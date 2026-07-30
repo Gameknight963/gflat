@@ -84,7 +84,7 @@ static byte ParseByte(string s, int line)
 
 static int ParseInt(string s, int line)
 {
-    // support 'X' char literals
+    // support char literals
     if (s.Length == 3 && s[0] == '\'' && s[2] == '\'')
         return s[1];
 

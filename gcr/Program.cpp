@@ -7,10 +7,12 @@
 #include <vector>
 #include <iterator>
 #include <stack>
+#include <iomanip>
 #include "colors.h"
 
 #ifdef _WIN32
 #include <windows.h>
+#include <cstdlib>
 
 static void enableAnsi()
 {
@@ -20,29 +22,45 @@ static void enableAnsi()
 	SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 }
 #else
-static void enableAnsi() {} // noop on linux
+static void enableAnsi() {}
 #endif
 
+static void vmError(size_t ip, const std::string& message)
+{
+	std::cerr << colors::BrightRed << "\n" << message << " at byte 0x"
+		<< std::hex << std::setw(2) << std::setfill('0')
+		<< (ip - 1) << colors::Reset;
+	std::exit(256);
+}
 
-int main(int argc, char *argv[])
+static int32_t pop(std::stack<int32_t>& stack, size_t ip)
+{
+	if (stack.empty())
+		vmError(ip, "stack underflow");
+	int32_t val = stack.top();
+	stack.pop();
+	return val;
+}
+
+int main(int argc, char* argv[])
 {
 	enableAnsi();
 
 	if (argc < 2)
 	{
-		std::cout << "no file specified";
+		std::cerr << colors::BrightRed << "no file specified" << colors::Reset;
 		return 257;
 	}
 	if (!std::filesystem::exists(argv[1]))
 	{
-		std::cout << argv[1] << ": no such file";
+		std::cerr << colors::BrightRed << argv[1] << ": no such file" << colors::Reset;
 		return 258;
 	}
 	std::string path = argv[1];
 	std::ifstream file(path, std::ios::binary);
 	if (!file)
 	{
-		std::cerr << path << ": could not open file";
+		std::cerr << colors::BrightRed << path << ": could not open file" << colors::Reset;
 		return 259;
 	}
 
@@ -50,61 +68,82 @@ int main(int argc, char *argv[])
 		std::istreambuf_iterator<char>(file),
 		std::istreambuf_iterator<char>()
 	};
-	
+
 	size_t ip = 0;
 	std::stack<int32_t> stack;
-	
+
 	while (ip < bytecode.size())
 	{
 		OpCode instruction = static_cast<OpCode>(bytecode[ip++]);
 
 		switch (instruction)
 		{
-			case OpCode::HALT:
-			{
-				uint8_t code = bytecode[ip++];
-				if (code == 0)
-					std::cout << colors::BrightBlack << "\nprogram exited with code " << static_cast<int>(code) << colors::Reset;
-				else
-					std::cerr << "\nunsuccessful exit: " << static_cast<int>(code);
-				return code;
-			}
-			case OpCode::PUSH:
-			{
-				int32_t value = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
-				ip += 4;
-				stack.push(value);
-				break;
-			}
-			case OpCode::POP:
-			{
-				stack.pop();
-				break;
-			}
-			case OpCode::ADD:
-			{
-				int32_t b = stack.top();
-				stack.pop();
-				int32_t a = stack.top();
-				stack.pop();
-				stack.push(a + b);
-				break;
-			}
-			case OpCode::PRINT:
-			{
-				int32_t a = stack.top();
-				stack.pop();
-				std::cout << static_cast<char>(a);
-				break;
-			}
-			default:
-			{
-				std::cerr << "\nunknown instruction: 0x" << std::hex << static_cast<int>(bytecode[ip-1]);
-				return 256;
-			}
+		case OpCode::HALT:
+		{
+			uint8_t code = bytecode[ip++];
+			if (code == 0)
+				std::cout << colors::BrightBlack << "\nprogram exited with code " << static_cast<int>(code) << colors::Reset;
+			else
+				std::cerr << colors::BrightRed << "\nunsuccessful exit: " << static_cast<int>(code) << colors::Reset;
+			return code;
+		}
+		case OpCode::PUSH:
+		{
+			int32_t value = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
+			ip += 4;
+			stack.push(value);
+			break;
+		}
+		case OpCode::POP:
+		{
+			pop(stack, ip);
+			break;
+		}
+		case OpCode::ADD:
+		{
+			int32_t b = pop(stack, ip);
+			int32_t a = pop(stack, ip);
+			stack.push(static_cast<int32_t>(static_cast<uint32_t>(a) + static_cast<uint32_t>(b)));
+			break;
+		}
+		case OpCode::SUB:
+		{
+			int32_t b = pop(stack, ip);
+			int32_t a = pop(stack, ip);
+			stack.push(static_cast<int32_t>(static_cast<uint32_t>(a) - static_cast<uint32_t>(b)));
+			break;
+		}
+		case OpCode::MUL:
+		{
+			int32_t b = pop(stack, ip);
+			int32_t a = pop(stack, ip);
+			stack.push(static_cast<int32_t>(static_cast<uint32_t>(a) * static_cast<uint32_t>(b)));
+			break;
+		}
+		case OpCode::DIV:
+		{
+			int32_t b = pop(stack, ip);
+			int32_t a = pop(stack, ip);
+			if (b == 0)
+				vmError(ip, "division by zero");
+			stack.push(a / b);
+			break;
+		}
+		case OpCode::PRINT:
+		{
+			std::cout << static_cast<char>(pop(stack, ip));
+			break;
+		}
+		default:
+		{
+			std::cerr << colors::BrightRed << "\nunknown instruction: 0x"
+				<< std::hex << std::setw(2) << std::setfill('0')
+				<< static_cast<int>(bytecode[ip - 1]) << colors::Reset;
+			return 256;
+		}
 		}
 	}
 
-	std::cerr << "\nno HALT instruction at the end of the program";
+	std::cerr << colors::Red << "\nprogram ended without HALT" << colors::Reset;
 	return 1;
 }

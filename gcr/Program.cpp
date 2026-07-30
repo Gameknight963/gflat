@@ -71,6 +71,7 @@ int main(int argc, char* argv[])
 
 	size_t ip = 0;
 	std::stack<int32_t> stack;
+	std::stack<size_t> callStack;
 
 	while (ip < bytecode.size())
 	{
@@ -132,6 +133,29 @@ int main(int argc, char* argv[])
 		case OpCode::PRINT:
 		{
 			std::cout << static_cast<char>(pop(stack, ip));
+			break;
+		}
+		case OpCode::JUMP:
+		{
+			int32_t offset = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
+			ip += 4;
+			ip += offset;
+			break;
+		}
+		case OpCode::CALL:
+		{
+			int32_t offset = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
+			ip += 4;
+			callStack.push(ip);
+			ip += offset;
+			break;
+		}
+		case OpCode::RET:
+		{
+			if (callStack.empty())
+				vmError(ip, "RET with empty call stack");
+			ip = callStack.top();
+			callStack.pop();
 			break;
 		}
 		default:

@@ -10,5 +10,8 @@ enum class OpCode : uint8_t
 	SUB = 0x04,
 	MUL = 0x05,
 	DIV = 0x06,
-	PRINT = 0x07
+	PRINT = 0x07,
+	JUMP = 0x08,
+	CALL = 0x09,
+	RET = 0x0A,
 };

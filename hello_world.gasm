@@ -1,26 +1,32 @@
-﻿PUSH 'H'
-PRINT
-PUSH 'e'
-PRINT
-PUSH 'l'
-PRINT
-PUSH 'l'
-PRINT
-PUSH 'o'
-PRINT
-PUSH ' '
-PRINT
-PUSH 'W'
-PRINT
-PUSH 'o'
-PRINT
-PUSH 'r'
-PRINT
-PUSH 'l'
-PRINT
+﻿PUSH '!'
 PUSH 'd'
-PRINT
-PUSH '!'
-PRINT
-
+PUSH 'l'
+PUSH 'r'
+PUSH 'o'
+PUSH 'W'
+PUSH ' '
+PUSH ','
+PUSH 'o'
+PUSH 'l'
+PUSH 'l'
+PUSH 'e'
+PUSH 'H'
+CALL printAll
 HALT
+
+printAll:
+    // print eachcharacter
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    PRINT
+    RET

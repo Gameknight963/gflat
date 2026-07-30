@@ -1,4 +1,4 @@
-﻿using gssembler;
+﻿using gasm;
 
 const string OutputExtension = ".bin";
 

@@ -1,4 +1,4 @@
-﻿namespace gssembler
+﻿namespace gasm
 {
     enum OpCode : byte
     {

@@ -7,9 +7,27 @@
 #include <vector>
 #include <iterator>
 #include <stack>
+#include "colors.h"
+
+#ifdef _WIN32
+#include <windows.h>
+
+static void enableAnsi()
+{
+	HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD mode = 0;
+	GetConsoleMode(handle, &mode);
+	SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+}
+#else
+static void enableAnsi() {} // noop on linux
+#endif
+
 
 int main(int argc, char *argv[])
 {
+	enableAnsi();
+
 	if (argc < 2)
 	{
 		std::cout << "no file specified";
@@ -46,9 +64,9 @@ int main(int argc, char *argv[])
 			{
 				uint8_t code = bytecode[ip++];
 				if (code == 0)
-					std::cout << "program exited with code " << static_cast<int>(code);
+					std::cout << colors::BrightBlack << "\nprogram exited with code " << static_cast<int>(code) << colors::Reset;
 				else
-					std::cerr << "unsuccessful exit: " << static_cast<int>(code);
+					std::cerr << "\nunsuccessful exit: " << static_cast<int>(code);
 				return code;
 			}
 			case OpCode::PUSH:
@@ -81,12 +99,12 @@ int main(int argc, char *argv[])
 			}
 			default:
 			{
-				std::cerr << "unknown instruction: 0x" << std::hex << static_cast<int>(bytecode[ip-1]);
+				std::cerr << "\nunknown instruction: 0x" << std::hex << static_cast<int>(bytecode[ip-1]);
 				return 256;
 			}
 		}
 	}
 
-	std::cerr << "no HALT instruction at the end of the program";
+	std::cerr << "\nno HALT instruction at the end of the program";
 	return 1;
 }

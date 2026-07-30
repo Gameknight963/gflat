@@ -132,6 +132,9 @@
   <ItemGroup>
     <ClInclude Include="opcodes.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="colors.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

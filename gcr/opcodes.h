@@ -14,4 +14,11 @@ enum class OpCode : uint8_t
 	JUMP = 0x08,
 	CALL = 0x09,
 	RET = 0x0A,
+	JZ = 0x0B,
+	JNZ = 0x0C,
+	CMP_EQ = 0x0D,
+	CMP_LT = 0x0E,
+	CMP_GT = 0x0F,
+	DUP = 0x10,
+	PRINT_INT = 0x11,
 };

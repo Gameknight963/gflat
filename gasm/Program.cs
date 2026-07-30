@@ -79,7 +79,7 @@ for (int i = 0; i < lines.Length; i++)
         EmitInt32(bytecode, (byte)opCode, value);
         currentByte += 5;
     }
-    else if (opCode == OpCode.JUMP || opCode == OpCode.CALL)
+    else if (opCode == OpCode.JUMP || opCode == OpCode.CALL || opCode == OpCode.JZ || opCode == OpCode.JNZ)
     {
         if (parts.Length < 2)
         {
@@ -114,6 +114,8 @@ static int InstructionSize(OpCode opCode) => opCode switch
     OpCode.PUSH => 5,
     OpCode.JUMP => 5,
     OpCode.CALL => 5,
+    OpCode.JZ => 5,
+    OpCode.JNZ => 5,
     _ => 1
 };
 

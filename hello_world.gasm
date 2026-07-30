@@ -1,32 +1,16 @@
-﻿PUSH '!'
-PUSH 'd'
-PUSH 'l'
-PUSH 'r'
-PUSH 'o'
-PUSH 'W'
-PUSH ' '
-PUSH ','
-PUSH 'o'
-PUSH 'l'
-PUSH 'l'
-PUSH 'e'
-PUSH 'H'
-CALL printAll
-HALT
+﻿PUSH 1      // counter
 
-printAll:
-    // print eachcharacter
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    PRINT
-    RET
+loop:
+    DUP
+    PUSH 6
+    CMP_EQ
+    JNZ done
+    DUP
+    PRINT_INT
+    PUSH 1
+    ADD
+    JUMP loop
+
+done:
+    POP
+    HALT

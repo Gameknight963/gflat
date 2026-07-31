@@ -1,16 +1,18 @@
-﻿PUSH 1      // counter
+﻿PUSH 48
 
 loop:
     DUP
-    PUSH 6
+    PUSH 86
     CMP_EQ
     JNZ done
     DUP
-    PRINT_INT
+    PRINT_CHAR
+    PUSH ' '
+    PRINT_CHAR
     PUSH 1
     ADD
     JUMP loop
 
 done:
     POP
-    HALT
+    HALT 0

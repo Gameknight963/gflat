@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
 			}
 			case OpCode::PRINT:
 			{
-				std::cout << static_cast<char>(pop(stack, ip));
+				std::cout << pop(stack, ip);
 				break;
 			}
 			case OpCode::JUMP:
@@ -172,8 +172,7 @@ int main(int argc, char* argv[])
 				int32_t offset = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
 				ip += 4;
 				int32_t val = pop(stack, ip);
-				if (val != 0)
-					ip += offset;
+				if (val != 0) ip += offset;
 				break;
 			}
 			case OpCode::CMP_EQ:
@@ -204,9 +203,9 @@ int main(int argc, char* argv[])
 				stack.push(stack.top());
 				break;
 			}
-			case OpCode::PRINT_INT:
+			case OpCode::PRINT_CHAR:
 			{
-				std::cout << pop(stack, ip);
+				std::cout << static_cast<char>(pop(stack, ip));
 				break;
 			}
 			default:

@@ -20,5 +20,5 @@ enum class OpCode : uint8_t
 	CMP_LT = 0x0E,
 	CMP_GT = 0x0F,
 	DUP = 0x10,
-	PRINT_INT = 0x11,
+	PRINT_CHAR = 0x11,
 };

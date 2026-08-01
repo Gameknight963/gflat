@@ -1,18 +1,13 @@
-﻿PUSH 48
+﻿PUSH 0
 
 loop:
     DUP
-    PUSH 86
+    PUSH 1000000000
     CMP_EQ
     JNZ done
-    DUP
-    PRINT_CHAR
-    PUSH ' '
-    PRINT_CHAR
     PUSH 1
     ADD
     JUMP loop
-
+    
 done:
-    POP
-    HALT 0
+    HALT

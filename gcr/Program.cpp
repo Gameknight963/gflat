@@ -6,8 +6,8 @@
 #include <cstdint>
 #include <vector>
 #include <iterator>
-#include <stack>
 #include <iomanip>
+#include <chrono>
 #include "colors.h"
 
 #ifdef _WIN32
@@ -25,6 +25,15 @@ static void enableAnsi()
 static void enableAnsi() {}
 #endif
 
+const size_t STACK_SIZE = 4096;
+const size_t CALL_STACK_SIZE = 256;
+
+static int32_t stack[STACK_SIZE];
+static int32_t sp = -1;
+
+static size_t callStack[CALL_STACK_SIZE];
+static int32_t csp = -1;
+
 static void vmError(size_t ip, const std::string& message)
 {
 	std::cerr << colors::BrightRed << "\n" << message << " at byte 0x"
@@ -33,18 +42,24 @@ static void vmError(size_t ip, const std::string& message)
 	std::exit(256);
 }
 
-static int32_t pop(std::stack<int32_t>& stack, size_t ip)
+static int32_t pop(size_t ip)
 {
-	if (stack.empty())
+	if (sp < 0)
 		vmError(ip, "stack underflow");
-	int32_t val = stack.top();
-	stack.pop();
-	return val;
+	return stack[sp--];
+}
+
+static void push(int32_t value, size_t ip)
+{
+	if (sp >= (int32_t)STACK_SIZE - 1)
+		vmError(ip, "stack overflow");
+	stack[++sp] = value;
 }
 
 int main(int argc, char* argv[])
 {
 	enableAnsi();
+	std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
 	if (argc < 2)
 	{
@@ -70,8 +85,6 @@ int main(int argc, char* argv[])
 	};
 
 	size_t ip = 0;
-	std::stack<int32_t> stack;
-	std::stack<size_t> callStack;
 
 	while (ip < bytecode.size())
 	{
@@ -83,56 +96,63 @@ int main(int argc, char* argv[])
 			{
 				uint8_t code = bytecode[ip++];
 				if (code == 0)
-					std::cout << colors::BrightBlack << "\nprogram exited with code " << static_cast<int>(code) << colors::Reset;
+					std::cout << colors::BrightBlack << "\nprogram exited with code " << static_cast<int>(code);
 				else
-					std::cerr << colors::BrightRed << "\nunsuccessful exit: " << static_cast<int>(code) << colors::Reset;
+					std::cerr << colors::BrightRed << "\nunsuccessful exit: " << static_cast<int>(code) << colors::BrightBlack;
+
+				std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+				std::cout
+					<< "\ntime elapsed: "
+					<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+					<< "ms"
+					<< colors::Reset;
 				return code;
 			}
 			case OpCode::PUSH:
 			{
 				int32_t value = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
 				ip += 4;
-				stack.push(value);
+				push(value, ip);
 				break;
 			}
 			case OpCode::POP:
 			{
-				pop(stack, ip);
+				pop(ip);
 				break;
 			}
 			case OpCode::ADD:
 			{
-				int32_t b = pop(stack, ip);
-				int32_t a = pop(stack, ip);
-				stack.push(static_cast<int32_t>(static_cast<uint32_t>(a) + static_cast<uint32_t>(b)));
+				int32_t b = pop(ip);
+				int32_t a = pop(ip);
+				push(static_cast<int32_t>(static_cast<uint32_t>(a) + static_cast<uint32_t>(b)), ip);
 				break;
 			}
 			case OpCode::SUB:
 			{
-				int32_t b = pop(stack, ip);
-				int32_t a = pop(stack, ip);
-				stack.push(static_cast<int32_t>(static_cast<uint32_t>(a) - static_cast<uint32_t>(b)));
+				int32_t b = pop(ip);
+				int32_t a = pop(ip);
+				push(static_cast<int32_t>(static_cast<uint32_t>(a) - static_cast<uint32_t>(b)), ip);
 				break;
 			}
 			case OpCode::MUL:
 			{
-				int32_t b = pop(stack, ip);
-				int32_t a = pop(stack, ip);
-				stack.push(static_cast<int32_t>(static_cast<uint32_t>(a) * static_cast<uint32_t>(b)));
+				int32_t b = pop(ip);
+				int32_t a = pop(ip);
+				push(static_cast<int32_t>(static_cast<uint32_t>(a) * static_cast<uint32_t>(b)), ip);
 				break;
 			}
 			case OpCode::DIV:
 			{
-				int32_t b = pop(stack, ip);
-				int32_t a = pop(stack, ip);
+				int32_t b = pop(ip);
+				int32_t a = pop(ip);
 				if (b == 0)
 					vmError(ip, "division by zero");
-				stack.push(a / b);
+				push(a / b, ip);
 				break;
 			}
 			case OpCode::PRINT:
 			{
-				std::cout << pop(stack, ip);
+				std::cout << pop(ip);
 				break;
 			}
 			case OpCode::JUMP:
@@ -146,24 +166,24 @@ int main(int argc, char* argv[])
 			{
 				int32_t offset = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
 				ip += 4;
-				callStack.push(ip);
+				if (csp >= (int32_t)CALL_STACK_SIZE - 1)
+					vmError(ip, "call stack overflow");
+				callStack[++csp] = ip;
 				ip += offset;
 				break;
 			}
 			case OpCode::RET:
 			{
-				if (callStack.empty())
+				if (csp < 0)
 					vmError(ip, "RET with empty call stack");
-				ip = callStack.top();
-				callStack.pop();
+				ip = callStack[csp--];
 				break;
 			}
 			case OpCode::JZ:
 			{
 				int32_t offset = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
 				ip += 4;
-				int32_t val = pop(stack, ip);
-				if (val == 0)
+				if (pop(ip) == 0)
 					ip += offset;
 				break;
 			}
@@ -171,41 +191,41 @@ int main(int argc, char* argv[])
 			{
 				int32_t offset = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
 				ip += 4;
-				int32_t val = pop(stack, ip);
-				if (val != 0) ip += offset;
+				if (pop(ip) != 0)
+					ip += offset;
 				break;
 			}
 			case OpCode::CMP_EQ:
 			{
-				int32_t b = pop(stack, ip);
-				int32_t a = pop(stack, ip);
-				stack.push(a == b ? 1 : 0);
+				int32_t b = pop(ip);
+				int32_t a = pop(ip);
+				push(a == b ? 1 : 0, ip);
 				break;
 			}
 			case OpCode::CMP_LT:
 			{
-				int32_t b = pop(stack, ip);
-				int32_t a = pop(stack, ip);
-				stack.push(a < b ? 1 : 0);
+				int32_t b = pop(ip);
+				int32_t a = pop(ip);
+				push(a < b ? 1 : 0, ip);
 				break;
 			}
 			case OpCode::CMP_GT:
 			{
-				int32_t b = pop(stack, ip);
-				int32_t a = pop(stack, ip);
-				stack.push(a > b ? 1 : 0);
+				int32_t b = pop(ip);
+				int32_t a = pop(ip);
+				push(a > b ? 1 : 0, ip);
 				break;
 			}
 			case OpCode::DUP:
 			{
-				if (stack.empty())
+				if (sp < 0)
 					vmError(ip, "DUP on empty stack");
-				stack.push(stack.top());
+				push(stack[sp], ip);
 				break;
 			}
 			case OpCode::PRINT_CHAR:
 			{
-				std::cout << static_cast<char>(pop(stack, ip));
+				std::cout << static_cast<char>(pop(ip));
 				break;
 			}
 			default:

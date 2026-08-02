@@ -182,13 +182,39 @@ namespace gflat
             }
 
             TypeExpression type = ParseTypeExpression();
-            string name = Expect(TokenKind.Identifier).Text;
+            string name;
+
+            if (Check(TokenKind.OpenParen))
+            {
+                // constructor - type was actually the name
+                name = ((NamedTypeExpression)type).Name;
+                return ParseConstructorDeclaration(name, accessibility, line);
+            }
+
+            name = Expect(TokenKind.Identifier).Text;
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
                 return ParseMethodDeclaration(type, name, accessibility, isStatic, line);
 
             return ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line);
+        }
+
+        private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line)
+        {
+            Expect(TokenKind.OpenParen);
+            List<Parameter> parameters = new();
+            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+            {
+                TypeExpression paramType = ParseTypeExpression();
+                string paramName = Expect(TokenKind.Identifier).Text;
+                parameters.Add(new Parameter(paramName, paramType, Current.Line));
+                if (!Check(TokenKind.CloseParen))
+                    Expect(TokenKind.Comma);
+            }
+            Expect(TokenKind.CloseParen);
+            BlockStatement body = ParseBlockStatement();
+            return new ConstructorDeclaration(name, parameters, body, accessibility, line);
         }
 
         private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, int line)

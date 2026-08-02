@@ -201,6 +201,18 @@ namespace gflat
             });
         }
 
+        public void Visit(ConstructorDeclaration node)
+        {
+            Print($"Constructor: {node.Accessibility} {node.Name}");
+            Indented(() =>
+            {
+                Print("Parameters:");
+                Indented(() => { foreach (Parameter p in node.Parameters) p.Accept(this); });
+                Print("Body:");
+                Indented(() => node.Body.Accept(this));
+            });
+        }
+
         public void Visit(NamedTypeExpression node) => Print($"Type: {(node.Namespace != null ? node.Namespace + "::" : "")}{node.Name}");
         public void Visit(PointerTypeExpression node) { Print($"PointerType{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }
         public void Visit(ManagedTypeExpression node) { Print($"ManagedType{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }

@@ -127,9 +127,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="malloc.c" />
     <ClCompile Include="Program.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="malloc.h" />
+    <ClInclude Include="malloc_config.h" />
     <ClInclude Include="opcodes.h" />
   </ItemGroup>
   <ItemGroup>

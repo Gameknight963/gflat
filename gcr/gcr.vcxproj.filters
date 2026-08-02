@@ -18,9 +18,18 @@
     <ClCompile Include="Program.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="malloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="opcodes.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="malloc.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="malloc_config.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

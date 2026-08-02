@@ -11,12 +11,14 @@
 #include <functional>
 #include <unordered_map>
 #include "colors.h"
+#include "malloc_config.h"
+#include "malloc.h"
+#include <sstream>
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <cstdlib>
-#include <string.h>
-#include <sstream>
 
 static void enableAnsi()
 {
@@ -67,9 +69,9 @@ const size_t MAX_FRAMES = 64;
 
 const size_t HEAP_SIZE = 1024 * 1024;
 static uint8_t heap[HEAP_SIZE];
-static uint32_t heapTop = 0;
+static mspace heapSpace;
 
-struct Frame 
+struct Frame
 {
 	int32_t locals[MAX_LOCALS];
 	int32_t localCount;
@@ -117,6 +119,8 @@ int main(int argc, char* argv[])
 	hostFunctions["io.print_newline"] = [&]() {
 		std::cout << '\n';
 		};
+
+	heapSpace = create_mspace_with_base(heap, HEAP_SIZE, 0);
 
 	while (ip < bytecode.size())
 	{
@@ -280,15 +284,16 @@ int main(int argc, char* argv[])
 			case OpCode::ALLOC:
 			{
 				uint8_t count = bytecode[ip++];
-				if (heapTop + count > HEAP_SIZE)
+				void* ptr = mspace_malloc(heapSpace, count);
+				if (!ptr)
 					vmError(ip, "out of heap memory");
-				push(static_cast<int32_t>(heapTop), ip);
-				heapTop += count;
+				push(static_cast<int32_t>(static_cast<uint8_t*>(ptr) - heap), ip);
 				break;
 			}
 			case OpCode::FREE:
 			{
-				pop(ip); // no-op for now, bump allocator cant free
+				uint32_t offset = static_cast<uint32_t>(pop(ip));
+				mspace_free(heapSpace, heap + offset);
 				break;
 			}
 			case OpCode::LOAD_HEAP:

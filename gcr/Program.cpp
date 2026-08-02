@@ -8,11 +8,15 @@
 #include <iterator>
 #include <iomanip>
 #include <chrono>
+#include <functional>
+#include <unordered_map>
 #include "colors.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #include <cstdlib>
+#include <string.h>
+#include <sstream>
 
 static void enableAnsi()
 {
@@ -33,6 +37,8 @@ static int32_t sp = -1;
 
 static size_t callStack[CALL_STACK_SIZE];
 static int32_t csp = -1;
+
+static std::unordered_map<std::string, std::function<void()>> hostFunctions;
 
 static void vmError(size_t ip, const std::string& message)
 {
@@ -55,6 +61,22 @@ static void push(int32_t value, size_t ip)
 		vmError(ip, "stack overflow");
 	stack[++sp] = value;
 }
+
+const size_t MAX_LOCALS = 256;
+const size_t MAX_FRAMES = 64;
+
+const size_t HEAP_SIZE = 1024 * 1024;
+static uint8_t heap[HEAP_SIZE];
+static uint32_t heapTop = 0;
+
+struct Frame 
+{
+	int32_t locals[MAX_LOCALS];
+	int32_t localCount;
+};
+
+static Frame frames[MAX_FRAMES];
+static int32_t fp = -1;
 
 int main(int argc, char* argv[])
 {
@@ -85,6 +107,16 @@ int main(int argc, char* argv[])
 	};
 
 	size_t ip = 0;
+
+	hostFunctions["io.print_int"] = [&]() {
+		std::cout << pop(ip);
+		};
+	hostFunctions["io.print_char"] = [&]() {
+		std::cout << static_cast<char>(pop(ip));
+		};
+	hostFunctions["io.print_newline"] = [&]() {
+		std::cout << '\n';
+		};
 
 	while (ip < bytecode.size())
 	{
@@ -150,11 +182,6 @@ int main(int argc, char* argv[])
 				push(a / b, ip);
 				break;
 			}
-			case OpCode::PRINT:
-			{
-				std::cout << pop(ip);
-				break;
-			}
 			case OpCode::JUMP:
 			{
 				int32_t offset = bytecode[ip] | (bytecode[ip + 1] << 8) | (bytecode[ip + 2] << 16) | (bytecode[ip + 3] << 24);
@@ -176,6 +203,7 @@ int main(int argc, char* argv[])
 			{
 				if (csp < 0)
 					vmError(ip, "RET with empty call stack");
+				if (fp >= 0) fp--;
 				ip = callStack[csp--];
 				break;
 			}
@@ -223,9 +251,84 @@ int main(int argc, char* argv[])
 				push(stack[sp], ip);
 				break;
 			}
-			case OpCode::PRINT_CHAR:
+			case OpCode::ENTER:
 			{
-				std::cout << static_cast<char>(pop(ip));
+				uint8_t count = bytecode[ip++];
+				if (fp >= (int32_t)MAX_FRAMES - 1)
+					vmError(ip, "frame stack overflow");
+				fp++;
+				frames[fp].localCount = count;
+				memset(frames[fp].locals, 0, count * sizeof(int32_t));
+				break;
+			}
+			case OpCode::LOAD:
+			{
+				uint8_t slot = bytecode[ip++];
+				if (fp < 0) vmError(ip, "LOAD outside of frame");
+				if (slot >= frames[fp].localCount) vmError(ip, "local variable index out of range");
+				push(frames[fp].locals[slot], ip);
+				break;
+			}
+			case OpCode::STORE:
+			{
+				uint8_t slot = bytecode[ip++];
+				if (fp < 0) vmError(ip, "STORE outside of frame");
+				if (slot >= frames[fp].localCount) vmError(ip, "local variable index out of range");
+				frames[fp].locals[slot] = pop(ip);
+				break;
+			}
+			case OpCode::ALLOC:
+			{
+				uint8_t count = bytecode[ip++];
+				if (heapTop + count > HEAP_SIZE)
+					vmError(ip, "out of heap memory");
+				push(static_cast<int32_t>(heapTop), ip);
+				heapTop += count;
+				break;
+			}
+			case OpCode::FREE:
+			{
+				pop(ip); // no-op for now, bump allocator cant free
+				break;
+			}
+			case OpCode::LOAD_HEAP:
+			{
+				uint32_t ptr = static_cast<uint32_t>(pop(ip));
+				if (ptr + 4 > HEAP_SIZE)
+				{
+					std::ostringstream oss;
+					oss << "heap read out of bounds at offset 0x" << std::hex << std::setw(8) << std::setfill('0') << ptr;
+					vmError(ip, oss.str());
+				}
+				int32_t value = heap[ptr] | (heap[ptr + 1] << 8) | (heap[ptr + 2] << 16) | (heap[ptr + 3] << 24);
+				push(value, ip);
+				break;
+			}
+			case OpCode::STORE_HEAP:
+			{
+				int32_t value = pop(ip);
+				uint32_t ptr = static_cast<uint32_t>(pop(ip));
+				if (ptr + 4 > HEAP_SIZE)
+				{
+					std::ostringstream oss;
+					oss << "heap write out of bounds at offset 0x" << std::hex << std::setw(8) << std::setfill('0') << ptr;
+					vmError(ip, oss.str());
+				}
+				heap[ptr] = value & 0xFF;
+				heap[ptr + 1] = (value >> 8) & 0xFF;
+				heap[ptr + 2] = (value >> 16) & 0xFF;
+				heap[ptr + 3] = (value >> 24) & 0xFF;
+				break;
+			}
+			case OpCode::CALL_HOST:
+			{
+				uint8_t len = bytecode[ip++];
+				std::string name(reinterpret_cast<const char*>(&bytecode[ip]), len);
+				ip += len;
+				auto it = hostFunctions.find(name);
+				if (it == hostFunctions.end())
+					vmError(ip, "unknown host function '" + name + "'");
+				it->second();
 				break;
 			}
 			default:

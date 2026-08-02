@@ -1,4 +1,6 @@
-﻿namespace gflat
+﻿using gflat.ast;
+
+namespace gflat
 {
     public class Program
     {
@@ -21,7 +23,11 @@
         static void Main(string[] args)
         {
             List<Token> tokens = Lexer.Tokenize(code);
-            foreach (Token token in tokens) Console.WriteLine(token);
+            foreach (Token t in tokens)
+                Console.WriteLine($"{t.Kind,-35} '{t.Text}'");
+            CompilationUnit ast = Parser.Parse(tokens);
+            AstPrinter printer = new AstPrinter();
+            ast.Accept(printer);
         }
     }
 }

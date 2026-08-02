@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include "colors.h"
+#include <ios>
 
 static const size_t STACK_SIZE = 4096;
 static const size_t CALL_STACK_SIZE = 256;
@@ -84,9 +86,9 @@ static size_t loadPool(const std::vector<uint8_t>& bytecode)
 
 static void vmError(const std::string& message)
 {
-    std::cerr << "\n" << message << " at byte 0x"
+    std::cerr << colors::BrightRed << "\n" << message << " at byte 0x"
         << std::hex << std::setw(2) << std::setfill('0')
-        << (ip - 1);
+        << (ip - 1) << colors::Reset;
     std::exit(256);
 }
 

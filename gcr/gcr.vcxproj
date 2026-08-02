@@ -129,11 +129,13 @@
   <ItemGroup>
     <ClCompile Include="malloc.c" />
     <ClCompile Include="Program.cpp" />
+    <ClCompile Include="gcr.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="malloc.h" />
     <ClInclude Include="malloc_config.h" />
     <ClInclude Include="opcodes.h" />
+    <ClInclude Include="gcr.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="colors.h" />

@@ -1,33 +1,30 @@
-﻿CALL main
-HALT
+﻿ENTER 1
 
-main:
-    ENTER 0
-    PUSH 'H'
-    CALL_HOST io.print_char
-    PUSH 'e'
-    CALL_HOST io.print_char
-    PUSH 'l'
-    CALL_HOST io.print_char
-    PUSH 'l'
-    CALL_HOST io.print_char
-    PUSH 'o'
-    CALL_HOST io.print_char
-    PUSH ','
-    CALL_HOST io.print_char
-    PUSH ' '
-    CALL_HOST io.print_char
-    PUSH 'W'
-    CALL_HOST io.print_char
-    PUSH 'o'
-    CALL_HOST io.print_char
-    PUSH 'r'
-    CALL_HOST io.print_char
-    PUSH 'l'
-    CALL_HOST io.print_char
-    PUSH 'd'
-    CALL_HOST io.print_char
-    PUSH '!'
-    CALL_HOST io.print_char
-    CALL_HOST io.print_newline
-    RET
+PUSH 0
+loop:
+    DUP
+    PUSH 1000000
+    CMP_EQ
+    JNZ done
+
+    ALLOC 4
+    STORE 0
+
+    PUSH 42
+    LOAD 0
+    STORE_HEAP
+
+    LOAD 0
+    LOAD_HEAP
+    POP
+
+    LOAD 0
+    FREE // free AFTER reading, moron :sob:
+
+    PUSH 1
+    ADD
+    JUMP loop
+
+done:
+    POP
+    HALT

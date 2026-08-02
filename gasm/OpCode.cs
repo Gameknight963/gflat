@@ -26,5 +26,6 @@
         FREE = 0x15,
         LOAD_HEAP = 0x16,
         STORE_HEAP = 0x17,
+        NOP = 0x18,
     }
 }

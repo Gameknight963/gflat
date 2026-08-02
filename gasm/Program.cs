@@ -21,6 +21,9 @@ string[] lines = File.ReadAllLines(inputPath);
 List<byte> bytecode = new();
 Dictionary<string, int> labels = new();
 
+List<string> pool = new();
+Dictionary<string, int> poolIndex = new();
+
 // pass 1: collect labels and their byte offsets
 int byteOffset = 0;
 for (int i = 0; i < lines.Length; i++)
@@ -54,6 +57,13 @@ for (int i = 0; i < lines.Length; i++)
             Console.Error.WriteLine($"line {i + 1}: CALL_HOST requires a function name");
             Environment.Exit(1);
         }
+        string name = parts[1];
+        if (!poolIndex.ContainsKey(name))
+        {
+            poolIndex[name] = pool.Count;
+            pool.Add(name);
+        }
+        byteOffset += 5;
     }
     else
     {
@@ -63,6 +73,16 @@ for (int i = 0; i < lines.Length; i++)
 
 // pass 2: emit bytecode
 int currentByte = 0;
+EmitUInt32(bytecode, (uint)pool.Count);
+foreach (string entry in pool)
+{
+    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(entry);
+    bytecode.Add((byte)(bytes.Length & 0xFF));
+    bytecode.Add((byte)((bytes.Length >> 8) & 0xFF));
+    foreach (byte b in bytes)
+        bytecode.Add(b);
+}
+
 for (int i = 0; i < lines.Length; i++)
 {
     string line = StripLine(lines[i]);
@@ -103,22 +123,14 @@ for (int i = 0; i < lines.Length; i++)
     }
     else if (opCode == OpCode.CALL_HOST)
     {
-        if (parts.Length < 2)
-        {
-            Console.Error.WriteLine($"line {i + 1}: CALL_HOST requires a function name");
-            Environment.Exit(1);
-        }
         string name = parts[1];
-        if (name.Length > 255)
-        {
-            Console.Error.WriteLine($"line {i + 1}: host function name too long");
-            Environment.Exit(1);
-        }
+        int index = poolIndex[name];
         bytecode.Add((byte)opCode);
-        bytecode.Add((byte)name.Length);
-        foreach (char c in name)
-            bytecode.Add((byte)c);
-        currentByte += 2 + name.Length;
+        bytecode.Add((byte)(index & 0xFF));
+        bytecode.Add((byte)((index >> 8) & 0xFF));
+        bytecode.Add((byte)((index >> 16) & 0xFF));
+        bytecode.Add((byte)((index >> 24) & 0xFF));
+        currentByte += 5;
     }
     else if (opCode == OpCode.ENTER || opCode == OpCode.LOAD ||
          opCode == OpCode.STORE || opCode == OpCode.ALLOC)
@@ -143,6 +155,14 @@ for (int i = 0; i < lines.Length; i++)
 File.WriteAllBytes(outputPath, bytecode.ToArray());
 Console.WriteLine($"assembled {lines.Length} lines -> {outputPath} ({bytecode.Count} bytes)");
 
+static void EmitUInt32(List<byte> bytecode, uint value)
+{
+    bytecode.Add((byte)(value & 0xFF));
+    bytecode.Add((byte)((value >> 8) & 0xFF));
+    bytecode.Add((byte)((value >> 16) & 0xFF));
+    bytecode.Add((byte)((value >> 24) & 0xFF));
+}
+
 static string StripLine(string line)
 {
     int commentIndex = line.IndexOf("//");
@@ -163,7 +183,7 @@ static int InstructionSize(OpCode opCode) => opCode switch
     OpCode.LOAD => 2,
     OpCode.STORE => 2,
     OpCode.ALLOC => 2,
-    OpCode.CALL_HOST => -1, // variable, handled separately
+    OpCode.CALL_HOST => 5,
     _ => 1
 };
 

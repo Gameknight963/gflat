@@ -76,7 +76,7 @@ static size_t loadPool(const std::vector<uint8_t>& bytecode)
         auto it = hostFunctionIndex.find(name);
         if (it != hostFunctionIndex.end())
             resolvedPool[e] = hostFunctionTable[it->second];
-        // if not found, leave as nullptr -- not every pool entry has to be a host function
+        // if not found, leave as nullptr, not every pool entry has to be a host function
     }
 
     return i; // bytecode starts here
@@ -112,7 +112,7 @@ void gvm_registerHost(const std::string& name, std::function<void()> fn)
 
 int vm_run(const std::vector<uint8_t>& bytecode, bool optimize)
 {
-    ip = 0;
+    ip = loadPool(bytecode);
     sp = -1;
     csp = -1;
     fp = -1;

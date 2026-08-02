@@ -48,18 +48,17 @@ int main(int argc, char* argv[])
         std::istreambuf_iterator<char>()
     };
 
-    GVM vm;
-    vm.registerHost("io.print_int", [&]() {
-        std::cout << vm.pop();
+    gvm_registerHost("io.print_int", []() {
+        std::cout << vm_pop();
         });
-    vm.registerHost("io.print_char", [&]() {
-        std::cout << static_cast<char>(vm.pop());
+    gvm_registerHost("io.print_char", []() {
+        std::cout << static_cast<char>(vm_pop());
         });
-    vm.registerHost("io.print_newline", [&]() {
+    gvm_registerHost("io.print_newline", []() {
         std::cout << '\n';
         });
 
-    int code = vm.run(bytecode);
+    int code = vm_run(bytecode);
 
     if (code == 0)
         std::cout << colors::BrightBlack << "\nprogram exited with code " << code;

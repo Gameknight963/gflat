@@ -129,13 +129,13 @@ public class Lexer
                 case '"':
                     tokens.Add(ReadString(code, i, out int strEnd, line));
                     i = strEnd;
-                    break;
+                    continue;
                 case '$':
                     if (i + 1 < code.Length && code[i + 1] == '"')
                     {
                         tokens.AddRange(ReadInterpolatedString(code, i, out int istrEnd, line));
                         i = istrEnd;
-                        break;
+                        continue;
                     }
                     tokens.Add(new Token(TokenKind.Dollar, line, i, i));
                     break;

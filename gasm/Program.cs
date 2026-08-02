@@ -47,7 +47,18 @@ for (int i = 0; i < lines.Length; i++)
         Environment.Exit(1);
     }
 
-    byteOffset += InstructionSize(opCode);
+    if (opCode == OpCode.CALL_HOST)
+    {
+        if (parts.Length < 2)
+        {
+            Console.Error.WriteLine($"line {i + 1}: CALL_HOST requires a function name");
+            Environment.Exit(1);
+        }
+    }
+    else
+    {
+        byteOffset += InstructionSize(opCode);
+    }
 }
 
 // pass 2: emit bytecode
@@ -90,6 +101,38 @@ for (int i = 0; i < lines.Length; i++)
         EmitInt32(bytecode, (byte)opCode, targetByte);
         currentByte += 5;
     }
+    else if (opCode == OpCode.CALL_HOST)
+    {
+        if (parts.Length < 2)
+        {
+            Console.Error.WriteLine($"line {i + 1}: CALL_HOST requires a function name");
+            Environment.Exit(1);
+        }
+        string name = parts[1];
+        if (name.Length > 255)
+        {
+            Console.Error.WriteLine($"line {i + 1}: host function name too long");
+            Environment.Exit(1);
+        }
+        bytecode.Add((byte)opCode);
+        bytecode.Add((byte)name.Length);
+        foreach (char c in name)
+            bytecode.Add((byte)c);
+        currentByte += 2 + name.Length;
+    }
+    else if (opCode == OpCode.ENTER || opCode == OpCode.LOAD ||
+         opCode == OpCode.STORE || opCode == OpCode.ALLOC)
+    {
+        if (parts.Length < 2)
+        {
+            Console.Error.WriteLine($"line {i + 1}: {opCode} requires an operand");
+            Environment.Exit(1);
+        }
+        byte operand = ParseByte(parts[1], i + 1);
+        bytecode.Add((byte)opCode);
+        bytecode.Add(operand);
+        currentByte += 2;
+    }
     else
     {
         bytecode.Add((byte)opCode);
@@ -116,6 +159,11 @@ static int InstructionSize(OpCode opCode) => opCode switch
     OpCode.CALL => 5,
     OpCode.JZ => 5,
     OpCode.JNZ => 5,
+    OpCode.ENTER => 2,
+    OpCode.LOAD => 2,
+    OpCode.STORE => 2,
+    OpCode.ALLOC => 2,
+    OpCode.CALL_HOST => -1, // variable, handled separately
     _ => 1
 };
 

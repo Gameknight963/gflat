@@ -1,13 +1,33 @@
-﻿PUSH 0
+﻿CALL main
+HALT
 
-loop:
-    DUP
-    PUSH 1000000000
-    CMP_EQ
-    JNZ done
-    PUSH 1
-    ADD
-    JUMP loop
-    
-done:
-    HALT
+main:
+    ENTER 0
+    PUSH 'H'
+    CALL_HOST io.print_char
+    PUSH 'e'
+    CALL_HOST io.print_char
+    PUSH 'l'
+    CALL_HOST io.print_char
+    PUSH 'l'
+    CALL_HOST io.print_char
+    PUSH 'o'
+    CALL_HOST io.print_char
+    PUSH ','
+    CALL_HOST io.print_char
+    PUSH ' '
+    CALL_HOST io.print_char
+    PUSH 'W'
+    CALL_HOST io.print_char
+    PUSH 'o'
+    CALL_HOST io.print_char
+    PUSH 'r'
+    CALL_HOST io.print_char
+    PUSH 'l'
+    CALL_HOST io.print_char
+    PUSH 'd'
+    CALL_HOST io.print_char
+    PUSH '!'
+    CALL_HOST io.print_char
+    CALL_HOST io.print_newline
+    RET

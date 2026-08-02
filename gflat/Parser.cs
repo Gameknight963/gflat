@@ -213,8 +213,18 @@ namespace gflat
                     Expect(TokenKind.Comma);
             }
             Expect(TokenKind.CloseParen);
-            BlockStatement body = ParseBlockStatement();
+            BlockStatement body = ParseBodyOrBlock();
             return new ConstructorDeclaration(name, parameters, body, accessibility, line);
+        }
+
+        private BlockStatement ParseBodyOrBlock()
+        {
+            int line = Current.Line;
+            if (Check(TokenKind.OpenBrace))
+                return ParseBlockStatement();
+
+            AstNode statement = ParseStatement();
+            return new BlockStatement(new List<AstNode> { statement }, line);
         }
 
         private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, int line)
@@ -230,7 +240,7 @@ namespace gflat
                     Expect(TokenKind.Comma);
             }
             Expect(TokenKind.CloseParen);
-            BlockStatement body = ParseBlockStatement();
+            BlockStatement body = ParseBodyOrBlock();
             return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, line);
         }
 
@@ -320,7 +330,7 @@ namespace gflat
                 case TokenKind.For:
                     return ParseForStatement();
                 case TokenKind.OpenBrace:
-                    return ParseBlockStatement();
+                    return ParseBodyOrBlock();
                 case TokenKind.Break:
                     Consume();
                     Expect(TokenKind.Semicolon);
@@ -337,6 +347,7 @@ namespace gflat
                 return ParseVariableDeclaration();
 
             AstNode expr = ParseExpression();
+            Console.WriteLine($"After ParseExpression, current token: {Current.Kind} '{Current.Text}'");
             Expect(TokenKind.Semicolon);
             return new ExpressionStatement(expr, line);
         }
@@ -383,10 +394,10 @@ namespace gflat
             Expect(TokenKind.OpenParen);
             AstNode condition = ParseExpression();
             Expect(TokenKind.CloseParen);
-            BlockStatement then = ParseBlockStatement();
+            BlockStatement then = ParseBodyOrBlock();
             BlockStatement? else_ = null;
             if (Match(TokenKind.Else))
-                else_ = ParseBlockStatement();
+                else_ = ParseBodyOrBlock();
             return new IfStatement(condition, then, else_, line);
         }
 
@@ -397,7 +408,7 @@ namespace gflat
             Expect(TokenKind.OpenParen);
             AstNode condition = ParseExpression();
             Expect(TokenKind.CloseParen);
-            BlockStatement body = ParseBlockStatement();
+            BlockStatement body = ParseBodyOrBlock();
             return new WhileStatement(condition, body, line);
         }
 
@@ -423,7 +434,7 @@ namespace gflat
                 increment = ParseExpression();
 
             Expect(TokenKind.CloseParen);
-            BlockStatement body = ParseBlockStatement();
+            BlockStatement body = ParseBodyOrBlock();
             return new ForStatement(initializer, condition, increment, body, line);
         }
 
@@ -486,6 +497,13 @@ namespace gflat
                 {
                     AstNode right = ParseExpression(rightPower - 1); // right associative
                     left = new AssignmentExpression(left, right, op.Kind, op.Line);
+                    continue;
+                }
+
+                if (op.Kind == TokenKind.DoubleColon)
+                {
+                    string member = Expect(TokenKind.Identifier).Text;
+                    left = new NamespaceAccessExpression(left, member, op.Line);
                     continue;
                 }
 
@@ -570,7 +588,7 @@ namespace gflat
             TokenKind.Plus or TokenKind.Minus => (10, 11),
             TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (12, 13),
             TokenKind.PlusPlus or TokenKind.MinusMinus => (14, 0),
-            TokenKind.Dot or TokenKind.Arrow => (16, 17),
+            TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (16, 17),
             TokenKind.OpenParen => (16, 0),
             _ => (0, 0)
         };

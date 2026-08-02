@@ -213,6 +213,12 @@ namespace gflat
             });
         }
 
+        public void Visit(NamespaceAccessExpression node)
+        {
+            Print($"NamespaceAccess: ::{node.Member}");
+            Indented(() => node.Left.Accept(this));
+        }
+
         public void Visit(NamedTypeExpression node) => Print($"Type: {(node.Namespace != null ? node.Namespace + "::" : "")}{node.Name}");
         public void Visit(PointerTypeExpression node) { Print($"PointerType{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }
         public void Visit(ManagedTypeExpression node) { Print($"ManagedType{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }

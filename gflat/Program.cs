@@ -84,9 +84,27 @@ namespace gflat
                         string msg = $"z is {z} and sum is {sum}";
 
                         // nested member access
-                        Dog* dog = new Dog("Rex", 3, "Labrador");
+                        Dog^ dog = new Dog("Rex", 3, "Labrador");
                         string description = dog.Describe();
                         string bark = dog.Bark();
+
+                                    bool flag = !true;
+                        int neg = -5;
+
+                        //shit
+                        string complex = $"result is {x + y * 2}";
+
+                        while (true)
+                        {
+                        if (flag) break;
+                        continue;
+                        }
+
+                        // arrow operator
+                        dog->pointee = null;
+
+                        // namespace qualified
+                        std::Console.Write("hello");
 
                         return 0;
                     }

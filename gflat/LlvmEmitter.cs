@@ -23,6 +23,10 @@ public class LlvmEmitter : IVisitor
 
     public string GetOutput() => _globals.ToString() + "\n" + _output.ToString();
 
+    private int _labelCounter = 0;
+    private string NewLabel(string prefix) => $"{prefix}_{_labelCounter++}";
+
+
     private string EmitType(TypeExpression type)
     {
         if (type is NamedTypeExpression named)
@@ -110,8 +114,55 @@ public class LlvmEmitter : IVisitor
         Emit($"    ret i32 {val}");
     }
 
-    public void Visit(IfStatement node) => throw new NotImplementedException();
-    public void Visit(WhileStatement node) => throw new NotImplementedException();
+    public void Visit(IfStatement node)
+    {
+        string thenLabel = NewLabel("then");
+        string elseLabel = NewLabel("else");
+        string mergeLabel = NewLabel("merge");
+
+        node.Condition.Accept(this);
+        string cond = Pop();
+        string condBit = NewTemp();
+        Emit($"    {condBit} = icmp ne i32 {cond}, 0");
+
+        if (node.Else != null)
+            Emit($"    br i1 {condBit}, label %{thenLabel}, label %{elseLabel}");
+        else
+            Emit($"    br i1 {condBit}, label %{thenLabel}, label %{mergeLabel}");
+
+        Emit($"{thenLabel}:");
+        node.Then.Accept(this);
+        Emit($"    br label %{mergeLabel}");
+
+        if (node.Else != null)
+        {
+            Emit($"{elseLabel}:");
+            node.Else.Accept(this);
+            Emit($"    br label %{mergeLabel}");
+        }
+
+        Emit($"{mergeLabel}:");
+    }
+    public void Visit(WhileStatement node)
+    {
+        string condLabel = NewLabel("while_cond");
+        string bodyLabel = NewLabel("while_body");
+        string exitLabel = NewLabel("while_exit");
+
+        Emit($"    br label %{condLabel}");
+        Emit($"{condLabel}:");
+        node.Condition.Accept(this);
+        string cond = Pop();
+        string condBit = NewTemp();
+        Emit($"    {condBit} = icmp ne i32 {cond}, 0");
+        Emit($"    br i1 {condBit}, label %{bodyLabel}, label %{exitLabel}");
+
+        Emit($"{bodyLabel}:");
+        node.Body.Accept(this);
+        Emit($"    br label %{condLabel}");
+
+        Emit($"{exitLabel}:");
+    }
     public void Visit(ForStatement node) => throw new NotImplementedException();
 
     public void Visit(VariableDeclaration node)
@@ -128,8 +179,11 @@ public class LlvmEmitter : IVisitor
             Emit($"    store {type} {val}, {type}* {ptr}");
         }
     }
-    public void Visit(ExpressionStatement node) => throw new NotImplementedException();
-
+    public void Visit(ExpressionStatement node)
+    {
+        node.Expression.Accept(this);
+        if (_valueStack.Count > 0) Pop(); // discard result
+    }
     public void Visit(BinaryExpression node)
     {
         node.Left.Accept(this);
@@ -138,18 +192,40 @@ public class LlvmEmitter : IVisitor
         string right = Pop();
         string temp = NewTemp();
 
-        string op = node.Operator switch
-        {
-            TokenKind.Plus => "add",
-            TokenKind.Minus => "sub",
-            TokenKind.Star => "mul",
-            TokenKind.Slash => "sdiv",
-            TokenKind.Percent => "srem",
-            _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
-        };
+        bool isComparison = node.Operator is TokenKind.EqualsEquals or TokenKind.NotEquals or
+            TokenKind.Less or TokenKind.Greater or TokenKind.LessEquals or TokenKind.GreaterEquals;
 
-        Emit($"    {temp} = {op} i32 {left}, {right}");
-        Push(temp);
+        if (isComparison)
+        {
+            string op = node.Operator switch
+            {
+                TokenKind.EqualsEquals => "eq",
+                TokenKind.NotEquals => "ne",
+                TokenKind.Less => "slt",
+                TokenKind.Greater => "sgt",
+                TokenKind.LessEquals => "sle",
+                TokenKind.GreaterEquals => "sge",
+                _ => throw new NotImplementedException()
+            };
+            Emit($"    {temp} = icmp {op} i32 {left}, {right}");
+            string extended = NewTemp();
+            Emit($"    {extended} = zext i1 {temp} to i32");
+            Push(extended);
+        }
+        else
+        {
+            string op = node.Operator switch
+            {
+                TokenKind.Plus => "add",
+                TokenKind.Minus => "sub",
+                TokenKind.Star => "mul",
+                TokenKind.Slash => "sdiv",
+                TokenKind.Percent => "srem",
+                _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
+            };
+            Emit($"    {temp} = {op} i32 {left}, {right}");
+            Push(temp);
+        }
     }
     public void Visit(UnaryExpression node) => throw new NotImplementedException();
 
@@ -188,7 +264,23 @@ public class LlvmEmitter : IVisitor
     }
     public void Visit(CallExpression node) => throw new NotImplementedException();
     public void Visit(MemberAccessExpression node) => throw new NotImplementedException();
-    public void Visit(AssignmentExpression node) => throw new NotImplementedException();
+    public void Visit(AssignmentExpression node)
+    {
+        node.Value.Accept(this);
+        string val = Pop();
+
+        if (node.Target is IdentifierExpression ident)
+        {
+            if (!_locals.TryGetValue(ident.Name, out string? ptr))
+                throw new Exception($"Unknown variable '{ident.Name}'");
+            Emit($"    store i32 {val}, i32* {ptr}");
+            Push(val); // assignment is an expression, push the value back
+        }
+        else
+        {
+            throw new NotImplementedException("Complex assignment targets not yet supported");
+        }
+    }
     public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
     public void Visit(NewExpression node) => throw new NotImplementedException();
     public void Visit(NamespaceAccessExpression node) => throw new NotImplementedException();

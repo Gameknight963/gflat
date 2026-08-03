@@ -12,10 +12,12 @@ namespace gflat
                 {
                     public int Main()
                     {
-                        int x = 5;
-                        int y = 10;
-                        int z = x + y;
-                        return z;
+                        int x = 0;
+                        while (x < 10)
+                        {
+                            x = x + 1;
+                        }
+                        return x;
                     }
                 }
             }

@@ -1,124 +1,66 @@
 ﻿using gflat.ast;
+using System.Diagnostics;
 
 namespace gflat
 {
     public class Program
     {
         const string code = """
-            using std;
-
-            namespace TestProgram
+            namespace Program
             {
-                public class Animal
-                {
-                    public string Name;
-                    public int Age;
-
-                    public Animal(string name, int age)
-                    {
-                        Name = name;
-                        Age = age;
-                    }
-
-                    public string Describe()
-                    {
-                        return $"I am {Name} and I am {Age} years old";
-                    }
-                }
-
-                public class Dog : Animal
-                {
-                    public string Breed;
-
-                    public Dog(string name, int age, string breed)
-                    {
-                        Name = name;
-                        Age = age;
-                        Breed = breed;
-                    }
-
-                    public string Bark()
-                    {
-                        return $"{Name} says: woof!";
-                    }
-                }
-
                 public class Program
                 {
-                    public int Main(string[] args)
+                    public int Main()
                     {
-                        // basic arithmetic
                         int x = 5;
                         int y = 10;
-                        int z = x + y * 2;
-
-                        // conditionals
-                        if (z > 20)
-                        {
-                            int big = z * 2;
-                        }
-                        else
-                        {
-                            int small = z + 1;
-                        }
-
-                        // while loop
-                        int counter = 0;
-                        while (counter < 10)
-                        {
-                            counter = counter + 1;
-                        }
-
-                        // for loop
-                        int sum = 0;
-                        for (int i = 0; i < 10; i++)
-                        {
-                            sum = sum + i;
-                        }
-
-                        // pointers
-                        int* ptr = null;
-                        int*? nullable = null;
-
-                        // string interpolation
-                        string msg = $"z is {z} and sum is {sum}";
-
-                        // nested member access
-                        Dog^ dog = new Dog("Rex", 3, "Labrador");
-                        string description = dog.Describe();
-                        string bark = dog.Bark();
-
-                                    bool flag = !true;
-                        int neg = -5;
-
-                        //shit
-                        string complex = $"result is {x + y * 2}";
-
-                        while (true)
-                        {
-                        if (flag) break;
-                        continue;
-                        }
-
-                        // arrow operator
-                        dog->pointee = null;
-
-                        // namespace qualified
-                        std::Console.Write("hello");
-
-                        return 0;
+                        int z = x + y;
+                        return z;
                     }
                 }
             }
             """;
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
+            //List<Token> tokens = Lexer.Tokenize(code);
+            //foreach (Token t in tokens)
+            //    Console.WriteLine($"{t.Kind,-35} '{t.Text}'");
+            //CompilationUnit ast = Parser.Parse(tokens);
+            //AstPrinter printer = new AstPrinter();
+            //ast.Accept(printer);
+
             List<Token> tokens = Lexer.Tokenize(code);
-            foreach (Token t in tokens)
-                Console.WriteLine($"{t.Kind,-35} '{t.Text}'");
             CompilationUnit ast = Parser.Parse(tokens);
-            AstPrinter printer = new AstPrinter();
-            ast.Accept(printer);
+            LlvmEmitter emitter = new LlvmEmitter();
+            ast.Accept(emitter);
+            string ir = emitter.GetOutput();
+            Console.WriteLine(ir);
+            File.WriteAllText("output.ll", ir);
+
+            Process process = new Process();
+            process.StartInfo.FileName = "clang.exe";
+            process.StartInfo.Arguments = "output.ll -o output.exe";
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.UseShellExecute = false;
+            process.Start();
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                Console.Error.WriteLine("clang failed:");
+                Console.Error.WriteLine(process.StandardError.ReadToEnd());
+                return 1;
+            }
+
+            Console.WriteLine("compiled successfully -> output.exe, running...");
+
+            process = new Process();
+            process.StartInfo.FileName = "output.exe";
+            process.StartInfo.RedirectStandardError = true;
+            process.Start();
+            process.WaitForExit();
+            Console.WriteLine($"ran with exit code: {process.ExitCode}");
+            return 0;
         }
     }
 }

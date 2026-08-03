@@ -33,7 +33,9 @@ namespace gflat
 
             List<Token> tokens = Lexer.Tokenize(code);
             CompilationUnit ast = Parser.Parse(tokens);
-            LlvmEmitter emitter = new LlvmEmitter();
+            TypeChecker checker = new TypeChecker();
+            ast.Accept(checker);
+            LlvmEmitter emitter = new LlvmEmitter(checker);
             ast.Accept(emitter);
             string ir = emitter.GetOutput();
             Console.WriteLine(ir);

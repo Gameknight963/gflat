@@ -347,7 +347,6 @@ namespace gflat
                 return ParseVariableDeclaration();
 
             AstNode expr = ParseExpression();
-            Console.WriteLine($"After ParseExpression, current token: {Current.Kind} '{Current.Text}'");
             Expect(TokenKind.Semicolon);
             return new ExpressionStatement(expr, line);
         }

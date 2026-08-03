@@ -5,6 +5,13 @@ namespace gflat;
 
 public class LlvmEmitter : IVisitor
 {
+    private TypeChecker _typeChecker;
+
+    public LlvmEmitter(TypeChecker typeChecker)
+    {
+        _typeChecker = typeChecker;
+    }
+
     private StringBuilder _output = new();
     private StringBuilder _globals = new();
     private int _tempCounter = 0;
@@ -122,8 +129,16 @@ public class LlvmEmitter : IVisitor
 
         node.Condition.Accept(this);
         string cond = Pop();
-        string condBit = NewTemp();
-        Emit($"    {condBit} = icmp ne i32 {cond}, 0");
+
+        string condBit;
+        TypeExpression condType = _typeChecker.GetType(node.Condition);
+        if (condType is NamedTypeExpression { Name: "bool" })
+            condBit = cond;
+        else
+        {
+            condBit = NewTemp();
+            Emit($"    {condBit} = icmp ne i32 {cond}, 0");
+        }
 
         if (node.Else != null)
             Emit($"    br i1 {condBit}, label %{thenLabel}, label %{elseLabel}");
@@ -143,6 +158,7 @@ public class LlvmEmitter : IVisitor
 
         Emit($"{mergeLabel}:");
     }
+
     public void Visit(WhileStatement node)
     {
         string condLabel = NewLabel("while_cond");
@@ -151,18 +167,27 @@ public class LlvmEmitter : IVisitor
 
         Emit($"    br label %{condLabel}");
         Emit($"{condLabel}:");
+
         node.Condition.Accept(this);
         string cond = Pop();
-        string condBit = NewTemp();
-        Emit($"    {condBit} = icmp ne i32 {cond}, 0");
-        Emit($"    br i1 {condBit}, label %{bodyLabel}, label %{exitLabel}");
 
+        string condBit;
+        TypeExpression condType = _typeChecker.GetType(node.Condition);
+        if (condType is NamedTypeExpression { Name: "bool" })
+            condBit = cond;
+        else
+        {
+            condBit = NewTemp();
+            Emit($"    {condBit} = icmp ne i32 {cond}, 0");
+        }
+
+        Emit($"    br i1 {condBit}, label %{bodyLabel}, label %{exitLabel}");
         Emit($"{bodyLabel}:");
         node.Body.Accept(this);
         Emit($"    br label %{condLabel}");
-
         Emit($"{exitLabel}:");
     }
+
     public void Visit(ForStatement node) => throw new NotImplementedException();
 
     public void Visit(VariableDeclaration node)
@@ -208,9 +233,7 @@ public class LlvmEmitter : IVisitor
                 _ => throw new NotImplementedException()
             };
             Emit($"    {temp} = icmp {op} i32 {left}, {right}");
-            string extended = NewTemp();
-            Emit($"    {extended} = zext i1 {temp} to i32");
-            Push(extended);
+            Push(temp);
         }
         else
         {
@@ -254,9 +277,10 @@ public class LlvmEmitter : IVisitor
     {
         if (_locals.TryGetValue(node.Name, out string? ptr))
         {
+            TypeExpression type = _typeChecker.GetType(node);
+            string llvmType = EmitType(type);
             string temp = NewTemp();
-            // we need the type here which is a problem...
-            Emit($"    {temp} = load i32, i32* {ptr}");
+            Emit($"    {temp} = load {llvmType}, {llvmType}* {ptr}");
             Push(temp);
             return;
         }

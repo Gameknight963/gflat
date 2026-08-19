@@ -1,15 +1,13 @@
 ﻿using gflat.ast;
 using gflat.CompileExceptions;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace gflat
 {
     public class TypeChecker : IVisitor
     {
-        private Dictionary<AstNode, TypeExpression> _types = new();
-        private Stack<Dictionary<string, TypeExpression>> _scopes = new();
+        private readonly Dictionary<AstNode, TypeExpression> _types = new();
+        private readonly Stack<Dictionary<string, TypeExpression>> _scopes = new();
+        private readonly Dictionary<string, MethodDeclaration> _functions = new();
 
         public TypeExpression GetType(AstNode node)
         {
@@ -76,9 +74,18 @@ namespace gflat
             root.Accept(checker);
         }
 
-        // stubs for now
         public void Visit(CompilationUnit node)
         {
+            // first pass: register all functions
+            // unlike SOME languages...
+            foreach (NamespaceDeclaration ns in node.Namespaces)
+                foreach (AstNode member in ns.Members)
+                    if (member is ClassDeclaration cls)
+                        foreach (AstNode m in cls.Members)
+                            if (m is MethodDeclaration method)
+                                _functions[method.Name] = method;
+
+            // second pass: type check bodies
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 ns.Accept(this);
         }
@@ -300,8 +307,39 @@ namespace gflat
         {
             foreach (AstNode arg in node.Arguments)
                 arg.Accept(this);
-            // hardcoded for now, will fix when we have proper function declarations
-            RecordType(node, Int);
+
+            string funcName = node.Callee is IdentifierExpression ident ? ident.Name
+                : node.Callee is MemberAccessExpression mem ? mem.Member
+                : throw new NotImplementedException("Complex callee not supported");
+
+            // allow hardcoded external functions for now
+            if (funcName == "printf" || funcName == "puts")
+            {
+                RecordType(node, Int);
+                return;
+            }
+
+            if (!_functions.TryGetValue(funcName, out MethodDeclaration? method))
+                throw new TypeCheckException($"Unknown function '{funcName}'", node.Line);
+
+            // check argument count
+            if (node.Arguments.Count != method.Parameters.Count)
+                throw new TypeCheckException(
+                    $"Function '{funcName}' expects {method.Parameters.Count} arguments but got {node.Arguments.Count}",
+                    node.Line);
+
+            // check argument types
+            for (int i = 0; i < node.Arguments.Count; i++)
+            {
+                TypeExpression argType = GetType(node.Arguments[i]);
+                TypeExpression paramType = method.Parameters[i].Type;
+                if (!TypesMatch(argType, paramType))
+                    throw new TypeCheckException(
+                        $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
+                        node.Line);
+            }
+
+            RecordType(node, method.ReturnType);
         }
         public void Visit(MemberAccessExpression node) => throw new NotImplementedException();
         public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();

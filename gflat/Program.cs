@@ -10,9 +10,32 @@ namespace gflat
             {
                 public class Program
                 {
+                    public int FizzBuzz(int n)
+                    {
+                        if (n > 100)
+                        {
+                            return 0;
+                        }
+                        if (n % 15 == 0)
+                        {
+                            printf("FizzBuzz\n");
+                        }
+                        if (n % 3 == 0)
+                        {
+                            printf("Fizz\n");
+                        }
+                        if (n % 5 == 0)
+                        {
+                            printf("Buzz\n");
+                        }
+                        printf("%d\n", n);
+                        FizzBuzz(n + 1);
+                        return 0;
+                    }
+
                     public int Main()
                     {
-                        printf("Hello, World!\n");
+                        FizzBuzz(1);
                         return 0;
                     }
                 }

@@ -88,6 +88,9 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(MethodDeclaration node)
     {
+        _locals.Clear();
+        _tempCounter = 0; // reset temp names per function too
+
         string returnType = EmitType(node.ReturnType);
         string name = node.Name == "Main" ? "main" : node.Name;
         string parameters = string.Join(", ", node.Parameters.Select(p =>
@@ -95,6 +98,17 @@ public class LlvmEmitter : IVisitor
 
         Emit($"define {returnType} @{name}({parameters}) {{");
         Emit("entry:");
+
+        // declare parameters as locals so they can be used in the body
+        foreach (Parameter p in node.Parameters)
+        {
+            string type = EmitType(p.Type);
+            string ptr = NewTemp();
+            Emit($"    {ptr} = alloca {type}");
+            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            _locals[p.Name] = ptr;
+        }
+
         node.Body.Accept(this);
         Emit("}");
         Emit("");

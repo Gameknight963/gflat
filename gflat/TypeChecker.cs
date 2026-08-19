@@ -296,7 +296,13 @@ namespace gflat
             }
         }
 
-        public void Visit(CallExpression node) => throw new NotImplementedException();
+        public void Visit(CallExpression node)
+        {
+            foreach (AstNode arg in node.Arguments)
+                arg.Accept(this);
+            // hardcoded for now, will fix when we have proper function declarations
+            RecordType(node, Int);
+        }
         public void Visit(MemberAccessExpression node) => throw new NotImplementedException();
         public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
         public void Visit(NewExpression node) => throw new NotImplementedException();

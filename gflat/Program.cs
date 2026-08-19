@@ -12,12 +12,8 @@ namespace gflat
                 {
                     public int Main()
                     {
-                        int x = 0;
-                        while (x < 10)
-                        {
-                            x = x + 1;
-                        }
-                        return x;
+                        printf("Hello, World!\n");
+                        return 0;
                     }
                 }
             }

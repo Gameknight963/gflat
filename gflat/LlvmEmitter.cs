@@ -268,6 +268,19 @@ public class LlvmEmitter : IVisitor
             case TokenKind.Null:
                 Push("null");
                 break;
+            case TokenKind.StringLiteral:
+                {
+                    string raw = node.Token.Text[1..^1]; // strip quotes
+                    string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                    string globalName = NewGlobal();
+                    int len = escaped.Length + 1; // +1 for null terminator
+                    string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                    EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
+                    string ptr = NewTemp();
+                    Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
+                    Push(ptr);
+                    break;
+                }
             default:
                 throw new NotImplementedException($"Literal type {node.Token.Kind} not yet supported");
         }
@@ -286,7 +299,35 @@ public class LlvmEmitter : IVisitor
         }
         throw new Exception($"Unknown identifier '{node.Name}'");
     }
-    public void Visit(CallExpression node) => throw new NotImplementedException();
+    public void Visit(CallExpression node)
+    {
+        // evaluate all arguments first
+        List<string> argValues = new();
+        List<string> argTypes = new();
+        foreach (AstNode arg in node.Arguments)
+        {
+            arg.Accept(this);
+            argValues.Add(Pop());
+            TypeExpression argType = _typeChecker.GetType(arg);
+            argTypes.Add(EmitType(argType));
+        }
+
+        // get the function name
+        string funcName;
+        if (node.Callee is IdentifierExpression ident)
+            funcName = ident.Name;
+        else if (node.Callee is MemberAccessExpression member)
+            funcName = member.Member; // simplified for now
+        else
+            throw new NotImplementedException("Complex callee not supported");
+
+        string args = string.Join(", ", argValues.Zip(argTypes, (v, t) => $"{t} {v}"));
+
+        // handle void vs non-void
+        string temp = NewTemp();
+        Emit($"    {temp} = call i32 @{funcName}({args})");
+        Push(temp);
+    }
     public void Visit(MemberAccessExpression node) => throw new NotImplementedException();
     public void Visit(AssignmentExpression node)
     {

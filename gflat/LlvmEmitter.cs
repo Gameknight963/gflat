@@ -202,7 +202,42 @@ public class LlvmEmitter : IVisitor
         Emit($"{exitLabel}:");
     }
 
-    public void Visit(ForStatement node) => throw new NotImplementedException();
+    public void Visit(ForStatement node)
+    {
+        string condLabel = NewLabel("for_cond");
+        string bodyLabel = NewLabel("for_body");
+        string exitLabel = NewLabel("for_exit");
+
+        node.Initializer?.Accept(this);
+
+        Emit($"    br label %{condLabel}");
+        Emit($"{condLabel}:");
+
+        if (node.Condition != null)
+        {
+            node.Condition.Accept(this);
+            string cond = Pop();
+            string condBit;
+            TypeExpression condType = _typeChecker.GetType(node.Condition);
+            if (condType is NamedTypeExpression { Name: "bool" })
+                condBit = cond;
+            else
+            {
+                condBit = NewTemp();
+                Emit($"    {condBit} = icmp ne i32 {cond}, 0");
+            }
+            Emit($"    br i1 {condBit}, label %{bodyLabel}, label %{exitLabel}");
+        }
+        else
+            Emit($"    br label %{bodyLabel}");
+
+        Emit($"{bodyLabel}:");
+        node.Body.Accept(this);
+        if (node.Increment != null)
+            node.Increment.Accept(this);
+        Emit($"    br label %{condLabel}");
+        Emit($"{exitLabel}:");
+    }
 
     public void Visit(VariableDeclaration node)
     {
@@ -264,8 +299,47 @@ public class LlvmEmitter : IVisitor
             Push(temp);
         }
     }
-    public void Visit(UnaryExpression node) => throw new NotImplementedException();
+    public void Visit(UnaryExpression node)
+    {
+        node.Operand.Accept(this);
+        string operand = Pop();
+        TypeExpression type = _typeChecker.GetType(node.Operand);
+        string llvmType = EmitType(type);
 
+        switch (node.Operator)
+        {
+            case TokenKind.Minus:
+                {
+                    string temp = NewTemp();
+                    Emit($"    {temp} = sub {llvmType} 0, {operand}");
+                    Push(temp);
+                    break;
+                }
+            case TokenKind.Bang:
+                {
+                    string temp = NewTemp();
+                    Emit($"    {temp} = xor i1 {operand}, 1");
+                    Push(temp);
+                    break;
+                }
+            case TokenKind.PlusPlus:
+            case TokenKind.MinusMinus:
+                {
+                    string op = node.Operator == TokenKind.PlusPlus ? "add" : "sub";
+                    string temp = NewTemp();
+                    Emit($"    {temp} = {op} {llvmType} {operand}, 1");
+
+                    // write back to the variable
+                    if (node.Operand is IdentifierExpression ident && _locals.TryGetValue(ident.Name, out string? ptr))
+                        Emit($"    store {llvmType} {temp}, {llvmType}* {ptr}");
+
+                    Push(node.IsPrefix ? temp : operand);
+                    break;
+                }
+            default:
+                throw new NotImplementedException($"Unary operator {node.Operator} not yet supported");
+        }
+    }
     public void Visit(LiteralExpression node)
     {
         switch (node.Token.Kind)

@@ -93,6 +93,7 @@ namespace gflat
             TokenKind.Static => "static",
             TokenKind.Readonly => "readonly",
             TokenKind.Null => "null",
+            TokenKind.Extern => "extern",
             TokenKind.True => "true",
             TokenKind.False => "false",
             TokenKind.Void => "void",

@@ -78,6 +78,7 @@
         Static,
         Readonly,
         Null,
+        Extern,
         True,
         False,
         Void,

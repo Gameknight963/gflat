@@ -136,7 +136,7 @@ namespace gflat
             Indented(() =>
             {
                 node.Type.Accept(this);
-                if (node.Initializer != null) node.Initializer.Accept(this);
+                node.Initializer?.Accept(this);
             });
         }
 
@@ -225,5 +225,9 @@ namespace gflat
         public void Visit(ArrayTypeExpression node) { Print("ArrayType"); Indented(() => node.ElementType.Accept(this)); }
         public void Visit(BreakStatement node) => Print("Break");
         public void Visit(ContinueStatement node) => Print("Continue");
+
+        public void Visit(AttributeNode node) => Print($"AttributeNode");
+
+        public void Visit(ExternDeclaration node) => Print($"ExternDecleration");
     }
 }

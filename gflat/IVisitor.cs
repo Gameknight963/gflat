@@ -37,5 +37,7 @@ namespace gflat
         void Visit(NewExpression node);
         void Visit(ConstructorDeclaration node);
         void Visit(NamespaceAccessExpression node);
+        void Visit(AttributeNode node);
+        void Visit(ExternDeclaration node);
     }
 }

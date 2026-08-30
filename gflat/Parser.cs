@@ -165,6 +165,9 @@ namespace gflat
         private AstNode ParseMember()
         {
             int line = Current.Line;
+            List<AttributeNode> attributes = ParseAttributes();
+            if (Check(TokenKind.Extern))
+                return ParseExternDeclaration(attributes, line);
             TokenKind accessibility = TokenKind.Private;
             bool isStatic = false;
             bool isConst = false;
@@ -198,6 +201,62 @@ namespace gflat
                 return ParseMethodDeclaration(type, name, accessibility, isStatic, line);
 
             return ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line);
+        }
+
+        private List<AttributeNode> ParseAttributes()
+        {
+            List<AttributeNode> attributes = new();
+            while (Check(TokenKind.OpenBracket))
+            {
+                int line = Current.Line;
+                Consume(); // [
+                string name = Expect(TokenKind.Identifier).Text;
+                List<string> args = new();
+                if (Match(TokenKind.OpenParen))
+                {
+                    while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+                    {
+                        args.Add(Expect(TokenKind.StringLiteral).Text);
+                        if (!Check(TokenKind.CloseParen))
+                            Expect(TokenKind.Comma);
+                    }
+                    Expect(TokenKind.CloseParen);
+                }
+                Expect(TokenKind.CloseBracket);
+                attributes.Add(new AttributeNode(name, args, line));
+            }
+            return attributes;
+        }
+
+        private ExternDeclaration ParseExternDeclaration(List<AttributeNode> attributes, int line)
+        {
+            Expect(TokenKind.Extern);
+            TypeExpression returnType = ParseTypeExpression();
+            string name = Expect(TokenKind.Identifier).Text;
+            Expect(TokenKind.OpenParen);
+
+            List<Parameter> parameters = new();
+            bool isVariadic = false;
+
+            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+            {
+                // check for variadic ...
+                if (Check(TokenKind.Dot) && Peek().Kind == TokenKind.Dot && Peek(2).Kind == TokenKind.Dot)
+                {
+                    Consume(); Consume(); Consume();
+                    isVariadic = true;
+                    break;
+                }
+                TypeExpression paramType = ParseTypeExpression();
+                string paramName = Expect(TokenKind.Identifier).Text;
+                parameters.Add(new Parameter(paramName, paramType, Current.Line));
+                if (!Check(TokenKind.CloseParen))
+                    Expect(TokenKind.Comma);
+            }
+
+            Expect(TokenKind.CloseParen);
+            Expect(TokenKind.Semicolon);
+            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line);
         }
 
         private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line)

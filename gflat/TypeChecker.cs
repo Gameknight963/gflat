@@ -8,6 +8,7 @@ namespace gflat
         private readonly Dictionary<AstNode, TypeExpression> _types = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _scopes = new();
         private readonly Dictionary<string, MethodDeclaration> _functions = new();
+        private readonly Dictionary<string, ExternDeclaration> _externs = new();
 
         public TypeExpression GetType(AstNode node)
         {
@@ -82,8 +83,12 @@ namespace gflat
                 foreach (AstNode member in ns.Members)
                     if (member is ClassDeclaration cls)
                         foreach (AstNode m in cls.Members)
+                        {
                             if (m is MethodDeclaration method)
                                 _functions[method.Name] = method;
+                            if (m is ExternDeclaration ext)
+                                _externs[ext.Name] = ext;
+                        }
 
             // second pass: type check bodies
             foreach (NamespaceDeclaration ns in node.Namespaces)
@@ -312,10 +317,9 @@ namespace gflat
                 : node.Callee is MemberAccessExpression mem ? mem.Member
                 : throw new NotImplementedException("Complex callee not supported");
 
-            // allow hardcoded external functions for now
-            if (funcName == "printf" || funcName == "puts")
+            if (_externs.TryGetValue(funcName, out ExternDeclaration? ext))
             {
-                RecordType(node, Int);
+                RecordType(node, ext.ReturnType);
                 return;
             }
 
@@ -351,6 +355,9 @@ namespace gflat
         public void Visit(ArrayTypeExpression node) { }
         public void Visit(BreakStatement node) { }
         public void Visit(ContinueStatement node) { }
+
+        public void Visit(AttributeNode node) { }
+        public void Visit(ExternDeclaration node) { }
 
         private static string TypeName(TypeExpression type) => type switch
         {

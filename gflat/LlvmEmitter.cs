@@ -5,7 +5,7 @@ namespace gflat;
 
 public class LlvmEmitter : IVisitor
 {
-    private TypeChecker _typeChecker;
+    private readonly TypeChecker _typeChecker;
 
     public LlvmEmitter(TypeChecker typeChecker)
     {
@@ -61,8 +61,6 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(CompilationUnit node)
     {
-        EmitGlobal("declare i32 @puts(i8*)");
-        EmitGlobal("declare i32 @printf(i8*, ...)");
         foreach (NamespaceDeclaration ns in node.Namespaces)
             ns.Accept(this);
     }
@@ -85,6 +83,19 @@ public class LlvmEmitter : IVisitor
     public void Visit(InterfaceDeclaration node) => throw new NotImplementedException();
 
     public void Visit(FieldDeclaration node) => throw new NotImplementedException();
+
+    public void Visit(ExternDeclaration node)
+    {
+        // validate it has [External] attribute
+        AttributeNode? external = node.Attributes.FirstOrDefault(a => a.Name == "External") 
+            ?? throw new Exception($"extern declaration '{node.Name}' missing [External] attribute");
+        string returnType = EmitType(node.ReturnType);
+        string parameters = string.Join(", ", node.Parameters.Select(p => EmitType(p.Type)));
+        if (node.IsVariadic)
+            parameters = parameters.Length > 0 ? parameters + ", ..." : "...";
+
+        EmitGlobal($"declare {returnType} @{node.Name}({parameters})");
+    }
 
     public void Visit(MethodDeclaration node)
     {
@@ -443,4 +454,6 @@ public class LlvmEmitter : IVisitor
     public void Visit(ArrayTypeExpression node) => throw new NotImplementedException();
     public void Visit(BreakStatement node) => throw new NotImplementedException();
     public void Visit(ContinueStatement node) => throw new NotImplementedException();
+
+    public void Visit(AttributeNode node) { }
 }

@@ -86,14 +86,10 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(ExternDeclaration node)
     {
-        // validate it has [External] attribute
-        AttributeNode? external = node.Attributes.FirstOrDefault(a => a.Name == "External") 
-            ?? throw new Exception($"extern declaration '{node.Name}' missing [External] attribute");
         string returnType = EmitType(node.ReturnType);
         string parameters = string.Join(", ", node.Parameters.Select(p => EmitType(p.Type)));
         if (node.IsVariadic)
             parameters = parameters.Length > 0 ? parameters + ", ..." : "...";
-
         EmitGlobal($"declare {returnType} @{node.Name}({parameters})");
     }
 

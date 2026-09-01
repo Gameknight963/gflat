@@ -10,7 +10,6 @@ namespace gflat
             {
                 public class Program
                 {
-                    [External("libc")]
                     extern int printf(char* format, ...);
 
                     public int Main()

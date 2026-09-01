@@ -14,7 +14,9 @@ namespace gflat
 
                     public int Main()
                     {
-                        printf("Hello from extern!\n");
+                        char* a = "holy shit we can store strings now";
+                        printf(a);
+                        printf("\n");
                         return 0;
                     }
                 }

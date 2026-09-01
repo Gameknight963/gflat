@@ -42,7 +42,10 @@ namespace gflat
         private static NamedTypeExpression Float => new NamedTypeExpression("float", null, 0);
         private static NamedTypeExpression Bool => new NamedTypeExpression("bool", null, 0);
         private static NamedTypeExpression Char => new NamedTypeExpression("char", null, 0);
-        private static NamedTypeExpression String => new NamedTypeExpression("string", null, 0);
+        private static PointerTypeExpression CharPtr => new PointerTypeExpression(Char, false, 0);
+
+        // leaving this commented till std::String is a thing
+        //private static NamedTypeExpression String => new NamedTypeExpression("string", null, 0);
         private static NamedTypeExpression Void => new NamedTypeExpression("void", null, 0);
         private static NamedTypeExpression Null => new NamedTypeExpression("null", null, 0);
 
@@ -272,12 +275,12 @@ namespace gflat
                 TokenKind.FloatLiteral => Float,
                 TokenKind.DoubleLiteral => Float,
                 TokenKind.LongLiteral => Long,
-                TokenKind.StringLiteral => String,
+                TokenKind.StringLiteral => CharPtr,
                 TokenKind.CharLiteral => Char,
                 TokenKind.True => Bool,
                 TokenKind.False => Bool,
                 TokenKind.Null => Null,
-                TokenKind.InterpolatedStringSegment => String,
+                TokenKind.InterpolatedStringSegment => CharPtr,
                 _ => throw new TypeCheckException($"Unknown literal type {node.Token.Kind}", node.Line)
             };
             RecordType(node, type);

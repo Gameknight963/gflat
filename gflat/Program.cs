@@ -8,17 +8,12 @@ namespace gflat
         const string code = """
             namespace Program
             {
-                public class Program
+                extern int printf(char* fmt, ...);
+            
+                int main()
                 {
-                    extern int printf(char* format, ...);
-
-                    public int Main()
-                    {
-                        char* a = "holy shit we can store strings now";
-                        printf(a);
-                        printf("\n");
-                        return 0;
-                    }
+                    printf("Hello from a free function!\n");
+                    return 0;
                 }
             }
             """;

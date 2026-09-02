@@ -84,14 +84,20 @@ namespace gflat
             // unlike SOME languages...
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 foreach (AstNode member in ns.Members)
+                {
+                    if (member is MethodDeclaration method)
+                        _functions[method.Name] = method;
+                    if (member is ExternDeclaration ext)
+                        _externs[ext.Name] = ext;
                     if (member is ClassDeclaration cls)
                         foreach (AstNode m in cls.Members)
                         {
-                            if (m is MethodDeclaration method)
-                                _functions[method.Name] = method;
-                            if (m is ExternDeclaration ext)
-                                _externs[ext.Name] = ext;
+                            if (m is MethodDeclaration cm)
+                                _functions[cm.Name] = cm;
+                            if (m is ExternDeclaration ce)
+                                _externs[ce.Name] = ce;
                         }
+                }
 
             // second pass: type check bodies
             foreach (NamespaceDeclaration ns in node.Namespaces)

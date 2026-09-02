@@ -73,10 +73,37 @@ namespace gflat
 
             List<AstNode> members = new();
             while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
-                members.Add(ParseTypeDeclaration());
+            {
+                List<AttributeNode> attributes = ParseAttributes();
+
+                if (Check(TokenKind.Extern))
+                {
+                    members.Add(ParseExternDeclaration(attributes, Current.Line));
+                    continue;
+                }
+                if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface))
+                {
+                    members.Add(ParseTypeDeclaration());
+                    continue;
+                }
+                // free function
+                members.Add(ParseFreeFunctionOrField(attributes));
+            }
 
             Expect(TokenKind.CloseBrace);
             return new NamespaceDeclaration(name, members, line);
+        }
+
+        private AstNode ParseFreeFunctionOrField(List<AttributeNode> attributes)
+        {
+            int line = Current.Line;
+            TypeExpression type = ParseTypeExpression();
+            string name = Expect(TokenKind.Identifier).Text;
+
+            if (Check(TokenKind.OpenParen))
+                return ParseMethodDeclaration(type, name, TokenKind.Public, false, line);
+
+            return ParseFieldDeclaration(type, name, TokenKind.Public, false, false, false, line);
         }
 
         private AstNode ParseTypeDeclaration()

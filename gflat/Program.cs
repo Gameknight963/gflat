@@ -31,6 +31,29 @@ namespace gflat
                 }
             }
             """;
+
+        static string GetExitCodeMessage(int exitCode)
+        {
+            uint code = unchecked((uint)exitCode);
+
+            return code switch
+            {
+                0x00000000 => "sucessful",
+                0xC0000005 => "access violation",
+                0xC0000006 => "in-page error",
+                0xC0000017 => "not enough memory",
+                0xC000001D => "illegal instruction",
+                0xC0000094 => "integer division by zero",
+                0xC0000095 => "integer overflow",
+                0xC0000096 => "Privileged instruction",
+                0xC000009A => "insufficient system resources",
+                0xC0000135 => "DLL not found",
+                0xC0000139 => "entry point not found",
+                0xC0000142 => "DLL initialization failed",
+                _ => $"unknown error (0x{code:X8})"
+            };
+        }
+
         static int Main(string[] args)
         {
             //List<Token> tokens = Lexer.Tokenize(code);
@@ -72,7 +95,7 @@ namespace gflat
             process.StartInfo.RedirectStandardError = true;
             process.Start();
             process.WaitForExit();
-            Console.WriteLine(new Win32Exception(process.ExitCode).Message);
+            Console.WriteLine($"0x{process.ExitCode:X8} {GetExitCodeMessage(process.ExitCode)}");
             return 0;
         }
     }

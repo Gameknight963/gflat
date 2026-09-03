@@ -10,12 +10,22 @@ namespace gflat
             {
                 extern int printf(char* fmt, ...);
 
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
                 int main()
                 {
-                    int x = 5;
-                    int* ptr = &x;
-                    *ptr = 10;
-                    printf("%d\n", x);
+                    Point p;
+                    p.x = 3;
+                    p.y = 4;
+
+                    Point* ptr = &p;
+                    ptr.x = 99;
+
+                    printf("%d %d\n", p.x, p.y);
                     return 0;
                 }
             }

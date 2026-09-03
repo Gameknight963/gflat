@@ -41,7 +41,6 @@ public class LlvmEmitter : IVisitor
     private int _labelCounter = 0;
     private string NewLabel(string prefix) => $"{prefix}_{_labelCounter++}";
 
-
     private string EmitType(TypeExpression type)
     {
         if (type is NamedTypeExpression named)
@@ -94,7 +93,14 @@ public class LlvmEmitter : IVisitor
             member.Accept(this);
     }
 
-    public void Visit(StructDeclaration node) => throw new NotImplementedException();
+    public void Visit(StructDeclaration node)
+    {
+        string fields = string.Join(", ", node.Members
+            .OfType<FieldDeclaration>()
+            .Select(f => EmitType(f.Type)));
+        EmitGlobal($"%{node.Name} = type {{ {fields} }}");
+    }
+
     public void Visit(InterfaceDeclaration node) => throw new NotImplementedException();
 
     public void Visit(FieldDeclaration node) => throw new NotImplementedException();
@@ -506,7 +512,45 @@ public class LlvmEmitter : IVisitor
         return $"{left}${node.Member}";
     }
 
-    public void Visit(MemberAccessExpression node) => throw new NotImplementedException();
+    public void Visit(MemberAccessExpression node)
+    {
+        string objPtr;
+        TypeExpression objType = _typeChecker.GetType(node.Object);
+
+        if (node.Object is IdentifierExpression memberIdent && _locals.TryGetValue(memberIdent.Name, out string? ptr))
+        {
+            if (objType is PointerTypeExpression innerPtrType)
+            {
+                string innerLlvmType = EmitType(innerPtrType.Inner);
+                string loadedPtr = NewTemp();
+                Emit($"    {loadedPtr} = load {innerLlvmType}*, {innerLlvmType}** {ptr}");
+                objPtr = loadedPtr;
+            }
+            else
+                objPtr = ptr;
+        }
+        else
+        {
+            node.Object.Accept(this);
+            objPtr = Pop();
+        }
+
+        if (objType is PointerTypeExpression ptrType)
+            objType = ptrType.Inner;
+
+        string structName = ((NamedTypeExpression)objType).Name;
+        TypeChecker.StructInfo info = _typeChecker.GetStruct(structName)!;
+        int fieldIdx = info.FieldIndex(node.Member);
+        TypeExpression fieldType = info.Fields[fieldIdx].Type;
+        string llvmFieldType = EmitType(fieldType);
+
+        string fieldPtr = NewTemp();
+        Emit($"    {fieldPtr} = getelementptr %{structName}, %{structName}* {objPtr}, i32 0, i32 {fieldIdx}");
+        string val = NewTemp();
+        Emit($"    {val} = load {llvmFieldType}, {llvmFieldType}* {fieldPtr}");
+        Push(val);
+    }
+
     public void Visit(AssignmentExpression node)
     {
         node.Value.Accept(this);
@@ -530,6 +574,43 @@ public class LlvmEmitter : IVisitor
                 throw new Exception("Cannot dereference non-pointer");
             string innerType = EmitType(innerPtr.Inner);
             Emit($"    store {innerType} {val}, {innerType}* {ptr}");
+            Push(val);
+        }
+        else if (node.Target is MemberAccessExpression memberAccess)
+        {
+            string objPtr;
+            TypeExpression objType = _typeChecker.GetType(memberAccess.Object);
+
+            if (memberAccess.Object is IdentifierExpression memberIdent && _locals.TryGetValue(memberIdent.Name, out string? ptr))
+            {
+                if (objType is PointerTypeExpression innerPtrType)
+                {
+                    string innerLlvmType = EmitType(innerPtrType.Inner);
+                    string loadedPtr = NewTemp();
+                    Emit($"    {loadedPtr} = load {innerLlvmType}*, {innerLlvmType}** {ptr}");
+                    objPtr = loadedPtr;
+                }
+                else
+                    objPtr = ptr;
+            }
+            else
+            {
+                memberAccess.Object.Accept(this);
+                objPtr = Pop();
+            }
+
+            if (objType is PointerTypeExpression ptrType)
+                objType = ptrType.Inner;
+
+            string structName = ((NamedTypeExpression)objType).Name;
+            TypeChecker.StructInfo info = _typeChecker.GetStruct(structName)!;
+            int fieldIdx = info.FieldIndex(memberAccess.Member);
+            TypeExpression fieldType = info.Fields[fieldIdx].Type;
+            string llvmFieldType = EmitType(fieldType);
+
+            string fieldPtr = NewTemp();
+            Emit($"    {fieldPtr} = getelementptr %{structName}, %{structName}* {objPtr}, i32 0, i32 {fieldIdx}");
+            Emit($"    store {llvmFieldType} {val}, {llvmFieldType}* {fieldPtr}");
             Push(val);
         }
         else

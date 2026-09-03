@@ -12,6 +12,17 @@ namespace gflat
         private NamespaceScope _currentNamespace = null!;
         private readonly Dictionary<NamespaceDeclaration, NamespaceScope> _namespaceScopes = new();
 
+        private Dictionary<string, StructInfo> _structs = new();
+
+        public StructInfo? GetStruct(string name) =>
+            _structs.TryGetValue(name, out StructInfo? info) ? info : null;
+
+        public class StructInfo
+        {
+            public List<(string Name, TypeExpression Type)> Fields = new();
+            public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
+        }
+
         private class NamespaceScope
         {
             public Dictionary<string, MethodDeclaration> Functions = new();
@@ -103,7 +114,7 @@ namespace gflat
         {
             NamespaceScope scope = new NamespaceScope { Parent = parent };
             parent.Children[ns.Name] = scope;
-            _namespaceScopes[ns] = scope; 
+            _namespaceScopes[ns] = scope;
 
             foreach (AstNode member in ns.Members)
             {
@@ -111,6 +122,14 @@ namespace gflat
                     scope.Functions[method.Name] = method;
                 else if (member is ExternDeclaration ext)
                     scope.Externs[ext.Name] = ext;
+                else if (member is StructDeclaration str)
+                {
+                    StructInfo info = new StructInfo();
+                    foreach (AstNode m in str.Members)
+                        if (m is FieldDeclaration field)
+                            info.Fields.Add((field.Name, field.Type));
+                    _structs[str.Name] = info;
+                }
                 else if (member is ClassDeclaration cls)
                     foreach (AstNode m in cls.Members)
                     {
@@ -123,6 +142,7 @@ namespace gflat
                     BuildNamespaceScope(nested, scope);
             }
         }
+
         public void Visit(UsingDirective node) { }
 
         public void Visit(NamespaceDeclaration node)
@@ -142,7 +162,13 @@ namespace gflat
                 member.Accept(this);
         }
 
-        public void Visit(StructDeclaration node) => throw new NotImplementedException();
+        public void Visit(StructDeclaration node)
+        {
+            // structs have no methods for now, just fields
+            // field types are validated when accessed
+            // nothing to type check in the body yet
+        }
+
         public void Visit(InterfaceDeclaration node) => throw new NotImplementedException();
         public void Visit(FieldDeclaration node) => throw new NotImplementedException();
 
@@ -354,6 +380,31 @@ namespace gflat
                         $"Cannot assign '{TypeName(valueType)}' to '{TypeName(ptr.Inner)}'", node.Line);
                 RecordType(node, ptr.Inner);
             }
+            else if (node.Target is MemberAccessExpression memberAccess)
+            {
+                memberAccess.Object.Accept(this);
+                TypeExpression objType = GetType(memberAccess.Object);
+
+                if (objType is PointerTypeExpression ptr)
+                    objType = ptr.Inner;
+
+                if (objType is not NamedTypeExpression named)
+                    throw new TypeCheckException("Member access on non-struct type", node.Line);
+
+                if (!_structs.TryGetValue(named.Name, out StructInfo? info))
+                    throw new TypeCheckException($"'{named.Name}' is not a struct", node.Line);
+
+                int idx = info.FieldIndex(memberAccess.Member);
+                if (idx < 0)
+                    throw new TypeCheckException($"'{named.Name}' has no field '{memberAccess.Member}'", node.Line);
+
+                TypeExpression fieldType = info.Fields[idx].Type;
+                if (!TypesMatch(fieldType, valueType))
+                    throw new TypeCheckException(
+                        $"Cannot assign '{TypeName(valueType)}' to '{TypeName(fieldType)}'", node.Line);
+
+                RecordType(node, fieldType);
+            }
             else
             {
                 throw new NotImplementedException("Complex assignment targets not yet supported");
@@ -486,7 +537,28 @@ namespace gflat
             return null;
         }
 
-        public void Visit(MemberAccessExpression node) => throw new NotImplementedException();
+        public void Visit(MemberAccessExpression node)
+        {
+            node.Object.Accept(this);
+            TypeExpression objType = GetType(node.Object);
+
+            // unwrap pointer if needed
+            if (objType is PointerTypeExpression ptr)
+                objType = ptr.Inner;
+
+            if (objType is not NamedTypeExpression named)
+                throw new TypeCheckException("Member access on non-struct type", node.Line);
+
+            if (!_structs.TryGetValue(named.Name, out StructInfo? info))
+                throw new TypeCheckException($"'{named.Name}' is not a struct", node.Line);
+
+            int idx = info.FieldIndex(node.Member);
+            if (idx < 0)
+                throw new TypeCheckException($"'{named.Name}' has no field '{node.Member}'", node.Line);
+
+            RecordType(node, info.Fields[idx].Type);
+        }
+
         public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
         public void Visit(NewExpression node) => throw new NotImplementedException();
         public void Visit(NamedTypeExpression node) { }

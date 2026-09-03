@@ -109,7 +109,7 @@ public class LlvmEmitter : IVisitor
     public void Visit(MethodDeclaration node)
     {
         _locals.Clear();
-        _tempCounter = 0; // reset temp names per function too
+        _tempCounter = 0;
 
         string returnType = EmitType(node.ReturnType);
         string name = node.Name == "main" ? "main" : $"gflat${_currentNamespacePath}${node.Name}";
@@ -119,7 +119,6 @@ public class LlvmEmitter : IVisitor
         Emit($"define {returnType} @{name}({parameters}) {{");
         Emit("entry:");
 
-        // declare parameters as locals so they can be used in the body
         foreach (Parameter p in node.Parameters)
         {
             string type = EmitType(p.Type);
@@ -130,6 +129,11 @@ public class LlvmEmitter : IVisitor
         }
 
         node.Body.Accept(this);
+
+        // emit ret void if void function has no explicit return
+        if (returnType == "void")
+            Emit("    ret void");
+
         Emit("}");
         Emit("");
     }

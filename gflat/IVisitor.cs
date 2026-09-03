@@ -39,5 +39,6 @@ namespace gflat
         void Visit(NamespaceAccessExpression node);
         void Visit(AttributeNode node);
         void Visit(ExternDeclaration node);
+        void Visit(GlobalExpression node);
     }
 }

@@ -86,6 +86,11 @@ namespace gflat
                     members.Add(ParseTypeDeclaration());
                     continue;
                 }
+                if (Check(TokenKind.Namespace))
+                {
+                    members.Add(ParseNamespaceDeclaration());
+                    continue;
+                }
                 // free function
                 members.Add(ParseFreeFunctionOrField(attributes));
             }
@@ -97,13 +102,22 @@ namespace gflat
         private AstNode ParseFreeFunctionOrField(List<AttributeNode> attributes)
         {
             int line = Current.Line;
+            TokenKind accessibility = TokenKind.Public; // default for free functions
+
+            if (Check(TokenKind.Public) || Check(TokenKind.Private) ||
+                Check(TokenKind.Protected) || Check(TokenKind.Internal))
+            {
+                accessibility = Current.Kind;
+                Consume();
+            }
+
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
 
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, TokenKind.Public, false, line);
+                return ParseMethodDeclaration(type, name, accessibility, false, line);
 
-            return ParseFieldDeclaration(type, name, TokenKind.Public, false, false, false, line);
+            return ParseFieldDeclaration(type, name, accessibility, false, false, false, line);
         }
 
         private AstNode ParseTypeDeclaration()
@@ -656,6 +670,18 @@ namespace gflat
             {
                 Token token = Consume();
                 return new IdentifierExpression(token.Text, line);
+            }
+
+            // global
+            if (Check(TokenKind.Global))
+            {
+                Consume(); // consume 'global'
+                Expect(TokenKind.DoubleColon);
+                string member = Expect(TokenKind.Identifier).Text;
+                AstNode left = new GlobalExpression(line);
+                // handle chained :: after global
+                AstNode result = new NamespaceAccessExpression(left, member, line);
+                return result;
             }
 
             throw new Exception($"Unexpected token '{Current.Text}' on line {line}");

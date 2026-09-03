@@ -202,6 +202,7 @@ public class Lexer
             "extralong" => TokenKind.ExtraLong,
             "string" => TokenKind.String,
             "extern" => TokenKind.Extern,
+            "global" => TokenKind.Global,
             _ => TokenKind.Identifier
         };
     }

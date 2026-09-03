@@ -7,8 +7,18 @@ namespace gflat
     {
         private readonly Dictionary<AstNode, TypeExpression> _types = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _scopes = new();
-        private readonly Dictionary<string, MethodDeclaration> _functions = new();
-        private readonly Dictionary<string, ExternDeclaration> _externs = new();
+
+        private readonly NamespaceScope _globalScope = new();
+        private NamespaceScope _currentNamespace = null!;
+        private readonly Dictionary<NamespaceDeclaration, NamespaceScope> _namespaceScopes = new();
+
+        private class NamespaceScope
+        {
+            public Dictionary<string, MethodDeclaration> Functions = new();
+            public Dictionary<string, ExternDeclaration> Externs = new();
+            public Dictionary<string, NamespaceScope> Children = new();
+            public NamespaceScope? Parent;
+        }
 
         public TypeExpression GetType(AstNode node)
         {
@@ -80,36 +90,50 @@ namespace gflat
 
         public void Visit(CompilationUnit node)
         {
-            // first pass: register all functions
-            // unlike SOME languages...
+            // first pass: build namespace tree
             foreach (NamespaceDeclaration ns in node.Namespaces)
-                foreach (AstNode member in ns.Members)
-                {
-                    if (member is MethodDeclaration method)
-                        _functions[method.Name] = method;
-                    if (member is ExternDeclaration ext)
-                        _externs[ext.Name] = ext;
-                    if (member is ClassDeclaration cls)
-                        foreach (AstNode m in cls.Members)
-                        {
-                            if (m is MethodDeclaration cm)
-                                _functions[cm.Name] = cm;
-                            if (m is ExternDeclaration ce)
-                                _externs[ce.Name] = ce;
-                        }
-                }
+                BuildNamespaceScope(ns, _globalScope);
 
             // second pass: type check bodies
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 ns.Accept(this);
         }
 
+        private void BuildNamespaceScope(NamespaceDeclaration ns, NamespaceScope parent)
+        {
+            NamespaceScope scope = new NamespaceScope { Parent = parent };
+            parent.Children[ns.Name] = scope;
+            _namespaceScopes[ns] = scope; 
+
+            foreach (AstNode member in ns.Members)
+            {
+                if (member is MethodDeclaration method)
+                    scope.Functions[method.Name] = method;
+                else if (member is ExternDeclaration ext)
+                    scope.Externs[ext.Name] = ext;
+                else if (member is ClassDeclaration cls)
+                    foreach (AstNode m in cls.Members)
+                    {
+                        if (m is MethodDeclaration cm)
+                            scope.Functions[cm.Name] = cm;
+                        if (m is ExternDeclaration ce)
+                            scope.Externs[ce.Name] = ce;
+                    }
+                else if (member is NamespaceDeclaration nested)
+                    BuildNamespaceScope(nested, scope);
+            }
+        }
         public void Visit(UsingDirective node) { }
 
         public void Visit(NamespaceDeclaration node)
         {
+            NamespaceScope previous = _currentNamespace;
+            _currentNamespace = _namespaceScopes[node];
+
             foreach (AstNode member in node.Members)
                 member.Accept(this);
+
+            _currentNamespace = previous;
         }
 
         public void Visit(ClassDeclaration node)
@@ -322,26 +346,41 @@ namespace gflat
             foreach (AstNode arg in node.Arguments)
                 arg.Accept(this);
 
-            string funcName = node.Callee is IdentifierExpression ident ? ident.Name
-                : node.Callee is MemberAccessExpression mem ? mem.Member
-                : throw new NotImplementedException("Complex callee not supported");
+            string? funcName = null;
+            MethodDeclaration? method = null;
+            ExternDeclaration? ext = null;
 
-            if (_externs.TryGetValue(funcName, out ExternDeclaration? ext))
+            if (node.Callee is IdentifierExpression ident)
+            {
+                funcName = ident.Name;
+                method = ResolveFunction(funcName);
+                ext = method == null ? ResolveExtern(funcName) : null;
+            }
+            else if (node.Callee is NamespaceAccessExpression nsAccess)
+            {
+                nsAccess.Accept(this);
+                RecordType(node, GetType(nsAccess));
+                return;
+            }
+            else
+            {
+                throw new NotImplementedException("Complex callee not supported");
+            }
+
+            if (ext != null)
             {
                 RecordType(node, ext.ReturnType);
                 return;
             }
 
-            if (!_functions.TryGetValue(funcName, out MethodDeclaration? method))
+            if (method == null)
                 throw new TypeCheckException($"Unknown function '{funcName}'", node.Line);
 
-            // check argument count
             if (node.Arguments.Count != method.Parameters.Count)
                 throw new TypeCheckException(
                     $"Function '{funcName}' expects {method.Parameters.Count} arguments but got {node.Arguments.Count}",
                     node.Line);
 
-            // check argument types
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 TypeExpression argType = GetType(node.Arguments[i]);
@@ -354,10 +393,83 @@ namespace gflat
 
             RecordType(node, method.ReturnType);
         }
+
+        private MethodDeclaration? ResolveFunction(string name)
+        {
+            NamespaceScope? scope = _currentNamespace;
+            while (scope != null)
+            {
+                if (scope.Functions.TryGetValue(name, out MethodDeclaration? method))
+                    return method;
+                scope = scope.Parent;
+            }
+            return null;
+        }
+
+        private ExternDeclaration? ResolveExtern(string name)
+        {
+            NamespaceScope? scope = _currentNamespace;
+            while (scope != null)
+            {
+                if (scope.Externs.TryGetValue(name, out ExternDeclaration? ext))
+                    return ext;
+                scope = scope.Parent;
+            }
+            return null;
+        }
+
+        public void Visit(NamespaceAccessExpression node)
+        {
+            // resolve the left side to a namespace scope
+            NamespaceScope? scope = ResolveNamespace(node.Left);
+            if (scope == null)
+                throw new TypeCheckException($"Could not resolve namespace", node.Line);
+
+            if (scope.Functions.TryGetValue(node.Member, out MethodDeclaration? method))
+            {
+                RecordType(node, method.ReturnType);
+                return;
+            }
+            if (scope.Externs.TryGetValue(node.Member, out ExternDeclaration? ext))
+            {
+                RecordType(node, ext.ReturnType);
+                return;
+            }
+            throw new TypeCheckException($"'{node.Member}' not found in namespace", node.Line);
+        }
+
+        private NamespaceScope? ResolveNamespace(AstNode node)
+        {
+            if (node is GlobalExpression)
+                return _globalScope;
+
+            if (node is IdentifierExpression ident)
+            {
+                // look for child namespace relative to current
+                NamespaceScope? scope = _currentNamespace;
+                while (scope != null)
+                {
+                    if (scope.Children.TryGetValue(ident.Name, out NamespaceScope? child))
+                        return child;
+                    scope = scope.Parent;
+                }
+                return null;
+            }
+
+            if (node is NamespaceAccessExpression access)
+            {
+                NamespaceScope? parent = ResolveNamespace(access.Left);
+                if (parent == null) return null;
+                parent.Children.TryGetValue(access.Member, out NamespaceScope? child);
+                return child;
+            }
+
+            return null;
+        }
+
         public void Visit(MemberAccessExpression node) => throw new NotImplementedException();
         public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
         public void Visit(NewExpression node) => throw new NotImplementedException();
-        public void Visit(NamespaceAccessExpression node) => throw new NotImplementedException();
         public void Visit(NamedTypeExpression node) { }
         public void Visit(PointerTypeExpression node) { }
         public void Visit(ManagedTypeExpression node) { }
@@ -376,5 +488,7 @@ namespace gflat
             ArrayTypeExpression a => TypeName(a.ElementType) + "[]",
             _ => "unknown"
         };
+
+        public void Visit(GlobalExpression node) { }
     }
 }

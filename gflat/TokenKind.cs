@@ -92,6 +92,7 @@
         InterpolatedStringSegment,
         InterpolatedStringExprStart,
         InterpolatedStringExprEnd,
+        Global,
         EndOfFile
     }
 }

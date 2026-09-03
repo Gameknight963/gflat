@@ -229,5 +229,6 @@ namespace gflat
         public void Visit(AttributeNode node) => Print($"AttributeNode");
 
         public void Visit(ExternDeclaration node) => Print($"ExternDecleration");
+        public void Visit(GlobalExpression node) => Print($"GlobalExpression");
     }
 }

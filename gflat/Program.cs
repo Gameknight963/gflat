@@ -13,7 +13,17 @@ namespace gflat
                 int main()
                 {
                     printf("Hello from a free function!\n");
+                    Nested::helper();
+                    global::Program::Nested::helper();
                     return 0;
+                }
+
+                namespace Nested
+                {
+                    void helper()
+                    {
+                        printf("helper");
+                    }
                 }
             }
             """;

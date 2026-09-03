@@ -12,12 +12,17 @@ public class LlvmEmitter : IVisitor
         _typeChecker = typeChecker;
     }
 
-    private StringBuilder _output = new();
-    private StringBuilder _globals = new();
+    private readonly StringBuilder _output = new();
+    private readonly StringBuilder _globals = new();
     private int _tempCounter = 0;
     private int _stringCounter = 0;
-    private Stack<string> _valueStack = new();
-    private Dictionary<string, string> _locals = new();
+    private readonly Stack<string> _valueStack = new();
+    private readonly Dictionary<string, string> _locals = new();
+
+    private readonly HashSet<string> _externNames = new();
+    private bool IsExtern(string name) => _externNames.Contains(name);
+
+    private string _currentNamespacePath = "";
 
     private string NewTemp() => $"%t{_tempCounter++}";
     private string NewGlobal() => $"@str{_stringCounter++}";
@@ -69,8 +74,15 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(NamespaceDeclaration node)
     {
+        string previous = _currentNamespacePath;
+        _currentNamespacePath = _currentNamespacePath.Length > 0
+            ? $"{_currentNamespacePath}${node.Name}"
+            : node.Name;
+
         foreach (AstNode member in node.Members)
             member.Accept(this);
+
+        _currentNamespacePath = previous;
     }
 
     public void Visit(ClassDeclaration node)
@@ -86,6 +98,7 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(ExternDeclaration node)
     {
+        _externNames.Add(node.Name);
         string returnType = EmitType(node.ReturnType);
         string parameters = string.Join(", ", node.Parameters.Select(p => EmitType(p.Type)));
         if (node.IsVariadic)
@@ -99,7 +112,7 @@ public class LlvmEmitter : IVisitor
         _tempCounter = 0; // reset temp names per function too
 
         string returnType = EmitType(node.ReturnType);
-        string name = node.Name == "Main" ? "main" : node.Name;
+        string name = node.Name == "main" ? "main" : $"gflat${_currentNamespacePath}${node.Name}";
         string parameters = string.Join(", ", node.Parameters.Select(p =>
             $"{EmitType(p.Type)} %{p.Name}"));
 
@@ -394,9 +407,9 @@ public class LlvmEmitter : IVisitor
         }
         throw new Exception($"Unknown identifier '{node.Name}'");
     }
+
     public void Visit(CallExpression node)
     {
-        // evaluate all arguments first
         List<string> argValues = new();
         List<string> argTypes = new();
         foreach (AstNode arg in node.Arguments)
@@ -407,22 +420,47 @@ public class LlvmEmitter : IVisitor
             argTypes.Add(EmitType(argType));
         }
 
-        // get the function name
         string funcName;
         if (node.Callee is IdentifierExpression ident)
-            funcName = ident.Name;
-        else if (node.Callee is MemberAccessExpression member)
-            funcName = member.Member; // simplified for now
+        {
+            // could be a local function or an extern
+            funcName = ident.Name == "main" ? "main" : $"gflat${_currentNamespacePath}${ident.Name}";
+            // check if it's an extern - externs don't get mangled
+            TypeExpression callType = _typeChecker.GetType(node);
+            if (IsExtern(ident.Name))
+                funcName = ident.Name;
+        }
+        else if (node.Callee is NamespaceAccessExpression nsAccess)
+        {
+            funcName = ResolveCallMangledName(nsAccess);
+        }
         else
+        {
             throw new NotImplementedException("Complex callee not supported");
+        }
 
         string args = string.Join(", ", argValues.Zip(argTypes, (v, t) => $"{t} {v}"));
-
-        // handle void vs non-void
         string temp = NewTemp();
         Emit($"    {temp} = call i32 @{funcName}({args})");
         Push(temp);
     }
+
+    private string ResolveCallMangledName(NamespaceAccessExpression node)
+    {
+        if (node.Left is GlobalExpression)
+            return $"gflat${node.Member}";
+
+        string left;
+        if (node.Left is IdentifierExpression ident)
+            left = $"gflat${_currentNamespacePath}${ident.Name}";
+        else if (node.Left is NamespaceAccessExpression nested)
+            left = ResolveCallMangledName(nested);
+        else
+            throw new NotImplementedException();
+
+        return $"{left}${node.Member}";
+    }
+
     public void Visit(MemberAccessExpression node) => throw new NotImplementedException();
     public void Visit(AssignmentExpression node)
     {
@@ -452,4 +490,5 @@ public class LlvmEmitter : IVisitor
     public void Visit(ContinueStatement node) => throw new NotImplementedException();
 
     public void Visit(AttributeNode node) { }
+    public void Visit(GlobalExpression node) { }
 }

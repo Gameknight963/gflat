@@ -17,6 +17,11 @@ namespace gflat
                     int y;
                 }
 
+                int DoSomething(Point p)
+                {
+                    return 5;
+                }
+
                 int main()
                 {
                     Point p;
@@ -26,6 +31,7 @@ namespace gflat
                     Point* ptr = &p;
                     ptr.x = 99;
 
+                    printf("%d\n", DoSomething(*ptr));
                     printf("%d %d\n", p.x, p.y);
                     return 0;
                 }

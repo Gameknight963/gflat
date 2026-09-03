@@ -346,6 +346,19 @@ public class LlvmEmitter : IVisitor
     }
     public void Visit(UnaryExpression node)
     {
+        if (node.Operator == TokenKind.Ampersand)
+        {
+            if (node.Operand is IdentifierExpression ident)
+            {
+                if (!_locals.TryGetValue(ident.Name, out string? ptr))
+                    throw new Exception($"Cannot take address of '{ident.Name}'");
+                Push(ptr);
+            }
+            else
+                throw new NotImplementedException("Can only take address of local variables for now");
+            return;
+        }
+
         node.Operand.Accept(this);
         string operand = Pop();
         TypeExpression type = _typeChecker.GetType(node.Operand);
@@ -379,18 +392,6 @@ public class LlvmEmitter : IVisitor
                         Emit($"    store {llvmType} {temp}, {llvmType}* {ptr}");
 
                     Push(node.IsPrefix ? temp : operand);
-                    break;
-                }
-            case TokenKind.Ampersand:
-                {
-                    if (node.Operand is IdentifierExpression ident)
-                    {
-                        if (!_locals.TryGetValue(ident.Name, out string? ptr))
-                            throw new Exception($"Cannot take address of '{ident.Name}'");
-                        Push(ptr); // the alloca ptr IS the address
-                    }
-                    else
-                        throw new NotImplementedException("Can only take address of local variables for now");
                     break;
                 }
             case TokenKind.Star:

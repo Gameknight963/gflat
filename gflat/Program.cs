@@ -1,4 +1,5 @@
 ﻿using gflat.ast;
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace gflat
@@ -71,7 +72,7 @@ namespace gflat
             process.StartInfo.RedirectStandardError = true;
             process.Start();
             process.WaitForExit();
-            Console.WriteLine($"ran with exit code: {process.ExitCode}");
+            Console.WriteLine(new Win32Exception(process.ExitCode).Message);
             return 0;
         }
     }

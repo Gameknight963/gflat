@@ -375,6 +375,32 @@ public class LlvmEmitter : IVisitor
                     Push(node.IsPrefix ? temp : operand);
                     break;
                 }
+            case TokenKind.Ampersand:
+                {
+                    if (node.Operand is IdentifierExpression ident)
+                    {
+                        if (!_locals.TryGetValue(ident.Name, out string? ptr))
+                            throw new Exception($"Cannot take address of '{ident.Name}'");
+                        Push(ptr); // the alloca ptr IS the address
+                    }
+                    else
+                        throw new NotImplementedException("Can only take address of local variables for now");
+                    break;
+                }
+            case TokenKind.Star:
+                {
+                    node.Operand.Accept(this);
+                    string ptr = Pop();
+                    TypeExpression ptrType = _typeChecker.GetType(node.Operand);
+                    if (ptrType is not PointerTypeExpression innerPtr)
+                        throw new Exception("Cannot dereference non-pointer");
+                    string innerType = EmitType(innerPtr.Inner);
+                    string temp = NewTemp();
+                    Emit($"    {temp} = load {innerType}, {innerType}* {ptr}");
+                    Push(temp);
+                    break;
+                }
+
             default:
                 throw new NotImplementedException($"Unary operator {node.Operator} not yet supported");
         }
@@ -490,13 +516,24 @@ public class LlvmEmitter : IVisitor
         {
             if (!_locals.TryGetValue(ident.Name, out string? ptr))
                 throw new Exception($"Unknown variable '{ident.Name}'");
-            Emit($"    store i32 {val}, i32* {ptr}");
-            Push(val); // assignment is an expression, push the value back
+            TypeExpression type = _typeChecker.GetType(node.Target);
+            string llvmType = EmitType(type);
+            Emit($"    store {llvmType} {val}, {llvmType}* {ptr}");
+            Push(val);
+        }
+        else if (node.Target is UnaryExpression { Operator: TokenKind.Star } deref)
+        {
+            deref.Operand.Accept(this);
+            string ptr = Pop();
+            TypeExpression ptrType = _typeChecker.GetType(deref.Operand);
+            if (ptrType is not PointerTypeExpression innerPtr)
+                throw new Exception("Cannot dereference non-pointer");
+            string innerType = EmitType(innerPtr.Inner);
+            Emit($"    store {innerType} {val}, {innerType}* {ptr}");
+            Push(val);
         }
         else
-        {
             throw new NotImplementedException("Complex assignment targets not yet supported");
-        }
     }
     public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
     public void Visit(NewExpression node) => throw new NotImplementedException();

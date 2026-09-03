@@ -292,6 +292,14 @@ namespace gflat
                         throw new TypeCheckException("'++/--' requires numeric operand", node.Line);
                     RecordType(node, operand);
                     break;
+                case TokenKind.Ampersand:
+                    RecordType(node, new PointerTypeExpression(operand, false, node.Line));
+                    break;
+                case TokenKind.Star:
+                    if (operand is not PointerTypeExpression ptr)
+                        throw new TypeCheckException("Cannot dereference non-pointer", node.Line);
+                    RecordType(node, ptr.Inner);
+                    break;
                 default:
                     throw new NotImplementedException($"Unary operator {node.Operator} not yet supported");
             }
@@ -334,6 +342,17 @@ namespace gflat
                     throw new TypeCheckException(
                         $"Cannot assign '{TypeName(valueType)}' to '{TypeName(targetType)}'", node.Line);
                 RecordType(node, targetType);
+            }
+            else if (node.Target is UnaryExpression { Operator: TokenKind.Star } deref)
+            {
+                deref.Operand.Accept(this);
+                TypeExpression ptrType = GetType(deref.Operand);
+                if (ptrType is not PointerTypeExpression ptr)
+                    throw new TypeCheckException("Cannot dereference non-pointer", node.Line);
+                if (!TypesMatch(ptr.Inner, valueType))
+                    throw new TypeCheckException(
+                        $"Cannot assign '{TypeName(valueType)}' to '{TypeName(ptr.Inner)}'", node.Line);
+                RecordType(node, ptr.Inner);
             }
             else
             {

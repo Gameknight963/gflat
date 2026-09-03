@@ -12,14 +12,10 @@ namespace gflat
 
                 int main()
                 {
-                    int i = 0;
-                    while (true)
-                    {
-                        if (i >= 5)
-                            break;
-                        i = i + 1;
-                    }
-                    printf("%d\n", i);
+                    int x = 5;
+                    int* ptr = &x;
+                    *ptr = 10;
+                    printf("%d\n", x);
                     return 0;
                 }
             }

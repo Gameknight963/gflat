@@ -38,6 +38,66 @@ public class LlvmEmitter : IVisitor
 
     public string GetOutput() => _globals.ToString() + "\n" + _output.ToString();
 
+    private enum EmitMode { RValue, LValue }
+
+    private void EmitAddress(AstNode node)
+    {
+        if (node is IdentifierExpression ident)
+        {
+            if (!_locals.TryGetValue(ident.Name, out string? ptr))
+                throw new Exception($"Unknown variable '{ident.Name}'");
+            Push(ptr);
+        }
+        else if (node is MemberAccessExpression member)
+        {
+            EmitMemberAddress(member);
+        }
+        else if (node is UnaryExpression { Operator: TokenKind.Star } deref)
+        {
+            deref.Operand.Accept(this);
+        }
+        else
+            throw new NotImplementedException($"Cannot take address of {node.GetType().Name}");
+    }
+
+
+    private void EmitMemberAddress(MemberAccessExpression node)
+    {
+        string objPtr;
+        TypeExpression objType = _typeChecker.GetType(node.Object);
+
+        if (node.Object is IdentifierExpression ident && _locals.TryGetValue(ident.Name, out string? ptr))
+        {
+            if (objType is PointerTypeExpression innerPtrType)
+            {
+                string innerLlvmType = EmitType(innerPtrType.Inner);
+                string loadedPtr = NewTemp();
+                Emit($"    {loadedPtr} = load {innerLlvmType}*, {innerLlvmType}** {ptr}");
+                objPtr = loadedPtr;
+            }
+            else
+                objPtr = ptr;
+        }
+        else
+        {
+            node.Object.Accept(this);
+            objPtr = Pop();
+        }
+
+        if (objType is PointerTypeExpression ptrType)
+            objType = ptrType.Inner;
+
+        string structName = ((NamedTypeExpression)objType).Name;
+        TypeChecker.StructInfo info = _typeChecker.GetStruct(structName)!;
+        int fieldIdx = info.FieldIndex(node.Member);
+        TypeExpression fieldType = info.Fields[fieldIdx].Type;
+        string llvmFieldType = EmitType(fieldType);
+
+        string fieldPtr = NewTemp();
+        Emit($"    {fieldPtr} = getelementptr %{structName}, %{structName}* {objPtr}, i32 0, i32 {fieldIdx}");
+        Push(fieldPtr);
+    }
+
     private int _labelCounter = 0;
     private string NewLabel(string prefix) => $"{prefix}_{_labelCounter++}";
 
@@ -344,18 +404,27 @@ public class LlvmEmitter : IVisitor
             Push(temp);
         }
     }
+
     public void Visit(UnaryExpression node)
     {
         if (node.Operator == TokenKind.Ampersand)
         {
-            if (node.Operand is IdentifierExpression ident)
-            {
-                if (!_locals.TryGetValue(ident.Name, out string? ptr))
-                    throw new Exception($"Cannot take address of '{ident.Name}'");
-                Push(ptr);
-            }
-            else
-                throw new NotImplementedException("Can only take address of local variables for now");
+            EmitAddress(node.Operand);
+            return;
+        }
+
+        if (node.Operator == TokenKind.Star)
+        {
+            node.Operand.Accept(this);
+            string ptr = Pop();
+            TypeExpression ptrType = _typeChecker.GetType(node.Operand);
+            if (ptrType is not PointerTypeExpression innerPtr)
+                throw new Exception("Cannot dereference non-pointer");
+
+            string innerType = EmitType(innerPtr.Inner);
+            string temp = NewTemp();
+            Emit($"    {temp} = load {innerType}, {innerType}* {ptr}");
+            Push(temp);
             return;
         }
 
@@ -387,31 +456,17 @@ public class LlvmEmitter : IVisitor
                     string temp = NewTemp();
                     Emit($"    {temp} = {op} {llvmType} {operand}, 1");
 
-                    // write back to the variable
                     if (node.Operand is IdentifierExpression ident && _locals.TryGetValue(ident.Name, out string? ptr))
                         Emit($"    store {llvmType} {temp}, {llvmType}* {ptr}");
 
                     Push(node.IsPrefix ? temp : operand);
                     break;
                 }
-            case TokenKind.Star:
-                {
-                    node.Operand.Accept(this);
-                    string ptr = Pop();
-                    TypeExpression ptrType = _typeChecker.GetType(node.Operand);
-                    if (ptrType is not PointerTypeExpression innerPtr)
-                        throw new Exception("Cannot dereference non-pointer");
-                    string innerType = EmitType(innerPtr.Inner);
-                    string temp = NewTemp();
-                    Emit($"    {temp} = load {innerType}, {innerType}* {ptr}");
-                    Push(temp);
-                    break;
-                }
-
             default:
                 throw new NotImplementedException($"Unary operator {node.Operator} not yet supported");
         }
     }
+
     public void Visit(LiteralExpression node)
     {
         switch (node.Token.Kind)
@@ -515,38 +570,10 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(MemberAccessExpression node)
     {
-        string objPtr;
-        TypeExpression objType = _typeChecker.GetType(node.Object);
-
-        if (node.Object is IdentifierExpression memberIdent && _locals.TryGetValue(memberIdent.Name, out string? ptr))
-        {
-            if (objType is PointerTypeExpression innerPtrType)
-            {
-                string innerLlvmType = EmitType(innerPtrType.Inner);
-                string loadedPtr = NewTemp();
-                Emit($"    {loadedPtr} = load {innerLlvmType}*, {innerLlvmType}** {ptr}");
-                objPtr = loadedPtr;
-            }
-            else
-                objPtr = ptr;
-        }
-        else
-        {
-            node.Object.Accept(this);
-            objPtr = Pop();
-        }
-
-        if (objType is PointerTypeExpression ptrType)
-            objType = ptrType.Inner;
-
-        string structName = ((NamedTypeExpression)objType).Name;
-        TypeChecker.StructInfo info = _typeChecker.GetStruct(structName)!;
-        int fieldIdx = info.FieldIndex(node.Member);
-        TypeExpression fieldType = info.Fields[fieldIdx].Type;
+        EmitMemberAddress(node);
+        string fieldPtr = Pop();
+        TypeExpression fieldType = _typeChecker.GetType(node);
         string llvmFieldType = EmitType(fieldType);
-
-        string fieldPtr = NewTemp();
-        Emit($"    {fieldPtr} = getelementptr %{structName}, %{structName}* {objPtr}, i32 0, i32 {fieldIdx}");
         string val = NewTemp();
         Emit($"    {val} = load {llvmFieldType}, {llvmFieldType}* {fieldPtr}");
         Push(val);
@@ -557,66 +584,16 @@ public class LlvmEmitter : IVisitor
         node.Value.Accept(this);
         string val = Pop();
 
-        if (node.Target is IdentifierExpression ident)
-        {
-            if (!_locals.TryGetValue(ident.Name, out string? ptr))
-                throw new Exception($"Unknown variable '{ident.Name}'");
-            TypeExpression type = _typeChecker.GetType(node.Target);
-            string llvmType = EmitType(type);
-            Emit($"    store {llvmType} {val}, {llvmType}* {ptr}");
-            Push(val);
-        }
-        else if (node.Target is UnaryExpression { Operator: TokenKind.Star } deref)
-        {
-            deref.Operand.Accept(this);
-            string ptr = Pop();
-            TypeExpression ptrType = _typeChecker.GetType(deref.Operand);
-            if (ptrType is not PointerTypeExpression innerPtr)
-                throw new Exception("Cannot dereference non-pointer");
-            string innerType = EmitType(innerPtr.Inner);
-            Emit($"    store {innerType} {val}, {innerType}* {ptr}");
-            Push(val);
-        }
-        else if (node.Target is MemberAccessExpression memberAccess)
-        {
-            string objPtr;
-            TypeExpression objType = _typeChecker.GetType(memberAccess.Object);
+        EmitAddress(node.Target);
+        string ptr = Pop();
 
-            if (memberAccess.Object is IdentifierExpression memberIdent && _locals.TryGetValue(memberIdent.Name, out string? ptr))
-            {
-                if (objType is PointerTypeExpression innerPtrType)
-                {
-                    string innerLlvmType = EmitType(innerPtrType.Inner);
-                    string loadedPtr = NewTemp();
-                    Emit($"    {loadedPtr} = load {innerLlvmType}*, {innerLlvmType}** {ptr}");
-                    objPtr = loadedPtr;
-                }
-                else
-                    objPtr = ptr;
-            }
-            else
-            {
-                memberAccess.Object.Accept(this);
-                objPtr = Pop();
-            }
+        TypeExpression targetType = _typeChecker.GetType(node.Target);
+        string llvmType = EmitType(targetType);
 
-            if (objType is PointerTypeExpression ptrType)
-                objType = ptrType.Inner;
-
-            string structName = ((NamedTypeExpression)objType).Name;
-            TypeChecker.StructInfo info = _typeChecker.GetStruct(structName)!;
-            int fieldIdx = info.FieldIndex(memberAccess.Member);
-            TypeExpression fieldType = info.Fields[fieldIdx].Type;
-            string llvmFieldType = EmitType(fieldType);
-
-            string fieldPtr = NewTemp();
-            Emit($"    {fieldPtr} = getelementptr %{structName}, %{structName}* {objPtr}, i32 0, i32 {fieldIdx}");
-            Emit($"    store {llvmFieldType} {val}, {llvmFieldType}* {fieldPtr}");
-            Push(val);
-        }
-        else
-            throw new NotImplementedException("Complex assignment targets not yet supported");
+        Emit($"    store {llvmType} {val}, {llvmType}* {ptr}");
+        Push(val);
     }
+
     public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
     public void Visit(NewExpression node) => throw new NotImplementedException();
     public void Visit(NamespaceAccessExpression node) => throw new NotImplementedException();

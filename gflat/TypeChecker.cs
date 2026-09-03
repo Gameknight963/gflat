@@ -358,57 +358,20 @@ namespace gflat
 
         public void Visit(AssignmentExpression node)
         {
+            if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star }))
+                throw new TypeCheckException("Invalid assignment target", node.Line);
+
+            node.Target.Accept(this);
+            TypeExpression targetType = GetType(node.Target);
+
             node.Value.Accept(this);
             TypeExpression valueType = GetType(node.Value);
 
-            if (node.Target is IdentifierExpression ident)
-            {
-                TypeExpression targetType = LookupVariable(ident.Name, node.Line);
-                if (!TypesMatch(targetType, valueType))
-                    throw new TypeCheckException(
-                        $"Cannot assign '{TypeName(valueType)}' to '{TypeName(targetType)}'", node.Line);
-                RecordType(node, targetType);
-            }
-            else if (node.Target is UnaryExpression { Operator: TokenKind.Star } deref)
-            {
-                deref.Operand.Accept(this);
-                TypeExpression ptrType = GetType(deref.Operand);
-                if (ptrType is not PointerTypeExpression ptr)
-                    throw new TypeCheckException("Cannot dereference non-pointer", node.Line);
-                if (!TypesMatch(ptr.Inner, valueType))
-                    throw new TypeCheckException(
-                        $"Cannot assign '{TypeName(valueType)}' to '{TypeName(ptr.Inner)}'", node.Line);
-                RecordType(node, ptr.Inner);
-            }
-            else if (node.Target is MemberAccessExpression memberAccess)
-            {
-                memberAccess.Object.Accept(this);
-                TypeExpression objType = GetType(memberAccess.Object);
+            if (!TypesMatch(targetType, valueType))
+                throw new TypeCheckException(
+                    $"Cannot assign '{TypeName(valueType)}' to '{TypeName(targetType)}'", node.Line);
 
-                if (objType is PointerTypeExpression ptr)
-                    objType = ptr.Inner;
-
-                if (objType is not NamedTypeExpression named)
-                    throw new TypeCheckException("Member access on non-struct type", node.Line);
-
-                if (!_structs.TryGetValue(named.Name, out StructInfo? info))
-                    throw new TypeCheckException($"'{named.Name}' is not a struct", node.Line);
-
-                int idx = info.FieldIndex(memberAccess.Member);
-                if (idx < 0)
-                    throw new TypeCheckException($"'{named.Name}' has no field '{memberAccess.Member}'", node.Line);
-
-                TypeExpression fieldType = info.Fields[idx].Type;
-                if (!TypesMatch(fieldType, valueType))
-                    throw new TypeCheckException(
-                        $"Cannot assign '{TypeName(valueType)}' to '{TypeName(fieldType)}'", node.Line);
-
-                RecordType(node, fieldType);
-            }
-            else
-            {
-                throw new NotImplementedException("Complex assignment targets not yet supported");
-            }
+            RecordType(node, targetType);
         }
 
         public void Visit(CallExpression node)

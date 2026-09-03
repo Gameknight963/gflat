@@ -19,6 +19,9 @@ public class LlvmEmitter : IVisitor
     private readonly Stack<string> _valueStack = new();
     private readonly Dictionary<string, string> _locals = new();
 
+    private readonly Stack<string> _breakLabels = new();
+    private readonly Stack<string> _continueLabels = new();
+
     private readonly HashSet<string> _externNames = new();
     private bool IsExtern(string name) => _externNames.Contains(name);
 
@@ -203,6 +206,9 @@ public class LlvmEmitter : IVisitor
         string bodyLabel = NewLabel("while_body");
         string exitLabel = NewLabel("while_exit");
 
+        _breakLabels.Push(exitLabel);
+        _continueLabels.Push(condLabel);
+
         Emit($"    br label %{condLabel}");
         Emit($"{condLabel}:");
 
@@ -224,6 +230,9 @@ public class LlvmEmitter : IVisitor
         node.Body.Accept(this);
         Emit($"    br label %{condLabel}");
         Emit($"{exitLabel}:");
+
+        _breakLabels.Pop();
+        _continueLabels.Pop();
     }
 
     public void Visit(ForStatement node)
@@ -231,6 +240,9 @@ public class LlvmEmitter : IVisitor
         string condLabel = NewLabel("for_cond");
         string bodyLabel = NewLabel("for_body");
         string exitLabel = NewLabel("for_exit");
+
+        _breakLabels.Push(exitLabel);
+        _continueLabels.Push(condLabel);
 
         node.Initializer?.Accept(this);
 
@@ -261,6 +273,9 @@ public class LlvmEmitter : IVisitor
             node.Increment.Accept(this);
         Emit($"    br label %{condLabel}");
         Emit($"{exitLabel}:");
+
+        _breakLabels.Pop();
+        _continueLabels.Pop();
     }
 
     public void Visit(VariableDeclaration node)
@@ -490,9 +505,18 @@ public class LlvmEmitter : IVisitor
     public void Visit(PointerTypeExpression node) => throw new NotImplementedException();
     public void Visit(ManagedTypeExpression node) => throw new NotImplementedException();
     public void Visit(ArrayTypeExpression node) => throw new NotImplementedException();
-    public void Visit(BreakStatement node) => throw new NotImplementedException();
-    public void Visit(ContinueStatement node) => throw new NotImplementedException();
-
+    public void Visit(BreakStatement node)
+    {
+        if (_breakLabels.Count == 0)
+            throw new Exception("break outside of loop");
+        Emit($"    br label %{_breakLabels.Peek()}");
+    }
+    public void Visit(ContinueStatement node)
+    {
+        if (_continueLabels.Count == 0)
+            throw new Exception("continue outside of loop");
+        Emit($"    br label %{_continueLabels.Peek()}");
+    }
     public void Visit(AttributeNode node) { }
     public void Visit(GlobalExpression node) { }
 }

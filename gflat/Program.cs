@@ -9,21 +9,18 @@ namespace gflat
             namespace Program
             {
                 extern int printf(char* fmt, ...);
-            
+
                 int main()
                 {
-                    printf("Hello from a free function!\n");
-                    Nested::helper();
-                    global::Program::Nested::helper();
-                    return 0;
-                }
-
-                namespace Nested
-                {
-                    void helper()
+                    int i = 0;
+                    while (true)
                     {
-                        printf("helper");
+                        if (i >= 5)
+                            break;
+                        i = i + 1;
                     }
+                    printf("%d\n", i);
+                    return 0;
                 }
             }
             """;

@@ -119,7 +119,13 @@ public class LlvmEmitter : IVisitor
             };
         }
         if (type is PointerTypeExpression ptr)
+        {
+            // LLVM does not allow void*, use i8* instead
+            if (ptr.Inner is NamedTypeExpression { Name: "void" })
+                return "i8*";
+
             return EmitType(ptr.Inner) + "*";
+        }
         if (type is ArrayTypeExpression arr)
             return EmitType(arr.ElementType) + "*";
 

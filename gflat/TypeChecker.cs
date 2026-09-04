@@ -359,7 +359,7 @@ namespace gflat
         public void Visit(AssignmentExpression node)
         {
             if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star }))
-                throw new TypeCheckException("Invalid assignment target", node.Line);
+                throw new TypeCheckException($"Invalid assignment target '{node.Target.GetType().Name}'", node.Line);
 
             node.Target.Accept(this);
             TypeExpression targetType = GetType(node.Target);

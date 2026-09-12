@@ -4,7 +4,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="gasm/gasm.csproj" />
-  <Project Path="gcr/gcr.vcxproj" Id="2565acae-7ac6-44e4-befb-b0092e9b1c80" />
   <Project Path="gflat/gflat.csproj" />
 </Solution>

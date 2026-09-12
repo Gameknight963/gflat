@@ -11,6 +11,8 @@ namespace gflat
             {
                 extern int printf(char* fmt, ...);
 
+                extern void* malloc(long size);
+
                 struct Point
                 {
                     int x;
@@ -19,6 +21,7 @@ namespace gflat
 
                 int DoSomething(Point p)
                 {
+                    printf("something\n");
                     return 5;
                 }
 
@@ -27,11 +30,13 @@ namespace gflat
                     Point p;
                     p.x = 3;
                     p.y = 4;
-
                     Point* ptr = &p;
                     ptr.x = 99;
                     printf("%d\n", DoSomething(*ptr));
                     printf("%d %d\n", p.x, p.y);
+
+                    global::Program::DoSomething(p);
+
                     return 0;
                 }
             }

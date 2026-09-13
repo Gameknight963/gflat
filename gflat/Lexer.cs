@@ -169,6 +169,7 @@ public class Lexer
             "class" => TokenKind.Class,
             "struct" => TokenKind.Struct,
             "interface" => TokenKind.Interface,
+            "enum" => TokenKind.Enum,
             "public" => TokenKind.Public,
             "private" => TokenKind.Private,
             "protected" => TokenKind.Protected,

@@ -44,5 +44,7 @@ namespace gflat
         void Visit(GlobalExpression node);
         void Visit(FunctionPointerTypeExpression node);
         void Visit(AliasDeclaration node);
+        void Visit(EnumDeclaration node);
+        void Visit(EnumMemberDeclaration node);
     }
 }

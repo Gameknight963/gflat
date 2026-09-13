@@ -98,10 +98,10 @@ namespace gflat
 
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, Current.Line);
-            if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface))
+            if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface) || Check(TokenKind.Enum))
                 return ParseTypeDeclaration();
 
-            // free function or field
+            // free function, field, alias, or type declaration with accessibility modifier
             return ParseFreeFunctionOrField(attributes);
         }
 
@@ -119,6 +119,14 @@ namespace gflat
 
             if (Check(TokenKind.Alias))
                 return ParseAliasDeclaration(accessibility, line);
+            if (Check(TokenKind.Enum))
+                return ParseEnumDeclaration(accessibility, line);
+            if (Check(TokenKind.Class))
+                return ParseClassDeclaration(accessibility, line);
+            if (Check(TokenKind.Struct))
+                return ParseStructDeclaration(accessibility, line);
+            if (Check(TokenKind.Interface))
+                return ParseInterfaceDeclaration(accessibility, line);
 
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
@@ -157,6 +165,7 @@ namespace gflat
             if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, line);
             if (Check(TokenKind.Struct)) return ParseStructDeclaration(accessibility, line);
             if (Check(TokenKind.Interface)) return ParseInterfaceDeclaration(accessibility, line);
+            if (Check(TokenKind.Enum)) return ParseEnumDeclaration(accessibility, line);
 
             throw new Exception($"Expected type declaration on line {Current.Line}");
         }
@@ -236,6 +245,8 @@ namespace gflat
 
             if (Check(TokenKind.Alias))
                 return ParseAliasDeclaration(accessibility, line);
+            if (Check(TokenKind.Enum))
+                return ParseEnumDeclaration(accessibility, line);
 
             TypeExpression type = ParseTypeExpression();
             string name;
@@ -492,6 +503,8 @@ namespace gflat
                     return ParseDeferStatement();
                 case TokenKind.Alias:
                     return ParseAliasDeclaration(TokenKind.Private, line);
+                case TokenKind.Enum:
+                    return ParseEnumDeclaration(TokenKind.Private, line);
             }
 
             // variable declaration or expression statement
@@ -536,6 +549,38 @@ namespace gflat
             TypeExpression target = ParseTypeExpression();
             Expect(TokenKind.Semicolon);
             return new AliasDeclaration(name, target, accessibility, line);
+        }
+
+        private EnumDeclaration ParseEnumDeclaration(TokenKind accessibility, int line)
+        {
+            Expect(TokenKind.Enum);
+            string name = Expect(TokenKind.Identifier).Text;
+
+            TypeExpression? underlyingType = null;
+            if (Match(TokenKind.Colon))
+            {
+                underlyingType = ParseTypeExpression();
+            }
+
+            Expect(TokenKind.OpenBrace);
+            List<EnumMemberDeclaration> members = new List<EnumMemberDeclaration>();
+            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
+            {
+                int memberLine = Current.Line;
+                string memberName = Expect(TokenKind.Identifier).Text;
+                AstNode? memberValue = null;
+                if (Match(TokenKind.Equals))
+                {
+                    memberValue = ParseExpression();
+                }
+                members.Add(new EnumMemberDeclaration(memberName, memberValue, memberLine));
+
+                if (!Match(TokenKind.Comma))
+                    break;
+            }
+            Expect(TokenKind.CloseBrace);
+
+            return new EnumDeclaration(name, underlyingType, members, accessibility, line);
         }
 
         private DeferStatement ParseDeferStatement()

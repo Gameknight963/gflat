@@ -1251,5 +1251,8 @@ namespace gflat
             else
                 _globalScope.Aliases[node.Name] = node.TargetType;
         }
+
+        public void Visit(EnumDeclaration node) { }
+        public void Visit(EnumMemberDeclaration node) { }
     }
 }

@@ -1479,4 +1479,6 @@ public class LlvmEmitter : IVisitor
     public void Visit(GlobalExpression node) { }
     public void Visit(FunctionPointerTypeExpression node) { }
     public void Visit(AliasDeclaration node) { }
+    public void Visit(EnumDeclaration node) { }
+    public void Visit(EnumMemberDeclaration node) { }
 }

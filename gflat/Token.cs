@@ -71,6 +71,7 @@ namespace gflat
             TokenKind.Class => "class",
             TokenKind.Struct => "struct",
             TokenKind.Interface => "interface",
+            TokenKind.Enum => "enum",
             TokenKind.Public => "public",
             TokenKind.Private => "private",
             TokenKind.Protected => "protected",

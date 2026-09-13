@@ -262,5 +262,33 @@ namespace gflat
             Print($"Alias: {node.Accessibility} {node.Name}");
             Indented(() => node.TargetType.Accept(this));
         }
+
+        public void Visit(EnumDeclaration node)
+        {
+            Print($"Enum: {node.Accessibility} {node.Name}");
+            Indented(() =>
+            {
+                if (node.UnderlyingType != null)
+                {
+                    Print("UnderlyingType:");
+                    Indented(() => node.UnderlyingType.Accept(this));
+                }
+                Print("Members:");
+                Indented(() =>
+                {
+                    foreach (EnumMemberDeclaration m in node.Members)
+                        m.Accept(this);
+                });
+            });
+        }
+
+        public void Visit(EnumMemberDeclaration node)
+        {
+            Print($"EnumMember: {node.Name}");
+            if (node.Value != null)
+            {
+                Indented(() => node.Value.Accept(this));
+            }
+        }
     }
 }

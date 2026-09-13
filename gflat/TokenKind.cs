@@ -56,6 +56,7 @@ namespace gflat
         Class,
         Struct,
         Interface,
+        Enum,
         Public,
         Private,
         Protected,

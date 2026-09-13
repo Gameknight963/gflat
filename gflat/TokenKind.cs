@@ -80,6 +80,7 @@ namespace gflat
         Null,
         Extern,
         Defer,
+        Alias,
         True,
         False,
         Void,

@@ -117,6 +117,9 @@ namespace gflat
                 Consume();
             }
 
+            if (Check(TokenKind.Alias))
+                return ParseAliasDeclaration(accessibility, line);
+
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
 
@@ -230,6 +233,9 @@ namespace gflat
                 else if (Check(TokenKind.Readonly)) { isReadonly = true; Consume(); }
                 else break;
             }
+
+            if (Check(TokenKind.Alias))
+                return ParseAliasDeclaration(accessibility, line);
 
             TypeExpression type = ParseTypeExpression();
             string name;
@@ -389,24 +395,59 @@ namespace gflat
             TypeExpression type = new NamedTypeExpression(name, ns, line);
 
             // postfix modifiers
-            if (Match(TokenKind.Star))
+            while (true)
             {
-                bool nullable = Match(TokenKind.QuestionMark);
-                type = new PointerTypeExpression(type, nullable, line);
-            }
-            else if (Match(TokenKind.Caret))
-            {
-                bool nullable = Match(TokenKind.QuestionMark);
-                type = new ManagedTypeExpression(type, nullable, line);
-            }
+                if (Match(TokenKind.Star))
+                {
+                    bool nullable = Match(TokenKind.QuestionMark);
+                    type = new PointerTypeExpression(type, nullable, line);
+                }
+                else if (Match(TokenKind.Caret))
+                {
+                    bool nullable = Match(TokenKind.QuestionMark);
+                    type = new ManagedTypeExpression(type, nullable, line);
+                }
+                else if (Check(TokenKind.OpenParen))
+                {
+                    Consume(); // (
+                    List<TypeExpression> paramTypes = new();
+                    while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+                    {
+                        paramTypes.Add(ParseTypeExpression());
+                        if (!Check(TokenKind.CloseParen))
+                            Expect(TokenKind.Comma);
+                    }
+                    Expect(TokenKind.CloseParen);
 
-            if (Match(TokenKind.OpenBracket))
-            {
-                int? size = null;
-                if (Check(TokenKind.IntLiteral))
-                    size = int.Parse(Consume().Text);
-                Expect(TokenKind.CloseBracket);
-                type = new ArrayTypeExpression(type, size, line);
+                    bool isManaged = false;
+                    if (Match(TokenKind.Star))
+                    {
+                        isManaged = false;
+                    }
+                    else if (Match(TokenKind.Caret))
+                    {
+                        isManaged = true;
+                    }
+                    else
+                    {
+                        throw new Exception($"Expected '*' or '^' for function pointer type on line {line}");
+                    }
+
+                    bool nullable = Match(TokenKind.QuestionMark);
+                    type = new FunctionPointerTypeExpression(type, paramTypes, isManaged, nullable, line);
+                }
+                else if (Match(TokenKind.OpenBracket))
+                {
+                    int? size = null;
+                    if (Check(TokenKind.IntLiteral))
+                        size = int.Parse(Consume().Text);
+                    Expect(TokenKind.CloseBracket);
+                    type = new ArrayTypeExpression(type, size, line);
+                }
+                else
+                {
+                    break;
+                }
             }
 
             return type;
@@ -449,6 +490,8 @@ namespace gflat
                     return new ContinueStatement(line);
                 case TokenKind.Defer:
                     return ParseDeferStatement();
+                case TokenKind.Alias:
+                    return ParseAliasDeclaration(TokenKind.Private, line);
             }
 
             // variable declaration or expression statement
@@ -483,6 +526,16 @@ namespace gflat
             {
                 _pos = saved;
             }
+        }
+
+        private AliasDeclaration ParseAliasDeclaration(TokenKind accessibility, int line)
+        {
+            Expect(TokenKind.Alias);
+            string name = Expect(TokenKind.Identifier).Text;
+            Expect(TokenKind.Equals);
+            TypeExpression target = ParseTypeExpression();
+            Expect(TokenKind.Semicolon);
+            return new AliasDeclaration(name, target, accessibility, line);
         }
 
         private DeferStatement ParseDeferStatement()

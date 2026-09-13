@@ -246,5 +246,21 @@ namespace gflat
 
         public void Visit(ExternDeclaration node) => Print($"ExternDecleration");
         public void Visit(GlobalExpression node) => Print($"GlobalExpression");
+
+        public void Visit(FunctionPointerTypeExpression node)
+        {
+            Print($"FunctionPointerType{(node.IsManaged ? "^" : "*")}{(node.IsNullable ? "?" : "")}");
+            Indented(() =>
+            {
+                Print("Return:"); Indented(() => node.ReturnType.Accept(this));
+                Print("Params:"); Indented(() => { foreach (var p in node.ParameterTypes) p.Accept(this); });
+            });
+        }
+
+        public void Visit(AliasDeclaration node)
+        {
+            Print($"Alias: {node.Accessibility} {node.Name}");
+            Indented(() => node.TargetType.Accept(this));
+        }
     }
 }

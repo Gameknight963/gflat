@@ -95,6 +95,7 @@ namespace gflat
             TokenKind.Null => "null",
             TokenKind.Extern => "extern",
             TokenKind.Defer => "defer",
+            TokenKind.Alias => "alias",
             TokenKind.True => "true",
             TokenKind.False => "false",
             TokenKind.Void => "void",

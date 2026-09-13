@@ -203,6 +203,7 @@ public class Lexer
             "string" => TokenKind.String,
             "extern" => TokenKind.Extern,
             "defer" => TokenKind.Defer,
+            "alias" => TokenKind.Alias,
             "global" => TokenKind.Global,
             _ => TokenKind.Identifier
         };

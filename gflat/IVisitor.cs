@@ -42,5 +42,7 @@ namespace gflat
         void Visit(AttributeNode node);
         void Visit(ExternDeclaration node);
         void Visit(GlobalExpression node);
+        void Visit(FunctionPointerTypeExpression node);
+        void Visit(AliasDeclaration node);
     }
 }

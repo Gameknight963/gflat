@@ -200,12 +200,21 @@ namespace gflat
         {
             Expect(TokenKind.Struct);
             string name = Expect(TokenKind.Identifier).Text;
+
+            List<string> interfaces = new();
+            if (Match(TokenKind.Colon))
+            {
+                interfaces.Add(Expect(TokenKind.Identifier).Text);
+                while (Match(TokenKind.Comma))
+                    interfaces.Add(Expect(TokenKind.Identifier).Text);
+            }
+
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
             while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
-            return new StructDeclaration(name, members, accessibility, line);
+            return new StructDeclaration(name, interfaces, members, accessibility, line);
         }
 
 
@@ -409,7 +418,7 @@ namespace gflat
                     Expect(TokenKind.Comma);
             }
             Expect(TokenKind.CloseParen);
-            BlockStatement body = ParseBodyOrBlock();
+            BlockStatement? body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
             return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, line);
         }
 

@@ -759,7 +759,7 @@ namespace gflat
                     foreach (Parameter p in method.Parameters)
                         DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
 
-                    method.Body.Accept(this);
+                    method.Body?.Accept(this);
                     PopScope();
                 }
                 else if (member is OperatorDeclaration op)
@@ -824,7 +824,7 @@ namespace gflat
             PushScope();
             foreach (Parameter p in node.Parameters)
                 DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
-            node.Body.Accept(this);
+            node.Body?.Accept(this);
             PopScope();
         }
 

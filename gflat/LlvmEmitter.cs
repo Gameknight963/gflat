@@ -542,7 +542,8 @@ public class LlvmEmitter : IVisitor
             _locals[p.Name] = ptr;
         }
 
-        node.Body.Accept(this);
+        if (node.Body != null)
+            node.Body.Accept(this);
 
         if (returnType == "void")
             Emit("    ret void");
@@ -599,7 +600,8 @@ public class LlvmEmitter : IVisitor
         }
 
         _hasTerminated = false;
-        node.Body.Accept(this);
+        if (node.Body != null)
+            node.Body.Accept(this);
 
         // emit ret void if void function has no explicit return
         if (returnType == "void" && !_hasTerminated)

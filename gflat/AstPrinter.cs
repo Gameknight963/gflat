@@ -75,8 +75,11 @@ namespace gflat
                 Indented(() => node.ReturnType.Accept(this));
                 Print("Parameters:");
                 Indented(() => { foreach (Parameter p in node.Parameters) p.Accept(this); });
-                Print("Body:");
-                Indented(() => node.Body.Accept(this));
+                if (node.Body != null)
+                {
+                    Print("Body:");
+                    Indented(() => node.Body.Accept(this));
+                }
             });
         }
 

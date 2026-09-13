@@ -258,6 +258,11 @@ namespace gflat
                 return ParseConstructorDeclaration(name, accessibility, line);
             }
 
+            if (Match(TokenKind.Operator))
+            {
+                return ParseOperatorDeclaration(type, accessibility, true, line);
+            }
+
             name = Expect(TokenKind.Identifier).Text;
 
             // if followed by ( it's a method, otherwise a field
@@ -346,8 +351,49 @@ namespace gflat
             if (Check(TokenKind.OpenBrace))
                 return ParseBlockStatement();
 
+            if (Match(TokenKind.EqualsGreater))
+            {
+                AstNode expr = ParseExpression();
+                Expect(TokenKind.Semicolon);
+                return new BlockStatement(new List<AstNode> { new ReturnStatement(expr, line) }, line);
+            }
+
             AstNode statement = ParseStatement();
             return new BlockStatement(new List<AstNode> { statement }, line);
+        }
+
+        private static bool IsOverloadableOperator(TokenKind kind) => kind switch
+        {
+            TokenKind.Plus or TokenKind.Minus or TokenKind.Star or TokenKind.Slash or TokenKind.Percent or
+            TokenKind.EqualsEquals or TokenKind.NotEquals or TokenKind.Less or TokenKind.Greater or
+            TokenKind.LessEquals or TokenKind.GreaterEquals or TokenKind.Ampersand or TokenKind.Pipe or
+            TokenKind.Caret or TokenKind.LessLess or TokenKind.GreaterGreater or TokenKind.Bang => true,
+            _ => false
+        };
+
+        private OperatorDeclaration ParseOperatorDeclaration(TypeExpression returnType, TokenKind accessibility, bool isStatic, int line)
+        {
+            Token opToken = Current;
+            if (!IsOverloadableOperator(opToken.Kind))
+            {
+                throw new Exception($"Expected overloadable operator after 'operator', got '{opToken.Text}' on line {opToken.Line}");
+            }
+            Consume();
+            string opSymbol = opToken.Text;
+
+            Expect(TokenKind.OpenParen);
+            List<Parameter> parameters = new();
+            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+            {
+                TypeExpression paramType = ParseTypeExpression();
+                string paramName = Expect(TokenKind.Identifier).Text;
+                parameters.Add(new Parameter(paramName, paramType, Current.Line));
+                if (!Check(TokenKind.CloseParen))
+                    Expect(TokenKind.Comma);
+            }
+            Expect(TokenKind.CloseParen);
+            BlockStatement body = ParseBodyOrBlock();
+            return new OperatorDeclaration(opToken.Kind, opSymbol, returnType, parameters, body, accessibility, isStatic, line);
         }
 
         private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, int line)

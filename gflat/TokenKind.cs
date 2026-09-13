@@ -104,6 +104,7 @@ namespace gflat
         InterpolatedStringExprStart,
         InterpolatedStringExprEnd,
         Global,
+        Operator,
         EndOfFile
     }
 }

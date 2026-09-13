@@ -408,6 +408,10 @@ public class LlvmEmitter : IVisitor
             {
                 EmitStructMethod(node.Name, method);
             }
+            else if (member is OperatorDeclaration op)
+            {
+                EmitStructOperator(node.Name, op);
+            }
         }
 
         _currentStruct = prevStruct;
@@ -416,12 +420,97 @@ public class LlvmEmitter : IVisitor
     private string EmitParamType(TypeExpression type) =>
         type is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(type);
 
+    private static string GetOperatorMethodName(TokenKind kind, int paramCount) => kind switch
+    {
+        TokenKind.Plus => "op_Addition",
+        TokenKind.Minus => paramCount == 1 ? "op_UnaryNegation" : "op_Subtraction",
+        TokenKind.Star => "op_Multiply",
+        TokenKind.Slash => "op_Division",
+        TokenKind.Percent => "op_Modulus",
+        TokenKind.EqualsEquals => "op_Equality",
+        TokenKind.NotEquals => "op_Inequality",
+        TokenKind.Less => "op_LessThan",
+        TokenKind.LessEquals => "op_LessThanOrEqual",
+        TokenKind.Greater => "op_GreaterThan",
+        TokenKind.GreaterEquals => "op_GreaterThanOrEqual",
+        TokenKind.Bang => "op_LogicalNot",
+        TokenKind.Ampersand => "op_BitwiseAnd",
+        TokenKind.Pipe => "op_BitwiseOr",
+        TokenKind.Caret => "op_ExclusiveOr",
+        TokenKind.LessLess => "op_LeftShift",
+        TokenKind.GreaterGreater => "op_RightShift",
+        _ => throw new NotImplementedException($"Operator {kind} not supported")
+    };
+
+    private string GetMangleTypeName(TypeExpression type)
+    {
+        type = _typeChecker.ResolveAlias(type);
+        if (type is NamedTypeExpression named)
+            return named.Name;
+        if (type is PointerTypeExpression ptr)
+            return GetMangleTypeName(ptr.Inner) + "Ptr";
+        if (type is ArrayTypeExpression arr)
+            return GetMangleTypeName(arr.ElementType) + "Arr";
+        return "val";
+    }
+
+    private string GetOperatorMangledName(string structName, OperatorDeclaration node)
+    {
+        string ns = _typeChecker.GetOperatorNamespace(node);
+        string baseOpName = GetOperatorMethodName(node.OperatorKind, node.Parameters.Count);
+        string paramTypes = string.Join("$", node.Parameters.Select(p => GetMangleTypeName(p.Type)));
+        return ns.Length > 0
+            ? $"gflat${ns}${structName}${baseOpName}${paramTypes}"
+            : $"gflat${structName}${baseOpName}${paramTypes}";
+    }
+
+    private void EmitStructOperator(string structName, OperatorDeclaration node)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+        _hasTerminated = false;
+
+        string returnType = EmitType(node.ReturnType);
+        _currentFunctionReturnType = returnType;
+        _currentFunctionExpectedType = node.ReturnType;
+        string mangledName = GetOperatorMangledName(structName, node);
+
+        List<string> paramList = new();
+        foreach (Parameter p in node.Parameters)
+            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+
+        string parameters = string.Join(", ", paramList);
+
+        Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        Emit("entry:");
+
+        foreach (Parameter p in node.Parameters)
+        {
+            string type = EmitParamType(p.Type);
+            string ptr = NewTemp();
+            Emit($"    {ptr} = alloca {type}");
+            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            _locals[p.Name] = ptr;
+        }
+
+        node.Body.Accept(this);
+
+        if (returnType == "void" && !_hasTerminated)
+            Emit("    ret void");
+
+        Emit("}");
+        Emit("");
+    }
+
     private void EmitStructMethod(string structName, MethodDeclaration node)
     {
         _locals.Clear();
         _tempCounter = 0;
+        _hasTerminated = false;
 
         string returnType = EmitType(node.ReturnType);
+        _currentFunctionReturnType = returnType;
+        _currentFunctionExpectedType = node.ReturnType;
         string ns = _currentNamespacePath;
         string mangledName = ns.Length > 0
             ? $"gflat${ns}${structName}${node.Name}"
@@ -462,6 +551,8 @@ public class LlvmEmitter : IVisitor
     public void Visit(InterfaceDeclaration node) => throw new NotImplementedException();
 
     public void Visit(FieldDeclaration node) => throw new NotImplementedException();
+
+    public void Visit(OperatorDeclaration node) => throw new NotImplementedException();
 
     public void Visit(ExternDeclaration node)
     {
@@ -776,6 +867,25 @@ public class LlvmEmitter : IVisitor
         string left = Pop();
         node.Right.Accept(this);
         string right = Pop();
+
+        if (_typeChecker.TryGetOperatorTarget(node, out (string StructName, OperatorDeclaration Operator) opTarget))
+        {
+            TypeExpression leftType1 = _typeChecker.GetType(node.Left);
+            TypeExpression rightType1 = _typeChecker.GetType(node.Right);
+            left = EmitImplicitCast(left, leftType1, opTarget.Operator.Parameters[0].Type);
+            right = EmitImplicitCast(right, rightType1, opTarget.Operator.Parameters[1].Type);
+
+            string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
+            string retLlvmType = EmitType(opTarget.Operator.ReturnType);
+            string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
+            string param1Type = EmitParamType(opTarget.Operator.Parameters[1].Type);
+
+            string temp1 = NewTemp();
+            Emit($"    {temp1} = call {retLlvmType} @{mangledName}({param0Type} {left}, {param1Type} {right})");
+            Push(temp1);
+            return;
+        }
+
         string temp = NewTemp();
 
         TypeExpression leftType = _typeChecker.GetType(node.Left);
@@ -1050,6 +1160,20 @@ public class LlvmEmitter : IVisitor
         node.Operand.Accept(this);
         string operand = Pop();
         TypeExpression type = _typeChecker.GetType(node.Operand);
+
+        if (_typeChecker.TryGetUnaryOperatorTarget(node, out (string StructName, OperatorDeclaration Operator) opTarget))
+        {
+            operand = EmitImplicitCast(operand, type, opTarget.Operator.Parameters[0].Type);
+            string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
+            string retLlvmType = EmitType(opTarget.Operator.ReturnType);
+            string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
+
+            string temp1 = NewTemp();
+            Emit($"    {temp1} = call {retLlvmType} @{mangledName}({param0Type} {operand})");
+            Push(temp1);
+            return;
+        }
+
         string llvmType = EmitType(type);
 
         switch (node.Operator)
@@ -1574,6 +1698,23 @@ public class LlvmEmitter : IVisitor
             string currentVal = NewTemp();
             Emit($"    {currentVal} = load {llvmType}, {llvmType}* {ptr}");
             string temp = NewTemp();
+
+            if (_typeChecker.TryGetCompoundOperatorTarget(node, out (string StructName, OperatorDeclaration Operator) opTarget))
+            {
+                currentVal = EmitImplicitCast(currentVal, targetType, opTarget.Operator.Parameters[0].Type);
+                val = EmitImplicitCast(val, valueType, opTarget.Operator.Parameters[1].Type);
+
+                string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
+                string retLlvmType = EmitType(opTarget.Operator.ReturnType);
+                string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
+                string param1Type = EmitParamType(opTarget.Operator.Parameters[1].Type);
+
+                Emit($"    {temp} = call {retLlvmType} @{mangledName}({param0Type} {currentVal}, {param1Type} {val})");
+                temp = EmitImplicitCast(temp, opTarget.Operator.ReturnType, targetType);
+                Emit($"    store {llvmType} {temp}, {llvmType}* {ptr}");
+                Push(temp);
+                return;
+            }
 
             TypeExpression resTargetType = _typeChecker.ResolveAlias(targetType);
             if (resTargetType is PointerTypeExpression ptrType && node.Operator is TokenKind.PlusEquals or TokenKind.MinusEquals)

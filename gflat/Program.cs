@@ -25,6 +25,40 @@ namespace gflat
                 {
                     printf("Point(%d, %d)\n", this.x, this.y);
                 }
+
+                public static Point operator +(Point a, Point b)
+                {
+                    Point res;
+                    res.x = a.x + b.x;
+                    res.y = a.y + b.y;
+                    return res;
+                }
+
+                public static Point operator -(Point a)
+                {
+                    Point res;
+                    res.x = 0 - a.x;
+                    res.y = 0 - a.y;
+                    return res;
+                }
+
+                public static Point operator *(Point p, int scale)
+                {
+                    Point res;
+                    res.x = p.x * scale;
+                    res.y = p.y * scale;
+                    return res;
+                }
+
+                public static bool operator ==(Point a, Point b)
+                {
+                    return a.x == b.x && a.y == b.y;
+                }
+
+                public static bool operator !=(Point a, Point b)
+                {
+                    return !(a == b);
+                }
             }
 
             void LogMessage(char* msg)
@@ -153,6 +187,26 @@ namespace gflat
                     return s;
                 };
                 printf("block lambda sum 1..10: %d\n", loopLambda(10));
+
+                Point pt1;
+                pt1.x = 10;
+                pt1.y = 20;
+                Point pt2;
+                pt2.x = 5;
+                pt2.y = 7;
+                Point pt3 = pt1 + pt2;
+                printf("operator + : Point(%d, %d)\n", pt3.x, pt3.y);
+
+                Point ptNeg = -pt1;
+                printf("operator - : Point(%d, %d)\n", ptNeg.x, ptNeg.y);
+
+                Point ptScaled = pt1 * 2;
+                printf("operator * : Point(%d, %d)\n", ptScaled.x, ptScaled.y);
+
+                pt1 += pt2;
+                printf("operator +=: Point(%d, %d)\n", pt1.x, pt1.y);
+
+                printf("operator ==: %d, !=: %d\n", pt1 == pt3, pt1 != pt2);
 
                 return 0;
             }

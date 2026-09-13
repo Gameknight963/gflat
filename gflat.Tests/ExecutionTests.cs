@@ -1327,5 +1327,215 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void StructBinaryOperatorAddExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static Point operator +(Point a, Point b)
+                    {
+                        Point res;
+                        res.x = a.x + b.x;
+                        res.y = a.y + b.y;
+                        return res;
+                    }
+                }
+
+                int main()
+                {
+                    Point p1;
+                    p1.x = 20;
+                    p1.y = 1;
+                    Point p2;
+                    p2.x = 20;
+                    p2.y = 1;
+                    Point p3 = p1 + p2;
+                    return p3.x + p3.y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void StructBinaryOperatorMultiplyScalarExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static Point operator *(Point p, int scale)
+                    {
+                        Point res;
+                        res.x = p.x * scale;
+                        res.y = p.y * scale;
+                        return res;
+                    }
+
+                    public static Point operator *(int scale, Point p)
+                    {
+                        return p * scale;
+                    }
+                }
+
+                int main()
+                {
+                    Point p;
+                    p.x = 3;
+                    p.y = 4;
+                    Point scaled1 = p * 3;
+                    Point scaled2 = 2 * scaled1;
+                    return scaled2.x + scaled2.y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void StructComparisonOperatorsExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static bool operator ==(Point a, Point b)
+                    {
+                        return a.x == b.x && a.y == b.y;
+                    }
+
+                    public static bool operator !=(Point a, Point b)
+                    {
+                        return !(a == b);
+                    }
+                }
+
+                int main()
+                {
+                    Point p1;
+                    p1.x = 10;
+                    p1.y = 20;
+                    Point p2;
+                    p2.x = 10;
+                    p2.y = 20;
+                    Point p3;
+                    p3.x = 10;
+                    p3.y = 99;
+
+                    if (p1 == p2 && p1 != p3)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void StructUnaryOperatorNegateExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static Point operator -(Point a)
+                    {
+                        Point res;
+                        res.x = 0 - a.x;
+                        res.y = 0 - a.y;
+                        return res;
+                    }
+                }
+
+                int main()
+                {
+                    Point p;
+                    p.x = -20;
+                    p.y = -22;
+                    Point neg = -p;
+                    return neg.x + neg.y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void StructCompoundAssignmentExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static Point operator +(Point a, Point b)
+                    {
+                        Point res;
+                        res.x = a.x + b.x;
+                        res.y = a.y + b.y;
+                        return res;
+                    }
+                }
+
+                int main()
+                {
+                    Point p;
+                    p.x = 10;
+                    p.y = 20;
+                    Point step;
+                    step.x = 6;
+                    step.y = 6;
+                    p += step;
+                    return p.x + p.y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void StructOperatorExpressionBodyExecution()
+        {
+            string code = """
+                struct Num
+                {
+                    int val;
+
+                    public static int operator +(Num a, Num b) => a.val + b.val;
+                }
+
+                int main()
+                {
+                    Num n1;
+                    n1.val = 19;
+                    Num n2;
+                    n2.val = 23;
+                    return n1 + n2;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
+

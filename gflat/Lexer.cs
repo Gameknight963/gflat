@@ -214,6 +214,7 @@ public class Lexer
             "defer" => TokenKind.Defer,
             "alias" => TokenKind.Alias,
             "global" => TokenKind.Global,
+            "operator" => TokenKind.Operator,
             _ => TokenKind.Identifier
         };
     }

@@ -116,6 +116,7 @@ namespace gflat
             TokenKind.ULongLiteral => "0ul",
             TokenKind.String => "string",
             TokenKind.Global => "global",
+            TokenKind.Operator => "operator",
             TokenKind.InterpolatedStringExprStart => "{",
             TokenKind.InterpolatedStringExprEnd => "}",
             _ => throw new InvalidOperationException($"Cannot infer token text of '{kind}'")

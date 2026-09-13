@@ -320,5 +320,25 @@ namespace gflat
                 Indented(() => node.Body.Accept(this));
             });
         }
+
+        public void Visit(OperatorDeclaration node)
+        {
+            Print($"OperatorDeclaration: {node.Accessibility} {(node.IsStatic ? "static " : "")}operator {node.OperatorSymbol}");
+            Indented(() =>
+            {
+                Print("Return:");
+                Indented(() => node.ReturnType.Accept(this));
+                Print("Params:");
+                Indented(() =>
+                {
+                    foreach (Parameter p in node.Parameters)
+                    {
+                        p.Accept(this);
+                    }
+                });
+                Print("Body:");
+                Indented(() => node.Body.Accept(this));
+            });
+        }
     }
 }

@@ -916,5 +916,202 @@ namespace gflat.Tests
             Assert.NotNull(ast);
             Assert.NotNull(checker);
         }
+
+        [Fact]
+        public void BinaryOperatorOverloadTypeChecksCleanly()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static Point operator +(Point a, Point b)
+                    {
+                        Point res;
+                        res.x = a.x + b.x;
+                        res.y = a.y + b.y;
+                        return res;
+                    }
+                }
+
+                int main()
+                {
+                    Point p1;
+                    p1.x = 10;
+                    p1.y = 20;
+                    Point p2;
+                    p2.x = 5;
+                    p2.y = 5;
+                    Point p3 = p1 + p2;
+                    return p3.x + p3.y;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void UnaryOperatorOverloadTypeChecksCleanly()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static Point operator -(Point a)
+                    {
+                        Point res;
+                        res.x = 0 - a.x;
+                        res.y = 0 - a.y;
+                        return res;
+                    }
+                }
+
+                int main()
+                {
+                    Point p1;
+                    p1.x = 10;
+                    p1.y = 20;
+                    Point p2 = -p1;
+                    return p2.x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ComparisonOperatorOverloadTypeChecksCleanly()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static bool operator ==(Point a, Point b)
+                    {
+                        return a.x == b.x && a.y == b.y;
+                    }
+
+                    public static bool operator !=(Point a, Point b)
+                    {
+                        return !(a == b);
+                    }
+                }
+
+                int main()
+                {
+                    Point p1;
+                    p1.x = 10;
+                    p1.y = 20;
+                    Point p2;
+                    p2.x = 10;
+                    p2.y = 20;
+                    if (p1 == p2)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void CompoundAssignmentWithOperatorOverloadTypeChecksCleanly()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static Point operator +(Point a, Point b)
+                    {
+                        Point res;
+                        res.x = a.x + b.x;
+                        res.y = a.y + b.y;
+                        return res;
+                    }
+                }
+
+                int main()
+                {
+                    Point p;
+                    p.x = 10;
+                    p.y = 20;
+                    Point step;
+                    step.x = 5;
+                    step.y = 5;
+                    p += step;
+                    return p.x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void OperatorWithoutContainingTypeParameterThrows()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static int operator +(int a, int b)
+                    {
+                        return a + b;
+                    }
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("One of the parameters of a user-defined operator must be the containing type 'Point'", ex.Message);
+        }
+
+        [Fact]
+        public void OperatorWithInvalidParameterCountThrows()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public static bool operator !(Point a, Point b)
+                    {
+                        return false;
+                    }
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Unary operator '!' must have exactly 1 parameter", ex.Message);
+        }
     }
 }
+

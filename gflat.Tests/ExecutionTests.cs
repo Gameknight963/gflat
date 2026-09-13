@@ -903,7 +903,206 @@ namespace gflat.Tests
                 }
                 """;
 
-            var result = CompilerTestHelper.Run(code);
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void EnumBasicReturnExitCode()
+        {
+            string code = """
+                enum Color
+                {
+                    Red,
+                    Green,
+                    Blue = 42
+                }
+
+                int main()
+                {
+                    Color c = Color::Blue;
+                    return c;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void EnumMemberAccessDotAndDoubleColon()
+        {
+            string code = """
+                enum Status
+                {
+                    Pending = 10,
+                    Active = 20,
+                    Done = 30
+                }
+
+                int main()
+                {
+                    Status s1 = Status::Active;
+                    Status s2 = Status.Active;
+                    if (s1 == s2 && s1 == 20)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void EnumAutoIncrementAndExplicitValues()
+        {
+            string code = """
+                enum Steps
+                {
+                    First = 10,
+                    Second,
+                    Third = 25,
+                    Fourth
+                }
+
+                int main()
+                {
+                    if (Steps::Second == 11 && Steps::Fourth == 26)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void EnumCustomBackingTypesExecution()
+        {
+            string code = """
+                enum ByteCode : char
+                {
+                    Start = 1,
+                    Mid = 5,
+                    End = 10
+                }
+
+                enum BigVal : long
+                {
+                    Small = 1L,
+                    Big = 32L
+                }
+
+                int main()
+                {
+                    ByteCode b = ByteCode::End;
+                    BigVal bg = BigVal.Big;
+                    if (b == ByteCode::End && bg == BigVal::Big)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void EnumInNamespaceExecution()
+        {
+            string code = """
+                namespace Graphics
+                {
+                    public enum Mode
+                    {
+                        Wireframe = 1,
+                        Solid = 2,
+                        Shaded = 42
+                    }
+                }
+
+                int main()
+                {
+                    Graphics::Mode m1 = Graphics::Mode::Shaded;
+                    Graphics::Mode m2 = Graphics.Mode.Shaded;
+                    if (m1 == m2 && m1 == 42)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void EnumInStructFieldExecution()
+        {
+            string code = """
+                enum Team
+                {
+                    Red = 1,
+                    Blue = 2
+                }
+
+                struct Player
+                {
+                    public Team team;
+                    public int score;
+                }
+
+                int main()
+                {
+                    Player p;
+                    p.team = Team::Blue;
+                    p.score = 40;
+
+                    if (p.team == Team::Blue)
+                    {
+                        return p.score + 2;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void EnumBitwiseFlagsExecution()
+        {
+            string code = """
+                enum Flags
+                {
+                    None = 0,
+                    Read = 1,
+                    Write = 2,
+                    Execute = 4
+                }
+
+                int main()
+                {
+                    Flags f = Flags::Read | Flags::Execute;
+                    if ((f & Flags::Execute) == Flags::Execute && (f & Flags::Write) == 0)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
     }

@@ -1235,6 +1235,13 @@ public class LlvmEmitter : IVisitor
                             val = promoted;
                             llvmArgType = "i32";
                         }
+                        else if (llvmArgType == "i8")
+                        {
+                            string promoted = NewTemp();
+                            Emit($"    {promoted} = sext i8 {val} to i32");
+                            val = promoted;
+                            llvmArgType = "i32";
+                        }
                     }
                 }
 

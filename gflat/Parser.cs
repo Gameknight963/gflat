@@ -747,7 +747,7 @@ namespace gflat
                 Check(TokenKind.Ampersand) || Check(TokenKind.PlusPlus) || Check(TokenKind.MinusMinus))
             {
                 Token op = Consume();
-                AstNode operand = ParseExpression(14); // high binding power for prefix (higher than binary ops)
+                AstNode operand = ParseExpression(20); // high binding power for prefix (higher than binary ops)
                 return new UnaryExpression(operand, op.Kind, true, line);
             }
 
@@ -818,14 +818,17 @@ namespace gflat
             TokenKind.StarEquals or TokenKind.SlashEquals or TokenKind.PercentEquals => (1, 1),
             TokenKind.PipePipe => (2, 3),
             TokenKind.AmpersandAmpersand => (4, 5),
-            TokenKind.EqualsEquals or TokenKind.NotEquals => (6, 7),
+            TokenKind.Pipe => (6, 7),
+            TokenKind.Caret => (8, 9),
+            TokenKind.Ampersand => (10, 11),
+            TokenKind.EqualsEquals or TokenKind.NotEquals => (12, 13),
             TokenKind.Less or TokenKind.Greater or
-            TokenKind.LessEquals or TokenKind.GreaterEquals => (8, 9),
-            TokenKind.Plus or TokenKind.Minus => (10, 11),
-            TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (12, 13),
-            TokenKind.PlusPlus or TokenKind.MinusMinus => (16, 0),
-            TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (16, 17),
-            TokenKind.OpenParen or TokenKind.OpenBracket => (16, 0),
+            TokenKind.LessEquals or TokenKind.GreaterEquals => (14, 15),
+            TokenKind.Plus or TokenKind.Minus => (16, 17),
+            TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (18, 19),
+            TokenKind.PlusPlus or TokenKind.MinusMinus => (22, 0),
+            TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (22, 23),
+            TokenKind.OpenParen or TokenKind.OpenBracket => (22, 0),
             _ => (0, 0)
         };
 

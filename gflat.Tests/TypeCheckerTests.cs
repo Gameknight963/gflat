@@ -1,3 +1,4 @@
+using gflat.ast;
 using gflat.CompileExceptions;
 using Xunit;
 
@@ -617,8 +618,128 @@ namespace gflat.Tests
                 }
                 """;
 
-            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Cannot subtract pointers of different types", ex.Message);
+        }
+
+        [Fact]
+        public void EnumBasicTypeCheckCleanly()
+        {
+            string code = """
+                enum Color
+                {
+                    Red,
+                    Green,
+                    Blue = 10,
+                    Yellow
+                }
+
+                int main()
+                {
+                    Color c = Color::Green;
+                    Color c2 = Color.Blue;
+                    int x = Color::Yellow;
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+            TypeChecker.EnumInfo? info = checker.GetEnum("Color");
+            Assert.NotNull(info);
+            Assert.Equal(0L, info.Members["Red"]);
+            Assert.Equal(1L, info.Members["Green"]);
+            Assert.Equal(10L, info.Members["Blue"]);
+            Assert.Equal(11L, info.Members["Yellow"]);
+        }
+
+        [Fact]
+        public void EnumCustomBackingTypeCheckCleanly()
+        {
+            string code = """
+                enum ByteCode : char
+                {
+                    Start = 1,
+                    Stop = 2
+                }
+
+                enum BigVal : long
+                {
+                    Huge = 1000L
+                }
+
+                int main()
+                {
+                    ByteCode b = ByteCode::Start;
+                    BigVal bg = BigVal::Huge;
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void EnumMemberNotFoundThrows()
+        {
+            string code = """
+                enum Color
+                {
+                    Red,
+                    Green
+                }
+
+                int main()
+                {
+                    Color c = Color::Purple;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Enum 'Color' does not contain member 'Purple'", ex.Message);
+        }
+
+        [Fact]
+        public void EnumInvalidUnderlyingTypeThrows()
+        {
+            string code = """
+                enum FloatEnum : float
+                {
+                    A = 1
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Enum underlying type must be an integral type", ex.Message);
+        }
+
+        [Fact]
+        public void EnumDuplicateMemberThrows()
+        {
+            string code = """
+                enum DuplicateEnum
+                {
+                    First = 1,
+                    First = 2
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("already contains a member named 'First'", ex.Message);
         }
     }
 }

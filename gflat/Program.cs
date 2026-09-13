@@ -52,6 +52,20 @@ namespace gflat
                 }
             }
 
+            enum LogLevel : char
+            {
+                Info = 1,
+                Warning = 2,
+                Error = 3
+            }
+
+            enum Status
+            {
+                Pending,
+                Running = 10,
+                Done
+            }
+
             int main()
             {
                 LogMessage("Top-level functions work!");
@@ -98,6 +112,11 @@ namespace gflat
                 printf("maybeOp is_null: %d\n", maybeOp->is_null);
                 maybeOp = &Math::Add;
                 printf("maybeOp is_null after assignment: %d, address: 0x%llx\n", maybeOp->is_null, maybeOp->address);
+
+                Status status = Status::Running;
+                printf("enum status: %d (expected 10), is Done: %d\n", status, Status.Done);
+                LogLevel level = LogLevel::Info;
+                printf("enum level: %d\n", level);
 
                 return 0;
             }

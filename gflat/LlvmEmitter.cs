@@ -180,6 +180,8 @@ public class LlvmEmitter : IVisitor
 
             return named.Name switch
             {
+                "byte" or "sbyte" => "i8",
+                "short" or "ushort" => "i16",
                 "int" or "uint" => "i32",
                 "long" or "ulong" or "nint" or "nuint" => "i64",
                 "extralong" => "i128",
@@ -238,7 +240,8 @@ public class LlvmEmitter : IVisitor
             return named.Name switch
             {
                 "bool" => 1,
-                "char" => 8,
+                "byte" or "sbyte" or "char" => 8,
+                "short" or "ushort" => 16,
                 "int" or "uint" => 32,
                 "long" or "ulong" or "nint" or "nuint" => 64,
                 "extralong" => 128,
@@ -1083,29 +1086,50 @@ public class LlvmEmitter : IVisitor
                     string shiftOp = node.Operator == TokenKind.LessLess ? "shl" : (_typeChecker.IsUnsignedInteger(leftType) ? "lshr" : "ashr");
                     Emit($"    {temp} = {shiftOp} {llvmType} {left}, {right}");
                 }
-                else if (node.Operator == TokenKind.Slash)
-                {
-                    string divOp = isUnsigned ? "udiv" : "sdiv";
-                    Emit($"    {temp} = {divOp} {llvmType} {left}, {right}");
-                }
-                else if (node.Operator == TokenKind.Percent)
-                {
-                    string remOp = isUnsigned ? "urem" : "srem";
-                    Emit($"    {temp} = {remOp} {llvmType} {left}, {right}");
-                }
                 else
                 {
-                    string op = node.Operator switch
+                    string leftLlvm = EmitType(leftType);
+                    string rightLlvm = EmitType(rightType);
+                    if (leftLlvm != rightLlvm)
                     {
-                        TokenKind.Plus => "add",
-                        TokenKind.Minus => "sub",
-                        TokenKind.Star => "mul",
-                        TokenKind.Pipe => "or",
-                        TokenKind.Ampersand => "and",
-                        TokenKind.Caret => "xor",
-                        _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
-                    };
-                    Emit($"    {temp} = {op} {llvmType} {left}, {right}");
+                        int leftBits = GetIntegerBitWidth(leftType);
+                        int rightBits = GetIntegerBitWidth(rightType);
+                        if (leftBits < rightBits)
+                        {
+                            left = EmitImplicitCast(left, leftType, rightType);
+                            llvmType = rightLlvm;
+                        }
+                        else if (rightBits < leftBits)
+                        {
+                            right = EmitImplicitCast(right, rightType, leftType);
+                            llvmType = leftLlvm;
+                        }
+                    }
+
+                    if (node.Operator == TokenKind.Slash)
+                    {
+                        string divOp = isUnsigned ? "udiv" : "sdiv";
+                        Emit($"    {temp} = {divOp} {llvmType} {left}, {right}");
+                    }
+                    else if (node.Operator == TokenKind.Percent)
+                    {
+                        string remOp = isUnsigned ? "urem" : "srem";
+                        Emit($"    {temp} = {remOp} {llvmType} {left}, {right}");
+                    }
+                    else
+                    {
+                        string op = node.Operator switch
+                        {
+                            TokenKind.Plus => "add",
+                            TokenKind.Minus => "sub",
+                            TokenKind.Star => "mul",
+                            TokenKind.Pipe => "or",
+                            TokenKind.Ampersand => "and",
+                            TokenKind.Caret => "xor",
+                            _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
+                        };
+                        Emit($"    {temp} = {op} {llvmType} {left}, {right}");
+                    }
                 }
             }
             Push(temp);

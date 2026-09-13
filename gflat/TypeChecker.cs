@@ -98,22 +98,69 @@ namespace gflat
             type is PointerTypeExpression { IsNullable: true } or
             ManagedTypeExpression { IsNullable: true };
 
+        private static int GetStringLiteralLength(string raw)
+        {
+            int length = 0;
+            for (int i = 0; i < raw.Length; i++)
+            {
+                if (raw[i] == '\\' && i + 1 < raw.Length)
+                {
+                    i++;
+                }
+                length++;
+            }
+            return length + 1; // +1 for null terminator \0
+        }
+
+        private static bool IsInteger(TypeExpression type) =>
+            type is NamedTypeExpression n && n.Name is "int" or "long" or "extralong" or "char";
+
         private static bool TypesMatch(TypeExpression a, TypeExpression b)
         {
-            // null is assignable to any nullable type
-            if (b is NamedTypeExpression { Name: "null" } && IsNullable(a)) return true;
-            if (a is NamedTypeExpression { Name: "null" } && IsNullable(b)) return true;
-
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
-            {
-                if (pa.Inner is NamedTypeExpression { Name: "void" } || pb.Inner is NamedTypeExpression { Name: "void" })
-                    return true;
-                return TypesMatch(pa.Inner, pb.Inner);
-            }
+                return pa.IsNullable == pb.IsNullable && TypesMatch(pa.Inner, pb.Inner);
+            if (a is ManagedTypeExpression ma && b is ManagedTypeExpression mb)
+                return ma.IsNullable == mb.IsNullable && TypesMatch(ma.Inner, mb.Inner);
             if (a is ArrayTypeExpression aa && b is ArrayTypeExpression ab)
-                return TypesMatch(aa.ElementType, ab.ElementType);
+                return TypesMatch(aa.ElementType, ab.ElementType) && (aa.Size == ab.Size || aa.Size == null || ab.Size == null);
+
+            return false;
+        }
+
+        private static bool IsAssignable(TypeExpression target, TypeExpression source)
+        {
+            if (TypesMatch(target, source))
+                return true;
+
+            // null is assignable to any nullable type
+            if (source is NamedTypeExpression { Name: "null" } && IsNullable(target))
+                return true;
+
+            // void* is implicitly convertible to/from any pointer type
+            if (target is PointerTypeExpression pt && source is PointerTypeExpression ps)
+            {
+                if (pt.Inner is NamedTypeExpression { Name: "void" } || ps.Inner is NamedTypeExpression { Name: "void" })
+                    return true;
+            }
+
+            // Array-to-pointer decay: T[N] or T[] can be assigned to T*
+            if (target is PointerTypeExpression ptrTarget && source is ArrayTypeExpression arrSource)
+            {
+                if (IsAssignable(ptrTarget.Inner, arrSource.ElementType))
+                    return true;
+            }
+
+            // Array-to-array assignment (e.g. char[10] a = "string" where string is char[7])
+            if (target is ArrayTypeExpression arrTarget && source is ArrayTypeExpression arrSrc)
+            {
+                if (IsAssignable(arrTarget.ElementType, arrSrc.ElementType))
+                {
+                    if (arrTarget.Size == null || arrSrc.Size == null || arrTarget.Size >= arrSrc.Size)
+                        return true;
+                }
+            }
 
             return false;
         }
@@ -321,15 +368,24 @@ namespace gflat
 
         public void Visit(VariableDeclaration node)
         {
+            TypeExpression varType = node.Type;
             if (node.Initializer != null)
             {
                 node.Initializer.Accept(this);
                 TypeExpression initType = GetType(node.Initializer);
-                if (!TypesMatch(node.Type, initType))
+
+                // Size inference for inferred arrays: char[] a = "string";
+                if (varType is ArrayTypeExpression { Size: null } arr && initType is ArrayTypeExpression { Size: not null } initArr)
+                {
+                    varType = new ArrayTypeExpression(arr.ElementType, initArr.Size, node.Line);
+                }
+
+                if (!IsAssignable(varType, initType))
                     throw new TypeCheckException(
-                        $"Cannot assign '{TypeName(initType)}' to '{TypeName(node.Type)}'", node.Line);
+                        $"Cannot assign '{TypeName(initType)}' to '{TypeName(varType)}'", node.Line);
             }
-            DeclareVariable(node.Name, node.Type, node.Line);
+            RecordType(node, varType);
+            DeclareVariable(node.Name, varType, node.Line);
         }
 
         public void Visit(ExpressionStatement node)
@@ -359,7 +415,7 @@ namespace gflat
             }
             else if (isComparison)
             {
-                if (!TypesMatch(left, right))
+                if (!TypesMatch(left, right) && !IsAssignable(left, right) && !IsAssignable(right, left))
                     throw new TypeCheckException(
                         $"Cannot compare '{TypeName(left)}' with '{TypeName(right)}'", node.Line);
                 RecordType(node, Bool);
@@ -418,7 +474,7 @@ namespace gflat
                 TokenKind.FloatLiteral => Float,
                 TokenKind.DoubleLiteral => Float,
                 TokenKind.LongLiteral => Long,
-                TokenKind.StringLiteral => CharPtr,
+                TokenKind.StringLiteral => new ArrayTypeExpression(Char, GetStringLiteralLength(node.Token.Text[1..^1]), node.Line),
                 TokenKind.CharLiteral => Char,
                 TokenKind.True => Bool,
                 TokenKind.False => Bool,
@@ -437,7 +493,7 @@ namespace gflat
 
         public void Visit(AssignmentExpression node)
         {
-            if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star }))
+            if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression))
                 throw new TypeCheckException($"Invalid assignment target '{node.Target.GetType().Name}'", node.Line);
 
             if (node.Target is MemberAccessExpression { IsArrow: true } arrow)
@@ -449,7 +505,7 @@ namespace gflat
             node.Value.Accept(this);
             TypeExpression valueType = GetType(node.Value);
 
-            if (!TypesMatch(targetType, valueType))
+            if (!IsAssignable(targetType, valueType))
                 throw new TypeCheckException(
                     $"Cannot assign '{TypeName(valueType)}' to '{TypeName(targetType)}'", node.Line);
 
@@ -539,6 +595,15 @@ namespace gflat
             if (ext != null)
             {
                 _resolvedCalls[node] = ext;
+                for (int i = 0; i < Math.Min(node.Arguments.Count, ext.Parameters.Count); i++)
+                {
+                    TypeExpression argType = GetType(node.Arguments[i]);
+                    TypeExpression paramType = ext.Parameters[i].Type;
+                    if (!IsAssignable(paramType, argType))
+                        throw new TypeCheckException(
+                            $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
+                            node.Line);
+                }
                 RecordType(node, ext.ReturnType);
                 return;
             }
@@ -557,7 +622,7 @@ namespace gflat
             {
                 TypeExpression argType = GetType(node.Arguments[i]);
                 TypeExpression paramType = method.Parameters[i].Type;
-                if (!TypesMatch(argType, paramType))
+                if (!IsAssignable(paramType, argType))
                     throw new TypeCheckException(
                         $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
                         node.Line);
@@ -707,7 +772,30 @@ namespace gflat
         public void Visit(PointerTypeExpression node) { }
         public void Visit(ManagedTypeExpression node) { }
         public void Visit(ArrayTypeExpression node) { }
-        public void Visit(IndexExpression node) => throw new NotImplementedException();
+        public void Visit(IndexExpression node)
+        {
+            node.Target.Accept(this);
+            node.Index.Accept(this);
+
+            TypeExpression targetType = GetType(node.Target);
+            TypeExpression indexType = GetType(node.Index);
+
+            if (!IsInteger(indexType))
+                throw new TypeCheckException($"Array index must be an integer, got '{TypeName(indexType)}'", node.Line);
+
+            if (targetType is ArrayTypeExpression arr)
+            {
+                RecordType(node, arr.ElementType);
+            }
+            else if (targetType is PointerTypeExpression ptr)
+            {
+                RecordType(node, ptr.Inner);
+            }
+            else
+            {
+                throw new TypeCheckException($"Cannot index non-array and non-pointer type '{TypeName(targetType)}'", node.Line);
+            }
+        }
         public void Visit(BreakStatement node) { }
         public void Visit(ContinueStatement node) { }
 
@@ -719,7 +807,7 @@ namespace gflat
             NamedTypeExpression n => n.Name,
             PointerTypeExpression p => TypeName(p.Inner) + "*",
             ManagedTypeExpression m => TypeName(m.Inner) + "^",
-            ArrayTypeExpression a => TypeName(a.ElementType) + "[]",
+            ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             _ => "unknown"
         };
 

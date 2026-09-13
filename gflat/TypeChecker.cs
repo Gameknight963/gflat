@@ -13,11 +13,14 @@ namespace gflat
         private readonly Dictionary<NamespaceDeclaration, NamespaceScope> _namespaceScopes = new();
 
         private Dictionary<string, StructInfo> _structs = new();
+        private Dictionary<string, EnumInfo> _enums = new();
         private readonly Dictionary<MethodDeclaration, string> _functionNamespaces = new();
         private readonly Dictionary<CallExpression, AstNode> _resolvedCalls = new();
         private readonly Dictionary<UnaryExpression, AstNode> _functionAddressTargets = new();
         private readonly HashSet<CallExpression> _indirectCalls = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _localAliases = new();
+        private readonly Stack<Dictionary<string, EnumInfo>> _localEnums = new();
+        private readonly Dictionary<AstNode, (EnumInfo Enum, long Value)> _resolvedEnumMembers = new();
 
         public string GetFunctionNamespace(MethodDeclaration method) =>
             _functionNamespaces.TryGetValue(method, out string? ns) ? ns : "";
@@ -33,6 +36,22 @@ namespace gflat
         public StructInfo? GetStruct(string name) =>
             _structs.TryGetValue(name, out StructInfo? info) ? info : null;
 
+        public EnumInfo? GetEnum(string name) =>
+            _enums.TryGetValue(name, out EnumInfo? info) ? info : null;
+
+        public bool TryGetEnumMember(AstNode node, out long value, out TypeExpression? underlyingType)
+        {
+            if (_resolvedEnumMembers.TryGetValue(node, out (EnumInfo Enum, long Value) info))
+            {
+                value = info.Value;
+                underlyingType = info.Enum.UnderlyingType;
+                return true;
+            }
+            value = 0;
+            underlyingType = null;
+            return false;
+        }
+
         private StructInfo? _currentStruct = null;
         private bool _inDefer = false;
 
@@ -45,11 +64,21 @@ namespace gflat
             public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
         }
 
+        public class EnumInfo
+        {
+            public string Name = "";
+            public string Namespace = "";
+            public TypeExpression UnderlyingType = new NamedTypeExpression("int", null, 0);
+            public Dictionary<string, long> Members = new();
+            public TokenKind Accessibility = TokenKind.Public;
+        }
+
         private class NamespaceScope
         {
             public Dictionary<string, MethodDeclaration> Functions = new();
             public Dictionary<string, ExternDeclaration> Externs = new();
             public Dictionary<string, TypeExpression> Aliases = new();
+            public Dictionary<string, EnumInfo> Enums = new();
             public Dictionary<string, NamespaceScope> Children = new();
             public NamespaceScope? Parent;
         }
@@ -67,12 +96,14 @@ namespace gflat
         {
             _scopes.Push(new Dictionary<string, TypeExpression>());
             _localAliases.Push(new Dictionary<string, TypeExpression>());
+            _localEnums.Push(new Dictionary<string, EnumInfo>());
         }
 
         private void PopScope()
         {
             _scopes.Pop();
             _localAliases.Pop();
+            _localEnums.Pop();
         }
 
         private void DeclareVariable(string name, TypeExpression type, int line)
@@ -227,8 +258,19 @@ namespace gflat
             return length + 1; // +1 for null terminator \0
         }
 
-        private static bool IsInteger(TypeExpression type) =>
-            type is NamedTypeExpression n && n.Name is "int" or "long" or "extralong" or "char";
+        private bool IsInteger(TypeExpression type)
+        {
+            type = ResolveAlias(type);
+            if (type is NamedTypeExpression n)
+            {
+                if (n.Name is "int" or "long" or "extralong" or "char")
+                    return true;
+                EnumInfo? enumInfo = ResolveEnum(n);
+                if (enumInfo != null)
+                    return IsInteger(enumInfo.UnderlyingType);
+            }
+            return false;
+        }
 
         private bool IsValidPointerForArithmetic(TypeExpression type, out string? error)
         {
@@ -301,6 +343,18 @@ namespace gflat
 
             if (TypesMatch(target, source))
                 return true;
+
+            // Enum assignability with underlying type
+            if (target is NamedTypeExpression nt && ResolveEnum(nt) is EnumInfo targetEnum)
+            {
+                if (IsAssignable(targetEnum.UnderlyingType, source))
+                    return true;
+            }
+            if (source is NamedTypeExpression ns && ResolveEnum(ns) is EnumInfo sourceEnum)
+            {
+                if (IsAssignable(target, sourceEnum.UnderlyingType))
+                    return true;
+            }
 
             // null is assignable to any nullable type
             if (source is NamedTypeExpression { Name: "null" } && IsNullable(target))
@@ -410,6 +464,10 @@ namespace gflat
                         info.Methods[sm.Name] = sm;
                         _functionNamespaces[sm] = nsPath;
                     }
+                    else if (m is EnumDeclaration enumDecl)
+                    {
+                        RegisterEnum(enumDecl, scope, nsPath.Length > 0 ? $"{nsPath}::{str.Name}" : str.Name);
+                    }
                 }
                 _structs[str.Name] = info;
             }
@@ -433,6 +491,10 @@ namespace gflat
             else if (member is AliasDeclaration alias)
             {
                 scope.Aliases[alias.Name] = alias.TargetType;
+            }
+            else if (member is EnumDeclaration enumDecl)
+            {
+                RegisterEnum(enumDecl, scope, nsPath);
             }
         }
 
@@ -1083,6 +1145,17 @@ namespace gflat
 
         public void Visit(NamespaceAccessExpression node)
         {
+            EnumInfo? enumInfo = ResolveEnum(node.Left);
+            if (enumInfo != null)
+            {
+                if (!enumInfo.Members.TryGetValue(node.Member, out long val))
+                    throw new TypeCheckException($"Enum '{enumInfo.Name}' does not contain member '{node.Member}'", node.Line);
+
+                RecordType(node, new NamedTypeExpression(enumInfo.Name, null, node.Line));
+                _resolvedEnumMembers[node] = (enumInfo, val);
+                return;
+            }
+
             // resolve the left side to a namespace scope
             NamespaceScope? scope = ResolveNamespace(node.Left);
             if (scope == null)
@@ -1127,11 +1200,33 @@ namespace gflat
                 return child;
             }
 
+            if (node is MemberAccessExpression accessDot)
+            {
+                NamespaceScope? parent = ResolveNamespace(accessDot.Object);
+                if (parent == null) return null;
+                parent.Children.TryGetValue(accessDot.Member, out NamespaceScope? child);
+                return child;
+            }
+
             return null;
         }
 
         public void Visit(MemberAccessExpression node)
         {
+            EnumInfo? enumInfo = ResolveEnum(node.Object);
+            if (enumInfo != null)
+            {
+                if (node.IsArrow)
+                    throw new TypeCheckException($"Cannot use '->' operator on enum '{enumInfo.Name}'", node.Line);
+
+                if (!enumInfo.Members.TryGetValue(node.Member, out long val))
+                    throw new TypeCheckException($"Enum '{enumInfo.Name}' does not contain member '{node.Member}'", node.Line);
+
+                RecordType(node, new NamedTypeExpression(enumInfo.Name, null, node.Line));
+                _resolvedEnumMembers[node] = (enumInfo, val);
+                return;
+            }
+
             node.Object.Accept(this);
             TypeExpression objType = GetType(node.Object);
 
@@ -1252,7 +1347,264 @@ namespace gflat
                 _globalScope.Aliases[node.Name] = node.TargetType;
         }
 
-        public void Visit(EnumDeclaration node) { }
+        private void RegisterEnum(EnumDeclaration enumDecl, NamespaceScope scope, string nsPath)
+        {
+            TypeExpression underlying = enumDecl.UnderlyingType != null
+                ? ResolveAlias(enumDecl.UnderlyingType)
+                : Int;
+
+            if (!IsInteger(underlying))
+            {
+                throw new TypeCheckException(
+                    $"Enum underlying type must be an integral type, but got '{TypeName(underlying)}'",
+                    enumDecl.Line);
+            }
+
+            EnumInfo info = new EnumInfo
+            {
+                Name = enumDecl.Name,
+                Namespace = nsPath,
+                UnderlyingType = underlying,
+                Accessibility = enumDecl.Accessibility
+            };
+
+            long nextValue = 0;
+            foreach (EnumMemberDeclaration memberDecl in enumDecl.Members)
+            {
+                if (info.Members.ContainsKey(memberDecl.Name))
+                {
+                    throw new TypeCheckException(
+                        $"Enum '{enumDecl.Name}' already contains a member named '{memberDecl.Name}'",
+                        memberDecl.Line);
+                }
+
+                if (memberDecl.Value != null)
+                {
+                    nextValue = EvaluateConstantInt(memberDecl.Value, info);
+                }
+
+                info.Members[memberDecl.Name] = nextValue;
+                nextValue++;
+            }
+
+            scope.Enums[enumDecl.Name] = info;
+            _enums[enumDecl.Name] = info;
+            if (nsPath.Length > 0)
+            {
+                _enums[$"{nsPath}::{enumDecl.Name}"] = info;
+            }
+        }
+
+        private long EvaluateConstantInt(AstNode expr, EnumInfo enumInfo)
+        {
+            if (expr is LiteralExpression lit)
+            {
+                if (lit.Token.Kind == TokenKind.IntLiteral)
+                    return long.Parse(lit.Token.Text);
+                if (lit.Token.Kind == TokenKind.HexInt)
+                {
+                    string text = lit.Token.Text;
+                    if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                        text = text[2..];
+                    return Convert.ToInt64(text, 16);
+                }
+                if (lit.Token.Kind == TokenKind.LongLiteral)
+                {
+                    string text = lit.Token.Text.TrimEnd('L', 'l');
+                    return long.Parse(text);
+                }
+                if (lit.Token.Kind == TokenKind.CharLiteral)
+                {
+                    string text = lit.Token.Text;
+                    if (text.Length >= 3 && text[0] == '\'' && text[^1] == '\'')
+                    {
+                        string inner = text[1..^1];
+                        if (inner.StartsWith("\\"))
+                        {
+                            return inner switch
+                            {
+                                "\\0" => '\0',
+                                "\\n" => '\n',
+                                "\\r" => '\r',
+                                "\\t" => '\t',
+                                "\\\\" => '\\',
+                                "\\'" => '\'',
+                                _ => inner.Length > 1 ? inner[1] : 0
+                            };
+                        }
+                        return inner.Length > 0 ? inner[0] : 0;
+                    }
+                }
+            }
+            else if (expr is UnaryExpression u)
+            {
+                if (u.Operator == TokenKind.Minus)
+                    return -EvaluateConstantInt(u.Operand, enumInfo);
+                if (u.Operator == TokenKind.Plus)
+                    return EvaluateConstantInt(u.Operand, enumInfo);
+                if (u.Operator == TokenKind.Bang)
+                    return ~EvaluateConstantInt(u.Operand, enumInfo);
+            }
+            else if (expr is BinaryExpression bin)
+            {
+                long left = EvaluateConstantInt(bin.Left, enumInfo);
+                long right = EvaluateConstantInt(bin.Right, enumInfo);
+                return bin.Operator switch
+                {
+                    TokenKind.Plus => left + right,
+                    TokenKind.Minus => left - right,
+                    TokenKind.Star => left * right,
+                    TokenKind.Slash => right != 0 ? left / right : throw new TypeCheckException("Division by zero in enum member value", expr.Line),
+                    TokenKind.Percent => right != 0 ? left % right : throw new TypeCheckException("Division by zero in enum member value", expr.Line),
+                    TokenKind.Pipe => left | right,
+                    TokenKind.Ampersand => left & right,
+                    TokenKind.Caret => left ^ right,
+                    TokenKind.Less => left < right ? 1 : 0,
+                    TokenKind.Greater => left > right ? 1 : 0,
+                    TokenKind.LessEquals => left <= right ? 1 : 0,
+                    TokenKind.GreaterEquals => left >= right ? 1 : 0,
+                    TokenKind.EqualsEquals => left == right ? 1 : 0,
+                    TokenKind.NotEquals => left != right ? 1 : 0,
+                    _ => throw new TypeCheckException($"Operator '{bin.Operator}' not supported in constant expression", expr.Line)
+                };
+            }
+            else if (expr is IdentifierExpression ident)
+            {
+                if (enumInfo.Members.TryGetValue(ident.Name, out long memberVal))
+                    return memberVal;
+                EnumInfo? otherEnum = ResolveEnum(ident);
+                if (otherEnum != null && otherEnum.Members.TryGetValue(ident.Name, out long otherVal))
+                    return otherVal;
+                throw new TypeCheckException($"Enum member or constant '{ident.Name}' not found", expr.Line);
+            }
+            else if (expr is NamespaceAccessExpression nsAccess)
+            {
+                EnumInfo? otherEnum = ResolveEnum(nsAccess.Left);
+                if (otherEnum != null && otherEnum.Members.TryGetValue(nsAccess.Member, out long memberVal))
+                    return memberVal;
+                throw new TypeCheckException($"Enum member '{nsAccess.Member}' not found", expr.Line);
+            }
+            else if (expr is MemberAccessExpression memAccess)
+            {
+                EnumInfo? otherEnum = ResolveEnum(memAccess.Object);
+                if (otherEnum != null && otherEnum.Members.TryGetValue(memAccess.Member, out long memberVal))
+                    return memberVal;
+                throw new TypeCheckException($"Enum member '{memAccess.Member}' not found", expr.Line);
+            }
+
+            throw new TypeCheckException("Enum member value must be a constant integer expression", expr.Line);
+        }
+
+        public EnumInfo? ResolveEnum(AstNode node)
+        {
+            if (node is IdentifierExpression ident)
+            {
+                foreach (Dictionary<string, EnumInfo> localScope in _localEnums)
+                {
+                    if (localScope.TryGetValue(ident.Name, out EnumInfo? localInfo))
+                        return localInfo;
+                }
+                NamespaceScope? cur = _currentNamespace;
+                while (cur != null)
+                {
+                    if (cur.Enums.TryGetValue(ident.Name, out EnumInfo? nsInfo))
+                        return nsInfo;
+                    cur = cur.Parent;
+                }
+                if (_globalScope.Enums.TryGetValue(ident.Name, out EnumInfo? gInfo))
+                    return gInfo;
+                if (_enums.TryGetValue(ident.Name, out EnumInfo? fallback))
+                    return fallback;
+                return null;
+            }
+
+            if (node is NamespaceAccessExpression nsAccess)
+            {
+                NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
+                if (scope != null && scope.Enums.TryGetValue(nsAccess.Member, out EnumInfo? info))
+                    return info;
+
+                string fullPath = GetAccessPath(nsAccess);
+                if (fullPath.Length > 0 && _enums.TryGetValue(fullPath, out EnumInfo? pathInfo))
+                    return pathInfo;
+
+                return null;
+            }
+
+            if (node is MemberAccessExpression memberAccess)
+            {
+                NamespaceScope? scope = ResolveNamespace(memberAccess.Object);
+                if (scope != null && scope.Enums.TryGetValue(memberAccess.Member, out EnumInfo? info))
+                    return info;
+
+                string fullPath = GetAccessPath(memberAccess);
+                if (fullPath.Length > 0 && _enums.TryGetValue(fullPath, out EnumInfo? pathInfo))
+                    return pathInfo;
+
+                return null;
+            }
+
+            return null;
+        }
+
+        public EnumInfo? ResolveEnum(NamedTypeExpression named)
+        {
+            if (named.Namespace != null)
+            {
+                NamespaceScope? ns = ResolveNamespaceByName(named.Namespace);
+                if (ns != null && ns.Enums.TryGetValue(named.Name, out EnumInfo? info))
+                    return info;
+
+                if (_enums.TryGetValue($"{named.Namespace}::{named.Name}", out EnumInfo? namespacedInfo))
+                    return namespacedInfo;
+            }
+            else
+            {
+                foreach (Dictionary<string, EnumInfo> localScope in _localEnums)
+                {
+                    if (localScope.TryGetValue(named.Name, out EnumInfo? info))
+                        return info;
+                }
+                NamespaceScope? cur = _currentNamespace;
+                while (cur != null)
+                {
+                    if (cur.Enums.TryGetValue(named.Name, out EnumInfo? info))
+                        return info;
+                    cur = cur.Parent;
+                }
+                if (_globalScope.Enums.TryGetValue(named.Name, out EnumInfo? gInfo))
+                    return gInfo;
+            }
+
+            return _enums.TryGetValue(named.Name, out EnumInfo? fallback) ? fallback : null;
+        }
+
+        private string GetAccessPath(AstNode node)
+        {
+            if (node is IdentifierExpression ident)
+                return ident.Name;
+            if (node is NamespaceAccessExpression nsAccess)
+            {
+                string left = GetAccessPath(nsAccess.Left);
+                return left.Length > 0 ? $"{left}::{nsAccess.Member}" : nsAccess.Member;
+            }
+            if (node is MemberAccessExpression memAccess)
+            {
+                string left = GetAccessPath(memAccess.Object);
+                return left.Length > 0 ? $"{left}::{memAccess.Member}" : memAccess.Member;
+            }
+            return "";
+        }
+
+        public void Visit(EnumDeclaration node)
+        {
+            NamespaceScope scope = _currentNamespace ?? _globalScope;
+            if (!scope.Enums.ContainsKey(node.Name))
+            {
+                RegisterEnum(node, scope, "");
+            }
+        }
+
         public void Visit(EnumMemberDeclaration node) { }
     }
 }

@@ -171,6 +171,10 @@ public class LlvmEmitter : IVisitor
         type = _typeChecker.ResolveAlias(type);
         if (type is NamedTypeExpression named)
         {
+            TypeChecker.EnumInfo? enumInfo = _typeChecker.ResolveEnum(named);
+            if (enumInfo != null)
+                return EmitType(enumInfo.UnderlyingType);
+
             return named.Name switch
             {
                 "int" => "i32",
@@ -820,6 +824,9 @@ public class LlvmEmitter : IVisitor
                     TokenKind.Star => "mul",
                     TokenKind.Slash => "sdiv",
                     TokenKind.Percent => "srem",
+                    TokenKind.Pipe => "or",
+                    TokenKind.Ampersand => "and",
+                    TokenKind.Caret => "xor",
                     _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
                 };
                 Emit($"    {temp} = {op} {llvmType} {left}, {right}");
@@ -1306,6 +1313,12 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(MemberAccessExpression node)
     {
+        if (_typeChecker.TryGetEnumMember(node, out long enumVal, out _))
+        {
+            Push(enumVal.ToString());
+            return;
+        }
+
         if (node.IsArrow)
         {
             node.Object.Accept(this);
@@ -1435,7 +1448,15 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
     public void Visit(NewExpression node) => throw new NotImplementedException();
-    public void Visit(NamespaceAccessExpression node) => throw new NotImplementedException();
+    public void Visit(NamespaceAccessExpression node)
+    {
+        if (_typeChecker.TryGetEnumMember(node, out long val, out _))
+        {
+            Push(val.ToString());
+            return;
+        }
+        throw new NotImplementedException();
+    }
     public void Visit(NamedTypeExpression node) => throw new NotImplementedException();
     public void Visit(PointerTypeExpression node) => throw new NotImplementedException();
     public void Visit(ManagedTypeExpression node) => throw new NotImplementedException();

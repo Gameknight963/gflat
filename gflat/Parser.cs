@@ -778,7 +778,7 @@ namespace gflat
             TokenKind.LessEquals or TokenKind.GreaterEquals => (8, 9),
             TokenKind.Plus or TokenKind.Minus => (10, 11),
             TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (12, 13),
-            TokenKind.PlusPlus or TokenKind.MinusMinus => (14, 0),
+            TokenKind.PlusPlus or TokenKind.MinusMinus => (16, 0),
             TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (16, 17),
             TokenKind.OpenParen or TokenKind.OpenBracket => (16, 0),
             _ => (0, 0)

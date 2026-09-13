@@ -25,9 +25,14 @@ namespace gflat
         public StructInfo? GetStruct(string name) =>
             _structs.TryGetValue(name, out StructInfo? info) ? info : null;
 
+        private StructInfo? _currentStruct = null;
+
         public class StructInfo
         {
+            public string Name = "";
+            public string Namespace = "";
             public List<(string Name, TypeExpression Type)> Fields = new();
+            public Dictionary<string, MethodDeclaration> Methods = new();
             public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
         }
 
@@ -63,6 +68,14 @@ namespace gflat
             foreach (Dictionary<string, TypeExpression> scope in _scopes)
                 if (scope.TryGetValue(name, out TypeExpression? type))
                     return type;
+
+            if (_currentStruct != null)
+            {
+                int idx = _currentStruct.FieldIndex(name);
+                if (idx >= 0)
+                    return _currentStruct.Fields[idx].Type;
+            }
+
             throw new TypeCheckException($"Unknown variable '{name}'", line);
         }
 
@@ -139,10 +152,21 @@ namespace gflat
             }
             else if (member is StructDeclaration str)
             {
-                StructInfo info = new StructInfo();
+                StructInfo info = new StructInfo
+                {
+                    Name = str.Name,
+                    Namespace = nsPath
+                };
                 foreach (AstNode m in str.Members)
+                {
                     if (m is FieldDeclaration field)
                         info.Fields.Add((field.Name, field.Type));
+                    else if (m is MethodDeclaration sm)
+                    {
+                        info.Methods[sm.Name] = sm;
+                        _functionNamespaces[sm] = nsPath;
+                    }
+                }
                 _structs[str.Name] = info;
             }
             else if (member is ClassDeclaration cls)
@@ -196,9 +220,27 @@ namespace gflat
 
         public void Visit(StructDeclaration node)
         {
-            // structs have no methods for now, just fields
-            // field types are validated when accessed
-            // nothing to type check in the body yet
+            StructInfo? previousStruct = _currentStruct;
+            _currentStruct = _structs[node.Name];
+
+            foreach (AstNode member in node.Members)
+            {
+                if (member is MethodDeclaration method)
+                {
+                    PushScope();
+                    var structType = new NamedTypeExpression(node.Name, null, method.Line);
+                    var thisType = new PointerTypeExpression(structType, false, method.Line);
+                    DeclareVariable("this", thisType, method.Line);
+
+                    foreach (Parameter p in method.Parameters)
+                        DeclareVariable(p.Name, p.Type, p.Line);
+
+                    method.Body.Accept(this);
+                    PopScope();
+                }
+            }
+
+            _currentStruct = previousStruct;
         }
 
         public void Visit(InterfaceDeclaration node) => throw new NotImplementedException();
@@ -416,7 +458,23 @@ namespace gflat
             MethodDeclaration? method = null;
             ExternDeclaration? ext = null;
 
-            if (node.Callee is IdentifierExpression ident)
+            if (node.Callee is MemberAccessExpression memberAccess)
+            {
+                memberAccess.Object.Accept(this);
+                TypeExpression objType = GetType(memberAccess.Object);
+                if (objType is PointerTypeExpression ptr)
+                    objType = ptr.Inner;
+
+                if (objType is not NamedTypeExpression named || !_structs.TryGetValue(named.Name, out StructInfo? sInfo))
+                    throw new TypeCheckException("Cannot call method on non-struct type", node.Line);
+
+                if (!sInfo.Methods.TryGetValue(memberAccess.Member, out method))
+                    throw new TypeCheckException($"'{named.Name}' has no method '{memberAccess.Member}'", node.Line);
+
+                funcName = $"{named.Name}.{memberAccess.Member}";
+                _resolvedCalls[node] = method;
+            }
+            else if (node.Callee is IdentifierExpression ident)
             {
                 funcName = ident.Name;
                 method = ResolveFunction(funcName);
@@ -560,10 +618,19 @@ namespace gflat
                 throw new TypeCheckException($"'{named.Name}' is not a struct", node.Line);
 
             int idx = info.FieldIndex(node.Member);
-            if (idx < 0)
-                throw new TypeCheckException($"'{named.Name}' has no field '{node.Member}'", node.Line);
+            if (idx >= 0)
+            {
+                RecordType(node, info.Fields[idx].Type);
+                return;
+            }
 
-            RecordType(node, info.Fields[idx].Type);
+            if (info.Methods.TryGetValue(node.Member, out MethodDeclaration? method))
+            {
+                RecordType(node, method.ReturnType);
+                return;
+            }
+
+            throw new TypeCheckException($"'{named.Name}' has no field or method '{node.Member}'", node.Line);
         }
 
         public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();

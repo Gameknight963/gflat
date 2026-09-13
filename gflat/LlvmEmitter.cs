@@ -26,6 +26,7 @@ public class LlvmEmitter : IVisitor
     private bool IsExtern(string name) => _externNames.Contains(name);
 
     private string _currentNamespacePath = "";
+    private TypeChecker.StructInfo? _currentStruct = null;
 
     private string NewTemp() => $"%t{_tempCounter++}";
     private string NewGlobal() => $"@str{_stringCounter++}";
@@ -44,9 +45,27 @@ public class LlvmEmitter : IVisitor
     {
         if (node is IdentifierExpression ident)
         {
-            if (!_locals.TryGetValue(ident.Name, out string? ptr))
-                throw new Exception($"Unknown variable '{ident.Name}'");
-            Push(ptr);
+            if (_locals.TryGetValue(ident.Name, out string? ptr))
+            {
+                Push(ptr);
+                return;
+            }
+
+            if (_currentStruct != null && _locals.TryGetValue("this", out string? thisPtr))
+            {
+                int idx = _currentStruct.FieldIndex(ident.Name);
+                if (idx >= 0)
+                {
+                    string loadedThis = NewTemp();
+                    Emit($"    {loadedThis} = load %{_currentStruct.Name}*, %{_currentStruct.Name}** {thisPtr}");
+                    string fieldPtr = NewTemp();
+                    Emit($"    {fieldPtr} = getelementptr %{_currentStruct.Name}, %{_currentStruct.Name}* {loadedThis}, i32 0, i32 {idx}");
+                    Push(fieldPtr);
+                    return;
+                }
+            }
+
+            throw new Exception($"Unknown variable '{ident.Name}'");
         }
         else if (node is MemberAccessExpression member)
         {
@@ -170,6 +189,62 @@ public class LlvmEmitter : IVisitor
             .OfType<FieldDeclaration>()
             .Select(f => EmitType(f.Type)));
         EmitGlobal($"%{node.Name} = type {{ {fields} }}");
+
+        TypeChecker.StructInfo? prevStruct = _currentStruct;
+        _currentStruct = _typeChecker.GetStruct(node.Name);
+
+        foreach (AstNode member in node.Members)
+        {
+            if (member is MethodDeclaration method)
+            {
+                EmitStructMethod(node.Name, method);
+            }
+        }
+
+        _currentStruct = prevStruct;
+    }
+
+    private void EmitStructMethod(string structName, MethodDeclaration node)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+
+        string returnType = EmitType(node.ReturnType);
+        string ns = _currentNamespacePath;
+        string mangledName = ns.Length > 0
+            ? $"gflat${ns}${structName}${node.Name}"
+            : $"gflat${structName}${node.Name}";
+
+        List<string> paramList = new() { $"%{structName}* %this" };
+        foreach (Parameter p in node.Parameters)
+            paramList.Add($"{EmitType(p.Type)} %{p.Name}");
+
+        string parameters = string.Join(", ", paramList);
+
+        Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        Emit("entry:");
+
+        string thisPtr = NewTemp();
+        Emit($"    {thisPtr} = alloca %{structName}*");
+        Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
+        _locals["this"] = thisPtr;
+
+        foreach (Parameter p in node.Parameters)
+        {
+            string type = EmitType(p.Type);
+            string ptr = NewTemp();
+            Emit($"    {ptr} = alloca {type}");
+            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            _locals[p.Name] = ptr;
+        }
+
+        node.Body.Accept(this);
+
+        if (returnType == "void")
+            Emit("    ret void");
+
+        Emit("}");
+        Emit("");
     }
 
     public void Visit(InterfaceDeclaration node) => throw new NotImplementedException();
@@ -628,6 +703,25 @@ public class LlvmEmitter : IVisitor
             Push(temp);
             return;
         }
+
+        if (_currentStruct != null && _locals.TryGetValue("this", out string? thisPtr))
+        {
+            int idx = _currentStruct.FieldIndex(node.Name);
+            if (idx >= 0)
+            {
+                string loadedThis = NewTemp();
+                Emit($"    {loadedThis} = load %{_currentStruct.Name}*, %{_currentStruct.Name}** {thisPtr}");
+                string fieldPtr = NewTemp();
+                Emit($"    {fieldPtr} = getelementptr %{_currentStruct.Name}, %{_currentStruct.Name}* {loadedThis}, i32 0, i32 {idx}");
+                TypeExpression type = _typeChecker.GetType(node);
+                string llvmType = EmitType(type);
+                string temp = NewTemp();
+                Emit($"    {temp} = load {llvmType}, {llvmType}* {fieldPtr}");
+                Push(temp);
+                return;
+            }
+        }
+
         throw new Exception($"Unknown identifier '{node.Name}'");
     }
 
@@ -635,50 +729,91 @@ public class LlvmEmitter : IVisitor
     {
         List<string> argValues = new();
         List<string> argTypes = new();
-        foreach (AstNode arg in node.Arguments)
-        {
-            arg.Accept(this);
-            argValues.Add(Pop());
-            TypeExpression argType = _typeChecker.GetType(arg);
-            argTypes.Add(EmitType(argType));
-        }
 
         string funcName;
         AstNode? target = _typeChecker.GetResolvedCall(node);
-        if (target is ExternDeclaration ext)
+
+        if (node.Callee is MemberAccessExpression memberAccess && target is MethodDeclaration structMethod)
         {
-            funcName = ext.Name;
-        }
-        else if (target is MethodDeclaration method)
-        {
-            if (method.Name == "main")
+            TypeExpression objType = _typeChecker.GetType(memberAccess.Object);
+            string thisVal;
+            string thisType;
+
+            if (objType is PointerTypeExpression ptrType)
             {
-                funcName = "main";
+                memberAccess.Object.Accept(this);
+                thisVal = Pop();
+                thisType = EmitType(ptrType);
             }
             else
             {
-                string ns = _typeChecker.GetFunctionNamespace(method);
-                funcName = ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}";
+                EmitAddress(memberAccess.Object);
+                thisVal = Pop();
+                thisType = EmitType(objType) + "*";
             }
-        }
-        else if (node.Callee is IdentifierExpression ident)
-        {
-            if (ident.Name == "main")
-                funcName = "main";
-            else if (IsExtern(ident.Name))
-                funcName = ident.Name;
-            else if (_currentNamespacePath.Length > 0)
-                funcName = $"gflat${_currentNamespacePath}${ident.Name}";
-            else
-                funcName = $"gflat${ident.Name}";
-        }
-        else if (node.Callee is NamespaceAccessExpression nsAccess)
-        {
-            funcName = ResolveCallMangledName(nsAccess);
+
+            argValues.Add(thisVal);
+            argTypes.Add(thisType);
+
+            foreach (AstNode arg in node.Arguments)
+            {
+                arg.Accept(this);
+                argValues.Add(Pop());
+                TypeExpression argType = _typeChecker.GetType(arg);
+                argTypes.Add(EmitType(argType));
+            }
+
+            string structName = ((NamedTypeExpression)(objType is PointerTypeExpression p ? p.Inner : objType)).Name;
+            string ns = _typeChecker.GetFunctionNamespace(structMethod);
+            funcName = ns.Length > 0 
+                ? $"gflat${ns}${structName}${structMethod.Name}" 
+                : $"gflat${structName}${structMethod.Name}";
         }
         else
         {
-            throw new NotImplementedException("Complex callee not supported");
+            foreach (AstNode arg in node.Arguments)
+            {
+                arg.Accept(this);
+                argValues.Add(Pop());
+                TypeExpression argType = _typeChecker.GetType(arg);
+                argTypes.Add(EmitType(argType));
+            }
+
+            if (target is ExternDeclaration ext)
+            {
+                funcName = ext.Name;
+            }
+            else if (target is MethodDeclaration method)
+            {
+                if (method.Name == "main")
+                {
+                    funcName = "main";
+                }
+                else
+                {
+                    string ns = _typeChecker.GetFunctionNamespace(method);
+                    funcName = ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}";
+                }
+            }
+            else if (node.Callee is IdentifierExpression ident)
+            {
+                if (ident.Name == "main")
+                    funcName = "main";
+                else if (IsExtern(ident.Name))
+                    funcName = ident.Name;
+                else if (_currentNamespacePath.Length > 0)
+                    funcName = $"gflat${_currentNamespacePath}${ident.Name}";
+                else
+                    funcName = $"gflat${ident.Name}";
+            }
+            else if (node.Callee is NamespaceAccessExpression nsAccess)
+            {
+                funcName = ResolveCallMangledName(nsAccess);
+            }
+            else
+            {
+                throw new NotImplementedException("Complex callee not supported");
+            }
         }
 
         TypeExpression callType = _typeChecker.GetType(node);

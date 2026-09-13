@@ -13,6 +13,17 @@ namespace gflat
             {
                 int x;
                 int y;
+
+                void Move(int dx, int dy)
+                {
+                    this.x += dx;
+                    this.y += dy;
+                }
+
+                void Print()
+                {
+                    printf("Point(%d, %d)\n", this.x, this.y);
+                }
             }
 
             void LogMessage(char* msg)
@@ -38,11 +49,16 @@ namespace gflat
                 LogMessage("Top-level functions work!");
 
                 Point p;
-                p.x = 3;
-                p.y = 4;
+                p.x = 10;
+                p.y = 20;
+                p.Print();
+
+                p.Move(5, 5);
+                p.Print();
+
                 Point* ptr = &p;
-                ptr.x = 99;
-                printf("Point: %d %d\n", p.x, p.y);
+                ptr.Move(100, 200);
+                ptr.Print();
 
                 long sum = Add64(1000000000L, 2000000000L);
                 printf("sum: %lld\n", sum);

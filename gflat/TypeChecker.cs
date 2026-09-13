@@ -977,7 +977,7 @@ namespace gflat
             }
             else if (isComparison)
             {
-                if (!TypesMatch(left, right) && !IsAssignable(left, right) && !IsAssignable(right, left))
+                if (!TypesMatch(left, right) && !IsAssignable(left, right) && !IsAssignable(right, left) && !(IsAssignable(Int, left) && IsAssignable(Int, right)))
                     throw new TypeCheckException(
                         $"Cannot compare '{TypeName(left)}' with '{TypeName(right)}'", node.Line);
                 RecordType(node, Bool);
@@ -1026,6 +1026,11 @@ namespace gflat
                         if (IsAssignable(right, left))
                         {
                             RecordType(node, right);
+                            return;
+                        }
+                        if (IsAssignable(Int, left) && IsAssignable(Int, right))
+                        {
+                            RecordType(node, Int);
                             return;
                         }
                     }
@@ -1080,6 +1085,11 @@ namespace gflat
                             RecordType(node, right);
                             return;
                         }
+                        if (IsAssignable(Int, left) && IsAssignable(Int, right))
+                        {
+                            RecordType(node, Int);
+                            return;
+                        }
                     }
                     throw new TypeCheckException(
                         $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
@@ -1107,6 +1117,11 @@ namespace gflat
                         if (IsAssignable(right, left))
                         {
                             RecordType(node, right);
+                            return;
+                        }
+                        if (IsAssignable(Int, left) && IsAssignable(Int, right))
+                        {
+                            RecordType(node, Int);
                             return;
                         }
                     }

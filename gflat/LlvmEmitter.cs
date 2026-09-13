@@ -893,7 +893,8 @@ public class LlvmEmitter : IVisitor
 
         TypeExpression leftType = _typeChecker.GetType(node.Left);
         TypeExpression rightType = _typeChecker.GetType(node.Right);
-        string llvmType = EmitType(leftType);
+        TypeExpression resultType = _typeChecker.GetType(node);
+        string llvmType = EmitType(resultType);
         bool isFloat = leftType is NamedTypeExpression { Name: "float" };
 
         bool isUnsigned = _typeChecker.IsUnsignedInteger(leftType) || _typeChecker.IsUnsignedInteger(rightType);
@@ -903,22 +904,27 @@ public class LlvmEmitter : IVisitor
 
         if (isComparison)
         {
-            string leftLlvm = EmitType(leftType);
+            string cmpLlvm = EmitType(leftType);
             string rightLlvm = EmitType(rightType);
-            if (leftLlvm != rightLlvm && !isFloat)
+            if (cmpLlvm != rightLlvm && !isFloat)
             {
                 int leftBits = GetIntegerBitWidth(leftType);
                 int rightBits = GetIntegerBitWidth(rightType);
                 if (leftBits < rightBits)
                 {
                     left = EmitImplicitCast(left, leftType, rightType);
-                    llvmType = rightLlvm;
+                    cmpLlvm = rightLlvm;
                 }
                 else if (rightBits < leftBits)
                 {
                     right = EmitImplicitCast(right, rightType, leftType);
-                    llvmType = leftLlvm;
                 }
+            }
+            else if (_typeChecker.IsUnsignedInteger(leftType) != _typeChecker.IsUnsignedInteger(rightType) && !isFloat)
+            {
+                left = EmitImplicitCast(left, leftType, new NamedTypeExpression("int", null, 0));
+                right = EmitImplicitCast(right, rightType, new NamedTypeExpression("int", null, 0));
+                cmpLlvm = "i32";
             }
 
             if (isFloat)
@@ -947,7 +953,7 @@ public class LlvmEmitter : IVisitor
                     TokenKind.GreaterEquals => isUnsigned ? "uge" : "sge",
                     _ => throw new NotImplementedException()
                 };
-                Emit($"    {temp} = icmp {op} {llvmType} {left}, {right}");
+                Emit($"    {temp} = icmp {op} {cmpLlvm} {left}, {right}");
             }
             Push(temp);
         }
@@ -1088,32 +1094,19 @@ public class LlvmEmitter : IVisitor
                 }
                 else
                 {
-                    string leftLlvm = EmitType(leftType);
-                    string rightLlvm = EmitType(rightType);
-                    if (leftLlvm != rightLlvm)
-                    {
-                        int leftBits = GetIntegerBitWidth(leftType);
-                        int rightBits = GetIntegerBitWidth(rightType);
-                        if (leftBits < rightBits)
-                        {
-                            left = EmitImplicitCast(left, leftType, rightType);
-                            llvmType = rightLlvm;
-                        }
-                        else if (rightBits < leftBits)
-                        {
-                            right = EmitImplicitCast(right, rightType, leftType);
-                            llvmType = leftLlvm;
-                        }
-                    }
+                    left = EmitImplicitCast(left, leftType, resultType);
+                    right = EmitImplicitCast(right, rightType, resultType);
+                    llvmType = EmitType(resultType);
+                    bool isUnsignedOp = _typeChecker.IsUnsignedInteger(resultType);
 
                     if (node.Operator == TokenKind.Slash)
                     {
-                        string divOp = isUnsigned ? "udiv" : "sdiv";
+                        string divOp = isUnsignedOp ? "udiv" : "sdiv";
                         Emit($"    {temp} = {divOp} {llvmType} {left}, {right}");
                     }
                     else if (node.Operator == TokenKind.Percent)
                     {
-                        string remOp = isUnsigned ? "urem" : "srem";
+                        string remOp = isUnsignedOp ? "urem" : "srem";
                         Emit($"    {temp} = {remOp} {llvmType} {left}, {right}");
                     }
                     else
@@ -1578,7 +1571,16 @@ public class LlvmEmitter : IVisitor
                         else if (llvmArgType == "i8")
                         {
                             string promoted = NewTemp();
-                            Emit($"    {promoted} = sext i8 {val} to i32");
+                            string extOp = _typeChecker.IsUnsignedInteger(argType) ? "zext" : "sext";
+                            Emit($"    {promoted} = {extOp} i8 {val} to i32");
+                            val = promoted;
+                            llvmArgType = "i32";
+                        }
+                        else if (llvmArgType == "i16")
+                        {
+                            string promoted = NewTemp();
+                            string extOp = _typeChecker.IsUnsignedInteger(argType) ? "zext" : "sext";
+                            Emit($"    {promoted} = {extOp} i16 {val} to i32");
                             val = promoted;
                             llvmArgType = "i32";
                         }

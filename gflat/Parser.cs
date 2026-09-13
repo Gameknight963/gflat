@@ -565,7 +565,8 @@ namespace gflat
         }
 
         private bool IsTypeStart() =>
-            Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
+            Current.Kind is TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or
+            TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
             TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
             TokenKind.Char or TokenKind.ExtraLong or
             TokenKind.String or TokenKind.Void or TokenKind.Identifier;
@@ -928,7 +929,8 @@ namespace gflat
             {
                 if (named.Namespace != null)
                     return true;
-                return named.Name is "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or
+                return named.Name is "byte" or "sbyte" or "short" or "ushort" or
+                    "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or
                     "float" or "double" or "bool" or "char" or "extralong" or "string" or "void";
             }
             return false;

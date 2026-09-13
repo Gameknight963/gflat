@@ -68,7 +68,7 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
-            Print($"Method: {node.Accessibility} {(node.IsStatic ? "static " : "")}{(node.IsVirtual ? "virtual " : "")}{(node.IsOverride ? "override " : "")}{(node.IsAbstract ? "abstract " : "")}{node.Name}");
+            Print($"Method: {node.Accessibility} {(node.IsConst ? "const " : "")}{(node.IsReadOnly ? "readonly " : "")}{(node.IsStatic ? "static " : "")}{(node.IsVirtual ? "virtual " : "")}{(node.IsOverride ? "override " : "")}{(node.IsAbstract ? "abstract " : "")}{node.Name}");
             Indented(() =>
             {
                 Print("ReturnType:");
@@ -85,7 +85,7 @@ namespace gflat
 
         public void Visit(Parameter node)
         {
-            Print($"Parameter: {node.Name}");
+            Print($"Parameter: {(node.IsConst ? "const " : "")}{node.Name}");
             Indented(() => node.Type.Accept(this));
         }
 
@@ -136,7 +136,7 @@ namespace gflat
 
         public void Visit(VariableDeclaration node)
         {
-            Print($"Variable: {node.Name}");
+            Print($"Variable: {(node.IsConst ? "const " : "")}{node.Name}");
             Indented(() =>
             {
                 node.Type.Accept(this);

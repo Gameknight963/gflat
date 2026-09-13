@@ -2778,6 +2778,85 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void ConstFunction_RuntimeExecution()
+        {
+            string code = """
+                const int Multiply(int a, int b)
+                {
+                    return a * b;
+                }
+
+                int main()
+                {
+                    int x = 6;
+                    int y = 7;
+                    return Multiply(x, y);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ConstParameter_RuntimeExecution()
+        {
+            string code = """
+                int AddConstant(const int step, int val)
+                {
+                    return val + step;
+                }
+
+                int main()
+                {
+                    int x = 40;
+                    return AddConstant(2, x);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ConstVariable_ArraySizingExecution()
+        {
+            string code = """
+                const int BufferSize = 5;
+
+                int main()
+                {
+                    int[BufferSize] arr;
+                    for (int i = 0; i < BufferSize; i++)
+                    {
+                        arr[i] = i * 2;
+                    }
+                    return arr[4];
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(8, result.ExitCode);
+        }
+
+        [Fact]
+        public void ConstVariable_InliningExecution()
+        {
+            string code = """
+                const int A = 15;
+                const int B = 27;
+
+                int main()
+                {
+                    return A + B;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
 

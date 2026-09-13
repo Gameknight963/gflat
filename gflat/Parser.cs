@@ -110,6 +110,7 @@ namespace gflat
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Public; // default for free functions
             bool isReadonly = false;
+            bool isConst = false;
             bool isAbstract = false;
 
             while (true)
@@ -123,6 +124,11 @@ namespace gflat
                 else if (Check(TokenKind.Readonly))
                 {
                     isReadonly = true;
+                    Consume();
+                }
+                else if (Check(TokenKind.Const))
+                {
+                    isConst = true;
                     Consume();
                 }
                 else if (Check(TokenKind.Abstract))
@@ -148,9 +154,9 @@ namespace gflat
             string name = Expect(TokenKind.Identifier).Text;
 
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly);
+                return ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly, isConst);
 
-            return ParseFieldDeclaration(type, name, accessibility, false, false, isReadonly, line);
+            return ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, line);
         }
 
         private AstNode ParseTypeDeclaration()
@@ -312,9 +318,18 @@ namespace gflat
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly);
+                return ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst);
 
             return ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line);
+        }
+
+        private Parameter ParseParameter()
+        {
+            int line = Current.Line;
+            bool isConst = Match(TokenKind.Const);
+            TypeExpression paramType = ParseTypeExpression();
+            string paramName = Expect(TokenKind.Identifier).Text;
+            return new Parameter(paramName, paramType, line, isConst);
         }
 
         private List<AttributeNode> ParseAttributes()
@@ -361,9 +376,7 @@ namespace gflat
                     isVariadic = true;
                     break;
                 }
-                TypeExpression paramType = ParseTypeExpression();
-                string paramName = Expect(TokenKind.Identifier).Text;
-                parameters.Add(new Parameter(paramName, paramType, Current.Line));
+                parameters.Add(ParseParameter());
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -379,9 +392,7 @@ namespace gflat
             List<Parameter> parameters = new();
             while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
             {
-                TypeExpression paramType = ParseTypeExpression();
-                string paramName = Expect(TokenKind.Identifier).Text;
-                parameters.Add(new Parameter(paramName, paramType, Current.Line));
+                parameters.Add(ParseParameter());
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -458,9 +469,7 @@ namespace gflat
             List<Parameter> parameters = new();
             while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
             {
-                TypeExpression paramType = ParseTypeExpression();
-                string paramName = Expect(TokenKind.Identifier).Text;
-                parameters.Add(new Parameter(paramName, paramType, Current.Line));
+                parameters.Add(ParseParameter());
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -469,15 +478,13 @@ namespace gflat
             return new OperatorDeclaration(opToken.Kind, opSymbol, returnType, parameters, body, accessibility, isStatic, line);
         }
 
-        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false)
+        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false)
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
             while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
             {
-                TypeExpression paramType = ParseTypeExpression();
-                string paramName = Expect(TokenKind.Identifier).Text;
-                parameters.Add(new Parameter(paramName, paramType, Current.Line));
+                parameters.Add(ParseParameter());
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -491,7 +498,7 @@ namespace gflat
             {
                 body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
             }
-            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly);
+            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst);
         }
 
         private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line)
@@ -610,10 +617,20 @@ namespace gflat
                 else if (Match(TokenKind.OpenBracket))
                 {
                     int? size = null;
-                    if (Check(TokenKind.IntLiteral))
-                        size = int.Parse(Consume().Text);
+                    AstNode? sizeExpr = null;
+                    if (!Check(TokenKind.CloseBracket))
+                    {
+                        if (Check(TokenKind.IntLiteral))
+                        {
+                            size = int.Parse(Consume().Text);
+                        }
+                        else
+                        {
+                            sizeExpr = ParseExpression();
+                        }
+                    }
                     Expect(TokenKind.CloseBracket);
-                    type = new ArrayTypeExpression(type, size, line);
+                    type = new ArrayTypeExpression(type, size, line, sizeExpr);
                 }
                 else
                 {
@@ -665,6 +682,12 @@ namespace gflat
                     return ParseAliasDeclaration(TokenKind.Private, line);
                 case TokenKind.Enum:
                     return ParseEnumDeclaration(TokenKind.Private, line);
+            }
+
+            if (Check(TokenKind.Const))
+            {
+                Consume();
+                return ParseVariableDeclaration(isConst: true);
             }
 
             // variable declaration or expression statement
@@ -797,7 +820,17 @@ namespace gflat
 
             AstNode? initializer = null;
             if (!Check(TokenKind.Semicolon))
-                initializer = IsVariableDeclaration() ? ParseVariableDeclaration() : ParseExpression();
+            {
+                if (Check(TokenKind.Const))
+                {
+                    Consume();
+                    initializer = ParseVariableDeclaration(isConst: true);
+                }
+                else
+                {
+                    initializer = IsVariableDeclaration() ? ParseVariableDeclaration() : ParseExpression();
+                }
+            }
             else
                 Expect(TokenKind.Semicolon);
 
@@ -815,7 +848,7 @@ namespace gflat
             return new ForStatement(initializer, condition, increment, body, line);
         }
 
-        private VariableDeclaration ParseVariableDeclaration()
+        private VariableDeclaration ParseVariableDeclaration(bool isConst = false)
         {
             int line = Current.Line;
             TypeExpression type = ParseTypeExpression();
@@ -824,7 +857,7 @@ namespace gflat
             if (Match(TokenKind.Equals))
                 initializer = ParseExpression();
             Expect(TokenKind.Semicolon);
-            return new VariableDeclaration(name, type, initializer, line);
+            return new VariableDeclaration(name, type, initializer, line, isConst);
         }
 
         private AstNode ParseExpression(int minBindingPower = 0)
@@ -1097,9 +1130,7 @@ namespace gflat
                 List<Parameter> parameters = new();
                 while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
                 {
-                    TypeExpression paramType = ParseTypeExpression();
-                    string paramName = Expect(TokenKind.Identifier).Text;
-                    parameters.Add(new Parameter(paramName, paramType, line));
+                    parameters.Add(ParseParameter());
                     if (!Check(TokenKind.CloseParen))
                     {
                         Expect(TokenKind.Comma);

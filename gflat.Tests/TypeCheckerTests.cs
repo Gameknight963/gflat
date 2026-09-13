@@ -1,5 +1,6 @@
 using gflat.ast;
 using gflat.CompileExceptions;
+using gflat.comptime;
 using Xunit;
 
 namespace gflat.Tests
@@ -2082,6 +2083,304 @@ namespace gflat.Tests
                     int* w = (int*)ro;
                     *w = 100;
                     return *w;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ConstVariable_RequiresInitializer()
+        {
+            string code = """
+                int main()
+                {
+                    const int x;
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ConstVariable_RequiresConstantInitializer()
+        {
+            string code = """
+                int main()
+                {
+                    int y = 5;
+                    const int x = y;
+                    return x;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ConstVariable_CannotBeReassigned()
+        {
+            string code = """
+                int main()
+                {
+                    const int x = 10;
+                    x = 20;
+                    return x;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ConstField_CannotBeReassigned()
+        {
+            string code = """
+                struct Config
+                {
+                    const int Max = 100;
+                }
+
+                int main()
+                {
+                    Config c;
+                    c.Max = 200;
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ConstParameter_RequiresConstantArgument()
+        {
+            string code = """
+                void SetBuffer(const int size, int* buf)
+                {
+                }
+
+                int main()
+                {
+                    int runtimeSize = 10;
+                    int x = 0;
+                    SetBuffer(runtimeSize, &x);
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ConstParameter_WithConstantArgumentAllowed()
+        {
+            string code = """
+                void SetBuffer(const int size, int* buf)
+                {
+                }
+
+                int main()
+                {
+                    const int C = 10;
+                    int x = 0;
+                    SetBuffer(C, &x);
+                    SetBuffer(20, &x);
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ConstMethod_EvaluatesAtCompileTime()
+        {
+            string code = """
+                const int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                const int Res = Add(10, 20);
+
+                int main()
+                {
+                    return Res;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+            Assert.True(checker.TryGetConstValueByName("Res", out ConstValue? val));
+            Assert.IsType<ConstValue.Integer>(val);
+            Assert.Equal(30, ((ConstValue.Integer)val!).Value);
+        }
+
+        [Fact]
+        public void ConstMethod_NonConstCalleeCannotBeEvaluated()
+        {
+            string code = """
+                int RuntimeAdd(int a, int b)
+                {
+                    return a + b;
+                }
+
+                const int Res = RuntimeAdd(1, 2);
+
+                int main()
+                {
+                    return Res;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ConstMethod_RecursionAndControlFlow()
+        {
+            string code = """
+                const int Factorial(int n)
+                {
+                    if (n <= 1)
+                    {
+                        return 1;
+                    }
+                    return n * Factorial(n - 1);
+                }
+
+                const int F5 = Factorial(5);
+
+                int main()
+                {
+                    return F5;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+            Assert.True(checker.TryGetConstValueByName("F5", out ConstValue? val));
+            Assert.IsType<ConstValue.Integer>(val);
+            Assert.Equal(120, ((ConstValue.Integer)val!).Value);
+        }
+
+        [Fact]
+        public void ConstMethod_StepLimitEnforced()
+        {
+            string code = """
+                const int Infinite()
+                {
+                    while (true)
+                    {
+                    }
+                    return 0;
+                }
+
+                const int X = Infinite();
+
+                int main()
+                {
+                    return X;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ConstString_Operations()
+        {
+            string code = """
+                const char[] Greeting = "hello";
+                const char Second = Greeting[1];
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+
+            Assert.True(checker.TryGetConstValueByName("Second", out ConstValue? charVal));
+            Assert.Equal('e', ((ConstValue.Char)charVal!).Value);
+        }
+
+        [Fact]
+        public void ConstStruct_ValueConstructionAndFieldAccess()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    Point(int x, int y)
+                    {
+                        this.x = x;
+                        this.y = y;
+                    }
+                }
+
+                const Point P = new Point(10, 20);
+                const int Px = P.x;
+                const int Py = P.y;
+
+                int main()
+                {
+                    return Px + Py;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+
+            Assert.True(checker.TryGetConstValueByName("Px", out ConstValue? xVal));
+            Assert.Equal(10, ((ConstValue.Integer)xVal!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("Py", out ConstValue? yVal));
+            Assert.Equal(20, ((ConstValue.Integer)yVal!).Value);
+        }
+
+        [Fact]
+        public void ConstArray_Sizing()
+        {
+            string code = """
+                const int Size = 16;
+
+                int main()
+                {
+                    int[Size] buffer;
+                    return buffer[0];
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ConstArray_SizingWithExpression()
+        {
+            string code = """
+                const int Base = 8;
+
+                int main()
+                {
+                    int[Base * 2] buffer;
+                    return buffer[0];
                 }
                 """;
 

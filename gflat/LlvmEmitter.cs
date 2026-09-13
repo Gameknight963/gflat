@@ -1,5 +1,6 @@
 using System.Text;
 using gflat.ast;
+using gflat.comptime;
 
 namespace gflat;
 
@@ -10,6 +11,43 @@ public class LlvmEmitter : IVisitor
     public LlvmEmitter(TypeChecker typeChecker)
     {
         _typeChecker = typeChecker;
+    }
+
+    private bool TryEmitConstValue(ConstValue constVal, TypeExpression type)
+    {
+        switch (constVal)
+        {
+            case ConstValue.Integer i:
+                Push(i.Value.ToString());
+                return true;
+            case ConstValue.UInteger u:
+                Push(u.Value.ToString());
+                return true;
+            case ConstValue.Float f:
+                Push(f.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                return true;
+            case ConstValue.Boolean b:
+                Push(b.Value ? "1" : "0");
+                return true;
+            case ConstValue.Char c:
+                Push(((int)c.Value).ToString());
+                return true;
+            case ConstValue.String s:
+                {
+                    string raw = s.Value;
+                    string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                    string globalName = NewGlobal();
+                    int len = escaped.Length + 1;
+                    string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                    EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
+                    string ptr = NewTemp();
+                    Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
+                    Push(ptr);
+                    return true;
+                }
+            default:
+                return false;
+        }
     }
 
     private StringBuilder _output = new();
@@ -1203,7 +1241,14 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(InterfaceDeclaration node) { }
 
-    public void Visit(FieldDeclaration node) => throw new NotImplementedException();
+    public void Visit(FieldDeclaration node)
+    {
+        if (node.IsConst)
+        {
+            return;
+        }
+        throw new NotImplementedException("Mutable global fields are not yet supported");
+    }
 
     public void Visit(OperatorDeclaration node) => throw new NotImplementedException();
 
@@ -2059,6 +2104,14 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(IdentifierExpression node)
     {
+        if (_typeChecker.TryGetConstValueByName(node.Name, out ConstValue? constVal) && constVal != null)
+        {
+            if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
+            {
+                return;
+            }
+        }
+
         if (_locals.TryGetValue(node.Name, out string? ptr))
         {
             TypeExpression type = _typeChecker.GetType(node);
@@ -2119,6 +2172,14 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(CallExpression node)
     {
+        if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
+        {
+            if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
+            {
+                return;
+            }
+        }
+
         if (node.Callee is MemberAccessExpression { IsArrow: true, Member: "free" } freeAccess)
         {
             freeAccess.Object.Accept(this);

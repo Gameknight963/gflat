@@ -1,5 +1,6 @@
 using gflat.ast;
 using gflat.CompileExceptions;
+using gflat.comptime;
 
 namespace gflat
 {
@@ -7,6 +8,28 @@ namespace gflat
     {
         private readonly Dictionary<AstNode, TypeExpression> _types = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _scopes = new();
+
+        private readonly ConstEvaluator _constEvaluator;
+        private readonly Dictionary<string, ConstValue> _constVariablesByName = new();
+        private readonly Dictionary<AstNode, ConstValue> _constValues = new();
+        private readonly HashSet<string> _constVariableNames = new();
+
+        public TypeChecker()
+        {
+            _constEvaluator = new ConstEvaluator(this);
+        }
+
+        public bool TryGetConstValueByName(string name, out ConstValue? value) =>
+            _constVariablesByName.TryGetValue(name, out value);
+
+        public bool TryGetConstValue(AstNode node, out ConstValue? value) =>
+            _constValues.TryGetValue(node, out value);
+
+        public bool IsConstVariable(string name) =>
+            _constVariableNames.Contains(name);
+
+        public MethodDeclaration? ResolveFunctionForComptime(string name) =>
+            ResolveFunction(name);
 
         private readonly NamespaceScope _globalScope = new();
         private NamespaceScope _currentNamespace = null!;
@@ -205,8 +228,21 @@ namespace gflat
             public Dictionary<string, EnumInfo> Enums = new();
             public Dictionary<string, InterfaceInfo> Interfaces = new();
             public Dictionary<string, ClassInfo> Classes = new();
+            public Dictionary<string, FieldDeclaration> Fields = new();
             public Dictionary<string, NamespaceScope> Children = new();
             public NamespaceScope? Parent;
+        }
+
+        private FieldDeclaration? ResolveGlobalField(string name)
+        {
+            NamespaceScope? scope = _currentNamespace;
+            while (scope != null)
+            {
+                if (scope.Fields.TryGetValue(name, out FieldDeclaration? field))
+                    return field;
+                scope = scope.Parent;
+            }
+            return null;
         }
 
         public TypeExpression GetType(AstNode node)
@@ -305,6 +341,12 @@ namespace gflat
                 }
             }
 
+            FieldDeclaration? globalField = ResolveGlobalField(name);
+            if (globalField != null)
+            {
+                return ResolveAlias(globalField.Type);
+            }
+
             if (ResolveFunction(name) != null || ResolveExtern(name) != null)
                 throw new TypeCheckException($"Cannot use function '{name}' as a value without '&'. Did you mean '&{name}'?", line);
 
@@ -337,6 +379,13 @@ namespace gflat
                     type = _currentClass.Fields[idx].Type;
                     return true;
                 }
+            }
+
+            FieldDeclaration? globalField = ResolveGlobalField(name);
+            if (globalField != null)
+            {
+                type = ResolveAlias(globalField.Type);
+                return true;
             }
 
             type = null;
@@ -414,9 +463,32 @@ namespace gflat
             }
             else if (type is ArrayTypeExpression arr)
             {
-                var resolvedElem = ResolveAlias(arr.ElementType);
-                if (resolvedElem != arr.ElementType)
-                    return new ArrayTypeExpression(resolvedElem, arr.Size, arr.Line);
+                TypeExpression resolvedElem = ResolveAlias(arr.ElementType);
+                int? size = arr.Size;
+                if (!size.HasValue && arr.SizeExpression != null)
+                {
+                    if (_constEvaluator.TryEvaluate(arr.SizeExpression, out ConstValue? cv, out string? err))
+                    {
+                        if (cv is ConstValue.Integer ci)
+                        {
+                            size = (int)ci.Value;
+                        }
+                        else if (cv is ConstValue.UInteger cui)
+                        {
+                            size = (int)cui.Value;
+                        }
+                        else
+                        {
+                            throw new TypeCheckException($"Array size expression must evaluate to integer, got {cv}", arr.Line);
+                        }
+                    }
+                    else
+                    {
+                        throw new TypeCheckException($"Array size must be a compile-time constant: {err}", arr.Line);
+                    }
+                }
+                if (resolvedElem != arr.ElementType || size != arr.Size)
+                    return new ArrayTypeExpression(resolvedElem, size, arr.Line, arr.SizeExpression);
             }
             else if (type is FunctionPointerTypeExpression fnPtr)
             {
@@ -1267,6 +1339,10 @@ namespace gflat
             {
                 RegisterEnum(enumDecl, scope, nsPath);
             }
+            else if (member is FieldDeclaration field)
+            {
+                scope.Fields[field.Name] = field;
+            }
         }
 
         private void BuildNamespaceScope(NamespaceDeclaration ns, NamespaceScope parent, string parentPath)
@@ -1363,6 +1439,22 @@ namespace gflat
                         {
                             throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
                         }
+                    }
+                    if (field.IsConst)
+                    {
+                        if (field.Initializer == null)
+                        {
+                            throw new TypeCheckException($"Const variable '{field.Name}' must have an initializer", field.Line);
+                        }
+                        if (!_constEvaluator.TryEvaluate(field.Initializer, out ConstValue? constVal, out string? err))
+                        {
+                            throw new TypeCheckException($"Const variable '{field.Name}' initializer must be a compile-time constant: {err}", field.Line);
+                        }
+                        _constVariablesByName[$"{node.Name}::{field.Name}"] = constVal!;
+                        _constVariablesByName[field.Name] = constVal!;
+                        _constValues[field] = constVal!;
+                        _constValues[field.Initializer] = constVal!;
+                        _constVariableNames.Add(field.Name);
                     }
                 }
                 else if (member is ConstructorDeclaration ctor)
@@ -1469,6 +1561,22 @@ namespace gflat
                             throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
                         }
                     }
+                    if (field.IsConst)
+                    {
+                        if (field.Initializer == null)
+                        {
+                            throw new TypeCheckException($"Const variable '{field.Name}' must have an initializer", field.Line);
+                        }
+                        if (!_constEvaluator.TryEvaluate(field.Initializer, out ConstValue? constVal, out string? err))
+                        {
+                            throw new TypeCheckException($"Const variable '{field.Name}' initializer must be a compile-time constant: {err}", field.Line);
+                        }
+                        _constVariablesByName[$"{node.Name}::{field.Name}"] = constVal!;
+                        _constVariablesByName[field.Name] = constVal!;
+                        _constValues[field] = constVal!;
+                        _constValues[field.Initializer] = constVal!;
+                        _constVariableNames.Add(field.Name);
+                    }
                 }
                 else if (member is ConstructorDeclaration ctor)
                 {
@@ -1571,7 +1679,42 @@ namespace gflat
             }
         }
 
-        public void Visit(FieldDeclaration node) => throw new NotImplementedException();
+        public void Visit(FieldDeclaration node)
+        {
+            ValidateTypeUsage(node.Type, node.Line);
+            if (node.Initializer != null)
+            {
+                node.Initializer.Accept(this);
+                TypeExpression initType = ResolveAlias(GetType(node.Initializer));
+                TypeExpression fieldType = ResolveAlias(node.Type);
+                if (!IsAssignable(fieldType, initType, node.Initializer))
+                {
+                    throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{node.Name}' of type '{TypeName(fieldType)}'", node.Line);
+                }
+            }
+            else if (node.IsConst)
+            {
+                throw new TypeCheckException($"Const variable '{node.Name}' must have an initializer", node.Line);
+            }
+
+            if (node.IsConst)
+            {
+                if (node.Initializer == null)
+                {
+                    throw new TypeCheckException($"Const variable '{node.Name}' must have an initializer", node.Line);
+                }
+                if (!_constEvaluator.TryEvaluate(node.Initializer, out ConstValue? constVal, out string? err))
+                {
+                    throw new TypeCheckException($"Const variable '{node.Name}' initializer must be a compile-time constant: {err}", node.Line);
+                }
+                _constVariablesByName[node.Name] = constVal!;
+                _constValues[node] = constVal!;
+                _constValues[node.Initializer] = constVal!;
+                _constVariableNames.Add(node.Name);
+            }
+
+            RecordType(node, ResolveAlias(node.Type));
+        }
 
         public void Visit(MethodDeclaration node)
         {
@@ -1794,13 +1937,34 @@ namespace gflat
                 // Size inference for inferred arrays: char[] a = "string";
                 if (varType is ArrayTypeExpression { Size: null } arr && initType is ArrayTypeExpression { Size: not null } initArr)
                 {
-                    varType = new ArrayTypeExpression(arr.ElementType, initArr.Size, node.Line);
+                    varType = new ArrayTypeExpression(arr.ElementType, initArr.Size, node.Line, arr.SizeExpression);
                 }
 
                 if (!IsAssignable(varType, initType, node.Initializer))
                     throw new TypeCheckException(
                         $"Cannot assign '{TypeName(initType)}' to '{TypeName(varType)}'", node.Line);
             }
+            else if (node.IsConst)
+            {
+                throw new TypeCheckException($"Const variable '{node.Name}' must have an initializer", node.Line);
+            }
+
+            if (node.IsConst)
+            {
+                if (node.Initializer == null)
+                {
+                    throw new TypeCheckException($"Const variable '{node.Name}' must have an initializer", node.Line);
+                }
+                if (!_constEvaluator.TryEvaluate(node.Initializer, out ConstValue? constVal, out string? err))
+                {
+                    throw new TypeCheckException($"Const variable '{node.Name}' initializer must be a compile-time constant: {err}", node.Line);
+                }
+                _constVariablesByName[node.Name] = constVal!;
+                _constValues[node] = constVal!;
+                _constValues[node.Initializer] = constVal!;
+                _constVariableNames.Add(node.Name);
+            }
+
             RecordType(node, varType);
             DeclareVariable(node.Name, varType, node.Line);
         }
@@ -2266,29 +2430,43 @@ namespace gflat
                 {
                     if (_structs.TryGetValue(named.Name, out StructInfo? sInfo))
                     {
-                        if (sInfo.FieldDeclarationsByName.TryGetValue(memberAccess.Member, out FieldDeclaration? sField) && sField.IsReadOnly)
+                        if (sInfo.FieldDeclarationsByName.TryGetValue(memberAccess.Member, out FieldDeclaration? sField))
                         {
-                            bool allowedInCtor = _currentConstructor != null &&
-                                                 memberAccess.Object is IdentifierExpression { Name: "this" } &&
-                                                 _currentStruct != null &&
-                                                 _currentStruct.Name == sInfo.Name;
-                            if (!allowedInCtor)
+                            if (sField.IsConst)
                             {
-                                throw new TypeCheckException($"Cannot assign to readonly field '{memberAccess.Member}' outside constructor", line);
+                                throw new TypeCheckException($"Cannot assign to const field '{memberAccess.Member}'", line);
+                            }
+                            if (sField.IsReadOnly)
+                            {
+                                bool allowedInCtor = _currentConstructor != null &&
+                                                     memberAccess.Object is IdentifierExpression { Name: "this" } &&
+                                                     _currentStruct != null &&
+                                                     _currentStruct.Name == sInfo.Name;
+                                if (!allowedInCtor)
+                                {
+                                    throw new TypeCheckException($"Cannot assign to readonly field '{memberAccess.Member}' outside constructor", line);
+                                }
                             }
                         }
                     }
                     else if (_classes.TryGetValue(named.Name, out ClassInfo? cInfo))
                     {
-                        if (cInfo.FieldDeclarationsByName.TryGetValue(memberAccess.Member, out FieldDeclaration? cField) && cField.IsReadOnly)
+                        if (cInfo.FieldDeclarationsByName.TryGetValue(memberAccess.Member, out FieldDeclaration? cField))
                         {
-                            bool allowedInCtor = _currentConstructor != null &&
-                                                 memberAccess.Object is IdentifierExpression { Name: "this" } &&
-                                                 _currentClass != null &&
-                                                 _currentClass.FieldDeclarations.Contains(cField);
-                            if (!allowedInCtor)
+                            if (cField.IsConst)
                             {
-                                throw new TypeCheckException($"Cannot assign to readonly field '{memberAccess.Member}' outside constructor", line);
+                                throw new TypeCheckException($"Cannot assign to const field '{memberAccess.Member}'", line);
+                            }
+                            if (cField.IsReadOnly)
+                            {
+                                bool allowedInCtor = _currentConstructor != null &&
+                                                     memberAccess.Object is IdentifierExpression { Name: "this" } &&
+                                                     _currentClass != null &&
+                                                     _currentClass.FieldDeclarations.Contains(cField);
+                                if (!allowedInCtor)
+                                {
+                                    throw new TypeCheckException($"Cannot assign to readonly field '{memberAccess.Member}' outside constructor", line);
+                                }
                             }
                         }
                     }
@@ -2298,6 +2476,17 @@ namespace gflat
 
             if (target is IdentifierExpression ident)
             {
+                if (IsConstVariable(ident.Name))
+                {
+                    throw new TypeCheckException($"Cannot assign to const variable '{ident.Name}'", line);
+                }
+
+                FieldDeclaration? globalField = ResolveGlobalField(ident.Name);
+                if (globalField != null && globalField.IsConst)
+                {
+                    throw new TypeCheckException($"Cannot assign to const variable '{ident.Name}'", line);
+                }
+
                 bool isLocal = false;
                 foreach (Dictionary<string, TypeExpression> scope in _scopes)
                 {
@@ -2321,9 +2510,13 @@ namespace gflat
                             }
                         }
 
-                        if (_currentStruct.FieldDeclarationsByName.TryGetValue(ident.Name, out FieldDeclaration? sField) && sField.IsReadOnly)
+                        if (_currentStruct.FieldDeclarationsByName.TryGetValue(ident.Name, out FieldDeclaration? sField))
                         {
-                            if (_currentConstructor == null)
+                            if (sField.IsConst)
+                            {
+                                throw new TypeCheckException($"Cannot assign to const field '{ident.Name}'", line);
+                            }
+                            if (sField.IsReadOnly && _currentConstructor == null)
                             {
                                 throw new TypeCheckException($"Cannot assign to readonly field '{ident.Name}' outside constructor", line);
                             }
@@ -2340,11 +2533,18 @@ namespace gflat
                             }
                         }
 
-                        if (_currentClass.FieldDeclarationsByName.TryGetValue(ident.Name, out FieldDeclaration? cField) && cField.IsReadOnly)
+                        if (_currentClass.FieldDeclarationsByName.TryGetValue(ident.Name, out FieldDeclaration? cField))
                         {
-                            if (_currentConstructor == null || !_currentClass.FieldDeclarations.Contains(cField))
+                            if (cField.IsConst)
                             {
-                                throw new TypeCheckException($"Cannot assign to readonly field '{ident.Name}' outside constructor", line);
+                                throw new TypeCheckException($"Cannot assign to const field '{ident.Name}'", line);
+                            }
+                            if (cField.IsReadOnly)
+                            {
+                                if (_currentConstructor == null || !_currentClass.FieldDeclarations.Contains(cField))
+                                {
+                                    throw new TypeCheckException($"Cannot assign to readonly field '{ident.Name}' outside constructor", line);
+                                }
                             }
                         }
                     }
@@ -2531,6 +2731,15 @@ namespace gflat
                             throw new TypeCheckException(
                                 $"Argument {i + 1} of '{namedIface.Name}.{memberAccess.Member}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
                                 node.Line);
+
+                        if (ifaceMethod.Parameters[i].IsConst)
+                        {
+                            if (!_constEvaluator.TryEvaluate(node.Arguments[i], out ConstValue? constVal, out string? err))
+                            {
+                                throw new TypeCheckException($"Argument {i + 1} for const parameter '{ifaceMethod.Parameters[i].Name}' must be a compile-time constant: {err}", node.Line);
+                            }
+                            _constValues[node.Arguments[i]] = constVal!;
+                        }
                     }
 
                     RecordType(node, ifaceMethod.ReturnType);
@@ -2675,6 +2884,15 @@ namespace gflat
                         throw new TypeCheckException(
                             $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
                             node.Line);
+
+                    if (ext.Parameters[i].IsConst)
+                    {
+                        if (!_constEvaluator.TryEvaluate(node.Arguments[i], out ConstValue? constVal, out string? err))
+                        {
+                            throw new TypeCheckException($"Argument {i + 1} for const parameter '{ext.Parameters[i].Name}' must be a compile-time constant: {err}", node.Line);
+                        }
+                        _constValues[node.Arguments[i]] = constVal!;
+                    }
                 }
                 RecordType(node, ext.ReturnType);
                 return;
@@ -2698,6 +2916,23 @@ namespace gflat
                     throw new TypeCheckException(
                         $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
                         node.Line);
+
+                if (method.Parameters[i].IsConst)
+                {
+                    if (!_constEvaluator.TryEvaluate(node.Arguments[i], out ConstValue? constVal, out string? err))
+                    {
+                        throw new TypeCheckException($"Argument {i + 1} for const parameter '{method.Parameters[i].Name}' must be a compile-time constant: {err}", node.Line);
+                    }
+                    _constValues[node.Arguments[i]] = constVal!;
+                }
+            }
+
+            if (method.IsConst)
+            {
+                if (_constEvaluator.TryEvaluate(node, out ConstValue? constResult, out string? _))
+                {
+                    _constValues[node] = constResult!;
+                }
             }
 
             RecordType(node, method.ReturnType);

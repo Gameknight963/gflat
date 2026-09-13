@@ -449,7 +449,7 @@ namespace gflat
                     DeclareVariable("this", thisType, method.Line);
 
                     foreach (Parameter p in method.Parameters)
-                        DeclareVariable(p.Name, p.Type, p.Line);
+                        DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
 
                     method.Body.Accept(this);
                     PopScope();
@@ -466,7 +466,7 @@ namespace gflat
         {
             PushScope();
             foreach (Parameter p in node.Parameters)
-                DeclareVariable(p.Name, p.Type, p.Line);
+                DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
             node.Body.Accept(this);
             PopScope();
         }
@@ -475,7 +475,7 @@ namespace gflat
         {
             PushScope();
             foreach (Parameter p in node.Parameters)
-                DeclareVariable(p.Name, p.Type, p.Line);
+                DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
             node.Body.Accept(this);
             PopScope();
         }
@@ -553,7 +553,7 @@ namespace gflat
 
         public void Visit(VariableDeclaration node)
         {
-            TypeExpression varType = node.Type;
+            TypeExpression varType = ResolveAlias(node.Type);
             if (node.Initializer != null)
             {
                 node.Initializer.Accept(this);
@@ -758,6 +758,7 @@ namespace gflat
                 varType = ResolveAlias(varType!);
                 if (varType is FunctionPointerTypeExpression fnPtr)
                 {
+                    identVar.Accept(this);
                     CheckIndirectCall(node, fnPtr);
                     return;
                 }

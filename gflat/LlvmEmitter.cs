@@ -73,12 +73,34 @@ public class LlvmEmitter : IVisitor
                 throw new Exception($"Cannot take address of pointer property '->{member.Member}'");
             EmitMemberAddress(member);
         }
+        else if (node is IndexExpression idx)
+        {
+            EmitIndexAddress(idx);
+        }
         else if (node is UnaryExpression { Operator: TokenKind.Star } deref)
         {
             deref.Operand.Accept(this);
         }
         else
             throw new NotImplementedException($"Cannot take address of {node.GetType().Name}");
+    }
+
+    private void EmitIndexAddress(IndexExpression node)
+    {
+        node.Target.Accept(this);
+        string targetPtr = Pop();
+        TypeExpression targetType = _typeChecker.GetType(node.Target);
+        TypeExpression elemType = targetType is ArrayTypeExpression a ? a.ElementType : ((PointerTypeExpression)targetType).Inner;
+        string llvmElemType = EmitType(elemType);
+
+        node.Index.Accept(this);
+        string idxVal = Pop();
+        TypeExpression idxType = _typeChecker.GetType(node.Index);
+        string llvmIdxType = EmitType(idxType);
+
+        string elemPtr = NewTemp();
+        Emit($"    {elemPtr} = getelementptr {llvmElemType}, {llvmElemType}* {targetPtr}, {llvmIdxType} {idxVal}");
+        Push(elemPtr);
     }
 
 
@@ -149,7 +171,12 @@ public class LlvmEmitter : IVisitor
             return EmitType(ptr.Inner) + "*";
         }
         if (type is ArrayTypeExpression arr)
-            return EmitType(arr.ElementType) + "*";
+        {
+            string elemType = EmitType(arr.ElementType);
+            if (arr.Size.HasValue)
+                return $"[{arr.Size.Value} x {elemType}]";
+            return elemType + "*";
+        }
 
         throw new NotImplementedException($"Type {type.GetType().Name} not yet supported");
     }
@@ -206,6 +233,9 @@ public class LlvmEmitter : IVisitor
         _currentStruct = prevStruct;
     }
 
+    private string EmitParamType(TypeExpression type) =>
+        type is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(type);
+
     private void EmitStructMethod(string structName, MethodDeclaration node)
     {
         _locals.Clear();
@@ -219,7 +249,7 @@ public class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{structName}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
 
         string parameters = string.Join(", ", paramList);
 
@@ -233,7 +263,7 @@ public class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
-            string type = EmitType(p.Type);
+            string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             Emit($"    {ptr} = alloca {type}");
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
@@ -257,7 +287,7 @@ public class LlvmEmitter : IVisitor
     {
         _externNames.Add(node.Name);
         string returnType = EmitType(node.ReturnType);
-        string parameters = string.Join(", ", node.Parameters.Select(p => EmitType(p.Type)));
+        string parameters = string.Join(", ", node.Parameters.Select(p => EmitParamType(p.Type)));
         if (node.IsVariadic)
             parameters = parameters.Length > 0 ? parameters + ", ..." : "...";
         EmitGlobal($"declare {returnType} @{node.Name}({parameters})");
@@ -278,14 +308,14 @@ public class LlvmEmitter : IVisitor
             name = $"gflat${node.Name}";
 
         string parameters = string.Join(", ", node.Parameters.Select(p =>
-            $"{EmitType(p.Type)} %{p.Name}"));
+            $"{EmitParamType(p.Type)} %{p.Name}"));
 
         Emit($"define {returnType} @{name}({parameters}) {{");
         Emit("entry:");
 
         foreach (Parameter p in node.Parameters)
         {
-            string type = EmitType(p.Type);
+            string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             Emit($"    {ptr} = alloca {type}");
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
@@ -447,17 +477,50 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(VariableDeclaration node)
     {
-        string type = EmitType(node.Type);
+        TypeExpression resolvedVarType = _typeChecker.GetType(node);
+        string type = EmitType(resolvedVarType);
         string ptr = NewTemp();
         Emit($"    {ptr} = alloca {type}");
         _locals[node.Name] = ptr;
 
         if (node.Initializer != null)
         {
+            if (resolvedVarType is ArrayTypeExpression { Size: not null } targetArr &&
+                node.Initializer is LiteralExpression { Token.Kind: TokenKind.StringLiteral } strLit)
+            {
+                string raw = strLit.Token.Text[1..^1];
+                string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                string globalName = NewGlobal();
+                int litLen = escaped.Length + 1;
+                string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                EmitGlobal($"{globalName} = private constant [{litLen} x i8] c\"{llvmStr}\\00\"");
+
+                if (targetArr.Size.Value == litLen)
+                {
+                    string loadedVal = NewTemp();
+                    Emit($"    {loadedVal} = load [{litLen} x i8], [{litLen} x i8]* {globalName}");
+                    Emit($"    store [{litLen} x i8] {loadedVal}, [{litLen} x i8]* {ptr}");
+                }
+                else
+                {
+                    if (!_externNames.Contains("llvm.memcpy"))
+                    {
+                        _externNames.Add("llvm.memcpy");
+                        EmitGlobal("declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)");
+                    }
+                    string destPtr = NewTemp();
+                    Emit($"    {destPtr} = bitcast {type}* {ptr} to i8*");
+                    string srcPtr = NewTemp();
+                    Emit($"    {srcPtr} = bitcast [{litLen} x i8]* {globalName} to i8*");
+                    Emit($"    call void @llvm.memcpy.p0i8.p0i8.i64(i8* {destPtr}, i8* {srcPtr}, i64 {litLen}, i1 false)");
+                }
+                return;
+            }
+
             node.Initializer.Accept(this);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(node.Initializer);
-            string initLlvmType = EmitType(initType);
+            string initLlvmType = initType is ArrayTypeExpression arrInit ? EmitType(arrInit.ElementType) + "*" : EmitType(initType);
             if (initLlvmType != type && type.EndsWith("*") && initLlvmType.EndsWith("*"))
             {
                 string castVal = NewTemp();
@@ -707,6 +770,15 @@ public class LlvmEmitter : IVisitor
         if (_locals.TryGetValue(node.Name, out string? ptr))
         {
             TypeExpression type = _typeChecker.GetType(node);
+            if (type is ArrayTypeExpression arr && arr.Size.HasValue)
+            {
+                string arrType = EmitType(type);
+                string decayed = NewTemp();
+                Emit($"    {decayed} = getelementptr {arrType}, {arrType}* {ptr}, i32 0, i32 0");
+                Push(decayed);
+                return;
+            }
+
             string llvmType = EmitType(type);
             string temp = NewTemp();
             Emit($"    {temp} = load {llvmType}, {llvmType}* {ptr}");
@@ -798,7 +870,8 @@ public class LlvmEmitter : IVisitor
                 arg.Accept(this);
                 argValues.Add(Pop());
                 TypeExpression argType = _typeChecker.GetType(arg);
-                argTypes.Add(EmitType(argType));
+                string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
+                argTypes.Add(llvmArgType);
             }
 
             string structName = ((NamedTypeExpression)(objType is PointerTypeExpression p ? p.Inner : objType)).Name;
@@ -815,11 +888,11 @@ public class LlvmEmitter : IVisitor
                 arg.Accept(this);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
-                string llvmArgType = EmitType(argType);
+                string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
 
                 if (target is MethodDeclaration methodTarget && i < methodTarget.Parameters.Count)
                 {
-                    string paramType = EmitType(methodTarget.Parameters[i].Type);
+                    string paramType = EmitParamType(methodTarget.Parameters[i].Type);
                     if (paramType != llvmArgType && paramType.EndsWith("*") && llvmArgType.EndsWith("*"))
                     {
                         string castVal = NewTemp();
@@ -832,7 +905,7 @@ public class LlvmEmitter : IVisitor
                 {
                     if (i < extDecl.Parameters.Count)
                     {
-                        string paramType = EmitType(extDecl.Parameters[i].Type);
+                        string paramType = EmitParamType(extDecl.Parameters[i].Type);
                         if (paramType != llvmArgType && paramType.EndsWith("*") && llvmArgType.EndsWith("*"))
                         {
                             string castVal = NewTemp();
@@ -978,7 +1051,7 @@ public class LlvmEmitter : IVisitor
 
         string finalVal = val;
         TypeExpression valueType = _typeChecker.GetType(node.Value);
-        string valueLlvmType = EmitType(valueType);
+        string valueLlvmType = valueType is ArrayTypeExpression arrVal ? EmitType(arrVal.ElementType) + "*" : EmitType(valueType);
         if (valueLlvmType != llvmType && llvmType.EndsWith("*") && valueLlvmType.EndsWith("*"))
         {
             string castVal = NewTemp();
@@ -1031,7 +1104,16 @@ public class LlvmEmitter : IVisitor
     public void Visit(PointerTypeExpression node) => throw new NotImplementedException();
     public void Visit(ManagedTypeExpression node) => throw new NotImplementedException();
     public void Visit(ArrayTypeExpression node) => throw new NotImplementedException();
-    public void Visit(IndexExpression node) => throw new NotImplementedException();
+    public void Visit(IndexExpression node)
+    {
+        EmitIndexAddress(node);
+        string elemPtr = Pop();
+        TypeExpression elemType = _typeChecker.GetType(node);
+        string llvmElemType = EmitType(elemType);
+        string val = NewTemp();
+        Emit($"    {val} = load {llvmElemType}, {llvmElemType}* {elemPtr}");
+        Push(val);
+    }
     public void Visit(BreakStatement node)
     {
         if (_breakLabels.Count == 0)

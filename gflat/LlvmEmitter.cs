@@ -196,6 +196,12 @@ public class LlvmEmitter : IVisitor
         }
         if (type is PointerTypeExpression ptr)
         {
+            TypeExpression inner = _typeChecker.ResolveAlias(ptr.Inner);
+            if (inner is NamedTypeExpression namedInner && _typeChecker.IsInterface(namedInner))
+            {
+                return "{ i8*, i8** }";
+            }
+
             // LLVM does not allow void*, use i8* instead
             if (ptr.Inner is NamedTypeExpression { Name: "void" })
                 return "i8*";
@@ -204,6 +210,12 @@ public class LlvmEmitter : IVisitor
         }
         if (type is ManagedTypeExpression mgd)
         {
+            TypeExpression inner = _typeChecker.ResolveAlias(mgd.Inner);
+            if (inner is NamedTypeExpression namedInner && _typeChecker.IsInterface(namedInner))
+            {
+                return "{ i8*, i8** }";
+            }
+
             if (mgd.Inner is NamedTypeExpression { Name: "void" })
                 return "i8*";
 
@@ -271,6 +283,51 @@ public class LlvmEmitter : IVisitor
         if (srcLlvm == dstLlvm)
         {
             return val;
+        }
+
+        if ((val == "null" || val == "zeroinitializer") && dstLlvm == "{ i8*, i8** }")
+        {
+            return "zeroinitializer";
+        }
+
+        // Struct pointer (or Interface pointer) to Interface pointer
+        if (dstType is PointerTypeExpression or ManagedTypeExpression)
+        {
+            TypeExpression dstInner = _typeChecker.ResolveAlias(dstType is PointerTypeExpression dp ? dp.Inner : ((ManagedTypeExpression)dstType).Inner);
+            if (dstInner is NamedTypeExpression dstNamedIface && _typeChecker.IsInterface(dstNamedIface))
+            {
+                TypeExpression srcInner = _typeChecker.ResolveAlias(srcType is PointerTypeExpression sp ? sp.Inner : ((ManagedTypeExpression)srcType).Inner);
+                if (srcInner is NamedTypeExpression srcNamedStruct)
+                {
+                    if (srcNamedStruct.Name == dstNamedIface.Name)
+                    {
+                        return val;
+                    }
+
+                    string dataPtr = NewTemp();
+                    Emit($"    {dataPtr} = bitcast {srcLlvm} {val} to i8*");
+
+                    string fat1 = NewTemp();
+                    Emit($"    {fat1} = insertvalue {{ i8*, i8** }} undef, i8* {dataPtr}, 0");
+
+                    string vtableGlobal = $"@{srcNamedStruct.Name}${dstNamedIface.Name}$vtable";
+                    TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(dstNamedIface.Name);
+                    int methodCount = ifaceInfo != null ? ifaceInfo.Methods.Count : 0;
+                    string vtablePtr = NewTemp();
+                    if (methodCount > 0)
+                    {
+                        Emit($"    {vtablePtr} = bitcast [{methodCount} x i8*]* {vtableGlobal} to i8**");
+                    }
+                    else
+                    {
+                        Emit($"    {vtablePtr} = bitcast [0 x i8*]* {vtableGlobal} to i8**");
+                    }
+
+                    string fat2 = NewTemp();
+                    Emit($"    {fat2} = insertvalue {{ i8*, i8** }} {fat1}, i8** {vtablePtr}, 1");
+                    return fat2;
+                }
+            }
         }
 
         // Pointer to Pointer (or Array to Pointer)
@@ -404,6 +461,43 @@ public class LlvmEmitter : IVisitor
 
         TypeChecker.StructInfo? prevStruct = _currentStruct;
         _currentStruct = _typeChecker.GetStruct(node.Name);
+
+        // Emit vtables for implemented interfaces
+        foreach (string ifaceName in node.Interfaces)
+        {
+            TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
+            if (ifaceInfo == null)
+            {
+                continue;
+            }
+
+            if (ifaceInfo.Methods.Count == 0)
+            {
+                EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [0 x i8*] zeroinitializer");
+            }
+            else
+            {
+                List<string> entries = new();
+                foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
+                {
+                    MethodDeclaration structMethod = _currentStruct!.Methods[ifaceMethod.Name];
+                    string retType = EmitType(structMethod.ReturnType);
+                    List<string> paramTypes = new() { $"%{node.Name}*" };
+                    foreach (Parameter p in structMethod.Parameters)
+                    {
+                        paramTypes.Add(EmitParamType(p.Type));
+                    }
+                    string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
+                    string methodNs = _typeChecker.GetFunctionNamespace(structMethod);
+                    string mangled = methodNs.Length > 0
+                        ? $"gflat${methodNs}${node.Name}${structMethod.Name}"
+                        : $"gflat${node.Name}${structMethod.Name}";
+                    entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
+                }
+                string vtableContent = string.Join(", ", entries);
+                EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{ifaceInfo.Methods.Count} x i8*] [ {vtableContent} ]");
+            }
+        }
 
         foreach (AstNode member in node.Members)
         {
@@ -552,7 +646,7 @@ public class LlvmEmitter : IVisitor
         Emit("");
     }
 
-    public void Visit(InterfaceDeclaration node) => throw new NotImplementedException();
+    public void Visit(InterfaceDeclaration node) { }
 
     public void Visit(FieldDeclaration node) => throw new NotImplementedException();
 
@@ -927,6 +1021,41 @@ public class LlvmEmitter : IVisitor
                 left = EmitImplicitCast(left, leftType, new NamedTypeExpression("int", null, 0));
                 right = EmitImplicitCast(right, rightType, new NamedTypeExpression("int", null, 0));
                 cmpLlvm = "i32";
+            }
+
+            if (cmpLlvm == "{ i8*, i8** }" || rightLlvm == "{ i8*, i8** }")
+            {
+                string leftData;
+                if (left == "null" || left == "zeroinitializer")
+                {
+                    leftData = "null";
+                }
+                else
+                {
+                    leftData = NewTemp();
+                    Emit($"    {leftData} = extractvalue {{ i8*, i8** }} {left}, 0");
+                }
+
+                string rightData;
+                if (right == "null" || right == "zeroinitializer")
+                {
+                    rightData = "null";
+                }
+                else
+                {
+                    rightData = NewTemp();
+                    Emit($"    {rightData} = extractvalue {{ i8*, i8** }} {right}, 0");
+                }
+
+                string cmpOp = node.Operator switch
+                {
+                    TokenKind.EqualsEquals => "eq",
+                    TokenKind.NotEquals => "ne",
+                    _ => throw new NotImplementedException()
+                };
+                Emit($"    {temp} = icmp {cmpOp} i8* {leftData}, {rightData}");
+                Push(temp);
+                return;
             }
 
             if (isFloat)
@@ -1441,6 +1570,61 @@ public class LlvmEmitter : IVisitor
             }
 
             Emit($"    call void @free(i8* {castPtr})");
+            return;
+        }
+
+        if (_typeChecker.TryGetInterfaceCall(node, out (TypeChecker.InterfaceInfo Interface, int SlotIndex, MethodDeclaration Method) ifaceCall))
+        {
+            MemberAccessExpression ifaceMemberAccess = (MemberAccessExpression)node.Callee;
+            ifaceMemberAccess.Object.Accept(this);
+            string fatPtr = Pop();
+
+            string dataPtr = NewTemp();
+            Emit($"    {dataPtr} = extractvalue {{ i8*, i8** }} {fatPtr}, 0");
+
+            string vtablePtr = NewTemp();
+            Emit($"    {vtablePtr} = extractvalue {{ i8*, i8** }} {fatPtr}, 1");
+
+            string slotPtr = NewTemp();
+            Emit($"    {slotPtr} = getelementptr i8*, i8** {vtablePtr}, i32 {ifaceCall.SlotIndex}");
+
+            string rawFnPtr = NewTemp();
+            Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
+
+            string returnType = EmitType(ifaceCall.Method.ReturnType);
+            List<string> fnParamTypes = new() { "i8*" };
+            foreach (Parameter p in ifaceCall.Method.Parameters)
+            {
+                fnParamTypes.Add(EmitParamType(p.Type));
+            }
+            string fnSig = $"{returnType} ({string.Join(", ", fnParamTypes)})*";
+
+            string typedFn = NewTemp();
+            Emit($"    {typedFn} = bitcast i8* {rawFnPtr} to {fnSig}");
+
+            List<string> callArgs = new() { $"i8* {dataPtr}" };
+            for (int i = 0; i < node.Arguments.Count; i++)
+            {
+                AstNode arg = node.Arguments[i];
+                arg.Accept(this);
+                string val = Pop();
+                TypeExpression argType = _typeChecker.GetType(arg);
+                string llvmArgType = EmitParamType(ifaceCall.Method.Parameters[i].Type);
+                val = EmitImplicitCast(val, argType, ifaceCall.Method.Parameters[i].Type);
+                callArgs.Add($"{llvmArgType} {val}");
+            }
+
+            string argsStr = string.Join(", ", callArgs);
+            if (returnType == "void")
+            {
+                Emit($"    call void {typedFn}({argsStr})");
+            }
+            else
+            {
+                string temp = NewTemp();
+                Emit($"    {temp} = call {returnType} {typedFn}({argsStr})");
+                Push(temp);
+            }
             return;
         }
 

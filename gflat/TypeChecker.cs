@@ -1424,6 +1424,7 @@ namespace gflat
                 case TokenKind.Star:
                     if (operand is not PointerTypeExpression ptr)
                         throw new TypeCheckException("Cannot dereference non-pointer", node.Line);
+                    ValidateTypeUsage(ptr.Inner, node.Line);
                     RecordType(node, ptr.Inner);
                     break;
                 default:

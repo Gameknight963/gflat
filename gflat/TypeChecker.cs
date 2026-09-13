@@ -92,11 +92,17 @@ namespace gflat
             public string Name = "";
             public string Namespace = "";
             public List<(string Name, TypeExpression Type)> Fields = new();
+            public List<FieldDeclaration> FieldDeclarations = new();
+            public List<ConstructorDeclaration> Constructors = new();
             public Dictionary<string, MethodDeclaration> Methods = new();
             public List<OperatorDeclaration> Operators = new();
             public List<string> Interfaces = new();
             public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
         }
+
+        private readonly Dictionary<NewExpression, ConstructorDeclaration?> _resolvedConstructors = new();
+        public ConstructorDeclaration? GetResolvedConstructor(NewExpression node) =>
+            _resolvedConstructors.TryGetValue(node, out ConstructorDeclaration? ctor) ? ctor : null;
 
         public class InterfaceInfo
         {
@@ -598,6 +604,18 @@ namespace gflat
                     return true;
             }
 
+            // default is assignable to any non-void type
+            if (source is NamedTypeExpression { Name: "default" })
+            {
+                if (target is not NamedTypeExpression { Name: "void" })
+                {
+                    if (valueNode is DefaultExpression def && def.TargetType == null)
+                        RecordType(def, target);
+                    return true;
+                }
+                return false;
+            }
+
             // null is assignable to any nullable type
             if (source is NamedTypeExpression { Name: "null" } && IsNullable(target))
                 return true;
@@ -779,11 +797,18 @@ namespace gflat
                 foreach (AstNode m in str.Members)
                 {
                     if (m is FieldDeclaration field)
+                    {
                         info.Fields.Add((field.Name, field.Type));
+                        info.FieldDeclarations.Add(field);
+                    }
                     else if (m is MethodDeclaration sm)
                     {
                         info.Methods[sm.Name] = sm;
                         _functionNamespaces[sm] = nsPath;
+                    }
+                    else if (m is ConstructorDeclaration ctor)
+                    {
+                        info.Constructors.Add(ctor);
                     }
                     else if (m is OperatorDeclaration op)
                     {
@@ -908,6 +933,20 @@ namespace gflat
                 if (member is FieldDeclaration field)
                 {
                     ValidateTypeUsage(field.Type, field.Line);
+                    if (field.Initializer != null)
+                    {
+                        field.Initializer.Accept(this);
+                        TypeExpression initType = ResolveAlias(GetType(field.Initializer));
+                        TypeExpression fieldType = ResolveAlias(field.Type);
+                        if (!IsAssignable(fieldType, initType, field.Initializer))
+                        {
+                            throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
+                        }
+                    }
+                }
+                else if (member is ConstructorDeclaration ctor)
+                {
+                    ctor.Accept(this);
                 }
                 else if (member is MethodDeclaration method)
                 {
@@ -1023,7 +1062,19 @@ namespace gflat
 
         public void Visit(ConstructorDeclaration node)
         {
+            if (_currentStruct == null)
+            {
+                throw new TypeCheckException("Constructor must be declared inside a struct", node.Line);
+            }
+            if (node.Name != _currentStruct.Name)
+            {
+                throw new TypeCheckException($"Constructor name '{node.Name}' does not match struct name '{_currentStruct.Name}'", node.Line);
+            }
             PushScope();
+            NamedTypeExpression structType = new NamedTypeExpression(_currentStruct.Name, null, node.Line);
+            PointerTypeExpression thisType = new PointerTypeExpression(structType, false, node.Line);
+            DeclareVariable("this", thisType, node.Line);
+
             foreach (Parameter p in node.Parameters)
             {
                 ValidateTypeUsage(p.Type, p.Line);
@@ -1915,7 +1966,101 @@ namespace gflat
         }
 
         public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
-        public void Visit(NewExpression node) => throw new NotImplementedException();
+        public void Visit(NewExpression node)
+        {
+            TypeExpression resolvedType = ResolveAlias(node.Type);
+            if (resolvedType is not NamedTypeExpression named || !_structs.TryGetValue(named.Name, out StructInfo? sInfo))
+            {
+                throw new TypeCheckException($"Cannot instantiate non-struct type '{TypeName(node.Type)}'", node.Line);
+            }
+
+            ConstructorDeclaration? matchedCtor = null;
+
+            if (sInfo.Constructors.Count == 0)
+            {
+                foreach (AstNode arg in node.Arguments)
+                    arg.Accept(this);
+
+                if (node.Arguments.Count != 0)
+                {
+                    throw new TypeCheckException($"Struct '{sInfo.Name}' does not define a constructor taking {node.Arguments.Count} arguments", node.Line);
+                }
+            }
+            else
+            {
+                List<ConstructorDeclaration> matches = new();
+                foreach (ConstructorDeclaration ctor in sInfo.Constructors)
+                {
+                    if (ctor.Parameters.Count != node.Arguments.Count)
+                        continue;
+
+                    bool matchesParams = true;
+                    for (int i = 0; i < node.Arguments.Count; i++)
+                    {
+                        AstNode arg = node.Arguments[i];
+                        TypeExpression paramType = ResolveAlias(ctor.Parameters[i].Type);
+                        if (arg is DefaultExpression def && def.TargetType == null)
+                        {
+                            RecordType(def, paramType);
+                        }
+                        else
+                        {
+                            arg.Accept(this);
+                        }
+                        TypeExpression argType = GetType(arg);
+                        if (!IsAssignable(paramType, argType, arg))
+                        {
+                            matchesParams = false;
+                            break;
+                        }
+                    }
+
+                    if (matchesParams)
+                        matches.Add(ctor);
+                }
+
+                if (matches.Count == 0)
+                {
+                    foreach (AstNode arg in node.Arguments)
+                    {
+                        if (!_types.ContainsKey(arg))
+                            arg.Accept(this);
+                    }
+                    string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
+                    throw new TypeCheckException($"No matching constructor found for '{sInfo.Name}' with arguments ({argTypes})", node.Line);
+                }
+                if (matches.Count > 1)
+                {
+                    throw new TypeCheckException($"Call to constructor of '{sInfo.Name}' is ambiguous", node.Line);
+                }
+
+                matchedCtor = matches[0];
+                _resolvedConstructors[node] = matchedCtor;
+            }
+
+            TypeExpression resultType = node.Kind switch
+            {
+                AllocationKind.Value => new NamedTypeExpression(sInfo.Name, null, node.Line),
+                AllocationKind.Pointer => new PointerTypeExpression(new NamedTypeExpression(sInfo.Name, null, node.Line), false, node.Line),
+                AllocationKind.Managed => new ManagedTypeExpression(new NamedTypeExpression(sInfo.Name, null, node.Line), false, node.Line),
+                _ => throw new Exception($"Unknown allocation kind {node.Kind}")
+            };
+
+            RecordType(node, resultType);
+        }
+
+        public void Visit(DefaultExpression node)
+        {
+            if (node.TargetType != null)
+            {
+                ValidateTypeUsage(node.TargetType, node.Line);
+                RecordType(node, ResolveAlias(node.TargetType));
+            }
+            else
+            {
+                RecordType(node, new NamedTypeExpression("default", null, node.Line));
+            }
+        }
         public void Visit(NamedTypeExpression node) { }
         public void Visit(PointerTypeExpression node) { }
         public void Visit(ManagedTypeExpression node) { }

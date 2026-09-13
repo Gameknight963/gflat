@@ -509,6 +509,16 @@ public class LlvmEmitter : IVisitor
             {
                 EmitStructOperator(node.Name, op);
             }
+            else if (member is ConstructorDeclaration ctor)
+            {
+                EmitStructConstructor(node.Name, ctor);
+            }
+        }
+
+        bool hasEmptyCtor = _currentStruct!.Constructors.Any(c => c.Parameters.Count == 0);
+        if (!hasEmptyCtor && (_currentStruct.Constructors.Count == 0 || _currentStruct.FieldDeclarations.Any(f => f.Initializer != null)))
+        {
+            EmitStructDefaultConstructor(node.Name);
         }
 
         _currentStruct = prevStruct;
@@ -646,6 +656,115 @@ public class LlvmEmitter : IVisitor
         Emit("");
     }
 
+    private string GetConstructorMangledName(string structName, ConstructorDeclaration? node, string ns)
+    {
+        if (node == null || node.Parameters.Count == 0)
+        {
+            return ns.Length > 0
+                ? $"gflat${ns}${structName}$ctor$default"
+                : $"gflat${structName}$ctor$default";
+        }
+
+        string paramTypes = string.Join("$", node.Parameters.Select(p => GetMangleTypeName(p.Type)));
+        return ns.Length > 0
+            ? $"gflat${ns}${structName}$ctor${paramTypes}"
+            : $"gflat${structName}$ctor${paramTypes}";
+    }
+
+    private void EmitFieldInitializers(string structName, string thisPtr)
+    {
+        if (_currentStruct == null) return;
+        foreach (FieldDeclaration field in _currentStruct.FieldDeclarations)
+        {
+            if (field.Initializer == null) continue;
+            int fieldIdx = _currentStruct.FieldIndex(field.Name);
+            string llvmFieldType = EmitType(field.Type);
+
+            string loadedThis = NewTemp();
+            Emit($"    {loadedThis} = load %{structName}*, %{structName}** {thisPtr}");
+            string fieldPtr = NewTemp();
+            Emit($"    {fieldPtr} = getelementptr %{structName}, %{structName}* {loadedThis}, i32 0, i32 {fieldIdx}");
+
+            field.Initializer.Accept(this);
+            string val = Pop();
+            TypeExpression initType = _typeChecker.GetType(field.Initializer);
+            val = EmitImplicitCast(val, initType, field.Type);
+            Emit($"    store {llvmFieldType} {val}, {llvmFieldType}* {fieldPtr}");
+        }
+    }
+
+    private void EmitStructConstructor(string structName, ConstructorDeclaration node)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+        _hasTerminated = false;
+
+        _currentFunctionReturnType = "void";
+        _currentFunctionExpectedType = new NamedTypeExpression("void", null, node.Line);
+        string ns = _currentNamespacePath;
+        string mangledName = GetConstructorMangledName(structName, node, ns);
+
+        List<string> paramList = new() { $"%{structName}* %this" };
+        foreach (Parameter p in node.Parameters)
+            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+
+        string parameters = string.Join(", ", paramList);
+
+        Emit($"define void @{mangledName}({parameters}) {{");
+        Emit("entry:");
+
+        string thisPtr = NewTemp();
+        Emit($"    {thisPtr} = alloca %{structName}*");
+        Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
+        _locals["this"] = thisPtr;
+
+        foreach (Parameter p in node.Parameters)
+        {
+            string type = EmitParamType(p.Type);
+            string ptr = NewTemp();
+            Emit($"    {ptr} = alloca {type}");
+            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            _locals[p.Name] = ptr;
+        }
+
+        EmitFieldInitializers(structName, thisPtr);
+
+        if (node.Body != null)
+            node.Body.Accept(this);
+
+        if (!_hasTerminated)
+            Emit("    ret void");
+
+        Emit("}");
+        Emit("");
+    }
+
+    private void EmitStructDefaultConstructor(string structName)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+        _hasTerminated = false;
+
+        _currentFunctionReturnType = "void";
+        _currentFunctionExpectedType = new NamedTypeExpression("void", null, 0);
+        string ns = _currentNamespacePath;
+        string mangledName = GetConstructorMangledName(structName, null, ns);
+
+        Emit($"define void @{mangledName}(%{structName}* %this) {{");
+        Emit("entry:");
+
+        string thisPtr = NewTemp();
+        Emit($"    {thisPtr} = alloca %{structName}*");
+        Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
+        _locals["this"] = thisPtr;
+
+        EmitFieldInitializers(structName, thisPtr);
+
+        Emit("    ret void");
+        Emit("}");
+        Emit("");
+    }
+
     public void Visit(InterfaceDeclaration node) { }
 
     public void Visit(FieldDeclaration node) => throw new NotImplementedException();
@@ -705,7 +824,7 @@ public class LlvmEmitter : IVisitor
         Emit("");
     }
 
-    public void Visit(ConstructorDeclaration node) => throw new NotImplementedException();
+    public void Visit(ConstructorDeclaration node) { }
     public void Visit(Parameter node) => throw new NotImplementedException();
 
     public void Visit(BlockStatement node)
@@ -1993,7 +2112,117 @@ public class LlvmEmitter : IVisitor
     }
 
     public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
-    public void Visit(NewExpression node) => throw new NotImplementedException();
+    public void Visit(NewExpression node)
+    {
+        TypeExpression resolvedType = _typeChecker.ResolveAlias(node.Type);
+        string structName = ((NamedTypeExpression)resolvedType).Name;
+        TypeChecker.StructInfo sInfo = _typeChecker.GetStruct(structName)!;
+        ConstructorDeclaration? ctor = _typeChecker.GetResolvedConstructor(node);
+
+        List<string> argVals = new();
+        foreach (AstNode arg in node.Arguments)
+        {
+            arg.Accept(this);
+            argVals.Add(Pop());
+        }
+
+        bool hasCtor = ctor != null || sInfo.Constructors.Any(c => c.Parameters.Count == 0) ||
+                       (sInfo.Constructors.Count == 0 && sInfo.FieldDeclarations.Any(f => f.Initializer != null));
+
+        if (node.Kind == AllocationKind.Value)
+        {
+            string temp = NewTemp();
+            Emit($"    {temp} = alloca %{structName}");
+            Emit($"    store %{structName} zeroinitializer, %{structName}* {temp}");
+
+            if (hasCtor)
+            {
+                string mangledName = GetConstructorMangledName(structName, ctor, sInfo.Namespace);
+                List<string> callArgs = new() { $"%{structName}* {temp}" };
+                if (ctor != null)
+                {
+                    for (int i = 0; i < ctor.Parameters.Count; i++)
+                    {
+                        TypeExpression argType = _typeChecker.GetType(node.Arguments[i]);
+                        string castVal = EmitImplicitCast(argVals[i], argType, ctor.Parameters[i].Type);
+                        callArgs.Add($"{EmitParamType(ctor.Parameters[i].Type)} {castVal}");
+                    }
+                }
+                Emit($"    call void @{mangledName}({string.Join(", ", callArgs)})");
+            }
+
+            string val = NewTemp();
+            Emit($"    {val} = load %{structName}, %{structName}* {temp}");
+            Push(val);
+        }
+        else if (node.Kind == AllocationKind.Pointer)
+        {
+            if (!_externNames.Contains("malloc"))
+            {
+                _externNames.Add("malloc");
+                EmitGlobal("declare i8* @malloc(i64)");
+            }
+
+            string sizePtr = NewTemp();
+            Emit($"    {sizePtr} = getelementptr %{structName}, %{structName}* null, i32 1");
+            string sizeInt = NewTemp();
+            Emit($"    {sizeInt} = ptrtoint %{structName}* {sizePtr} to i64");
+
+            string rawMem = NewTemp();
+            Emit($"    {rawMem} = call i8* @malloc(i64 {sizeInt})");
+            string typedPtr = NewTemp();
+            Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{structName}*");
+            Emit($"    store %{structName} zeroinitializer, %{structName}* {typedPtr}");
+
+            if (hasCtor)
+            {
+                string mangledName = GetConstructorMangledName(structName, ctor, sInfo.Namespace);
+                List<string> callArgs = new() { $"%{structName}* {typedPtr}" };
+                if (ctor != null)
+                {
+                    for (int i = 0; i < ctor.Parameters.Count; i++)
+                    {
+                        TypeExpression argType = _typeChecker.GetType(node.Arguments[i]);
+                        string castVal = EmitImplicitCast(argVals[i], argType, ctor.Parameters[i].Type);
+                        callArgs.Add($"{EmitParamType(ctor.Parameters[i].Type)} {castVal}");
+                    }
+                }
+                Emit($"    call void @{mangledName}({string.Join(", ", callArgs)})");
+            }
+
+            Push(typedPtr);
+        }
+        else
+        {
+            throw new NotImplementedException($"Allocation kind {node.Kind} not supported");
+        }
+    }
+
+    public void Visit(DefaultExpression node)
+    {
+        TypeExpression type = _typeChecker.GetType(node);
+        Push(GetDefaultValue(type));
+    }
+
+    private string GetDefaultValue(TypeExpression type)
+    {
+        type = _typeChecker.ResolveAlias(type);
+        if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
+            return "null";
+        if (type is ArrayTypeExpression)
+            return "zeroinitializer";
+        if (type is NamedTypeExpression named)
+        {
+            if (_typeChecker.GetStruct(named.Name) != null || _typeChecker.IsInterface(named.Name))
+                return "zeroinitializer";
+            if (_typeChecker.GetEnum(named.Name) != null)
+                return "0";
+            if (named.Name is "float" or "double")
+                return "0.0";
+            return "0";
+        }
+        return "0";
+    }
     public void Visit(NamespaceAccessExpression node)
     {
         if (_typeChecker.TryGetEnumMember(node, out long val, out _))

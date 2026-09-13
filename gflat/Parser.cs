@@ -430,7 +430,7 @@ namespace gflat
             // handle built-in type keywords
             if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
                 TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
-                TokenKind.Char or TokenKind.ExtraLong or
+                TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or TokenKind.ExtraLong or
                 TokenKind.String or TokenKind.Void)
             {
                 name = Current.Text;

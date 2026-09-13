@@ -544,5 +544,163 @@ namespace gflat.Tests
             var result = CompilerTestHelper.Run(code);
             Assert.Equal(77, result.ExitCode);
         }
+
+        [Fact]
+        public void FunctionPointerDirectCall()
+        {
+            string code = """
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    int(int, int)* fn = &Add;
+                    return fn(15, 27);
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void FunctionPointerPassedAsArgument()
+        {
+            string code = """
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int Multiply(int a, int b)
+                {
+                    return a * b;
+                }
+
+                int Apply(int a, int b, int(int, int)* op)
+                {
+                    return op(a, b);
+                }
+
+                int main()
+                {
+                    int sum = Apply(10, 20, &Add);
+                    int prod = Apply(3, 4, &Multiply);
+                    return sum + prod;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void NullableFunctionPointerAndMetadataProperties()
+        {
+            string code = """
+                int Multiply(int a, int b)
+                {
+                    return a * b;
+                }
+
+                int main()
+                {
+                    int(int, int)*? fn = null;
+                    int isNullBefore = 0;
+                    if (fn->is_null)
+                    {
+                        isNullBefore = 1;
+                    }
+
+                    fn = &Multiply;
+                    int isNullAfter = 0;
+                    if (fn->is_null)
+                    {
+                        isNullAfter = 1;
+                    }
+
+                    long addr = fn->address;
+                    int hasAddress = 0;
+                    if (addr != 0L)
+                    {
+                        hasAddress = 1;
+                    }
+
+                    int val = fn(6, 7);
+                    return isNullBefore * 100 + isNullAfter * 10 + hasAddress * val;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(142, result.ExitCode);
+        }
+
+        [Fact]
+        public void TypeAliasLocalAndNamespaceScope()
+        {
+            string code = """
+                namespace Calculations
+                {
+                    public alias BinOp = int(int, int)*;
+
+                    public int Sub(int a, int b)
+                    {
+                        return a - b;
+                    }
+                }
+
+                int main()
+                {
+                    alias LocalOp = Calculations::BinOp;
+                    LocalOp op = &Calculations::Sub;
+                    return op(50, 8);
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void FunctionPointerInStructAndArray()
+        {
+            string code = """
+                alias OpFunc = int(int, int)*;
+
+                struct Calculator
+                {
+                    OpFunc op;
+                }
+
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int Sub(int a, int b)
+                {
+                    return a - b;
+                }
+
+                int main()
+                {
+                    Calculator calc;
+                    calc.op = &Add;
+                    int r1 = calc.op(20, 30);
+
+                    OpFunc[2] ops;
+                    ops[0] = &Add;
+                    ops[1] = &Sub;
+                    int r2 = ops[1](r1, 8);
+
+                    return r2;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }

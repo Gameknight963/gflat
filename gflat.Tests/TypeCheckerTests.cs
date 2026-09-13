@@ -355,5 +355,153 @@ namespace gflat.Tests
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Cannot return from within a defer statement", ex.Message);
         }
+
+        [Fact]
+        public void FunctionPointerValidAssignmentPasses()
+        {
+            string code = """
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    int(int, int)* f = &Add;
+                    return f(10, 20);
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void FunctionUsedAsValueWithoutAmpersandThrowsHelpfulDiagnostic()
+        {
+            string code = """
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    int(int, int)* f = Add;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot use function 'Add' as a value without '&'. Did you mean '&Add'?", ex.Message);
+        }
+
+        [Fact]
+        public void FunctionPointerArgumentMismatchThrows()
+        {
+            string code = """
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    int(int, int)* f = &Add;
+                    return f(10, "string");
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("cannot pass", ex.Message);
+        }
+
+        [Fact]
+        public void FunctionPointerArgumentCountMismatchThrows()
+        {
+            string code = """
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    int(int, int)* f = &Add;
+                    return f(10);
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("expects 2 arguments but got 1", ex.Message);
+        }
+
+        [Fact]
+        public void FunctionPointerCannotCallFreeThrows()
+        {
+            string code = """
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    int(int, int)* f = &Add;
+                    f->free();
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot call '->free' on a function pointer", ex.Message);
+        }
+
+        [Fact]
+        public void TypeAliasDeclarationAndUsagePasses()
+        {
+            string code = """
+                alias BinaryOp = int(int, int)*;
+
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    BinaryOp op = &Add;
+                    return op(3, 4);
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void TypeAliasAcrossNamespacePasses()
+        {
+            string code = """
+                namespace Math
+                {
+                    public alias BinaryOp = int(int, int)*;
+
+                    public int Multiply(int a, int b)
+                    {
+                        return a * b;
+                    }
+                }
+
+                int main()
+                {
+                    Math::BinaryOp op = &Math::Multiply;
+                    return op(5, 6);
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
     }
 }

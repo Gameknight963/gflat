@@ -39,7 +39,14 @@ namespace gflat
 
             namespace Math
             {
-                int Double(int x)
+                public alias BinaryOp = int(int, int)*;
+
+                public int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                public int Double(int x)
                 {
                     return x * 2;
                 }
@@ -82,6 +89,15 @@ namespace gflat
 
                 int d = Math::Double(21);
                 printf("double: %d\n", d);
+
+                alias LocalOp = Math::BinaryOp;
+                LocalOp op = &Math::Add;
+                printf("function pointer call: %d\n", op(20, 22));
+
+                int(int, int)*? maybeOp = null;
+                printf("maybeOp is_null: %d\n", maybeOp->is_null);
+                maybeOp = &Math::Add;
+                printf("maybeOp is_null after assignment: %d, address: 0x%llx\n", maybeOp->is_null, maybeOp->address);
 
                 return 0;
             }

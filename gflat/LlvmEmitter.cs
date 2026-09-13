@@ -2703,6 +2703,19 @@ public class LlvmEmitter : IVisitor
             }
         }
 
+        if (node.Object is IdentifierExpression objIdent &&
+            _typeChecker.TryGetConstValueByName(objIdent.Name, out ConstValue? constObj) &&
+            constObj is ConstValue.Struct constStruct)
+        {
+            if (constStruct.Fields.TryGetValue(node.Member, out ConstValue? fieldVal))
+            {
+                if (TryEmitConstValue(fieldVal, _typeChecker.GetType(node)))
+                {
+                    return;
+                }
+            }
+        }
+
         EmitMemberAddress(node);
         string fieldPtr = Pop();
         TypeExpression fieldType = _typeChecker.GetType(node);

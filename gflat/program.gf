@@ -1,13 +1,41 @@
 extern int printf(char* fmt, ...);
-extern void* malloc(long size);
+
+// ========================================================
+// 1. Const Functions & Compile-Time Evaluation (Stage 2)
+// ========================================================
+
+const int Factorial(int n)
+{
+    if (n <= 1)
+    {
+        return 1;
+    }
+    return n * Factorial(n - 1);
+}
+
+const int Square(int x)
+{
+    return x * x;
+}
+
+// Compile-time constants computed from const function calls & math
+const int ItemCount = Factorial(4);        // 24 at compile time!
+const int HeaderSize = 8;
+const int BufferCapacity = ItemCount + HeaderSize; // 32 at compile time!
+
+// ========================================================
+// 2. Structs, Readonly Methods & Operators (Stage 1)
+// ========================================================
 
 struct Point
 {
-    int x = 0;
-    int y = 0;
+    int x;
+    int y;
 
     Point()
     {
+        this.x = 0;
+        this.y = 0;
     }
 
     Point(int x, int y)
@@ -16,15 +44,21 @@ struct Point
         this.y = y;
     }
 
+    // Readonly method: cannot mutate 'this' fields
+    readonly void Print()
+    {
+        printf("Point(%d, %d)\n", this.x, this.y);
+    }
+
+    readonly int LengthSquared()
+    {
+        return this.x * this.x + this.y * this.y;
+    }
+
     void Move(int dx, int dy)
     {
         this.x += dx;
         this.y += dy;
-    }
-
-    void Print()
-    {
-        printf("Point(%d, %d)\n", this.x, this.y);
     }
 
     public static Point operator +(Point a, Point b)
@@ -35,32 +69,102 @@ struct Point
         return res;
     }
 
-    public static Point operator -(Point a)
-    {
-        Point res;
-        res.x = 0 - a.x;
-        res.y = 0 - a.y;
-        return res;
-    }
-
-    public static Point operator *(Point p, int scale)
-    {
-        Point res;
-        res.x = p.x * scale;
-        res.y = p.y * scale;
-        return res;
-    }
-
     public static bool operator ==(Point a, Point b)
     {
         return a.x == b.x && a.y == b.y;
     }
+}
 
-    public static bool operator !=(Point a, Point b)
+// Comptime constant value-struct
+const Point Origin = new Point(0, 0);
+
+// Function accepting a readonly pointer: cannot mutate pointee!
+void InspectPoint(readonly Point* p)
+{
+    printf("Inspecting Point: ");
+    p.Print(); // Allowed because Print() is a readonly method
+    printf("  LengthSquared: %d\n", p.LengthSquared());
+}
+
+// ========================================================
+// 3. Const Parameters & Array Sizing
+// ========================================================
+
+// Const parameter: caller MUST pass a compile-time constant
+void InitializeBuffer(const int size, int* buf)
+{
+    for (int i = 0; i < size; i = i + 1)
     {
-        return !(a == b);
+        buf[i] = (i + 1) * 10;
     }
 }
+
+// ========================================================
+// 4. Readonly Fields & OOP Inheritance (Stage 1)
+// ========================================================
+
+abstract class Entity
+{
+    // Readonly field: can only be assigned in constructor
+    public readonly int id;
+    public int health;
+
+    public Entity(int id, int health)
+    {
+        this.id = id;
+        this.health = health;
+    }
+
+    public abstract void Describe();
+
+    public readonly void PrintStatus()
+    {
+        printf("[Entity #%d] Health: %d\n", this.id, this.health);
+    }
+
+    public void TakeDamage(int amount)
+    {
+        this.health -= amount;
+        if (this.health < 0)
+        {
+            this.health = 0;
+        }
+    }
+}
+
+class Player : Entity
+{
+    public int score;
+
+    public Player(int id, int health, int score) : base(id, health)
+    {
+        this.score = score;
+    }
+
+    public override void Describe()
+    {
+        printf("Player #%d - Health: %d, Score: %d\n", this.id, this.health, this.score);
+    }
+}
+
+class Monster : Entity
+{
+    public int damage;
+
+    public Monster(int id, int health, int damage) : base(id, health)
+    {
+        this.damage = damage;
+    }
+
+    public override void Describe()
+    {
+        printf("Monster #%d - Health: %d, Damage: %d\n", this.id, this.health, this.damage);
+    }
+}
+
+// ========================================================
+// 5. Interfaces & Polymorphism
+// ========================================================
 
 interface IShape
 {
@@ -70,8 +174,8 @@ interface IShape
 
 struct Rect : IShape
 {
-    int w = 1;
-    int h = 1;
+    int w;
+    int h;
 
     Rect(int w, int h)
     {
@@ -90,237 +194,77 @@ struct Rect : IShape
     }
 }
 
-void PrintShape(char* name, IShape* s)
+void PrintShape(char* label, IShape* shape)
 {
-    printf("%s - Area: %d, Perimeter: %d\n", name, s.Area(), s.Perimeter());
+    printf("%s -> Area: %d, Perimeter: %d\n", label, shape.Area(), shape.Perimeter());
 }
 
-void LogMessage(char* msg)
-{
-    printf("%s\n", msg);
-}
-
-abstract class Animal
-{
-    public int age;
-
-    public Animal()
-    {
-        this.age = 0;
-    }
-
-    public Animal(int age)
-    {
-        this.age = age;
-    }
-
-    public abstract void Speak();
-
-    public void Introduce()
-    {
-        printf("I am an animal of age %d, and I say: ", this.age);
-        this.Speak();
-    }
-}
-
-class Dog : Animal
-{
-    public int barkPitch;
-
-    public Dog(int age, int pitch)
-    {
-        this.age = age;
-        this.barkPitch = pitch;
-    }
-
-    public override void Speak()
-    {
-        printf("Woof! (pitch: %d)\n", this.barkPitch);
-    }
-}
-
-class Cat : Animal
-{
-    public Cat(int age)
-    {
-        this.age = age;
-    }
-
-    public override void Speak()
-    {
-        printf("Meow!\n");
-    }
-}
-
-long Add64(long a, long b)
-{
-    return a + b;
-}
-
-namespace Math
-{
-    public alias BinaryOp = int(int, int)*;
-
-    public int Add(int a, int b)
-    {
-        return a + b;
-    }
-
-    public int Double(int x)
-    {
-        return x * 2;
-    }
-}
-
-enum LogLevel : char
-{
-    Info = 1,
-    Warning = 2,
-    Error = 3
-}
-
-enum Status
-{
-    Pending,
-    Running = 10,
-    Done
-}
+// ========================================================
+// Main Entry Point
+// ========================================================
 
 int main()
 {
-    LogMessage("Top-level functions work!");
+    printf("=== gflat Showcase: const & readonly Systems ===\n\n");
 
-    Point pDef = default;
-    printf("default point: (%d, %d)\n", pDef.x, pDef.y);
+    // --- 1. Const Evaluation & Array Sizing ---
+    printf("-- 1. Compile-Time Evaluation & Constants --\n");
+    printf("Factorial(4) = %d (computed at compile time)\n", ItemCount);
+    printf("BufferCapacity = %d\n", BufferCapacity);
+    printf("Origin Point = (%d, %d)\n", Origin.x, Origin.y);
 
-    Point p = new Point(10, 20);
-    p.Print();
-    char[] a = "string";
-    printf("buffer before: %s\n", a);
-    a[0] = 'S';
-    printf("buffer after: %s\n", a);
+    // Array sized by compile-time constant expression!
+    int[BufferCapacity] myBuffer;
+    InitializeBuffer(BufferCapacity, myBuffer);
+    printf("myBuffer[0] = %d, myBuffer[5] = %d, myBuffer[31] = %d\n\n",
+           myBuffer[0], myBuffer[5], myBuffer[31]);
 
-    p.Move(5, 5);
-    p.Print();
+    // --- 2. Readonly Methods & Readonly Pointers ---
+    printf("-- 2. Readonly Methods & Pointers --\n");
+    Point pt = new Point(3, 4);
+    pt.Print();
 
-    Point* ptr = &p;
-    ptr.Move(100, 200);
-    ptr.Print();
+    // Pass mutable pointer to readonly Point* parameter
+    InspectPoint(&pt);
 
-    printf("ptr address: 0x%llx, is_null: %d\n", ptr->address, ptr->is_null);
+    pt.Move(2, -1);
+    printf("After Move(2, -1): ");
+    pt.Print();
 
-    defer printf("deferred cleanup: main finished!\n");
+    Point pt2 = new Point(5, 10);
+    Point ptSum = pt + pt2;
+    printf("Operator + result: ");
+    ptSum.Print();
+    printf("\n");
 
-    Point* heapPoint = new* Point(42, 84);
-    defer heapPoint->free();
-    heapPoint.Print();
-    printf("heapPoint address: 0x%llx\n", heapPoint->address);
+    // --- 3. Readonly Fields & Inheritance ---
+    printf("-- 3. Readonly Fields & OOP --\n");
+    Player player = new Player(101, 100, 500);
+    player.Describe();
+    player.TakeDamage(25);
+    player.PrintStatus();
 
-    long sum = Add64(1000000000L, 2000000000L);
-    printf("sum: %lld\n", sum);
+    Monster monster = new Monster(999, 50, 15);
+    Entity* e1 = &player;
+    Entity* e2 = &monster;
+    e1.Describe();
+    e2.Describe();
+    printf("\n");
 
-    int d = Math::Double(21);
-    printf("double: %d\n", d);
+    // --- 4. Heap Allocation, Defer & Interfaces ---
+    printf("-- 4. Heap Allocation, Defer & Interfaces --\n");
+    defer printf("Deferred cleanup: main exited successfully!\n");
 
-    alias LocalOp = Math::BinaryOp;
-    LocalOp op = &Math::Add;
-    printf("function pointer call: %d\n", op(20, 22));
+    Rect stackRect = new Rect(6, 7);
+    PrintShape("Stack Rect", &stackRect);
 
-    int(int, int)*? maybeOp = null;
-    printf("maybeOp is_null: %d\n", maybeOp->is_null);
-    maybeOp = &Math::Add;
-    printf("maybeOp is_null after assignment: %d, address: 0x%llx\n", maybeOp->is_null, maybeOp->address);
+    Rect* heapRect = new* Rect(12, 5);
+    defer heapRect->free();
+    PrintShape("Heap Rect", heapRect);
 
-    Status status = Status::Running;
-    printf("enum status: %d (expected 10), is Done: %d\n", status, Status.Done);
-    LogLevel level = LogLevel::Info;
-    printf("enum level: %d\n", level);
-
-    uint u = 3000000000u;
-    ulong ul = 10000000000000000000ul;
-    printf("unsigned int: %u, unsigned long: %llu\n", u, ul);
-
-    uint shifted = 1u << 4;
-    uint rshifted = 0x80000000u >> 1;
-    printf("shifted: %u, rshifted: 0x%x\n", shifted, rshifted);
-
-    int convertedFromUInt = u;
-    printf("implicit uint to int: %d\n", convertedFromUInt);
-
-    long largeNum = 0x123456789abcdef0l;
-    int truncated = (int)largeNum;
-    printf("explicit cast long to int: 0x%x\n", truncated);
-
-    nuint ptrAddress = (nuint)ptr;
-    Point* restoredPtr = (Point*)ptrAddress;
-    printf("nuint roundtrip address: 0x%llx\n", restoredPtr->address);
-
-    int(int, int)* addLambda = (int a, int b) => a + b;
-    printf("lambda add: %d\n", addLambda(19, 23));
-
-    int(int, int)* mulLambda = static (int a, int b) => a * b;
-    printf("static lambda mul: %d\n", mulLambda(6, 7));
-
-    int(int)* loopLambda = (int n) =>
-    {
-        int s = 0;
-        for (int i = 1; i <= n; i = i + 1)
-        {
-            s = s + i;
-        }
-        return s;
-    };
-    printf("block lambda sum 1..10: %d\n", loopLambda(10));
-
-    Point pt1;
-    pt1.x = 10;
-    pt1.y = 20;
-    Point pt2;
-    pt2.x = 5;
-    pt2.y = 7;
-    Point pt3 = pt1 + pt2;
-    printf("operator + : Point(%d, %d)\n", pt3.x, pt3.y);
-
-    Point ptNeg = -pt1;
-    printf("operator - : Point(%d, %d)\n", ptNeg.x, ptNeg.y);
-
-    Point ptScaled = pt1 * 2;
-    printf("operator * : Point(%d, %d)\n", ptScaled.x, ptScaled.y);
-
-    pt1 += pt2;
-    printf("operator +=: Point(%d, %d)\n", pt1.x, pt1.y);
-
-    printf("operator ==: %d, !=: %d\n", pt1 == pt3, pt1 != pt2);
-
-    byte byteVal = 200;
-    sbyte sbyteVal = -50;
-    short shortVal = 1000;
-    ushort ushortVal = 50000;
-    printf("small primitives: byte=%u, sbyte=%d, short=%d, ushort=%u\n", byteVal, sbyteVal, shortVal, ushortVal);
-
-    int sumSmall = byteVal + sbyteVal + shortVal + ushortVal;
-    printf("sum of small primitives widened to int: %d\n", sumSmall);
-
-    byte byteTrunc = (byte)300;
-    printf("byte truncated from 300: %u\n", byteTrunc);
-
-    Rect rectStack = new Rect(5, 10);
-    PrintShape("Stack Rect", &rectStack);
-
-    Rect* rectHeap = new* Rect(7, 3);
-    PrintShape("Heap Rect", rectHeap);
-    rectHeap->free();
-
-    Dog dog = new Dog(3, 85);
-    Cat cat = new Cat(5);
-    Animal* a1 = &dog;
-    Animal* a2 = &cat;
-    a1.Introduce();
-    a2.Introduce();
-
-    Dog* heapDog = new* Dog(2, 99);
-    defer heapDog->free();
-    heapDog.Introduce();
+    // Lambda expressions
+    int(int, int)* addFn = (int a, int b) => a + b;
+    printf("Lambda (20 + 22) = %d\n", addFn(20, 22));
 
     return 0;
 }

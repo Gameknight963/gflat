@@ -382,8 +382,9 @@ namespace gflat
             string name = "";
 
             // handle built-in type keywords
-            if (Current.Kind is TokenKind.Int or TokenKind.Float or TokenKind.Bool or
-                TokenKind.Char or TokenKind.Long or TokenKind.ExtraLong or
+            if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
+                TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
+                TokenKind.Char or TokenKind.ExtraLong or
                 TokenKind.String or TokenKind.Void)
             {
                 name = Current.Text;
@@ -518,8 +519,9 @@ namespace gflat
         }
 
         private bool IsTypeStart() =>
-            Current.Kind is TokenKind.Int or TokenKind.Float or TokenKind.Bool or
-            TokenKind.Char or TokenKind.Long or TokenKind.ExtraLong or
+            Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
+            TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
+            TokenKind.Char or TokenKind.ExtraLong or
             TokenKind.String or TokenKind.Void or TokenKind.Identifier;
 
         private bool IsVariableDeclaration()
@@ -747,14 +749,47 @@ namespace gflat
                 Check(TokenKind.Ampersand) || Check(TokenKind.PlusPlus) || Check(TokenKind.MinusMinus))
             {
                 Token op = Consume();
-                AstNode operand = ParseExpression(20); // high binding power for prefix (higher than binary ops)
+                AstNode operand = ParseExpression(22); // high binding power for prefix (higher than binary ops)
                 return new UnaryExpression(operand, op.Kind, true, line);
             }
 
-            // parenthesized expression
+            // cast or parenthesized expression
             if (Check(TokenKind.OpenParen))
             {
-                Consume();
+                int saved = _pos;
+                bool isCast = false;
+                TypeExpression? castType = null;
+                try
+                {
+                    Consume(); // '('
+                    castType = ParseTypeExpression();
+                    if (Match(TokenKind.CloseParen))
+                    {
+                        bool isDefiniteType = IsDefiniteType(castType);
+                        if (isDefiniteType && IsCastOperandStarter(Current.Kind))
+                        {
+                            isCast = true;
+                        }
+                        else if (!isDefiniteType && IsUnambiguousCastOperandStarter(Current.Kind))
+                        {
+                            isCast = true;
+                        }
+                    }
+                }
+                catch
+                {
+                    isCast = false;
+                }
+
+                if (isCast && castType != null)
+                {
+                    AstNode operand = ParseExpression(22);
+                    return new CastExpression(castType, operand, line);
+                }
+
+                // fallback to parenthesized expression
+                _pos = saved;
+                Consume(); // '('
                 AstNode expr = ParseExpression();
                 Expect(TokenKind.CloseParen);
                 return expr;
@@ -765,8 +800,9 @@ namespace gflat
                 return ParseInterpolatedString();
 
             // literals
-            if (Current.Kind is TokenKind.IntLiteral or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
-                TokenKind.LongLiteral or TokenKind.HexInt or TokenKind.StringLiteral or
+            if (Current.Kind is TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
+                TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
+                TokenKind.HexInt or TokenKind.StringLiteral or
                 TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null)
             {
                 Token token = Consume();
@@ -812,6 +848,39 @@ namespace gflat
             throw new Exception($"Unexpected token '{Current.Text}' on line {line}");
         }
 
+        private static bool IsDefiniteType(TypeExpression type)
+        {
+            if (type is PointerTypeExpression or ManagedTypeExpression or ArrayTypeExpression or FunctionPointerTypeExpression)
+                return true;
+            if (type is NamedTypeExpression named)
+            {
+                if (named.Namespace != null)
+                    return true;
+                return named.Name is "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or
+                    "float" or "double" or "bool" or "char" or "extralong" or "string" or "void";
+            }
+            return false;
+        }
+
+        private static bool IsCastOperandStarter(TokenKind kind) =>
+            kind is TokenKind.Identifier or
+            TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
+            TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
+            TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or
+            TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
+            TokenKind.Minus or TokenKind.Bang or TokenKind.Star or TokenKind.Ampersand or
+            TokenKind.PlusPlus or TokenKind.MinusMinus;
+
+        private static bool IsUnambiguousCastOperandStarter(TokenKind kind) =>
+            kind is TokenKind.Identifier or
+            TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
+            TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
+            TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or
+            TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
+            TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
+
         private static (int left, int right) GetInfixBindingPower(TokenKind kind) => kind switch
         {
             TokenKind.Equals or TokenKind.PlusEquals or TokenKind.MinusEquals or
@@ -824,11 +893,12 @@ namespace gflat
             TokenKind.EqualsEquals or TokenKind.NotEquals => (12, 13),
             TokenKind.Less or TokenKind.Greater or
             TokenKind.LessEquals or TokenKind.GreaterEquals => (14, 15),
-            TokenKind.Plus or TokenKind.Minus => (16, 17),
-            TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (18, 19),
-            TokenKind.PlusPlus or TokenKind.MinusMinus => (22, 0),
-            TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (22, 23),
-            TokenKind.OpenParen or TokenKind.OpenBracket => (22, 0),
+            TokenKind.LessLess or TokenKind.GreaterGreater => (16, 17),
+            TokenKind.Plus or TokenKind.Minus => (18, 19),
+            TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (20, 21),
+            TokenKind.PlusPlus or TokenKind.MinusMinus => (24, 0),
+            TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (24, 25),
+            TokenKind.OpenParen or TokenKind.OpenBracket => (24, 0),
             _ => (0, 0)
         };
 

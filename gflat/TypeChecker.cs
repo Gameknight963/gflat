@@ -155,8 +155,13 @@ namespace gflat
         }
 
         private static NamedTypeExpression Int => new NamedTypeExpression("int", null, 0);
+        private static NamedTypeExpression UInt => new NamedTypeExpression("uint", null, 0);
         private static NamedTypeExpression Long => new NamedTypeExpression("long", null, 0);
+        private static NamedTypeExpression ULong => new NamedTypeExpression("ulong", null, 0);
+        private static NamedTypeExpression NInt => new NamedTypeExpression("nint", null, 0);
+        private static NamedTypeExpression NUInt => new NamedTypeExpression("nuint", null, 0);
         private static NamedTypeExpression Float => new NamedTypeExpression("float", null, 0);
+        private static NamedTypeExpression Double => new NamedTypeExpression("double", null, 0);
         private static NamedTypeExpression Bool => new NamedTypeExpression("bool", null, 0);
         private static NamedTypeExpression Char => new NamedTypeExpression("char", null, 0);
         private static PointerTypeExpression CharPtr => new PointerTypeExpression(Char, false, 0);
@@ -167,7 +172,7 @@ namespace gflat
         private static NamedTypeExpression Null => new NamedTypeExpression("null", null, 0);
 
         private static bool IsNumeric(TypeExpression type) =>
-            type is NamedTypeExpression n && n.Name is "int" or "long" or "float" or "extralong";
+            type is NamedTypeExpression n && n.Name is "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "float" or "double" or "extralong" or "char";
 
         private static bool IsNullable(TypeExpression type) =>
             type is PointerTypeExpression { IsNullable: true } or
@@ -258,19 +263,35 @@ namespace gflat
             return length + 1; // +1 for null terminator \0
         }
 
-        private bool IsInteger(TypeExpression type)
+        public bool IsUnsignedInteger(TypeExpression type)
         {
             type = ResolveAlias(type);
             if (type is NamedTypeExpression n)
             {
-                if (n.Name is "int" or "long" or "extralong" or "char")
+                if (n.Name is "uint" or "ulong" or "nuint")
                     return true;
                 EnumInfo? enumInfo = ResolveEnum(n);
                 if (enumInfo != null)
-                    return IsInteger(enumInfo.UnderlyingType);
+                    return IsUnsignedInteger(enumInfo.UnderlyingType);
             }
             return false;
         }
+
+        public bool IsSignedInteger(TypeExpression type)
+        {
+            type = ResolveAlias(type);
+            if (type is NamedTypeExpression n)
+            {
+                if (n.Name is "int" or "long" or "extralong" or "char" or "nint")
+                    return true;
+                EnumInfo? enumInfo = ResolveEnum(n);
+                if (enumInfo != null)
+                    return IsSignedInteger(enumInfo.UnderlyingType);
+            }
+            return false;
+        }
+
+        public bool IsInteger(TypeExpression type) => IsSignedInteger(type) || IsUnsignedInteger(type);
 
         private bool IsValidPointerForArithmetic(TypeExpression type, out string? error)
         {
@@ -407,6 +428,25 @@ namespace gflat
                     if (arrTarget.Size == null || arrSrc.Size == null || arrTarget.Size >= arrSrc.Size)
                         return true;
                 }
+            }
+
+            // Implicit numeric conversions
+            if (source is NamedTypeExpression s && target is NamedTypeExpression t)
+            {
+                if (s.Name == "uint" && t.Name is "int" or "long" or "ulong" or "nint" or "nuint" or "extralong")
+                    return true;
+                if (s.Name == "int" && t.Name is "long" or "nint" or "extralong")
+                    return true;
+                if (s.Name == "char" && t.Name is "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "extralong")
+                    return true;
+                if (s.Name == "ulong" && t.Name is "long" or "nuint" or "extralong")
+                    return true;
+                if (s.Name == "nint" && t.Name is "long" or "extralong")
+                    return true;
+                if (s.Name == "nuint" && t.Name is "ulong" or "extralong")
+                    return true;
+                if (s.Name == "float" && t.Name == "double")
+                    return true;
             }
 
             return false;
@@ -773,6 +813,13 @@ namespace gflat
                         $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
                 RecordType(node, left);
             }
+            else if (node.Operator is TokenKind.LessLess or TokenKind.GreaterGreater)
+            {
+                if (!IsInteger(left) || !IsInteger(right))
+                    throw new TypeCheckException(
+                        $"Bit shift operators require integer operands, got '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                RecordType(node, left);
+            }
             else
             {
                 if (!TypesMatch(left, right))
@@ -882,10 +929,14 @@ namespace gflat
             TypeExpression type = node.Token.Kind switch
             {
                 TokenKind.IntLiteral => Int,
-                TokenKind.HexInt => Int,
+                TokenKind.UIntLiteral => UInt,
+                TokenKind.HexInt => node.Token.Text.EndsWith("ul", StringComparison.OrdinalIgnoreCase) || node.Token.Text.EndsWith("lu", StringComparison.OrdinalIgnoreCase) ? ULong :
+                                    node.Token.Text.EndsWith("u", StringComparison.OrdinalIgnoreCase) ? UInt :
+                                    node.Token.Text.EndsWith("l", StringComparison.OrdinalIgnoreCase) ? Long : Int,
                 TokenKind.FloatLiteral => Float,
-                TokenKind.DoubleLiteral => Float,
+                TokenKind.DoubleLiteral => Double,
                 TokenKind.LongLiteral => Long,
+                TokenKind.ULongLiteral => ULong,
                 TokenKind.StringLiteral => new ArrayTypeExpression(Char, GetStringLiteralLength(node.Token.Text[1..^1]), node.Line),
                 TokenKind.CharLiteral => Char,
                 TokenKind.True => Bool,
@@ -1606,5 +1657,92 @@ namespace gflat
         }
 
         public void Visit(EnumMemberDeclaration node) { }
+
+        public void Visit(CastExpression node)
+        {
+            node.Operand.Accept(this);
+            TypeExpression sourceType = ResolveAlias(GetType(node.Operand));
+            TypeExpression targetType = ResolveAlias(node.TargetType);
+
+            if (!IsValidCast(sourceType, targetType))
+            {
+                throw new TypeCheckException($"Cannot cast '{TypeName(sourceType)}' to '{TypeName(targetType)}'", node.Line);
+            }
+
+            RecordType(node, node.TargetType);
+        }
+
+        private bool IsValidCast(TypeExpression src, TypeExpression dst)
+        {
+            src = ResolveAlias(src);
+            dst = ResolveAlias(dst);
+
+            if (TypesMatch(src, dst))
+            {
+                return true;
+            }
+
+            // Enums: treat as underlying type
+            if (src is NamedTypeExpression nSrc && ResolveEnum(nSrc) is { } enumSrc)
+            {
+                return IsValidCast(enumSrc.UnderlyingType, dst);
+            }
+            if (dst is NamedTypeExpression nDst && ResolveEnum(nDst) is { } enumDst)
+            {
+                return IsValidCast(src, enumDst.UnderlyingType);
+            }
+
+            // Null to pointer / nullable
+            if (src is NamedTypeExpression { Name: "null" } && (dst is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression))
+            {
+                return true;
+            }
+
+            // Numeric to numeric (integers, floats, double, char)
+            if (IsNumeric(src) && IsNumeric(dst))
+            {
+                return true;
+            }
+
+            // Pointer to pointer
+            if (src is PointerTypeExpression && dst is PointerTypeExpression)
+            {
+                return true;
+            }
+
+            // Function pointer to function pointer or void*
+            if (src is FunctionPointerTypeExpression && dst is FunctionPointerTypeExpression)
+            {
+                return true;
+            }
+            if (src is FunctionPointerTypeExpression && dst is PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" } })
+            {
+                return true;
+            }
+            if (src is PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" } } && dst is FunctionPointerTypeExpression)
+            {
+                return true;
+            }
+
+            // Pointer to integer (e.g. nint, nuint, long, ulong, int, uint)
+            if ((src is PointerTypeExpression || src is FunctionPointerTypeExpression) && IsInteger(dst))
+            {
+                return true;
+            }
+
+            // Integer to pointer (e.g. (void*)addr, (int*)0)
+            if (IsInteger(src) && (dst is PointerTypeExpression || dst is FunctionPointerTypeExpression))
+            {
+                return true;
+            }
+
+            // Array to pointer decay (e.g. (char*)arr)
+            if (src is ArrayTypeExpression arr && dst is PointerTypeExpression ptr)
+            {
+                return IsValidCast(arr.ElementType, ptr.Inner);
+            }
+
+            return false;
+        }
     }
 }

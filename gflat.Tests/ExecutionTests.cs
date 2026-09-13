@@ -1105,5 +1105,141 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void UIntArithmeticAndComparisonExecution()
+        {
+            string code = """
+                int main()
+                {
+                    uint large = 3000000000u;
+                    uint small = 10u;
+                    if (large > small)
+                    {
+                        uint divRes = large / 1000000000u;
+                        if (divRes == 3u)
+                        {
+                            return 42;
+                        }
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ULongArithmeticAndComparisonExecution()
+        {
+            string code = """
+                int main()
+                {
+                    ulong large = 10000000000000000000ul;
+                    ulong small = 5ul;
+                    if (large > small)
+                    {
+                        ulong div = large / 1000000000000000000ul;
+                        if (div == 10ul)
+                        {
+                            return 42;
+                        }
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void PointerSizedNIntNUIntExecution()
+        {
+            string code = """
+                int main()
+                {
+                    int val = 42;
+                    int* ptr = &val;
+                    nuint addr = (nuint)ptr;
+                    int* ptr2 = (int*)addr;
+                    return *ptr2;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ExplicitCastsExecution()
+        {
+            string code = """
+                enum Status
+                {
+                    Ok = 42
+                }
+
+                int main()
+                {
+                    long l = 0x10000002al;
+                    int truncated = (int)l;
+                    if (truncated != 42) return 1;
+
+                    int neg = -1;
+                    uint u = (uint)neg;
+                    if (u <= 0u) return 2;
+
+                    Status s = Status::Ok;
+                    int enumVal = (int)s;
+                    if (enumVal != 42) return 3;
+
+                    Status s2 = (Status)42;
+                    if ((int)s2 != 42) return 4;
+
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void UnsignedLogicalShiftRightExecution()
+        {
+            string code = """
+                int main()
+                {
+                    uint x = 0x80000000u;
+                    uint y = x >> 1;
+                    if (y == 0x40000000u)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ShiftLeftExecution()
+        {
+            string code = """
+                int main()
+                {
+                    uint x = 21u;
+                    uint y = x << 1;
+                    return (int)y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }

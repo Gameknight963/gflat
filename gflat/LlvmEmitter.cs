@@ -28,6 +28,7 @@ public class LlvmEmitter : IVisitor
     private string _currentNamespacePath = "";
     private TypeChecker.StructInfo? _currentStruct = null;
     private string _currentFunctionReturnType = "";
+    private TypeExpression? _currentFunctionExpectedType = null;
 
     private readonly List<List<AstNode>> _deferScopes = new();
     private readonly Stack<int> _loopDeferDepths = new();
@@ -177,8 +178,8 @@ public class LlvmEmitter : IVisitor
 
             return named.Name switch
             {
-                "int" => "i32",
-                "long" => "i64",
+                "int" or "uint" => "i32",
+                "long" or "ulong" or "nint" or "nuint" => "i64",
                 "extralong" => "i128",
                 "float" => "float",
                 "double" => "double",
@@ -219,6 +220,143 @@ public class LlvmEmitter : IVisitor
         }
 
         throw new NotImplementedException($"Type {type.GetType().Name} not yet supported");
+    }
+
+    private int GetIntegerBitWidth(TypeExpression type)
+    {
+        type = _typeChecker.ResolveAlias(type);
+        if (type is NamedTypeExpression named)
+        {
+            TypeChecker.EnumInfo? enumInfo = _typeChecker.ResolveEnum(named);
+            if (enumInfo != null)
+            {
+                return GetIntegerBitWidth(enumInfo.UnderlyingType);
+            }
+
+            return named.Name switch
+            {
+                "bool" => 1,
+                "char" => 8,
+                "int" or "uint" => 32,
+                "long" or "ulong" or "nint" or "nuint" => 64,
+                "extralong" => 128,
+                _ => 32
+            };
+        }
+        return 32;
+    }
+
+    private string EmitCast(string val, TypeExpression srcType, TypeExpression dstType)
+    {
+        srcType = _typeChecker.ResolveAlias(srcType);
+        dstType = _typeChecker.ResolveAlias(dstType);
+
+        if (srcType is NamedTypeExpression srcNamed && _typeChecker.ResolveEnum(srcNamed) is { } srcEnum)
+        {
+            srcType = srcEnum.UnderlyingType;
+        }
+        if (dstType is NamedTypeExpression dstNamed && _typeChecker.ResolveEnum(dstNamed) is { } dstEnum)
+        {
+            dstType = dstEnum.UnderlyingType;
+        }
+
+        string srcLlvm = EmitType(srcType);
+        string dstLlvm = EmitType(dstType);
+
+        if (srcLlvm == dstLlvm)
+        {
+            return val;
+        }
+
+        // Pointer to Pointer (or Array to Pointer)
+        if ((srcType is PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression || srcLlvm.EndsWith("*")) &&
+            (dstType is PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression || dstLlvm.EndsWith("*")))
+        {
+            string temp = NewTemp();
+            Emit($"    {temp} = bitcast {srcLlvm} {val} to {dstLlvm}");
+            return temp;
+        }
+
+        // Pointer to Integer
+        if ((srcType is PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression || srcLlvm.EndsWith("*")) &&
+            _typeChecker.IsInteger(dstType))
+        {
+            string temp = NewTemp();
+            Emit($"    {temp} = ptrtoint {srcLlvm} {val} to {dstLlvm}");
+            return temp;
+        }
+
+        // Integer to Pointer
+        if (_typeChecker.IsInteger(srcType) &&
+            (dstType is PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression || dstLlvm.EndsWith("*")))
+        {
+            string temp = NewTemp();
+            Emit($"    {temp} = inttoptr {srcLlvm} {val} to {dstLlvm}");
+            return temp;
+        }
+
+        // Integer to Integer
+        if (_typeChecker.IsInteger(srcType) && _typeChecker.IsInteger(dstType))
+        {
+            int srcBits = GetIntegerBitWidth(srcType);
+            int dstBits = GetIntegerBitWidth(dstType);
+
+            if (dstBits < srcBits)
+            {
+                string temp = NewTemp();
+                Emit($"    {temp} = trunc {srcLlvm} {val} to {dstLlvm}");
+                return temp;
+            }
+            if (dstBits > srcBits)
+            {
+                string temp = NewTemp();
+                string extOp = _typeChecker.IsUnsignedInteger(srcType) ? "zext" : "sext";
+                Emit($"    {temp} = {extOp} {srcLlvm} {val} to {dstLlvm}");
+                return temp;
+            }
+            return val;
+        }
+
+        // Integer to Float/Double
+        if (_typeChecker.IsInteger(srcType) && dstType is NamedTypeExpression { Name: "float" or "double" })
+        {
+            string temp = NewTemp();
+            string convOp = _typeChecker.IsUnsignedInteger(srcType) ? "uitofp" : "sitofp";
+            Emit($"    {temp} = {convOp} {srcLlvm} {val} to {dstLlvm}");
+            return temp;
+        }
+
+        // Float/Double to Integer
+        if (srcType is NamedTypeExpression { Name: "float" or "double" } && _typeChecker.IsInteger(dstType))
+        {
+            string temp = NewTemp();
+            string convOp = _typeChecker.IsUnsignedInteger(dstType) ? "fptoui" : "fptosi";
+            Emit($"    {temp} = {convOp} {srcLlvm} {val} to {dstLlvm}");
+            return temp;
+        }
+
+        // Float to Double
+        if (srcType is NamedTypeExpression { Name: "float" } && dstType is NamedTypeExpression { Name: "double" })
+        {
+            string temp = NewTemp();
+            Emit($"    {temp} = fpext {srcLlvm} {val} to {dstLlvm}");
+            return temp;
+        }
+
+        // Double to Float
+        if (srcType is NamedTypeExpression { Name: "double" } && dstType is NamedTypeExpression { Name: "float" })
+        {
+            string temp = NewTemp();
+            Emit($"    {temp} = fptrunc {srcLlvm} {val} to {dstLlvm}");
+            return temp;
+        }
+
+        return val;
+    }
+
+    private string EmitImplicitCast(string val, TypeExpression fromType, TypeExpression toType)
+    {
+        return EmitCast(val, fromType, toType);
     }
 
     public void Visit(CompilationUnit node)
@@ -340,6 +478,7 @@ public class LlvmEmitter : IVisitor
 
         string returnType = EmitType(node.ReturnType);
         _currentFunctionReturnType = returnType;
+        _currentFunctionExpectedType = node.ReturnType;
         string name;
         if (node.Name == "main")
             name = "main";
@@ -419,18 +558,9 @@ public class LlvmEmitter : IVisitor
 
             if (_currentFunctionReturnType.Length > 0 && llvmReturnType != _currentFunctionReturnType)
             {
-                if (llvmReturnType == "i8" && _currentFunctionReturnType == "i32")
+                if (_currentFunctionExpectedType != null)
                 {
-                    string promoted = NewTemp();
-                    Emit($"    {promoted} = sext i8 {val} to i32");
-                    val = promoted;
-                    llvmReturnType = "i32";
-                }
-                else if (llvmReturnType.EndsWith("*") && _currentFunctionReturnType.EndsWith("*"))
-                {
-                    string castVal = NewTemp();
-                    Emit($"    {castVal} = bitcast {llvmReturnType} {val} to {_currentFunctionReturnType}");
-                    val = castVal;
+                    val = EmitImplicitCast(val, returnType, _currentFunctionExpectedType);
                     llvmReturnType = _currentFunctionReturnType;
                 }
             }
@@ -629,13 +759,7 @@ public class LlvmEmitter : IVisitor
             node.Initializer.Accept(this);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(node.Initializer);
-            string initLlvmType = initType is ArrayTypeExpression arrInit ? EmitType(arrInit.ElementType) + "*" : EmitType(initType);
-            if (initLlvmType != type && type.EndsWith("*") && initLlvmType.EndsWith("*"))
-            {
-                string castVal = NewTemp();
-                Emit($"    {castVal} = bitcast {initLlvmType} {val} to {type}");
-                val = castVal;
-            }
+            val = EmitImplicitCast(val, initType, resolvedVarType);
             Emit($"    store {type} {val}, {type}* {ptr}");
         }
     }
@@ -657,11 +781,31 @@ public class LlvmEmitter : IVisitor
         string llvmType = EmitType(leftType);
         bool isFloat = leftType is NamedTypeExpression { Name: "float" };
 
+        bool isUnsigned = _typeChecker.IsUnsignedInteger(leftType) || _typeChecker.IsUnsignedInteger(rightType);
+
         bool isComparison = node.Operator is TokenKind.EqualsEquals or TokenKind.NotEquals or
             TokenKind.Less or TokenKind.Greater or TokenKind.LessEquals or TokenKind.GreaterEquals;
 
         if (isComparison)
         {
+            string leftLlvm = EmitType(leftType);
+            string rightLlvm = EmitType(rightType);
+            if (leftLlvm != rightLlvm && !isFloat)
+            {
+                int leftBits = GetIntegerBitWidth(leftType);
+                int rightBits = GetIntegerBitWidth(rightType);
+                if (leftBits < rightBits)
+                {
+                    left = EmitImplicitCast(left, leftType, rightType);
+                    llvmType = rightLlvm;
+                }
+                else if (rightBits < leftBits)
+                {
+                    right = EmitImplicitCast(right, rightType, leftType);
+                    llvmType = leftLlvm;
+                }
+            }
+
             if (isFloat)
             {
                 string op = node.Operator switch
@@ -682,10 +826,10 @@ public class LlvmEmitter : IVisitor
                 {
                     TokenKind.EqualsEquals => "eq",
                     TokenKind.NotEquals => "ne",
-                    TokenKind.Less => "slt",
-                    TokenKind.Greater => "sgt",
-                    TokenKind.LessEquals => "sle",
-                    TokenKind.GreaterEquals => "sge",
+                    TokenKind.Less => isUnsigned ? "ult" : "slt",
+                    TokenKind.Greater => isUnsigned ? "ugt" : "sgt",
+                    TokenKind.LessEquals => isUnsigned ? "ule" : "sle",
+                    TokenKind.GreaterEquals => isUnsigned ? "uge" : "sge",
                     _ => throw new NotImplementedException()
                 };
                 Emit($"    {temp} = icmp {op} {llvmType} {left}, {right}");
@@ -817,19 +961,40 @@ public class LlvmEmitter : IVisitor
             }
             else
             {
-                string op = node.Operator switch
+                if (node.Operator is TokenKind.LessLess or TokenKind.GreaterGreater)
                 {
-                    TokenKind.Plus => "add",
-                    TokenKind.Minus => "sub",
-                    TokenKind.Star => "mul",
-                    TokenKind.Slash => "sdiv",
-                    TokenKind.Percent => "srem",
-                    TokenKind.Pipe => "or",
-                    TokenKind.Ampersand => "and",
-                    TokenKind.Caret => "xor",
-                    _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
-                };
-                Emit($"    {temp} = {op} {llvmType} {left}, {right}");
+                    string rightLlvm = EmitType(rightType);
+                    if (rightLlvm != llvmType)
+                    {
+                        right = EmitImplicitCast(right, rightType, leftType);
+                    }
+                    string shiftOp = node.Operator == TokenKind.LessLess ? "shl" : (_typeChecker.IsUnsignedInteger(leftType) ? "lshr" : "ashr");
+                    Emit($"    {temp} = {shiftOp} {llvmType} {left}, {right}");
+                }
+                else if (node.Operator == TokenKind.Slash)
+                {
+                    string divOp = isUnsigned ? "udiv" : "sdiv";
+                    Emit($"    {temp} = {divOp} {llvmType} {left}, {right}");
+                }
+                else if (node.Operator == TokenKind.Percent)
+                {
+                    string remOp = isUnsigned ? "urem" : "srem";
+                    Emit($"    {temp} = {remOp} {llvmType} {left}, {right}");
+                }
+                else
+                {
+                    string op = node.Operator switch
+                    {
+                        TokenKind.Plus => "add",
+                        TokenKind.Minus => "sub",
+                        TokenKind.Star => "mul",
+                        TokenKind.Pipe => "or",
+                        TokenKind.Ampersand => "and",
+                        TokenKind.Caret => "xor",
+                        _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
+                    };
+                    Emit($"    {temp} = {op} {llvmType} {left}, {right}");
+                }
             }
             Push(temp);
         }
@@ -949,12 +1114,48 @@ public class LlvmEmitter : IVisitor
             case TokenKind.IntLiteral:
                 Push(node.Token.Text);
                 break;
+            case TokenKind.UIntLiteral:
+                {
+                    string txt = node.Token.Text.TrimEnd('u', 'U');
+                    if (txt.StartsWith("0x") || txt.StartsWith("0X"))
+                    {
+                        Push(Convert.ToUInt32(txt[2..], 16).ToString());
+                    }
+                    else
+                    {
+                        Push(uint.Parse(txt).ToString());
+                    }
+                    break;
+                }
             case TokenKind.HexInt:
                 Push(Convert.ToInt64(node.Token.Text, 16).ToString());
                 break;
             case TokenKind.LongLiteral:
-                Push(node.Token.Text.TrimEnd('L', 'l'));
-                break;
+                {
+                    string txt = node.Token.Text.TrimEnd('l', 'L');
+                    if (txt.StartsWith("0x") || txt.StartsWith("0X"))
+                    {
+                        Push(Convert.ToInt64(txt[2..], 16).ToString());
+                    }
+                    else
+                    {
+                        Push(long.Parse(txt).ToString());
+                    }
+                    break;
+                }
+            case TokenKind.ULongLiteral:
+                {
+                    string txt = node.Token.Text.TrimEnd('u', 'U', 'l', 'L');
+                    if (txt.StartsWith("0x") || txt.StartsWith("0X"))
+                    {
+                        Push(Convert.ToUInt64(txt[2..], 16).ToString());
+                    }
+                    else
+                    {
+                        Push(ulong.Parse(txt).ToString());
+                    }
+                    break;
+                }
             case TokenKind.FloatLiteral:
             case TokenKind.DoubleLiteral:
                 {
@@ -1118,14 +1319,8 @@ public class LlvmEmitter : IVisitor
 
                 if (i < fnPtr.ParameterTypes.Count)
                 {
-                    string paramType = EmitParamType(fnPtr.ParameterTypes[i]);
-                    if (paramType != llvmArgType && paramType.EndsWith("*") && llvmArgType.EndsWith("*"))
-                    {
-                        string castVal = NewTemp();
-                        Emit($"    {castVal} = bitcast {llvmArgType} {val} to {paramType}");
-                        val = castVal;
-                        llvmArgType = paramType;
-                    }
+                    val = EmitImplicitCast(val, argType, fnPtr.ParameterTypes[i]);
+                    llvmArgType = EmitParamType(fnPtr.ParameterTypes[i]);
                 }
 
                 argVals.Add(val);
@@ -1177,12 +1372,19 @@ public class LlvmEmitter : IVisitor
             argValues.Add(thisVal);
             argTypes.Add(thisType);
 
-            foreach (AstNode arg in node.Arguments)
+            for (int i = 0; i < node.Arguments.Count; i++)
             {
+                AstNode arg = node.Arguments[i];
                 arg.Accept(this);
-                argValues.Add(Pop());
+                string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
+                if (i < structMethod.Parameters.Count)
+                {
+                    val = EmitImplicitCast(val, argType, structMethod.Parameters[i].Type);
+                    llvmArgType = EmitParamType(structMethod.Parameters[i].Type);
+                }
+                argValues.Add(val);
                 argTypes.Add(llvmArgType);
             }
 
@@ -1204,27 +1406,15 @@ public class LlvmEmitter : IVisitor
 
                 if (target is MethodDeclaration methodTarget && i < methodTarget.Parameters.Count)
                 {
-                    string paramType = EmitParamType(methodTarget.Parameters[i].Type);
-                    if (paramType != llvmArgType && paramType.EndsWith("*") && llvmArgType.EndsWith("*"))
-                    {
-                        string castVal = NewTemp();
-                        Emit($"    {castVal} = bitcast {llvmArgType} {val} to {paramType}");
-                        val = castVal;
-                        llvmArgType = paramType;
-                    }
+                    val = EmitImplicitCast(val, argType, methodTarget.Parameters[i].Type);
+                    llvmArgType = EmitParamType(methodTarget.Parameters[i].Type);
                 }
                 else if (target is ExternDeclaration extDecl)
                 {
                     if (i < extDecl.Parameters.Count)
                     {
-                        string paramType = EmitParamType(extDecl.Parameters[i].Type);
-                        if (paramType != llvmArgType && paramType.EndsWith("*") && llvmArgType.EndsWith("*"))
-                        {
-                            string castVal = NewTemp();
-                            Emit($"    {castVal} = bitcast {llvmArgType} {val} to {paramType}");
-                            val = castVal;
-                            llvmArgType = paramType;
-                        }
+                        val = EmitImplicitCast(val, argType, extDecl.Parameters[i].Type);
+                        llvmArgType = EmitParamType(extDecl.Parameters[i].Type);
                     }
                     else if (extDecl.IsVariadic)
                     {
@@ -1374,15 +1564,8 @@ public class LlvmEmitter : IVisitor
         string llvmType = EmitType(targetType);
         bool isFloat = targetType is NamedTypeExpression { Name: "float" };
 
-        string finalVal = val;
         TypeExpression valueType = _typeChecker.GetType(node.Value);
-        string valueLlvmType = valueType is ArrayTypeExpression arrVal ? EmitType(arrVal.ElementType) + "*" : EmitType(valueType);
-        if (valueLlvmType != llvmType && llvmType.EndsWith("*") && valueLlvmType.EndsWith("*"))
-        {
-            string castVal = NewTemp();
-            Emit($"    {castVal} = bitcast {valueLlvmType} {finalVal} to {llvmType}");
-            finalVal = castVal;
-        }
+        string finalVal = EmitImplicitCast(val, valueType, targetType);
 
         if (node.Operator != TokenKind.Equals)
         {
@@ -1435,13 +1618,14 @@ public class LlvmEmitter : IVisitor
             }
             else
             {
+                bool isUnsigned = _typeChecker.IsUnsignedInteger(targetType);
                 string op = node.Operator switch
                 {
                     TokenKind.PlusEquals => "add",
                     TokenKind.MinusEquals => "sub",
                     TokenKind.StarEquals => "mul",
-                    TokenKind.SlashEquals => "sdiv",
-                    TokenKind.PercentEquals => "srem",
+                    TokenKind.SlashEquals => isUnsigned ? "udiv" : "sdiv",
+                    TokenKind.PercentEquals => isUnsigned ? "urem" : "srem",
                     _ => throw new NotImplementedException($"Compound assignment {node.Operator} not supported")
                 };
                 Emit($"    {temp} = {op} {llvmType} {currentVal}, {val}");
@@ -1509,4 +1693,14 @@ public class LlvmEmitter : IVisitor
     public void Visit(AliasDeclaration node) { }
     public void Visit(EnumDeclaration node) { }
     public void Visit(EnumMemberDeclaration node) { }
+
+    public void Visit(CastExpression node)
+    {
+        node.Operand.Accept(this);
+        string val = Pop();
+        TypeExpression srcType = _typeChecker.GetType(node.Operand);
+        TypeExpression dstType = node.TargetType;
+        string castVal = EmitCast(val, srcType, dstType);
+        Push(castVal);
+    }
 }

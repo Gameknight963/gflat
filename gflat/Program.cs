@@ -118,6 +118,25 @@ namespace gflat
                 LogLevel level = LogLevel::Info;
                 printf("enum level: %d\n", level);
 
+                uint u = 3000000000u;
+                ulong ul = 10000000000000000000ul;
+                printf("unsigned int: %u, unsigned long: %llu\n", u, ul);
+
+                uint shifted = 1u << 4;
+                uint rshifted = 0x80000000u >> 1;
+                printf("shifted: %u, rshifted: 0x%x\n", shifted, rshifted);
+
+                int convertedFromUInt = u;
+                printf("implicit uint to int: %d\n", convertedFromUInt);
+
+                long largeNum = 0x123456789abcdef0l;
+                int truncated = (int)largeNum;
+                printf("explicit cast long to int: 0x%x\n", truncated);
+
+                nuint ptrAddress = (nuint)ptr;
+                Point* restoredPtr = (Point*)ptrAddress;
+                printf("nuint roundtrip address: 0x%llx\n", restoredPtr->address);
+
                 return 0;
             }
             """;

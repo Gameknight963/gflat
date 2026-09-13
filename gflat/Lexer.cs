@@ -59,10 +59,14 @@ public class Lexer
                 case '<':
                     if (i + 1 < code.Length && code[i + 1] == '=')
                     { tokens.Add(new Token(TokenKind.LessEquals, line, i, i + 1)); i++; break; }
+                    if (i + 1 < code.Length && code[i + 1] == '<')
+                    { tokens.Add(new Token(TokenKind.LessLess, line, i, i + 1)); i++; break; }
                     tokens.Add(new Token(TokenKind.Less, line, i, i)); break;
                 case '>':
                     if (i + 1 < code.Length && code[i + 1] == '=')
                     { tokens.Add(new Token(TokenKind.GreaterEquals, line, i, i + 1)); i++; break; }
+                    if (i + 1 < code.Length && code[i + 1] == '>')
+                    { tokens.Add(new Token(TokenKind.GreaterGreater, line, i, i + 1)); i++; break; }
                     tokens.Add(new Token(TokenKind.Greater, line, i, i)); break;
                 case '|':
                     if (i + 1 < code.Length && code[i + 1] == '|')
@@ -201,6 +205,10 @@ public class Lexer
             "char" => TokenKind.Char,
             "long" => TokenKind.Long,
             "extralong" => TokenKind.ExtraLong,
+            "uint" => TokenKind.UInt,
+            "ulong" => TokenKind.ULong,
+            "nint" => TokenKind.NInt,
+            "nuint" => TokenKind.NUInt,
             "string" => TokenKind.String,
             "extern" => TokenKind.Extern,
             "defer" => TokenKind.Defer,
@@ -279,8 +287,21 @@ public class Lexer
         {
             i += 2;
             while (i < source.Length && char.IsAsciiHexDigit(source[i])) i++;
+            TokenKind hexKind = TokenKind.HexInt;
+            if (i < source.Length && char.ToLower(source[i]) == 'u')
+            {
+                i++;
+                if (i < source.Length && char.ToLower(source[i]) == 'l') { i++; hexKind = TokenKind.ULongLiteral; }
+                else hexKind = TokenKind.UIntLiteral;
+            }
+            else if (i < source.Length && char.ToLower(source[i]) == 'l')
+            {
+                i++;
+                if (i < source.Length && char.ToLower(source[i]) == 'u') { i++; hexKind = TokenKind.ULongLiteral; }
+                else hexKind = TokenKind.LongLiteral;
+            }
             endIndex = i;
-            return new Token(TokenKind.HexInt, line, startIndex, i - 1, source[startIndex..i]);
+            return new Token(hexKind, line, startIndex, i - 1, source[startIndex..i]);
         }
 
         while (i < source.Length && (char.IsDigit(source[i]) || source[i] == '_')) i++;
@@ -296,12 +317,41 @@ public class Lexer
         TokenKind kind = TokenKind.IntLiteral;
         if (i < source.Length)
         {
-            switch (char.ToLower(source[i]))
+            char ch = char.ToLower(source[i]);
+            if (ch == 'u')
             {
-                case 'f': kind = TokenKind.FloatLiteral; i++; break;
-                case 'd': kind = TokenKind.DoubleLiteral; i++; break;
-                case 'm': kind = TokenKind.DecimalLiteral; i++; break;
-                case 'l': kind = TokenKind.LongLiteral; i++; break;
+                i++;
+                if (i < source.Length && char.ToLower(source[i]) == 'l')
+                {
+                    i++;
+                    kind = TokenKind.ULongLiteral;
+                }
+                else
+                {
+                    kind = TokenKind.UIntLiteral;
+                }
+            }
+            else if (ch == 'l')
+            {
+                i++;
+                if (i < source.Length && char.ToLower(source[i]) == 'u')
+                {
+                    i++;
+                    kind = TokenKind.ULongLiteral;
+                }
+                else
+                {
+                    kind = TokenKind.LongLiteral;
+                }
+            }
+            else
+            {
+                switch (ch)
+                {
+                    case 'f': kind = TokenKind.FloatLiteral; i++; break;
+                    case 'd': kind = TokenKind.DoubleLiteral; i++; break;
+                    case 'm': kind = TokenKind.DecimalLiteral; i++; break;
+                }
             }
         }
         if (hasDecimalPoint && kind == TokenKind.IntLiteral) kind = TokenKind.DoubleLiteral;

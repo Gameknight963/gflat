@@ -290,5 +290,17 @@ namespace gflat
                 Indented(() => node.Value.Accept(this));
             }
         }
+
+        public void Visit(CastExpression node)
+        {
+            Print("CastExpression");
+            Indented(() =>
+            {
+                Print("TargetType:");
+                Indented(() => node.TargetType.Accept(this));
+                Print("Operand:");
+                Indented(() => node.Operand.Accept(this));
+            });
+        }
     }
 }

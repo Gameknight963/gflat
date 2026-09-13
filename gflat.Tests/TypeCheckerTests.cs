@@ -741,5 +741,104 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("already contains a member named 'First'", ex.Message);
         }
+
+        [Fact]
+        public void UIntAndULongTypeCheckCleanly()
+        {
+            string code = """
+                int main()
+                {
+                    uint u = 100u;
+                    ulong ul = 200ul;
+                    int i = u;
+                    long l = ul;
+                    uint shifted = u << 2;
+                    uint rshifted = u >> 1;
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void IntToUIntImplicitConversionThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int i = 10;
+                    uint u = i;
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void PointerSizedNIntNUIntTypeCheckCleanly()
+        {
+            string code = """
+                int main()
+                {
+                    nint ni = 10;
+                    nuint nui = 20u;
+                    long l = ni;
+                    ulong ul = nui;
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void CastExpressionTypeCheckCleanly()
+        {
+            string code = """
+                int main()
+                {
+                    int i = 10;
+                    uint u = (uint)i;
+                    int* ptr = (int*)0;
+                    nuint addr = (nuint)ptr;
+                    void* vp = (void*)ptr;
+                    int* ptr2 = (int*)vp;
+                    int truncated = (int)100L;
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void InvalidCastThrows()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    Point p;
+                    int x = (int)p;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot cast 'Point' to 'int'", ex.Message);
+        }
     }
 }

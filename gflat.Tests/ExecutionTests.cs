@@ -702,5 +702,209 @@ namespace gflat.Tests
             var result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void PointerAdditionAndDereference()
+        {
+            string code = """
+                int main()
+                {
+                    int[4] arr;
+                    arr[0] = 10;
+                    arr[1] = 20;
+                    arr[2] = 30;
+                    arr[3] = 40;
+
+                    int* p = &arr[0];
+                    int v0 = *p;
+                    int v1 = *(p + 1);
+                    int v2 = *(2 + p);
+                    int* p3 = p + 3;
+                    int v3 = *p3;
+
+                    return v0 + v1 + v2 + v3;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(100, result.ExitCode);
+        }
+
+        [Fact]
+        public void PointerIncrementAndDecrement()
+        {
+            string code = """
+                int main()
+                {
+                    int[3] arr;
+                    arr[0] = 11;
+                    arr[1] = 22;
+                    arr[2] = 33;
+
+                    int* p = &arr[0];
+                    int a = *p++;
+                    int b = *p;
+                    int c = *++p;
+                    p--;
+                    int d = *p;
+
+                    return a + b + c + d;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(88, result.ExitCode);
+        }
+
+        [Fact]
+        public void PointerCompoundAssignment()
+        {
+            string code = """
+                int main()
+                {
+                    int[5] arr;
+                    arr[0] = 10;
+                    arr[1] = 20;
+                    arr[2] = 30;
+                    arr[3] = 40;
+                    arr[4] = 50;
+
+                    int* p = &arr[0];
+                    p += 3;
+                    int v3 = *p;
+                    p -= 1;
+                    int v2 = *p;
+
+                    return v3 + v2;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(70, result.ExitCode);
+        }
+
+        [Fact]
+        public void PointerDifferenceReturnsElementDistance()
+        {
+            string code = """
+                struct Node
+                {
+                    int a;
+                    int b;
+                }
+
+                int main()
+                {
+                    Node[10] nodes;
+                    Node* start = &nodes[2];
+                    Node* end = &nodes[7];
+
+                    long dist = end - start;
+                    int d = 0;
+                    if (dist == 5L)
+                    {
+                        d = 42;
+                    }
+                    return d;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void FunctionPointerArithmeticInArray()
+        {
+            string code = """
+                alias BinaryOp = int(int, int)*;
+
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int Sub(int a, int b)
+                {
+                    return a - b;
+                }
+
+                int Mul(int a, int b)
+                {
+                    return a * b;
+                }
+
+                int main()
+                {
+                    BinaryOp[3] ops;
+                    ops[0] = &Add;
+                    ops[1] = &Sub;
+                    ops[2] = &Mul;
+
+                    BinaryOp* p = &ops[0];
+                    BinaryOp fn0 = *p;
+                    p++;
+                    BinaryOp fn1 = *p;
+                    p += 1;
+                    BinaryOp fn2 = *p;
+
+                    long diff = p - &ops[0];
+
+                    int r0 = fn0(10, 20);
+                    int r1 = fn1(50, 8);
+                    int r2 = fn2(3, 4);
+
+                    int isDiffTwo = 0;
+                    if (diff == 2L)
+                    {
+                        isDiffTwo = 1;
+                    }
+
+                    return r1 + isDiffTwo - 1;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void FunctionPointerDirectArithmetic()
+        {
+            string code = """
+                alias BinaryOp = int(int, int)*;
+
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int Sub(int a, int b)
+                {
+                    return a - b;
+                }
+
+                int main()
+                {
+                    BinaryOp[2] ops;
+                    ops[0] = &Add;
+                    ops[1] = &Sub;
+
+                    BinaryOp f0 = ops[0];
+                    BinaryOp f1 = f0 + 1;
+                    long diff = f1 - f0;
+
+                    int d = 0;
+                    if (diff == 1L)
+                    {
+                        d = 42;
+                    }
+                    return d;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }

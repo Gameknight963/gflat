@@ -503,5 +503,122 @@ namespace gflat.Tests
             var (ast, checker) = CompilerTestHelper.Check(code);
             Assert.NotNull(ast);
         }
+
+        [Fact]
+        public void PointerAdditionAndSubtractionTypeCheckCleanly()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    int* p = &x;
+                    int* p2 = p + 1;
+                    int* p3 = 2 + p;
+                    int* p4 = p - 1;
+                    long diff = p2 - p;
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void FunctionPointerArithmeticTypeChecksCleanly()
+        {
+            string code = """
+                alias Fn = int(int, int)*;
+
+                int Add(int a, int b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    Fn f = &Add;
+                    Fn f2 = f + 1;
+                    Fn f3 = f - 1;
+                    long diff = f2 - f;
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void PointerArithmeticOnVoidPointerThrows()
+        {
+            string code = """
+                extern void* malloc(long size);
+
+                int main()
+                {
+                    void* p = malloc(10L);
+                    void* p2 = p + 1;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Pointer arithmetic is not allowed on 'void*'", ex.Message);
+        }
+
+        [Fact]
+        public void PointerArithmeticOnManagedPointerThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int^? p = null;
+                    int^? p2 = p + 1;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Pointer arithmetic is not allowed on managed pointers ('^')", ex.Message);
+        }
+
+        [Fact]
+        public void AddingTwoPointersThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int a = 1;
+                    int b = 2;
+                    int* p1 = &a;
+                    int* p2 = &b;
+                    int* p3 = p1 + p2;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot add two pointers together", ex.Message);
+        }
+
+        [Fact]
+        public void SubtractingDifferentPointerTypesThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int a = 1;
+                    long b = 2L;
+                    int* p1 = &a;
+                    long* p2 = &b;
+                    long diff = p1 - p2;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot subtract pointers of different types", ex.Message);
+        }
     }
 }

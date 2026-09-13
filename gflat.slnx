@@ -5,4 +5,5 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="gflat/gflat.csproj" />
+  <Project Path="gflat.Tests/gflat.Tests.csproj" />
 </Solution>

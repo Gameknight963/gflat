@@ -208,6 +208,18 @@ namespace gflat
 
                 printf("operator ==: %d, !=: %d\n", pt1 == pt3, pt1 != pt2);
 
+                byte byteVal = 200;
+                sbyte sbyteVal = -50;
+                short shortVal = 1000;
+                ushort ushortVal = 50000;
+                printf("small primitives: byte=%u, sbyte=%d, short=%d, ushort=%u\n", byteVal, sbyteVal, shortVal, ushortVal);
+
+                int sumSmall = byteVal + sbyteVal + shortVal + ushortVal;
+                printf("sum of small primitives widened to int: %d\n", sumSmall);
+
+                byte byteTrunc = (byte)300;
+                printf("byte truncated from 300: %u\n", byteTrunc);
+
                 return 0;
             }
             """;

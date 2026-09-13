@@ -1536,6 +1536,137 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void ByteArithmeticAndWideningExecution()
+        {
+            string code = """
+                int main()
+                {
+                    byte a = 200;
+                    byte b = 50;
+                    byte c = a - b;
+                    if (c != 150)
+                    {
+                        return 1;
+                    }
+
+                    int widened = c;
+                    if (widened != 150)
+                    {
+                        return 2;
+                    }
+
+                    byte overflowWrap = (byte)(a + 100);
+                    if (overflowWrap != 44)
+                    {
+                        return 3;
+                    }
+
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void SByteNegativeValuesExecution()
+        {
+            string code = """
+                int main()
+                {
+                    sbyte a = -10;
+                    sbyte b = 52;
+                    sbyte c = a + b;
+                    if (c != 42)
+                    {
+                        return 1;
+                    }
+
+                    int widened = a;
+                    if (widened != -10)
+                    {
+                        return 2;
+                    }
+
+                    if (a > b)
+                    {
+                        return 3;
+                    }
+
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ShortAndUShortArithmeticExecution()
+        {
+            string code = """
+                int main()
+                {
+                    short s = -1000;
+                    ushort u = 1042;
+
+                    int sum = s + u;
+                    if (sum != 42)
+                    {
+                        return 1;
+                    }
+
+                    ushort uBig = 60000;
+                    ushort uSmall = 10000;
+                    if (uBig < uSmall)
+                    {
+                        return 2;
+                    }
+
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void CastBetweenSizesExecution()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 300;
+                    byte b = (byte)x;
+                    if (b != 44)
+                    {
+                        return 1;
+                    }
+
+                    int neg = -5;
+                    sbyte sb = (sbyte)neg;
+                    if (sb != -5)
+                    {
+                        return 2;
+                    }
+
+                    short s = (short)sb;
+                    if (s != -5)
+                    {
+                        return 3;
+                    }
+
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
 

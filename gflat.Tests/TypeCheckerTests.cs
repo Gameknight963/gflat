@@ -1112,6 +1112,92 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Unary operator '!' must have exactly 1 parameter", ex.Message);
         }
+
+        [Fact]
+        public void SmallPrimitivesTypeCheckCleanly()
+        {
+            string code = """
+                int main()
+                {
+                    byte b = 250;
+                    sbyte sb = -100;
+                    short s = 30000;
+                    ushort u = 60000;
+
+                    byte b2 = 5;
+                    byte sumB = b + b2;
+
+                    short s2 = 100;
+                    short sumS = s + s2;
+
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void SmallPrimitivesWideningImplicitConversions()
+        {
+            string code = """
+                int main()
+                {
+                    byte b = 100;
+                    short s1 = b;
+                    ushort u1 = b;
+                    int i1 = b;
+                    uint ui1 = b;
+                    long l1 = b;
+                    ulong ul1 = b;
+
+                    sbyte sb = -50;
+                    short s2 = sb;
+                    int i2 = sb;
+                    long l2 = sb;
+
+                    short s3 = 1000;
+                    int i3 = s3;
+                    long l3 = s3;
+
+                    ushort u2 = 50000;
+                    int i4 = u2;
+                    uint ui2 = u2;
+                    long l4 = u2;
+                    ulong ul2 = u2;
+
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void OutOfRangeLiteralAssignmentThrows()
+        {
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { byte b = 300; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { sbyte sb = 200; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { sbyte sb = -200; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { short s = 70000; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { short s = -50000; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { ushort u = 70000; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { ushort u = -1; return 0; }"));
+        }
+
+        [Fact]
+        public void NarrowingWithoutCastThrows()
+        {
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { int x = 10; byte b = x; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { int x = 10; sbyte sb = x; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { int x = 10; short s = x; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { int x = 10; ushort u = x; return 0; }"));
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { short s = 10; byte b = s; return 0; }"));
+        }
     }
 }
 

@@ -649,6 +649,7 @@ public class LlvmEmitter : IVisitor
         string temp = NewTemp();
 
         TypeExpression leftType = _typeChecker.GetType(node.Left);
+        TypeExpression rightType = _typeChecker.GetType(node.Right);
         string llvmType = EmitType(leftType);
         bool isFloat = leftType is NamedTypeExpression { Name: "float" };
 
@@ -695,6 +696,109 @@ public class LlvmEmitter : IVisitor
         }
         else
         {
+            TypeExpression resLeftType = _typeChecker.ResolveAlias(leftType);
+            TypeExpression resRightType = _typeChecker.ResolveAlias(rightType);
+
+            if (node.Operator == TokenKind.Plus)
+            {
+                if (resLeftType is PointerTypeExpression pLeft)
+                {
+                    string elemType = EmitType(pLeft.Inner);
+                    string idxType = EmitType(rightType);
+                    Emit($"    {temp} = getelementptr {elemType}, {elemType}* {left}, {idxType} {right}");
+                    Push(temp);
+                    return;
+                }
+                if (resRightType is PointerTypeExpression pRight)
+                {
+                    string elemType = EmitType(pRight.Inner);
+                    string idxType = EmitType(leftType);
+                    Emit($"    {temp} = getelementptr {elemType}, {elemType}* {right}, {idxType} {left}");
+                    Push(temp);
+                    return;
+                }
+                if (resLeftType is FunctionPointerTypeExpression fnLeft)
+                {
+                    string fnTypeStr = EmitType(fnLeft);
+                    string idxType = EmitType(rightType);
+                    string castPtr = NewTemp();
+                    Emit($"    {castPtr} = bitcast {fnTypeStr} {left} to i8**");
+                    string gepPtr = NewTemp();
+                    Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, {idxType} {right}");
+                    Emit($"    {temp} = bitcast i8** {gepPtr} to {fnTypeStr}");
+                    Push(temp);
+                    return;
+                }
+                if (resRightType is FunctionPointerTypeExpression fnRight)
+                {
+                    string fnTypeStr = EmitType(fnRight);
+                    string idxType = EmitType(leftType);
+                    string castPtr = NewTemp();
+                    Emit($"    {castPtr} = bitcast {fnTypeStr} {right} to i8**");
+                    string gepPtr = NewTemp();
+                    Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, {idxType} {left}");
+                    Emit($"    {temp} = bitcast i8** {gepPtr} to {fnTypeStr}");
+                    Push(temp);
+                    return;
+                }
+            }
+            else if (node.Operator == TokenKind.Minus)
+            {
+                if (resLeftType is PointerTypeExpression pLeft && resRightType is PointerTypeExpression pRight)
+                {
+                    string elemType = EmitType(pLeft.Inner);
+                    string p1Int = NewTemp();
+                    string p2Int = NewTemp();
+                    Emit($"    {p1Int} = ptrtoint {EmitType(pLeft)} {left} to i64");
+                    Emit($"    {p2Int} = ptrtoint {EmitType(pRight)} {right} to i64");
+                    string diffBytes = NewTemp();
+                    Emit($"    {diffBytes} = sub i64 {p1Int}, {p2Int}");
+                    string sizePtr = NewTemp();
+                    Emit($"    {sizePtr} = getelementptr {elemType}, {elemType}* null, i32 1");
+                    string sizeInt = NewTemp();
+                    Emit($"    {sizeInt} = ptrtoint {elemType}* {sizePtr} to i64");
+                    Emit($"    {temp} = sdiv i64 {diffBytes}, {sizeInt}");
+                    Push(temp);
+                    return;
+                }
+                if (resLeftType is FunctionPointerTypeExpression fnLeft && resRightType is FunctionPointerTypeExpression fnRight)
+                {
+                    string p1Int = NewTemp();
+                    string p2Int = NewTemp();
+                    Emit($"    {p1Int} = ptrtoint {EmitType(fnLeft)} {left} to i64");
+                    Emit($"    {p2Int} = ptrtoint {EmitType(fnRight)} {right} to i64");
+                    string diffBytes = NewTemp();
+                    Emit($"    {diffBytes} = sub i64 {p1Int}, {p2Int}");
+                    Emit($"    {temp} = sdiv i64 {diffBytes}, 8");
+                    Push(temp);
+                    return;
+                }
+                if (resLeftType is PointerTypeExpression pLeftSingle)
+                {
+                    string elemType = EmitType(pLeftSingle.Inner);
+                    string idxType = EmitType(rightType);
+                    string negIdx = NewTemp();
+                    Emit($"    {negIdx} = sub {idxType} 0, {right}");
+                    Emit($"    {temp} = getelementptr {elemType}, {elemType}* {left}, {idxType} {negIdx}");
+                    Push(temp);
+                    return;
+                }
+                if (resLeftType is FunctionPointerTypeExpression fnLeftSingle)
+                {
+                    string fnTypeStr = EmitType(fnLeftSingle);
+                    string idxType = EmitType(rightType);
+                    string negIdx = NewTemp();
+                    Emit($"    {negIdx} = sub {idxType} 0, {right}");
+                    string castPtr = NewTemp();
+                    Emit($"    {castPtr} = bitcast {fnTypeStr} {left} to i8**");
+                    string gepPtr = NewTemp();
+                    Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, {idxType} {negIdx}");
+                    Emit($"    {temp} = bitcast i8** {gepPtr} to {fnTypeStr}");
+                    Push(temp);
+                    return;
+                }
+            }
+
             if (isFloat)
             {
                 string op = node.Operator switch
@@ -793,12 +897,35 @@ public class LlvmEmitter : IVisitor
             case TokenKind.PlusPlus:
             case TokenKind.MinusMinus:
                 {
-                    string op = node.Operator == TokenKind.PlusPlus ? "add" : "sub";
-                    string temp = NewTemp();
-                    Emit($"    {temp} = {op} {llvmType} {operand}, 1");
+                    string temp;
+                    int step = node.Operator == TokenKind.PlusPlus ? 1 : -1;
+                    TypeExpression resType = _typeChecker.ResolveAlias(type);
+                    if (resType is PointerTypeExpression ptrType)
+                    {
+                        string elemType = EmitType(ptrType.Inner);
+                        temp = NewTemp();
+                        Emit($"    {temp} = getelementptr {elemType}, {elemType}* {operand}, i32 {step}");
+                    }
+                    else if (resType is FunctionPointerTypeExpression fnPtrType)
+                    {
+                        string fnPtrTypeStr = EmitType(fnPtrType);
+                        string castPtr = NewTemp();
+                        Emit($"    {castPtr} = bitcast {fnPtrTypeStr} {operand} to i8**");
+                        string gepPtr = NewTemp();
+                        Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, i32 {step}");
+                        temp = NewTemp();
+                        Emit($"    {temp} = bitcast i8** {gepPtr} to {fnPtrTypeStr}");
+                    }
+                    else
+                    {
+                        string op = node.Operator == TokenKind.PlusPlus ? "add" : "sub";
+                        temp = NewTemp();
+                        Emit($"    {temp} = {op} {llvmType} {operand}, 1");
+                    }
 
-                    if (node.Operand is IdentifierExpression ident && _locals.TryGetValue(ident.Name, out string? ptr))
-                        Emit($"    store {llvmType} {temp}, {llvmType}* {ptr}");
+                    EmitAddress(node.Operand);
+                    string targetSlot = Pop();
+                    Emit($"    store {llvmType} {temp}, {llvmType}* {targetSlot}");
 
                     Push(node.IsPrefix ? temp : operand);
                     break;
@@ -1243,7 +1370,38 @@ public class LlvmEmitter : IVisitor
             Emit($"    {currentVal} = load {llvmType}, {llvmType}* {ptr}");
             string temp = NewTemp();
 
-            if (isFloat)
+            TypeExpression resTargetType = _typeChecker.ResolveAlias(targetType);
+            if (resTargetType is PointerTypeExpression ptrType && node.Operator is TokenKind.PlusEquals or TokenKind.MinusEquals)
+            {
+                string elemType = EmitType(ptrType.Inner);
+                string idxType = EmitType(valueType);
+                string stepVal = val;
+                if (node.Operator == TokenKind.MinusEquals)
+                {
+                    string negVal = NewTemp();
+                    Emit($"    {negVal} = sub {idxType} 0, {val}");
+                    stepVal = negVal;
+                }
+                Emit($"    {temp} = getelementptr {elemType}, {elemType}* {currentVal}, {idxType} {stepVal}");
+            }
+            else if (resTargetType is FunctionPointerTypeExpression fnPtrType && node.Operator is TokenKind.PlusEquals or TokenKind.MinusEquals)
+            {
+                string fnPtrTypeStr = EmitType(fnPtrType);
+                string idxType = EmitType(valueType);
+                string stepVal = val;
+                if (node.Operator == TokenKind.MinusEquals)
+                {
+                    string negVal = NewTemp();
+                    Emit($"    {negVal} = sub {idxType} 0, {val}");
+                    stepVal = negVal;
+                }
+                string castPtr = NewTemp();
+                Emit($"    {castPtr} = bitcast {fnPtrTypeStr} {currentVal} to i8**");
+                string gepPtr = NewTemp();
+                Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, {idxType} {stepVal}");
+                Emit($"    {temp} = bitcast i8** {gepPtr} to {fnPtrTypeStr}");
+            }
+            else if (isFloat)
             {
                 string op = node.Operator switch
                 {

@@ -230,6 +230,38 @@ namespace gflat
         private static bool IsInteger(TypeExpression type) =>
             type is NamedTypeExpression n && n.Name is "int" or "long" or "extralong" or "char";
 
+        private bool IsValidPointerForArithmetic(TypeExpression type, out string? error)
+        {
+            type = ResolveAlias(type);
+            if (type is ManagedTypeExpression)
+            {
+                error = "Pointer arithmetic is not allowed on managed pointers ('^')";
+                return false;
+            }
+            if (type is PointerTypeExpression ptr)
+            {
+                if (ptr.Inner is NamedTypeExpression { Name: "void" })
+                {
+                    error = "Pointer arithmetic is not allowed on 'void*'";
+                    return false;
+                }
+                error = null;
+                return true;
+            }
+            if (type is FunctionPointerTypeExpression fnPtr)
+            {
+                if (fnPtr.IsManaged)
+                {
+                    error = "Pointer arithmetic is not allowed on managed function pointers ('^')";
+                    return false;
+                }
+                error = null;
+                return true;
+            }
+            error = null;
+            return false;
+        }
+
         private bool TypesMatch(TypeExpression a, TypeExpression b)
         {
             a = ResolveAlias(a);
@@ -605,6 +637,80 @@ namespace gflat
                         $"Cannot compare '{TypeName(left)}' with '{TypeName(right)}'", node.Line);
                 RecordType(node, Bool);
             }
+            else if (node.Operator == TokenKind.Plus)
+            {
+                TypeExpression resolvedLeft = ResolveAlias(left);
+                TypeExpression resolvedRight = ResolveAlias(right);
+
+                if ((resolvedLeft is PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression) &&
+                    (resolvedRight is PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression))
+                {
+                    throw new TypeCheckException("Cannot add two pointers together", node.Line);
+                }
+
+                string? errLeft = null;
+                string? errRight = null;
+                if (IsValidPointerForArithmetic(resolvedLeft, out errLeft) && IsInteger(resolvedRight))
+                {
+                    if (errLeft != null)
+                        throw new TypeCheckException(errLeft, node.Line);
+                    RecordType(node, left);
+                    return;
+                }
+                if (IsInteger(resolvedLeft) && IsValidPointerForArithmetic(resolvedRight, out errRight))
+                {
+                    if (errRight != null)
+                        throw new TypeCheckException(errRight, node.Line);
+                    RecordType(node, right);
+                    return;
+                }
+                if (errLeft != null)
+                    throw new TypeCheckException(errLeft, node.Line);
+                if (errRight != null)
+                    throw new TypeCheckException(errRight, node.Line);
+
+                if (!TypesMatch(left, right))
+                    throw new TypeCheckException(
+                        $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                RecordType(node, left);
+            }
+            else if (node.Operator == TokenKind.Minus)
+            {
+                TypeExpression resolvedLeft = ResolveAlias(left);
+                TypeExpression resolvedRight = ResolveAlias(right);
+
+                string? errLeft = null;
+                string? errRight = null;
+                if (IsValidPointerForArithmetic(resolvedLeft, out errLeft) && IsInteger(resolvedRight))
+                {
+                    if (errLeft != null)
+                        throw new TypeCheckException(errLeft, node.Line);
+                    RecordType(node, left);
+                    return;
+                }
+                if (IsValidPointerForArithmetic(resolvedLeft, out string? errL) && IsValidPointerForArithmetic(resolvedRight, out string? errR))
+                {
+                    if (errL != null)
+                        throw new TypeCheckException(errL, node.Line);
+                    if (errR != null)
+                        throw new TypeCheckException(errR, node.Line);
+
+                    if (!TypesMatch(resolvedLeft, resolvedRight))
+                        throw new TypeCheckException(
+                            $"Cannot subtract pointers of different types '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                    RecordType(node, Long);
+                    return;
+                }
+                if (errLeft != null)
+                    throw new TypeCheckException(errLeft, node.Line);
+                if (errRight != null)
+                    throw new TypeCheckException(errRight, node.Line);
+
+                if (!TypesMatch(left, right))
+                    throw new TypeCheckException(
+                        $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                RecordType(node, left);
+            }
             else
             {
                 if (!TypesMatch(left, right))
@@ -687,7 +793,16 @@ namespace gflat
                 case TokenKind.PlusPlus:
                 case TokenKind.MinusMinus:
                     if (!IsNumeric(operand))
-                        throw new TypeCheckException("'++/--' requires numeric operand", node.Line);
+                    {
+                        if (IsValidPointerForArithmetic(operand, out string? errPtr))
+                        {
+                            RecordType(node, operand);
+                            break;
+                        }
+                        if (errPtr != null)
+                            throw new TypeCheckException(errPtr, node.Line);
+                        throw new TypeCheckException("'++/--' requires numeric or pointer operand", node.Line);
+                    }
                     RecordType(node, operand);
                     break;
                 case TokenKind.Star:
@@ -739,6 +854,19 @@ namespace gflat
 
             node.Value.Accept(this);
             TypeExpression valueType = GetType(node.Value);
+
+            if (node.Operator is TokenKind.PlusEquals or TokenKind.MinusEquals)
+            {
+                if (IsValidPointerForArithmetic(targetType, out string? errPtr) && IsInteger(valueType))
+                {
+                    if (errPtr != null)
+                        throw new TypeCheckException(errPtr, node.Line);
+                    RecordType(node, targetType);
+                    return;
+                }
+                if (errPtr != null)
+                    throw new TypeCheckException(errPtr, node.Line);
+            }
 
             if (!IsAssignable(targetType, valueType))
                 throw new TypeCheckException(

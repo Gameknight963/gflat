@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using gflat.ast;
 
 namespace gflat;
@@ -111,6 +111,7 @@ public class LlvmEmitter : IVisitor
                 "long" => "i64",
                 "extralong" => "i128",
                 "float" => "float",
+                "double" => "double",
                 "bool" => "i1",
                 "char" => "i8",
                 "void" => "void",
@@ -134,6 +135,10 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(CompilationUnit node)
     {
+        _currentNamespacePath = "";
+        foreach (AstNode member in node.Members)
+            member.Accept(this);
+
         foreach (NamespaceDeclaration ns in node.Namespaces)
             ns.Accept(this);
     }
@@ -187,7 +192,14 @@ public class LlvmEmitter : IVisitor
         _tempCounter = 0;
 
         string returnType = EmitType(node.ReturnType);
-        string name = node.Name == "main" ? "main" : $"gflat${_currentNamespacePath}${node.Name}";
+        string name;
+        if (node.Name == "main")
+            name = "main";
+        else if (_currentNamespacePath.Length > 0)
+            name = $"gflat${_currentNamespacePath}${node.Name}";
+        else
+            name = $"gflat${node.Name}";
+
         string parameters = string.Join(", ", node.Parameters.Select(p =>
             $"{EmitType(p.Type)} %{p.Name}"));
 
@@ -231,7 +243,9 @@ public class LlvmEmitter : IVisitor
         }
         node.Value.Accept(this);
         string val = Pop();
-        Emit($"    ret i32 {val}");
+        TypeExpression returnType = _typeChecker.GetType(node.Value);
+        string llvmReturnType = EmitType(returnType);
+        Emit($"    ret {llvmReturnType} {val}");
     }
 
     public void Visit(IfStatement node)
@@ -377,36 +391,78 @@ public class LlvmEmitter : IVisitor
         string right = Pop();
         string temp = NewTemp();
 
+        TypeExpression leftType = _typeChecker.GetType(node.Left);
+        string llvmType = EmitType(leftType);
+        bool isFloat = leftType is NamedTypeExpression { Name: "float" };
+
         bool isComparison = node.Operator is TokenKind.EqualsEquals or TokenKind.NotEquals or
             TokenKind.Less or TokenKind.Greater or TokenKind.LessEquals or TokenKind.GreaterEquals;
 
         if (isComparison)
         {
-            string op = node.Operator switch
+            if (isFloat)
             {
-                TokenKind.EqualsEquals => "eq",
-                TokenKind.NotEquals => "ne",
-                TokenKind.Less => "slt",
-                TokenKind.Greater => "sgt",
-                TokenKind.LessEquals => "sle",
-                TokenKind.GreaterEquals => "sge",
-                _ => throw new NotImplementedException()
-            };
-            Emit($"    {temp} = icmp {op} i32 {left}, {right}");
+                string op = node.Operator switch
+                {
+                    TokenKind.EqualsEquals => "oeq",
+                    TokenKind.NotEquals => "one",
+                    TokenKind.Less => "olt",
+                    TokenKind.Greater => "ogt",
+                    TokenKind.LessEquals => "ole",
+                    TokenKind.GreaterEquals => "oge",
+                    _ => throw new NotImplementedException()
+                };
+                Emit($"    {temp} = fcmp {op} float {left}, {right}");
+            }
+            else
+            {
+                string op = node.Operator switch
+                {
+                    TokenKind.EqualsEquals => "eq",
+                    TokenKind.NotEquals => "ne",
+                    TokenKind.Less => "slt",
+                    TokenKind.Greater => "sgt",
+                    TokenKind.LessEquals => "sle",
+                    TokenKind.GreaterEquals => "sge",
+                    _ => throw new NotImplementedException()
+                };
+                Emit($"    {temp} = icmp {op} {llvmType} {left}, {right}");
+            }
+            Push(temp);
+        }
+        else if (node.Operator is TokenKind.AmpersandAmpersand or TokenKind.PipePipe)
+        {
+            string op = node.Operator == TokenKind.AmpersandAmpersand ? "and" : "or";
+            Emit($"    {temp} = {op} i1 {left}, {right}");
             Push(temp);
         }
         else
         {
-            string op = node.Operator switch
+            if (isFloat)
             {
-                TokenKind.Plus => "add",
-                TokenKind.Minus => "sub",
-                TokenKind.Star => "mul",
-                TokenKind.Slash => "sdiv",
-                TokenKind.Percent => "srem",
-                _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
-            };
-            Emit($"    {temp} = {op} i32 {left}, {right}");
+                string op = node.Operator switch
+                {
+                    TokenKind.Plus => "fadd",
+                    TokenKind.Minus => "fsub",
+                    TokenKind.Star => "fmul",
+                    TokenKind.Slash => "fdiv",
+                    _ => throw new NotImplementedException($"Float operator {node.Operator} not supported")
+                };
+                Emit($"    {temp} = {op} float {left}, {right}");
+            }
+            else
+            {
+                string op = node.Operator switch
+                {
+                    TokenKind.Plus => "add",
+                    TokenKind.Minus => "sub",
+                    TokenKind.Star => "mul",
+                    TokenKind.Slash => "sdiv",
+                    TokenKind.Percent => "srem",
+                    _ => throw new NotImplementedException($"Operator {node.Operator} not yet supported")
+                };
+                Emit($"    {temp} = {op} {llvmType} {left}, {right}");
+            }
             Push(temp);
         }
     }
@@ -480,6 +536,56 @@ public class LlvmEmitter : IVisitor
             case TokenKind.IntLiteral:
                 Push(node.Token.Text);
                 break;
+            case TokenKind.HexInt:
+                Push(Convert.ToInt64(node.Token.Text, 16).ToString());
+                break;
+            case TokenKind.LongLiteral:
+                Push(node.Token.Text.TrimEnd('L', 'l'));
+                break;
+            case TokenKind.FloatLiteral:
+            case TokenKind.DoubleLiteral:
+                {
+                    string txt = node.Token.Text.TrimEnd('f', 'F', 'd', 'D');
+                    if (double.TryParse(txt, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d))
+                    {
+                        string str = d.ToString("0.0######", System.Globalization.CultureInfo.InvariantCulture);
+                        if (!str.Contains('.')) str += ".0";
+                        Push(str);
+                    }
+                    else
+                    {
+                        Push(txt);
+                    }
+                    break;
+                }
+            case TokenKind.CharLiteral:
+                {
+                    string raw = node.Token.Text;
+                    char ch;
+                    if (raw.Length >= 3 && raw[1] == '\\')
+                    {
+                        ch = raw[2] switch
+                        {
+                            'n' => '\n',
+                            't' => '\t',
+                            'r' => '\r',
+                            '0' => '\0',
+                            '\\' => '\\',
+                            '\'' => '\'',
+                            _ => raw[2]
+                        };
+                    }
+                    else if (raw.Length >= 3)
+                    {
+                        ch = raw[1];
+                    }
+                    else
+                    {
+                        ch = '\0';
+                    }
+                    Push(((int)ch).ToString());
+                    break;
+                }
             case TokenKind.True:
                 Push("1");
                 break;
@@ -534,14 +640,33 @@ public class LlvmEmitter : IVisitor
         }
 
         string funcName;
-        if (node.Callee is IdentifierExpression ident)
+        AstNode? target = _typeChecker.GetResolvedCall(node);
+        if (target is ExternDeclaration ext)
         {
-            // could be a local function or an extern
-            funcName = ident.Name == "main" ? "main" : $"gflat${_currentNamespacePath}${ident.Name}";
-            // check if it's an extern - externs don't get mangled
-            TypeExpression callType = _typeChecker.GetType(node);
-            if (IsExtern(ident.Name))
+            funcName = ext.Name;
+        }
+        else if (target is MethodDeclaration method)
+        {
+            if (method.Name == "main")
+            {
+                funcName = "main";
+            }
+            else
+            {
+                string ns = _typeChecker.GetFunctionNamespace(method);
+                funcName = ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}";
+            }
+        }
+        else if (node.Callee is IdentifierExpression ident)
+        {
+            if (ident.Name == "main")
+                funcName = "main";
+            else if (IsExtern(ident.Name))
                 funcName = ident.Name;
+            else if (_currentNamespacePath.Length > 0)
+                funcName = $"gflat${_currentNamespacePath}${ident.Name}";
+            else
+                funcName = $"gflat${ident.Name}";
         }
         else if (node.Callee is NamespaceAccessExpression nsAccess)
         {
@@ -552,10 +677,20 @@ public class LlvmEmitter : IVisitor
             throw new NotImplementedException("Complex callee not supported");
         }
 
+        TypeExpression callType = _typeChecker.GetType(node);
+        string retType = EmitType(callType);
         string args = string.Join(", ", argValues.Zip(argTypes, (v, t) => $"{t} {v}"));
-        string temp = NewTemp();
-        Emit($"    {temp} = call i32 @{funcName}({args})");
-        Push(temp);
+
+        if (retType == "void")
+        {
+            Emit($"    call void @{funcName}({args})");
+        }
+        else
+        {
+            string temp = NewTemp();
+            Emit($"    {temp} = call {retType} @{funcName}({args})");
+            Push(temp);
+        }
     }
 
     private string ResolveCallMangledName(NamespaceAccessExpression node)

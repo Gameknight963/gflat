@@ -1,4 +1,4 @@
-﻿using gflat.ast;
+using gflat.ast;
 using System.ComponentModel;
 using System.Diagnostics;
 
@@ -7,40 +7,82 @@ namespace gflat
     public class Program
     {
         const string code = """
-            namespace Program
+            extern int printf(char* fmt, ...);
+
+            struct Point
             {
-                extern int printf(char* fmt, ...);
+                int x;
+                int y;
+            }
 
-                extern void* malloc(long size);
+            void LogMessage(char* msg)
+            {
+                printf("%s\n", msg);
+            }
 
-                struct Point
+            long Add64(long a, long b)
+            {
+                return a + b;
+            }
+
+            namespace Math
+            {
+                int Double(int x)
                 {
-                    int x;
-                    int y;
-                }
-
-                int DoSomething(Point p)
-                {
-                    printf("something\n");
-                    return 5;
-                }
-
-                int main()
-                {
-                    Point p;
-                    p.x = 3;
-                    p.y = 4;
-                    Point* ptr = &p;
-                    ptr.x = 99;
-                    printf("%d\n", DoSomething(*ptr));
-                    printf("%d %d\n", p.x, p.y);
-
-                    global::Program::DoSomething(p);
-
-                    return 0;
+                    return x * 2;
                 }
             }
+
+            int main()
+            {
+                LogMessage("Top-level functions work!");
+
+                Point p;
+                p.x = 3;
+                p.y = 4;
+                Point* ptr = &p;
+                ptr.x = 99;
+                printf("Point: %d %d\n", p.x, p.y);
+
+                long sum = Add64(1000000000L, 2000000000L);
+                printf("sum: %lld\n", sum);
+
+                int d = Math::Double(21);
+                printf("double: %d\n", d);
+
+                return 0;
+            }
             """;
+
+        static string GetClangLibArgs()
+        {
+            string? lib = Environment.GetEnvironmentVariable("LIB");
+            if (!string.IsNullOrEmpty(lib))
+                return "";
+
+            string vsBase = @"C:\Program Files\Microsoft Visual Studio";
+            if (Directory.Exists(vsBase))
+            {
+                try
+                {
+                    var dirs = Directory.GetDirectories(vsBase, "*", SearchOption.AllDirectories)
+                        .Where(d => d.EndsWith(@"VC\Tools\MSVC"))
+                        .ToList();
+                    foreach (var vcTools in dirs)
+                    {
+                        var versions = Directory.GetDirectories(vcTools);
+                        foreach (var v in versions.OrderByDescending(x => x))
+                        {
+                            string x64 = Path.Combine(v, "lib", "x64");
+                            if (File.Exists(Path.Combine(x64, "libcmt.lib")))
+                                return $"-Xlinker /libpath:\"{x64}\"";
+                        }
+                    }
+                }
+                catch { }
+            }
+            return "";
+        }
 
         static string GetExitCodeMessage(int exitCode)
         {
@@ -85,7 +127,10 @@ namespace gflat
 
             Process process = new Process();
             process.StartInfo.FileName = "clang.exe";
-            process.StartInfo.Arguments = "output.ll -o output.exe";
+            string libArgs = GetClangLibArgs();
+            process.StartInfo.Arguments = string.IsNullOrEmpty(libArgs)
+                ? "output.ll -o output.exe"
+                : $"output.ll -o output.exe {libArgs}";
             process.StartInfo.RedirectStandardError = true;
             process.StartInfo.UseShellExecute = false;
             process.Start();

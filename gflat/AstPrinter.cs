@@ -40,7 +40,7 @@ namespace gflat
 
         public void Visit(ClassDeclaration node)
         {
-            Print($"Class: {node.Accessibility} {node.Name}");
+            Print($"Class: {node.Accessibility} {(node.IsAbstract ? "abstract " : "")}{node.Name}");
             Indented(() => { foreach (AstNode m in node.Members) m.Accept(this); });
         }
 
@@ -68,7 +68,7 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
-            Print($"Method: {node.Accessibility} {node.Name}");
+            Print($"Method: {node.Accessibility} {(node.IsStatic ? "static " : "")}{(node.IsVirtual ? "virtual " : "")}{(node.IsOverride ? "override " : "")}{(node.IsAbstract ? "abstract " : "")}{node.Name}");
             Indented(() =>
             {
                 Print("ReturnType:");

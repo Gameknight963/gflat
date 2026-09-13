@@ -29,6 +29,7 @@ public class LlvmEmitter : IVisitor
 
     private string _currentNamespacePath = "";
     private TypeChecker.StructInfo? _currentStruct = null;
+    private TypeChecker.ClassInfo? _currentClass = null;
     private string _currentFunctionReturnType = "";
     private TypeExpression? _currentFunctionExpectedType = null;
 
@@ -85,6 +86,20 @@ public class LlvmEmitter : IVisitor
                     Emit($"    {loadedThis} = load %{_currentStruct.Name}*, %{_currentStruct.Name}** {thisPtr}");
                     string fieldPtr = NewTemp();
                     Emit($"    {fieldPtr} = getelementptr %{_currentStruct.Name}, %{_currentStruct.Name}* {loadedThis}, i32 0, i32 {idx}");
+                    Push(fieldPtr);
+                    return;
+                }
+            }
+
+            if (_currentClass != null && _locals.TryGetValue("this", out string? classThisPtr))
+            {
+                int idx = _currentClass.FieldIndex(ident.Name);
+                if (idx >= 0)
+                {
+                    string loadedThis = NewTemp();
+                    Emit($"    {loadedThis} = load %{_currentClass.Name}*, %{_currentClass.Name}** {classThisPtr}");
+                    string fieldPtr = NewTemp();
+                    Emit($"    {fieldPtr} = getelementptr %{_currentClass.Name}, %{_currentClass.Name}* {loadedThis}, i32 0, i32 {idx + 1}");
                     Push(fieldPtr);
                     return;
                 }
@@ -154,16 +169,32 @@ public class LlvmEmitter : IVisitor
 
         if (objType is PointerTypeExpression ptrType)
             objType = ptrType.Inner;
+        if (objType is ManagedTypeExpression mgdType)
+            objType = mgdType.Inner;
 
-        string structName = ((NamedTypeExpression)objType).Name;
+        string typeName = ((NamedTypeExpression)objType).Name;
+        if (_typeChecker.IsClass(typeName))
+        {
+            TypeChecker.ClassInfo cInfo = _typeChecker.GetClass(typeName)!;
+            int fieldIdx = cInfo.FieldIndex(node.Member);
+            TypeExpression fieldType = cInfo.Fields[fieldIdx].Type;
+            string llvmFieldType = EmitType(fieldType);
+
+            string fieldPtr = NewTemp();
+            Emit($"    {fieldPtr} = getelementptr %{typeName}, %{typeName}* {objPtr}, i32 0, i32 {fieldIdx + 1}");
+            Push(fieldPtr);
+            return;
+        }
+
+        string structName = typeName;
         TypeChecker.StructInfo info = _typeChecker.GetStruct(structName)!;
-        int fieldIdx = info.FieldIndex(node.Member);
-        TypeExpression fieldType = info.Fields[fieldIdx].Type;
-        string llvmFieldType = EmitType(fieldType);
+        int sFieldIdx = info.FieldIndex(node.Member);
+        TypeExpression sFieldType = info.Fields[sFieldIdx].Type;
+        string llvmSFieldType = EmitType(sFieldType);
 
-        string fieldPtr = NewTemp();
-        Emit($"    {fieldPtr} = getelementptr %{structName}, %{structName}* {objPtr}, i32 0, i32 {fieldIdx}");
-        Push(fieldPtr);
+        string sFieldPtr = NewTemp();
+        Emit($"    {sFieldPtr} = getelementptr %{structName}, %{structName}* {objPtr}, i32 0, i32 {sFieldIdx}");
+        Push(sFieldPtr);
     }
 
     private int _labelCounter = 0;
@@ -448,8 +479,320 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(ClassDeclaration node)
     {
+        TypeChecker.ClassInfo? prevClass = _currentClass;
+        _currentClass = _typeChecker.GetClass(node.Name);
+
+        // 1. Emit class struct layout: %ClassName = type { i8**, fields... }
+        List<string> llvmFieldTypes = new() { "i8**" };
+        foreach (var field in _currentClass!.Fields)
+        {
+            llvmFieldTypes.Add(EmitType(field.Type));
+        }
+        EmitGlobal($"%{node.Name} = type {{ {string.Join(", ", llvmFieldTypes)} }}");
+
+        // 2. Emit class vtable: @ClassName$vtable = internal constant [N x i8*] [ ... ]
+        int vtableSize = _currentClass.VirtualMethods.Count;
+        if (vtableSize == 0)
+        {
+            EmitGlobal($"@{node.Name}$vtable = internal constant [0 x i8*] zeroinitializer");
+        }
+        else
+        {
+            List<string> entries = new();
+            for (int i = 0; i < vtableSize; i++)
+            {
+                MethodDeclaration vm = _currentClass.VirtualMethods[i];
+                if (vm.IsAbstract)
+                {
+                    entries.Add("i8* null");
+                }
+                else
+                {
+                    string declaringClass = _currentClass.Methods[vm.Name].DeclaringClass;
+                    string retType = EmitType(vm.ReturnType);
+                    List<string> paramTypes = new() { $"%{declaringClass}*" };
+                    foreach (Parameter p in vm.Parameters)
+                    {
+                        paramTypes.Add(EmitParamType(p.Type));
+                    }
+                    string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
+                    string methodNs = _typeChecker.GetFunctionNamespace(vm);
+                    string mangled = methodNs.Length > 0
+                        ? $"gflat${methodNs}${declaringClass}${vm.Name}"
+                        : $"gflat${declaringClass}${vm.Name}";
+                    entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
+                }
+            }
+            EmitGlobal($"@{node.Name}$vtable = internal constant [{vtableSize} x i8*] [ {string.Join(", ", entries)} ]");
+        }
+
+        // 3. Emit vtables for implemented interfaces
+        foreach (string ifaceName in _currentClass.Interfaces)
+        {
+            TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
+            if (ifaceInfo == null) continue;
+
+            if (ifaceInfo.Methods.Count == 0)
+            {
+                EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [0 x i8*] zeroinitializer");
+            }
+            else
+            {
+                List<string> entries = new();
+                foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
+                {
+                    MethodDeclaration classMethod = _currentClass.Methods[ifaceMethod.Name].Method;
+                    string declaringClass = _currentClass.Methods[ifaceMethod.Name].DeclaringClass;
+                    string retType = EmitType(classMethod.ReturnType);
+                    List<string> paramTypes = new() { $"%{declaringClass}*" };
+                    foreach (Parameter p in classMethod.Parameters)
+                    {
+                        paramTypes.Add(EmitParamType(p.Type));
+                    }
+                    string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
+                    string methodNs = _typeChecker.GetFunctionNamespace(classMethod);
+                    string mangled = methodNs.Length > 0
+                        ? $"gflat${methodNs}${declaringClass}${classMethod.Name}"
+                        : $"gflat${declaringClass}${classMethod.Name}";
+                    entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
+                }
+                EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{ifaceInfo.Methods.Count} x i8*] [ {string.Join(", ", entries)} ]");
+            }
+        }
+
+        // 4. Emit methods and constructors
         foreach (AstNode member in node.Members)
-            member.Accept(this);
+        {
+            if (member is MethodDeclaration method)
+            {
+                if (!method.IsAbstract)
+                {
+                    EmitClassMethod(node.Name, method);
+                }
+            }
+            else if (member is ConstructorDeclaration ctor)
+            {
+                EmitClassConstructor(node.Name, ctor);
+            }
+        }
+
+        // 5. Emit default constructor if none defined
+        bool hasEmptyCtor = _currentClass.Constructors.Any(c => c.Parameters.Count == 0);
+        if (!hasEmptyCtor)
+        {
+            EmitClassDefaultConstructor(node.Name);
+        }
+
+        _currentClass = prevClass;
+    }
+
+    private void EmitClassMethod(string className, MethodDeclaration node)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+        _hasTerminated = false;
+
+        string returnType = EmitType(node.ReturnType);
+        _currentFunctionReturnType = returnType;
+        _currentFunctionExpectedType = node.ReturnType;
+        string ns = _currentNamespacePath;
+        string mangledName = ns.Length > 0
+            ? $"gflat${ns}${className}${node.Name}"
+            : $"gflat${className}${node.Name}";
+
+        List<string> paramList = new() { $"%{className}* %this" };
+        foreach (Parameter p in node.Parameters)
+            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+
+        string parameters = string.Join(", ", paramList);
+
+        Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        Emit("entry:");
+
+        string thisPtr = NewTemp();
+        Emit($"    {thisPtr} = alloca %{className}*");
+        Emit($"    store %{className}* %this, %{className}** {thisPtr}");
+        _locals["this"] = thisPtr;
+
+        foreach (Parameter p in node.Parameters)
+        {
+            string type = EmitParamType(p.Type);
+            string ptr = NewTemp();
+            Emit($"    {ptr} = alloca {type}");
+            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            _locals[p.Name] = ptr;
+        }
+
+        TypeChecker.ClassInfo? prevClass = _currentClass;
+        _currentClass = _typeChecker.GetClass(className);
+
+        if (node.Body != null)
+            node.Body.Accept(this);
+
+        _currentClass = prevClass;
+
+        if (returnType == "void" && !_hasTerminated)
+            Emit("    ret void");
+
+        Emit("}");
+        Emit("");
+    }
+
+    private void EmitClassFieldInitializers(string className, string thisPtr)
+    {
+        if (_currentClass == null) return;
+        foreach (FieldDeclaration field in _currentClass.FieldDeclarations)
+        {
+            if (field.Initializer == null) continue;
+            int fieldIdx = _currentClass.FieldIndex(field.Name);
+            string llvmFieldType = EmitType(field.Type);
+
+            string loadedThis = NewTemp();
+            Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
+            string fieldPtr = NewTemp();
+            Emit($"    {fieldPtr} = getelementptr %{className}, %{className}* {loadedThis}, i32 0, i32 {fieldIdx + 1}");
+
+            field.Initializer.Accept(this);
+            string val = Pop();
+            TypeExpression initType = _typeChecker.GetType(field.Initializer);
+            val = EmitImplicitCast(val, initType, field.Type);
+            Emit($"    store {llvmFieldType} {val}, {llvmFieldType}* {fieldPtr}");
+        }
+    }
+
+    private void EmitClassConstructor(string className, ConstructorDeclaration node)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+        _hasTerminated = false;
+
+        _currentFunctionReturnType = "void";
+        _currentFunctionExpectedType = new NamedTypeExpression("void", null, node.Line);
+        string ns = _currentNamespacePath;
+        string mangledName = GetConstructorMangledName(className, node, ns);
+
+        List<string> paramList = new() { $"%{className}* %this" };
+        foreach (Parameter p in node.Parameters)
+            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+
+        string parameters = string.Join(", ", paramList);
+
+        Emit($"define void @{mangledName}({parameters}) {{");
+        Emit("entry:");
+
+        string thisPtr = NewTemp();
+        Emit($"    {thisPtr} = alloca %{className}*");
+        Emit($"    store %{className}* %this, %{className}** {thisPtr}");
+        _locals["this"] = thisPtr;
+
+        foreach (Parameter p in node.Parameters)
+        {
+            string type = EmitParamType(p.Type);
+            string ptr = NewTemp();
+            Emit($"    {ptr} = alloca {type}");
+            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            _locals[p.Name] = ptr;
+        }
+
+        TypeChecker.ClassInfo? prevClass = _currentClass;
+        _currentClass = _typeChecker.GetClass(className);
+
+        // 1. Call base class constructor if base class exists
+        if (_currentClass!.BaseClass != null)
+        {
+            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClass(_currentClass.BaseClass)!;
+            string loadedThis = NewTemp();
+            Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
+            string baseThis = NewTemp();
+            Emit($"    {baseThis} = bitcast %{className}* {loadedThis} to %{baseInfo.Name}*");
+            string baseCtorName = GetConstructorMangledName(baseInfo.Name, null, baseInfo.Namespace);
+            Emit($"    call void @{baseCtorName}(%{baseInfo.Name}* {baseThis})");
+        }
+
+        // 2. Setup vtable pointer
+        int vtableSize = _currentClass.VirtualMethods.Count;
+        string loadedThisForVtable = NewTemp();
+        Emit($"    {loadedThisForVtable} = load %{className}*, %{className}** {thisPtr}");
+        string vtableSlot = NewTemp();
+        Emit($"    {vtableSlot} = getelementptr %{className}, %{className}* {loadedThisForVtable}, i32 0, i32 0");
+        string vtablePtr = NewTemp();
+        if (vtableSize > 0)
+            Emit($"    {vtablePtr} = bitcast [{vtableSize} x i8*]* @{className}$vtable to i8**");
+        else
+            Emit($"    {vtablePtr} = bitcast [0 x i8*]* @{className}$vtable to i8**");
+        Emit($"    store i8** {vtablePtr}, i8*** {vtableSlot}");
+
+        // 3. Field initializers for this class
+        EmitClassFieldInitializers(className, thisPtr);
+
+        // 4. Constructor body
+        if (node.Body != null)
+            node.Body.Accept(this);
+
+        _currentClass = prevClass;
+
+        if (!_hasTerminated)
+            Emit("    ret void");
+
+        Emit("}");
+        Emit("");
+    }
+
+    private void EmitClassDefaultConstructor(string className)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+        _hasTerminated = false;
+
+        _currentFunctionReturnType = "void";
+        _currentFunctionExpectedType = new NamedTypeExpression("void", null, 0);
+        string ns = _currentNamespacePath;
+        string mangledName = GetConstructorMangledName(className, null, ns);
+
+        Emit($"define void @{mangledName}(%{className}* %this) {{");
+        Emit("entry:");
+
+        string thisPtr = NewTemp();
+        Emit($"    {thisPtr} = alloca %{className}*");
+        Emit($"    store %{className}* %this, %{className}** {thisPtr}");
+        _locals["this"] = thisPtr;
+
+        TypeChecker.ClassInfo? prevClass = _currentClass;
+        _currentClass = _typeChecker.GetClass(className);
+
+        // 1. Call base class constructor if base class exists
+        if (_currentClass!.BaseClass != null)
+        {
+            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClass(_currentClass.BaseClass)!;
+            string loadedThis = NewTemp();
+            Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
+            string baseThis = NewTemp();
+            Emit($"    {baseThis} = bitcast %{className}* {loadedThis} to %{baseInfo.Name}*");
+            string baseCtorName = GetConstructorMangledName(baseInfo.Name, null, baseInfo.Namespace);
+            Emit($"    call void @{baseCtorName}(%{baseInfo.Name}* {baseThis})");
+        }
+
+        // 2. Setup vtable pointer
+        int vtableSize = _currentClass.VirtualMethods.Count;
+        string loadedThisForVtable = NewTemp();
+        Emit($"    {loadedThisForVtable} = load %{className}*, %{className}** {thisPtr}");
+        string vtableSlot = NewTemp();
+        Emit($"    {vtableSlot} = getelementptr %{className}, %{className}* {loadedThisForVtable}, i32 0, i32 0");
+        string vtablePtr = NewTemp();
+        if (vtableSize > 0)
+            Emit($"    {vtablePtr} = bitcast [{vtableSize} x i8*]* @{className}$vtable to i8**");
+        else
+            Emit($"    {vtablePtr} = bitcast [0 x i8*]* @{className}$vtable to i8**");
+        Emit($"    store i8** {vtablePtr}, i8*** {vtableSlot}");
+
+        // 3. Field initializers for this class
+        EmitClassFieldInitializers(className, thisPtr);
+
+        _currentClass = prevClass;
+
+        Emit("    ret void");
+        Emit("}");
+        Emit("");
     }
 
     public void Visit(StructDeclaration node)
@@ -1659,6 +2002,24 @@ public class LlvmEmitter : IVisitor
             }
         }
 
+        if (_currentClass != null && _locals.TryGetValue("this", out string? classThisPtr))
+        {
+            int idx = _currentClass.FieldIndex(node.Name);
+            if (idx >= 0)
+            {
+                string loadedThis = NewTemp();
+                Emit($"    {loadedThis} = load %{_currentClass.Name}*, %{_currentClass.Name}** {classThisPtr}");
+                string fieldPtr = NewTemp();
+                Emit($"    {fieldPtr} = getelementptr %{_currentClass.Name}, %{_currentClass.Name}* {loadedThis}, i32 0, i32 {idx + 1}");
+                TypeExpression type = _typeChecker.GetType(node);
+                string llvmType = EmitType(type);
+                string temp = NewTemp();
+                Emit($"    {temp} = load {llvmType}, {llvmType}* {fieldPtr}");
+                Push(temp);
+                return;
+            }
+        }
+
         throw new Exception($"Unknown identifier '{node.Name}'");
     }
 
@@ -1747,6 +2108,103 @@ public class LlvmEmitter : IVisitor
             return;
         }
 
+        if (_typeChecker.TryGetVirtualMethodCall(node, out (TypeChecker.ClassInfo Class, int SlotIndex, MethodDeclaration Method) vcall))
+        {
+            string thisVal;
+            string thisType;
+
+            if (node.Callee is MemberAccessExpression vMemberAccess)
+            {
+                TypeExpression objType = _typeChecker.GetType(vMemberAccess.Object);
+                if (objType is PointerTypeExpression ptrType)
+                {
+                    vMemberAccess.Object.Accept(this);
+                    thisVal = Pop();
+                    thisType = EmitType(ptrType);
+                }
+                else if (objType is ManagedTypeExpression mgdType)
+                {
+                    vMemberAccess.Object.Accept(this);
+                    thisVal = Pop();
+                    thisType = EmitType(mgdType);
+                }
+                else
+                {
+                    EmitAddress(vMemberAccess.Object);
+                    thisVal = Pop();
+                    thisType = EmitType(objType) + "*";
+                }
+            }
+            else
+            {
+                string loadedThis = NewTemp();
+                Emit($"    {loadedThis} = load %{vcall.Class.Name}*, %{vcall.Class.Name}** {_locals["this"]}");
+                thisVal = loadedThis;
+                thisType = $"%{vcall.Class.Name}*";
+            }
+
+            string basePtr = thisVal;
+            if (thisType != $"%{vcall.Class.Name}*")
+            {
+                basePtr = NewTemp();
+                Emit($"    {basePtr} = bitcast {thisType} {thisVal} to %{vcall.Class.Name}*");
+            }
+
+            string vtableSlot = NewTemp();
+            Emit($"    {vtableSlot} = getelementptr %{vcall.Class.Name}, %{vcall.Class.Name}* {basePtr}, i32 0, i32 0");
+            string vtablePtr = NewTemp();
+            Emit($"    {vtablePtr} = load i8**, i8*** {vtableSlot}");
+
+            string slotPtr = NewTemp();
+            Emit($"    {slotPtr} = getelementptr i8*, i8** {vtablePtr}, i32 {vcall.SlotIndex}");
+            string rawFnPtr = NewTemp();
+            Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
+
+            string declaringClass = vcall.Class.Methods[vcall.Method.Name].DeclaringClass;
+            string returnType = EmitType(vcall.Method.ReturnType);
+            List<string> fnParamTypes = new() { $"%{declaringClass}*" };
+            foreach (Parameter p in vcall.Method.Parameters)
+            {
+                fnParamTypes.Add(EmitParamType(p.Type));
+            }
+            string fnSig = $"{returnType} ({string.Join(", ", fnParamTypes)})*";
+
+            string typedFn = NewTemp();
+            Emit($"    {typedFn} = bitcast i8* {rawFnPtr} to {fnSig}");
+
+            string passedThis = basePtr;
+            if (vcall.Class.Name != declaringClass)
+            {
+                passedThis = NewTemp();
+                Emit($"    {passedThis} = bitcast %{vcall.Class.Name}* {basePtr} to %{declaringClass}*");
+            }
+
+            List<string> callArgs = new() { $"%{declaringClass}* {passedThis}" };
+            for (int i = 0; i < node.Arguments.Count; i++)
+            {
+                AstNode arg = node.Arguments[i];
+                arg.Accept(this);
+                string val = Pop();
+                TypeExpression argType = _typeChecker.GetType(arg);
+                string llvmArgType = EmitParamType(vcall.Method.Parameters[i].Type);
+                val = EmitImplicitCast(val, argType, vcall.Method.Parameters[i].Type);
+                callArgs.Add($"{llvmArgType} {val}");
+            }
+
+            string argsStr = string.Join(", ", callArgs);
+            if (returnType == "void")
+            {
+                Emit($"    call void {typedFn}({argsStr})");
+            }
+            else
+            {
+                string temp = NewTemp();
+                Emit($"    {temp} = call {returnType} {typedFn}({argsStr})");
+                Push(temp);
+            }
+            return;
+        }
+
         if (_typeChecker.IsIndirectCall(node))
         {
             node.Callee.Accept(this);
@@ -1810,6 +2268,12 @@ public class LlvmEmitter : IVisitor
                 thisVal = Pop();
                 thisType = EmitType(ptrType);
             }
+            else if (objType is ManagedTypeExpression mgdType)
+            {
+                memberAccess.Object.Accept(this);
+                thisVal = Pop();
+                thisType = EmitType(mgdType);
+            }
             else
             {
                 EmitAddress(memberAccess.Object);
@@ -1836,11 +2300,57 @@ public class LlvmEmitter : IVisitor
                 argTypes.Add(llvmArgType);
             }
 
-            string structName = ((NamedTypeExpression)(objType is PointerTypeExpression p ? p.Inner : objType)).Name;
+            string rawName = ((NamedTypeExpression)(objType is PointerTypeExpression p ? p.Inner : (objType is ManagedTypeExpression m ? m.Inner : objType))).Name;
+            string typeName = rawName;
+            if (_typeChecker.IsClass(rawName))
+            {
+                TypeChecker.ClassInfo cInfo = _typeChecker.GetClass(rawName)!;
+                string declaringClass = cInfo.Methods[structMethod.Name].DeclaringClass;
+                typeName = declaringClass;
+                if (rawName != declaringClass)
+                {
+                    string castThis = NewTemp();
+                    Emit($"    {castThis} = bitcast {thisType} {thisVal} to %{declaringClass}*");
+                    argValues[0] = castThis;
+                    argTypes[0] = $"%{declaringClass}*";
+                }
+            }
+
             string ns = _typeChecker.GetFunctionNamespace(structMethod);
             funcName = ns.Length > 0 
-                ? $"gflat${ns}${structName}${structMethod.Name}" 
-                : $"gflat${structName}${structMethod.Name}";
+                ? $"gflat${ns}${typeName}${structMethod.Name}" 
+                : $"gflat${typeName}${structMethod.Name}";
+        }
+        else if (node.Callee is IdentifierExpression idMethod && target is MethodDeclaration methodMember && _currentClass != null && _currentClass.Methods.ContainsKey(idMethod.Name))
+        {
+            string declaringClass = _currentClass.Methods[idMethod.Name].DeclaringClass;
+            string loadedThis = NewTemp();
+            Emit($"    {loadedThis} = load %{_currentClass.Name}*, %{_currentClass.Name}** {_locals["this"]}");
+            string passedThis = loadedThis;
+            if (_currentClass.Name != declaringClass)
+            {
+                passedThis = NewTemp();
+                Emit($"    {passedThis} = bitcast %{_currentClass.Name}* {loadedThis} to %{declaringClass}*");
+            }
+            argValues.Add(passedThis);
+            argTypes.Add($"%{declaringClass}*");
+
+            for (int i = 0; i < node.Arguments.Count; i++)
+            {
+                AstNode arg = node.Arguments[i];
+                arg.Accept(this);
+                string val = Pop();
+                TypeExpression argType = _typeChecker.GetType(arg);
+                string llvmArgType = EmitParamType(methodMember.Parameters[i].Type);
+                val = EmitImplicitCast(val, argType, methodMember.Parameters[i].Type);
+                argValues.Add(val);
+                argTypes.Add(llvmArgType);
+            }
+
+            string ns = _typeChecker.GetFunctionNamespace(methodMember);
+            funcName = ns.Length > 0
+                ? $"gflat${ns}${declaringClass}${methodMember.Name}"
+                : $"gflat${declaringClass}${methodMember.Name}";
         }
         else
         {
@@ -2115,8 +2625,11 @@ public class LlvmEmitter : IVisitor
     public void Visit(NewExpression node)
     {
         TypeExpression resolvedType = _typeChecker.ResolveAlias(node.Type);
-        string structName = ((NamedTypeExpression)resolvedType).Name;
-        TypeChecker.StructInfo sInfo = _typeChecker.GetStruct(structName)!;
+        string typeName = ((NamedTypeExpression)resolvedType).Name;
+        bool isClass = _typeChecker.IsClass(typeName);
+        TypeChecker.StructInfo? sInfo = isClass ? null : _typeChecker.GetStruct(typeName)!;
+        TypeChecker.ClassInfo? cInfo = isClass ? _typeChecker.GetClass(typeName)! : null;
+        string typeNs = isClass ? cInfo!.Namespace : sInfo!.Namespace;
         ConstructorDeclaration? ctor = _typeChecker.GetResolvedConstructor(node);
 
         List<string> argVals = new();
@@ -2126,19 +2639,19 @@ public class LlvmEmitter : IVisitor
             argVals.Add(Pop());
         }
 
-        bool hasCtor = ctor != null || sInfo.Constructors.Any(c => c.Parameters.Count == 0) ||
+        bool hasCtor = isClass || ctor != null || sInfo!.Constructors.Any(c => c.Parameters.Count == 0) ||
                        (sInfo.Constructors.Count == 0 && sInfo.FieldDeclarations.Any(f => f.Initializer != null));
 
         if (node.Kind == AllocationKind.Value)
         {
             string temp = NewTemp();
-            Emit($"    {temp} = alloca %{structName}");
-            Emit($"    store %{structName} zeroinitializer, %{structName}* {temp}");
+            Emit($"    {temp} = alloca %{typeName}");
+            Emit($"    store %{typeName} zeroinitializer, %{typeName}* {temp}");
 
             if (hasCtor)
             {
-                string mangledName = GetConstructorMangledName(structName, ctor, sInfo.Namespace);
-                List<string> callArgs = new() { $"%{structName}* {temp}" };
+                string mangledName = GetConstructorMangledName(typeName, ctor, typeNs);
+                List<string> callArgs = new() { $"%{typeName}* {temp}" };
                 if (ctor != null)
                 {
                     for (int i = 0; i < ctor.Parameters.Count; i++)
@@ -2152,7 +2665,7 @@ public class LlvmEmitter : IVisitor
             }
 
             string val = NewTemp();
-            Emit($"    {val} = load %{structName}, %{structName}* {temp}");
+            Emit($"    {val} = load %{typeName}, %{typeName}* {temp}");
             Push(val);
         }
         else if (node.Kind == AllocationKind.Pointer)
@@ -2164,20 +2677,20 @@ public class LlvmEmitter : IVisitor
             }
 
             string sizePtr = NewTemp();
-            Emit($"    {sizePtr} = getelementptr %{structName}, %{structName}* null, i32 1");
+            Emit($"    {sizePtr} = getelementptr %{typeName}, %{typeName}* null, i32 1");
             string sizeInt = NewTemp();
-            Emit($"    {sizeInt} = ptrtoint %{structName}* {sizePtr} to i64");
+            Emit($"    {sizeInt} = ptrtoint %{typeName}* {sizePtr} to i64");
 
             string rawMem = NewTemp();
             Emit($"    {rawMem} = call i8* @malloc(i64 {sizeInt})");
             string typedPtr = NewTemp();
-            Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{structName}*");
-            Emit($"    store %{structName} zeroinitializer, %{structName}* {typedPtr}");
+            Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{typeName}*");
+            Emit($"    store %{typeName} zeroinitializer, %{typeName}* {typedPtr}");
 
             if (hasCtor)
             {
-                string mangledName = GetConstructorMangledName(structName, ctor, sInfo.Namespace);
-                List<string> callArgs = new() { $"%{structName}* {typedPtr}" };
+                string mangledName = GetConstructorMangledName(typeName, ctor, typeNs);
+                List<string> callArgs = new() { $"%{typeName}* {typedPtr}" };
                 if (ctor != null)
                 {
                     for (int i = 0; i < ctor.Parameters.Count; i++)

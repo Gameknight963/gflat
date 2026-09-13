@@ -100,6 +100,58 @@ void LogMessage(char* msg)
     printf("%s\n", msg);
 }
 
+abstract class Animal
+{
+    public int age;
+
+    public Animal()
+    {
+        this.age = 0;
+    }
+
+    public Animal(int age)
+    {
+        this.age = age;
+    }
+
+    public abstract void Speak();
+
+    public void Introduce()
+    {
+        printf("I am an animal of age %d, and I say: ", this.age);
+        this.Speak();
+    }
+}
+
+class Dog : Animal
+{
+    public int barkPitch;
+
+    public Dog(int age, int pitch)
+    {
+        this.age = age;
+        this.barkPitch = pitch;
+    }
+
+    public override void Speak()
+    {
+        printf("Woof! (pitch: %d)\n", this.barkPitch);
+    }
+}
+
+class Cat : Animal
+{
+    public Cat(int age)
+    {
+        this.age = age;
+    }
+
+    public override void Speak()
+    {
+        printf("Meow!\n");
+    }
+}
+
 long Add64(long a, long b)
 {
     return a + b;
@@ -258,6 +310,17 @@ int main()
     Rect* rectHeap = new* Rect(7, 3);
     PrintShape("Heap Rect", rectHeap);
     rectHeap->free();
+
+    Dog dog = new Dog(3, 85);
+    Cat cat = new Cat(5);
+    Animal* a1 = &dog;
+    Animal* a2 = &cat;
+    a1.Introduce();
+    a2.Introduce();
+
+    Dog* heapDog = new* Dog(2, 99);
+    defer heapDog->free();
+    heapDog.Introduce();
 
     return 0;
 }

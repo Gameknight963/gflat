@@ -114,6 +114,59 @@ namespace gflat
             public TokenKind Accessibility = TokenKind.Public;
         }
 
+        public class ClassInfo
+        {
+            public string Name = "";
+            public string Namespace = "";
+            public string? BaseClass = null;
+            public bool IsAbstract = false;
+            public TokenKind Accessibility = TokenKind.Public;
+            public List<string> Interfaces = new();
+            public List<(string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass)> Fields = new();
+            public List<FieldDeclaration> FieldDeclarations = new();
+            public List<ConstructorDeclaration> Constructors = new();
+            public Dictionary<string, (MethodDeclaration Method, string DeclaringClass)> Methods = new();
+            public List<MethodDeclaration> VirtualMethods = new();
+            public Dictionary<string, int> VTableSlots = new(); // Method name -> slot index
+            public int Line = 0;
+            public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
+        }
+
+        private readonly Dictionary<string, ClassInfo> _classes = new();
+        public ClassInfo? GetClass(string name) => _classes.TryGetValue(name, out ClassInfo? info) ? info : null;
+        public bool IsClass(string name) => _classes.ContainsKey(name);
+        private ClassInfo? _currentClass = null;
+
+        private readonly Dictionary<CallExpression, (ClassInfo Class, int SlotIndex, MethodDeclaration Method)> _virtualMethodCalls = new();
+        public bool TryGetVirtualMethodCall(CallExpression node, out (ClassInfo Class, int SlotIndex, MethodDeclaration Method) call) =>
+            _virtualMethodCalls.TryGetValue(node, out call);
+
+        public bool IsSubclassOf(string derivedName, string baseName)
+        {
+            if (derivedName == baseName) return true;
+            if (_classes.TryGetValue(derivedName, out ClassInfo? info))
+            {
+                string? cur = info.BaseClass;
+                while (cur != null)
+                {
+                    if (cur == baseName) return true;
+                    if (_classes.TryGetValue(cur, out ClassInfo? parent))
+                        cur = parent.BaseClass;
+                    else
+                        break;
+                }
+            }
+            return false;
+        }
+
+        public bool ClassImplementsInterface(ClassInfo cInfo, string ifaceName)
+        {
+            if (cInfo.Interfaces.Contains(ifaceName)) return true;
+            if (cInfo.BaseClass != null && _classes.TryGetValue(cInfo.BaseClass, out ClassInfo? baseInfo))
+                return ClassImplementsInterface(baseInfo, ifaceName);
+            return false;
+        }
+
         public class EnumInfo
         {
             public string Name = "";
@@ -130,6 +183,7 @@ namespace gflat
             public Dictionary<string, TypeExpression> Aliases = new();
             public Dictionary<string, EnumInfo> Enums = new();
             public Dictionary<string, InterfaceInfo> Interfaces = new();
+            public Dictionary<string, ClassInfo> Classes = new();
             public Dictionary<string, NamespaceScope> Children = new();
             public NamespaceScope? Parent;
         }
@@ -209,6 +263,27 @@ namespace gflat
                 }
             }
 
+            if (_currentClass != null)
+            {
+                int idx = _currentClass.FieldIndex(name);
+                if (idx >= 0)
+                {
+                    if (_lambdaScopeBoundaries.Count > 0)
+                    {
+                        bool isStatic = _lambdaStaticStack.Peek();
+                        if (isStatic)
+                        {
+                            throw new TypeCheckException($"A static lambda cannot reference 'this'", line);
+                        }
+                        else
+                        {
+                            throw new TypeCheckException($"Capturing 'this' in a lambda is not currently supported", line);
+                        }
+                    }
+                    return _currentClass.Fields[idx].Type;
+                }
+            }
+
             if (ResolveFunction(name) != null || ResolveExtern(name) != null)
                 throw new TypeCheckException($"Cannot use function '{name}' as a value without '&'. Did you mean '&{name}'?", line);
 
@@ -229,6 +304,16 @@ namespace gflat
                 if (idx >= 0)
                 {
                     type = _currentStruct.Fields[idx].Type;
+                    return true;
+                }
+            }
+
+            if (_currentClass != null)
+            {
+                int idx = _currentClass.FieldIndex(name);
+                if (idx >= 0)
+                {
+                    type = _currentClass.Fields[idx].Type;
                     return true;
                 }
             }
@@ -636,6 +721,75 @@ namespace gflat
                             return true;
                         }
                     }
+                    if (sourceInner is NamedTypeExpression sourceClassNamed && _classes.TryGetValue(sourceClassNamed.Name, out ClassInfo? cInfo))
+                    {
+                        if (ClassImplementsInterface(cInfo, targetIface.Name))
+                        {
+                            if (psStruct.IsNullable && !ptIface.IsNullable)
+                                return false;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // Struct or class managed ref to interface managed ref assignability
+            if (target is ManagedTypeExpression mtIface && source is ManagedTypeExpression msStruct)
+            {
+                TypeExpression targetInner = ResolveAlias(mtIface.Inner);
+                TypeExpression sourceInner = ResolveAlias(msStruct.Inner);
+                if (targetInner is NamedTypeExpression targetIfaceNamed && ResolveInterface(targetIfaceNamed) is InterfaceInfo targetIface)
+                {
+                    if (sourceInner is NamedTypeExpression sourceNamed && _structs.TryGetValue(sourceNamed.Name, out StructInfo? sInfo))
+                    {
+                        if (sInfo.Interfaces.Contains(targetIface.Name))
+                        {
+                            if (msStruct.IsNullable && !mtIface.IsNullable)
+                                return false;
+                            return true;
+                        }
+                    }
+                    if (sourceInner is NamedTypeExpression sourceClassNamed && _classes.TryGetValue(sourceClassNamed.Name, out ClassInfo? cInfo))
+                    {
+                        if (ClassImplementsInterface(cInfo, targetIface.Name))
+                        {
+                            if (msStruct.IsNullable && !mtIface.IsNullable)
+                                return false;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // Class pointer inheritance assignability (Derived* to Base*)
+            if (target is PointerTypeExpression ptBase && source is PointerTypeExpression psDerived)
+            {
+                TypeExpression targetInner = ResolveAlias(ptBase.Inner);
+                TypeExpression sourceInner = ResolveAlias(psDerived.Inner);
+                if (targetInner is NamedTypeExpression tNamed && sourceInner is NamedTypeExpression sNamed)
+                {
+                    if (IsSubclassOf(sNamed.Name, tNamed.Name))
+                    {
+                        if (psDerived.IsNullable && !ptBase.IsNullable)
+                            return false;
+                        return true;
+                    }
+                }
+            }
+
+            // Class managed ref inheritance assignability (Derived^ to Base^)
+            if (target is ManagedTypeExpression mtBase && source is ManagedTypeExpression msDerived)
+            {
+                TypeExpression targetInner = ResolveAlias(mtBase.Inner);
+                TypeExpression sourceInner = ResolveAlias(msDerived.Inner);
+                if (targetInner is NamedTypeExpression tNamed && sourceInner is NamedTypeExpression sNamed)
+                {
+                    if (IsSubclassOf(sNamed.Name, tNamed.Name))
+                    {
+                        if (msDerived.IsNullable && !mtBase.IsNullable)
+                            return false;
+                        return true;
+                    }
                 }
             }
 
@@ -739,6 +893,9 @@ namespace gflat
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 BuildNamespaceScope(ns, _globalScope, "");
 
+            // resolve class hierarchies and vtable layouts
+            ResolveClassHierarchies();
+
             // second pass: type check bodies
             _currentNamespace = _globalScope;
             foreach (AstNode member in node.Members)
@@ -746,6 +903,143 @@ namespace gflat
 
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 ns.Accept(this);
+        }
+
+        private void ResolveClassHierarchies()
+        {
+            // First partition base class vs interfaces for all classes
+            foreach (ClassInfo cls in _classes.Values)
+            {
+                List<string> remainingInterfaces = new();
+                foreach (string item in cls.Interfaces)
+                {
+                    if (_classes.ContainsKey(item))
+                    {
+                        if (cls.BaseClass != null)
+                        {
+                            throw new TypeCheckException($"Class '{cls.Name}' cannot inherit from multiple classes ('{cls.BaseClass}' and '{item}')", cls.Line);
+                        }
+                        cls.BaseClass = item;
+                    }
+                    else
+                    {
+                        remainingInterfaces.Add(item);
+                    }
+                }
+                cls.Interfaces = remainingInterfaces;
+            }
+
+            HashSet<string> visited = new();
+            HashSet<string> visiting = new();
+
+            foreach (ClassInfo cls in _classes.Values)
+            {
+                ResolveClassHierarchy(cls, visiting, visited);
+            }
+        }
+
+        private void ResolveClassHierarchy(ClassInfo cls, HashSet<string> visiting, HashSet<string> visited)
+        {
+            if (visited.Contains(cls.Name)) return;
+            if (visiting.Contains(cls.Name))
+                throw new TypeCheckException($"Circular inheritance detected involving class '{cls.Name}'", cls.Line);
+
+            visiting.Add(cls.Name);
+
+            if (cls.BaseClass != null)
+            {
+                if (!_classes.TryGetValue(cls.BaseClass, out ClassInfo? baseInfo))
+                {
+                    throw new TypeCheckException($"Class '{cls.Name}' inherits from unknown class '{cls.BaseClass}'", cls.Line);
+                }
+
+                ResolveClassHierarchy(baseInfo, visiting, visited);
+
+                // Inherit base fields in prefix order
+                cls.Fields.AddRange(baseInfo.Fields);
+
+                // Inherit base vtable slots
+                cls.VirtualMethods.AddRange(baseInfo.VirtualMethods);
+                foreach (var kvp in baseInfo.VTableSlots)
+                {
+                    cls.VTableSlots[kvp.Key] = kvp.Value;
+                }
+
+                // Inherit base methods (not overridden)
+                foreach (var kvp in baseInfo.Methods)
+                {
+                    if (!cls.Methods.ContainsKey(kvp.Key))
+                    {
+                        cls.Methods[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+
+            // Append cls's own declared fields
+            foreach (FieldDeclaration f in cls.FieldDeclarations)
+            {
+                if (cls.FieldIndex(f.Name) >= 0)
+                    throw new TypeCheckException($"Class '{cls.Name}' cannot declare field '{f.Name}' because it is already declared in a base class", f.Line);
+                cls.Fields.Add((f.Name, f.Type, f.Accessibility, cls.Name));
+            }
+
+            // Process methods: override, virtual, abstract, normal
+            foreach (var kvp in cls.Methods.Where(m => m.Value.DeclaringClass == cls.Name).ToList())
+            {
+                MethodDeclaration method = kvp.Value.Method;
+                if (method.IsOverride)
+                {
+                    if (!cls.VTableSlots.TryGetValue(method.Name, out int slot))
+                    {
+                        throw new TypeCheckException($"Method '{method.Name}' in class '{cls.Name}' is marked override but does not override any virtual or abstract method in a base class", method.Line);
+                    }
+                    MethodDeclaration baseMethod = cls.VirtualMethods[slot];
+                    if (!TypesMatch(ResolveAlias(method.ReturnType), ResolveAlias(baseMethod.ReturnType)))
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' has return type '{TypeName(method.ReturnType)}' which does not match base method return type '{TypeName(baseMethod.ReturnType)}'", method.Line);
+                    if (method.Parameters.Count != baseMethod.Parameters.Count)
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' has {method.Parameters.Count} parameters, but base method has {baseMethod.Parameters.Count}", method.Line);
+                    for (int p = 0; p < method.Parameters.Count; p++)
+                    {
+                        if (!TypesMatch(ResolveAlias(method.Parameters[p].Type), ResolveAlias(baseMethod.Parameters[p].Type)))
+                            throw new TypeCheckException($"Parameter '{method.Parameters[p].Name}' of overriding method '{method.Name}' has type '{TypeName(method.Parameters[p].Type)}' which does not match base parameter type '{TypeName(baseMethod.Parameters[p].Type)}'", method.Parameters[p].Line);
+                    }
+                    if (baseMethod.Accessibility == TokenKind.Public && method.Accessibility != TokenKind.Public)
+                        throw new TypeCheckException($"Overriding method '{method.Name}' cannot reduce accessibility of public base method", method.Line);
+                    if (baseMethod.Accessibility == TokenKind.Protected && method.Accessibility == TokenKind.Private)
+                        throw new TypeCheckException($"Overriding method '{method.Name}' cannot reduce accessibility of protected base method", method.Line);
+
+                    cls.VirtualMethods[slot] = method;
+                    cls.Methods[method.Name] = (method, cls.Name);
+                }
+                else if (method.IsVirtual || method.IsAbstract)
+                {
+                    if (cls.VTableSlots.ContainsKey(method.Name))
+                    {
+                        throw new TypeCheckException($"Method '{method.Name}' in class '{cls.Name}' hides base virtual method without 'override' keyword", method.Line);
+                    }
+                    int slot = cls.VirtualMethods.Count;
+                    cls.VirtualMethods.Add(method);
+                    cls.VTableSlots[method.Name] = slot;
+                    cls.Methods[method.Name] = (method, cls.Name);
+                }
+            }
+
+            // If concrete class, ensure all abstract methods in vtable are implemented
+            if (!cls.IsAbstract)
+            {
+                for (int slot = 0; slot < cls.VirtualMethods.Count; slot++)
+                {
+                    MethodDeclaration vm = cls.VirtualMethods[slot];
+                    if (vm.IsAbstract)
+                    {
+                        string declaringClass = cls.Methods[vm.Name].DeclaringClass;
+                        throw new TypeCheckException($"Class '{cls.Name}' must implement abstract method '{declaringClass}.{vm.Name}' or be declared abstract", cls.Line);
+                    }
+                }
+            }
+
+            visiting.Remove(cls.Name);
+            visited.Add(cls.Name);
         }
 
         private void RegisterMemberInScope(AstNode member, NamespaceScope scope, string nsPath)
@@ -824,16 +1118,43 @@ namespace gflat
             }
             else if (member is ClassDeclaration cls)
             {
+                ClassInfo info = new ClassInfo
+                {
+                    Name = cls.Name,
+                    Namespace = nsPath,
+                    BaseClass = cls.BaseClass,
+                    IsAbstract = cls.IsAbstract,
+                    Accessibility = cls.Accessibility,
+                    Interfaces = new List<string>(cls.Interfaces),
+                    Line = cls.Line
+                };
+
                 foreach (AstNode m in cls.Members)
                 {
-                    if (m is MethodDeclaration cm)
+                    if (m is FieldDeclaration field)
                     {
-                        scope.Functions[cm.Name] = cm;
+                        info.FieldDeclarations.Add(field);
+                    }
+                    else if (m is ConstructorDeclaration ctor)
+                    {
+                        info.Constructors.Add(ctor);
+                    }
+                    else if (m is MethodDeclaration cm)
+                    {
+                        if (cm.IsAbstract && !cls.IsAbstract)
+                            throw new TypeCheckException($"Abstract method '{cm.Name}' can only be declared in an abstract class", cm.Line);
+                        if (cm.IsAbstract && cm.Body != null)
+                            throw new TypeCheckException($"Abstract method '{cm.Name}' cannot have a body", cm.Line);
+                        if (!cm.IsAbstract && cm.Body == null)
+                            throw new TypeCheckException($"Method '{cm.Name}' must declare a body unless marked abstract", cm.Line);
+
+                        info.Methods[cm.Name] = (cm, cls.Name);
                         _functionNamespaces[cm] = nsPath;
                     }
-                    if (m is ExternDeclaration ce)
-                        scope.Externs[ce.Name] = ce;
                 }
+
+                _classes[cls.Name] = info;
+                scope.Classes[cls.Name] = info;
             }
             else if (member is NamespaceDeclaration nested)
             {
@@ -875,8 +1196,97 @@ namespace gflat
 
         public void Visit(ClassDeclaration node)
         {
+            ClassInfo? prevClass = _currentClass;
+            _currentClass = _classes[node.Name];
+
+            // Validate implemented interfaces
+            foreach (string ifaceName in _currentClass.Interfaces)
+            {
+                InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
+                if (ifaceInfo == null)
+                {
+                    throw new TypeCheckException($"Class '{node.Name}' implements unknown interface '{ifaceName}'", node.Line);
+                }
+
+                foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
+                {
+                    if (!_currentClass.Methods.TryGetValue(ifaceMethod.Name, out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                    {
+                        throw new TypeCheckException($"Class '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                    }
+
+                    MethodDeclaration classMethod = mEntry.Method;
+                    if (!TypesMatch(ResolveAlias(classMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
+                    {
+                        throw new TypeCheckException(
+                            $"Method '{classMethod.Name}' in class '{node.Name}' has return type '{TypeName(classMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
+                            classMethod.Line);
+                    }
+
+                    if (classMethod.Parameters.Count != ifaceMethod.Parameters.Count)
+                    {
+                        throw new TypeCheckException(
+                            $"Method '{classMethod.Name}' in class '{node.Name}' has {classMethod.Parameters.Count} parameters, but interface '{ifaceName}' expects {ifaceMethod.Parameters.Count}",
+                            classMethod.Line);
+                    }
+
+                    for (int i = 0; i < ifaceMethod.Parameters.Count; i++)
+                    {
+                        TypeExpression classParamType = ResolveAlias(classMethod.Parameters[i].Type);
+                        TypeExpression ifaceParamType = ResolveAlias(ifaceMethod.Parameters[i].Type);
+                        if (!TypesMatch(classParamType, ifaceParamType))
+                        {
+                            throw new TypeCheckException(
+                                $"Parameter '{classMethod.Parameters[i].Name}' of method '{classMethod.Name}' in class '{node.Name}' has type '{TypeName(classParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
+                                classMethod.Parameters[i].Line);
+                        }
+                    }
+                }
+            }
+
             foreach (AstNode member in node.Members)
-                member.Accept(this);
+            {
+                if (member is FieldDeclaration field)
+                {
+                    ValidateTypeUsage(field.Type, field.Line);
+                    if (field.Initializer != null)
+                    {
+                        field.Initializer.Accept(this);
+                        TypeExpression initType = ResolveAlias(GetType(field.Initializer));
+                        TypeExpression fieldType = ResolveAlias(field.Type);
+                        if (!IsAssignable(fieldType, initType, field.Initializer))
+                        {
+                            throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
+                        }
+                    }
+                }
+                else if (member is ConstructorDeclaration ctor)
+                {
+                    ctor.Accept(this);
+                }
+                else if (member is MethodDeclaration method)
+                {
+                    ValidateTypeUsage(method.ReturnType, method.Line);
+                    if (!method.IsAbstract)
+                    {
+                        PushScope();
+                        NamedTypeExpression classType = new NamedTypeExpression(node.Name, null, method.Line);
+                        PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line);
+                        DeclareVariable("this", thisType, method.Line);
+
+                        foreach (Parameter p in method.Parameters)
+                        {
+                            ValidateTypeUsage(p.Type, p.Line);
+                            DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                        }
+
+                        method.Body?.Accept(this);
+                        PopScope();
+                    }
+                }
+            }
+
+            _currentClass = prevClass;
         }
 
         public void Visit(StructDeclaration node)
@@ -1062,17 +1472,19 @@ namespace gflat
 
         public void Visit(ConstructorDeclaration node)
         {
-            if (_currentStruct == null)
+            if (_currentStruct == null && _currentClass == null)
             {
-                throw new TypeCheckException("Constructor must be declared inside a struct", node.Line);
+                throw new TypeCheckException("Constructor must be declared inside a struct or class", node.Line);
             }
-            if (node.Name != _currentStruct.Name)
+            string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
+            if (node.Name != ownerName)
             {
-                throw new TypeCheckException($"Constructor name '{node.Name}' does not match struct name '{_currentStruct.Name}'", node.Line);
+                string kindStr = _currentStruct != null ? "struct" : "class";
+                throw new TypeCheckException($"Constructor name '{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
             }
             PushScope();
-            NamedTypeExpression structType = new NamedTypeExpression(_currentStruct.Name, null, node.Line);
-            PointerTypeExpression thisType = new PointerTypeExpression(structType, false, node.Line);
+            NamedTypeExpression typeExpr = new NamedTypeExpression(ownerName, null, node.Line);
+            PointerTypeExpression thisType = new PointerTypeExpression(typeExpr, false, node.Line);
             DeclareVariable("this", thisType, node.Line);
 
             foreach (Parameter p in node.Parameters)
@@ -1642,6 +2054,8 @@ namespace gflat
                 TypeExpression objType = GetType(memberAccess.Object);
                 if (objType is PointerTypeExpression ptr)
                     objType = ptr.Inner;
+                if (objType is ManagedTypeExpression mgd)
+                    objType = mgd.Inner;
 
                 objType = ResolveAlias(objType);
 
@@ -1672,32 +2086,88 @@ namespace gflat
                     return;
                 }
 
-                if (objType is not NamedTypeExpression named || !_structs.TryGetValue(named.Name, out StructInfo? sInfo))
-                    throw new TypeCheckException("Cannot call method on non-struct type", node.Line);
+                if (objType is not NamedTypeExpression named)
+                    throw new TypeCheckException("Cannot call method on non-struct and non-class type", node.Line);
 
-                int fieldIdx = sInfo.FieldIndex(memberAccess.Member);
-                if (fieldIdx >= 0)
+                if (_classes.TryGetValue(named.Name, out ClassInfo? classInfo))
                 {
-                    TypeExpression fieldType = ResolveAlias(sInfo.Fields[fieldIdx].Type);
-                    if (fieldType is FunctionPointerTypeExpression fnPtrField)
+                    int fieldIdx = classInfo.FieldIndex(memberAccess.Member);
+                    if (fieldIdx >= 0)
                     {
-                        RecordType(memberAccess, fieldType);
-                        CheckIndirectCall(node, fnPtrField);
-                        return;
+                        (string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field = classInfo.Fields[fieldIdx];
+                        if (field.Accessibility == TokenKind.Private && _currentClass?.Name != field.DeclaringClass)
+                            throw new TypeCheckException($"Cannot access private field '{memberAccess.Member}' of class '{field.DeclaringClass}'", node.Line);
+                        if (field.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, field.DeclaringClass)))
+                            throw new TypeCheckException($"Cannot access protected field '{memberAccess.Member}' of class '{field.DeclaringClass}'", node.Line);
+
+                        TypeExpression fieldType = ResolveAlias(field.Type);
+                        if (fieldType is FunctionPointerTypeExpression fnPtrField)
+                        {
+                            RecordType(memberAccess, fieldType);
+                            CheckIndirectCall(node, fnPtrField);
+                            return;
+                        }
                     }
+
+                    if (!classInfo.Methods.TryGetValue(memberAccess.Member, out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                        throw new TypeCheckException($"Class '{named.Name}' has no method '{memberAccess.Member}'", node.Line);
+
+                    method = mEntry.Method;
+                    if (method.Accessibility == TokenKind.Private && _currentClass?.Name != mEntry.DeclaringClass)
+                        throw new TypeCheckException($"Cannot access private method '{memberAccess.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
+                    if (method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
+                        throw new TypeCheckException($"Cannot access protected method '{memberAccess.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
+
+                    if (classInfo.VTableSlots.TryGetValue(memberAccess.Member, out int slotIndex))
+                    {
+                        _virtualMethodCalls[node] = (classInfo, slotIndex, method);
+                    }
+
+                    funcName = $"{classInfo.Name}.{memberAccess.Member}";
+                    _resolvedCalls[node] = method;
                 }
+                else if (_structs.TryGetValue(named.Name, out StructInfo? sInfo))
+                {
+                    int fieldIdx = sInfo.FieldIndex(memberAccess.Member);
+                    if (fieldIdx >= 0)
+                    {
+                        TypeExpression fieldType = ResolveAlias(sInfo.Fields[fieldIdx].Type);
+                        if (fieldType is FunctionPointerTypeExpression fnPtrField)
+                        {
+                            RecordType(memberAccess, fieldType);
+                            CheckIndirectCall(node, fnPtrField);
+                            return;
+                        }
+                    }
 
-                if (!sInfo.Methods.TryGetValue(memberAccess.Member, out method))
-                    throw new TypeCheckException($"'{named.Name}' has no method '{memberAccess.Member}'", node.Line);
+                    if (!sInfo.Methods.TryGetValue(memberAccess.Member, out method))
+                        throw new TypeCheckException($"'{named.Name}' has no method '{memberAccess.Member}'", node.Line);
 
-                funcName = $"{named.Name}.{memberAccess.Member}";
-                _resolvedCalls[node] = method;
+                    funcName = $"{named.Name}.{memberAccess.Member}";
+                    _resolvedCalls[node] = method;
+                }
+                else
+                {
+                    throw new TypeCheckException($"'{named.Name}' is not a struct or class", node.Line);
+                }
             }
             else if (node.Callee is IdentifierExpression ident)
             {
                 funcName = ident.Name;
-                method = ResolveFunction(funcName);
-                ext = method == null ? ResolveExtern(funcName) : null;
+                if (_currentClass != null && _currentClass.Methods.TryGetValue(funcName, out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                {
+                    method = mEntry.Method;
+                    if (_currentClass.VTableSlots.TryGetValue(funcName, out int slotIndex))
+                    {
+                        _virtualMethodCalls[node] = (_currentClass, slotIndex, method);
+                    }
+                    _resolvedCalls[node] = method;
+                }
+                else
+                {
+                    method = ResolveFunction(funcName);
+                    ext = method == null ? ResolveExtern(funcName) : null;
+                }
             }
             else if (node.Callee is NamespaceAccessExpression nsAccess)
             {
@@ -1930,6 +2400,8 @@ namespace gflat
             // unwrap pointer if needed
             if (objType is PointerTypeExpression ptr)
                 objType = ptr.Inner;
+            if (objType is ManagedTypeExpression mgd)
+                objType = mgd.Inner;
 
             objType = ResolveAlias(objType);
 
@@ -1944,10 +2416,45 @@ namespace gflat
             }
 
             if (objType is not NamedTypeExpression named)
-                throw new TypeCheckException("Member access on non-struct type", node.Line);
+                throw new TypeCheckException("Member access on non-struct and non-class type", node.Line);
+
+            if (_classes.TryGetValue(named.Name, out ClassInfo? classInfo))
+            {
+                int fIdx = classInfo.FieldIndex(node.Member);
+                if (fIdx >= 0)
+                {
+                    (string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field = classInfo.Fields[fIdx];
+                    if (field.Accessibility == TokenKind.Private && _currentClass?.Name != field.DeclaringClass)
+                    {
+                        throw new TypeCheckException($"Cannot access private field '{node.Member}' of class '{field.DeclaringClass}'", node.Line);
+                    }
+                    if (field.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, field.DeclaringClass)))
+                    {
+                        throw new TypeCheckException($"Cannot access protected field '{node.Member}' of class '{field.DeclaringClass}'", node.Line);
+                    }
+                    RecordType(node, field.Type);
+                    return;
+                }
+
+                if (classInfo.Methods.TryGetValue(node.Member, out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                {
+                    if (mEntry.Method.Accessibility == TokenKind.Private && _currentClass?.Name != mEntry.DeclaringClass)
+                    {
+                        throw new TypeCheckException($"Cannot access private method '{node.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
+                    }
+                    if (mEntry.Method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
+                    {
+                        throw new TypeCheckException($"Cannot access protected method '{node.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
+                    }
+                    RecordType(node, mEntry.Method.ReturnType);
+                    return;
+                }
+
+                throw new TypeCheckException($"Class '{named.Name}' has no field or method '{node.Member}'", node.Line);
+            }
 
             if (!_structs.TryGetValue(named.Name, out StructInfo? info))
-                throw new TypeCheckException($"'{named.Name}' is not a struct", node.Line);
+                throw new TypeCheckException($"'{named.Name}' is not a struct or class", node.Line);
 
             int idx = info.FieldIndex(node.Member);
             if (idx >= 0)
@@ -1969,12 +2476,99 @@ namespace gflat
         public void Visit(NewExpression node)
         {
             TypeExpression resolvedType = ResolveAlias(node.Type);
-            if (resolvedType is not NamedTypeExpression named || !_structs.TryGetValue(named.Name, out StructInfo? sInfo))
+            if (resolvedType is not NamedTypeExpression named)
             {
-                throw new TypeCheckException($"Cannot instantiate non-struct type '{TypeName(node.Type)}'", node.Line);
+                throw new TypeCheckException($"Cannot instantiate non-struct and non-class type '{TypeName(node.Type)}'", node.Line);
             }
 
-            ConstructorDeclaration? matchedCtor = null;
+            if (_classes.TryGetValue(named.Name, out ClassInfo? cInfo))
+            {
+                if (cInfo.IsAbstract)
+                {
+                    throw new TypeCheckException($"Cannot instantiate abstract class '{cInfo.Name}'", node.Line);
+                }
+
+                ConstructorDeclaration? matchedCtor = null;
+                if (cInfo.Constructors.Count == 0)
+                {
+                    foreach (AstNode arg in node.Arguments)
+                        arg.Accept(this);
+
+                    if (node.Arguments.Count != 0)
+                    {
+                        throw new TypeCheckException($"Class '{cInfo.Name}' does not define a constructor taking {node.Arguments.Count} arguments", node.Line);
+                    }
+                }
+                else
+                {
+                    List<ConstructorDeclaration> matches = new();
+                    foreach (ConstructorDeclaration ctor in cInfo.Constructors)
+                    {
+                        if (ctor.Parameters.Count != node.Arguments.Count)
+                            continue;
+
+                        bool matchesParams = true;
+                        for (int i = 0; i < node.Arguments.Count; i++)
+                        {
+                            AstNode arg = node.Arguments[i];
+                            TypeExpression paramType = ResolveAlias(ctor.Parameters[i].Type);
+                            if (arg is DefaultExpression def && def.TargetType == null)
+                            {
+                                RecordType(def, paramType);
+                            }
+                            else
+                            {
+                                arg.Accept(this);
+                            }
+                            TypeExpression argType = GetType(arg);
+                            if (!IsAssignable(paramType, argType, arg))
+                            {
+                                matchesParams = false;
+                                break;
+                            }
+                        }
+
+                        if (matchesParams)
+                            matches.Add(ctor);
+                    }
+
+                    if (matches.Count == 0)
+                    {
+                        foreach (AstNode arg in node.Arguments)
+                        {
+                            if (!_types.ContainsKey(arg))
+                                arg.Accept(this);
+                        }
+                        string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
+                        throw new TypeCheckException($"No matching constructor found for '{cInfo.Name}' with arguments ({argTypes})", node.Line);
+                    }
+                    if (matches.Count > 1)
+                    {
+                        throw new TypeCheckException($"Call to constructor of '{cInfo.Name}' is ambiguous", node.Line);
+                    }
+
+                    matchedCtor = matches[0];
+                    _resolvedConstructors[node] = matchedCtor;
+                }
+
+                TypeExpression resultType = node.Kind switch
+                {
+                    AllocationKind.Value => new NamedTypeExpression(cInfo.Name, null, node.Line),
+                    AllocationKind.Pointer => new PointerTypeExpression(new NamedTypeExpression(cInfo.Name, null, node.Line), false, node.Line),
+                    AllocationKind.Managed => new ManagedTypeExpression(new NamedTypeExpression(cInfo.Name, null, node.Line), false, node.Line),
+                    _ => throw new Exception($"Unknown allocation kind {node.Kind}")
+                };
+
+                RecordType(node, resultType);
+                return;
+            }
+
+            if (!_structs.TryGetValue(named.Name, out StructInfo? sInfo))
+            {
+                throw new TypeCheckException($"Cannot instantiate non-struct and non-class type '{TypeName(node.Type)}'", node.Line);
+            }
+
+            ConstructorDeclaration? matchedStructCtor = null;
 
             if (sInfo.Constructors.Count == 0)
             {
@@ -2034,11 +2628,11 @@ namespace gflat
                     throw new TypeCheckException($"Call to constructor of '{sInfo.Name}' is ambiguous", node.Line);
                 }
 
-                matchedCtor = matches[0];
-                _resolvedConstructors[node] = matchedCtor;
+                matchedStructCtor = matches[0];
+                _resolvedConstructors[node] = matchedStructCtor;
             }
 
-            TypeExpression resultType = node.Kind switch
+            TypeExpression structResultType = node.Kind switch
             {
                 AllocationKind.Value => new NamedTypeExpression(sInfo.Name, null, node.Line),
                 AllocationKind.Pointer => new PointerTypeExpression(new NamedTypeExpression(sInfo.Name, null, node.Line), false, node.Line),
@@ -2046,7 +2640,7 @@ namespace gflat
                 _ => throw new Exception($"Unknown allocation kind {node.Kind}")
             };
 
-            RecordType(node, resultType);
+            RecordType(node, structResultType);
         }
 
         public void Visit(DefaultExpression node)
@@ -2437,6 +3031,10 @@ namespace gflat
                     {
                         return true;
                     }
+                    if (_classes.TryGetValue(srcNamed.Name, out ClassInfo? cInfo) && ClassImplementsInterface(cInfo, dstIface.Name))
+                    {
+                        return true;
+                    }
                 }
                 return false;
             }
@@ -2445,8 +3043,39 @@ namespace gflat
                 return false;
             }
 
+            // Managed ref to interface managed ref
+            if (dst is ManagedTypeExpression mDst && ResolveAlias(mDst.Inner) is NamedTypeExpression dstMngNamed && ResolveInterface(dstMngNamed) is InterfaceInfo dstMngIface)
+            {
+                if (src is ManagedTypeExpression mSrc && ResolveAlias(mSrc.Inner) is NamedTypeExpression srcMngNamed)
+                {
+                    if (srcMngNamed.Name == dstMngIface.Name)
+                    {
+                        return true;
+                    }
+                    if (_structs.TryGetValue(srcMngNamed.Name, out StructInfo? sInfo) && sInfo.Interfaces.Contains(dstMngIface.Name))
+                    {
+                        return true;
+                    }
+                    if (_classes.TryGetValue(srcMngNamed.Name, out ClassInfo? cInfo) && ClassImplementsInterface(cInfo, dstMngIface.Name))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (src is ManagedTypeExpression mSrcIface && ResolveAlias(mSrcIface.Inner) is NamedTypeExpression srcMngIfaceNamed && ResolveInterface(srcMngIfaceNamed) != null)
+            {
+                return false;
+            }
+
             // Pointer to pointer
             if (src is PointerTypeExpression && dst is PointerTypeExpression)
+            {
+                return true;
+            }
+
+            // Managed to managed
+            if (src is ManagedTypeExpression && dst is ManagedTypeExpression)
             {
                 return true;
             }

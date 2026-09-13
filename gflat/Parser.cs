@@ -98,7 +98,7 @@ namespace gflat
 
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, Current.Line);
-            if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface) || Check(TokenKind.Enum))
+            if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface) || Check(TokenKind.Enum) || Check(TokenKind.Abstract))
                 return ParseTypeDeclaration();
 
             // free function, field, alias, or type declaration with accessibility modifier
@@ -117,12 +117,19 @@ namespace gflat
                 Consume();
             }
 
+            bool isAbstract = false;
+            if (Check(TokenKind.Abstract))
+            {
+                isAbstract = true;
+                Consume();
+            }
+
             if (Check(TokenKind.Alias))
                 return ParseAliasDeclaration(accessibility, line);
             if (Check(TokenKind.Enum))
                 return ParseEnumDeclaration(accessibility, line);
             if (Check(TokenKind.Class))
-                return ParseClassDeclaration(accessibility, line);
+                return ParseClassDeclaration(accessibility, isAbstract, line);
             if (Check(TokenKind.Struct))
                 return ParseStructDeclaration(accessibility, line);
             if (Check(TokenKind.Interface))
@@ -132,7 +139,7 @@ namespace gflat
             string name = Expect(TokenKind.Identifier).Text;
 
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, false, line);
+                return ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line);
 
             return ParseFieldDeclaration(type, name, accessibility, false, false, false, line);
         }
@@ -140,10 +147,9 @@ namespace gflat
         private AstNode ParseTypeDeclaration()
         {
             int line = Current.Line;
-            TokenKind accessibility = TokenKind.Private; // default
-
-            // static classes coming soon
+            TokenKind accessibility = TokenKind.Internal;
             bool isStatic = false;
+            bool isAbstract = false;
 
             while (true)
             {
@@ -159,10 +165,15 @@ namespace gflat
                     Consume();
                     if (isStatic) throw new NotImplementedException("Static classes are not yet supported");
                 }
+                else if (Check(TokenKind.Abstract))
+                {
+                    isAbstract = true;
+                    Consume();
+                }
                 else break;
             }
 
-            if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, line);
+            if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, isAbstract, line);
             if (Check(TokenKind.Struct)) return ParseStructDeclaration(accessibility, line);
             if (Check(TokenKind.Interface)) return ParseInterfaceDeclaration(accessibility, line);
             if (Check(TokenKind.Enum)) return ParseEnumDeclaration(accessibility, line);
@@ -170,7 +181,7 @@ namespace gflat
             throw new Exception($"Expected type declaration on line {Current.Line}");
         }
 
-        private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, int line)
+        private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line)
         {
             Expect(TokenKind.Class);
             string name = Expect(TokenKind.Identifier).Text;
@@ -193,7 +204,7 @@ namespace gflat
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
 
-            return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, line);
+            return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line);
         }
 
         private StructDeclaration ParseStructDeclaration(TokenKind accessibility, int line)
@@ -240,6 +251,9 @@ namespace gflat
             bool isStatic = false;
             bool isConst = false;
             bool isReadonly = false;
+            bool isVirtual = false;
+            bool isOverride = false;
+            bool isAbstract = false;
 
             while (true)
             {
@@ -249,6 +263,9 @@ namespace gflat
                 else if (Check(TokenKind.Static)) { isStatic = true; Consume(); }
                 else if (Check(TokenKind.Const)) { isConst = true; Consume(); }
                 else if (Check(TokenKind.Readonly)) { isReadonly = true; Consume(); }
+                else if (Check(TokenKind.Virtual)) { isVirtual = true; Consume(); }
+                else if (Check(TokenKind.Override)) { isOverride = true; Consume(); }
+                else if (Check(TokenKind.Abstract)) { isAbstract = true; Consume(); }
                 else break;
             }
 
@@ -276,7 +293,7 @@ namespace gflat
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, isStatic, line);
+                return ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line);
 
             return ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line);
         }
@@ -405,7 +422,7 @@ namespace gflat
             return new OperatorDeclaration(opToken.Kind, opSymbol, returnType, parameters, body, accessibility, isStatic, line);
         }
 
-        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, int line)
+        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line)
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
@@ -418,8 +435,16 @@ namespace gflat
                     Expect(TokenKind.Comma);
             }
             Expect(TokenKind.CloseParen);
-            BlockStatement? body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
-            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, line);
+            BlockStatement? body = null;
+            if (isAbstract)
+            {
+                Expect(TokenKind.Semicolon);
+            }
+            else
+            {
+                body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
+            }
+            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line);
         }
 
         private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line)

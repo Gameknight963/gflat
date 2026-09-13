@@ -2126,6 +2126,341 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void ClassBasicInheritanceExecution()
+        {
+            string code = """
+                class Animal
+                {
+                    public int age;
+
+                    public Animal()
+                    {
+                        this.age = 0;
+                    }
+
+                    public Animal(int a)
+                    {
+                        this.age = a;
+                    }
+
+                    public int GetAge()
+                    {
+                        return this.age;
+                    }
+                }
+
+                class Dog : Animal
+                {
+                    public int barkPitch;
+
+                    public Dog(int a, int pitch)
+                    {
+                        this.age = a;
+                        this.barkPitch = pitch;
+                    }
+
+                    public int GetPitch()
+                    {
+                        return this.barkPitch;
+                    }
+                }
+
+                int main()
+                {
+                    Dog d = new Dog(5, 42);
+                    return d.GetAge() + d.GetPitch();
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(47, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassVirtualMethodDispatchExecution()
+        {
+            string code = """
+                class Animal
+                {
+                    public int id;
+
+                    public Animal()
+                    {
+                        this.id = 0;
+                    }
+
+                    public Animal(int id)
+                    {
+                        this.id = id;
+                    }
+
+                    public virtual int Speak()
+                    {
+                        return 10;
+                    }
+                }
+
+                class Dog : Animal
+                {
+                    public Dog(int id)
+                    {
+                        this.id = id;
+                    }
+
+                    public override int Speak()
+                    {
+                        return 20;
+                    }
+                }
+
+                class Cat : Animal
+                {
+                    public Cat(int id)
+                    {
+                        this.id = id;
+                    }
+
+                    public override int Speak()
+                    {
+                        return 30;
+                    }
+                }
+
+                int MakeSound(Animal* a)
+                {
+                    return a.Speak();
+                }
+
+                int main()
+                {
+                    Dog d = new Dog(1);
+                    Cat c = new Cat(2);
+                    Animal baseAnimal = new Animal(3);
+
+                    int s1 = MakeSound(&d);
+                    int s2 = MakeSound(&c);
+                    int s3 = MakeSound(&baseAnimal);
+
+                    return s1 + s2 + s3; // 20 + 30 + 10 = 60
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(60, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassAbstractMethodExecution()
+        {
+            string code = """
+                abstract class Shape
+                {
+                    public abstract int Area();
+
+                    public int ScaleArea(int factor)
+                    {
+                        return this.Area() * factor;
+                    }
+                }
+
+                class Rect : Shape
+                {
+                    public int w;
+                    public int h;
+
+                    public Rect(int w, int h)
+                    {
+                        this.w = w;
+                        this.h = h;
+                    }
+
+                    public override int Area()
+                    {
+                        return this.w * this.h;
+                    }
+                }
+
+                int main()
+                {
+                    Rect r = new Rect(4, 5);
+                    Shape* s = &r;
+                    return s.ScaleArea(3); // (4 * 5) * 3 = 60
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(60, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassMultiLevelInheritanceExecution()
+        {
+            string code = """
+                class A
+                {
+                    public virtual int Value()
+                    {
+                        return 1;
+                    }
+                }
+
+                class B : A
+                {
+                    public override int Value()
+                    {
+                        return 10;
+                    }
+                }
+
+                class C : B
+                {
+                    public override int Value()
+                    {
+                        return 100;
+                    }
+                }
+
+                int GetVal(A* a)
+                {
+                    return a.Value();
+                }
+
+                int main()
+                {
+                    A a = new A();
+                    B b = new B();
+                    C c = new C();
+
+                    return GetVal(&a) + GetVal(&b) + GetVal(&c); // 1 + 10 + 100 = 111
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(111, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassHeapAllocationAndFree()
+        {
+            string code = """
+                class Widget
+                {
+                    public int width;
+                    public int height;
+
+                    public Widget(int w, int h)
+                    {
+                        this.width = w;
+                        this.height = h;
+                    }
+
+                    public virtual int Area()
+                    {
+                        return this.width * this.height;
+                    }
+                }
+
+                int main()
+                {
+                    Widget* w = new* Widget(6, 7);
+                    int area = w.Area();
+                    w->free();
+                    return area;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassAbiLayoutAndRawDispatchExecution()
+        {
+            string code = """
+                class Animal
+                {
+                    public int age;
+
+                    public Animal()
+                    {
+                        this.age = 0;
+                    }
+
+                    public Animal(int a)
+                    {
+                        this.age = a;
+                    }
+
+                    public virtual int Speak()
+                    {
+                        return 100;
+                    }
+                }
+
+                class Dog : Animal
+                {
+                    public int barkPitch;
+
+                    public Dog(int a, int pitch)
+                    {
+                        this.age = a;
+                        this.barkPitch = pitch;
+                    }
+
+                    public override int Speak()
+                    {
+                        return 200 + this.barkPitch;
+                    }
+                }
+
+                int main()
+                {
+                    Dog* dog = new* Dog(7, 42);
+
+                    // 1. Verify byte layout compatibility with C++ ABI:
+                    // In C++ layout on 64-bit platforms:
+                    // Offset 0..7:   vtable pointer (8 bytes)
+                    // Offset 8..11:  Animal.age (4 bytes)
+                    // Offset 12..15: Dog.barkPitch (4 bytes)
+                    byte* raw = (byte*)dog;
+                    int ageVal = *(int*)(raw + 8);
+                    int pitchVal = *(int*)(raw + 12);
+
+                    if (ageVal != 7 || pitchVal != 42)
+                    {
+                        dog->free();
+                        return 1;
+                    }
+
+                    // 2. Direct ABI vtable dispatch:
+                    // Load vtable pointer at offset 0
+                    void*** vtablePtrLocation = (void***)dog;
+                    void** vtable = *vtablePtrLocation;
+
+                    // Slot 0 is Speak()
+                    void* rawMethod = vtable[0];
+                    int(Dog*)* directFn = (int(Dog*)*)rawMethod;
+
+                    // Invoke slot 0 directly with 'dog' as 'this'
+                    int directResult = directFn(dog);
+
+                    dog->free();
+
+                    // Expected directResult = 200 + 42 = 242
+                    if (directResult != 242)
+                    {
+                        return 2;
+                    }
+
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(0, result.ExitCode);
+        }
     }
 }
 

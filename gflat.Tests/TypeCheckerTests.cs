@@ -1535,6 +1535,209 @@ namespace gflat.Tests
 
             Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
         }
+
+        [Fact]
+        public void ClassInheritanceTypeChecksCleanly()
+        {
+            string code = """
+                class Animal
+                {
+                    public int age;
+                    public Animal(int a)
+                    {
+                        this.age = a;
+                    }
+                    public int GetAge()
+                    {
+                        return this.age;
+                    }
+                }
+
+                class Dog : Animal
+                {
+                    public int barkVolume;
+                    public Dog(int a, int v)
+                    {
+                        this.age = a;
+                        this.barkVolume = v;
+                    }
+                }
+
+                int main()
+                {
+                    Dog* d = new* Dog(3, 10);
+                    Animal* a = d;
+                    return a.GetAge();
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ClassVirtualAndOverrideTypeChecksCleanly()
+        {
+            string code = """
+                class Base
+                {
+                    public virtual int Value() { return 1; }
+                }
+
+                class Derived : Base
+                {
+                    public override int Value() { return 2; }
+                }
+
+                int main()
+                {
+                    Derived* d = new* Derived();
+                    Base* b = d;
+                    return b.Value();
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ClassCircularInheritanceThrows()
+        {
+            string code = """
+                class A : B { }
+                class B : A { }
+                int main() { return 0; }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Circular inheritance", ex.Message);
+        }
+
+        [Fact]
+        public void ClassAbstractMethodInNonAbstractClassThrows()
+        {
+            string code = """
+                class NormalClass
+                {
+                    public abstract int Foo();
+                }
+                int main() { return 0; }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Abstract method 'Foo' can only be declared in an abstract class", ex.Message);
+        }
+
+        [Fact]
+        public void ClassUnimplementedAbstractMethodThrows()
+        {
+            string code = """
+                abstract class Base
+                {
+                    public abstract int Foo();
+                }
+
+                class Derived : Base
+                {
+                }
+
+                int main() { return 0; }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must implement abstract method 'Base.Foo'", ex.Message);
+        }
+
+        [Fact]
+        public void ClassAbstractInstantiationThrows()
+        {
+            string code = """
+                abstract class Base
+                {
+                    public abstract int Foo();
+                }
+                int main()
+                {
+                    Base* b = new* Base();
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot instantiate abstract class 'Base'", ex.Message);
+        }
+
+        [Fact]
+        public void ClassPrivateMemberAccessThrows()
+        {
+            string code = """
+                class Secret
+                {
+                    private int secretVal = 42;
+                }
+
+                int main()
+                {
+                    Secret* s = new* Secret();
+                    return s.secretVal;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot access private field 'secretVal'", ex.Message);
+        }
+
+        [Fact]
+        public void ClassProtectedMemberAccessAllowedInSubclass()
+        {
+            string code = """
+                class Base
+                {
+                    protected int protVal = 10;
+                }
+
+                class Derived : Base
+                {
+                    public int GetVal()
+                    {
+                        return this.protVal;
+                    }
+                }
+
+                int main()
+                {
+                    Derived* d = new* Derived();
+                    return d.GetVal();
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ClassProtectedMemberAccessOutsideThrows()
+        {
+            string code = """
+                class Base
+                {
+                    protected int protVal = 10;
+                }
+
+                int main()
+                {
+                    Base* b = new* Base();
+                    return b.protVal;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot access protected field 'protVal'", ex.Message);
+        }
     }
 }
 

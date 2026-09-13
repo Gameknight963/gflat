@@ -27,6 +27,7 @@ public class LlvmEmitter : IVisitor
 
     private string _currentNamespacePath = "";
     private TypeChecker.StructInfo? _currentStruct = null;
+    private string _currentFunctionReturnType = "";
 
     private string NewTemp() => $"%t{_tempCounter++}";
     private string NewGlobal() => $"@str{_stringCounter++}";
@@ -299,6 +300,7 @@ public class LlvmEmitter : IVisitor
         _tempCounter = 0;
 
         string returnType = EmitType(node.ReturnType);
+        _currentFunctionReturnType = returnType;
         string name;
         if (node.Name == "main")
             name = "main";
@@ -352,6 +354,25 @@ public class LlvmEmitter : IVisitor
         string val = Pop();
         TypeExpression returnType = _typeChecker.GetType(node.Value);
         string llvmReturnType = EmitType(returnType);
+
+        if (_currentFunctionReturnType.Length > 0 && llvmReturnType != _currentFunctionReturnType)
+        {
+            if (llvmReturnType == "i8" && _currentFunctionReturnType == "i32")
+            {
+                string promoted = NewTemp();
+                Emit($"    {promoted} = sext i8 {val} to i32");
+                val = promoted;
+                llvmReturnType = "i32";
+            }
+            else if (llvmReturnType.EndsWith("*") && _currentFunctionReturnType.EndsWith("*"))
+            {
+                string castVal = NewTemp();
+                Emit($"    {castVal} = bitcast {llvmReturnType} {val} to {_currentFunctionReturnType}");
+                val = castVal;
+                llvmReturnType = _currentFunctionReturnType;
+            }
+        }
+
         Emit($"    ret {llvmReturnType} {val}");
     }
 

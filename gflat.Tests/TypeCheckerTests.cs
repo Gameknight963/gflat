@@ -223,5 +223,88 @@ namespace gflat.Tests
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("is a property, not a method", ex.Message);
         }
+
+        [Fact]
+        public void FixedSizeArrayDeclarationAndAssignment()
+        {
+            string code = """
+                int main()
+                {
+                    char[7] a = "string";
+                    char* p = a;
+                    char first = a[0];
+                    a[0] = 'S';
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void InferredArrayDeclarationTypeChecks()
+        {
+            string code = """
+                int main()
+                {
+                    char[] a = "string";
+                    char* s = a;
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ArrayBufferTooSmallThrowsTypeCheckException()
+        {
+            string code = """
+                int main()
+                {
+                    char[3] a = "string";
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign", ex.Message);
+        }
+
+        [Fact]
+        public void NonIntegerIndexThrowsTypeCheckException()
+        {
+            string code = """
+                int main()
+                {
+                    int[5] arr;
+                    int val = arr["invalid"];
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Array index must be an integer", ex.Message);
+        }
+
+        [Fact]
+        public void IndexNonArrayThrowsTypeCheckException()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    int y = x[0];
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot index non-array and non-pointer type", ex.Message);
+        }
     }
 }

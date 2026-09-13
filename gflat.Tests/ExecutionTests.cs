@@ -319,5 +319,86 @@ namespace gflat.Tests
             var result = CompilerTestHelper.Run(code);
             Assert.Equal(125, result.ExitCode);
         }
+
+        [Fact]
+        public void FixedSizeArrayBufferAndIndex()
+        {
+            string code = """
+                int main()
+                {
+                    int[4] nums;
+                    nums[0] = 10;
+                    nums[1] = 20;
+                    nums[2] = 30;
+                    nums[3] = 40;
+                    return nums[0] + nums[1] + nums[2] + nums[3];
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(100, result.ExitCode);
+        }
+
+        [Fact]
+        public void StringLiteralToStackArrayAndModification()
+        {
+            string code = """
+                int main()
+                {
+                    char[] a = "hello";
+                    a[0] = 'H';
+                    // 'H' is ASCII 72
+                    return a[0];
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(72, result.ExitCode);
+        }
+
+        [Fact]
+        public void ArrayDecayToFunctionPointer()
+        {
+            string code = """
+                int StrLen(char* s)
+                {
+                    int len = 0;
+                    while (s[len] != '\0')
+                    {
+                        len++;
+                    }
+                    return len;
+                }
+
+                int main()
+                {
+                    char[7] a = "string";
+                    return StrLen(a);
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(6, result.ExitCode);
+        }
+
+        [Fact]
+        public void PointerIndexing()
+        {
+            string code = """
+                int main()
+                {
+                    int[3] arr;
+                    arr[0] = 5;
+                    arr[1] = 15;
+                    arr[2] = 25;
+
+                    int* ptr = arr;
+                    return ptr[0] + ptr[1] + ptr[2];
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(45, result.ExitCode);
+        }
     }
 }

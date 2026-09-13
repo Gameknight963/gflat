@@ -54,7 +54,11 @@ namespace gflat
                 p.y = 20;
                 p.Print();
 
-                char* a = "string";
+                char[] a = "string";
+                printf("buffer before: %s\n", a);
+                a[0] = 'S';
+                printf("buffer after: %s\n", a);
+
                 p.Move(5, 5);
                 p.Print();
 

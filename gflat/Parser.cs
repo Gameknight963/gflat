@@ -476,32 +476,50 @@ namespace gflat
                 }
                 else if (Check(TokenKind.OpenParen))
                 {
-                    Consume(); // (
+                    int saved = _pos;
+                    bool isFnPtr = false;
                     List<TypeExpression> paramTypes = new();
-                    while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
-                    {
-                        paramTypes.Add(ParseTypeExpression());
-                        if (!Check(TokenKind.CloseParen))
-                            Expect(TokenKind.Comma);
-                    }
-                    Expect(TokenKind.CloseParen);
-
                     bool isManaged = false;
-                    if (Match(TokenKind.Star))
+                    bool nullable = false;
+                    try
                     {
-                        isManaged = false;
+                        Consume(); // (
+                        while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+                        {
+                            paramTypes.Add(ParseTypeExpression());
+                            if (!Check(TokenKind.CloseParen))
+                                Expect(TokenKind.Comma);
+                        }
+                        Expect(TokenKind.CloseParen);
+
+                        if (Match(TokenKind.Star))
+                        {
+                            isManaged = false;
+                            isFnPtr = true;
+                        }
+                        else if (Match(TokenKind.Caret))
+                        {
+                            isManaged = true;
+                            isFnPtr = true;
+                        }
+
+                        if (isFnPtr)
+                            nullable = Match(TokenKind.QuestionMark);
                     }
-                    else if (Match(TokenKind.Caret))
+                    catch
                     {
-                        isManaged = true;
+                        isFnPtr = false;
+                    }
+
+                    if (isFnPtr)
+                    {
+                        type = new FunctionPointerTypeExpression(type, paramTypes, isManaged, nullable, line);
                     }
                     else
                     {
-                        throw new Exception($"Expected '*' or '^' for function pointer type on line {line}");
+                        _pos = saved;
+                        break;
                     }
-
-                    bool nullable = Match(TokenKind.QuestionMark);
-                    type = new FunctionPointerTypeExpression(type, paramTypes, isManaged, nullable, line);
                 }
                 else if (Match(TokenKind.OpenBracket))
                 {
@@ -891,10 +909,29 @@ namespace gflat
                 return new LiteralExpression(token, line);
             }
 
+            // default expression
+            if (Check(TokenKind.Default))
+            {
+                Consume();
+                TypeExpression? targetType = null;
+                if (Match(TokenKind.OpenParen))
+                {
+                    targetType = ParseTypeExpression();
+                    Expect(TokenKind.CloseParen);
+                }
+                return new DefaultExpression(targetType, line);
+            }
+
             // new expression
             if (Check(TokenKind.New))
             {
                 Consume();
+                AllocationKind kind = AllocationKind.Value;
+                if (Match(TokenKind.Star))
+                    kind = AllocationKind.Pointer;
+                else if (Match(TokenKind.Caret))
+                    kind = AllocationKind.Managed;
+
                 TypeExpression type = ParseTypeExpression();
                 Expect(TokenKind.OpenParen);
                 List<AstNode> args = new();
@@ -905,7 +942,7 @@ namespace gflat
                         Expect(TokenKind.Comma);
                 }
                 Expect(TokenKind.CloseParen);
-                return new NewExpression(type, args, line);
+                return new NewExpression(type, args, kind, line);
             }
 
             // identifier

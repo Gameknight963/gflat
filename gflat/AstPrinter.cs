@@ -203,7 +203,7 @@ namespace gflat
 
         public void Visit(NewExpression node)
         {
-            Print("New");
+            Print($"New ({node.Kind})");
             Indented(() =>
             {
                 node.Type.Accept(this);
@@ -342,6 +342,15 @@ namespace gflat
                 Print("Body:");
                 Indented(() => node.Body.Accept(this));
             });
+        }
+
+        public void Visit(DefaultExpression node)
+        {
+            Print($"DefaultExpression{(node.TargetType != null ? "" : " (inferred)")}");
+            if (node.TargetType != null)
+            {
+                Indented(() => node.TargetType.Accept(this));
+            }
         }
     }
 }

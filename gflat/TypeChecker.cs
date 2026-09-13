@@ -26,6 +26,7 @@ namespace gflat
             _structs.TryGetValue(name, out StructInfo? info) ? info : null;
 
         private StructInfo? _currentStruct = null;
+        private bool _inDefer = false;
 
         public class StructInfo
         {
@@ -325,8 +326,28 @@ namespace gflat
             PopScope();
         }
 
+        public void Visit(DeferStatement node)
+        {
+            if (node.Statement is ReturnStatement)
+                throw new TypeCheckException("Cannot return from within a defer statement", node.Line);
+
+            bool prevInDefer = _inDefer;
+            _inDefer = true;
+            try
+            {
+                node.Statement.Accept(this);
+            }
+            finally
+            {
+                _inDefer = prevInDefer;
+            }
+        }
+
         public void Visit(ReturnStatement node)
         {
+            if (_inDefer)
+                throw new TypeCheckException("Cannot return from within a defer statement", node.Line);
+
             if (node.Value != null)
                 node.Value.Accept(this);
         }

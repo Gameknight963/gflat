@@ -29,6 +29,27 @@ public class LlvmEmitter : IVisitor
     private TypeChecker.StructInfo? _currentStruct = null;
     private string _currentFunctionReturnType = "";
 
+    private readonly List<List<AstNode>> _deferScopes = new();
+    private readonly Stack<int> _loopDeferDepths = new();
+    private bool _hasTerminated = false;
+
+    private void EmitDefersDownTo(int targetDepth)
+    {
+        List<AstNode> toEmit = new();
+        for (int scopeIdx = _deferScopes.Count - 1; scopeIdx >= targetDepth; scopeIdx--)
+        {
+            var scope = _deferScopes[scopeIdx];
+            for (int i = scope.Count - 1; i >= 0; i--)
+            {
+                toEmit.Add(scope[i]);
+            }
+        }
+        foreach (var stmt in toEmit)
+        {
+            stmt.Accept(this);
+        }
+    }
+
     private string NewTemp() => $"%t{_tempCounter++}";
     private string NewGlobal() => $"@str{_stringCounter++}";
 
@@ -324,10 +345,11 @@ public class LlvmEmitter : IVisitor
             _locals[p.Name] = ptr;
         }
 
+        _hasTerminated = false;
         node.Body.Accept(this);
 
         // emit ret void if void function has no explicit return
-        if (returnType == "void")
+        if (returnType == "void" && !_hasTerminated)
             Emit("    ret void");
 
         Emit("}");
@@ -339,41 +361,71 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(BlockStatement node)
     {
+        _deferScopes.Add(new List<AstNode>());
+        bool terminated = false;
+
         foreach (AstNode statement in node.Statements)
+        {
+            if (terminated)
+                break;
+
             statement.Accept(this);
+
+            if (_hasTerminated)
+                terminated = true;
+        }
+
+        var defers = _deferScopes[^1];
+        _deferScopes.RemoveAt(_deferScopes.Count - 1);
+
+        if (!terminated)
+        {
+            for (int i = defers.Count - 1; i >= 0; i--)
+            {
+                defers[i].Accept(this);
+            }
+        }
     }
 
     public void Visit(ReturnStatement node)
     {
-        if (node.Value == null)
+        string? val = null;
+        string? llvmReturnType = null;
+
+        if (node.Value != null)
         {
+            node.Value.Accept(this);
+            val = Pop();
+            TypeExpression returnType = _typeChecker.GetType(node.Value);
+            llvmReturnType = EmitType(returnType);
+
+            if (_currentFunctionReturnType.Length > 0 && llvmReturnType != _currentFunctionReturnType)
+            {
+                if (llvmReturnType == "i8" && _currentFunctionReturnType == "i32")
+                {
+                    string promoted = NewTemp();
+                    Emit($"    {promoted} = sext i8 {val} to i32");
+                    val = promoted;
+                    llvmReturnType = "i32";
+                }
+                else if (llvmReturnType.EndsWith("*") && _currentFunctionReturnType.EndsWith("*"))
+                {
+                    string castVal = NewTemp();
+                    Emit($"    {castVal} = bitcast {llvmReturnType} {val} to {_currentFunctionReturnType}");
+                    val = castVal;
+                    llvmReturnType = _currentFunctionReturnType;
+                }
+            }
+        }
+
+        EmitDefersDownTo(0);
+
+        if (val == null)
             Emit("    ret void");
-            return;
-        }
-        node.Value.Accept(this);
-        string val = Pop();
-        TypeExpression returnType = _typeChecker.GetType(node.Value);
-        string llvmReturnType = EmitType(returnType);
+        else
+            Emit($"    ret {llvmReturnType} {val}");
 
-        if (_currentFunctionReturnType.Length > 0 && llvmReturnType != _currentFunctionReturnType)
-        {
-            if (llvmReturnType == "i8" && _currentFunctionReturnType == "i32")
-            {
-                string promoted = NewTemp();
-                Emit($"    {promoted} = sext i8 {val} to i32");
-                val = promoted;
-                llvmReturnType = "i32";
-            }
-            else if (llvmReturnType.EndsWith("*") && _currentFunctionReturnType.EndsWith("*"))
-            {
-                string castVal = NewTemp();
-                Emit($"    {castVal} = bitcast {llvmReturnType} {val} to {_currentFunctionReturnType}");
-                val = castVal;
-                llvmReturnType = _currentFunctionReturnType;
-            }
-        }
-
-        Emit($"    ret {llvmReturnType} {val}");
+        _hasTerminated = true;
     }
 
     public void Visit(IfStatement node)
@@ -401,17 +453,25 @@ public class LlvmEmitter : IVisitor
             Emit($"    br i1 {condBit}, label %{thenLabel}, label %{mergeLabel}");
 
         Emit($"{thenLabel}:");
+        _hasTerminated = false;
         node.Then.Accept(this);
-        Emit($"    br label %{mergeLabel}");
+        bool thenTerminated = _hasTerminated;
+        if (!thenTerminated)
+            Emit($"    br label %{mergeLabel}");
 
+        bool elseTerminated = false;
         if (node.Else != null)
         {
             Emit($"{elseLabel}:");
+            _hasTerminated = false;
             node.Else.Accept(this);
-            Emit($"    br label %{mergeLabel}");
+            elseTerminated = _hasTerminated;
+            if (!elseTerminated)
+                Emit($"    br label %{mergeLabel}");
         }
 
         Emit($"{mergeLabel}:");
+        _hasTerminated = (node.Else != null && thenTerminated && elseTerminated);
     }
 
     public void Visit(WhileStatement node)
@@ -422,6 +482,7 @@ public class LlvmEmitter : IVisitor
 
         _breakLabels.Push(exitLabel);
         _continueLabels.Push(condLabel);
+        _loopDeferDepths.Push(_deferScopes.Count);
 
         Emit($"    br label %{condLabel}");
         Emit($"{condLabel}:");
@@ -441,12 +502,16 @@ public class LlvmEmitter : IVisitor
 
         Emit($"    br i1 {condBit}, label %{bodyLabel}, label %{exitLabel}");
         Emit($"{bodyLabel}:");
+        _hasTerminated = false;
         node.Body.Accept(this);
-        Emit($"    br label %{condLabel}");
+        if (!_hasTerminated)
+            Emit($"    br label %{condLabel}");
         Emit($"{exitLabel}:");
 
         _breakLabels.Pop();
         _continueLabels.Pop();
+        _loopDeferDepths.Pop();
+        _hasTerminated = false;
     }
 
     public void Visit(ForStatement node)
@@ -458,6 +523,7 @@ public class LlvmEmitter : IVisitor
 
         _breakLabels.Push(exitLabel);
         _continueLabels.Push(incLabel);
+        _loopDeferDepths.Push(_deferScopes.Count);
 
         node.Initializer?.Accept(this);
 
@@ -483,8 +549,10 @@ public class LlvmEmitter : IVisitor
             Emit($"    br label %{bodyLabel}");
 
         Emit($"{bodyLabel}:");
+        _hasTerminated = false;
         node.Body.Accept(this);
-        Emit($"    br label %{incLabel}");
+        if (!_hasTerminated)
+            Emit($"    br label %{incLabel}");
 
         Emit($"{incLabel}:");
         if (node.Increment != null)
@@ -494,6 +562,8 @@ public class LlvmEmitter : IVisitor
 
         _breakLabels.Pop();
         _continueLabels.Pop();
+        _loopDeferDepths.Pop();
+        _hasTerminated = false;
     }
 
     public void Visit(VariableDeclaration node)
@@ -1135,17 +1205,30 @@ public class LlvmEmitter : IVisitor
         Emit($"    {val} = load {llvmElemType}, {llvmElemType}* {elemPtr}");
         Push(val);
     }
+    public void Visit(DeferStatement node)
+    {
+        if (_deferScopes.Count == 0)
+            throw new Exception($"defer statement outside of block scope on line {node.Line}");
+
+        _deferScopes[^1].Add(node.Statement);
+    }
     public void Visit(BreakStatement node)
     {
         if (_breakLabels.Count == 0)
             throw new Exception("break outside of loop");
+        int targetDepth = _loopDeferDepths.Peek();
+        EmitDefersDownTo(targetDepth);
         Emit($"    br label %{_breakLabels.Peek()}");
+        _hasTerminated = true;
     }
     public void Visit(ContinueStatement node)
     {
         if (_continueLabels.Count == 0)
             throw new Exception("continue outside of loop");
+        int targetDepth = _loopDeferDepths.Peek();
+        EmitDefersDownTo(targetDepth);
         Emit($"    br label %{_continueLabels.Peek()}");
+        _hasTerminated = true;
     }
     public void Visit(AttributeNode node) { }
     public void Visit(GlobalExpression node) { }

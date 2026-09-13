@@ -208,10 +208,14 @@ int main()
     printf("=== gflat Showcase: const & readonly Systems ===\n\n");
 
     // --- 1. Const Evaluation & Array Sizing ---
-    printf("-- 1. Compile-Time Evaluation & Constants --\n");
+    printf("-- 1. Compile-Time Evaluation, Constants & Type Info --\n");
     printf("Factorial(4) = %d (computed at compile time)\n", ItemCount);
     printf("BufferCapacity = %d\n", BufferCapacity);
     printf("Origin Point = (%d, %d)\n", Origin.x, Origin.y);
+    printf("sizeof(int) = %d, sizeof(Point) = %d, sizeof(void*) = %d\n",
+           sizeof(int), sizeof(Point), sizeof(void*));
+    printf("nameof(Point) = '%s', nameof(Origin) = '%s', nameof(int) = '%s'\n",
+           nameof(Point), nameof(Origin), nameof(int));
 
     // Array sized by compile-time constant expression!
     int[BufferCapacity] myBuffer;

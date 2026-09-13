@@ -224,6 +224,8 @@ public class Lexer
             "global" => TokenKind.Global,
             "operator" => TokenKind.Operator,
             "base" => TokenKind.Base,
+            "sizeof" => TokenKind.Sizeof,
+            "nameof" => TokenKind.Nameof,
             _ => TokenKind.Identifier
         };
     }

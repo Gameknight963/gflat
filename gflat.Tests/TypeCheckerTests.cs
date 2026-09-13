@@ -2388,6 +2388,218 @@ namespace gflat.Tests
             Assert.NotNull(ast);
             Assert.NotNull(checker);
         }
+
+        [Fact]
+        public void Sizeof_Primitives()
+        {
+            string code = """
+                const int S_Int = sizeof(int);
+                const int S_Char = sizeof(char);
+                const int S_Short = sizeof(short);
+                const int S_Long = sizeof(long);
+                const int S_Bool = sizeof(bool);
+                const int S_Float = sizeof(float);
+                const int S_Ptr = sizeof(void*);
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+
+            Assert.True(checker.TryGetConstValueByName("S_Int", out ConstValue? vInt));
+            Assert.Equal(4, ((ConstValue.Integer)vInt!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_Char", out ConstValue? vChar));
+            Assert.Equal(1, ((ConstValue.Integer)vChar!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_Short", out ConstValue? vShort));
+            Assert.Equal(2, ((ConstValue.Integer)vShort!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_Long", out ConstValue? vLong));
+            Assert.Equal(8, ((ConstValue.Integer)vLong!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_Bool", out ConstValue? vBool));
+            Assert.Equal(1, ((ConstValue.Integer)vBool!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_Float", out ConstValue? vFloat));
+            Assert.Equal(4, ((ConstValue.Integer)vFloat!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_Ptr", out ConstValue? vPtr));
+            Assert.Equal(8, ((ConstValue.Integer)vPtr!).Value);
+        }
+
+        [Fact]
+        public void Sizeof_StructsAndPadding()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                struct Mixed
+                {
+                    char c;
+                    int i;
+                }
+
+                struct Quad
+                {
+                    char c1;
+                    short s;
+                    int i;
+                    long l;
+                }
+
+                const int S_Point = sizeof(Point);
+                const int S_Mixed = sizeof(Mixed);
+                const int S_Quad = sizeof(Quad);
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+
+            Assert.True(checker.TryGetConstValueByName("S_Point", out ConstValue? vPoint));
+            Assert.Equal(8, ((ConstValue.Integer)vPoint!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_Mixed", out ConstValue? vMixed));
+            Assert.Equal(8, ((ConstValue.Integer)vMixed!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_Quad", out ConstValue? vQuad));
+            Assert.Equal(16, ((ConstValue.Integer)vQuad!).Value);
+        }
+
+        [Fact]
+        public void Sizeof_FixedArray()
+        {
+            string code = """
+                const int S_ArrInt = sizeof(int[10]);
+                const int S_ArrChar = sizeof(char[16]);
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+
+            Assert.True(checker.TryGetConstValueByName("S_ArrInt", out ConstValue? vArrInt));
+            Assert.Equal(40, ((ConstValue.Integer)vArrInt!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("S_ArrChar", out ConstValue? vArrChar));
+            Assert.Equal(16, ((ConstValue.Integer)vArrChar!).Value);
+        }
+
+        [Fact]
+        public void Sizeof_InConstVariableAndArraySizing()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                const int S = sizeof(Point);
+
+                int main()
+                {
+                    int[sizeof(Point)] buffer;
+                    return buffer[0];
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+
+            Assert.True(checker.TryGetConstValueByName("S", out ConstValue? vS));
+            Assert.Equal(8, ((ConstValue.Integer)vS!).Value);
+        }
+
+        [Fact]
+        public void Nameof_IdentifierAndType()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                const char[] N_Point = nameof(Point);
+                const char[] N_Int = nameof(int);
+
+                int main()
+                {
+                    int myVariable = 42;
+                    const char[] N_Var = nameof(myVariable);
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+
+            Assert.True(checker.TryGetConstValueByName("N_Point", out ConstValue? vPoint));
+            Assert.Equal("Point", ((ConstValue.String)vPoint!).Value);
+
+            Assert.True(checker.TryGetConstValueByName("N_Int", out ConstValue? vInt));
+            Assert.Equal("int", ((ConstValue.String)vInt!).Value);
+        }
+
+        [Fact]
+        public void Nameof_MemberAccess()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    Point pt;
+                    const char[] N_Field = nameof(pt.x);
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void Nameof_NonExistentSymbol_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    const char[] N = nameof(nonExistentSymbol);
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
     }
 }
 

@@ -358,5 +358,17 @@ namespace gflat
                 Indented(() => node.TargetType.Accept(this));
             }
         }
+
+        public void Visit(SizeofExpression node)
+        {
+            Print("SizeofExpression");
+            Indented(() => node.TargetType.Accept(this));
+        }
+
+        public void Visit(NameofExpression node)
+        {
+            Print("NameofExpression");
+            Indented(() => node.Target.Accept(this));
+        }
     }
 }

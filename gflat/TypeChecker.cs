@@ -353,7 +353,7 @@ namespace gflat
             throw new TypeCheckException($"Unknown variable '{name}'", line);
         }
 
-        private bool TryLookupVariable(string name, out TypeExpression? type)
+        public bool TryLookupVariable(string name, out TypeExpression? type)
         {
             foreach (Dictionary<string, TypeExpression> scope in _scopes)
             {
@@ -564,6 +564,254 @@ namespace gflat
                 length++;
             }
             return length + 1; // +1 for null terminator \0
+        }
+
+        public static bool IsPrimitive(string name) =>
+            name is "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or
+                    "long" or "ulong" or "nint" or "nuint" or "float" or "double" or
+                    "bool" or "char" or "extralong" or "string" or "void";
+
+        public int GetTypeAlignment(TypeExpression type)
+        {
+            type = ResolveAlias(type);
+            if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
+            {
+                return 8;
+            }
+            if (type is ArrayTypeExpression arr)
+            {
+                return GetTypeAlignment(arr.ElementType);
+            }
+            if (type is NamedTypeExpression named)
+            {
+                EnumInfo? enumInfo = ResolveEnum(named);
+                if (enumInfo != null)
+                {
+                    return GetTypeAlignment(enumInfo.UnderlyingType);
+                }
+                if (IsInterface(named))
+                {
+                    return 8;
+                }
+                StructInfo? structInfo = GetStruct(named.Name);
+                if (structInfo != null)
+                {
+                    return GetStructAlignment(structInfo);
+                }
+                if (GetClass(named.Name) != null)
+                {
+                    return 8;
+                }
+                return named.Name switch
+                {
+                    "bool" or "byte" or "sbyte" or "char" => 1,
+                    "short" or "ushort" => 2,
+                    "int" or "uint" or "float" => 4,
+                    "long" or "ulong" or "double" or "nint" or "nuint" => 8,
+                    "extralong" => 16,
+                    "void" => 1,
+                    _ => 4
+                };
+            }
+            return 8;
+        }
+
+        public int GetStructAlignment(StructInfo structInfo)
+        {
+            int maxAlign = 1;
+            foreach ((string Name, TypeExpression Type) field in structInfo.Fields)
+            {
+                int align = GetTypeAlignment(field.Type);
+                if (align > maxAlign)
+                {
+                    maxAlign = align;
+                }
+            }
+            return maxAlign;
+        }
+
+        public int GetStructSize(StructInfo structInfo)
+        {
+            int offset = 0;
+            int maxAlign = 1;
+            foreach ((string Name, TypeExpression Type) field in structInfo.Fields)
+            {
+                int fieldSize = GetTypeSize(field.Type);
+                int fieldAlign = GetTypeAlignment(field.Type);
+                if (fieldAlign > maxAlign)
+                {
+                    maxAlign = fieldAlign;
+                }
+                offset = (offset + fieldAlign - 1) & ~(fieldAlign - 1);
+                offset += fieldSize;
+            }
+            offset = (offset + maxAlign - 1) & ~(maxAlign - 1);
+            return offset;
+        }
+
+        public int GetClassSize(ClassInfo classInfo)
+        {
+            int offset = 8; // vtable pointer
+            int maxAlign = 8;
+            foreach ((string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field in classInfo.Fields)
+            {
+                int fieldSize = GetTypeSize(field.Type);
+                int fieldAlign = GetTypeAlignment(field.Type);
+                if (fieldAlign > maxAlign)
+                {
+                    maxAlign = fieldAlign;
+                }
+                offset = (offset + fieldAlign - 1) & ~(fieldAlign - 1);
+                offset += fieldSize;
+            }
+            offset = (offset + maxAlign - 1) & ~(maxAlign - 1);
+            return offset;
+        }
+
+        public int GetTypeSize(TypeExpression type)
+        {
+            type = ResolveAlias(type);
+            if (type is PointerTypeExpression ptr)
+            {
+                TypeExpression inner = ResolveAlias(ptr.Inner);
+                if (inner is NamedTypeExpression namedInner && IsInterface(namedInner))
+                {
+                    return 16;
+                }
+                return 8;
+            }
+            if (type is ManagedTypeExpression mgd)
+            {
+                TypeExpression inner = ResolveAlias(mgd.Inner);
+                if (inner is NamedTypeExpression namedInner && IsInterface(namedInner))
+                {
+                    return 16;
+                }
+                return 8;
+            }
+            if (type is FunctionPointerTypeExpression)
+            {
+                return 8;
+            }
+            if (type is ArrayTypeExpression arr)
+            {
+                int elemSize = GetTypeSize(arr.ElementType);
+                if (arr.Size.HasValue)
+                {
+                    return elemSize * arr.Size.Value;
+                }
+                return 8;
+            }
+            if (type is NamedTypeExpression named)
+            {
+                EnumInfo? enumInfo = ResolveEnum(named);
+                if (enumInfo != null)
+                {
+                    return GetTypeSize(enumInfo.UnderlyingType);
+                }
+                if (IsInterface(named))
+                {
+                    return 16;
+                }
+                StructInfo? structInfo = GetStruct(named.Name);
+                if (structInfo != null)
+                {
+                    return GetStructSize(structInfo);
+                }
+                ClassInfo? classInfo = GetClass(named.Name);
+                if (classInfo != null)
+                {
+                    return GetClassSize(classInfo);
+                }
+                return named.Name switch
+                {
+                    "bool" or "byte" or "sbyte" or "char" => 1,
+                    "short" or "ushort" => 2,
+                    "int" or "uint" or "float" => 4,
+                    "long" or "ulong" or "double" or "nint" or "nuint" => 8,
+                    "extralong" => 16,
+                    "void" => 0,
+                    _ => throw new TypeCheckException($"Cannot determine size of unknown type '{named.Name}'", named.Line)
+                };
+            }
+            throw new TypeCheckException($"Cannot determine size of type '{TypeName(type)}'", type.Line);
+        }
+
+        public string ExtractName(AstNode target)
+        {
+            if (target is NamedTypeExpression named)
+            {
+                return named.Name;
+            }
+            if (target is IdentifierExpression ident)
+            {
+                return ident.Name;
+            }
+            if (target is MemberAccessExpression member)
+            {
+                return member.Member;
+            }
+            if (target is NamespaceAccessExpression nsAccess)
+            {
+                return nsAccess.Member;
+            }
+            if (target is PointerTypeExpression ptr)
+            {
+                return ExtractName(ptr.Inner);
+            }
+            if (target is ManagedTypeExpression mgd)
+            {
+                return ExtractName(mgd.Inner);
+            }
+            if (target is ArrayTypeExpression arr)
+            {
+                return ExtractName(arr.ElementType);
+            }
+            throw new TypeCheckException($"Cannot extract name from expression of type '{target.GetType().Name}'", target.Line);
+        }
+
+        private void ValidateNameofTarget(AstNode target)
+        {
+            if (target is NamedTypeExpression named)
+            {
+                if (!IsPrimitive(named.Name) &&
+                    !_structs.ContainsKey(named.Name) &&
+                    !_classes.ContainsKey(named.Name) &&
+                    !_interfaces.ContainsKey(named.Name) &&
+                    ResolveEnum(named) == null &&
+                    !TryLookupVariable(named.Name, out _) &&
+                    ResolveFunction(named.Name) == null &&
+                    ResolveGlobalField(named.Name) == null)
+                {
+                    throw new TypeCheckException($"The name '{named.Name}' does not exist in the current context", target.Line);
+                }
+                return;
+            }
+            if (target is IdentifierExpression ident)
+            {
+                if (!IsPrimitive(ident.Name) &&
+                    !_structs.ContainsKey(ident.Name) &&
+                    !_classes.ContainsKey(ident.Name) &&
+                    !_interfaces.ContainsKey(ident.Name) &&
+                    ResolveEnum(new NamedTypeExpression(ident.Name, null, target.Line)) == null &&
+                    !TryLookupVariable(ident.Name, out _) &&
+                    ResolveFunction(ident.Name) == null &&
+                    ResolveGlobalField(ident.Name) == null)
+                {
+                    throw new TypeCheckException($"The name '{ident.Name}' does not exist in the current context", target.Line);
+                }
+                return;
+            }
+            if (target is MemberAccessExpression)
+            {
+                target.Accept(this);
+                return;
+            }
+            if (target is NamespaceAccessExpression)
+            {
+                target.Accept(this);
+                return;
+            }
         }
 
         public bool IsUnsignedInteger(TypeExpression type)
@@ -3365,6 +3613,37 @@ namespace gflat
             {
                 RecordType(node, new NamedTypeExpression("default", null, node.Line));
             }
+        }
+
+        public void Visit(SizeofExpression node)
+        {
+            TypeExpression targetType = ResolveAlias(node.TargetType);
+            if (targetType is NamedTypeExpression named &&
+                !IsPrimitive(named.Name) &&
+                !_structs.ContainsKey(named.Name) &&
+                !_classes.ContainsKey(named.Name) &&
+                !_interfaces.ContainsKey(named.Name) &&
+                ResolveEnum(named) == null &&
+                TryLookupVariable(named.Name, out TypeExpression? varType) &&
+                varType != null)
+            {
+                targetType = ResolveAlias(varType);
+            }
+            ValidateTypeUsage(targetType, node.Line);
+            int size = GetTypeSize(targetType);
+            RecordType(node, Int);
+            ConstValue.Integer constVal = new ConstValue.Integer(size);
+            _constValues[node] = constVal;
+        }
+
+        public void Visit(NameofExpression node)
+        {
+            ValidateNameofTarget(node.Target);
+            string name = ExtractName(node.Target);
+            TypeExpression strType = new ArrayTypeExpression(Char, name.Length + 1, node.Line);
+            RecordType(node, strType);
+            ConstValue.String constVal = new ConstValue.String(name);
+            _constValues[node] = constVal;
         }
         public void Visit(NamedTypeExpression node) { }
         public void Visit(PointerTypeExpression node) { }

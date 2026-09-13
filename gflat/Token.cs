@@ -126,6 +126,8 @@ namespace gflat
             TokenKind.Override => "override",
             TokenKind.Abstract => "abstract",
             TokenKind.Base => "base",
+            TokenKind.Sizeof => "sizeof",
+            TokenKind.Nameof => "nameof",
             TokenKind.InterpolatedStringExprStart => "{",
             TokenKind.InterpolatedStringExprEnd => "}",
             _ => throw new InvalidOperationException($"Cannot infer token text of '{kind}'")

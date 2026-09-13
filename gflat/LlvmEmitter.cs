@@ -2923,6 +2923,32 @@ public class LlvmEmitter : IVisitor
         Push(GetDefaultValue(type));
     }
 
+    public void Visit(SizeofExpression node)
+    {
+        if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
+        {
+            if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
+            {
+                return;
+            }
+        }
+        int size = _typeChecker.GetTypeSize(node.TargetType);
+        Push(size.ToString());
+    }
+
+    public void Visit(NameofExpression node)
+    {
+        if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
+        {
+            if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
+            {
+                return;
+            }
+        }
+        string name = _typeChecker.ExtractName(node.Target);
+        TryEmitConstValue(new ConstValue.String(name), _typeChecker.GetType(node));
+    }
+
     private string GetDefaultValue(TypeExpression type)
     {
         type = _typeChecker.ResolveAlias(type);

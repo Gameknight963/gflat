@@ -1041,6 +1041,34 @@ namespace gflat
                 return new DefaultExpression(targetType, line);
             }
 
+            // sizeof expression
+            if (Check(TokenKind.Sizeof))
+            {
+                Consume();
+                Expect(TokenKind.OpenParen);
+                TypeExpression targetType = ParseTypeExpression();
+                Expect(TokenKind.CloseParen);
+                return new SizeofExpression(targetType, line);
+            }
+
+            // nameof expression
+            if (Check(TokenKind.Nameof))
+            {
+                Consume();
+                Expect(TokenKind.OpenParen);
+                AstNode target;
+                if (IsBuiltInTypeKeyword(Current.Kind))
+                {
+                    target = ParseTypeExpression();
+                }
+                else
+                {
+                    target = ParseExpression();
+                }
+                Expect(TokenKind.CloseParen);
+                return new NameofExpression(target, line);
+            }
+
             // new expression
             if (Check(TokenKind.New))
             {
@@ -1101,12 +1129,18 @@ namespace gflat
             return false;
         }
 
+        private static bool IsBuiltInTypeKeyword(TokenKind kind) =>
+            kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
+            TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
+            TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or
+            TokenKind.ExtraLong or TokenKind.String or TokenKind.Void;
+
         private static bool IsCastOperandStarter(TokenKind kind) =>
             kind is TokenKind.Identifier or
             TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
-            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
             TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
             TokenKind.Minus or TokenKind.Bang or TokenKind.Star or TokenKind.Ampersand or
             TokenKind.PlusPlus or TokenKind.MinusMinus;
@@ -1116,7 +1150,7 @@ namespace gflat
             TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
-            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
             TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
             TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
 

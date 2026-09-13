@@ -917,5 +917,33 @@ namespace gflat.comptime
         public void Visit(GlobalExpression node) { }
         public void Visit(AliasDeclaration node) { }
         public void Visit(InterpolatedStringExpression node) { }
+
+        public void Visit(SizeofExpression node)
+        {
+            CheckSteps(node.Line);
+            TypeExpression targetType = _typeChecker.ResolveAlias(node.TargetType);
+            if (targetType is NamedTypeExpression named &&
+                !TypeChecker.IsPrimitive(named.Name) &&
+                _typeChecker.GetStruct(named.Name) == null &&
+                _typeChecker.GetClass(named.Name) == null &&
+                _typeChecker.GetInterface(named.Name) == null &&
+                _typeChecker.ResolveEnum(named) == null &&
+                TryGetVariable(named.Name, out _))
+            {
+                if (_typeChecker.TryLookupVariable(named.Name, out TypeExpression? varType) && varType != null)
+                {
+                    targetType = _typeChecker.ResolveAlias(varType);
+                }
+            }
+            int size = _typeChecker.GetTypeSize(targetType);
+            _currentValue = new ConstValue.Integer(size);
+        }
+
+        public void Visit(NameofExpression node)
+        {
+            CheckSteps(node.Line);
+            string name = _typeChecker.ExtractName(node.Target);
+            _currentValue = new ConstValue.String(name);
+        }
     }
 }

@@ -2857,6 +2857,56 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void Sizeof_RuntimeExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    int sizeInt = sizeof(int);
+                    int sizePoint = sizeof(Point);
+                    int sizeArray = sizeof(int[5]);
+                    int sizePtr = sizeof(void*);
+                    int total = sizeInt + sizePoint + sizeArray + sizePtr + 2;
+                    return total;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void Nameof_RuntimeExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    char* name = nameof(Point);
+                    if (name[0] == 'P' && name[4] == 't')
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
 

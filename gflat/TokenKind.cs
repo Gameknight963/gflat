@@ -114,6 +114,8 @@ namespace gflat
         Global,
         Operator,
         Base,
+        Sizeof,
+        Nameof,
         EndOfFile
     }
 }

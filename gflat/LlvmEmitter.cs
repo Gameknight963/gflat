@@ -12,8 +12,10 @@ public class LlvmEmitter : IVisitor
         _typeChecker = typeChecker;
     }
 
-    private readonly StringBuilder _output = new();
+    private StringBuilder _output = new();
     private readonly StringBuilder _globals = new();
+    private readonly StringBuilder _lambdaFunctions = new();
+    private int _lambdaCounter = 0;
     private int _tempCounter = 0;
     private int _stringCounter = 0;
     private readonly Stack<string> _valueStack = new();
@@ -60,7 +62,7 @@ public class LlvmEmitter : IVisitor
     private void Emit(string line) => _output.AppendLine(line);
     private void EmitGlobal(string line) => _globals.AppendLine(line);
 
-    public string GetOutput() => _globals.ToString() + "\n" + _output.ToString();
+    public string GetOutput() => _globals.ToString() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString();
 
     private enum EmitMode { RValue, LValue }
 
@@ -1702,5 +1704,97 @@ public class LlvmEmitter : IVisitor
         TypeExpression dstType = node.TargetType;
         string castVal = EmitCast(val, srcType, dstType);
         Push(castVal);
+    }
+
+    public void Visit(LambdaExpression node)
+    {
+        int id = _lambdaCounter++;
+        string funcName = $"gflat$lambda${id}";
+
+        TypeExpression returnType = _typeChecker.GetLambdaReturnType(node);
+        string llvmReturnType = EmitType(returnType);
+
+        // Save current emitter state
+        StringBuilder savedOutput = _output;
+        Dictionary<string, string> savedLocals = new(_locals);
+        int savedTempCounter = _tempCounter;
+        string savedReturnType = _currentFunctionReturnType;
+        TypeExpression? savedExpectedType = _currentFunctionExpectedType;
+        bool savedTerminated = _hasTerminated;
+        List<List<AstNode>> savedDeferScopes = new(_deferScopes);
+
+        // Prepare lambda context
+        _output = _lambdaFunctions;
+        _locals.Clear();
+        _tempCounter = 0;
+        _currentFunctionReturnType = llvmReturnType;
+        _currentFunctionExpectedType = returnType;
+        _hasTerminated = false;
+        _deferScopes.Clear();
+
+        string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitParamType(p.Type)} %{p.Name}"));
+        Emit($"define {llvmReturnType} @{funcName}({parameters}) {{");
+        Emit("entry:");
+
+        foreach (Parameter p in node.Parameters)
+        {
+            string pType = EmitType(p.Type);
+            string allocaPtr = NewTemp();
+            Emit($"    {allocaPtr} = alloca {pType}");
+            Emit($"    store {pType} %{p.Name}, {pType}* {allocaPtr}");
+            _locals[p.Name] = allocaPtr;
+        }
+
+        if (node.IsExpressionBody)
+        {
+            node.Body.Accept(this);
+            if (llvmReturnType == "void")
+            {
+                Emit("    ret void");
+            }
+            else
+            {
+                string res = Pop();
+                TypeExpression bodyType = _typeChecker.GetType(node.Body);
+                res = EmitImplicitCast(res, bodyType, returnType);
+                Emit($"    ret {llvmReturnType} {res}");
+            }
+            _hasTerminated = true;
+        }
+        else
+        {
+            node.Body.Accept(this);
+            if (!_hasTerminated)
+            {
+                if (llvmReturnType == "void")
+                {
+                    Emit("    ret void");
+                }
+                else
+                {
+                    Emit($"    ret {llvmReturnType} zeroinitializer");
+                }
+            }
+        }
+
+        Emit("}");
+        Emit("");
+
+        // Restore enclosing emitter state
+        _output = savedOutput;
+        _locals.Clear();
+        foreach (KeyValuePair<string, string> kvp in savedLocals)
+        {
+            _locals[kvp.Key] = kvp.Value;
+        }
+        _tempCounter = savedTempCounter;
+        _currentFunctionReturnType = savedReturnType;
+        _currentFunctionExpectedType = savedExpectedType;
+        _hasTerminated = savedTerminated;
+        _deferScopes.Clear();
+        _deferScopes.AddRange(savedDeferScopes);
+
+        // Push the function address as a function pointer
+        Push($"@{funcName}");
     }
 }

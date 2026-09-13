@@ -137,6 +137,23 @@ namespace gflat
                 Point* restoredPtr = (Point*)ptrAddress;
                 printf("nuint roundtrip address: 0x%llx\n", restoredPtr->address);
 
+                int(int, int)* addLambda = (int a, int b) => a + b;
+                printf("lambda add: %d\n", addLambda(19, 23));
+
+                int(int, int)* mulLambda = static (int a, int b) => a * b;
+                printf("static lambda mul: %d\n", mulLambda(6, 7));
+
+                int(int)* loopLambda = (int n) =>
+                {
+                    int s = 0;
+                    for (int i = 1; i <= n; i = i + 1)
+                    {
+                        s = s + i;
+                    }
+                    return s;
+                };
+                printf("block lambda sum 1..10: %d\n", loopLambda(10));
+
                 return 0;
             }
             """;

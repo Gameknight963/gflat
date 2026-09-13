@@ -302,5 +302,23 @@ namespace gflat
                 Indented(() => node.Operand.Accept(this));
             });
         }
+
+        public void Visit(LambdaExpression node)
+        {
+            Print($"LambdaExpression (static={node.IsStatic}, exprBody={node.IsExpressionBody})");
+            Indented(() =>
+            {
+                Print("Params:");
+                Indented(() =>
+                {
+                    foreach (Parameter p in node.Parameters)
+                    {
+                        p.Accept(this);
+                    }
+                });
+                Print("Body:");
+                Indented(() => node.Body.Accept(this));
+            });
+        }
     }
 }

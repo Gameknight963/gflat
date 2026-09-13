@@ -21,6 +21,12 @@ namespace gflat
         private readonly Stack<Dictionary<string, TypeExpression>> _localAliases = new();
         private readonly Stack<Dictionary<string, EnumInfo>> _localEnums = new();
         private readonly Dictionary<AstNode, (EnumInfo Enum, long Value)> _resolvedEnumMembers = new();
+        private readonly Stack<int> _lambdaScopeBoundaries = new();
+        private readonly Stack<bool> _lambdaStaticStack = new();
+        private readonly Stack<List<TypeExpression>> _actualReturnTypes = new();
+        private readonly Dictionary<LambdaExpression, TypeExpression> _lambdaReturnTypes = new();
+
+        public TypeExpression GetLambdaReturnType(LambdaExpression node) => _lambdaReturnTypes[node];
 
         public string GetFunctionNamespace(MethodDeclaration method) =>
             _functionNamespaces.TryGetValue(method, out string? ns) ? ns : "";
@@ -115,15 +121,47 @@ namespace gflat
 
         private TypeExpression LookupVariable(string name, int line)
         {
+            int depth = _scopes.Count;
             foreach (Dictionary<string, TypeExpression> scope in _scopes)
+            {
                 if (scope.TryGetValue(name, out TypeExpression? type))
+                {
+                    if (_lambdaScopeBoundaries.Count > 0 && depth <= _lambdaScopeBoundaries.Peek())
+                    {
+                        bool isStatic = _lambdaStaticStack.Peek();
+                        if (isStatic)
+                        {
+                            throw new TypeCheckException($"A static lambda cannot reference outer local variable '{name}'", line);
+                        }
+                        else
+                        {
+                            throw new TypeCheckException($"Capturing outer local variable '{name}' is not currently supported", line);
+                        }
+                    }
                     return type;
+                }
+                depth--;
+            }
 
             if (_currentStruct != null)
             {
                 int idx = _currentStruct.FieldIndex(name);
                 if (idx >= 0)
+                {
+                    if (_lambdaScopeBoundaries.Count > 0)
+                    {
+                        bool isStatic = _lambdaStaticStack.Peek();
+                        if (isStatic)
+                        {
+                            throw new TypeCheckException($"A static lambda cannot reference 'this'", line);
+                        }
+                        else
+                        {
+                            throw new TypeCheckException($"Capturing 'this' in a lambda is not currently supported", line);
+                        }
+                    }
                     return _currentStruct.Fields[idx].Type;
+                }
             }
 
             if (ResolveFunction(name) != null || ResolveExtern(name) != null)
@@ -647,7 +685,20 @@ namespace gflat
                 throw new TypeCheckException("Cannot return from within a defer statement", node.Line);
 
             if (node.Value != null)
+            {
                 node.Value.Accept(this);
+                if (_actualReturnTypes.Count > 0)
+                {
+                    _actualReturnTypes.Peek().Add(GetType(node.Value));
+                }
+            }
+            else
+            {
+                if (_actualReturnTypes.Count > 0)
+                {
+                    _actualReturnTypes.Peek().Add(Void);
+                }
+            }
         }
 
         public void Visit(IfStatement node)
@@ -1743,6 +1794,59 @@ namespace gflat
             }
 
             return false;
+        }
+
+        public void Visit(LambdaExpression node)
+        {
+            _lambdaScopeBoundaries.Push(_scopes.Count);
+            _lambdaStaticStack.Push(node.IsStatic);
+            _actualReturnTypes.Push(new List<TypeExpression>());
+
+            PushScope();
+            List<TypeExpression> paramTypes = new();
+            foreach (Parameter p in node.Parameters)
+            {
+                TypeExpression pType = ResolveAlias(p.Type);
+                paramTypes.Add(pType);
+                DeclareVariable(p.Name, pType, p.Line);
+            }
+
+            TypeExpression returnType;
+            if (node.IsExpressionBody)
+            {
+                node.Body.Accept(this);
+                returnType = ResolveAlias(GetType(node.Body));
+            }
+            else
+            {
+                node.Body.Accept(this);
+                List<TypeExpression> returns = _actualReturnTypes.Peek();
+                if (returns.Count == 0)
+                {
+                    returnType = Void;
+                }
+                else
+                {
+                    returnType = ResolveAlias(returns[0]);
+                    for (int i = 1; i < returns.Count; i++)
+                    {
+                        TypeExpression other = ResolveAlias(returns[i]);
+                        if (!TypesMatch(returnType, other) && !IsAssignable(returnType, other))
+                        {
+                            throw new TypeCheckException($"Inconsistent return types in lambda: '{TypeName(returnType)}' and '{TypeName(other)}'", node.Line);
+                        }
+                    }
+                }
+            }
+
+            PopScope();
+            _actualReturnTypes.Pop();
+            _lambdaStaticStack.Pop();
+            _lambdaScopeBoundaries.Pop();
+
+            _lambdaReturnTypes[node] = returnType;
+            FunctionPointerTypeExpression fnType = new FunctionPointerTypeExpression(returnType, paramTypes, isManaged: false, isNullable: false, node.Line);
+            RecordType(node, fnType);
         }
     }
 }

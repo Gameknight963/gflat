@@ -1241,5 +1241,91 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void LambdaExpressionBodyExecution()
+        {
+            string code = """
+                int main()
+                {
+                    int(int, int)* add = (int a, int b) => a + b;
+                    return add(20, 22);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void LambdaStaticExpressionBodyExecution()
+        {
+            string code = """
+                int main()
+                {
+                    int(int, int)* mul = static (int a, int b) => a * b;
+                    return mul(6, 7);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void LambdaBlockBodyExecution()
+        {
+            string code = """
+                int main()
+                {
+                    int(int)* sumTo = (int n) =>
+                    {
+                        int s = 0;
+                        for (int i = 1; i <= n; i = i + 1)
+                        {
+                            s = s + i;
+                        }
+                        return s;
+                    };
+                    return sumTo(6) + 21;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void LambdaPassedAsFunctionArgumentExecution()
+        {
+            string code = """
+                int Apply(int a, int b, int(int, int)* op)
+                {
+                    return op(a, b);
+                }
+
+                int main()
+                {
+                    return Apply(40, 2, (int x, int y) => x + y);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void LambdaImmediateInvocationExecution()
+        {
+            string code = """
+                int main()
+                {
+                    return ((int x, int y) => x * y)(6, 7);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }

@@ -840,5 +840,81 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Cannot cast 'Point' to 'int'", ex.Message);
         }
+
+        [Fact]
+        public void LambdaExpressionTypeCheckCleanly()
+        {
+            string code = """
+                int main()
+                {
+                    int(int, int)* add = (int a, int b) => a + b;
+                    int(int, int)* mul = static (int a, int b) => a * b;
+                    int()* answer = () => 42;
+                    int(int, int)* max = (int a, int b) =>
+                    {
+                        if (a > b) return a;
+                        return b;
+                    };
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void LambdaCapturingOuterLocalThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    int(int)* f = (int y) => x + y;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Capturing outer local variable 'x' is not currently supported", ex.Message);
+        }
+
+        [Fact]
+        public void StaticLambdaCapturingOuterLocalThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    int(int)* f = static (int y) => x + y;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("A static lambda cannot reference outer local variable 'x'", ex.Message);
+        }
+
+        [Fact]
+        public void LambdaCanAccessGlobalsAndFunctions()
+        {
+            string code = """
+                int DoubleIt(int x)
+                {
+                    return x * 2;
+                }
+
+                int main()
+                {
+                    int(int)* f = (int x) => DoubleIt(x);
+                    return f(21);
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
     }
 }

@@ -47,5 +47,6 @@ namespace gflat
         void Visit(EnumDeclaration node);
         void Visit(EnumMemberDeclaration node);
         void Visit(CastExpression node);
+        void Visit(LambdaExpression node);
     }
 }

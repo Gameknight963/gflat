@@ -753,6 +753,32 @@ namespace gflat
                 return new UnaryExpression(operand, op.Kind, true, line);
             }
 
+            // static lambda
+            if (Check(TokenKind.Static))
+            {
+                int saved = _pos;
+                Consume(); // 'static'
+                if (Check(TokenKind.OpenParen))
+                {
+                    LambdaExpression? lambda = TryParseLambda(true);
+                    if (lambda != null)
+                    {
+                        return lambda;
+                    }
+                }
+                _pos = saved;
+            }
+
+            // lambda expression
+            if (Check(TokenKind.OpenParen))
+            {
+                LambdaExpression? lambda = TryParseLambda(false);
+                if (lambda != null)
+                {
+                    return lambda;
+                }
+            }
+
             // cast or parenthesized expression
             if (Check(TokenKind.OpenParen))
             {
@@ -880,6 +906,54 @@ namespace gflat
             TokenKind.OpenParen or TokenKind.New or TokenKind.Global or
             TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
             TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
+
+        private LambdaExpression? TryParseLambda(bool isStatic)
+        {
+            int saved = _pos;
+            try
+            {
+                int line = Current.Line;
+                Expect(TokenKind.OpenParen);
+                List<Parameter> parameters = new();
+                while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+                {
+                    TypeExpression paramType = ParseTypeExpression();
+                    string paramName = Expect(TokenKind.Identifier).Text;
+                    parameters.Add(new Parameter(paramName, paramType, line));
+                    if (!Check(TokenKind.CloseParen))
+                    {
+                        Expect(TokenKind.Comma);
+                    }
+                }
+                Expect(TokenKind.CloseParen);
+
+                if (!Match(TokenKind.EqualsGreater))
+                {
+                    _pos = saved;
+                    return null;
+                }
+
+                AstNode body;
+                bool isExpressionBody;
+                if (Check(TokenKind.OpenBrace))
+                {
+                    body = ParseBlockStatement();
+                    isExpressionBody = false;
+                }
+                else
+                {
+                    body = ParseExpression();
+                    isExpressionBody = true;
+                }
+
+                return new LambdaExpression(isStatic, parameters, body, isExpressionBody, line);
+            }
+            catch
+            {
+                _pos = saved;
+                return null;
+            }
+        }
 
         private static (int left, int right) GetInfixBindingPower(TokenKind kind) => kind switch
         {

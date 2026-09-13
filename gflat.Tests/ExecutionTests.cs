@@ -400,5 +400,149 @@ namespace gflat.Tests
             var result = CompilerTestHelper.Run(code);
             Assert.Equal(45, result.ExitCode);
         }
+
+        [Fact]
+        public void DeferBlockExitLifoOrder()
+        {
+            string code = """
+                int main()
+                {
+                    int result = 0;
+                    {
+                        defer result = result * 10 + 1;
+                        defer result = result * 10 + 2;
+                        defer result = result * 10 + 3;
+                    }
+                    return result;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(321, result.ExitCode);
+        }
+
+        [Fact]
+        public void DeferEarlyReturnExecutesDefersInLifo()
+        {
+            string code = """
+                int Foo(int* res)
+                {
+                    defer *res = *res * 10 + 1;
+                    if (*res > 0)
+                    {
+                        defer *res = *res * 10 + 2;
+                        return 42;
+                    }
+                    defer *res = *res * 10 + 3;
+                    return 99;
+                }
+
+                int main()
+                {
+                    int r = 5;
+                    int retVal = Foo(&r);
+                    if (retVal != 42)
+                    {
+                        return 1;
+                    }
+                    if (r != 521)
+                    {
+                        return 2;
+                    }
+                    return 0;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(0, result.ExitCode);
+        }
+
+        [Fact]
+        public void DeferReturnValueEvaluatedBeforeDeferRuns()
+        {
+            string code = """
+                int Foo()
+                {
+                    int x = 10;
+                    defer x = 99;
+                    return x;
+                }
+
+                int main()
+                {
+                    return Foo();
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(10, result.ExitCode);
+        }
+
+        [Fact]
+        public void DeferInLoopExecutesPerIteration()
+        {
+            string code = """
+                int main()
+                {
+                    int total = 0;
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        defer total += i;
+                    }
+                    return total;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(6, result.ExitCode);
+        }
+
+        [Fact]
+        public void DeferInLoopBreakAndContinue()
+        {
+            string code = """
+                int main()
+                {
+                    int cleaned = 0;
+                    for (int i = 0; i < 5; i++)
+                    {
+                        defer cleaned += 1;
+                        if (i == 1)
+                        {
+                            defer cleaned += 10;
+                            continue;
+                        }
+                        if (i == 3)
+                        {
+                            defer cleaned += 100;
+                            break;
+                        }
+                    }
+                    return cleaned;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(114, result.ExitCode);
+        }
+
+        [Fact]
+        public void DeferPointerFreeOnScopeExit()
+        {
+            string code = """
+                extern void* malloc(long size);
+
+                int main()
+                {
+                    int* ptr = malloc(4L);
+                    *ptr = 77;
+                    defer ptr->free();
+                    return *ptr;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(77, result.ExitCode);
+        }
     }
 }

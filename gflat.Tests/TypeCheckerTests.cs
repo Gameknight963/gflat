@@ -306,5 +306,54 @@ namespace gflat.Tests
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Cannot index non-array and non-pointer type", ex.Message);
         }
+
+        [Fact]
+        public void DeferStatementValidStatementPasses()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 1;
+                    defer x = 2;
+                    return x;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void DeferStatementReturnInsideDeferThrows()
+        {
+            string code = """
+                int main()
+                {
+                    defer return 1;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot return from within a defer statement", ex.Message);
+        }
+
+        [Fact]
+        public void DeferStatementReturnInsideNestedBlockInDeferThrows()
+        {
+            string code = """
+                int main()
+                {
+                    defer
+                    {
+                        return 1;
+                    }
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot return from within a defer statement", ex.Message);
+        }
     }
 }

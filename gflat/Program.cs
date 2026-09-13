@@ -68,12 +68,14 @@ namespace gflat
 
                 printf("ptr address: 0x%llx, is_null: %d\n", ptr->address, ptr->is_null);
 
+                defer printf("deferred cleanup: main finished!\n");
+
                 Point* heapPoint = malloc(8L);
+                defer heapPoint->free();
                 heapPoint.x = 42;
                 heapPoint.y = 84;
                 heapPoint.Print();
                 printf("heapPoint address: 0x%llx\n", heapPoint->address);
-                heapPoint->free();
 
                 long sum = Add64(1000000000L, 2000000000L);
                 printf("sum: %lld\n", sum);

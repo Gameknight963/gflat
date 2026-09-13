@@ -209,6 +209,10 @@ namespace gflat
             return false;
         }
 
+        private static NamedTypeExpression Byte => new NamedTypeExpression("byte", null, 0);
+        private static NamedTypeExpression SByte => new NamedTypeExpression("sbyte", null, 0);
+        private static NamedTypeExpression Short => new NamedTypeExpression("short", null, 0);
+        private static NamedTypeExpression UShort => new NamedTypeExpression("ushort", null, 0);
         private static NamedTypeExpression Int => new NamedTypeExpression("int", null, 0);
         private static NamedTypeExpression UInt => new NamedTypeExpression("uint", null, 0);
         private static NamedTypeExpression Long => new NamedTypeExpression("long", null, 0);
@@ -227,7 +231,7 @@ namespace gflat
         private static NamedTypeExpression Null => new NamedTypeExpression("null", null, 0);
 
         private static bool IsNumeric(TypeExpression type) =>
-            type is NamedTypeExpression n && n.Name is "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "float" or "double" or "extralong" or "char";
+            type is NamedTypeExpression n && n.Name is "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "float" or "double" or "extralong" or "char";
 
         private static bool IsNullable(TypeExpression type) =>
             type is PointerTypeExpression { IsNullable: true } or
@@ -323,7 +327,7 @@ namespace gflat
             type = ResolveAlias(type);
             if (type is NamedTypeExpression n)
             {
-                if (n.Name is "uint" or "ulong" or "nuint")
+                if (n.Name is "byte" or "ushort" or "uint" or "ulong" or "nuint")
                     return true;
                 EnumInfo? enumInfo = ResolveEnum(n);
                 if (enumInfo != null)
@@ -337,7 +341,7 @@ namespace gflat
             type = ResolveAlias(type);
             if (type is NamedTypeExpression n)
             {
-                if (n.Name is "int" or "long" or "extralong" or "char" or "nint")
+                if (n.Name is "sbyte" or "short" or "int" or "long" or "extralong" or "char" or "nint")
                     return true;
                 EnumInfo? enumInfo = ResolveEnum(n);
                 if (enumInfo != null)
@@ -347,6 +351,101 @@ namespace gflat
         }
 
         public bool IsInteger(TypeExpression type) => IsSignedInteger(type) || IsUnsignedInteger(type);
+
+        private static bool TryGetIntegerConstant(AstNode node, out long value)
+        {
+            if (node is LiteralExpression lit)
+            {
+                if (lit.Token.Kind == TokenKind.IntLiteral)
+                {
+                    return long.TryParse(lit.Token.Text, out value);
+                }
+                if (lit.Token.Kind == TokenKind.UIntLiteral)
+                {
+                    string txt = lit.Token.Text.TrimEnd('u', 'U');
+                    if (txt.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            value = Convert.ToInt64(txt[2..], 16);
+                            return true;
+                        }
+                        catch
+                        {
+                            value = 0;
+                            return false;
+                        }
+                    }
+                    return long.TryParse(txt, out value);
+                }
+                if (lit.Token.Kind == TokenKind.HexInt)
+                {
+                    string txt = lit.Token.Text.TrimEnd('u', 'U', 'l', 'L');
+                    try
+                    {
+                        value = Convert.ToInt64(txt, 16);
+                        return true;
+                    }
+                    catch
+                    {
+                        value = 0;
+                        return false;
+                    }
+                }
+                if (lit.Token.Kind is TokenKind.LongLiteral or TokenKind.ULongLiteral)
+                {
+                    string txt = lit.Token.Text.TrimEnd('u', 'U', 'l', 'L');
+                    if (txt.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            value = Convert.ToInt64(txt[2..], 16);
+                            return true;
+                        }
+                        catch
+                        {
+                            value = 0;
+                            return false;
+                        }
+                    }
+                    return long.TryParse(txt, out value);
+                }
+            }
+            else if (node is UnaryExpression unary)
+            {
+                if (unary.Operator == TokenKind.Minus)
+                {
+                    if (TryGetIntegerConstant(unary.Operand, out long innerVal))
+                    {
+                        value = -innerVal;
+                        return true;
+                    }
+                }
+                else if (unary.Operator == TokenKind.Plus)
+                {
+                    return TryGetIntegerConstant(unary.Operand, out value);
+                }
+            }
+
+            value = 0;
+            return false;
+        }
+
+        private static bool FitsInIntegerType(string typeName, long value) => typeName switch
+        {
+            "byte" => value >= byte.MinValue && value <= byte.MaxValue,
+            "sbyte" => value >= sbyte.MinValue && value <= sbyte.MaxValue,
+            "short" => value >= short.MinValue && value <= short.MaxValue,
+            "ushort" => value >= ushort.MinValue && value <= ushort.MaxValue,
+            "int" => value >= int.MinValue && value <= int.MaxValue,
+            "uint" => value >= 0 && value <= uint.MaxValue,
+            "long" => true,
+            "ulong" => value >= 0,
+            "nint" => true,
+            "nuint" => value >= 0,
+            "extralong" => true,
+            _ => false
+        };
 
         private bool IsValidPointerForArithmetic(TypeExpression type, out string? error)
         {
@@ -412,7 +511,7 @@ namespace gflat
             return false;
         }
 
-        private bool IsAssignable(TypeExpression target, TypeExpression source)
+        private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
             target = ResolveAlias(target);
             source = ResolveAlias(source);
@@ -420,15 +519,22 @@ namespace gflat
             if (TypesMatch(target, source))
                 return true;
 
+            // Integer constant literal in-range assignment
+            if (valueNode != null && IsInteger(source) && target is NamedTypeExpression targetNamed && TryGetIntegerConstant(valueNode, out long constVal))
+            {
+                if (FitsInIntegerType(targetNamed.Name, constVal))
+                    return true;
+            }
+
             // Enum assignability with underlying type
             if (target is NamedTypeExpression nt && ResolveEnum(nt) is EnumInfo targetEnum)
             {
-                if (IsAssignable(targetEnum.UnderlyingType, source))
+                if (IsAssignable(targetEnum.UnderlyingType, source, valueNode))
                     return true;
             }
             if (source is NamedTypeExpression ns && ResolveEnum(ns) is EnumInfo sourceEnum)
             {
-                if (IsAssignable(target, sourceEnum.UnderlyingType))
+                if (IsAssignable(target, sourceEnum.UnderlyingType, valueNode))
                     return true;
             }
 
@@ -488,6 +594,14 @@ namespace gflat
             // Implicit numeric conversions
             if (source is NamedTypeExpression s && target is NamedTypeExpression t)
             {
+                if (s.Name == "byte" && t.Name is "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "extralong")
+                    return true;
+                if (s.Name == "sbyte" && t.Name is "short" or "int" or "long" or "nint" or "extralong")
+                    return true;
+                if (s.Name == "short" && t.Name is "int" or "long" or "nint" or "extralong")
+                    return true;
+                if (s.Name == "ushort" && t.Name is "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "extralong")
+                    return true;
                 if (s.Name == "uint" && t.Name is "int" or "long" or "ulong" or "nint" or "nuint" or "extralong")
                     return true;
                 if (s.Name == "int" && t.Name is "long" or "nint" or "extralong")
@@ -821,7 +935,7 @@ namespace gflat
                     varType = new ArrayTypeExpression(arr.ElementType, initArr.Size, node.Line);
                 }
 
-                if (!IsAssignable(varType, initType))
+                if (!IsAssignable(varType, initType, node.Initializer))
                     throw new TypeCheckException(
                         $"Cannot assign '{TypeName(initType)}' to '{TypeName(varType)}'", node.Line);
             }
@@ -901,8 +1015,23 @@ namespace gflat
                     throw new TypeCheckException(errRight, node.Line);
 
                 if (!TypesMatch(left, right))
+                {
+                    if (IsInteger(left) && IsInteger(right))
+                    {
+                        if (IsAssignable(left, right))
+                        {
+                            RecordType(node, left);
+                            return;
+                        }
+                        if (IsAssignable(right, left))
+                        {
+                            RecordType(node, right);
+                            return;
+                        }
+                    }
                     throw new TypeCheckException(
                         $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                }
                 RecordType(node, left);
             }
             else if (node.Operator == TokenKind.Minus)
@@ -938,8 +1067,23 @@ namespace gflat
                     throw new TypeCheckException(errRight, node.Line);
 
                 if (!TypesMatch(left, right))
+                {
+                    if (IsInteger(left) && IsInteger(right))
+                    {
+                        if (IsAssignable(left, right))
+                        {
+                            RecordType(node, left);
+                            return;
+                        }
+                        if (IsAssignable(right, left))
+                        {
+                            RecordType(node, right);
+                            return;
+                        }
+                    }
                     throw new TypeCheckException(
                         $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                }
                 RecordType(node, left);
             }
             else if (node.Operator is TokenKind.LessLess or TokenKind.GreaterGreater)
@@ -952,8 +1096,23 @@ namespace gflat
             else
             {
                 if (!TypesMatch(left, right))
+                {
+                    if (IsInteger(left) && IsInteger(right))
+                    {
+                        if (IsAssignable(left, right))
+                        {
+                            RecordType(node, left);
+                            return;
+                        }
+                        if (IsAssignable(right, left))
+                        {
+                            RecordType(node, right);
+                            return;
+                        }
+                    }
                     throw new TypeCheckException(
                         $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                }
                 RecordType(node, left);
             }
         }
@@ -1134,7 +1293,7 @@ namespace gflat
                     throw new TypeCheckException(errPtr, node.Line);
             }
 
-            if (!IsAssignable(targetType, valueType))
+            if (!IsAssignable(targetType, valueType, node.Value))
                 throw new TypeCheckException(
                     $"Cannot assign '{TypeName(valueType)}' to '{TypeName(targetType)}'", node.Line);
 
@@ -1269,7 +1428,7 @@ namespace gflat
                 {
                     TypeExpression argType = GetType(node.Arguments[i]);
                     TypeExpression paramType = ext.Parameters[i].Type;
-                    if (!IsAssignable(paramType, argType))
+                    if (!IsAssignable(paramType, argType, node.Arguments[i]))
                         throw new TypeCheckException(
                             $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
                             node.Line);
@@ -1292,7 +1451,7 @@ namespace gflat
             {
                 TypeExpression argType = GetType(node.Arguments[i]);
                 TypeExpression paramType = method.Parameters[i].Type;
-                if (!IsAssignable(paramType, argType))
+                if (!IsAssignable(paramType, argType, node.Arguments[i]))
                     throw new TypeCheckException(
                         $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
                         node.Line);
@@ -1314,7 +1473,7 @@ namespace gflat
             {
                 TypeExpression argType = GetType(node.Arguments[i]);
                 TypeExpression paramType = fnPtr.ParameterTypes[i];
-                if (!IsAssignable(paramType, argType))
+                if (!IsAssignable(paramType, argType, node.Arguments[i]))
                     throw new TypeCheckException(
                         $"Argument {i + 1} of indirect call: cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
                         node.Line);

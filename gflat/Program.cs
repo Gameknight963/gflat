@@ -54,7 +54,7 @@ namespace gflat
             }
             """;
 
-        static string GetClangLibArgs()
+        public static string GetClangLibArgs()
         {
             string? lib = Environment.GetEnvironmentVariable("LIB");
             if (!string.IsNullOrEmpty(lib))

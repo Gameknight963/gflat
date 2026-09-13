@@ -325,10 +325,11 @@ public class LlvmEmitter : IVisitor
     {
         string condLabel = NewLabel("for_cond");
         string bodyLabel = NewLabel("for_body");
+        string incLabel = NewLabel("for_inc");
         string exitLabel = NewLabel("for_exit");
 
         _breakLabels.Push(exitLabel);
-        _continueLabels.Push(condLabel);
+        _continueLabels.Push(incLabel);
 
         node.Initializer?.Accept(this);
 
@@ -355,6 +356,9 @@ public class LlvmEmitter : IVisitor
 
         Emit($"{bodyLabel}:");
         node.Body.Accept(this);
+        Emit($"    br label %{incLabel}");
+
+        Emit($"{incLabel}:");
         if (node.Increment != null)
             node.Increment.Accept(this);
         Emit($"    br label %{condLabel}");
@@ -730,9 +734,45 @@ public class LlvmEmitter : IVisitor
 
         TypeExpression targetType = _typeChecker.GetType(node.Target);
         string llvmType = EmitType(targetType);
+        bool isFloat = targetType is NamedTypeExpression { Name: "float" };
 
-        Emit($"    store {llvmType} {val}, {llvmType}* {ptr}");
-        Push(val);
+        string finalVal = val;
+        if (node.Operator != TokenKind.Equals)
+        {
+            string currentVal = NewTemp();
+            Emit($"    {currentVal} = load {llvmType}, {llvmType}* {ptr}");
+            string temp = NewTemp();
+
+            if (isFloat)
+            {
+                string op = node.Operator switch
+                {
+                    TokenKind.PlusEquals => "fadd",
+                    TokenKind.MinusEquals => "fsub",
+                    TokenKind.StarEquals => "fmul",
+                    TokenKind.SlashEquals => "fdiv",
+                    _ => throw new NotImplementedException($"Compound assignment {node.Operator} not supported on float")
+                };
+                Emit($"    {temp} = {op} float {currentVal}, {val}");
+            }
+            else
+            {
+                string op = node.Operator switch
+                {
+                    TokenKind.PlusEquals => "add",
+                    TokenKind.MinusEquals => "sub",
+                    TokenKind.StarEquals => "mul",
+                    TokenKind.SlashEquals => "sdiv",
+                    TokenKind.PercentEquals => "srem",
+                    _ => throw new NotImplementedException($"Compound assignment {node.Operator} not supported")
+                };
+                Emit($"    {temp} = {op} {llvmType} {currentVal}, {val}");
+            }
+            finalVal = temp;
+        }
+
+        Emit($"    store {llvmType} {finalVal}, {llvmType}* {ptr}");
+        Push(finalVal);
     }
 
     public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();

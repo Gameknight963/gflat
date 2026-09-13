@@ -707,6 +707,7 @@ namespace gflat
         public void Visit(PointerTypeExpression node) { }
         public void Visit(ManagedTypeExpression node) { }
         public void Visit(ArrayTypeExpression node) { }
+        public void Visit(IndexExpression node) => throw new NotImplementedException();
         public void Visit(BreakStatement node) { }
         public void Visit(ContinueStatement node) { }
 

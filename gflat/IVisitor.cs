@@ -1,4 +1,4 @@
-﻿using gflat.ast;
+using gflat.ast;
 
 namespace gflat
 {
@@ -32,6 +32,7 @@ namespace gflat
         void Visit(PointerTypeExpression node);
         void Visit(ManagedTypeExpression node);
         void Visit(ArrayTypeExpression node);
+        void Visit(IndexExpression node);
         void Visit(BreakStatement node);
         void Visit(ContinueStatement node);
         void Visit(NewExpression node);

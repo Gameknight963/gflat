@@ -400,11 +400,13 @@ namespace gflat
                 type = new ManagedTypeExpression(type, nullable, line);
             }
 
-            if (Check(TokenKind.OpenBracket) && Peek().Kind == TokenKind.CloseBracket)
+            if (Match(TokenKind.OpenBracket))
             {
-                Consume(); // [
-                Consume(); // ]
-                type = new ArrayTypeExpression(type, line);
+                int? size = null;
+                if (Check(TokenKind.IntLiteral))
+                    size = int.Parse(Consume().Text);
+                Expect(TokenKind.CloseBracket);
+                type = new ArrayTypeExpression(type, size, line);
             }
 
             return type;
@@ -596,6 +598,15 @@ namespace gflat
                     continue;
                 }
 
+                // handle indexing
+                if (op.Kind == TokenKind.OpenBracket)
+                {
+                    AstNode index = ParseExpression();
+                    Expect(TokenKind.CloseBracket);
+                    left = new IndexExpression(left, index, op.Line);
+                    continue;
+                }
+
                 // handle assignment operators
                 if (op.Kind is TokenKind.Equals or TokenKind.PlusEquals or TokenKind.MinusEquals or
                     TokenKind.StarEquals or TokenKind.SlashEquals or TokenKind.PercentEquals)
@@ -706,7 +717,7 @@ namespace gflat
             TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (12, 13),
             TokenKind.PlusPlus or TokenKind.MinusMinus => (14, 0),
             TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (16, 17),
-            TokenKind.OpenParen => (16, 0),
+            TokenKind.OpenParen or TokenKind.OpenBracket => (16, 0),
             _ => (0, 0)
         };
 

@@ -1031,6 +1031,7 @@ public class LlvmEmitter : IVisitor
     public void Visit(PointerTypeExpression node) => throw new NotImplementedException();
     public void Visit(ManagedTypeExpression node) => throw new NotImplementedException();
     public void Visit(ArrayTypeExpression node) => throw new NotImplementedException();
+    public void Visit(IndexExpression node) => throw new NotImplementedException();
     public void Visit(BreakStatement node)
     {
         if (_breakLabels.Count == 0)

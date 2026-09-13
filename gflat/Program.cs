@@ -54,6 +54,7 @@ namespace gflat
                 p.y = 20;
                 p.Print();
 
+                char* a = "string";
                 p.Move(5, 5);
                 p.Print();
 

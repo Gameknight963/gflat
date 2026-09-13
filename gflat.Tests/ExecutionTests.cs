@@ -1667,6 +1667,242 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void StackStructInterfaceCallExecution()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                    int Perimeter();
+                }
+
+                struct Rect : IShape
+                {
+                    int w;
+                    int h;
+
+                    int Area()
+                    {
+                        return this.w * this.h;
+                    }
+
+                    int Perimeter()
+                    {
+                        return 2 * (this.w + this.h);
+                    }
+                }
+
+                int main()
+                {
+                    Rect r;
+                    r.w = 6;
+                    r.h = 7;
+                    IShape* s = &r;
+                    if (s.Area() != 42)
+                    {
+                        return 1;
+                    }
+                    if (s.Perimeter() != 26)
+                    {
+                        return 2;
+                    }
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void HeapStructInterfaceCallExecution()
+        {
+            string code = """
+                extern void* malloc(long size);
+
+                interface IShape
+                {
+                    int Area();
+                }
+
+                struct Rect : IShape
+                {
+                    int w;
+                    int h;
+
+                    int Area()
+                    {
+                        return this.w * this.h;
+                    }
+                }
+
+                int main()
+                {
+                    Rect* r = (Rect*)malloc(8L);
+                    r.w = 5;
+                    r.h = 8;
+                    IShape* s = r;
+                    if (s.Area() != 40)
+                    {
+                        return 1;
+                    }
+                    r->free();
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void MultipleInterfacesExecution()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                interface IDescribable
+                {
+                    int Code();
+                }
+
+                struct Circle : IShape, IDescribable
+                {
+                    int r;
+
+                    int Area()
+                    {
+                        return 3 * this.r * this.r;
+                    }
+
+                    int Code()
+                    {
+                        return 123;
+                    }
+                }
+
+                int main()
+                {
+                    Circle c;
+                    c.r = 4;
+                    IShape* s = &c;
+                    IDescribable* d = &c;
+                    if (s.Area() != 48)
+                    {
+                        return 1;
+                    }
+                    if (d.Code() != 123)
+                    {
+                        return 2;
+                    }
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void InterfacePassedAsParameterExecution()
+        {
+            string code = """
+                interface ICalc
+                {
+                    int Compute(int x);
+                }
+
+                struct Multiplier : ICalc
+                {
+                    int factor;
+
+                    int Compute(int x)
+                    {
+                        return x * this.factor;
+                    }
+                }
+
+                struct Adder : ICalc
+                {
+                    int delta;
+
+                    int Compute(int x)
+                    {
+                        return x + this.delta;
+                    }
+                }
+
+                int ExecuteCalc(ICalc* calc, int val)
+                {
+                    return calc.Compute(val);
+                }
+
+                int main()
+                {
+                    Multiplier m;
+                    m.factor = 3;
+
+                    Adder a;
+                    a.delta = 10;
+
+                    int res1 = ExecuteCalc(&m, 5);
+                    int res2 = ExecuteCalc(&a, 5);
+
+                    if (res1 + res2 != 30)
+                    {
+                        return 1;
+                    }
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void InterfaceNullComparisonExecution()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                struct Rect : IShape
+                {
+                    int Area()
+                    {
+                        return 1;
+                    }
+                }
+
+                int main()
+                {
+                    IShape*? s = null;
+                    if (s != null)
+                    {
+                        return 1;
+                    }
+
+                    Rect r;
+                    s = &r;
+                    if (s == null)
+                    {
+                        return 2;
+                    }
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
 

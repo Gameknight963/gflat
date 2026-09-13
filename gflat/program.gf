@@ -52,6 +52,33 @@ struct Point
     }
 }
 
+interface IShape
+{
+    int Area();
+    int Perimeter();
+}
+
+struct Rect : IShape
+{
+    int w;
+    int h;
+
+    int Area()
+    {
+        return this.w * this.h;
+    }
+
+    int Perimeter()
+    {
+        return 2 * (this.w + this.h);
+    }
+}
+
+void PrintShape(char* name, IShape* s)
+{
+    printf("%s - Area: %d, Perimeter: %d\n", name, s.Area(), s.Perimeter());
+}
+
 void LogMessage(char* msg)
 {
     printf("%s\n", msg);
@@ -210,6 +237,17 @@ int main()
 
     byte byteTrunc = (byte)300;
     printf("byte truncated from 300: %u\n", byteTrunc);
+
+    Rect rectStack;
+    rectStack.w = 5;
+    rectStack.h = 10;
+    PrintShape("Stack Rect", &rectStack);
+
+    Rect* rectHeap = (Rect*)malloc(8L);
+    rectHeap.w = 7;
+    rectHeap.h = 3;
+    PrintShape("Heap Rect", rectHeap);
+    rectHeap->free();
 
     return 0;
 }

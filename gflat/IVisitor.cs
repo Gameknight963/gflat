@@ -38,6 +38,7 @@ namespace gflat
         void Visit(ContinueStatement node);
         void Visit(NewExpression node);
         void Visit(ConstructorDeclaration node);
+        void Visit(DestructorDeclaration node);
         void Visit(NamespaceAccessExpression node);
         void Visit(AttributeNode node);
         void Visit(ExternDeclaration node);

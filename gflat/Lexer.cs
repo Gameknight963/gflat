@@ -153,6 +153,7 @@ public class Lexer
                 case ')': tokens.Add(new Token(TokenKind.CloseParen, line, i, i)); break;
                 case '{': tokens.Add(new Token(TokenKind.OpenBrace, line, i, i)); break;
                 case '}': tokens.Add(new Token(TokenKind.CloseBrace, line, i, i)); break;
+                case '~': tokens.Add(new Token(TokenKind.Tilde, line, i, i)); break;
                 case '[': tokens.Add(new Token(TokenKind.OpenBracket, line, i, i)); break;
                 case ']': tokens.Add(new Token(TokenKind.CloseBracket, line, i, i)); break;
                 default:
@@ -222,6 +223,7 @@ public class Lexer
             "alias" => TokenKind.Alias,
             "global" => TokenKind.Global,
             "operator" => TokenKind.Operator,
+            "base" => TokenKind.Base,
             _ => TokenKind.Identifier
         };
     }

@@ -2461,6 +2461,239 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(0, result.ExitCode);
         }
+
+        [Fact]
+        public void ClassBaseConstructorExecution()
+        {
+            string code = """
+                class Shape
+                {
+                    public int x;
+                    public int y;
+
+                    public Shape(int x, int y)
+                    {
+                        this.x = x;
+                        this.y = y;
+                    }
+                }
+
+                class Rectangle : Shape
+                {
+                    public int width;
+                    public int height;
+
+                    public Rectangle(int x, int y, int w, int h) : base(x, y)
+                    {
+                        this.width = w;
+                        this.height = h;
+                    }
+
+                    public int Area()
+                    {
+                        return this.width * this.height;
+                    }
+                }
+
+                int main()
+                {
+                    Rectangle r = new Rectangle(10, 20, 5, 4);
+                    return r.x + r.y + r.Area(); // 10 + 20 + 20 = 50
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(50, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassDestructorExecution()
+        {
+            string code = """
+                class Resource
+                {
+                    public int* counter;
+
+                    public Resource(int* c)
+                    {
+                        this.counter = c;
+                    }
+
+                    public ~Resource()
+                    {
+                        *this.counter = *this.counter + 10;
+                    }
+                }
+
+                int main()
+                {
+                    int flag = 5;
+                    Resource* r = new* Resource(&flag);
+                    r->free();
+                    return flag; // 15
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(15, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassPolymorphicVirtualDestructorExecution()
+        {
+            string code = """
+                class Base
+                {
+                    public int* counter;
+
+                    public Base(int* c)
+                    {
+                        this.counter = c;
+                    }
+
+                    public virtual ~Base()
+                    {
+                        *this.counter = *this.counter + 1;
+                    }
+                }
+
+                class Derived : Base
+                {
+                    public Derived(int* c) : base(c)
+                    {
+                    }
+
+                    public ~Derived()
+                    {
+                        *this.counter = *this.counter + 10;
+                    }
+                }
+
+                int main()
+                {
+                    int c = 0;
+                    Base* b = new* Derived(&c);
+                    b->free(); // Virtual destructor dispatch: Derived runs (+10), then Base runs (+1)
+                    return c; // 11
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(11, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassMultipleInterfacesExecution()
+        {
+            string code = """
+                interface IGreet
+                {
+                    int Greet();
+                }
+
+                interface ICalc
+                {
+                    int Add(int a, int b);
+                }
+
+                class Service : IGreet, ICalc
+                {
+                    public int factor;
+
+                    public Service(int f)
+                    {
+                        this.factor = f;
+                    }
+
+                    public int Greet()
+                    {
+                        return 100 * this.factor;
+                    }
+
+                    public int Add(int a, int b)
+                    {
+                        return (a + b) * this.factor;
+                    }
+                }
+
+                int main()
+                {
+                    Service* s = new* Service(2);
+                    IGreet* g = s;
+                    ICalc* c = s;
+
+                    int r1 = g.Greet();   // 100 * 2 = 200
+                    int r2 = c.Add(3, 4); // (3 + 4) * 2 = 14
+                    s->free();
+                    return r1 + r2;       // 214
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(214, result.ExitCode);
+        }
+
+        [Fact]
+        public void ClassAbiVirtualDestructorSlotMatchesCppExecution()
+        {
+            string code = """
+                class Base
+                {
+                    public int* tracker;
+
+                    public Base(int* t)
+                    {
+                        this.tracker = t;
+                    }
+
+                    public virtual ~Base()
+                    {
+                        *this.tracker = *this.tracker + 1;
+                    }
+
+                    public virtual int Value()
+                    {
+                        return 10;
+                    }
+                }
+
+                class Derived : Base
+                {
+                    public Derived(int* t) : base(t) { }
+
+                    public ~Derived()
+                    {
+                        *this.tracker = *this.tracker + 20;
+                    }
+
+                    public override int Value()
+                    {
+                        return 30;
+                    }
+                }
+
+                int main()
+                {
+                    int tracker = 0;
+                    Derived* d = new* Derived(&tracker);
+                    Base* b = d;
+
+                    // b.Value() is virtual slot 0
+                    if (b.Value() != 30) return 1;
+
+                    // b->free() invokes virtual destructor
+                    b->free();
+
+                    // Derived destructor (20) + Base destructor (1) = 21
+                    if (tracker != 21) return 2;
+
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(0, result.ExitCode);
+        }
     }
 }
 

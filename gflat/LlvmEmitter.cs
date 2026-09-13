@@ -501,6 +501,16 @@ public class LlvmEmitter : IVisitor
             List<string> entries = new();
             for (int i = 0; i < vtableSize; i++)
             {
+                if (i == _currentClass.DestructorSlot)
+                {
+                    string dtorNs = _currentClass.Namespace;
+                    string dtorMangled = dtorNs.Length > 0
+                        ? $"gflat${dtorNs}${node.Name}$dtor"
+                        : $"gflat${node.Name}$dtor";
+                    entries.Add($"i8* bitcast (void (%{node.Name}*)* @{dtorMangled} to i8*)");
+                    continue;
+                }
+
                 MethodDeclaration vm = _currentClass.VirtualMethods[i];
                 if (vm.IsAbstract)
                 {
@@ -560,7 +570,7 @@ public class LlvmEmitter : IVisitor
             }
         }
 
-        // 4. Emit methods and constructors
+        // 4. Emit methods, constructors, and destructors
         foreach (AstNode member in node.Members)
         {
             if (member is MethodDeclaration method)
@@ -574,6 +584,16 @@ public class LlvmEmitter : IVisitor
             {
                 EmitClassConstructor(node.Name, ctor);
             }
+            else if (member is DestructorDeclaration dtor)
+            {
+                EmitClassDestructor(node.Name, dtor);
+            }
+        }
+
+        // If class didn't declare a destructor but its hierarchy has one, emit default chained destructor
+        if (_currentClass.Destructor == null && _typeChecker.HasAnyDestructor(_currentClass))
+        {
+            EmitClassDestructor(node.Name, null);
         }
 
         // 5. Emit default constructor if none defined
@@ -705,8 +725,29 @@ public class LlvmEmitter : IVisitor
             Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
             string baseThis = NewTemp();
             Emit($"    {baseThis} = bitcast %{className}* {loadedThis} to %{baseInfo.Name}*");
-            string baseCtorName = GetConstructorMangledName(baseInfo.Name, null, baseInfo.Namespace);
-            Emit($"    call void @{baseCtorName}(%{baseInfo.Name}* {baseThis})");
+
+            ConstructorDeclaration? resolvedBaseCtor = _typeChecker.GetResolvedBaseConstructor(node);
+            if (node.BaseArguments != null && resolvedBaseCtor != null)
+            {
+                List<string> baseArgs = new() { $"%{baseInfo.Name}* {baseThis}" };
+                for (int i = 0; i < node.BaseArguments.Count; i++)
+                {
+                    AstNode arg = node.BaseArguments[i];
+                    arg.Accept(this);
+                    string val = Pop();
+                    TypeExpression argType = _typeChecker.GetType(arg);
+                    val = EmitImplicitCast(val, argType, resolvedBaseCtor.Parameters[i].Type);
+                    string llvmType = EmitParamType(resolvedBaseCtor.Parameters[i].Type);
+                    baseArgs.Add($"{llvmType} {val}");
+                }
+                string baseCtorName = GetConstructorMangledName(baseInfo.Name, resolvedBaseCtor, baseInfo.Namespace);
+                Emit($"    call void @{baseCtorName}({string.Join(", ", baseArgs)})");
+            }
+            else
+            {
+                string baseCtorName = GetConstructorMangledName(baseInfo.Name, null, baseInfo.Namespace);
+                Emit($"    call void @{baseCtorName}(%{baseInfo.Name}* {baseThis})");
+            }
         }
 
         // 2. Setup vtable pointer
@@ -791,6 +832,58 @@ public class LlvmEmitter : IVisitor
         _currentClass = prevClass;
 
         Emit("    ret void");
+        Emit("}");
+        Emit("");
+    }
+
+    private void EmitClassDestructor(string className, DestructorDeclaration? node)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+        _hasTerminated = false;
+
+        _currentFunctionReturnType = "void";
+        _currentFunctionExpectedType = new NamedTypeExpression("void", null, node?.Line ?? 0);
+        string ns = _currentNamespacePath;
+        string mangledName = ns.Length > 0 ? $"gflat${ns}${className}$dtor" : $"gflat${className}$dtor";
+
+        Emit($"define void @{mangledName}(%{className}* %this) {{");
+        Emit("entry:");
+
+        string thisPtr = NewTemp();
+        Emit($"    {thisPtr} = alloca %{className}*");
+        Emit($"    store %{className}* %this, %{className}** {thisPtr}");
+        _locals["this"] = thisPtr;
+
+        TypeChecker.ClassInfo? prevClass = _currentClass;
+        _currentClass = _typeChecker.GetClass(className);
+
+        if (node?.Body != null)
+        {
+            node.Body.Accept(this);
+        }
+
+        if (_currentClass!.BaseClass != null)
+        {
+            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClass(_currentClass.BaseClass)!;
+            if (_typeChecker.HasAnyDestructor(baseInfo))
+            {
+                string loadedThis = NewTemp();
+                Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
+                string baseThis = NewTemp();
+                Emit($"    {baseThis} = bitcast %{className}* {loadedThis} to %{baseInfo.Name}*");
+                string baseDtorName = baseInfo.Namespace.Length > 0
+                    ? $"gflat${baseInfo.Namespace}${baseInfo.Name}$dtor"
+                    : $"gflat${baseInfo.Name}$dtor";
+                Emit($"    call void @{baseDtorName}(%{baseInfo.Name}* {baseThis})");
+            }
+        }
+
+        _currentClass = prevClass;
+        if (!_hasTerminated)
+        {
+            Emit("    ret void");
+        }
         Emit("}");
         Emit("");
     }
@@ -1168,6 +1261,7 @@ public class LlvmEmitter : IVisitor
     }
 
     public void Visit(ConstructorDeclaration node) { }
+    public void Visit(DestructorDeclaration node) { }
     public void Visit(Parameter node) => throw new NotImplementedException();
 
     public void Visit(BlockStatement node)
@@ -2027,16 +2121,54 @@ public class LlvmEmitter : IVisitor
     {
         if (node.Callee is MemberAccessExpression { IsArrow: true, Member: "free" } freeAccess)
         {
+            freeAccess.Object.Accept(this);
+            string ptrVal = Pop();
+            TypeExpression ptrType = _typeChecker.GetType(freeAccess.Object);
+            string llvmPtrType = EmitType(ptrType);
+
+            if (_typeChecker.TryGetClassDestructorCall(node, out (TypeChecker.ClassInfo Class, bool IsVirtual, int SlotIndex) dtorCall))
+            {
+                if (dtorCall.IsVirtual)
+                {
+                    string classPtr = ptrVal;
+                    if (llvmPtrType != $"%{dtorCall.Class.Name}*")
+                    {
+                        classPtr = NewTemp();
+                        Emit($"    {classPtr} = bitcast {llvmPtrType} {ptrVal} to %{dtorCall.Class.Name}*");
+                    }
+                    string vtableSlot = NewTemp();
+                    Emit($"    {vtableSlot} = getelementptr %{dtorCall.Class.Name}, %{dtorCall.Class.Name}* {classPtr}, i32 0, i32 0");
+                    string vtablePtr = NewTemp();
+                    Emit($"    {vtablePtr} = load i8**, i8*** {vtableSlot}");
+                    string slotPtr = NewTemp();
+                    Emit($"    {slotPtr} = getelementptr i8*, i8** {vtablePtr}, i32 {dtorCall.SlotIndex}");
+                    string rawFnPtr = NewTemp();
+                    Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
+                    string dtorFn = NewTemp();
+                    Emit($"    {dtorFn} = bitcast i8* {rawFnPtr} to void (%{dtorCall.Class.Name}*)*");
+                    Emit($"    call void {dtorFn}(%{dtorCall.Class.Name}* {classPtr})");
+                }
+                else
+                {
+                    string classPtr = ptrVal;
+                    if (llvmPtrType != $"%{dtorCall.Class.Name}*")
+                    {
+                        classPtr = NewTemp();
+                        Emit($"    {classPtr} = bitcast {llvmPtrType} {ptrVal} to %{dtorCall.Class.Name}*");
+                    }
+                    string dtorNs = dtorCall.Class.Namespace;
+                    string dtorMangled = dtorNs.Length > 0
+                        ? $"gflat${dtorNs}${dtorCall.Class.Name}$dtor"
+                        : $"gflat${dtorCall.Class.Name}$dtor";
+                    Emit($"    call void @{dtorMangled}(%{dtorCall.Class.Name}* {classPtr})");
+                }
+            }
+
             if (!_externNames.Contains("free"))
             {
                 _externNames.Add("free");
                 EmitGlobal("declare void @free(i8*)");
             }
-
-            freeAccess.Object.Accept(this);
-            string ptrVal = Pop();
-            TypeExpression ptrType = _typeChecker.GetType(freeAccess.Object);
-            string llvmPtrType = EmitType(ptrType);
 
             string castPtr;
             if (llvmPtrType != "i8*")

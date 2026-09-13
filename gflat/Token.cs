@@ -63,6 +63,7 @@ namespace gflat
             TokenKind.OpenBracket => "[",
             TokenKind.CloseBracket => "]",
             TokenKind.QuestionMark => "?",
+            TokenKind.Tilde => "~",
             TokenKind.Caret => "^",
             TokenKind.Dollar => "$",
             TokenKind.EqualsGreater => "=>",
@@ -124,6 +125,7 @@ namespace gflat
             TokenKind.Virtual => "virtual",
             TokenKind.Override => "override",
             TokenKind.Abstract => "abstract",
+            TokenKind.Base => "base",
             TokenKind.InterpolatedStringExprStart => "{",
             TokenKind.InterpolatedStringExprEnd => "}",
             _ => throw new InvalidOperationException($"Cannot infer token text of '{kind}'")

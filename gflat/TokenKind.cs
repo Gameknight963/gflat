@@ -48,6 +48,7 @@ namespace gflat
         Comma,
         OpenBracket,
         CloseBracket,
+        Tilde,
         Dot,
         EqualsGreater,
         Caret,
@@ -112,6 +113,7 @@ namespace gflat
         InterpolatedStringExprEnd,
         Global,
         Operator,
+        Base,
         EndOfFile
     }
 }

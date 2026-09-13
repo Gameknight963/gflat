@@ -1556,9 +1556,8 @@ namespace gflat.Tests
                 class Dog : Animal
                 {
                     public int barkVolume;
-                    public Dog(int a, int v)
+                    public Dog(int a, int v) : base(a)
                     {
-                        this.age = a;
                         this.barkVolume = v;
                     }
                 }
@@ -1737,6 +1736,100 @@ namespace gflat.Tests
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Cannot access protected field 'protVal'", ex.Message);
+        }
+
+        [Fact]
+        public void ClassBaseConstructorMissingThrows()
+        {
+            string code = """
+                class Base
+                {
+                    public Base(int x) { }
+                }
+
+                class Derived : Base
+                {
+                    public Derived(int y) { }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must explicitly call a base constructor", ex.Message);
+        }
+
+        [Fact]
+        public void ClassBaseConstructorTypeMismatchThrows()
+        {
+            string code = """
+                class Base
+                {
+                    public Base(int x) { }
+                }
+
+                class Derived : Base
+                {
+                    public Derived() : base("hello") { }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("No matching base constructor found", ex.Message);
+        }
+
+        [Fact]
+        public void ClassDestructorMismatchedNameThrows()
+        {
+            string code = """
+                class Animal
+                {
+                    public ~Dog() { }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("does not match class name", ex.Message);
+        }
+
+        [Fact]
+        public void ClassDestructorDuplicateThrows()
+        {
+            string code = """
+                class Animal
+                {
+                    public ~Animal() { }
+                    public ~Animal() { }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("already defines a destructor", ex.Message);
+        }
+
+        [Fact]
+        public void ClassImplementsInterfaceTypeChecksCleanly()
+        {
+            string code = """
+                interface IGreeter
+                {
+                    int Greet();
+                }
+
+                class Person : IGreeter
+                {
+                    public int Greet() { return 42; }
+                }
+
+                int main()
+                {
+                    Person* p = new* Person();
+                    IGreeter* g = p;
+                    return g.Greet();
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
         }
     }
 }

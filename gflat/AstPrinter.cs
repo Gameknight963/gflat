@@ -344,6 +344,12 @@ namespace gflat
             });
         }
 
+        public void Visit(DestructorDeclaration node)
+        {
+            Print($"Destructor: ~{node.Name}{(node.IsVirtual ? " (virtual)" : "")}");
+            Indented(() => node.Body.Accept(this));
+        }
+
         public void Visit(DefaultExpression node)
         {
             Print($"DefaultExpression{(node.TargetType != null ? "" : " (inferred)")}");

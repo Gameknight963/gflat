@@ -128,6 +128,8 @@ namespace gflat
             public Dictionary<string, (MethodDeclaration Method, string DeclaringClass)> Methods = new();
             public List<MethodDeclaration> VirtualMethods = new();
             public Dictionary<string, int> VTableSlots = new(); // Method name -> slot index
+            public DestructorDeclaration? Destructor = null;
+            public int DestructorSlot = -1; // -1 if non-virtual or no destructor
             public int Line = 0;
             public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
         }
@@ -137,9 +139,17 @@ namespace gflat
         public bool IsClass(string name) => _classes.ContainsKey(name);
         private ClassInfo? _currentClass = null;
 
+        private readonly Dictionary<ConstructorDeclaration, ConstructorDeclaration> _resolvedBaseConstructors = new();
+        public ConstructorDeclaration? GetResolvedBaseConstructor(ConstructorDeclaration ctor) =>
+            _resolvedBaseConstructors.TryGetValue(ctor, out ConstructorDeclaration? baseCtor) ? baseCtor : null;
+
         private readonly Dictionary<CallExpression, (ClassInfo Class, int SlotIndex, MethodDeclaration Method)> _virtualMethodCalls = new();
         public bool TryGetVirtualMethodCall(CallExpression node, out (ClassInfo Class, int SlotIndex, MethodDeclaration Method) call) =>
             _virtualMethodCalls.TryGetValue(node, out call);
+
+        private readonly Dictionary<CallExpression, (ClassInfo Class, bool IsVirtual, int SlotIndex)> _classDestructorCalls = new();
+        public bool TryGetClassDestructorCall(CallExpression node, out (ClassInfo Class, bool IsVirtual, int SlotIndex) call) =>
+            _classDestructorCalls.TryGetValue(node, out call);
 
         public bool IsSubclassOf(string derivedName, string baseName)
         {
@@ -164,6 +174,14 @@ namespace gflat
             if (cInfo.Interfaces.Contains(ifaceName)) return true;
             if (cInfo.BaseClass != null && _classes.TryGetValue(cInfo.BaseClass, out ClassInfo? baseInfo))
                 return ClassImplementsInterface(baseInfo, ifaceName);
+            return false;
+        }
+
+        public bool HasAnyDestructor(ClassInfo c)
+        {
+            if (c.Destructor != null) return true;
+            if (c.BaseClass != null && _classes.TryGetValue(c.BaseClass, out ClassInfo? baseInfo))
+                return HasAnyDestructor(baseInfo);
             return false;
         }
 
@@ -973,6 +991,20 @@ namespace gflat
                         cls.Methods[kvp.Key] = kvp.Value;
                     }
                 }
+                // Inherit base interfaces
+                foreach (string baseIface in baseInfo.Interfaces)
+                {
+                    if (!cls.Interfaces.Contains(baseIface))
+                    {
+                        cls.Interfaces.Add(baseIface);
+                    }
+                }
+
+                // Inherit base destructor slot
+                if (baseInfo.DestructorSlot >= 0)
+                {
+                    cls.DestructorSlot = baseInfo.DestructorSlot;
+                }
             }
 
             // Append cls's own declared fields
@@ -1021,6 +1053,22 @@ namespace gflat
                     cls.VirtualMethods.Add(method);
                     cls.VTableSlots[method.Name] = slot;
                     cls.Methods[method.Name] = (method, cls.Name);
+                }
+            }
+
+            // Handle virtual destructor slot
+            bool isVirtualDtor = cls.Destructor?.IsVirtual == true || (cls.Destructor != null && cls.VirtualMethods.Count > 0) || cls.DestructorSlot >= 0;
+            if (isVirtualDtor)
+            {
+                if (cls.DestructorSlot < 0)
+                {
+                    cls.DestructorSlot = cls.VirtualMethods.Count;
+                    cls.VTableSlots["$dtor"] = cls.DestructorSlot;
+                    cls.VirtualMethods.Add(new MethodDeclaration("$dtor", Void, new List<Parameter>(), null, TokenKind.Public, false, true, false, false, cls.Destructor?.Line ?? cls.Line));
+                }
+                else
+                {
+                    cls.VirtualMethods[cls.DestructorSlot] = new MethodDeclaration("$dtor", Void, new List<Parameter>(), null, TokenKind.Public, false, false, true, false, cls.Destructor?.Line ?? cls.Line);
                 }
             }
 
@@ -1138,6 +1186,14 @@ namespace gflat
                     else if (m is ConstructorDeclaration ctor)
                     {
                         info.Constructors.Add(ctor);
+                    }
+                    else if (m is DestructorDeclaration dtor)
+                    {
+                        if (info.Destructor != null)
+                            throw new TypeCheckException($"Class '{cls.Name}' already defines a destructor", dtor.Line);
+                        if (dtor.Name != cls.Name)
+                            throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match class name '{cls.Name}'", dtor.Line);
+                        info.Destructor = dtor;
                     }
                     else if (m is MethodDeclaration cm)
                     {
@@ -1263,6 +1319,10 @@ namespace gflat
                 else if (member is ConstructorDeclaration ctor)
                 {
                     ctor.Accept(this);
+                }
+                else if (member is DestructorDeclaration dtor)
+                {
+                    dtor.Accept(this);
                 }
                 else if (member is MethodDeclaration method)
                 {
@@ -1492,6 +1552,84 @@ namespace gflat
                 ValidateTypeUsage(p.Type, p.Line);
                 DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
             }
+
+            if (node.BaseArguments != null)
+            {
+                if (_currentClass == null || _currentClass.BaseClass == null)
+                {
+                    throw new TypeCheckException($"Cannot call base constructor because '{ownerName}' does not inherit from a base class", node.Line);
+                }
+
+                ClassInfo baseClass = _classes[_currentClass.BaseClass];
+                foreach (AstNode arg in node.BaseArguments)
+                {
+                    arg.Accept(this);
+                }
+
+                List<ConstructorDeclaration> matches = new();
+                foreach (ConstructorDeclaration baseCtor in baseClass.Constructors)
+                {
+                    if (baseCtor.Parameters.Count != node.BaseArguments.Count)
+                        continue;
+
+                    bool matchesParams = true;
+                    for (int i = 0; i < node.BaseArguments.Count; i++)
+                    {
+                        TypeExpression paramType = ResolveAlias(baseCtor.Parameters[i].Type);
+                        TypeExpression argType = GetType(node.BaseArguments[i]);
+                        if (!IsAssignable(paramType, argType, node.BaseArguments[i]))
+                        {
+                            matchesParams = false;
+                            break;
+                        }
+                    }
+
+                    if (matchesParams)
+                        matches.Add(baseCtor);
+                }
+
+                if (matches.Count == 0)
+                {
+                    string argTypes = string.Join(", ", node.BaseArguments.Select(a => TypeName(GetType(a))));
+                    throw new TypeCheckException($"No matching base constructor found for '{baseClass.Name}' with arguments ({argTypes})", node.Line);
+                }
+                if (matches.Count > 1)
+                {
+                    throw new TypeCheckException($"Call to base constructor of '{baseClass.Name}' is ambiguous", node.Line);
+                }
+
+                _resolvedBaseConstructors[node] = matches[0];
+            }
+            else if (_currentClass != null && _currentClass.BaseClass != null)
+            {
+                ClassInfo baseClass = _classes[_currentClass.BaseClass];
+                if (baseClass.Constructors.Count > 0 && !baseClass.Constructors.Any(c => c.Parameters.Count == 0))
+                {
+                    throw new TypeCheckException($"Class '{ownerName}' must explicitly call a base constructor because base class '{baseClass.Name}' does not define a parameterless constructor", node.Line);
+                }
+            }
+
+            node.Body.Accept(this);
+            PopScope();
+        }
+
+        public void Visit(DestructorDeclaration node)
+        {
+            if (_currentClass == null && _currentStruct == null)
+            {
+                throw new TypeCheckException("Destructor must be declared inside a class or struct", node.Line);
+            }
+            string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
+            if (node.Name != ownerName)
+            {
+                string kindStr = _currentStruct != null ? "struct" : "class";
+                throw new TypeCheckException($"Destructor name '~{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
+            }
+
+            PushScope();
+            NamedTypeExpression typeExpr = new NamedTypeExpression(ownerName, null, node.Line);
+            PointerTypeExpression thisType = new PointerTypeExpression(typeExpr, false, node.Line);
+            DeclareVariable("this", thisType, node.Line);
             node.Body.Accept(this);
             PopScope();
         }
@@ -2027,6 +2165,21 @@ namespace gflat
                             throw new TypeCheckException("Cannot call '->free' on a function pointer", node.Line);
                         if (node.Arguments.Count != 0)
                             throw new TypeCheckException("'free()' takes no arguments", node.Line);
+
+                        TypeExpression? innerType = targetObjType is PointerTypeExpression p ? p.Inner : (targetObjType is ManagedTypeExpression m ? m.Inner : null);
+                        if (innerType != null)
+                        {
+                            TypeExpression resInner = ResolveAlias(innerType);
+                            if (resInner is NamedTypeExpression namedCls && _classes.TryGetValue(namedCls.Name, out ClassInfo? clsInfo))
+                            {
+                                bool hasVirtualDtor = clsInfo.DestructorSlot >= 0;
+                                bool hasDtor = hasVirtualDtor || HasAnyDestructor(clsInfo);
+                                if (hasDtor)
+                                {
+                                    _classDestructorCalls[node] = (clsInfo, hasVirtualDtor, clsInfo.DestructorSlot);
+                                }
+                            }
+                        }
 
                         RecordType(node, Void);
                         return;

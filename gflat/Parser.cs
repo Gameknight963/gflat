@@ -269,6 +269,16 @@ namespace gflat
                 else break;
             }
 
+            if (Check(TokenKind.Tilde))
+            {
+                Consume();
+                string dtorName = Expect(TokenKind.Identifier).Text;
+                Expect(TokenKind.OpenParen);
+                Expect(TokenKind.CloseParen);
+                BlockStatement dtorBody = ParseBodyOrBlock();
+                return new DestructorDeclaration(dtorName, dtorBody, isVirtual, line);
+            }
+
             if (Check(TokenKind.Alias))
                 return ParseAliasDeclaration(accessibility, line);
             if (Check(TokenKind.Enum))
@@ -367,8 +377,36 @@ namespace gflat
                     Expect(TokenKind.Comma);
             }
             Expect(TokenKind.CloseParen);
+
+            List<AstNode>? baseArguments = null;
+            if (Match(TokenKind.Colon))
+            {
+                if (Check(TokenKind.Base))
+                {
+                    Consume();
+                }
+                else if (Check(TokenKind.Identifier))
+                {
+                    Consume();
+                }
+                else
+                {
+                    throw new Exception($"Expected 'base' or base class name after ':' in constructor initializer on line {Current.Line}");
+                }
+
+                Expect(TokenKind.OpenParen);
+                baseArguments = new List<AstNode>();
+                while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+                {
+                    baseArguments.Add(ParseExpression());
+                    if (!Check(TokenKind.CloseParen))
+                        Expect(TokenKind.Comma);
+                }
+                Expect(TokenKind.CloseParen);
+            }
+
             BlockStatement body = ParseBodyOrBlock();
-            return new ConstructorDeclaration(name, parameters, body, accessibility, line);
+            return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments);
         }
 
         private BlockStatement ParseBodyOrBlock()

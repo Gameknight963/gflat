@@ -1412,6 +1412,129 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Use '.' to call method 'Area' on 'IShape'", ex.Message);
         }
+
+        [Fact]
+        public void DefaultExpressionsTypeCheckCleanly()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                Point GetPoint()
+                {
+                    return default;
+                }
+
+                int main()
+                {
+                    Point p1 = default;
+                    Point p2 = default(Point);
+                    int x1 = default;
+                    int x2 = default(int);
+                    Point* ptr = default;
+                    p1 = default;
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void StructWithFieldInitializersAndConstructorsTypeChecks()
+        {
+            string code = """
+                struct Point
+                {
+                    int x = 10;
+                    int y = 20;
+
+                    Point(int x, int y)
+                    {
+                        this.x = x;
+                        this.y = y;
+                    }
+                }
+
+                int main()
+                {
+                    Point p1 = new Point(1, 2);
+                    Point* p2 = new* Point(3, 4);
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void InvalidFieldInitializerThrows()
+        {
+            string code = """
+                struct Point
+                {
+                    int x = "not an int";
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ConstructorNameMismatchThrows()
+        {
+            string code = """
+                struct Point
+                {
+                    WrongName(int x)
+                    {
+                    }
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Constructor name 'WrongName' does not match struct name 'Point'", ex.Message);
+        }
+
+        [Fact]
+        public void ConstructorArgumentMismatchThrows()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    Point(int x)
+                    {
+                        this.x = x;
+                    }
+                }
+
+                int main()
+                {
+                    Point p = new Point("string instead of int");
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
     }
 }
 

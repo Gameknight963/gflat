@@ -3,8 +3,18 @@ extern void* malloc(long size);
 
 struct Point
 {
-    int x;
-    int y;
+    int x = 0;
+    int y = 0;
+
+    Point()
+    {
+    }
+
+    Point(int x, int y)
+    {
+        this.x = x;
+        this.y = y;
+    }
 
     void Move(int dx, int dy)
     {
@@ -60,8 +70,14 @@ interface IShape
 
 struct Rect : IShape
 {
-    int w;
-    int h;
+    int w = 1;
+    int h = 1;
+
+    Rect(int w, int h)
+    {
+        this.w = w;
+        this.h = h;
+    }
 
     int Area()
     {
@@ -122,11 +138,11 @@ int main()
 {
     LogMessage("Top-level functions work!");
 
-    Point p;
-    p.x = 10;
-    p.y = 20;
-    p.Print();
+    Point pDef = default;
+    printf("default point: (%d, %d)\n", pDef.x, pDef.y);
 
+    Point p = new Point(10, 20);
+    p.Print();
     char[] a = "string";
     printf("buffer before: %s\n", a);
     a[0] = 'S';
@@ -143,10 +159,8 @@ int main()
 
     defer printf("deferred cleanup: main finished!\n");
 
-    Point* heapPoint = malloc(8L);
+    Point* heapPoint = new* Point(42, 84);
     defer heapPoint->free();
-    heapPoint.x = 42;
-    heapPoint.y = 84;
     heapPoint.Print();
     printf("heapPoint address: 0x%llx\n", heapPoint->address);
 
@@ -238,14 +252,10 @@ int main()
     byte byteTrunc = (byte)300;
     printf("byte truncated from 300: %u\n", byteTrunc);
 
-    Rect rectStack;
-    rectStack.w = 5;
-    rectStack.h = 10;
+    Rect rectStack = new Rect(5, 10);
     PrintShape("Stack Rect", &rectStack);
 
-    Rect* rectHeap = (Rect*)malloc(8L);
-    rectHeap.w = 7;
-    rectHeap.h = 3;
+    Rect* rectHeap = new* Rect(7, 3);
     PrintShape("Heap Rect", rectHeap);
     rectHeap->free();
 

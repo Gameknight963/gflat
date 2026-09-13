@@ -1903,6 +1903,229 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void DefaultLiteralStructExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    Point p = default;
+                    if (p.x != 0 || p.y != 0)
+                    {
+                        return 1;
+                    }
+                    Point p2 = default(Point);
+                    if (p2.x != 0 || p2.y != 0)
+                    {
+                        return 2;
+                    }
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void DefaultPrimitiveExecution()
+        {
+            string code = """
+                int main()
+                {
+                    int x = default;
+                    bool b = default;
+                    int*? ptr = default;
+                    int y = default(int);
+
+                    if (x != 0 || b != false || ptr != null || y != 0)
+                    {
+                        return 1;
+                    }
+
+                    int* rawPtr = default;
+                    if (!rawPtr->is_null)
+                    {
+                        return 2;
+                    }
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void FieldInitializerExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x = 15;
+                    int y = 27;
+                }
+
+                int main()
+                {
+                    Point p = new Point();
+                    if (p.x != 15 || p.y != 27)
+                    {
+                        return 1;
+                    }
+
+                    Point* hp = new* Point();
+                    if (hp.x != 15 || hp.y != 27)
+                    {
+                        hp->free();
+                        return 2;
+                    }
+                    hp->free();
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void CustomConstructorStackExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    Point(int x, int y)
+                    {
+                        this.x = x;
+                        this.y = y;
+                    }
+                }
+
+                int main()
+                {
+                    Point p = new Point(10, 32);
+                    return p.x + p.y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void CustomConstructorHeapExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    Point(int x, int y)
+                    {
+                        this.x = x;
+                        this.y = y;
+                    }
+                }
+
+                int main()
+                {
+                    Point* p = new* Point(20, 22);
+                    int sum = p.x + p.y;
+                    p->free();
+                    return sum;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ConstructorWithFieldInitializersExecution()
+        {
+            string code = """
+                struct Widget
+                {
+                    int a = 10;
+                    int b = 20;
+                    int c = 30;
+
+                    Widget(int customB)
+                    {
+                        this.b = customB;
+                    }
+                }
+
+                int main()
+                {
+                    Widget w = new Widget(99);
+                    if (w.a != 10 || w.b != 99 || w.c != 30)
+                    {
+                        return 1;
+                    }
+                    return 42;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void MultipleConstructorOverloadsExecution()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    Point()
+                    {
+                        this.x = 1;
+                        this.y = 2;
+                    }
+
+                    Point(int val)
+                    {
+                        this.x = val;
+                        this.y = val;
+                    }
+
+                    Point(int x, int y)
+                    {
+                        this.x = x;
+                        this.y = y;
+                    }
+                }
+
+                int main()
+                {
+                    Point p0 = new Point();
+                    Point p1 = new Point(10);
+                    Point p2 = new Point(5, 14);
+
+                    int total = (p0.x + p0.y) + (p1.x + p1.y) + (p2.x + p2.y);
+                    // (1 + 2) + (10 + 10) + (5 + 14) = 3 + 20 + 19 = 42
+                    return total;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
 

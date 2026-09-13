@@ -1,4 +1,4 @@
-﻿using gflat.ast;
+using gflat.ast;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -25,6 +25,7 @@ namespace gflat
             Indented(() =>
             {
                 foreach (UsingDirective u in node.Usings) u.Accept(this);
+                foreach (AstNode m in node.Members) m.Accept(this);
                 foreach (NamespaceDeclaration n in node.Namespaces) n.Accept(this);
             });
         }

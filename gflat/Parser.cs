@@ -1,4 +1,4 @@
-﻿using gflat.ast;
+using gflat.ast;
 
 namespace gflat
 {
@@ -45,14 +45,20 @@ namespace gflat
             int line = Current.Line;
             List<UsingDirective> usings = new();
             List<NamespaceDeclaration> namespaces = new();
+            List<AstNode> members = new();
 
             while (Check(TokenKind.Using))
                 usings.Add(ParseUsingDirective());
 
             while (!Check(TokenKind.EndOfFile))
-                namespaces.Add(ParseNamespaceDeclaration());
+            {
+                if (Check(TokenKind.Namespace))
+                    namespaces.Add(ParseNamespaceDeclaration());
+                else
+                    members.Add(ParseTopLevelMember());
+            }
 
-            return new CompilationUnit(usings, namespaces, line);
+            return new CompilationUnit(usings, namespaces, members, line);
         }
 
         private UsingDirective ParseUsingDirective()
@@ -74,29 +80,29 @@ namespace gflat
             List<AstNode> members = new();
             while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
             {
-                List<AttributeNode> attributes = ParseAttributes();
-
-                if (Check(TokenKind.Extern))
-                {
-                    members.Add(ParseExternDeclaration(attributes, Current.Line));
-                    continue;
-                }
-                if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface))
-                {
-                    members.Add(ParseTypeDeclaration());
-                    continue;
-                }
                 if (Check(TokenKind.Namespace))
                 {
                     members.Add(ParseNamespaceDeclaration());
                     continue;
                 }
-                // free function
-                members.Add(ParseFreeFunctionOrField(attributes));
+                members.Add(ParseTopLevelMember());
             }
 
             Expect(TokenKind.CloseBrace);
             return new NamespaceDeclaration(name, members, line);
+        }
+
+        private AstNode ParseTopLevelMember()
+        {
+            List<AttributeNode> attributes = ParseAttributes();
+
+            if (Check(TokenKind.Extern))
+                return ParseExternDeclaration(attributes, Current.Line);
+            if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface))
+                return ParseTypeDeclaration();
+
+            // free function or field
+            return ParseFreeFunctionOrField(attributes);
         }
 
         private AstNode ParseFreeFunctionOrField(List<AttributeNode> attributes)

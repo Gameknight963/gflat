@@ -1,4 +1,4 @@
-﻿using gflat.ast;
+using gflat.ast;
 using gflat.CompileExceptions;
 
 namespace gflat
@@ -13,6 +13,14 @@ namespace gflat
         private readonly Dictionary<NamespaceDeclaration, NamespaceScope> _namespaceScopes = new();
 
         private Dictionary<string, StructInfo> _structs = new();
+        private readonly Dictionary<MethodDeclaration, string> _functionNamespaces = new();
+        private readonly Dictionary<CallExpression, AstNode> _resolvedCalls = new();
+
+        public string GetFunctionNamespace(MethodDeclaration method) =>
+            _functionNamespaces.TryGetValue(method, out string? ns) ? ns : "";
+
+        public AstNode? GetResolvedCall(CallExpression call) =>
+            _resolvedCalls.TryGetValue(call, out AstNode? target) ? target : null;
 
         public StructInfo? GetStruct(string name) =>
             _structs.TryGetValue(name, out StructInfo? info) ? info : null;
@@ -101,46 +109,70 @@ namespace gflat
 
         public void Visit(CompilationUnit node)
         {
-            // first pass: build namespace tree
+            // first pass: register top-level members in global scope
+            foreach (AstNode member in node.Members)
+                RegisterMemberInScope(member, _globalScope, "");
+
+            // and nested namespaces
             foreach (NamespaceDeclaration ns in node.Namespaces)
-                BuildNamespaceScope(ns, _globalScope);
+                BuildNamespaceScope(ns, _globalScope, "");
 
             // second pass: type check bodies
+            _currentNamespace = _globalScope;
+            foreach (AstNode member in node.Members)
+                member.Accept(this);
+
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 ns.Accept(this);
         }
 
-        private void BuildNamespaceScope(NamespaceDeclaration ns, NamespaceScope parent)
+        private void RegisterMemberInScope(AstNode member, NamespaceScope scope, string nsPath)
         {
+            if (member is MethodDeclaration method)
+            {
+                scope.Functions[method.Name] = method;
+                _functionNamespaces[method] = nsPath;
+            }
+            else if (member is ExternDeclaration ext)
+            {
+                scope.Externs[ext.Name] = ext;
+            }
+            else if (member is StructDeclaration str)
+            {
+                StructInfo info = new StructInfo();
+                foreach (AstNode m in str.Members)
+                    if (m is FieldDeclaration field)
+                        info.Fields.Add((field.Name, field.Type));
+                _structs[str.Name] = info;
+            }
+            else if (member is ClassDeclaration cls)
+            {
+                foreach (AstNode m in cls.Members)
+                {
+                    if (m is MethodDeclaration cm)
+                    {
+                        scope.Functions[cm.Name] = cm;
+                        _functionNamespaces[cm] = nsPath;
+                    }
+                    if (m is ExternDeclaration ce)
+                        scope.Externs[ce.Name] = ce;
+                }
+            }
+            else if (member is NamespaceDeclaration nested)
+            {
+                BuildNamespaceScope(nested, scope, nsPath.Length > 0 ? $"{nsPath}${nested.Name}" : nested.Name);
+            }
+        }
+
+        private void BuildNamespaceScope(NamespaceDeclaration ns, NamespaceScope parent, string parentPath)
+        {
+            string nsPath = parentPath.Length > 0 ? $"{parentPath}${ns.Name}" : ns.Name;
             NamespaceScope scope = new NamespaceScope { Parent = parent };
             parent.Children[ns.Name] = scope;
             _namespaceScopes[ns] = scope;
 
             foreach (AstNode member in ns.Members)
-            {
-                if (member is MethodDeclaration method)
-                    scope.Functions[method.Name] = method;
-                else if (member is ExternDeclaration ext)
-                    scope.Externs[ext.Name] = ext;
-                else if (member is StructDeclaration str)
-                {
-                    StructInfo info = new StructInfo();
-                    foreach (AstNode m in str.Members)
-                        if (m is FieldDeclaration field)
-                            info.Fields.Add((field.Name, field.Type));
-                    _structs[str.Name] = info;
-                }
-                else if (member is ClassDeclaration cls)
-                    foreach (AstNode m in cls.Members)
-                    {
-                        if (m is MethodDeclaration cm)
-                            scope.Functions[cm.Name] = cm;
-                        if (m is ExternDeclaration ce)
-                            scope.Externs[ce.Name] = ce;
-                    }
-                else if (member is NamespaceDeclaration nested)
-                    BuildNamespaceScope(nested, scope);
-            }
+                RegisterMemberInScope(member, scope, nsPath);
         }
 
         public void Visit(UsingDirective node) { }
@@ -336,6 +368,7 @@ namespace gflat
             TypeExpression type = node.Token.Kind switch
             {
                 TokenKind.IntLiteral => Int,
+                TokenKind.HexInt => Int,
                 TokenKind.FloatLiteral => Float,
                 TokenKind.DoubleLiteral => Float,
                 TokenKind.LongLiteral => Long,
@@ -393,6 +426,14 @@ namespace gflat
             {
                 nsAccess.Accept(this);
                 RecordType(node, GetType(nsAccess));
+                NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
+                if (scope != null)
+                {
+                    if (scope.Functions.TryGetValue(nsAccess.Member, out MethodDeclaration? m))
+                        _resolvedCalls[node] = m;
+                    else if (scope.Externs.TryGetValue(nsAccess.Member, out ExternDeclaration? e))
+                        _resolvedCalls[node] = e;
+                }
                 return;
             }
             else
@@ -402,12 +443,15 @@ namespace gflat
 
             if (ext != null)
             {
+                _resolvedCalls[node] = ext;
                 RecordType(node, ext.ReturnType);
                 return;
             }
 
             if (method == null)
                 throw new TypeCheckException($"Unknown function '{funcName}'", node.Line);
+
+            _resolvedCalls[node] = method;
 
             if (node.Arguments.Count != method.Parameters.Count)
                 throw new TypeCheckException(

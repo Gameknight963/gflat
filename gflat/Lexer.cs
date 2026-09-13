@@ -1,4 +1,4 @@
-﻿namespace gflat;
+namespace gflat;
 
 public class Lexer
 {
@@ -202,6 +202,7 @@ public class Lexer
             "extralong" => TokenKind.ExtraLong,
             "string" => TokenKind.String,
             "extern" => TokenKind.Extern,
+            "defer" => TokenKind.Defer,
             "global" => TokenKind.Global,
             _ => TokenKind.Identifier
         };

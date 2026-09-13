@@ -1,4 +1,4 @@
-﻿namespace gflat
+namespace gflat
 {
     public enum TokenKind
     {
@@ -79,6 +79,7 @@
         Readonly,
         Null,
         Extern,
+        Defer,
         True,
         False,
         Void,

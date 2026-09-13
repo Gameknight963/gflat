@@ -19,6 +19,7 @@ namespace gflat
         void Visit(WhileStatement node);
         void Visit(ForStatement node);
         void Visit(VariableDeclaration node);
+        void Visit(DeferStatement node);
         void Visit(ExpressionStatement node);
         void Visit(BinaryExpression node);
         void Visit(UnaryExpression node);

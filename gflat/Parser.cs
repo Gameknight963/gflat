@@ -447,6 +447,8 @@ namespace gflat
                     Consume();
                     Expect(TokenKind.Semicolon);
                     return new ContinueStatement(line);
+                case TokenKind.Defer:
+                    return ParseDeferStatement();
             }
 
             // variable declaration or expression statement
@@ -481,6 +483,14 @@ namespace gflat
             {
                 _pos = saved;
             }
+        }
+
+        private DeferStatement ParseDeferStatement()
+        {
+            int line = Current.Line;
+            Expect(TokenKind.Defer);
+            AstNode stmt = ParseStatement();
+            return new DeferStatement(stmt, line);
         }
 
         private ReturnStatement ParseReturnStatement()
@@ -639,7 +649,7 @@ namespace gflat
                 Check(TokenKind.Ampersand) || Check(TokenKind.PlusPlus) || Check(TokenKind.MinusMinus))
             {
                 Token op = Consume();
-                AstNode operand = ParseExpression(8); // high binding power for prefix
+                AstNode operand = ParseExpression(14); // high binding power for prefix (higher than binary ops)
                 return new UnaryExpression(operand, op.Kind, true, line);
             }
 

@@ -141,6 +141,12 @@ namespace gflat
             });
         }
 
+        public void Visit(DeferStatement node)
+        {
+            Print("Defer");
+            Indented(() => node.Statement.Accept(this));
+        }
+
         public void Visit(ExpressionStatement node)
         {
             Print("ExpressionStatement");

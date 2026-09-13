@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -94,6 +94,7 @@ namespace gflat
             TokenKind.Readonly => "readonly",
             TokenKind.Null => "null",
             TokenKind.Extern => "extern",
+            TokenKind.Defer => "defer",
             TokenKind.True => "true",
             TokenKind.False => "false",
             TokenKind.Void => "void",

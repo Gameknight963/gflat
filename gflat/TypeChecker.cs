@@ -14,6 +14,8 @@ namespace gflat
 
         private Dictionary<string, StructInfo> _structs = new();
         private Dictionary<string, EnumInfo> _enums = new();
+        private Dictionary<string, InterfaceInfo> _interfaces = new();
+        private readonly Dictionary<CallExpression, (InterfaceInfo Interface, int SlotIndex, MethodDeclaration Method)> _interfaceMethodCalls = new();
         private readonly Dictionary<MethodDeclaration, string> _functionNamespaces = new();
         private readonly Dictionary<CallExpression, AstNode> _resolvedCalls = new();
         private readonly Dictionary<UnaryExpression, AstNode> _functionAddressTargets = new();
@@ -55,6 +57,14 @@ namespace gflat
 
         public bool IsIndirectCall(CallExpression call) => _indirectCalls.Contains(call);
 
+        public bool TryGetInterfaceCall(CallExpression node, out (InterfaceInfo Interface, int SlotIndex, MethodDeclaration Method) call) =>
+            _interfaceMethodCalls.TryGetValue(node, out call);
+
+        public InterfaceInfo? GetInterface(string name) =>
+            _interfaces.TryGetValue(name, out InterfaceInfo? info) ? info : null;
+
+        public bool IsInterface(string name) => _interfaces.ContainsKey(name);
+
         public StructInfo? GetStruct(string name) =>
             _structs.TryGetValue(name, out StructInfo? info) ? info : null;
 
@@ -84,7 +94,18 @@ namespace gflat
             public List<(string Name, TypeExpression Type)> Fields = new();
             public Dictionary<string, MethodDeclaration> Methods = new();
             public List<OperatorDeclaration> Operators = new();
+            public List<string> Interfaces = new();
             public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
+        }
+
+        public class InterfaceInfo
+        {
+            public string Name = "";
+            public string Namespace = "";
+            public List<MethodDeclaration> Methods = new();
+            public Dictionary<string, MethodDeclaration> MethodsByName = new();
+            public Dictionary<string, int> MethodIndices = new();
+            public TokenKind Accessibility = TokenKind.Public;
         }
 
         public class EnumInfo
@@ -102,6 +123,7 @@ namespace gflat
             public Dictionary<string, ExternDeclaration> Externs = new();
             public Dictionary<string, TypeExpression> Aliases = new();
             public Dictionary<string, EnumInfo> Enums = new();
+            public Dictionary<string, InterfaceInfo> Interfaces = new();
             public Dictionary<string, NamespaceScope> Children = new();
             public NamespaceScope? Parent;
         }
@@ -306,6 +328,44 @@ namespace gflat
             if (_globalScope.Children.TryGetValue(nsName, out NamespaceScope? gChild))
                 return gChild;
             return null;
+        }
+
+        public InterfaceInfo? ResolveInterface(NamedTypeExpression named)
+        {
+            if (named.Namespace != null)
+            {
+                NamespaceScope? ns = ResolveNamespaceByName(named.Namespace);
+                if (ns != null && ns.Interfaces.TryGetValue(named.Name, out InterfaceInfo? info))
+                    return info;
+            }
+            else
+            {
+                NamespaceScope? cur = _currentNamespace;
+                while (cur != null)
+                {
+                    if (cur.Interfaces.TryGetValue(named.Name, out InterfaceInfo? info))
+                        return info;
+                    cur = cur.Parent;
+                }
+                if (_globalScope.Interfaces.TryGetValue(named.Name, out InterfaceInfo? gInfo))
+                    return gInfo;
+            }
+            return _interfaces.TryGetValue(named.Name, out InterfaceInfo? fallback) ? fallback : null;
+        }
+
+        public bool IsInterface(NamedTypeExpression named) => ResolveInterface(named) != null;
+
+        private void ValidateTypeUsage(TypeExpression type, int line)
+        {
+            TypeExpression resolved = ResolveAlias(type);
+            if (resolved is NamedTypeExpression named && IsInterface(named))
+            {
+                throw new TypeCheckException($"Cannot use interface '{named.Name}' as a value type. Interfaces must be used as pointers ('{named.Name}*')", line);
+            }
+            else if (resolved is ArrayTypeExpression arr)
+            {
+                ValidateTypeUsage(arr.ElementType, line);
+            }
         }
 
         private static int GetStringLiteralLength(string raw)
@@ -542,11 +602,35 @@ namespace gflat
             if (source is NamedTypeExpression { Name: "null" } && IsNullable(target))
                 return true;
 
-            // void* is implicitly convertible to/from any pointer type
+            // Struct pointer to interface pointer assignability
+            if (target is PointerTypeExpression ptIface && source is PointerTypeExpression psStruct)
+            {
+                TypeExpression targetInner = ResolveAlias(ptIface.Inner);
+                TypeExpression sourceInner = ResolveAlias(psStruct.Inner);
+                if (targetInner is NamedTypeExpression targetIfaceNamed && ResolveInterface(targetIfaceNamed) is InterfaceInfo targetIface)
+                {
+                    if (sourceInner is NamedTypeExpression sourceNamed && _structs.TryGetValue(sourceNamed.Name, out StructInfo? sInfo))
+                    {
+                        if (sInfo.Interfaces.Contains(targetIface.Name))
+                        {
+                            if (psStruct.IsNullable && !ptIface.IsNullable)
+                                return false;
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // void* is implicitly convertible to/from any pointer type (except interface fat pointer)
             if (target is PointerTypeExpression pt && source is PointerTypeExpression ps)
             {
-                if (pt.Inner is NamedTypeExpression { Name: "void" } || ps.Inner is NamedTypeExpression { Name: "void" })
-                    return true;
+                bool targetIsIface = ResolveAlias(pt.Inner) is NamedTypeExpression tNamed && IsInterface(tNamed);
+                bool sourceIsIface = ResolveAlias(ps.Inner) is NamedTypeExpression sNamed && IsInterface(sNamed);
+                if (!targetIsIface && !sourceIsIface)
+                {
+                    if (pt.Inner is NamedTypeExpression { Name: "void" } || ps.Inner is NamedTypeExpression { Name: "void" })
+                        return true;
+                }
             }
 
             // Function pointer assignability
@@ -657,12 +741,40 @@ namespace gflat
             {
                 scope.Externs[ext.Name] = ext;
             }
+            else if (member is InterfaceDeclaration iface)
+            {
+                InterfaceInfo info = new InterfaceInfo
+                {
+                    Name = iface.Name,
+                    Namespace = nsPath,
+                    Accessibility = iface.Accessibility
+                };
+                int slotIndex = 0;
+                foreach (AstNode m in iface.Members)
+                {
+                    if (m is MethodDeclaration sm)
+                    {
+                        if (info.MethodsByName.ContainsKey(sm.Name))
+                            throw new TypeCheckException($"Interface '{iface.Name}' already contains a method named '{sm.Name}'", sm.Line);
+                        info.Methods.Add(sm);
+                        info.MethodsByName[sm.Name] = sm;
+                        info.MethodIndices[sm.Name] = slotIndex++;
+                    }
+                    else
+                    {
+                        throw new TypeCheckException($"Interface '{iface.Name}' can only contain method declarations", m.Line);
+                    }
+                }
+                _interfaces[iface.Name] = info;
+                scope.Interfaces[iface.Name] = info;
+            }
             else if (member is StructDeclaration str)
             {
                 StructInfo info = new StructInfo
                 {
                     Name = str.Name,
-                    Namespace = nsPath
+                    Namespace = nsPath,
+                    Interfaces = new List<string>(str.Interfaces)
                 };
                 foreach (AstNode m in str.Members)
                 {
@@ -747,17 +859,69 @@ namespace gflat
             StructInfo? previousStruct = _currentStruct;
             _currentStruct = _structs[node.Name];
 
+            // Validate implemented interfaces
+            foreach (string ifaceName in node.Interfaces)
+            {
+                InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
+                if (ifaceInfo == null)
+                {
+                    throw new TypeCheckException($"Struct '{node.Name}' implements unknown interface '{ifaceName}'", node.Line);
+                }
+
+                foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
+                {
+                    if (!_currentStruct.Methods.TryGetValue(ifaceMethod.Name, out MethodDeclaration? structMethod))
+                    {
+                        throw new TypeCheckException($"Struct '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                    }
+
+                    if (!TypesMatch(ResolveAlias(structMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
+                    {
+                        throw new TypeCheckException(
+                            $"Method '{structMethod.Name}' in struct '{node.Name}' has return type '{TypeName(structMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
+                            structMethod.Line);
+                    }
+
+                    if (structMethod.Parameters.Count != ifaceMethod.Parameters.Count)
+                    {
+                        throw new TypeCheckException(
+                            $"Method '{structMethod.Name}' in struct '{node.Name}' has {structMethod.Parameters.Count} parameters, but interface '{ifaceName}' expects {ifaceMethod.Parameters.Count}",
+                            structMethod.Line);
+                    }
+
+                    for (int i = 0; i < ifaceMethod.Parameters.Count; i++)
+                    {
+                        TypeExpression structParamType = ResolveAlias(structMethod.Parameters[i].Type);
+                        TypeExpression ifaceParamType = ResolveAlias(ifaceMethod.Parameters[i].Type);
+                        if (!TypesMatch(structParamType, ifaceParamType))
+                        {
+                            throw new TypeCheckException(
+                                $"Parameter '{structMethod.Parameters[i].Name}' of method '{structMethod.Name}' in struct '{node.Name}' has type '{TypeName(structParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
+                                structMethod.Parameters[i].Line);
+                        }
+                    }
+                }
+            }
+
             foreach (AstNode member in node.Members)
             {
-                if (member is MethodDeclaration method)
+                if (member is FieldDeclaration field)
                 {
+                    ValidateTypeUsage(field.Type, field.Line);
+                }
+                else if (member is MethodDeclaration method)
+                {
+                    ValidateTypeUsage(method.ReturnType, method.Line);
                     PushScope();
-                    var structType = new NamedTypeExpression(node.Name, null, method.Line);
-                    var thisType = new PointerTypeExpression(structType, false, method.Line);
+                    NamedTypeExpression structType = new NamedTypeExpression(node.Name, null, method.Line);
+                    PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line);
                     DeclareVariable("this", thisType, method.Line);
 
                     foreach (Parameter p in method.Parameters)
+                    {
+                        ValidateTypeUsage(p.Type, p.Line);
                         DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                    }
 
                     method.Body?.Accept(this);
                     PopScope();
@@ -778,6 +942,8 @@ namespace gflat
                 throw new TypeCheckException("Operator overloads must be declared inside a struct", node.Line);
             }
 
+            ValidateTypeUsage(node.ReturnType, node.Line);
+
             if (node.OperatorKind == TokenKind.Bang)
             {
                 if (node.Parameters.Count != 1)
@@ -794,6 +960,7 @@ namespace gflat
             bool hasContainingType = false;
             foreach (Parameter p in node.Parameters)
             {
+                ValidateTypeUsage(p.Type, p.Line);
                 TypeExpression resolvedParam = ResolveAlias(p.Type);
                 if (resolvedParam is NamedTypeExpression named && named.Name == _currentStruct.Name)
                 {
@@ -816,14 +983,40 @@ namespace gflat
             PopScope();
         }
 
-        public void Visit(InterfaceDeclaration node) => throw new NotImplementedException();
+        public void Visit(InterfaceDeclaration node)
+        {
+            foreach (AstNode member in node.Members)
+            {
+                if (member is MethodDeclaration method)
+                {
+                    if (method.Body != null)
+                    {
+                        throw new TypeCheckException($"Interface method '{node.Name}.{method.Name}' cannot have a body", method.Line);
+                    }
+                    ValidateTypeUsage(method.ReturnType, method.Line);
+                    foreach (Parameter p in method.Parameters)
+                    {
+                        ValidateTypeUsage(p.Type, p.Line);
+                    }
+                }
+                else
+                {
+                    throw new TypeCheckException($"Interface '{node.Name}' can only contain method declarations", member.Line);
+                }
+            }
+        }
+
         public void Visit(FieldDeclaration node) => throw new NotImplementedException();
 
         public void Visit(MethodDeclaration node)
         {
+            ValidateTypeUsage(node.ReturnType, node.Line);
             PushScope();
             foreach (Parameter p in node.Parameters)
+            {
+                ValidateTypeUsage(p.Type, p.Line);
                 DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+            }
             node.Body?.Accept(this);
             PopScope();
         }
@@ -832,7 +1025,10 @@ namespace gflat
         {
             PushScope();
             foreach (Parameter p in node.Parameters)
+            {
+                ValidateTypeUsage(p.Type, p.Line);
                 DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+            }
             node.Body.Accept(this);
             PopScope();
         }
@@ -924,6 +1120,7 @@ namespace gflat
         public void Visit(VariableDeclaration node)
         {
             TypeExpression varType = ResolveAlias(node.Type);
+            ValidateTypeUsage(varType, node.Line);
             if (node.Initializer != null)
             {
                 node.Initializer.Accept(this);
@@ -1377,9 +1574,13 @@ namespace gflat
                     else
                     {
                         TypeExpression? innerType = targetObjType is PointerTypeExpression p ? p.Inner : (targetObjType is ManagedTypeExpression m ? m.Inner : null);
-                        if (innerType is NamedTypeExpression namedStr && _structs.ContainsKey(namedStr.Name))
+                        if (innerType != null)
                         {
-                            throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to call method '{memberAccess.Member}' on '{namedStr.Name}'.", node.Line);
+                            TypeExpression resInner = ResolveAlias(innerType);
+                            if (resInner is NamedTypeExpression namedStr && (_structs.ContainsKey(namedStr.Name) || IsInterface(namedStr)))
+                            {
+                                throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to call method '{memberAccess.Member}' on '{namedStr.Name}'.", node.Line);
+                            }
                         }
                         throw new TypeCheckException($"Unknown pointer operation '->{memberAccess.Member}'. The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free').", node.Line);
                     }
@@ -1389,6 +1590,35 @@ namespace gflat
                 TypeExpression objType = GetType(memberAccess.Object);
                 if (objType is PointerTypeExpression ptr)
                     objType = ptr.Inner;
+
+                objType = ResolveAlias(objType);
+
+                if (objType is NamedTypeExpression namedIface && ResolveInterface(namedIface) is InterfaceInfo ifaceInfo)
+                {
+                    if (!ifaceInfo.MethodsByName.TryGetValue(memberAccess.Member, out MethodDeclaration? ifaceMethod))
+                        throw new TypeCheckException($"Interface '{namedIface.Name}' has no method '{memberAccess.Member}'", node.Line);
+
+                    int slotIdx = ifaceInfo.MethodIndices[memberAccess.Member];
+                    _interfaceMethodCalls[node] = (ifaceInfo, slotIdx, ifaceMethod);
+
+                    if (node.Arguments.Count != ifaceMethod.Parameters.Count)
+                        throw new TypeCheckException(
+                            $"Method '{namedIface.Name}.{memberAccess.Member}' expects {ifaceMethod.Parameters.Count} arguments but got {node.Arguments.Count}",
+                            node.Line);
+
+                    for (int i = 0; i < node.Arguments.Count; i++)
+                    {
+                        TypeExpression argType = GetType(node.Arguments[i]);
+                        TypeExpression paramType = ifaceMethod.Parameters[i].Type;
+                        if (!IsAssignable(paramType, argType, node.Arguments[i]))
+                            throw new TypeCheckException(
+                                $"Argument {i + 1} of '{namedIface.Name}.{memberAccess.Member}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
+                                node.Line);
+                    }
+
+                    RecordType(node, ifaceMethod.ReturnType);
+                    return;
+                }
 
                 if (objType is not NamedTypeExpression named || !_structs.TryGetValue(named.Name, out StructInfo? sInfo))
                     throw new TypeCheckException("Cannot call method on non-struct type", node.Line);
@@ -1633,9 +1863,13 @@ namespace gflat
                 else
                 {
                     TypeExpression? innerType = objType is PointerTypeExpression p ? p.Inner : (objType is ManagedTypeExpression m ? m.Inner : null);
-                    if (innerType is NamedTypeExpression namedStr && _structs.ContainsKey(namedStr.Name))
+                    if (innerType != null)
                     {
-                        throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to access member '{node.Member}' on '{namedStr.Name}'.", node.Line);
+                        TypeExpression resInner = ResolveAlias(innerType);
+                        if (resInner is NamedTypeExpression namedStr && (_structs.ContainsKey(namedStr.Name) || IsInterface(namedStr)))
+                        {
+                            throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to access member '{node.Member}' on '{namedStr.Name}'.", node.Line);
+                        }
                     }
                     throw new TypeCheckException($"Unknown pointer operation '->{node.Member}'. The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free').", node.Line);
                 }
@@ -1644,6 +1878,18 @@ namespace gflat
             // unwrap pointer if needed
             if (objType is PointerTypeExpression ptr)
                 objType = ptr.Inner;
+
+            objType = ResolveAlias(objType);
+
+            if (objType is NamedTypeExpression namedIface && ResolveInterface(namedIface) is InterfaceInfo ifaceInfo)
+            {
+                if (ifaceInfo.MethodsByName.TryGetValue(node.Member, out MethodDeclaration? ifaceMethod))
+                {
+                    RecordType(node, ifaceMethod.ReturnType);
+                    return;
+                }
+                throw new TypeCheckException($"Interface '{namedIface.Name}' has no method '{node.Member}'", node.Line);
+            }
 
             if (objType is not NamedTypeExpression named)
                 throw new TypeCheckException("Member access on non-struct type", node.Line);
@@ -1990,6 +2236,7 @@ namespace gflat
             node.Operand.Accept(this);
             TypeExpression sourceType = ResolveAlias(GetType(node.Operand));
             TypeExpression targetType = ResolveAlias(node.TargetType);
+            ValidateTypeUsage(targetType, node.Line);
 
             if (!IsValidCast(sourceType, targetType))
             {
@@ -2029,6 +2276,27 @@ namespace gflat
             if (IsNumeric(src) && IsNumeric(dst))
             {
                 return true;
+            }
+
+            // Pointer to interface pointer
+            if (dst is PointerTypeExpression pDst && ResolveAlias(pDst.Inner) is NamedTypeExpression dstNamed && ResolveInterface(dstNamed) is InterfaceInfo dstIface)
+            {
+                if (src is PointerTypeExpression pSrc && ResolveAlias(pSrc.Inner) is NamedTypeExpression srcNamed)
+                {
+                    if (srcNamed.Name == dstIface.Name)
+                    {
+                        return true;
+                    }
+                    if (_structs.TryGetValue(srcNamed.Name, out StructInfo? sInfo) && sInfo.Interfaces.Contains(dstIface.Name))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (src is PointerTypeExpression pSrcIface && ResolveAlias(pSrcIface.Inner) is NamedTypeExpression srcIfaceNamed && ResolveInterface(srcIfaceNamed) != null)
+            {
+                return false;
             }
 
             // Pointer to pointer
@@ -2082,6 +2350,7 @@ namespace gflat
             List<TypeExpression> paramTypes = new();
             foreach (Parameter p in node.Parameters)
             {
+                ValidateTypeUsage(p.Type, p.Line);
                 TypeExpression pType = ResolveAlias(p.Type);
                 paramTypes.Add(pType);
                 DeclareVariable(p.Name, pType, p.Line);
@@ -2114,6 +2383,7 @@ namespace gflat
                     }
                 }
             }
+            ValidateTypeUsage(returnType, node.Line);
 
             PopScope();
             _actualReturnTypes.Pop();

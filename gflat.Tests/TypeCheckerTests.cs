@@ -1198,6 +1198,220 @@ namespace gflat.Tests
             Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { int x = 10; ushort u = x; return 0; }"));
             Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check("int main() { short s = 10; byte b = s; return 0; }"));
         }
+
+        [Fact]
+        public void StructImplementsInterfaceCleanly()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                struct Rect : IShape
+                {
+                    int w;
+                    int h;
+
+                    int Area()
+                    {
+                        return this.w * this.h;
+                    }
+                }
+
+                int main()
+                {
+                    Rect r;
+                    r.w = 5;
+                    r.h = 4;
+                    IShape* s = &r;
+                    return s.Area();
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void StructMultipleInterfacesCleanly()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                interface IDrawable
+                {
+                    void Draw();
+                }
+
+                struct Canvas : IShape, IDrawable
+                {
+                    int Area()
+                    {
+                        return 100;
+                    }
+
+                    void Draw()
+                    {
+                    }
+                }
+
+                int main()
+                {
+                    Canvas c;
+                    IShape* s = &c;
+                    IDrawable* d = &c;
+                    return s.Area();
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void MissingInterfaceMethodThrows()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                struct Rect : IShape
+                {
+                    int w;
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void InterfaceMethodSignatureMismatchThrows()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                struct Rect : IShape
+                {
+                    void Area()
+                    {
+                    }
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void InterfaceByValueThrows()
+        {
+            string codeVar = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                int main()
+                {
+                    IShape s;
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(codeVar));
+
+            string codeParam = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                void Foo(IShape s)
+                {
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(codeParam));
+        }
+
+        [Fact]
+        public void NonImplementingStructCastThrows()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                struct Other
+                {
+                    int x;
+                }
+
+                int main()
+                {
+                    Other o;
+                    IShape* s = (IShape*)&o;
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void ArrowOnInterfacePointerThrows()
+        {
+            string code = """
+                interface IShape
+                {
+                    int Area();
+                }
+
+                struct Rect : IShape
+                {
+                    int Area()
+                    {
+                        return 1;
+                    }
+                }
+
+                int main()
+                {
+                    Rect r;
+                    IShape* s = &r;
+                    return s->Area();
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Use '.' to call method 'Area' on 'IShape'", ex.Message);
+        }
     }
 }
 

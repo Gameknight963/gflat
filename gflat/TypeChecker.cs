@@ -15,12 +15,20 @@ namespace gflat
         private Dictionary<string, StructInfo> _structs = new();
         private readonly Dictionary<MethodDeclaration, string> _functionNamespaces = new();
         private readonly Dictionary<CallExpression, AstNode> _resolvedCalls = new();
+        private readonly Dictionary<UnaryExpression, AstNode> _functionAddressTargets = new();
+        private readonly HashSet<CallExpression> _indirectCalls = new();
+        private readonly Stack<Dictionary<string, TypeExpression>> _localAliases = new();
 
         public string GetFunctionNamespace(MethodDeclaration method) =>
             _functionNamespaces.TryGetValue(method, out string? ns) ? ns : "";
 
         public AstNode? GetResolvedCall(CallExpression call) =>
             _resolvedCalls.TryGetValue(call, out AstNode? target) ? target : null;
+
+        public AstNode? GetFunctionAddressTarget(UnaryExpression unary) =>
+            _functionAddressTargets.TryGetValue(unary, out AstNode? target) ? target : null;
+
+        public bool IsIndirectCall(CallExpression call) => _indirectCalls.Contains(call);
 
         public StructInfo? GetStruct(string name) =>
             _structs.TryGetValue(name, out StructInfo? info) ? info : null;
@@ -41,6 +49,7 @@ namespace gflat
         {
             public Dictionary<string, MethodDeclaration> Functions = new();
             public Dictionary<string, ExternDeclaration> Externs = new();
+            public Dictionary<string, TypeExpression> Aliases = new();
             public Dictionary<string, NamespaceScope> Children = new();
             public NamespaceScope? Parent;
         }
@@ -54,8 +63,17 @@ namespace gflat
 
         private void RecordType(AstNode node, TypeExpression type) => _types[node] = type;
 
-        private void PushScope() => _scopes.Push(new Dictionary<string, TypeExpression>());
-        private void PopScope() => _scopes.Pop();
+        private void PushScope()
+        {
+            _scopes.Push(new Dictionary<string, TypeExpression>());
+            _localAliases.Push(new Dictionary<string, TypeExpression>());
+        }
+
+        private void PopScope()
+        {
+            _scopes.Pop();
+            _localAliases.Pop();
+        }
 
         private void DeclareVariable(string name, TypeExpression type, int line)
         {
@@ -77,7 +95,32 @@ namespace gflat
                     return _currentStruct.Fields[idx].Type;
             }
 
+            if (ResolveFunction(name) != null || ResolveExtern(name) != null)
+                throw new TypeCheckException($"Cannot use function '{name}' as a value without '&'. Did you mean '&{name}'?", line);
+
             throw new TypeCheckException($"Unknown variable '{name}'", line);
+        }
+
+        private bool TryLookupVariable(string name, out TypeExpression? type)
+        {
+            foreach (Dictionary<string, TypeExpression> scope in _scopes)
+            {
+                if (scope.TryGetValue(name, out type))
+                    return true;
+            }
+
+            if (_currentStruct != null)
+            {
+                int idx = _currentStruct.FieldIndex(name);
+                if (idx >= 0)
+                {
+                    type = _currentStruct.Fields[idx].Type;
+                    return true;
+                }
+            }
+
+            type = null;
+            return false;
         }
 
         private static NamedTypeExpression Int => new NamedTypeExpression("int", null, 0);
@@ -97,7 +140,78 @@ namespace gflat
 
         private static bool IsNullable(TypeExpression type) =>
             type is PointerTypeExpression { IsNullable: true } or
-            ManagedTypeExpression { IsNullable: true };
+            ManagedTypeExpression { IsNullable: true } or
+            FunctionPointerTypeExpression { IsNullable: true };
+
+        public TypeExpression ResolveAlias(TypeExpression type)
+        {
+            if (type is NamedTypeExpression named)
+            {
+                if (named.Namespace != null)
+                {
+                    NamespaceScope? ns = ResolveNamespaceByName(named.Namespace);
+                    if (ns != null && ns.Aliases.TryGetValue(named.Name, out var target))
+                        return ResolveAlias(target);
+                }
+                else
+                {
+                    foreach (var localScope in _localAliases)
+                    {
+                        if (localScope.TryGetValue(named.Name, out var target))
+                            return ResolveAlias(target);
+                    }
+                    var cur = _currentNamespace;
+                    while (cur != null)
+                    {
+                        if (cur.Aliases.TryGetValue(named.Name, out var target))
+                            return ResolveAlias(target);
+                        cur = cur.Parent;
+                    }
+                    if (_globalScope.Aliases.TryGetValue(named.Name, out var gTarget))
+                        return ResolveAlias(gTarget);
+                }
+            }
+            else if (type is PointerTypeExpression ptr)
+            {
+                var resolvedInner = ResolveAlias(ptr.Inner);
+                if (resolvedInner != ptr.Inner)
+                    return new PointerTypeExpression(resolvedInner, ptr.IsNullable, ptr.Line);
+            }
+            else if (type is ManagedTypeExpression mgd)
+            {
+                var resolvedInner = ResolveAlias(mgd.Inner);
+                if (resolvedInner != mgd.Inner)
+                    return new ManagedTypeExpression(resolvedInner, mgd.IsNullable, mgd.Line);
+            }
+            else if (type is ArrayTypeExpression arr)
+            {
+                var resolvedElem = ResolveAlias(arr.ElementType);
+                if (resolvedElem != arr.ElementType)
+                    return new ArrayTypeExpression(resolvedElem, arr.Size, arr.Line);
+            }
+            else if (type is FunctionPointerTypeExpression fnPtr)
+            {
+                var resolvedRet = ResolveAlias(fnPtr.ReturnType);
+                var resolvedParams = fnPtr.ParameterTypes.Select(ResolveAlias).ToList();
+                return new FunctionPointerTypeExpression(resolvedRet, resolvedParams, fnPtr.IsManaged, fnPtr.IsNullable, fnPtr.Line);
+            }
+
+            return type;
+        }
+
+        private NamespaceScope? ResolveNamespaceByName(string nsName)
+        {
+            NamespaceScope? scope = _currentNamespace;
+            while (scope != null)
+            {
+                if (scope.Children.TryGetValue(nsName, out NamespaceScope? child))
+                    return child;
+                scope = scope.Parent;
+            }
+            if (_globalScope.Children.TryGetValue(nsName, out NamespaceScope? gChild))
+                return gChild;
+            return null;
+        }
 
         private static int GetStringLiteralLength(string raw)
         {
@@ -116,8 +230,11 @@ namespace gflat
         private static bool IsInteger(TypeExpression type) =>
             type is NamedTypeExpression n && n.Name is "int" or "long" or "extralong" or "char";
 
-        private static bool TypesMatch(TypeExpression a, TypeExpression b)
+        private bool TypesMatch(TypeExpression a, TypeExpression b)
         {
+            a = ResolveAlias(a);
+            b = ResolveAlias(b);
+
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
@@ -126,12 +243,30 @@ namespace gflat
                 return ma.IsNullable == mb.IsNullable && TypesMatch(ma.Inner, mb.Inner);
             if (a is ArrayTypeExpression aa && b is ArrayTypeExpression ab)
                 return TypesMatch(aa.ElementType, ab.ElementType) && (aa.Size == ab.Size || aa.Size == null || ab.Size == null);
+            if (a is FunctionPointerTypeExpression fa && b is FunctionPointerTypeExpression fb)
+            {
+                if (fa.IsManaged != fb.IsManaged || fa.IsNullable != fb.IsNullable)
+                    return false;
+                if (!TypesMatch(fa.ReturnType, fb.ReturnType))
+                    return false;
+                if (fa.ParameterTypes.Count != fb.ParameterTypes.Count)
+                    return false;
+                for (int i = 0; i < fa.ParameterTypes.Count; i++)
+                {
+                    if (!TypesMatch(fa.ParameterTypes[i], fb.ParameterTypes[i]))
+                        return false;
+                }
+                return true;
+            }
 
             return false;
         }
 
-        private static bool IsAssignable(TypeExpression target, TypeExpression source)
+        private bool IsAssignable(TypeExpression target, TypeExpression source)
         {
+            target = ResolveAlias(target);
+            source = ResolveAlias(source);
+
             if (TypesMatch(target, source))
                 return true;
 
@@ -145,6 +280,31 @@ namespace gflat
                 if (pt.Inner is NamedTypeExpression { Name: "void" } || ps.Inner is NamedTypeExpression { Name: "void" })
                     return true;
             }
+
+            // Function pointer assignability
+            if (target is FunctionPointerTypeExpression ft && source is FunctionPointerTypeExpression fs)
+            {
+                if (ft.IsManaged != fs.IsManaged)
+                    return false;
+                if (fs.IsNullable && !ft.IsNullable)
+                    return false;
+                if (!IsAssignable(ft.ReturnType, fs.ReturnType))
+                    return false;
+                if (ft.ParameterTypes.Count != fs.ParameterTypes.Count)
+                    return false;
+                for (int i = 0; i < ft.ParameterTypes.Count; i++)
+                {
+                    if (!TypesMatch(ft.ParameterTypes[i], fs.ParameterTypes[i]))
+                        return false;
+                }
+                return true;
+            }
+
+            // void* is implicitly convertible to/from unmanaged function pointers
+            if (target is PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" } } && source is FunctionPointerTypeExpression { IsManaged: false })
+                return true;
+            if (source is PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" } } && target is FunctionPointerTypeExpression { IsManaged: false })
+                return true;
 
             // Array-to-pointer decay: T[N] or T[] can be assigned to T*
             if (target is PointerTypeExpression ptrTarget && source is ArrayTypeExpression arrSource)
@@ -237,6 +397,10 @@ namespace gflat
             else if (member is NamespaceDeclaration nested)
             {
                 BuildNamespaceScope(nested, scope, nsPath.Length > 0 ? $"{nsPath}${nested.Name}" : nested.Name);
+            }
+            else if (member is AliasDeclaration alias)
+            {
+                scope.Aliases[alias.Name] = alias.TargetType;
             }
         }
 
@@ -452,6 +616,59 @@ namespace gflat
 
         public void Visit(UnaryExpression node)
         {
+            if (node.Operator == TokenKind.Ampersand)
+            {
+                if (node.Operand is IdentifierExpression identOperand)
+                {
+                    MethodDeclaration? method = ResolveFunction(identOperand.Name);
+                    ExternDeclaration? ext = method == null ? ResolveExtern(identOperand.Name) : null;
+                    if (method != null)
+                    {
+                        var paramTypes = method.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
+                        var fnType = new FunctionPointerTypeExpression(ResolveAlias(method.ReturnType), paramTypes, false, false, node.Line);
+                        RecordType(node, fnType);
+                        _functionAddressTargets[node] = method;
+                        return;
+                    }
+                    if (ext != null)
+                    {
+                        var paramTypes = ext.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
+                        var fnType = new FunctionPointerTypeExpression(ResolveAlias(ext.ReturnType), paramTypes, false, false, node.Line);
+                        RecordType(node, fnType);
+                        _functionAddressTargets[node] = ext;
+                        return;
+                    }
+                }
+                else if (node.Operand is NamespaceAccessExpression nsAccess)
+                {
+                    NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
+                    if (scope != null)
+                    {
+                        if (scope.Functions.TryGetValue(nsAccess.Member, out MethodDeclaration? m))
+                        {
+                            var paramTypes = m.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
+                            var fnType = new FunctionPointerTypeExpression(ResolveAlias(m.ReturnType), paramTypes, false, false, node.Line);
+                            RecordType(node, fnType);
+                            _functionAddressTargets[node] = m;
+                            return;
+                        }
+                        if (scope.Externs.TryGetValue(nsAccess.Member, out ExternDeclaration? e))
+                        {
+                            var paramTypes = e.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
+                            var fnType = new FunctionPointerTypeExpression(ResolveAlias(e.ReturnType), paramTypes, false, false, node.Line);
+                            RecordType(node, fnType);
+                            _functionAddressTargets[node] = e;
+                            return;
+                        }
+                    }
+                }
+
+                node.Operand.Accept(this);
+                TypeExpression operandType = GetType(node.Operand);
+                RecordType(node, new PointerTypeExpression(operandType, false, node.Line));
+                return;
+            }
+
             node.Operand.Accept(this);
             TypeExpression operand = GetType(node.Operand);
 
@@ -472,9 +689,6 @@ namespace gflat
                     if (!IsNumeric(operand))
                         throw new TypeCheckException("'++/--' requires numeric operand", node.Line);
                     RecordType(node, operand);
-                    break;
-                case TokenKind.Ampersand:
-                    RecordType(node, new PointerTypeExpression(operand, false, node.Line));
                     break;
                 case TokenKind.Star:
                     if (operand is not PointerTypeExpression ptr)
@@ -538,6 +752,32 @@ namespace gflat
             foreach (AstNode arg in node.Arguments)
                 arg.Accept(this);
 
+            // Check if callee is a local variable or struct member holding a function pointer
+            if (node.Callee is IdentifierExpression identVar && TryLookupVariable(identVar.Name, out TypeExpression? varType))
+            {
+                varType = ResolveAlias(varType!);
+                if (varType is FunctionPointerTypeExpression fnPtr)
+                {
+                    CheckIndirectCall(node, fnPtr);
+                    return;
+                }
+            }
+
+            // Check if callee is an expression evaluating to a function pointer (e.g. member access, index, call)
+            if (node.Callee is not IdentifierExpression and not NamespaceAccessExpression)
+            {
+                if (node.Callee is not MemberAccessExpression { IsArrow: true })
+                {
+                    node.Callee.Accept(this);
+                    TypeExpression calleeType = ResolveAlias(GetType(node.Callee));
+                    if (calleeType is FunctionPointerTypeExpression fnPtr)
+                    {
+                        CheckIndirectCall(node, fnPtr);
+                        return;
+                    }
+                }
+            }
+
             string? funcName = null;
             MethodDeclaration? method = null;
             ExternDeclaration? ext = null;
@@ -548,11 +788,13 @@ namespace gflat
                 {
                     memberAccess.Object.Accept(this);
                     TypeExpression targetObjType = GetType(memberAccess.Object);
-                    if (targetObjType is not PointerTypeExpression && targetObjType is not ManagedTypeExpression)
+                    if (targetObjType is not PointerTypeExpression && targetObjType is not ManagedTypeExpression && targetObjType is not FunctionPointerTypeExpression)
                         throw new TypeCheckException($"Cannot use '->' operator on non-pointer type '{TypeName(targetObjType)}'", node.Line);
 
                     if (memberAccess.Member == "free")
                     {
+                        if (targetObjType is FunctionPointerTypeExpression)
+                            throw new TypeCheckException("Cannot call '->free' on a function pointer", node.Line);
                         if (node.Arguments.Count != 0)
                             throw new TypeCheckException("'free()' takes no arguments", node.Line);
 
@@ -565,7 +807,7 @@ namespace gflat
                     }
                     else
                     {
-                        TypeExpression innerType = targetObjType is PointerTypeExpression p ? p.Inner : ((ManagedTypeExpression)targetObjType).Inner;
+                        TypeExpression? innerType = targetObjType is PointerTypeExpression p ? p.Inner : (targetObjType is ManagedTypeExpression m ? m.Inner : null);
                         if (innerType is NamedTypeExpression namedStr && _structs.ContainsKey(namedStr.Name))
                         {
                             throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to call method '{memberAccess.Member}' on '{namedStr.Name}'.", node.Line);
@@ -581,6 +823,18 @@ namespace gflat
 
                 if (objType is not NamedTypeExpression named || !_structs.TryGetValue(named.Name, out StructInfo? sInfo))
                     throw new TypeCheckException("Cannot call method on non-struct type", node.Line);
+
+                int fieldIdx = sInfo.FieldIndex(memberAccess.Member);
+                if (fieldIdx >= 0)
+                {
+                    TypeExpression fieldType = ResolveAlias(sInfo.Fields[fieldIdx].Type);
+                    if (fieldType is FunctionPointerTypeExpression fnPtrField)
+                    {
+                        RecordType(memberAccess, fieldType);
+                        CheckIndirectCall(node, fnPtrField);
+                        return;
+                    }
+                }
 
                 if (!sInfo.Methods.TryGetValue(memberAccess.Member, out method))
                     throw new TypeCheckException($"'{named.Name}' has no method '{memberAccess.Member}'", node.Line);
@@ -650,6 +904,28 @@ namespace gflat
             }
 
             RecordType(node, method.ReturnType);
+        }
+
+        private void CheckIndirectCall(CallExpression node, FunctionPointerTypeExpression fnPtr)
+        {
+            _indirectCalls.Add(node);
+
+            if (node.Arguments.Count != fnPtr.ParameterTypes.Count)
+                throw new TypeCheckException(
+                    $"Function pointer expects {fnPtr.ParameterTypes.Count} arguments but got {node.Arguments.Count}",
+                    node.Line);
+
+            for (int i = 0; i < node.Arguments.Count; i++)
+            {
+                TypeExpression argType = GetType(node.Arguments[i]);
+                TypeExpression paramType = fnPtr.ParameterTypes[i];
+                if (!IsAssignable(paramType, argType))
+                    throw new TypeCheckException(
+                        $"Argument {i + 1} of indirect call: cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
+                        node.Line);
+            }
+
+            RecordType(node, fnPtr.ReturnType);
         }
 
         private MethodDeclaration? ResolveFunction(string name)
@@ -732,7 +1008,7 @@ namespace gflat
 
             if (node.IsArrow)
             {
-                if (objType is not PointerTypeExpression && objType is not ManagedTypeExpression)
+                if (objType is not PointerTypeExpression && objType is not ManagedTypeExpression && objType is not FunctionPointerTypeExpression)
                     throw new TypeCheckException($"Cannot use '->' operator on non-pointer type '{TypeName(objType)}'", node.Line);
 
                 if (node.Member == "address")
@@ -747,12 +1023,14 @@ namespace gflat
                 }
                 else if (node.Member == "free")
                 {
+                    if (objType is FunctionPointerTypeExpression)
+                        throw new TypeCheckException("Cannot call '->free' on a function pointer", node.Line);
                     RecordType(node, Void);
                     return;
                 }
                 else
                 {
-                    TypeExpression innerType = objType is PointerTypeExpression p ? p.Inner : ((ManagedTypeExpression)objType).Inner;
+                    TypeExpression? innerType = objType is PointerTypeExpression p ? p.Inner : (objType is ManagedTypeExpression m ? m.Inner : null);
                     if (innerType is NamedTypeExpression namedStr && _structs.ContainsKey(namedStr.Name))
                     {
                         throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to access member '{node.Member}' on '{namedStr.Name}'.", node.Line);
@@ -829,9 +1107,20 @@ namespace gflat
             PointerTypeExpression p => TypeName(p.Inner) + "*",
             ManagedTypeExpression m => TypeName(m.Inner) + "^",
             ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
+            FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"
         };
 
         public void Visit(GlobalExpression node) { }
+        public void Visit(FunctionPointerTypeExpression node) { }
+        public void Visit(AliasDeclaration node)
+        {
+            if (_localAliases.Count > 0)
+                _localAliases.Peek()[node.Name] = node.TargetType;
+            else if (_currentNamespace != null)
+                _currentNamespace.Aliases[node.Name] = node.TargetType;
+            else
+                _globalScope.Aliases[node.Name] = node.TargetType;
+        }
     }
 }

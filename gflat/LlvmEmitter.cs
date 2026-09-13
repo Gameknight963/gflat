@@ -168,6 +168,7 @@ public class LlvmEmitter : IVisitor
 
     private string EmitType(TypeExpression type)
     {
+        type = _typeChecker.ResolveAlias(type);
         if (type is NamedTypeExpression named)
         {
             return named.Name switch
@@ -192,12 +193,25 @@ public class LlvmEmitter : IVisitor
 
             return EmitType(ptr.Inner) + "*";
         }
+        if (type is ManagedTypeExpression mgd)
+        {
+            if (mgd.Inner is NamedTypeExpression { Name: "void" })
+                return "i8*";
+
+            return EmitType(mgd.Inner) + "*";
+        }
         if (type is ArrayTypeExpression arr)
         {
             string elemType = EmitType(arr.ElementType);
             if (arr.Size.HasValue)
                 return $"[{arr.Size.Value} x {elemType}]";
             return elemType + "*";
+        }
+        if (type is FunctionPointerTypeExpression fnPtr)
+        {
+            string ret = EmitType(fnPtr.ReturnType);
+            string paramTypes = string.Join(", ", fnPtr.ParameterTypes.Select(EmitParamType));
+            return $"{ret} ({paramTypes})*";
         }
 
         throw new NotImplementedException($"Type {type.GetType().Name} not yet supported");
@@ -714,6 +728,28 @@ public class LlvmEmitter : IVisitor
     {
         if (node.Operator == TokenKind.Ampersand)
         {
+            AstNode? fnTarget = _typeChecker.GetFunctionAddressTarget(node);
+            if (fnTarget != null)
+            {
+                if (fnTarget is ExternDeclaration ext)
+                {
+                    Push($"@{ext.Name}");
+                    return;
+                }
+                if (fnTarget is MethodDeclaration method)
+                {
+                    if (method.Name == "main")
+                    {
+                        Push("@main");
+                        return;
+                    }
+                    string ns = _typeChecker.GetFunctionNamespace(method);
+                    string mangled = ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}";
+                    Push($"@{mangled}");
+                    return;
+                }
+            }
+
             EmitAddress(node.Operand);
             return;
         }
@@ -925,6 +961,57 @@ public class LlvmEmitter : IVisitor
             }
 
             Emit($"    call void @free(i8* {castPtr})");
+            return;
+        }
+
+        if (_typeChecker.IsIndirectCall(node))
+        {
+            node.Callee.Accept(this);
+            string fnVal = Pop();
+
+            TypeExpression calleeType = _typeChecker.ResolveAlias(_typeChecker.GetType(node.Callee));
+            FunctionPointerTypeExpression fnPtr = (FunctionPointerTypeExpression)calleeType;
+
+            List<string> argVals = new();
+            List<string> argTypesList = new();
+            for (int i = 0; i < node.Arguments.Count; i++)
+            {
+                AstNode arg = node.Arguments[i];
+                arg.Accept(this);
+                string val = Pop();
+                TypeExpression argType = _typeChecker.GetType(arg);
+                string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
+
+                if (i < fnPtr.ParameterTypes.Count)
+                {
+                    string paramType = EmitParamType(fnPtr.ParameterTypes[i]);
+                    if (paramType != llvmArgType && paramType.EndsWith("*") && llvmArgType.EndsWith("*"))
+                    {
+                        string castVal = NewTemp();
+                        Emit($"    {castVal} = bitcast {llvmArgType} {val} to {paramType}");
+                        val = castVal;
+                        llvmArgType = paramType;
+                    }
+                }
+
+                argVals.Add(val);
+                argTypesList.Add(llvmArgType);
+            }
+
+            TypeExpression indirectCallType = _typeChecker.GetType(node);
+            string indirectRetType = EmitType(indirectCallType);
+            string indirectArgs = string.Join(", ", argVals.Zip(argTypesList, (v, t) => $"{t} {v}"));
+
+            if (indirectRetType == "void")
+            {
+                Emit($"    call void {fnVal}({indirectArgs})");
+            }
+            else
+            {
+                string temp = NewTemp();
+                Emit($"    {temp} = call {indirectRetType} {fnVal}({indirectArgs})");
+                Push(temp);
+            }
             return;
         }
 
@@ -1232,4 +1319,6 @@ public class LlvmEmitter : IVisitor
     }
     public void Visit(AttributeNode node) { }
     public void Visit(GlobalExpression node) { }
+    public void Visit(FunctionPointerTypeExpression node) { }
+    public void Visit(AliasDeclaration node) { }
 }

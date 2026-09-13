@@ -1831,6 +1831,264 @@ namespace gflat.Tests
             Assert.NotNull(ast);
             Assert.NotNull(checker);
         }
+
+        [Fact]
+        public void ReadonlyPointerAssignmentRejection()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 42;
+                    readonly int* p = &x;
+                    *p = 10;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign to dereference of readonly pointer", ex.Message);
+        }
+
+        [Fact]
+        public void ReadonlyPointerIndexAssignmentRejection()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 42;
+                    readonly int* p = &x;
+                    p[0] = 10;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign to dereference of readonly pointer", ex.Message);
+        }
+
+        [Fact]
+        public void ReadonlyPointerIncrementRejection()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 42;
+                    readonly int* p = &x;
+                    (*p)++;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign to dereference of readonly pointer", ex.Message);
+        }
+
+        [Fact]
+        public void ReadonlyPointerPassingToWritablePointerRejection()
+        {
+            string code = """
+                void Modify(int* ptr)
+                {
+                    *ptr = 100;
+                }
+
+                int main()
+                {
+                    int x = 42;
+                    readonly int* p = &x;
+                    Modify(p);
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("cannot pass 'readonly int*' as 'int*'", ex.Message);
+        }
+
+        [Fact]
+        public void WritablePointerToReadonlyPointerConversionAllowed()
+        {
+            string code = """
+                int ReadVal(readonly int* ptr)
+                {
+                    return *ptr;
+                }
+
+                int main()
+                {
+                    int x = 42;
+                    int* p = &x;
+                    readonly int* ro = p;
+                    return ReadVal(p);
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ReadonlyFieldModificationOutsideConstructorRejection()
+        {
+            string code = """
+                struct User
+                {
+                    readonly int id;
+                    int age;
+
+                    public User(int i, int a)
+                    {
+                        this.id = i;
+                        this.age = a;
+                    }
+                }
+
+                int main()
+                {
+                    User u = new User(1, 20);
+                    u.id = 2;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign to readonly field 'id' outside constructor", ex.Message);
+        }
+
+        [Fact]
+        public void ReadonlyFieldAssignmentInsideConstructorAllowed()
+        {
+            string code = """
+                class User
+                {
+                    readonly int id;
+
+                    public User(int i)
+                    {
+                        this.id = i;
+                    }
+
+                    public int GetId()
+                    {
+                        return this.id;
+                    }
+                }
+
+                int main()
+                {
+                    User* u = new* User(99);
+                    return u.GetId();
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ReadonlyMethodMutatingThisRejection()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+
+                    public readonly void Reset()
+                    {
+                        this.x = 0;
+                    }
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign to field 'x' on readonly instance", ex.Message);
+        }
+
+        [Fact]
+        public void NonReadonlyMethodOnReadonlyReceiverRejection()
+        {
+            string code = """
+                struct Counter
+                {
+                    int count;
+
+                    public void Increment()
+                    {
+                        this.count = this.count + 1;
+                    }
+
+                    public readonly int GetCount()
+                    {
+                        return this.count;
+                    }
+                }
+
+                int main()
+                {
+                    Counter c;
+                    readonly Counter* ptr = &c;
+                    ptr.Increment();
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot call non-readonly method 'Increment' on readonly instance", ex.Message);
+        }
+
+        [Fact]
+        public void ReadonlyMethodOnReadonlyReceiverAllowed()
+        {
+            string code = """
+                struct Counter
+                {
+                    int count;
+
+                    public readonly int GetCount()
+                    {
+                        return this.count;
+                    }
+                }
+
+                int main()
+                {
+                    Counter c;
+                    readonly Counter* ptr = &c;
+                    return ptr.GetCount();
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void ExplicitCastAwayReadonlyAllowed()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 42;
+                    readonly int* ro = &x;
+                    int* w = (int*)ro;
+                    *w = 100;
+                    return *w;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
     }
 }
 

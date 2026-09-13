@@ -16,8 +16,9 @@ namespace gflat.ast
         public bool IsVirtual { get; }
         public bool IsOverride { get; }
         public bool IsAbstract { get; }
+        public bool IsReadOnly { get; }
 
-        public MethodDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, BlockStatement? body, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line) : base(line)
+        public MethodDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, BlockStatement? body, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false) : base(line)
         {
             Name = name;
             ReturnType = returnType;
@@ -28,6 +29,7 @@ namespace gflat.ast
             IsVirtual = isVirtual;
             IsOverride = isOverride;
             IsAbstract = isAbstract;
+            IsReadOnly = isReadOnly;
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

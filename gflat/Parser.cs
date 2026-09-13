@@ -109,19 +109,28 @@ namespace gflat
         {
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Public; // default for free functions
-
-            if (Check(TokenKind.Public) || Check(TokenKind.Private) ||
-                Check(TokenKind.Protected) || Check(TokenKind.Internal))
-            {
-                accessibility = Current.Kind;
-                Consume();
-            }
-
+            bool isReadonly = false;
             bool isAbstract = false;
-            if (Check(TokenKind.Abstract))
+
+            while (true)
             {
-                isAbstract = true;
-                Consume();
+                if (Check(TokenKind.Public) || Check(TokenKind.Private) ||
+                    Check(TokenKind.Protected) || Check(TokenKind.Internal))
+                {
+                    accessibility = Current.Kind;
+                    Consume();
+                }
+                else if (Check(TokenKind.Readonly))
+                {
+                    isReadonly = true;
+                    Consume();
+                }
+                else if (Check(TokenKind.Abstract))
+                {
+                    isAbstract = true;
+                    Consume();
+                }
+                else break;
             }
 
             if (Check(TokenKind.Alias))
@@ -139,9 +148,9 @@ namespace gflat
             string name = Expect(TokenKind.Identifier).Text;
 
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line);
+                return ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly);
 
-            return ParseFieldDeclaration(type, name, accessibility, false, false, false, line);
+            return ParseFieldDeclaration(type, name, accessibility, false, false, isReadonly, line);
         }
 
         private AstNode ParseTypeDeclaration()
@@ -303,7 +312,7 @@ namespace gflat
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line);
+                return ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly);
 
             return ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line);
         }
@@ -460,7 +469,7 @@ namespace gflat
             return new OperatorDeclaration(opToken.Kind, opSymbol, returnType, parameters, body, accessibility, isStatic, line);
         }
 
-        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line)
+        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false)
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
@@ -482,7 +491,7 @@ namespace gflat
             {
                 body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
             }
-            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line);
+            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly);
         }
 
         private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line)
@@ -491,12 +500,24 @@ namespace gflat
             if (Match(TokenKind.Equals))
                 initializer = ParseExpression();
             Expect(TokenKind.Semicolon);
-            return new FieldDeclaration(name, type, initializer, accessibility, isConst, isStatic, line);
+            if (isReadonly)
+            {
+                if (type is PointerTypeExpression ptr && !ptr.IsReadOnly)
+                {
+                    type = new PointerTypeExpression(ptr.Inner, ptr.IsNullable, ptr.Line, isReadOnly: true);
+                }
+                else if (type is ManagedTypeExpression mgd && !mgd.IsReadOnly)
+                {
+                    type = new ManagedTypeExpression(mgd.Inner, mgd.IsNullable, mgd.Line, isReadOnly: true);
+                }
+            }
+            return new FieldDeclaration(name, type, initializer, accessibility, isConst, isStatic, line, isReadonly);
         }
 
         private TypeExpression ParseTypeExpression()
         {
             int line = Current.Line;
+            bool isReadOnly = Match(TokenKind.Readonly);
             string name = "";
 
             // handle built-in type keywords
@@ -530,12 +551,14 @@ namespace gflat
                 if (Match(TokenKind.Star))
                 {
                     bool nullable = Match(TokenKind.QuestionMark);
-                    type = new PointerTypeExpression(type, nullable, line);
+                    type = new PointerTypeExpression(type, nullable, line, isReadOnly);
+                    isReadOnly = false;
                 }
                 else if (Match(TokenKind.Caret))
                 {
                     bool nullable = Match(TokenKind.QuestionMark);
-                    type = new ManagedTypeExpression(type, nullable, line);
+                    type = new ManagedTypeExpression(type, nullable, line, isReadOnly);
+                    isReadOnly = false;
                 }
                 else if (Check(TokenKind.OpenParen))
                 {
@@ -659,7 +682,7 @@ namespace gflat
             TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
             TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
             TokenKind.Char or TokenKind.ExtraLong or
-            TokenKind.String or TokenKind.Void or TokenKind.Identifier;
+            TokenKind.String or TokenKind.Void or TokenKind.Identifier or TokenKind.Readonly;
 
         private bool IsVariableDeclaration()
         {

@@ -93,6 +93,7 @@ namespace gflat
             public string Namespace = "";
             public List<(string Name, TypeExpression Type)> Fields = new();
             public List<FieldDeclaration> FieldDeclarations = new();
+            public Dictionary<string, FieldDeclaration> FieldDeclarationsByName = new();
             public List<ConstructorDeclaration> Constructors = new();
             public Dictionary<string, MethodDeclaration> Methods = new();
             public List<OperatorDeclaration> Operators = new();
@@ -124,6 +125,7 @@ namespace gflat
             public List<string> Interfaces = new();
             public List<(string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass)> Fields = new();
             public List<FieldDeclaration> FieldDeclarations = new();
+            public Dictionary<string, FieldDeclaration> FieldDeclarationsByName = new();
             public List<ConstructorDeclaration> Constructors = new();
             public Dictionary<string, (MethodDeclaration Method, string DeclaringClass)> Methods = new();
             public List<MethodDeclaration> VirtualMethods = new();
@@ -138,6 +140,7 @@ namespace gflat
         public ClassInfo? GetClass(string name) => _classes.TryGetValue(name, out ClassInfo? info) ? info : null;
         public bool IsClass(string name) => _classes.ContainsKey(name);
         private ClassInfo? _currentClass = null;
+        private ConstructorDeclaration? _currentConstructor = null;
 
         private readonly Dictionary<ConstructorDeclaration, ConstructorDeclaration> _resolvedBaseConstructors = new();
         public ConstructorDeclaration? GetResolvedBaseConstructor(ConstructorDeclaration ctor) =>
@@ -656,9 +659,9 @@ namespace gflat
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
-                return pa.IsNullable == pb.IsNullable && TypesMatch(pa.Inner, pb.Inner);
+                return pa.IsNullable == pb.IsNullable && pa.IsReadOnly == pb.IsReadOnly && TypesMatch(pa.Inner, pb.Inner);
             if (a is ManagedTypeExpression ma && b is ManagedTypeExpression mb)
-                return ma.IsNullable == mb.IsNullable && TypesMatch(ma.Inner, mb.Inner);
+                return ma.IsNullable == mb.IsNullable && ma.IsReadOnly == mb.IsReadOnly && TypesMatch(ma.Inner, mb.Inner);
             if (a is ArrayTypeExpression aa && b is ArrayTypeExpression ab)
                 return TypesMatch(aa.ElementType, ab.ElementType) && (aa.Size == ab.Size || aa.Size == null || ab.Size == null);
             if (a is FunctionPointerTypeExpression fa && b is FunctionPointerTypeExpression fb)
@@ -687,6 +690,28 @@ namespace gflat
 
             if (TypesMatch(target, source))
                 return true;
+
+            // Pointer to pointer assignability (handles readonly conversion: T* to readonly T*)
+            if (target is PointerTypeExpression ptExact && source is PointerTypeExpression psExact)
+            {
+                if (psExact.IsReadOnly && !ptExact.IsReadOnly)
+                    return false;
+                if (psExact.IsNullable && !ptExact.IsNullable)
+                    return false;
+                if (TypesMatch(ptExact.Inner, psExact.Inner))
+                    return true;
+            }
+
+            // Managed ref to managed ref assignability (handles readonly conversion: T^ to readonly T^)
+            if (target is ManagedTypeExpression mtExact && source is ManagedTypeExpression msExact)
+            {
+                if (msExact.IsReadOnly && !mtExact.IsReadOnly)
+                    return false;
+                if (msExact.IsNullable && !mtExact.IsNullable)
+                    return false;
+                if (TypesMatch(mtExact.Inner, msExact.Inner))
+                    return true;
+            }
 
             // Integer constant literal in-range assignment
             if (valueNode != null && IsInteger(source) && target is NamedTypeExpression targetNamed && TryGetIntegerConstant(valueNode, out long constVal))
@@ -726,6 +751,8 @@ namespace gflat
             // Struct pointer to interface pointer assignability
             if (target is PointerTypeExpression ptIface && source is PointerTypeExpression psStruct)
             {
+                if (psStruct.IsReadOnly && !ptIface.IsReadOnly)
+                    return false;
                 TypeExpression targetInner = ResolveAlias(ptIface.Inner);
                 TypeExpression sourceInner = ResolveAlias(psStruct.Inner);
                 if (targetInner is NamedTypeExpression targetIfaceNamed && ResolveInterface(targetIfaceNamed) is InterfaceInfo targetIface)
@@ -754,6 +781,8 @@ namespace gflat
             // Struct or class managed ref to interface managed ref assignability
             if (target is ManagedTypeExpression mtIface && source is ManagedTypeExpression msStruct)
             {
+                if (msStruct.IsReadOnly && !mtIface.IsReadOnly)
+                    return false;
                 TypeExpression targetInner = ResolveAlias(mtIface.Inner);
                 TypeExpression sourceInner = ResolveAlias(msStruct.Inner);
                 if (targetInner is NamedTypeExpression targetIfaceNamed && ResolveInterface(targetIfaceNamed) is InterfaceInfo targetIface)
@@ -782,6 +811,8 @@ namespace gflat
             // Class pointer inheritance assignability (Derived* to Base*)
             if (target is PointerTypeExpression ptBase && source is PointerTypeExpression psDerived)
             {
+                if (psDerived.IsReadOnly && !ptBase.IsReadOnly)
+                    return false;
                 TypeExpression targetInner = ResolveAlias(ptBase.Inner);
                 TypeExpression sourceInner = ResolveAlias(psDerived.Inner);
                 if (targetInner is NamedTypeExpression tNamed && sourceInner is NamedTypeExpression sNamed)
@@ -798,6 +829,8 @@ namespace gflat
             // Class managed ref inheritance assignability (Derived^ to Base^)
             if (target is ManagedTypeExpression mtBase && source is ManagedTypeExpression msDerived)
             {
+                if (msDerived.IsReadOnly && !mtBase.IsReadOnly)
+                    return false;
                 TypeExpression targetInner = ResolveAlias(mtBase.Inner);
                 TypeExpression sourceInner = ResolveAlias(msDerived.Inner);
                 if (targetInner is NamedTypeExpression tNamed && sourceInner is NamedTypeExpression sNamed)
@@ -814,6 +847,8 @@ namespace gflat
             // void* is implicitly convertible to/from any pointer type (except interface fat pointer)
             if (target is PointerTypeExpression pt && source is PointerTypeExpression ps)
             {
+                if (ps.IsReadOnly && !pt.IsReadOnly)
+                    return false;
                 bool targetIsIface = ResolveAlias(pt.Inner) is NamedTypeExpression tNamed && IsInterface(tNamed);
                 bool sourceIsIface = ResolveAlias(ps.Inner) is NamedTypeExpression sNamed && IsInterface(sNamed);
                 if (!targetIsIface && !sourceIsIface)
@@ -975,6 +1010,10 @@ namespace gflat
 
                 // Inherit base fields in prefix order
                 cls.Fields.AddRange(baseInfo.Fields);
+                foreach (KeyValuePair<string, FieldDeclaration> kvp in baseInfo.FieldDeclarationsByName)
+                {
+                    cls.FieldDeclarationsByName[kvp.Key] = kvp.Value;
+                }
 
                 // Inherit base vtable slots
                 cls.VirtualMethods.AddRange(baseInfo.VirtualMethods);
@@ -1013,6 +1052,7 @@ namespace gflat
                 if (cls.FieldIndex(f.Name) >= 0)
                     throw new TypeCheckException($"Class '{cls.Name}' cannot declare field '{f.Name}' because it is already declared in a base class", f.Line);
                 cls.Fields.Add((f.Name, f.Type, f.Accessibility, cls.Name));
+                cls.FieldDeclarationsByName[f.Name] = f;
             }
 
             // Process methods: override, virtual, abstract, normal
@@ -1026,6 +1066,8 @@ namespace gflat
                         throw new TypeCheckException($"Method '{method.Name}' in class '{cls.Name}' is marked override but does not override any virtual or abstract method in a base class", method.Line);
                     }
                     MethodDeclaration baseMethod = cls.VirtualMethods[slot];
+                    if (baseMethod.IsReadOnly && !method.IsReadOnly)
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' must be marked readonly to match base method", method.Line);
                     if (!TypesMatch(ResolveAlias(method.ReturnType), ResolveAlias(baseMethod.ReturnType)))
                         throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' has return type '{TypeName(method.ReturnType)}' which does not match base method return type '{TypeName(baseMethod.ReturnType)}'", method.Line);
                     if (method.Parameters.Count != baseMethod.Parameters.Count)
@@ -1142,6 +1184,7 @@ namespace gflat
                     {
                         info.Fields.Add((field.Name, field.Type));
                         info.FieldDeclarations.Add(field);
+                        info.FieldDeclarationsByName[field.Name] = field;
                     }
                     else if (m is MethodDeclaration sm)
                     {
@@ -1272,6 +1315,12 @@ namespace gflat
                     }
 
                     MethodDeclaration classMethod = mEntry.Method;
+                    if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly)
+                    {
+                        throw new TypeCheckException(
+                            $"Method '{classMethod.Name}' in class '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
+                            classMethod.Line);
+                    }
                     if (!TypesMatch(ResolveAlias(classMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
                     {
                         throw new TypeCheckException(
@@ -1331,7 +1380,7 @@ namespace gflat
                     {
                         PushScope();
                         NamedTypeExpression classType = new NamedTypeExpression(node.Name, null, method.Line);
-                        PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line);
+                        PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line, isReadOnly: method.IsReadOnly);
                         DeclareVariable("this", thisType, method.Line);
 
                         foreach (Parameter p in method.Parameters)
@@ -1368,6 +1417,13 @@ namespace gflat
                     if (!_currentStruct.Methods.TryGetValue(ifaceMethod.Name, out MethodDeclaration? structMethod))
                     {
                         throw new TypeCheckException($"Struct '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                    }
+
+                    if (ifaceMethod.IsReadOnly && !structMethod.IsReadOnly)
+                    {
+                        throw new TypeCheckException(
+                            $"Method '{structMethod.Name}' in struct '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
+                            structMethod.Line);
                     }
 
                     if (!TypesMatch(ResolveAlias(structMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
@@ -1423,7 +1479,7 @@ namespace gflat
                     ValidateTypeUsage(method.ReturnType, method.Line);
                     PushScope();
                     NamedTypeExpression structType = new NamedTypeExpression(node.Name, null, method.Line);
-                    PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line);
+                    PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line, isReadOnly: method.IsReadOnly);
                     DeclareVariable("this", thisType, method.Line);
 
                     foreach (Parameter p in method.Parameters)
@@ -1542,75 +1598,83 @@ namespace gflat
                 string kindStr = _currentStruct != null ? "struct" : "class";
                 throw new TypeCheckException($"Constructor name '{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
             }
-            PushScope();
-            NamedTypeExpression typeExpr = new NamedTypeExpression(ownerName, null, node.Line);
-            PointerTypeExpression thisType = new PointerTypeExpression(typeExpr, false, node.Line);
-            DeclareVariable("this", thisType, node.Line);
-
-            foreach (Parameter p in node.Parameters)
+            _currentConstructor = node;
+            try
             {
-                ValidateTypeUsage(p.Type, p.Line);
-                DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
-            }
+                PushScope();
+                NamedTypeExpression typeExpr = new NamedTypeExpression(ownerName, null, node.Line);
+                PointerTypeExpression thisType = new PointerTypeExpression(typeExpr, false, node.Line);
+                DeclareVariable("this", thisType, node.Line);
 
-            if (node.BaseArguments != null)
-            {
-                if (_currentClass == null || _currentClass.BaseClass == null)
+                foreach (Parameter p in node.Parameters)
                 {
-                    throw new TypeCheckException($"Cannot call base constructor because '{ownerName}' does not inherit from a base class", node.Line);
+                    ValidateTypeUsage(p.Type, p.Line);
+                    DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
                 }
 
-                ClassInfo baseClass = _classes[_currentClass.BaseClass];
-                foreach (AstNode arg in node.BaseArguments)
+                if (node.BaseArguments != null)
                 {
-                    arg.Accept(this);
-                }
-
-                List<ConstructorDeclaration> matches = new();
-                foreach (ConstructorDeclaration baseCtor in baseClass.Constructors)
-                {
-                    if (baseCtor.Parameters.Count != node.BaseArguments.Count)
-                        continue;
-
-                    bool matchesParams = true;
-                    for (int i = 0; i < node.BaseArguments.Count; i++)
+                    if (_currentClass == null || _currentClass.BaseClass == null)
                     {
-                        TypeExpression paramType = ResolveAlias(baseCtor.Parameters[i].Type);
-                        TypeExpression argType = GetType(node.BaseArguments[i]);
-                        if (!IsAssignable(paramType, argType, node.BaseArguments[i]))
-                        {
-                            matchesParams = false;
-                            break;
-                        }
+                        throw new TypeCheckException($"Cannot call base constructor because '{ownerName}' does not inherit from a base class", node.Line);
                     }
 
-                    if (matchesParams)
-                        matches.Add(baseCtor);
+                    ClassInfo baseClass = _classes[_currentClass.BaseClass];
+                    foreach (AstNode arg in node.BaseArguments)
+                    {
+                        arg.Accept(this);
+                    }
+
+                    List<ConstructorDeclaration> matches = new();
+                    foreach (ConstructorDeclaration baseCtor in baseClass.Constructors)
+                    {
+                        if (baseCtor.Parameters.Count != node.BaseArguments.Count)
+                            continue;
+
+                        bool matchesParams = true;
+                        for (int i = 0; i < node.BaseArguments.Count; i++)
+                        {
+                            TypeExpression paramType = ResolveAlias(baseCtor.Parameters[i].Type);
+                            TypeExpression argType = GetType(node.BaseArguments[i]);
+                            if (!IsAssignable(paramType, argType, node.BaseArguments[i]))
+                            {
+                                matchesParams = false;
+                                break;
+                            }
+                        }
+
+                        if (matchesParams)
+                            matches.Add(baseCtor);
+                    }
+
+                    if (matches.Count == 0)
+                    {
+                        string argTypes = string.Join(", ", node.BaseArguments.Select(a => TypeName(GetType(a))));
+                        throw new TypeCheckException($"No matching base constructor found for '{baseClass.Name}' with arguments ({argTypes})", node.Line);
+                    }
+                    if (matches.Count > 1)
+                    {
+                        throw new TypeCheckException($"Call to base constructor of '{baseClass.Name}' is ambiguous", node.Line);
+                    }
+
+                    _resolvedBaseConstructors[node] = matches[0];
+                }
+                else if (_currentClass != null && _currentClass.BaseClass != null)
+                {
+                    ClassInfo baseClass = _classes[_currentClass.BaseClass];
+                    if (baseClass.Constructors.Count > 0 && !baseClass.Constructors.Any(c => c.Parameters.Count == 0))
+                    {
+                        throw new TypeCheckException($"Class '{ownerName}' must explicitly call a base constructor because base class '{baseClass.Name}' does not define a parameterless constructor", node.Line);
+                    }
                 }
 
-                if (matches.Count == 0)
-                {
-                    string argTypes = string.Join(", ", node.BaseArguments.Select(a => TypeName(GetType(a))));
-                    throw new TypeCheckException($"No matching base constructor found for '{baseClass.Name}' with arguments ({argTypes})", node.Line);
-                }
-                if (matches.Count > 1)
-                {
-                    throw new TypeCheckException($"Call to base constructor of '{baseClass.Name}' is ambiguous", node.Line);
-                }
-
-                _resolvedBaseConstructors[node] = matches[0];
+                node.Body.Accept(this);
+                PopScope();
             }
-            else if (_currentClass != null && _currentClass.BaseClass != null)
+            finally
             {
-                ClassInfo baseClass = _classes[_currentClass.BaseClass];
-                if (baseClass.Constructors.Count > 0 && !baseClass.Constructors.Any(c => c.Parameters.Count == 0))
-                {
-                    throw new TypeCheckException($"Class '{ownerName}' must explicitly call a base constructor because base class '{baseClass.Name}' does not define a parameterless constructor", node.Line);
-                }
+                _currentConstructor = null;
             }
-
-            node.Body.Accept(this);
-            PopScope();
         }
 
         public void Visit(DestructorDeclaration node)
@@ -2009,6 +2073,7 @@ namespace gflat
                     break;
                 case TokenKind.PlusPlus:
                 case TokenKind.MinusMinus:
+                    CheckAssignmentTarget(node.Operand, node.Line);
                     if (!IsNumeric(operand))
                     {
                         if (IsValidPointerForArithmetic(operand, out string? errPtr))
@@ -2063,6 +2128,230 @@ namespace gflat
             RecordType(node, type);
         }
 
+        private bool IsExpressionReadOnly(AstNode node)
+        {
+            if (node is IdentifierExpression ident)
+            {
+                if (ident.Name == "this")
+                {
+                    if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
+                    {
+                        TypeExpression resThis = ResolveAlias(thisType);
+                        return (resThis is PointerTypeExpression p && p.IsReadOnly) || (resThis is ManagedTypeExpression m && m.IsReadOnly);
+                    }
+                }
+                else
+                {
+                    bool isLocal = false;
+                    foreach (Dictionary<string, TypeExpression> scope in _scopes)
+                    {
+                        if (scope.ContainsKey(ident.Name))
+                        {
+                            isLocal = true;
+                            break;
+                        }
+                    }
+
+                    if (!isLocal)
+                    {
+                        if ((_currentStruct != null && _currentStruct.FieldIndex(ident.Name) >= 0) ||
+                            (_currentClass != null && _currentClass.FieldIndex(ident.Name) >= 0))
+                        {
+                            if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
+                            {
+                                TypeExpression resThis = ResolveAlias(thisType);
+                                return (resThis is PointerTypeExpression p && p.IsReadOnly) || (resThis is ManagedTypeExpression m && m.IsReadOnly);
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            if (node is UnaryExpression deref && deref.Operator == TokenKind.Star)
+            {
+                TypeExpression opType = ResolveAlias(GetType(deref.Operand));
+                return (opType is PointerTypeExpression p && p.IsReadOnly) || (opType is ManagedTypeExpression m && m.IsReadOnly);
+            }
+
+            if (node is IndexExpression idx)
+            {
+                TypeExpression targetType = ResolveAlias(GetType(idx.Target));
+                return (targetType is PointerTypeExpression p && p.IsReadOnly) || (targetType is ManagedTypeExpression m && m.IsReadOnly);
+            }
+
+            if (node is MemberAccessExpression member)
+            {
+                TypeExpression objType = ResolveAlias(GetType(member.Object));
+                if ((objType is PointerTypeExpression p && p.IsReadOnly) || (objType is ManagedTypeExpression m && m.IsReadOnly))
+                {
+                    return true;
+                }
+
+                TypeExpression unwrapped = objType;
+                while (unwrapped is PointerTypeExpression ptr)
+                {
+                    unwrapped = ResolveAlias(ptr.Inner);
+                }
+                while (unwrapped is ManagedTypeExpression mgd)
+                {
+                    unwrapped = ResolveAlias(mgd.Inner);
+                }
+
+                if (unwrapped is NamedTypeExpression named)
+                {
+                    if (_structs.TryGetValue(named.Name, out StructInfo? sInfo) &&
+                        sInfo.FieldDeclarationsByName.TryGetValue(member.Member, out FieldDeclaration? sField) &&
+                        sField.IsReadOnly)
+                    {
+                        return true;
+                    }
+                    if (_classes.TryGetValue(named.Name, out ClassInfo? cInfo) &&
+                        cInfo.FieldDeclarationsByName.TryGetValue(member.Member, out FieldDeclaration? cField) &&
+                        cField.IsReadOnly)
+                    {
+                        return true;
+                    }
+                }
+
+                return IsExpressionReadOnly(member.Object);
+            }
+
+            return false;
+        }
+
+        private void CheckAssignmentTarget(AstNode target, int line)
+        {
+            if (target is UnaryExpression deref && deref.Operator == TokenKind.Star)
+            {
+                TypeExpression opType = ResolveAlias(GetType(deref.Operand));
+                if (opType is PointerTypeExpression { IsReadOnly: true })
+                {
+                    throw new TypeCheckException("Cannot assign to dereference of readonly pointer", line);
+                }
+                return;
+            }
+
+            if (target is IndexExpression idx)
+            {
+                TypeExpression targetType = ResolveAlias(GetType(idx.Target));
+                if (targetType is PointerTypeExpression { IsReadOnly: true })
+                {
+                    throw new TypeCheckException("Cannot assign to dereference of readonly pointer", line);
+                }
+                return;
+            }
+
+            if (target is MemberAccessExpression memberAccess)
+            {
+                TypeExpression rawObjType = ResolveAlias(GetType(memberAccess.Object));
+                if ((rawObjType is PointerTypeExpression p && p.IsReadOnly) ||
+                    (rawObjType is ManagedTypeExpression m && m.IsReadOnly) ||
+                    IsExpressionReadOnly(memberAccess.Object))
+                {
+                    throw new TypeCheckException($"Cannot assign to field '{memberAccess.Member}' on readonly instance", line);
+                }
+
+                TypeExpression unwrapped = rawObjType;
+                while (unwrapped is PointerTypeExpression ptr)
+                {
+                    unwrapped = ResolveAlias(ptr.Inner);
+                }
+                while (unwrapped is ManagedTypeExpression mgd)
+                {
+                    unwrapped = ResolveAlias(mgd.Inner);
+                }
+
+                if (unwrapped is NamedTypeExpression named)
+                {
+                    if (_structs.TryGetValue(named.Name, out StructInfo? sInfo))
+                    {
+                        if (sInfo.FieldDeclarationsByName.TryGetValue(memberAccess.Member, out FieldDeclaration? sField) && sField.IsReadOnly)
+                        {
+                            bool allowedInCtor = _currentConstructor != null &&
+                                                 memberAccess.Object is IdentifierExpression { Name: "this" } &&
+                                                 _currentStruct != null &&
+                                                 _currentStruct.Name == sInfo.Name;
+                            if (!allowedInCtor)
+                            {
+                                throw new TypeCheckException($"Cannot assign to readonly field '{memberAccess.Member}' outside constructor", line);
+                            }
+                        }
+                    }
+                    else if (_classes.TryGetValue(named.Name, out ClassInfo? cInfo))
+                    {
+                        if (cInfo.FieldDeclarationsByName.TryGetValue(memberAccess.Member, out FieldDeclaration? cField) && cField.IsReadOnly)
+                        {
+                            bool allowedInCtor = _currentConstructor != null &&
+                                                 memberAccess.Object is IdentifierExpression { Name: "this" } &&
+                                                 _currentClass != null &&
+                                                 _currentClass.FieldDeclarations.Contains(cField);
+                            if (!allowedInCtor)
+                            {
+                                throw new TypeCheckException($"Cannot assign to readonly field '{memberAccess.Member}' outside constructor", line);
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+
+            if (target is IdentifierExpression ident)
+            {
+                bool isLocal = false;
+                foreach (Dictionary<string, TypeExpression> scope in _scopes)
+                {
+                    if (scope.ContainsKey(ident.Name))
+                    {
+                        isLocal = true;
+                        break;
+                    }
+                }
+
+                if (!isLocal)
+                {
+                    if (_currentStruct != null && _currentStruct.FieldIndex(ident.Name) >= 0)
+                    {
+                        if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
+                        {
+                            TypeExpression resThis = ResolveAlias(thisType);
+                            if ((resThis is PointerTypeExpression p && p.IsReadOnly) || (resThis is ManagedTypeExpression m && m.IsReadOnly))
+                            {
+                                throw new TypeCheckException($"Cannot assign to field '{ident.Name}' on readonly instance", line);
+                            }
+                        }
+
+                        if (_currentStruct.FieldDeclarationsByName.TryGetValue(ident.Name, out FieldDeclaration? sField) && sField.IsReadOnly)
+                        {
+                            if (_currentConstructor == null)
+                            {
+                                throw new TypeCheckException($"Cannot assign to readonly field '{ident.Name}' outside constructor", line);
+                            }
+                        }
+                    }
+                    else if (_currentClass != null && _currentClass.FieldIndex(ident.Name) >= 0)
+                    {
+                        if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
+                        {
+                            TypeExpression resThis = ResolveAlias(thisType);
+                            if ((resThis is PointerTypeExpression p && p.IsReadOnly) || (resThis is ManagedTypeExpression m && m.IsReadOnly))
+                            {
+                                throw new TypeCheckException($"Cannot assign to field '{ident.Name}' on readonly instance", line);
+                            }
+                        }
+
+                        if (_currentClass.FieldDeclarationsByName.TryGetValue(ident.Name, out FieldDeclaration? cField) && cField.IsReadOnly)
+                        {
+                            if (_currentConstructor == null || !_currentClass.FieldDeclarations.Contains(cField))
+                            {
+                                throw new TypeCheckException($"Cannot assign to readonly field '{ident.Name}' outside constructor", line);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public void Visit(AssignmentExpression node)
         {
             if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression))
@@ -2073,6 +2362,7 @@ namespace gflat
 
             node.Target.Accept(this);
             TypeExpression targetType = GetType(node.Target);
+            CheckAssignmentTarget(node.Target, node.Line);
 
             node.Value.Accept(this);
             TypeExpression valueType = GetType(node.Value);
@@ -2204,7 +2494,12 @@ namespace gflat
                 }
 
                 memberAccess.Object.Accept(this);
-                TypeExpression objType = GetType(memberAccess.Object);
+                TypeExpression rawObjType = GetType(memberAccess.Object);
+                bool isReceiverReadOnly = (rawObjType is PointerTypeExpression pRec && pRec.IsReadOnly)
+                                       || (rawObjType is ManagedTypeExpression mRec && mRec.IsReadOnly)
+                                       || IsExpressionReadOnly(memberAccess.Object);
+
+                TypeExpression objType = rawObjType;
                 if (objType is PointerTypeExpression ptr)
                     objType = ptr.Inner;
                 if (objType is ManagedTypeExpression mgd)
@@ -2216,6 +2511,9 @@ namespace gflat
                 {
                     if (!ifaceInfo.MethodsByName.TryGetValue(memberAccess.Member, out MethodDeclaration? ifaceMethod))
                         throw new TypeCheckException($"Interface '{namedIface.Name}' has no method '{memberAccess.Member}'", node.Line);
+
+                    if (isReceiverReadOnly && !ifaceMethod.IsReadOnly)
+                        throw new TypeCheckException($"Cannot call non-readonly method '{ifaceMethod.Name}' on readonly instance", node.Line);
 
                     int slotIdx = ifaceInfo.MethodIndices[memberAccess.Member];
                     _interfaceMethodCalls[node] = (ifaceInfo, slotIdx, ifaceMethod);
@@ -2266,6 +2564,8 @@ namespace gflat
                         throw new TypeCheckException($"Class '{named.Name}' has no method '{memberAccess.Member}'", node.Line);
 
                     method = mEntry.Method;
+                    if (isReceiverReadOnly && !method.IsReadOnly)
+                        throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
                     if (method.Accessibility == TokenKind.Private && _currentClass?.Name != mEntry.DeclaringClass)
                         throw new TypeCheckException($"Cannot access private method '{memberAccess.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
                     if (method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
@@ -2296,6 +2596,9 @@ namespace gflat
                     if (!sInfo.Methods.TryGetValue(memberAccess.Member, out method))
                         throw new TypeCheckException($"'{named.Name}' has no method '{memberAccess.Member}'", node.Line);
 
+                    if (isReceiverReadOnly && !method.IsReadOnly)
+                        throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
+
                     funcName = $"{named.Name}.{memberAccess.Member}";
                     _resolvedCalls[node] = method;
                 }
@@ -2310,9 +2613,29 @@ namespace gflat
                 if (_currentClass != null && _currentClass.Methods.TryGetValue(funcName, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                 {
                     method = mEntry.Method;
+                    if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
+                    {
+                        TypeExpression resThisType = ResolveAlias(thisType);
+                        if (((resThisType is PointerTypeExpression p && p.IsReadOnly) || (resThisType is ManagedTypeExpression m && m.IsReadOnly)) && !method.IsReadOnly)
+                        {
+                            throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
+                        }
+                    }
                     if (_currentClass.VTableSlots.TryGetValue(funcName, out int slotIndex))
                     {
                         _virtualMethodCalls[node] = (_currentClass, slotIndex, method);
+                    }
+                    _resolvedCalls[node] = method;
+                }
+                else if (_currentStruct != null && _currentStruct.Methods.TryGetValue(funcName, out method))
+                {
+                    if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
+                    {
+                        TypeExpression resThisType = ResolveAlias(thisType);
+                        if (((resThisType is PointerTypeExpression p && p.IsReadOnly) || (resThisType is ManagedTypeExpression m && m.IsReadOnly)) && !method.IsReadOnly)
+                        {
+                            throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
+                        }
                     }
                     _resolvedCalls[node] = method;
                 }
@@ -2845,8 +3168,8 @@ namespace gflat
         private static string TypeName(TypeExpression type) => type switch
         {
             NamedTypeExpression n => n.Name,
-            PointerTypeExpression p => TypeName(p.Inner) + "*",
-            ManagedTypeExpression m => TypeName(m.Inner) + "^",
+            PointerTypeExpression p => (p.IsReadOnly ? "readonly " : "") + TypeName(p.Inner) + "*",
+            ManagedTypeExpression m => (m.IsReadOnly ? "readonly " : "") + TypeName(m.Inner) + "^",
             ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"

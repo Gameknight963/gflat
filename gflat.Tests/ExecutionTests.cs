@@ -2694,6 +2694,90 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(0, result.ExitCode);
         }
+
+        [Fact]
+        public void ReadonlyPointerExecution()
+        {
+            string code = """
+                int Sum(readonly int* a, readonly int* b)
+                {
+                    return *a + *b;
+                }
+
+                int main()
+                {
+                    int x = 15;
+                    int y = 27;
+                    return Sum(&x, &y);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ReadonlyMethodExecution()
+        {
+            string code = """
+                struct Rectangle
+                {
+                    int width;
+                    int height;
+
+                    public readonly int Area()
+                    {
+                        return this.width * this.height;
+                    }
+                }
+
+                int main()
+                {
+                    Rectangle r;
+                    r.width = 6;
+                    r.height = 7;
+                    readonly Rectangle* ptr = &r;
+                    return ptr.Area();
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ReadonlyFieldExecution()
+        {
+            string code = """
+                class User
+                {
+                    readonly int id;
+                    int score;
+
+                    public User(int id, int score)
+                    {
+                        this.id = id;
+                        this.score = score;
+                    }
+
+                    public readonly int GetTotal()
+                    {
+                        return this.id + this.score;
+                    }
+                }
+
+                int main()
+                {
+                    User* u = new* User(10, 32);
+                    int total = u.GetTotal();
+                    u->free();
+                    return total;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
 

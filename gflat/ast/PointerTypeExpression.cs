@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -8,11 +8,13 @@ namespace gflat.ast
     {
         public TypeExpression Inner { get; }
         public bool IsNullable { get; }
+        public bool IsReadOnly { get; }
 
-        public PointerTypeExpression(TypeExpression inner, bool isNullable, int line) : base(line)
+        public PointerTypeExpression(TypeExpression inner, bool isNullable, int line, bool isReadOnly = false) : base(line)
         {
             Inner = inner;
             IsNullable = isNullable;
+            IsReadOnly = isReadOnly;
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

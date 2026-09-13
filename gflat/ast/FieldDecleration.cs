@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -12,8 +12,9 @@ namespace gflat.ast
         public TokenKind Accessibility { get; }
         public bool IsConst { get; }
         public bool IsStatic { get; }
+        public bool IsReadOnly { get; }
 
-        public FieldDeclaration(string name, TypeExpression type, AstNode? initializer, TokenKind accessibility, bool isConst, bool isStatic, int line) : base(line)
+        public FieldDeclaration(string name, TypeExpression type, AstNode? initializer, TokenKind accessibility, bool isConst, bool isStatic, int line, bool isReadOnly = false) : base(line)
         {
             Name = name;
             Type = type;
@@ -21,6 +22,7 @@ namespace gflat.ast
             Accessibility = accessibility;
             IsConst = isConst;
             IsStatic = isStatic;
+            IsReadOnly = isReadOnly;
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

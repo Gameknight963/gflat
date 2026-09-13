@@ -8,6 +8,7 @@ namespace gflat
     {
         const string code = """
             extern int printf(char* fmt, ...);
+            extern void* malloc(long size);
 
             struct Point
             {
@@ -59,6 +60,15 @@ namespace gflat
                 Point* ptr = &p;
                 ptr.Move(100, 200);
                 ptr.Print();
+
+                printf("ptr address: 0x%llx, is_null: %d\n", ptr->address, ptr->is_null);
+
+                Point* heapPoint = malloc(8L);
+                heapPoint.x = 42;
+                heapPoint.y = 84;
+                heapPoint.Print();
+                printf("heapPoint address: 0x%llx\n", heapPoint->address);
+                heapPoint->free();
 
                 long sum = Add64(1000000000L, 2000000000L);
                 printf("sum: %lld\n", sum);
@@ -162,7 +172,7 @@ namespace gflat
             Console.WriteLine("compiled successfully -> output.exe, running...");
 
             process = new Process();
-            process.StartInfo.FileName = "output.exe";
+            process.StartInfo.FileName = Path.GetFullPath("output.exe");
             process.StartInfo.RedirectStandardError = true;
             process.Start();
             process.WaitForExit();

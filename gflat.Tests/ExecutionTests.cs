@@ -224,5 +224,100 @@ namespace gflat.Tests
             var result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void PointerIsNullTest()
+        {
+            string code = """
+                struct Node
+                {
+                    int value;
+                }
+
+                int main()
+                {
+                    Node*? empty = null;
+                    if (!empty->is_null)
+                    {
+                        return 1;
+                    }
+
+                    Node n;
+                    n.value = 42;
+                    Node* ptr = &n;
+                    if (ptr->is_null)
+                    {
+                        return 2;
+                    }
+
+                    return n.value;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void PointerAddressTest()
+        {
+            string code = """
+                int main()
+                {
+                    int val = 123;
+                    int* ptr = &val;
+                    long addr = ptr->address;
+                    if (addr == 0L)
+                    {
+                        return 1;
+                    }
+
+                    int*? nullPtr = null;
+                    long nullAddr = nullPtr->address;
+                    if (nullAddr != 0L)
+                    {
+                        return 2;
+                    }
+
+                    return 0;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(0, result.ExitCode);
+        }
+
+        [Fact]
+        public void PointerFreeTest()
+        {
+            string code = """
+                extern void* malloc(long size);
+
+                struct Item
+                {
+                    int id;
+                    int count;
+                }
+
+                int main()
+                {
+                    Item* item = malloc(16L);
+                    if (item->is_null)
+                    {
+                        return 1;
+                    }
+
+                    item.id = 100;
+                    item.count = 25;
+                    int total = item.id + item.count;
+
+                    item->free();
+                    return total;
+                }
+                """;
+
+            var result = CompilerTestHelper.Run(code);
+            Assert.Equal(125, result.ExitCode);
+        }
     }
 }

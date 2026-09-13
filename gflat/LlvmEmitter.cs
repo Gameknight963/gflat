@@ -69,6 +69,8 @@ public class LlvmEmitter : IVisitor
         }
         else if (node is MemberAccessExpression member)
         {
+            if (member.IsArrow)
+                throw new Exception($"Cannot take address of pointer property '->{member.Member}'");
             EmitMemberAddress(member);
         }
         else if (node is UnaryExpression { Operator: TokenKind.Star } deref)
@@ -454,6 +456,14 @@ public class LlvmEmitter : IVisitor
         {
             node.Initializer.Accept(this);
             string val = Pop();
+            TypeExpression initType = _typeChecker.GetType(node.Initializer);
+            string initLlvmType = EmitType(initType);
+            if (initLlvmType != type && type.EndsWith("*") && initLlvmType.EndsWith("*"))
+            {
+                string castVal = NewTemp();
+                Emit($"    {castVal} = bitcast {initLlvmType} {val} to {type}");
+                val = castVal;
+            }
             Emit($"    store {type} {val}, {type}* {ptr}");
         }
     }
@@ -727,6 +737,34 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(CallExpression node)
     {
+        if (node.Callee is MemberAccessExpression { IsArrow: true, Member: "free" } freeAccess)
+        {
+            if (!_externNames.Contains("free"))
+            {
+                _externNames.Add("free");
+                EmitGlobal("declare void @free(i8*)");
+            }
+
+            freeAccess.Object.Accept(this);
+            string ptrVal = Pop();
+            TypeExpression ptrType = _typeChecker.GetType(freeAccess.Object);
+            string llvmPtrType = EmitType(ptrType);
+
+            string castPtr;
+            if (llvmPtrType != "i8*")
+            {
+                castPtr = NewTemp();
+                Emit($"    {castPtr} = bitcast {llvmPtrType} {ptrVal} to i8*");
+            }
+            else
+            {
+                castPtr = ptrVal;
+            }
+
+            Emit($"    call void @free(i8* {castPtr})");
+            return;
+        }
+
         List<string> argValues = new();
         List<string> argTypes = new();
 
@@ -771,12 +809,52 @@ public class LlvmEmitter : IVisitor
         }
         else
         {
-            foreach (AstNode arg in node.Arguments)
+            for (int i = 0; i < node.Arguments.Count; i++)
             {
+                AstNode arg = node.Arguments[i];
                 arg.Accept(this);
-                argValues.Add(Pop());
+                string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
-                argTypes.Add(EmitType(argType));
+                string llvmArgType = EmitType(argType);
+
+                if (target is MethodDeclaration methodTarget && i < methodTarget.Parameters.Count)
+                {
+                    string paramType = EmitType(methodTarget.Parameters[i].Type);
+                    if (paramType != llvmArgType && paramType.EndsWith("*") && llvmArgType.EndsWith("*"))
+                    {
+                        string castVal = NewTemp();
+                        Emit($"    {castVal} = bitcast {llvmArgType} {val} to {paramType}");
+                        val = castVal;
+                        llvmArgType = paramType;
+                    }
+                }
+                else if (target is ExternDeclaration extDecl)
+                {
+                    if (i < extDecl.Parameters.Count)
+                    {
+                        string paramType = EmitType(extDecl.Parameters[i].Type);
+                        if (paramType != llvmArgType && paramType.EndsWith("*") && llvmArgType.EndsWith("*"))
+                        {
+                            string castVal = NewTemp();
+                            Emit($"    {castVal} = bitcast {llvmArgType} {val} to {paramType}");
+                            val = castVal;
+                            llvmArgType = paramType;
+                        }
+                    }
+                    else if (extDecl.IsVariadic)
+                    {
+                        if (llvmArgType == "i1")
+                        {
+                            string promoted = NewTemp();
+                            Emit($"    {promoted} = zext i1 {val} to i32");
+                            val = promoted;
+                            llvmArgType = "i32";
+                        }
+                    }
+                }
+
+                argValues.Add(val);
+                argTypes.Add(llvmArgType);
             }
 
             if (target is ExternDeclaration ext)
@@ -850,6 +928,33 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(MemberAccessExpression node)
     {
+        if (node.IsArrow)
+        {
+            node.Object.Accept(this);
+            string ptrVal = Pop();
+            TypeExpression objType = _typeChecker.GetType(node.Object);
+            string llvmPtrType = EmitType(objType);
+
+            if (node.Member == "address")
+            {
+                string intVal = NewTemp();
+                Emit($"    {intVal} = ptrtoint {llvmPtrType} {ptrVal} to i64");
+                Push(intVal);
+                return;
+            }
+            else if (node.Member == "is_null")
+            {
+                string boolVal = NewTemp();
+                Emit($"    {boolVal} = icmp eq {llvmPtrType} {ptrVal}, null");
+                Push(boolVal);
+                return;
+            }
+            else
+            {
+                throw new NotImplementedException($"Pointer operation '->{node.Member}' not supported as expression");
+            }
+        }
+
         EmitMemberAddress(node);
         string fieldPtr = Pop();
         TypeExpression fieldType = _typeChecker.GetType(node);
@@ -872,6 +977,15 @@ public class LlvmEmitter : IVisitor
         bool isFloat = targetType is NamedTypeExpression { Name: "float" };
 
         string finalVal = val;
+        TypeExpression valueType = _typeChecker.GetType(node.Value);
+        string valueLlvmType = EmitType(valueType);
+        if (valueLlvmType != llvmType && llvmType.EndsWith("*") && valueLlvmType.EndsWith("*"))
+        {
+            string castVal = NewTemp();
+            Emit($"    {castVal} = bitcast {valueLlvmType} {finalVal} to {llvmType}");
+            finalVal = castVal;
+        }
+
         if (node.Operator != TokenKind.Equals)
         {
             string currentVal = NewTemp();

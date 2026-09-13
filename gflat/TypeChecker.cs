@@ -107,7 +107,11 @@ namespace gflat
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
+            {
+                if (pa.Inner is NamedTypeExpression { Name: "void" } || pb.Inner is NamedTypeExpression { Name: "void" })
+                    return true;
                 return TypesMatch(pa.Inner, pb.Inner);
+            }
             if (a is ArrayTypeExpression aa && b is ArrayTypeExpression ab)
                 return TypesMatch(aa.ElementType, ab.ElementType);
 
@@ -436,6 +440,9 @@ namespace gflat
             if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star }))
                 throw new TypeCheckException($"Invalid assignment target '{node.Target.GetType().Name}'", node.Line);
 
+            if (node.Target is MemberAccessExpression { IsArrow: true } arrow)
+                throw new TypeCheckException($"Cannot assign to read-only pointer property '->{arrow.Member}'", node.Line);
+
             node.Target.Accept(this);
             TypeExpression targetType = GetType(node.Target);
 
@@ -460,6 +467,36 @@ namespace gflat
 
             if (node.Callee is MemberAccessExpression memberAccess)
             {
+                if (memberAccess.IsArrow)
+                {
+                    memberAccess.Object.Accept(this);
+                    TypeExpression targetObjType = GetType(memberAccess.Object);
+                    if (targetObjType is not PointerTypeExpression && targetObjType is not ManagedTypeExpression)
+                        throw new TypeCheckException($"Cannot use '->' operator on non-pointer type '{TypeName(targetObjType)}'", node.Line);
+
+                    if (memberAccess.Member == "free")
+                    {
+                        if (node.Arguments.Count != 0)
+                            throw new TypeCheckException("'free()' takes no arguments", node.Line);
+
+                        RecordType(node, Void);
+                        return;
+                    }
+                    else if (memberAccess.Member is "address" or "is_null")
+                    {
+                        throw new TypeCheckException($"'->{memberAccess.Member}' is a property, not a method", node.Line);
+                    }
+                    else
+                    {
+                        TypeExpression innerType = targetObjType is PointerTypeExpression p ? p.Inner : ((ManagedTypeExpression)targetObjType).Inner;
+                        if (innerType is NamedTypeExpression namedStr && _structs.ContainsKey(namedStr.Name))
+                        {
+                            throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to call method '{memberAccess.Member}' on '{namedStr.Name}'.", node.Line);
+                        }
+                        throw new TypeCheckException($"Unknown pointer operation '->{memberAccess.Member}'. The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free').", node.Line);
+                    }
+                }
+
                 memberAccess.Object.Accept(this);
                 TypeExpression objType = GetType(memberAccess.Object);
                 if (objType is PointerTypeExpression ptr)
@@ -606,6 +643,37 @@ namespace gflat
         {
             node.Object.Accept(this);
             TypeExpression objType = GetType(node.Object);
+
+            if (node.IsArrow)
+            {
+                if (objType is not PointerTypeExpression && objType is not ManagedTypeExpression)
+                    throw new TypeCheckException($"Cannot use '->' operator on non-pointer type '{TypeName(objType)}'", node.Line);
+
+                if (node.Member == "address")
+                {
+                    RecordType(node, Long);
+                    return;
+                }
+                else if (node.Member == "is_null")
+                {
+                    RecordType(node, Bool);
+                    return;
+                }
+                else if (node.Member == "free")
+                {
+                    RecordType(node, Void);
+                    return;
+                }
+                else
+                {
+                    TypeExpression innerType = objType is PointerTypeExpression p ? p.Inner : ((ManagedTypeExpression)objType).Inner;
+                    if (innerType is NamedTypeExpression namedStr && _structs.ContainsKey(namedStr.Name))
+                    {
+                        throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to access member '{node.Member}' on '{namedStr.Name}'.", node.Line);
+                    }
+                    throw new TypeCheckException($"Unknown pointer operation '->{node.Member}'. The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free').", node.Line);
+                }
+            }
 
             // unwrap pointer if needed
             if (objType is PointerTypeExpression ptr)

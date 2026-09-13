@@ -114,5 +114,114 @@ namespace gflat.Tests
 
             Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
         }
+
+        [Fact]
+        public void ArrowOperatorOnNonPointerThrows()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                }
+
+                int main()
+                {
+                    Point p;
+                    long a = p->address;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot use '->' operator on non-pointer type", ex.Message);
+        }
+
+        [Fact]
+        public void ArrowOperatorForStructMemberSuggestsDot()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                }
+
+                int main()
+                {
+                    Point p;
+                    Point* ptr = &p;
+                    int val = ptr->x;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("reserved for pointer metadata and lifecycle operations", ex.Message);
+            Assert.Contains("Use '.' to access member 'x'", ex.Message);
+        }
+
+        [Fact]
+        public void ArrowOperatorForStructMethodSuggestsDot()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+
+                    void Reset()
+                    {
+                        this.x = 0;
+                    }
+                }
+
+                int main()
+                {
+                    Point p;
+                    Point* ptr = &p;
+                    ptr->Reset();
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("reserved for pointer metadata and lifecycle operations", ex.Message);
+            Assert.Contains("Use '.' to call method 'Reset'", ex.Message);
+        }
+
+        [Fact]
+        public void ArrowPropertyAssignmentThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    int* ptr = &x;
+                    ptr->address = 100L;
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign to read-only pointer property", ex.Message);
+        }
+
+        [Fact]
+        public void ArrowPropertyWithParenthesesThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    int* ptr = &x;
+                    if (ptr->is_null())
+                    {
+                        return 1;
+                    }
+                    return 0;
+                }
+                """;
+
+            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("is a property, not a method", ex.Message);
+        }
     }
 }

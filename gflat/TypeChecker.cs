@@ -54,6 +54,15 @@ namespace gflat
         private readonly Dictionary<UnaryExpression, (string StructName, OperatorDeclaration Operator)> _unaryOperatorTargets = new();
         private readonly Dictionary<AssignmentExpression, (string StructName, OperatorDeclaration Operator)> _compoundOperatorTargets = new();
         private readonly Dictionary<OperatorDeclaration, string> _operatorNamespaces = new();
+        private AstNode? _currentFunction = null;
+        private readonly Stack<TryStatement> _tryStack = new();
+        private readonly HashSet<AstNode> _canThrowFunctions = new();
+        private readonly HashSet<AstNode> _throwingCalls = new();
+        private readonly List<(AstNode Call, AstNode? Caller, List<TryStatement> Tries)> _callSites = new();
+        private readonly List<(ThrowStatement Throw, AstNode? Caller, List<TryStatement> Tries, string ThrownTypeName)> _throwSites = new();
+
+        public bool CanFunctionThrow(AstNode func) => _canThrowFunctions.Contains(func);
+        public bool CanCallThrow(AstNode call) => _throwingCalls.Contains(call);
 
         public bool TryGetOperatorTarget(BinaryExpression node, out (string StructName, OperatorDeclaration Operator) target) =>
             _operatorTargets.TryGetValue(node, out target);
@@ -1608,6 +1617,8 @@ namespace gflat
 
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 ns.Accept(this);
+
+            PropagateCanThrow();
         }
 
         private void ResolveClassHierarchies()
@@ -2078,22 +2089,31 @@ namespace gflat
                 }
                 else if (member is MethodDeclaration method)
                 {
-                    ValidateTypeUsage(method.ReturnType, method.Line);
-                    if (!method.IsAbstract)
+                    AstNode? prevFunc = _currentFunction;
+                    _currentFunction = method;
+                    try
                     {
-                        PushScope();
-                        NamedTypeExpression classType = new NamedTypeExpression(node.Name, null, method.Line);
-                        PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line, isReadOnly: method.IsReadOnly);
-                        DeclareVariable("this", thisType, method.Line);
-
-                        foreach (Parameter p in method.Parameters)
+                        ValidateTypeUsage(method.ReturnType, method.Line);
+                        if (!method.IsAbstract)
                         {
-                            ValidateTypeUsage(p.Type, p.Line);
-                            DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
-                        }
+                            PushScope();
+                            NamedTypeExpression classType = new NamedTypeExpression(node.Name, null, method.Line);
+                            PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line, isReadOnly: method.IsReadOnly);
+                            DeclareVariable("this", thisType, method.Line);
 
-                        method.Body?.Accept(this);
-                        PopScope();
+                            foreach (Parameter p in method.Parameters)
+                            {
+                                ValidateTypeUsage(p.Type, p.Line);
+                                DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                            }
+
+                            method.Body?.Accept(this);
+                            PopScope();
+                        }
+                    }
+                    finally
+                    {
+                        _currentFunction = prevFunc;
                     }
                 }
             }
@@ -2201,20 +2221,29 @@ namespace gflat
                 }
                 else if (member is MethodDeclaration method)
                 {
-                    ValidateTypeUsage(method.ReturnType, method.Line);
-                    PushScope();
-                    NamedTypeExpression structType = new NamedTypeExpression(node.Name, null, method.Line);
-                    PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line, isReadOnly: method.IsReadOnly);
-                    DeclareVariable("this", thisType, method.Line);
-
-                    foreach (Parameter p in method.Parameters)
+                    AstNode? prevFunc = _currentFunction;
+                    _currentFunction = method;
+                    try
                     {
-                        ValidateTypeUsage(p.Type, p.Line);
-                        DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
-                    }
+                        ValidateTypeUsage(method.ReturnType, method.Line);
+                        PushScope();
+                        NamedTypeExpression structType = new NamedTypeExpression(node.Name, null, method.Line);
+                        PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line, isReadOnly: method.IsReadOnly);
+                        DeclareVariable("this", thisType, method.Line);
 
-                    method.Body?.Accept(this);
-                    PopScope();
+                        foreach (Parameter p in method.Parameters)
+                        {
+                            ValidateTypeUsage(p.Type, p.Line);
+                            DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                        }
+
+                        method.Body?.Accept(this);
+                        PopScope();
+                    }
+                    finally
+                    {
+                        _currentFunction = prevFunc;
+                    }
                 }
                 else if (member is OperatorDeclaration op)
                 {
@@ -2264,13 +2293,22 @@ namespace gflat
                 throw new TypeCheckException($"One of the parameters of a user-defined operator must be the containing type '{_currentStruct.Name}'", node.Line);
             }
 
-            PushScope();
-            foreach (Parameter p in node.Parameters)
+            AstNode? prevFunc = _currentFunction;
+            _currentFunction = node;
+            try
             {
-                DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                PushScope();
+                foreach (Parameter p in node.Parameters)
+                {
+                    DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                }
+                node.Body.Accept(this);
+                PopScope();
             }
-            node.Body.Accept(this);
-            PopScope();
+            finally
+            {
+                _currentFunction = prevFunc;
+            }
         }
 
         public void Visit(InterfaceDeclaration node)
@@ -2341,15 +2379,24 @@ namespace gflat
         {
             if (node.IsGeneric) return;
 
-            ValidateTypeUsage(node.ReturnType, node.Line);
-            PushScope();
-            foreach (Parameter p in node.Parameters)
+            AstNode? prevFunc = _currentFunction;
+            _currentFunction = node;
+            try
             {
-                ValidateTypeUsage(p.Type, p.Line);
-                DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                ValidateTypeUsage(node.ReturnType, node.Line);
+                PushScope();
+                foreach (Parameter p in node.Parameters)
+                {
+                    ValidateTypeUsage(p.Type, p.Line);
+                    DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                }
+                node.Body?.Accept(this);
+                PopScope();
             }
-            node.Body?.Accept(this);
-            PopScope();
+            finally
+            {
+                _currentFunction = prevFunc;
+            }
         }
 
         public void Visit(ConstructorDeclaration node)
@@ -2365,6 +2412,8 @@ namespace gflat
                 throw new TypeCheckException($"Constructor name '{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
             }
             _currentConstructor = node;
+            AstNode? prevFunc = _currentFunction;
+            _currentFunction = node;
             try
             {
                 PushScope();
@@ -2439,6 +2488,7 @@ namespace gflat
             }
             finally
             {
+                _currentFunction = prevFunc;
                 _currentConstructor = null;
             }
         }
@@ -3246,6 +3296,8 @@ namespace gflat
 
         public void Visit(CallExpression node)
         {
+            _callSites.Add((node, _currentFunction, _tryStack.ToList()));
+
             foreach (AstNode arg in node.Arguments)
                 arg.Accept(this);
 
@@ -3853,6 +3905,8 @@ namespace gflat
         public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
         public void Visit(NewExpression node)
         {
+            _callSites.Add((node, _currentFunction, _tryStack.ToList()));
+
             TypeExpression resolvedType = ResolveAlias(node.Type);
             if (resolvedType is not NamedTypeExpression named)
             {
@@ -4859,14 +4913,240 @@ namespace gflat
 
         public void Visit(ThrowStatement node)
         {
+            node.Expression.Accept(this);
+            TypeExpression exprType = ResolveAlias(_types[node.Expression]);
+
+            TypeExpression? innerType = null;
+            if (exprType is PointerTypeExpression ptr)
+            {
+                innerType = ResolveAlias(ptr.Inner);
+            }
+            else if (exprType is ManagedTypeExpression mgd)
+            {
+                innerType = ResolveAlias(mgd.Inner);
+            }
+
+            if (innerType is not NamedTypeExpression named || !TypeDerivesFromClass(named, "Exception"))
+            {
+                throw new TypeCheckException($"Cannot throw non-exception type '{TypeName(exprType)}'. Thrown expressions must be a pointer to 'Exception' or a subclass of 'Exception'", node.Line);
+            }
+
+            _throwSites.Add((node, _currentFunction, _tryStack.ToList(), named.Name));
         }
 
         public void Visit(TryStatement node)
         {
+            _tryStack.Push(node);
+            try
+            {
+                node.TryBlock.Accept(this);
+            }
+            finally
+            {
+                _tryStack.Pop();
+            }
+
+            bool hasCatchAll = false;
+            List<string> caughtTypeNames = new();
+
+            foreach (CatchClause clause in node.CatchClauses)
+            {
+                if (hasCatchAll)
+                {
+                    throw new TypeCheckException("A catch-all clause must be the last catch clause", clause.Line);
+                }
+
+                if (clause.ExceptionType == null)
+                {
+                    hasCatchAll = true;
+                }
+                else
+                {
+                    TypeExpression resolved = ResolveAlias(clause.ExceptionType);
+                    string? typeName = null;
+                    if (resolved is NamedTypeExpression named)
+                    {
+                        typeName = named.Name;
+                    }
+                    else if (resolved is PointerTypeExpression ptr && ResolveAlias(ptr.Inner) is NamedTypeExpression ptrNamed)
+                    {
+                        typeName = ptrNamed.Name;
+                    }
+                    else if (resolved is ManagedTypeExpression mgd && ResolveAlias(mgd.Inner) is NamedTypeExpression mgdNamed)
+                    {
+                        typeName = mgdNamed.Name;
+                    }
+
+                    if (typeName == null || !TypeDerivesFromClass(new NamedTypeExpression(typeName, null, clause.Line), "Exception"))
+                    {
+                        throw new TypeCheckException($"Catch type '{TypeName(clause.ExceptionType)}' must be 'Exception' or a subclass of 'Exception'", clause.Line);
+                    }
+
+                    foreach (string prevCaught in caughtTypeNames)
+                    {
+                        if (prevCaught == "Exception" || (typeName != prevCaught && TypeDerivesFromClass(new NamedTypeExpression(typeName, null, clause.Line), prevCaught)) || typeName == prevCaught)
+                        {
+                            throw new TypeCheckException($"Catch clause for '{typeName}' is unreachable because a previous catch clause catches '{prevCaught}'", clause.Line);
+                        }
+                    }
+                    caughtTypeNames.Add(typeName);
+                }
+
+                clause.Accept(this);
+            }
         }
 
         public void Visit(CatchClause node)
         {
+            PushScope();
+            try
+            {
+                if (node.VariableName != null && node.ExceptionType != null)
+                {
+                    TypeExpression varType = node.ExceptionType;
+                    if (varType is not PointerTypeExpression && varType is not ManagedTypeExpression)
+                    {
+                        varType = new PointerTypeExpression(varType, false, node.Line);
+                    }
+                    DeclareVariable(node.VariableName, varType, node.Line);
+                }
+                node.Body.Accept(this);
+            }
+            finally
+            {
+                PopScope();
+            }
+        }
+
+        private void PropagateCanThrow()
+        {
+            foreach (var (throwStmt, caller, tries, thrownType) in _throwSites)
+            {
+                if (caller == null)
+                {
+                    continue;
+                }
+                bool caught = false;
+                foreach (TryStatement tryStmt in tries)
+                {
+                    if (TryCatchesType(tryStmt, thrownType))
+                    {
+                        caught = true;
+                        break;
+                    }
+                }
+                if (!caught)
+                {
+                    _canThrowFunctions.Add(caller);
+                }
+            }
+
+            bool changed = true;
+            while (changed)
+            {
+                changed = false;
+
+                // Propagate through virtual overrides
+                foreach (ClassInfo cls in _classes.Values)
+                {
+                    if (cls.BaseClass != null && _classes.TryGetValue(cls.BaseClass, out ClassInfo? baseCls))
+                    {
+                        foreach (var kvp in cls.Methods)
+                        {
+                            if (baseCls.Methods.TryGetValue(kvp.Key, out var baseMethodEntry))
+                            {
+                                MethodDeclaration derivedMethod = kvp.Value.Method;
+                                MethodDeclaration baseMethod = baseMethodEntry.Method;
+
+                                if (_canThrowFunctions.Contains(derivedMethod) && _canThrowFunctions.Add(baseMethod))
+                                {
+                                    changed = true;
+                                }
+                                if (_canThrowFunctions.Contains(baseMethod) && _canThrowFunctions.Add(derivedMethod))
+                                {
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Propagate through calls
+                foreach (var (callNode, caller, tries) in _callSites)
+                {
+                    AstNode? callee = null;
+                    if (callNode is CallExpression call)
+                    {
+                        _resolvedCalls.TryGetValue(call, out callee);
+                    }
+                    else if (callNode is NewExpression newExpr)
+                    {
+                        _resolvedConstructors.TryGetValue(newExpr, out ConstructorDeclaration? ctor);
+                        callee = ctor;
+                    }
+
+                    if (callee != null && _canThrowFunctions.Contains(callee))
+                    {
+                        if (_throwingCalls.Add(callNode))
+                        {
+                            changed = true;
+                        }
+
+                        if (caller != null)
+                        {
+                            bool caught = false;
+                            foreach (TryStatement tryStmt in tries)
+                            {
+                                if (TryCatchesType(tryStmt, "Exception"))
+                                {
+                                    caught = true;
+                                    break;
+                                }
+                            }
+
+                            if (!caught && _canThrowFunctions.Add(caller))
+                            {
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // main() is always the top-level entry point with standard C ABI (i32 main())
+            _canThrowFunctions.RemoveWhere(f => f is MethodDeclaration m && m.Name == "main");
+        }
+
+        private bool TryCatchesType(TryStatement tryStmt, string thrownTypeName)
+        {
+            foreach (CatchClause clause in tryStmt.CatchClauses)
+            {
+                if (clause.ExceptionType == null)
+                {
+                    return true;
+                }
+
+                TypeExpression resolved = ResolveAlias(clause.ExceptionType);
+                string? catchName = null;
+                if (resolved is NamedTypeExpression named)
+                {
+                    catchName = named.Name;
+                }
+                else if (resolved is PointerTypeExpression ptr && ResolveAlias(ptr.Inner) is NamedTypeExpression ptrNamed)
+                {
+                    catchName = ptrNamed.Name;
+                }
+                else if (resolved is ManagedTypeExpression mgd && ResolveAlias(mgd.Inner) is NamedTypeExpression mgdNamed)
+                {
+                    catchName = mgdNamed.Name;
+                }
+
+                if (catchName == "Exception" || catchName == thrownTypeName || TypeDerivesFromClass(new NamedTypeExpression(thrownTypeName, null, 0), catchName!))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

@@ -3076,6 +3076,171 @@ namespace gflat.Tests
             Assert.Null(tryStmt.CatchClauses[2].VariableName);
             Assert.Null(tryStmt.CatchClauses[3].ExceptionType);
         }
+
+        [Fact]
+        public void TypeChecker_ThrowException_ValidHierarchy_Passes()
+        {
+            string code = """
+                class CustomException : Exception
+                {
+                    public CustomException(readonly char* msg) : base(msg, 100)
+                    {
+                    }
+                }
+
+                void ThrowCustom()
+                {
+                    throw new* CustomException(c"custom error");
+                }
+
+                int main()
+                {
+                    try
+                    {
+                        ThrowCustom();
+                    }
+                    catch (CustomException* ce)
+                    {
+                        return ce.GetCode();
+                    }
+                    catch (Exception* ex)
+                    {
+                        return ex.GetCode();
+                    }
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            MethodDeclaration? throwCustom = ast.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "ThrowCustom");
+            Assert.NotNull(throwCustom);
+            Assert.True(checker.CanFunctionThrow(throwCustom));
+
+            MethodDeclaration? main = ast.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "main");
+            Assert.NotNull(main);
+            Assert.False(checker.CanFunctionThrow(main));
+        }
+
+        [Fact]
+        public void TypeChecker_ThrowNonException_Throws()
+        {
+            string code = """
+                void Bad()
+                {
+                    throw 42;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot throw non-exception type", ex.Message);
+        }
+
+        [Fact]
+        public void TypeChecker_CatchNonException_Throws()
+        {
+            string code = """
+                void Bad()
+                {
+                    try
+                    {
+                    }
+                    catch (int x)
+                    {
+                    }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must be 'Exception' or a subclass", ex.Message);
+        }
+
+        [Fact]
+        public void TypeChecker_UnreachableCatchClause_Throws()
+        {
+            string code = """
+                class CustomException : Exception
+                {
+                }
+
+                void Bad()
+                {
+                    try
+                    {
+                    }
+                    catch (Exception* e1)
+                    {
+                    }
+                    catch (CustomException* e2)
+                    {
+                    }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("unreachable", ex.Message);
+        }
+
+        [Fact]
+        public void TypeChecker_CatchAllNotLast_Throws()
+        {
+            string code = """
+                void Bad()
+                {
+                    try
+                    {
+                    }
+                    catch
+                    {
+                    }
+                    catch (Exception* e)
+                    {
+                    }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must be the last catch clause", ex.Message);
+        }
+
+        [Fact]
+        public void TypeChecker_InterproceduralCanThrow_Propagates()
+        {
+            string code = """
+                void Level1()
+                {
+                    throw new* Exception(c"error");
+                }
+
+                void Level2()
+                {
+                    Level1();
+                }
+
+                void Safe()
+                {
+                    try
+                    {
+                        Level2();
+                    }
+                    catch
+                    {
+                    }
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            MethodDeclaration? l1 = ast.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "Level1");
+            MethodDeclaration? l2 = ast.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "Level2");
+            MethodDeclaration? safe = ast.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "Safe");
+
+            Assert.NotNull(l1);
+            Assert.NotNull(l2);
+            Assert.NotNull(safe);
+
+            Assert.True(checker.CanFunctionThrow(l1));
+            Assert.True(checker.CanFunctionThrow(l2));
+            Assert.False(checker.CanFunctionThrow(safe));
+        }
     }
 }
 

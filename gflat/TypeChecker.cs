@@ -394,7 +394,12 @@ namespace gflat
             FieldDeclaration? globalField = ResolveGlobalField(name);
             if (globalField != null)
             {
-                return ResolveAlias(globalField.Type);
+                TypeExpression gType = ResolveAlias(globalField.Type);
+                if (globalField.IsConst && gType is PointerTypeExpression gPtr && !gPtr.IsReadOnly)
+                {
+                    gType = new PointerTypeExpression(gPtr.Inner, gPtr.IsNullable, gPtr.Line, isReadOnly: true);
+                }
+                return gType;
             }
 
             if (ResolveFunction(name) != null || ResolveExtern(name) != null)
@@ -434,7 +439,12 @@ namespace gflat
             FieldDeclaration? globalField = ResolveGlobalField(name);
             if (globalField != null)
             {
-                type = ResolveAlias(globalField.Type);
+                TypeExpression gType = ResolveAlias(globalField.Type);
+                if (globalField.IsConst && gType is PointerTypeExpression gPtr && !gPtr.IsReadOnly)
+                {
+                    gType = new PointerTypeExpression(gPtr.Inner, gPtr.IsNullable, gPtr.Line, isReadOnly: true);
+                }
+                type = gType;
                 return true;
             }
 
@@ -2027,11 +2037,15 @@ namespace gflat
                 if (member is FieldDeclaration field)
                 {
                     ValidateTypeUsage(field.Type, field.Line);
+                    TypeExpression fieldType = ResolveAlias(field.Type);
+                    if (field.IsConst && fieldType is PointerTypeExpression cPtr && !cPtr.IsReadOnly)
+                    {
+                        fieldType = new PointerTypeExpression(cPtr.Inner, cPtr.IsNullable, cPtr.Line, isReadOnly: true);
+                    }
                     if (field.Initializer != null)
                     {
                         field.Initializer.Accept(this);
                         TypeExpression initType = ResolveAlias(GetType(field.Initializer));
-                        TypeExpression fieldType = ResolveAlias(field.Type);
                         if (!IsAssignable(fieldType, initType, field.Initializer))
                         {
                             throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
@@ -2150,11 +2164,15 @@ namespace gflat
                 if (member is FieldDeclaration field)
                 {
                     ValidateTypeUsage(field.Type, field.Line);
+                    TypeExpression fieldType = ResolveAlias(field.Type);
+                    if (field.IsConst && fieldType is PointerTypeExpression sPtr && !sPtr.IsReadOnly)
+                    {
+                        fieldType = new PointerTypeExpression(sPtr.Inner, sPtr.IsNullable, sPtr.Line, isReadOnly: true);
+                    }
                     if (field.Initializer != null)
                     {
                         field.Initializer.Accept(this);
                         TypeExpression initType = ResolveAlias(GetType(field.Initializer));
-                        TypeExpression fieldType = ResolveAlias(field.Type);
                         if (!IsAssignable(fieldType, initType, field.Initializer))
                         {
                             throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
@@ -2281,11 +2299,15 @@ namespace gflat
         public void Visit(FieldDeclaration node)
         {
             ValidateTypeUsage(node.Type, node.Line);
+            TypeExpression fieldType = ResolveAlias(node.Type);
+            if (node.IsConst && fieldType is PointerTypeExpression fPtr && !fPtr.IsReadOnly)
+            {
+                fieldType = new PointerTypeExpression(fPtr.Inner, fPtr.IsNullable, fPtr.Line, isReadOnly: true);
+            }
             if (node.Initializer != null)
             {
                 node.Initializer.Accept(this);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
-                TypeExpression fieldType = ResolveAlias(node.Type);
                 if (!IsAssignable(fieldType, initType, node.Initializer))
                 {
                     throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{node.Name}' of type '{TypeName(fieldType)}'", node.Line);
@@ -2312,7 +2334,7 @@ namespace gflat
                 _constVariableNames.Add(node.Name);
             }
 
-            RecordType(node, ResolveAlias(node.Type));
+            RecordType(node, fieldType);
         }
 
         public void Visit(MethodDeclaration node)
@@ -2529,6 +2551,10 @@ namespace gflat
         public void Visit(VariableDeclaration node)
         {
             TypeExpression varType = ResolveAlias(node.Type);
+            if (node.IsConst && varType is PointerTypeExpression ptr && !ptr.IsReadOnly)
+            {
+                varType = new PointerTypeExpression(ptr.Inner, ptr.IsNullable, ptr.Line, isReadOnly: true);
+            }
             ValidateTypeUsage(varType, node.Line);
             if (node.Initializer != null)
             {
@@ -2810,7 +2836,12 @@ namespace gflat
 
                 node.Operand.Accept(this);
                 TypeExpression operandType = GetType(node.Operand);
-                RecordType(node, new PointerTypeExpression(operandType, false, node.Line));
+                bool isReadOnly = IsExpressionReadOnly(node.Operand);
+                RecordType(node, new PointerTypeExpression(operandType, false, node.Line, isReadOnly: isReadOnly));
+                if (_constEvaluator.TryEvaluate(node, out ConstValue? constPtr, out _))
+                {
+                    _constValues[node] = constPtr!;
+                }
                 return;
             }
 
@@ -2891,12 +2922,20 @@ namespace gflat
         {
             TypeExpression type = LookupVariable(node.Name, node.Line);
             RecordType(node, type);
+            if (TryGetConstValueByName(node.Name, out ConstValue? cv) && cv != null)
+            {
+                _constValues[node] = cv;
+            }
         }
 
         private bool IsExpressionReadOnly(AstNode node)
         {
             if (node is IdentifierExpression ident)
             {
+                if (_constVariableNames.Contains(ident.Name))
+                {
+                    return true;
+                }
                 if (ident.Name == "this")
                 {
                     if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
@@ -3254,6 +3293,8 @@ namespace gflat
                     {
                         if (targetObjType is FunctionPointerTypeExpression)
                             throw new TypeCheckException("Cannot call '->free' on a function pointer", node.Line);
+                        if ((targetObjType is PointerTypeExpression pFree && pFree.IsReadOnly) || (targetObjType is ManagedTypeExpression mFree && mFree.IsReadOnly))
+                            throw new TypeCheckException("Cannot call '->free' on a readonly pointer", node.Line);
                         if (node.Arguments.Count != 0)
                             throw new TypeCheckException("'free()' takes no arguments", node.Line);
 
@@ -3714,6 +3755,8 @@ namespace gflat
                 {
                     if (objType is FunctionPointerTypeExpression)
                         throw new TypeCheckException("Cannot call '->free' on a function pointer", node.Line);
+                    if ((objType is PointerTypeExpression pFree && pFree.IsReadOnly) || (objType is ManagedTypeExpression mFree && mFree.IsReadOnly))
+                        throw new TypeCheckException("Cannot call '->free' on a readonly pointer", node.Line);
                     RecordType(node, Void);
                     return;
                 }

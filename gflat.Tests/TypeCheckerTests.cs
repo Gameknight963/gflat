@@ -2911,6 +2911,123 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("does not satisfy constraint 'BaseObj'", ex.Message);
         }
+
+        [Fact]
+        public void ConstPointer_Struct_TypeChecksCleanly()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                    Point(int a, int b) { x = a; y = b; }
+                }
+
+                const Point* p = new* Point(1, 2);
+
+                int main()
+                {
+                    return p.x + p.y;
+                }
+                """;
+
+            CompilerTestHelper.Check(code);
+        }
+
+        [Fact]
+        public void ConstPointer_Mutation_Throws()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                    Point(int a, int b) { x = a; y = b; }
+                }
+
+                const Point* p = new* Point(1, 2);
+
+                int main()
+                {
+                    p.x = 10;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("readonly", ex.Message);
+        }
+
+        [Fact]
+        public void ConstPointer_Free_Throws()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                    Point(int a, int b) { x = a; y = b; }
+                }
+
+                const Point* p = new* Point(1, 2);
+
+                int main()
+                {
+                    p->free();
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("readonly", ex.Message);
+        }
+
+        [Fact]
+        public void ConstPointer_AddressOfConst_TypeChecksCleanly()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                    Point(int a, int b) { x = a; y = b; }
+                }
+
+                const Point Origin = new Point(0, 0);
+                const Point* pOrigin = &Origin;
+
+                int main()
+                {
+                    return pOrigin.x;
+                }
+                """;
+
+            CompilerTestHelper.Check(code);
+        }
+
+        [Fact]
+        public void ConstPointer_AddressOfConst_AssignToMutable_Throws()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                    Point(int a, int b) { x = a; y = b; }
+                }
+
+                const Point Origin = new Point(0, 0);
+
+                int main()
+                {
+                    Point* p = &Origin;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign", ex.Message);
+        }
     }
 }
 

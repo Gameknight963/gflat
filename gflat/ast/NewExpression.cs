@@ -13,7 +13,7 @@ namespace gflat.ast
 
     public class NewExpression : AstNode
     {
-        public TypeExpression Type { get; }
+        public TypeExpression Type { get; set; }
         public List<AstNode> Arguments { get; }
         public AllocationKind Kind { get; }
 

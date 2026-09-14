@@ -3276,6 +3276,103 @@ namespace gflat.Tests
             Assert.Contains(outer.Members, m => m is ClassDeclaration { Name: "NestedClass" });
             Assert.Contains(outer.Members, m => m is StructDeclaration { Name: "NestedStruct" });
         }
+
+        [Fact]
+        public void TypeCheck_NestedClass_InstantiatesAndCallsMethod()
+        {
+            string code = """
+                class Outer
+                {
+                    public class Inner
+                    {
+                        public int Value;
+                        public Inner(int v)
+                        {
+                            this.Value = v;
+                        }
+                        public int GetValue()
+                        {
+                            return this.Value;
+                        }
+                    }
+
+                    public Inner* CreateInner(int v)
+                    {
+                        return new* Inner(v);
+                    }
+                }
+
+                int main()
+                {
+                    Outer* o = new* Outer();
+                    Outer.Inner* inner1 = o.CreateInner(42);
+                    Outer.Inner* inner2 = new* Outer.Inner(100);
+                    return inner1.GetValue() + inner2.GetValue();
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+            Assert.NotNull(checker.GetClass("Outer.Inner"));
+        }
+
+        [Fact]
+        public void TypeCheck_NestedStruct_InstantiatesAndAccessesFields()
+        {
+            string code = """
+                struct Container
+                {
+                    public struct Item
+                    {
+                        public int Id;
+                        public Item(int id)
+                        {
+                            this.Id = id;
+                        }
+                    }
+                }
+
+                int main()
+                {
+                    Container.Item item = new Container.Item(5);
+                    return item.Id;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+            Assert.NotNull(checker.GetStruct("Container.Item"));
+        }
+
+        [Fact]
+        public void TypeCheck_NestedClass_CanAccessOuterPrivateMember()
+        {
+            string code = """
+                class Outer
+                {
+                    private int secret;
+
+                    public class Inner
+                    {
+                        public int ReadSecret(Outer* o)
+                        {
+                            return o.secret;
+                        }
+                    }
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
     }
 }
 

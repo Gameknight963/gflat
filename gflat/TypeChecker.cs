@@ -148,8 +148,21 @@ namespace gflat
 
         public bool IsInterface(string name) => _interfaces.ContainsKey(name);
 
-        public StructInfo? GetStruct(string name) =>
-            _structs.TryGetValue(name, out StructInfo? info) ? info : null;
+        public StructInfo? GetStruct(string name)
+        {
+            if (_structs.TryGetValue(name, out StructInfo? info))
+            {
+                return info;
+            }
+
+            string? nested = ResolveNestedTypeName(name);
+            if (nested != null && _structs.TryGetValue(nested, out StructInfo? nestedInfo))
+            {
+                return nestedInfo;
+            }
+
+            return null;
+        }
 
         public EnumInfo? GetEnum(string name) =>
             _enums.TryGetValue(name, out EnumInfo? info) ? info : null;
@@ -220,10 +233,84 @@ namespace gflat
         }
 
         private readonly Dictionary<string, ClassInfo> _classes = new();
-        public ClassInfo? GetClass(string name) => _classes.TryGetValue(name, out ClassInfo? info) ? info : null;
-        public bool IsClass(string name) => _classes.ContainsKey(name);
+        public ClassInfo? GetClass(string name)
+        {
+            if (_classes.TryGetValue(name, out ClassInfo? info))
+            {
+                return info;
+            }
+
+            string? nested = ResolveNestedTypeName(name);
+            if (nested != null && _classes.TryGetValue(nested, out ClassInfo? nestedInfo))
+            {
+                return nestedInfo;
+            }
+
+            return null;
+        }
+
+        public bool IsClass(string name) => GetClass(name) != null;
         private ClassInfo? _currentClass = null;
         private ConstructorDeclaration? _currentConstructor = null;
+
+        private string? ResolveNestedTypeName(string name)
+        {
+            if (name.Contains('.'))
+            {
+                if (_classes.ContainsKey(name) || _structs.ContainsKey(name))
+                {
+                    return name;
+                }
+            }
+
+            string? currentName = _currentClass?.Name ?? _currentStruct?.Name;
+            while (currentName != null)
+            {
+                string candidate = $"{currentName}.{name}";
+                if (_classes.ContainsKey(candidate) || _structs.ContainsKey(candidate))
+                {
+                    return candidate;
+                }
+
+                int lastDot = currentName.LastIndexOf('.');
+                if (lastDot >= 0)
+                {
+                    currentName = currentName.Substring(0, lastDot);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (_classes.ContainsKey(name) || _structs.ContainsKey(name))
+            {
+                return name;
+            }
+
+            return null;
+        }
+
+        private bool CanAccessPrivate(string? accessorName, string declaringClass)
+        {
+            if (accessorName == null)
+            {
+                return false;
+            }
+            if (accessorName == declaringClass)
+            {
+                return true;
+            }
+            if (accessorName.StartsWith(declaringClass + "."))
+            {
+                return true;
+            }
+            if (declaringClass.StartsWith(accessorName + "."))
+            {
+                return true;
+            }
+            return false;
+        }
 
         private readonly Dictionary<ConstructorDeclaration, ConstructorDeclaration> _resolvedBaseConstructors = new();
         public ConstructorDeclaration? GetResolvedBaseConstructor(ConstructorDeclaration ctor) =>
@@ -783,19 +870,25 @@ namespace gflat
                     }
                     if (_globalScope.Aliases.TryGetValue(named.Name, out var gTarget))
                         return ResolveAlias(gTarget);
+
+                    string? resolvedNested = ResolveNestedTypeName(named.Name);
+                    if (resolvedNested != null && resolvedNested != named.Name)
+                    {
+                        return new NamedTypeExpression(resolvedNested, named.Namespace, named.Line);
+                    }
                 }
             }
             else if (type is PointerTypeExpression ptr)
             {
-                var resolvedInner = ResolveAlias(ptr.Inner);
+                TypeExpression resolvedInner = ResolveAlias(ptr.Inner);
                 if (resolvedInner != ptr.Inner)
-                    return new PointerTypeExpression(resolvedInner, ptr.IsNullable, ptr.Line);
+                    return new PointerTypeExpression(resolvedInner, ptr.IsNullable, ptr.Line, isReadOnly: ptr.IsReadOnly);
             }
             else if (type is ManagedTypeExpression mgd)
             {
-                var resolvedInner = ResolveAlias(mgd.Inner);
+                TypeExpression resolvedInner = ResolveAlias(mgd.Inner);
                 if (resolvedInner != mgd.Inner)
-                    return new ManagedTypeExpression(resolvedInner, mgd.IsNullable, mgd.Line);
+                    return new ManagedTypeExpression(resolvedInner, mgd.IsNullable, mgd.Line, isReadOnly: mgd.IsReadOnly);
             }
             else if (type is ArrayTypeExpression arr)
             {
@@ -1627,16 +1720,65 @@ namespace gflat
             // First partition base class vs interfaces for all classes
             foreach (ClassInfo cls in _classes.Values)
             {
+                if (cls.BaseClass != null && !_classes.ContainsKey(cls.BaseClass))
+                {
+                    string? current = cls.Name;
+                    while (current != null)
+                    {
+                        int lastDot = current.LastIndexOf('.');
+                        string enclosing = lastDot >= 0 ? current.Substring(0, lastDot) : "";
+                        if (enclosing.Length > 0)
+                        {
+                            string candidate = $"{enclosing}.{cls.BaseClass}";
+                            if (_classes.ContainsKey(candidate))
+                            {
+                                cls.BaseClass = candidate;
+                                break;
+                            }
+                            current = enclosing;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+
                 List<string> remainingInterfaces = new();
                 foreach (string item in cls.Interfaces)
                 {
-                    if (_classes.ContainsKey(item))
+                    string resolvedItem = item;
+                    if (!_classes.ContainsKey(resolvedItem))
+                    {
+                        string? current = cls.Name;
+                        while (current != null)
+                        {
+                            int lastDot = current.LastIndexOf('.');
+                            string enclosing = lastDot >= 0 ? current.Substring(0, lastDot) : "";
+                            if (enclosing.Length > 0)
+                            {
+                                string candidate = $"{enclosing}.{item}";
+                                if (_classes.ContainsKey(candidate))
+                                {
+                                    resolvedItem = candidate;
+                                    break;
+                                }
+                                current = enclosing;
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (_classes.ContainsKey(resolvedItem))
                     {
                         if (cls.BaseClass != null)
                         {
-                            throw new TypeCheckException($"Class '{cls.Name}' cannot inherit from multiple classes ('{cls.BaseClass}' and '{item}')", cls.Line);
+                            throw new TypeCheckException($"Class '{cls.Name}' cannot inherit from multiple classes ('{cls.BaseClass}' and '{resolvedItem}')", cls.Line);
                         }
-                        cls.BaseClass = item;
+                        cls.BaseClass = resolvedItem;
                     }
                     else
                     {
@@ -1854,9 +1996,40 @@ namespace gflat
                     Interfaces = new List<string>(str.Interfaces)
                 };
                 RegisterPrefixFromAttributes(str.Attributes, nsPath, str.Name, null, null, str, null, str.Line);
-                foreach (AstNode m in str.Members)
+                for (int i = 0; i < str.Members.Count; i++)
                 {
-                    if (m is FieldDeclaration field)
+                    AstNode m = str.Members[i];
+                    if (m is ClassDeclaration nestedCls)
+                    {
+                        ClassDeclaration qualifiedCls = new ClassDeclaration(
+                            $"{str.Name}.{nestedCls.Name}",
+                            nestedCls.BaseClass,
+                            nestedCls.Interfaces,
+                            nestedCls.Members,
+                            nestedCls.Accessibility,
+                            nestedCls.IsAbstract,
+                            nestedCls.Line,
+                            nestedCls.Attributes,
+                            nestedCls.GenericParameters
+                        );
+                        str.Members[i] = qualifiedCls;
+                        RegisterMemberInScope(qualifiedCls, scope, nsPath);
+                    }
+                    else if (m is StructDeclaration nestedStruct)
+                    {
+                        StructDeclaration qualifiedStruct = new StructDeclaration(
+                            $"{str.Name}.{nestedStruct.Name}",
+                            nestedStruct.Interfaces,
+                            nestedStruct.Members,
+                            nestedStruct.Accessibility,
+                            nestedStruct.Line,
+                            nestedStruct.Attributes,
+                            nestedStruct.GenericParameters
+                        );
+                        str.Members[i] = qualifiedStruct;
+                        RegisterMemberInScope(qualifiedStruct, scope, nsPath);
+                    }
+                    else if (m is FieldDeclaration field)
                     {
                         info.Fields.Add((field.Name, field.Type));
                         info.FieldDeclarations.Add(field);
@@ -1904,9 +2077,40 @@ namespace gflat
                 };
                 RegisterPrefixFromAttributes(cls.Attributes, nsPath, cls.Name, null, null, null, cls, cls.Line);
 
-                foreach (AstNode m in cls.Members)
+                for (int i = 0; i < cls.Members.Count; i++)
                 {
-                    if (m is FieldDeclaration field)
+                    AstNode m = cls.Members[i];
+                    if (m is ClassDeclaration nestedCls)
+                    {
+                        ClassDeclaration qualifiedCls = new ClassDeclaration(
+                            $"{cls.Name}.{nestedCls.Name}",
+                            nestedCls.BaseClass,
+                            nestedCls.Interfaces,
+                            nestedCls.Members,
+                            nestedCls.Accessibility,
+                            nestedCls.IsAbstract,
+                            nestedCls.Line,
+                            nestedCls.Attributes,
+                            nestedCls.GenericParameters
+                        );
+                        cls.Members[i] = qualifiedCls;
+                        RegisterMemberInScope(qualifiedCls, scope, nsPath);
+                    }
+                    else if (m is StructDeclaration nestedStruct)
+                    {
+                        StructDeclaration qualifiedStruct = new StructDeclaration(
+                            $"{cls.Name}.{nestedStruct.Name}",
+                            nestedStruct.Interfaces,
+                            nestedStruct.Members,
+                            nestedStruct.Accessibility,
+                            nestedStruct.Line,
+                            nestedStruct.Attributes,
+                            nestedStruct.GenericParameters
+                        );
+                        cls.Members[i] = qualifiedStruct;
+                        RegisterMemberInScope(qualifiedStruct, scope, nsPath);
+                    }
+                    else if (m is FieldDeclaration field)
                     {
                         info.FieldDeclarations.Add(field);
                     }
@@ -1919,7 +2123,8 @@ namespace gflat
                     {
                         if (info.Destructor != null)
                             throw new TypeCheckException($"Class '{cls.Name}' already defines a destructor", dtor.Line);
-                        if (dtor.Name != cls.Name)
+                        string shortClsName = cls.Name.Contains('.') ? cls.Name.Substring(cls.Name.LastIndexOf('.') + 1) : cls.Name;
+                        if (dtor.Name != cls.Name && dtor.Name != shortClsName)
                             throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match class name '{cls.Name}'", dtor.Line);
                         info.Destructor = dtor;
                     }
@@ -1991,135 +2196,162 @@ namespace gflat
             if (node.IsGeneric) return;
 
             ClassInfo? prevClass = _currentClass;
+            StructInfo? prevStruct = _currentStruct;
             _currentClass = _classes[node.Name];
+            _currentStruct = null;
 
-            // Validate implemented interfaces
-            foreach (string ifaceName in _currentClass.Interfaces)
+            try
             {
-                InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
-                if (ifaceInfo == null)
+                // Validate implemented interfaces
+                foreach (string ifaceName in _currentClass.Interfaces)
                 {
-                    throw new TypeCheckException($"Class '{node.Name}' implements unknown interface '{ifaceName}'", node.Line);
-                }
-
-                foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
-                {
-                    if (!_currentClass.Methods.TryGetValue(ifaceMethod.Name, out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                    InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
+                    if (ifaceInfo == null)
                     {
-                        throw new TypeCheckException($"Class '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                        throw new TypeCheckException($"Class '{node.Name}' implements unknown interface '{ifaceName}'", node.Line);
                     }
 
-                    MethodDeclaration classMethod = mEntry.Method;
-                    if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly)
+                    foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
                     {
-                        throw new TypeCheckException(
-                            $"Method '{classMethod.Name}' in class '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
-                            classMethod.Line);
-                    }
-                    if (!TypesMatch(ResolveAlias(classMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
-                    {
-                        throw new TypeCheckException(
-                            $"Method '{classMethod.Name}' in class '{node.Name}' has return type '{TypeName(classMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
-                            classMethod.Line);
-                    }
+                        if (!_currentClass.Methods.TryGetValue(ifaceMethod.Name, out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                        {
+                            throw new TypeCheckException($"Class '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                        }
 
-                    if (classMethod.Parameters.Count != ifaceMethod.Parameters.Count)
-                    {
-                        throw new TypeCheckException(
-                            $"Method '{classMethod.Name}' in class '{node.Name}' has {classMethod.Parameters.Count} parameters, but interface '{ifaceName}' expects {ifaceMethod.Parameters.Count}",
-                            classMethod.Line);
-                    }
-
-                    for (int i = 0; i < ifaceMethod.Parameters.Count; i++)
-                    {
-                        TypeExpression classParamType = ResolveAlias(classMethod.Parameters[i].Type);
-                        TypeExpression ifaceParamType = ResolveAlias(ifaceMethod.Parameters[i].Type);
-                        if (!TypesMatch(classParamType, ifaceParamType))
+                        MethodDeclaration classMethod = mEntry.Method;
+                        if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly)
                         {
                             throw new TypeCheckException(
-                                $"Parameter '{classMethod.Parameters[i].Name}' of method '{classMethod.Name}' in class '{node.Name}' has type '{TypeName(classParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
-                                classMethod.Parameters[i].Line);
+                                $"Method '{classMethod.Name}' in class '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
+                                classMethod.Line);
                         }
-                    }
-                }
-            }
+                        if (!TypesMatch(ResolveAlias(classMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
+                        {
+                            throw new TypeCheckException(
+                                $"Method '{classMethod.Name}' in class '{node.Name}' has return type '{TypeName(classMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
+                                classMethod.Line);
+                        }
 
-            foreach (AstNode member in node.Members)
-            {
-                if (member is FieldDeclaration field)
-                {
-                    ValidateTypeUsage(field.Type, field.Line);
-                    TypeExpression fieldType = ResolveAlias(field.Type);
-                    if (field.IsConst && fieldType is PointerTypeExpression cPtr && !cPtr.IsReadOnly)
-                    {
-                        fieldType = new PointerTypeExpression(cPtr.Inner, cPtr.IsNullable, cPtr.Line, isReadOnly: true);
-                    }
-                    if (field.Initializer != null)
-                    {
-                        field.Initializer.Accept(this);
-                        TypeExpression initType = ResolveAlias(GetType(field.Initializer));
-                        if (!IsAssignable(fieldType, initType, field.Initializer))
+                        if (classMethod.Parameters.Count != ifaceMethod.Parameters.Count)
                         {
-                            throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
+                            throw new TypeCheckException(
+                                $"Method '{classMethod.Name}' in class '{node.Name}' has {classMethod.Parameters.Count} parameters, but interface '{ifaceName}' expects {ifaceMethod.Parameters.Count}",
+                                classMethod.Line);
                         }
-                    }
-                    if (field.IsConst)
-                    {
-                        if (field.Initializer == null)
-                        {
-                            throw new TypeCheckException($"Const variable '{field.Name}' must have an initializer", field.Line);
-                        }
-                        if (!_constEvaluator.TryEvaluate(field.Initializer, out ConstValue? constVal, out string? err))
-                        {
-                            throw new TypeCheckException($"Const variable '{field.Name}' initializer must be a compile-time constant: {err}", field.Line);
-                        }
-                        _constVariablesByName[$"{node.Name}::{field.Name}"] = constVal!;
-                        _constVariablesByName[field.Name] = constVal!;
-                        _constValues[field] = constVal!;
-                        _constValues[field.Initializer] = constVal!;
-                        _constVariableNames.Add(field.Name);
-                    }
-                }
-                else if (member is ConstructorDeclaration ctor)
-                {
-                    ctor.Accept(this);
-                }
-                else if (member is DestructorDeclaration dtor)
-                {
-                    dtor.Accept(this);
-                }
-                else if (member is MethodDeclaration method)
-                {
-                    AstNode? prevFunc = _currentFunction;
-                    _currentFunction = method;
-                    try
-                    {
-                        ValidateTypeUsage(method.ReturnType, method.Line);
-                        if (!method.IsAbstract)
-                        {
-                            PushScope();
-                            NamedTypeExpression classType = new NamedTypeExpression(node.Name, null, method.Line);
-                            PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line, isReadOnly: method.IsReadOnly);
-                            DeclareVariable("this", thisType, method.Line);
 
-                            foreach (Parameter p in method.Parameters)
+                        for (int i = 0; i < ifaceMethod.Parameters.Count; i++)
+                        {
+                            TypeExpression classParamType = ResolveAlias(classMethod.Parameters[i].Type);
+                            TypeExpression ifaceParamType = ResolveAlias(ifaceMethod.Parameters[i].Type);
+                            if (!TypesMatch(classParamType, ifaceParamType))
                             {
-                                ValidateTypeUsage(p.Type, p.Line);
-                                DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                                throw new TypeCheckException(
+                                    $"Parameter '{classMethod.Parameters[i].Name}' of method '{classMethod.Name}' in class '{node.Name}' has type '{TypeName(classParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
+                                    classMethod.Parameters[i].Line);
                             }
-
-                            method.Body?.Accept(this);
-                            PopScope();
                         }
                     }
-                    finally
+                }
+
+                foreach (AstNode member in node.Members)
+                {
+                    if (member is FieldDeclaration field)
                     {
-                        _currentFunction = prevFunc;
+                        field.Type = ResolveAlias(field.Type);
+                        int fIdx = _currentClass.FieldIndex(field.Name);
+                        if (fIdx >= 0)
+                        {
+                            _currentClass.Fields[fIdx] = (field.Name, field.Type, field.Accessibility, _currentClass.Name);
+                        }
+                        ValidateTypeUsage(field.Type, field.Line);
+                        TypeExpression fieldType = field.Type;
+                        if (field.IsConst && fieldType is PointerTypeExpression cPtr && !cPtr.IsReadOnly)
+                        {
+                            fieldType = new PointerTypeExpression(cPtr.Inner, cPtr.IsNullable, cPtr.Line, isReadOnly: true);
+                        }
+                        if (field.Initializer != null)
+                        {
+                            field.Initializer.Accept(this);
+                            TypeExpression initType = ResolveAlias(GetType(field.Initializer));
+                            if (!IsAssignable(fieldType, initType, field.Initializer))
+                            {
+                                throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
+                            }
+                        }
+                        if (field.IsConst)
+                        {
+                            if (field.Initializer == null)
+                            {
+                                throw new TypeCheckException($"Const variable '{field.Name}' must have an initializer", field.Line);
+                            }
+                            if (!_constEvaluator.TryEvaluate(field.Initializer, out ConstValue? constVal, out string? err))
+                            {
+                                throw new TypeCheckException($"Const variable '{field.Name}' initializer must be a compile-time constant: {err}", field.Line);
+                            }
+                            _constVariablesByName[$"{node.Name}::{field.Name}"] = constVal!;
+                            _constVariablesByName[field.Name] = constVal!;
+                            _constValues[field] = constVal!;
+                            _constValues[field.Initializer] = constVal!;
+                            _constVariableNames.Add(field.Name);
+                        }
+                    }
+                    else if (member is ConstructorDeclaration ctor)
+                    {
+                        ctor.Accept(this);
+                    }
+                    else if (member is DestructorDeclaration dtor)
+                    {
+                        dtor.Accept(this);
+                    }
+                    else if (member is MethodDeclaration method)
+                    {
+                        method.ReturnType = ResolveAlias(method.ReturnType);
+                        foreach (Parameter p in method.Parameters)
+                        {
+                            p.Type = ResolveAlias(p.Type);
+                        }
+                        AstNode? prevFunc = _currentFunction;
+                        _currentFunction = method;
+                        try
+                        {
+                            ValidateTypeUsage(method.ReturnType, method.Line);
+                            if (!method.IsAbstract)
+                            {
+                                PushScope();
+                                NamedTypeExpression classType = new NamedTypeExpression(node.Name, null, method.Line);
+                                PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line, isReadOnly: method.IsReadOnly);
+                                DeclareVariable("this", thisType, method.Line);
+
+                                foreach (Parameter p in method.Parameters)
+                                {
+                                    ValidateTypeUsage(p.Type, p.Line);
+                                    DeclareVariable(p.Name, p.Type, p.Line);
+                                }
+
+                                method.Body?.Accept(this);
+                                PopScope();
+                            }
+                        }
+                        finally
+                        {
+                            _currentFunction = prevFunc;
+                        }
+                    }
+                    else if (member is ClassDeclaration nestedCls)
+                    {
+                        nestedCls.Accept(this);
+                    }
+                    else if (member is StructDeclaration nestedStruct)
+                    {
+                        nestedStruct.Accept(this);
                     }
                 }
             }
-
-            _currentClass = prevClass;
+            finally
+            {
+                _currentClass = prevClass;
+                _currentStruct = prevStruct;
+            }
         }
 
         public void Visit(StructDeclaration node)
@@ -2127,132 +2359,164 @@ namespace gflat
             if (node.IsGeneric) return;
 
             StructInfo? previousStruct = _currentStruct;
+            ClassInfo? prevClass = _currentClass;
             _currentStruct = _structs[node.Name];
+            _currentClass = null;
 
-            // Validate implemented interfaces
-            foreach (string ifaceName in node.Interfaces)
+            try
             {
-                InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
-                if (ifaceInfo == null)
+                // Validate implemented interfaces
+                foreach (string ifaceName in node.Interfaces)
                 {
-                    throw new TypeCheckException($"Struct '{node.Name}' implements unknown interface '{ifaceName}'", node.Line);
-                }
-
-                foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
-                {
-                    if (!_currentStruct.Methods.TryGetValue(ifaceMethod.Name, out MethodDeclaration? structMethod))
+                    InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
+                    if (ifaceInfo == null)
                     {
-                        throw new TypeCheckException($"Struct '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                        throw new TypeCheckException($"Struct '{node.Name}' implements unknown interface '{ifaceName}'", node.Line);
                     }
 
-                    if (ifaceMethod.IsReadOnly && !structMethod.IsReadOnly)
+                    foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
                     {
-                        throw new TypeCheckException(
-                            $"Method '{structMethod.Name}' in struct '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
-                            structMethod.Line);
-                    }
+                        if (!_currentStruct.Methods.TryGetValue(ifaceMethod.Name, out MethodDeclaration? structMethod))
+                        {
+                            throw new TypeCheckException($"Struct '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                        }
 
-                    if (!TypesMatch(ResolveAlias(structMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
-                    {
-                        throw new TypeCheckException(
-                            $"Method '{structMethod.Name}' in struct '{node.Name}' has return type '{TypeName(structMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
-                            structMethod.Line);
-                    }
-
-                    if (structMethod.Parameters.Count != ifaceMethod.Parameters.Count)
-                    {
-                        throw new TypeCheckException(
-                            $"Method '{structMethod.Name}' in struct '{node.Name}' has {structMethod.Parameters.Count} parameters, but interface '{ifaceName}' expects {ifaceMethod.Parameters.Count}",
-                            structMethod.Line);
-                    }
-
-                    for (int i = 0; i < ifaceMethod.Parameters.Count; i++)
-                    {
-                        TypeExpression structParamType = ResolveAlias(structMethod.Parameters[i].Type);
-                        TypeExpression ifaceParamType = ResolveAlias(ifaceMethod.Parameters[i].Type);
-                        if (!TypesMatch(structParamType, ifaceParamType))
+                        if (ifaceMethod.IsReadOnly && !structMethod.IsReadOnly)
                         {
                             throw new TypeCheckException(
-                                $"Parameter '{structMethod.Parameters[i].Name}' of method '{structMethod.Name}' in struct '{node.Name}' has type '{TypeName(structParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
-                                structMethod.Parameters[i].Line);
+                                $"Method '{structMethod.Name}' in struct '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
+                                structMethod.Line);
                         }
-                    }
-                }
-            }
 
-            foreach (AstNode member in node.Members)
-            {
-                if (member is FieldDeclaration field)
-                {
-                    ValidateTypeUsage(field.Type, field.Line);
-                    TypeExpression fieldType = ResolveAlias(field.Type);
-                    if (field.IsConst && fieldType is PointerTypeExpression sPtr && !sPtr.IsReadOnly)
-                    {
-                        fieldType = new PointerTypeExpression(sPtr.Inner, sPtr.IsNullable, sPtr.Line, isReadOnly: true);
-                    }
-                    if (field.Initializer != null)
-                    {
-                        field.Initializer.Accept(this);
-                        TypeExpression initType = ResolveAlias(GetType(field.Initializer));
-                        if (!IsAssignable(fieldType, initType, field.Initializer))
+                        if (!TypesMatch(ResolveAlias(structMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
                         {
-                            throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
+                            throw new TypeCheckException(
+                                $"Method '{structMethod.Name}' in struct '{node.Name}' has return type '{TypeName(structMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
+                                structMethod.Line);
                         }
-                    }
-                    if (field.IsConst)
-                    {
-                        if (field.Initializer == null)
-                        {
-                            throw new TypeCheckException($"Const variable '{field.Name}' must have an initializer", field.Line);
-                        }
-                        if (!_constEvaluator.TryEvaluate(field.Initializer, out ConstValue? constVal, out string? err))
-                        {
-                            throw new TypeCheckException($"Const variable '{field.Name}' initializer must be a compile-time constant: {err}", field.Line);
-                        }
-                        _constVariablesByName[$"{node.Name}::{field.Name}"] = constVal!;
-                        _constVariablesByName[field.Name] = constVal!;
-                        _constValues[field] = constVal!;
-                        _constValues[field.Initializer] = constVal!;
-                        _constVariableNames.Add(field.Name);
-                    }
-                }
-                else if (member is ConstructorDeclaration ctor)
-                {
-                    ctor.Accept(this);
-                }
-                else if (member is MethodDeclaration method)
-                {
-                    AstNode? prevFunc = _currentFunction;
-                    _currentFunction = method;
-                    try
-                    {
-                        ValidateTypeUsage(method.ReturnType, method.Line);
-                        PushScope();
-                        NamedTypeExpression structType = new NamedTypeExpression(node.Name, null, method.Line);
-                        PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line, isReadOnly: method.IsReadOnly);
-                        DeclareVariable("this", thisType, method.Line);
 
+                        if (structMethod.Parameters.Count != ifaceMethod.Parameters.Count)
+                        {
+                            throw new TypeCheckException(
+                                $"Method '{structMethod.Name}' in struct '{node.Name}' has {structMethod.Parameters.Count} parameters, but interface '{ifaceName}' expects {ifaceMethod.Parameters.Count}",
+                                structMethod.Line);
+                        }
+
+                        for (int i = 0; i < ifaceMethod.Parameters.Count; i++)
+                        {
+                            TypeExpression structParamType = ResolveAlias(structMethod.Parameters[i].Type);
+                            TypeExpression ifaceParamType = ResolveAlias(ifaceMethod.Parameters[i].Type);
+                            if (!TypesMatch(structParamType, ifaceParamType))
+                            {
+                                throw new TypeCheckException(
+                                    $"Parameter '{structMethod.Parameters[i].Name}' of method '{structMethod.Name}' in struct '{node.Name}' has type '{TypeName(structParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
+                                    structMethod.Parameters[i].Line);
+                            }
+                        }
+                    }
+                }
+
+                foreach (AstNode member in node.Members)
+                {
+                    if (member is FieldDeclaration field)
+                    {
+                        field.Type = ResolveAlias(field.Type);
+                        int fIdx = _currentStruct.Fields.FindIndex(f => f.Name == field.Name);
+                        if (fIdx >= 0)
+                        {
+                            _currentStruct.Fields[fIdx] = (field.Name, field.Type);
+                        }
+                        ValidateTypeUsage(field.Type, field.Line);
+                        TypeExpression fieldType = field.Type;
+                        if (field.IsConst && fieldType is PointerTypeExpression sPtr && !sPtr.IsReadOnly)
+                        {
+                            fieldType = new PointerTypeExpression(sPtr.Inner, sPtr.IsNullable, sPtr.Line, isReadOnly: true);
+                        }
+                        if (field.Initializer != null)
+                        {
+                            field.Initializer.Accept(this);
+                            TypeExpression initType = ResolveAlias(GetType(field.Initializer));
+                            if (!IsAssignable(fieldType, initType, field.Initializer))
+                            {
+                                throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
+                            }
+                        }
+                        if (field.IsConst)
+                        {
+                            if (field.Initializer == null)
+                            {
+                                throw new TypeCheckException($"Const variable '{field.Name}' must have an initializer", field.Line);
+                            }
+                            if (!_constEvaluator.TryEvaluate(field.Initializer, out ConstValue? constVal, out string? err))
+                            {
+                                throw new TypeCheckException($"Const variable '{field.Name}' initializer must be a compile-time constant: {err}", field.Line);
+                            }
+                            _constVariablesByName[$"{node.Name}::{field.Name}"] = constVal!;
+                            _constVariablesByName[field.Name] = constVal!;
+                            _constValues[field] = constVal!;
+                            _constValues[field.Initializer] = constVal!;
+                            _constVariableNames.Add(field.Name);
+                        }
+                    }
+                    else if (member is ConstructorDeclaration ctor)
+                    {
+                        ctor.Accept(this);
+                    }
+                    else if (member is MethodDeclaration method)
+                    {
+                        method.ReturnType = ResolveAlias(method.ReturnType);
                         foreach (Parameter p in method.Parameters)
                         {
-                            ValidateTypeUsage(p.Type, p.Line);
-                            DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                            p.Type = ResolveAlias(p.Type);
                         }
+                        AstNode? prevFunc = _currentFunction;
+                        _currentFunction = method;
+                        try
+                        {
+                            ValidateTypeUsage(method.ReturnType, method.Line);
+                            PushScope();
+                            NamedTypeExpression structType = new NamedTypeExpression(node.Name, null, method.Line);
+                            PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line, isReadOnly: method.IsReadOnly);
+                            DeclareVariable("this", thisType, method.Line);
 
-                        method.Body?.Accept(this);
-                        PopScope();
+                            foreach (Parameter p in method.Parameters)
+                            {
+                                ValidateTypeUsage(p.Type, p.Line);
+                                DeclareVariable(p.Name, p.Type, p.Line);
+                            }
+
+                            method.Body?.Accept(this);
+                            PopScope();
+                        }
+                        finally
+                        {
+                            _currentFunction = prevFunc;
+                        }
                     }
-                    finally
+                    else if (member is OperatorDeclaration op)
                     {
-                        _currentFunction = prevFunc;
+                        op.ReturnType = ResolveAlias(op.ReturnType);
+                        foreach (Parameter p in op.Parameters)
+                        {
+                            p.Type = ResolveAlias(p.Type);
+                        }
+                        op.Accept(this);
                     }
-                }
-                else if (member is OperatorDeclaration op)
-                {
-                    op.Accept(this);
+                    else if (member is ClassDeclaration nestedCls)
+                    {
+                        nestedCls.Accept(this);
+                    }
+                    else if (member is StructDeclaration nestedStruct)
+                    {
+                        nestedStruct.Accept(this);
+                    }
                 }
             }
-
-            _currentStruct = previousStruct;
+            finally
+            {
+                _currentStruct = previousStruct;
+                _currentClass = prevClass;
+            }
         }
 
         public void Visit(OperatorDeclaration node)
@@ -2407,7 +2671,8 @@ namespace gflat
                 throw new TypeCheckException("Constructor must be declared inside a struct or class", node.Line);
             }
             string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
-            if (node.Name != ownerName)
+            string shortOwnerName = ownerName.Contains('.') ? ownerName.Substring(ownerName.LastIndexOf('.') + 1) : ownerName;
+            if (node.Name != ownerName && node.Name != shortOwnerName)
             {
                 string kindStr = _currentStruct != null ? "struct" : "class";
                 throw new TypeCheckException($"Constructor name '{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
@@ -2424,8 +2689,9 @@ namespace gflat
 
                 foreach (Parameter p in node.Parameters)
                 {
+                    p.Type = ResolveAlias(p.Type);
                     ValidateTypeUsage(p.Type, p.Line);
-                    DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                    DeclareVariable(p.Name, p.Type, p.Line);
                 }
 
                 if (node.BaseArguments != null)
@@ -2501,7 +2767,8 @@ namespace gflat
                 throw new TypeCheckException("Destructor must be declared inside a class or struct", node.Line);
             }
             string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
-            if (node.Name != ownerName)
+            string shortOwnerName = ownerName.Contains('.') ? ownerName.Substring(ownerName.LastIndexOf('.') + 1) : ownerName;
+            if (node.Name != ownerName && node.Name != shortOwnerName)
             {
                 string kindStr = _currentStruct != null ? "struct" : "class";
                 throw new TypeCheckException($"Destructor name '~{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
@@ -3450,7 +3717,7 @@ namespace gflat
                     if (fieldIdx >= 0)
                     {
                         (string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field = classInfo.Fields[fieldIdx];
-                        if (field.Accessibility == TokenKind.Private && _currentClass?.Name != field.DeclaringClass)
+                        if (field.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, field.DeclaringClass))
                             throw new TypeCheckException($"Cannot access private field '{memberAccess.Member}' of class '{field.DeclaringClass}'", node.Line);
                         if (field.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, field.DeclaringClass)))
                             throw new TypeCheckException($"Cannot access protected field '{memberAccess.Member}' of class '{field.DeclaringClass}'", node.Line);
@@ -3470,7 +3737,7 @@ namespace gflat
                     method = mEntry.Method;
                     if (isReceiverReadOnly && !method.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
-                    if (method.Accessibility == TokenKind.Private && _currentClass?.Name != mEntry.DeclaringClass)
+                    if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
                         throw new TypeCheckException($"Cannot access private method '{memberAccess.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
                     if (method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
                         throw new TypeCheckException($"Cannot access protected method '{memberAccess.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
@@ -3855,7 +4122,7 @@ namespace gflat
                 if (fIdx >= 0)
                 {
                     (string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field = classInfo.Fields[fIdx];
-                    if (field.Accessibility == TokenKind.Private && _currentClass?.Name != field.DeclaringClass)
+                    if (field.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, field.DeclaringClass))
                     {
                         throw new TypeCheckException($"Cannot access private field '{node.Member}' of class '{field.DeclaringClass}'", node.Line);
                     }
@@ -3869,7 +4136,7 @@ namespace gflat
 
                 if (classInfo.Methods.TryGetValue(node.Member, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                 {
-                    if (mEntry.Method.Accessibility == TokenKind.Private && _currentClass?.Name != mEntry.DeclaringClass)
+                    if (mEntry.Method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
                     {
                         throw new TypeCheckException($"Cannot access private method '{node.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
                     }
@@ -3909,6 +4176,7 @@ namespace gflat
             _callSites.Add((node, _currentFunction, _tryStack.ToList()));
 
             TypeExpression resolvedType = ResolveAlias(node.Type);
+            node.Type = resolvedType;
             if (resolvedType is not NamedTypeExpression named)
             {
                 throw new TypeCheckException($"Cannot instantiate non-struct and non-class type '{TypeName(node.Type)}'", node.Line);

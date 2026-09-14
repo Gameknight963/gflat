@@ -738,134 +738,165 @@ public class LlvmEmitter : IVisitor
         if (node.IsGeneric) return;
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
+        TypeChecker.StructInfo? prevStruct = _currentStruct;
         _currentClass = _typeChecker.GetClass(node.Name);
+        _currentStruct = null;
 
-        // 1. Emit class struct layout: %ClassName = type { i8**, fields... }
-        List<string> llvmFieldTypes = new() { "i8**" };
-        foreach (var field in _currentClass!.Fields)
+        try
         {
-            llvmFieldTypes.Add(EmitType(field.Type));
-        }
-        EmitGlobal($"%{node.Name} = type {{ {string.Join(", ", llvmFieldTypes)} }}");
-
-        // 2. Emit class vtable: @ClassName$vtable = internal constant [N x i8*] [ ... ]
-        int vtableSize = _currentClass.VirtualMethods.Count;
-        if (vtableSize == 0)
-        {
-            EmitGlobal($"@{node.Name}$vtable = internal constant [0 x i8*] zeroinitializer");
-        }
-        else
-        {
-            List<string> entries = new();
-            for (int i = 0; i < vtableSize; i++)
+            // 1. Emit class struct layout: %ClassName = type { i8**, fields... }
+            List<string> llvmFieldTypes = new() { "i8**" };
+            foreach (var field in _currentClass!.Fields)
             {
-                if (i == _currentClass.DestructorSlot)
-                {
-                    string dtorNs = _currentClass.Namespace;
-                    string dtorMangled = dtorNs.Length > 0
-                        ? $"gflat${dtorNs}${node.Name}$dtor"
-                        : $"gflat${node.Name}$dtor";
-                    entries.Add($"i8* bitcast (void (%{node.Name}*)* @{dtorMangled} to i8*)");
-                    continue;
-                }
-
-                MethodDeclaration vm = _currentClass.VirtualMethods[i];
-                if (vm.IsAbstract)
-                {
-                    entries.Add("i8* null");
-                }
-                else
-                {
-                    string declaringClass = _currentClass.Methods[vm.Name].DeclaringClass;
-                    bool isThrowing = _typeChecker.CanFunctionThrow(vm);
-                    string baseRet = EmitType(vm.ReturnType);
-                    string retType = isThrowing
-                        ? (baseRet == "void" ? "{ %Exception*, i1 }" : $"{{ {baseRet}, %Exception*, i1 }}")
-                        : baseRet;
-                    List<string> paramTypes = new() { $"%{declaringClass}*" };
-                    foreach (Parameter p in vm.Parameters)
-                    {
-                        paramTypes.Add(EmitParamType(p.Type));
-                    }
-                    string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
-                    string methodNs = _typeChecker.GetFunctionNamespace(vm);
-                    string mangled = methodNs.Length > 0
-                        ? $"gflat${methodNs}${declaringClass}${vm.Name}"
-                        : $"gflat${declaringClass}${vm.Name}";
-                    entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
-                }
+                llvmFieldTypes.Add(EmitType(field.Type));
             }
-            EmitGlobal($"@{node.Name}$vtable = internal constant [{vtableSize} x i8*] [ {string.Join(", ", entries)} ]");
-        }
+            EmitGlobal($"%{node.Name} = type {{ {string.Join(", ", llvmFieldTypes)} }}");
 
-        // 3. Emit vtables for implemented interfaces
-        foreach (string ifaceName in _currentClass.Interfaces)
-        {
-            TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
-            if (ifaceInfo == null) continue;
-
-            if (ifaceInfo.Methods.Count == 0)
+            // 2. Emit class vtable: @ClassName$vtable = internal constant [N x i8*] [ ... ]
+            int vtableSize = _currentClass.VirtualMethods.Count;
+            if (vtableSize == 0)
             {
-                EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [0 x i8*] zeroinitializer");
+                EmitGlobal($"@{node.Name}$vtable = internal constant [0 x i8*] zeroinitializer");
             }
             else
             {
                 List<string> entries = new();
-                foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
+                for (int i = 0; i < vtableSize; i++)
                 {
-                    MethodDeclaration classMethod = _currentClass.Methods[ifaceMethod.Name].Method;
-                    string declaringClass = _currentClass.Methods[ifaceMethod.Name].DeclaringClass;
-                    string retType = EmitType(classMethod.ReturnType);
-                    List<string> paramTypes = new() { $"%{declaringClass}*" };
-                    foreach (Parameter p in classMethod.Parameters)
+                    if (i == _currentClass.DestructorSlot)
                     {
-                        paramTypes.Add(EmitParamType(p.Type));
+                        string dtorNs = _currentClass.Namespace;
+                        string dtorMangled = dtorNs.Length > 0
+                            ? $"gflat${dtorNs}${node.Name}$dtor"
+                            : $"gflat${node.Name}$dtor";
+                        entries.Add($"i8* bitcast (void (%{node.Name}*)* @{dtorMangled} to i8*)");
+                        continue;
                     }
-                    string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
-                    string methodNs = _typeChecker.GetFunctionNamespace(classMethod);
-                    string mangled = methodNs.Length > 0
-                        ? $"gflat${methodNs}${declaringClass}${classMethod.Name}"
-                        : $"gflat${declaringClass}${classMethod.Name}";
-                    entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
-                }
-                EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{ifaceInfo.Methods.Count} x i8*] [ {string.Join(", ", entries)} ]");
-            }
-        }
 
-        // 4. Emit methods, constructors, and destructors
-        foreach (AstNode member in node.Members)
-        {
-            if (member is MethodDeclaration method)
+                    MethodDeclaration vm = _currentClass.VirtualMethods[i];
+                    if (vm.IsAbstract)
+                    {
+                        entries.Add("i8* null");
+                    }
+                    else
+                    {
+                        string declaringClass = _currentClass.Methods[vm.Name].DeclaringClass;
+                        TypeChecker.ClassInfo declaringClassInfo = _typeChecker.GetClass(declaringClass)!;
+                        string methodNs = declaringClassInfo.Namespace;
+                        string mangled = methodNs.Length > 0
+                            ? $"gflat${methodNs}${declaringClass}${vm.Name}"
+                            : $"gflat${declaringClass}${vm.Name}";
+
+                        bool isThrowing = _typeChecker.CanFunctionThrow(vm);
+                        string baseRet = EmitType(vm.ReturnType);
+                        string retType = isThrowing
+                            ? (baseRet == "void" ? "{ %Exception*, i1 }" : $"{{ {baseRet}, %Exception*, i1 }}")
+                            : baseRet;
+
+                        List<string> paramTypes = new() { $"%{declaringClass}*" };
+                        foreach (Parameter p in vm.Parameters)
+                        {
+                            paramTypes.Add(EmitParamType(p.Type));
+                        }
+                        string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
+                        entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
+                    }
+                }
+                string vtableContent = string.Join(", ", entries);
+                EmitGlobal($"@{node.Name}$vtable = internal constant [{vtableSize} x i8*] [ {vtableContent} ]");
+            }
+
+            // 3. Emit interface vtables for this class
+            foreach (string ifaceName in _currentClass.Interfaces)
             {
-                if (!method.IsAbstract)
+                TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
+                if (ifaceInfo == null)
                 {
-                    EmitClassMethod(node.Name, method);
+                    continue;
+                }
+
+                if (ifaceInfo.Methods.Count == 0)
+                {
+                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [0 x i8*] zeroinitializer");
+                }
+                else
+                {
+                    List<string> entries = new();
+                    foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
+                    {
+                        (MethodDeclaration Method, string DeclaringClass) mEntry = _currentClass.Methods[ifaceMethod.Name];
+                        MethodDeclaration classMethod = mEntry.Method;
+                        string declaringClass = mEntry.DeclaringClass;
+                        TypeChecker.ClassInfo declaringInfo = _typeChecker.GetClass(declaringClass)!;
+                        string methodNs = declaringInfo.Namespace;
+                        string mangled = methodNs.Length > 0
+                            ? $"gflat${methodNs}${declaringClass}${classMethod.Name}"
+                            : $"gflat${declaringClass}${classMethod.Name}";
+
+                        bool isThrowing = _typeChecker.CanFunctionThrow(classMethod);
+                        string baseRet = EmitType(classMethod.ReturnType);
+                        string retType = isThrowing
+                            ? (baseRet == "void" ? "{ %Exception*, i1 }" : $"{{ {baseRet}, %Exception*, i1 }}")
+                            : baseRet;
+
+                        List<string> paramTypes = new() { $"%{declaringClass}*" };
+                        foreach (Parameter p in classMethod.Parameters)
+                        {
+                            paramTypes.Add(EmitParamType(p.Type));
+                        }
+                        string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
+                        entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
+                    }
+                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{ifaceInfo.Methods.Count} x i8*] [ {string.Join(", ", entries)} ]");
                 }
             }
-            else if (member is ConstructorDeclaration ctor)
+
+            // 4. Emit methods, constructors, and destructors
+            foreach (AstNode member in node.Members)
             {
-                EmitClassConstructor(node.Name, ctor);
+                if (member is MethodDeclaration method)
+                {
+                    if (!method.IsAbstract)
+                    {
+                        EmitClassMethod(node.Name, method);
+                    }
+                }
+                else if (member is ConstructorDeclaration ctor)
+                {
+                    EmitClassConstructor(node.Name, ctor);
+                }
+                else if (member is DestructorDeclaration dtor)
+                {
+                    EmitClassDestructor(node.Name, dtor);
+                }
+                else if (member is ClassDeclaration nestedCls)
+                {
+                    nestedCls.Accept(this);
+                }
+                else if (member is StructDeclaration nestedStruct)
+                {
+                    nestedStruct.Accept(this);
+                }
             }
-            else if (member is DestructorDeclaration dtor)
+
+            // If class didn't declare a destructor but its hierarchy has one, emit default chained destructor
+            if (_currentClass.Destructor == null && _typeChecker.HasAnyDestructor(_currentClass))
             {
-                EmitClassDestructor(node.Name, dtor);
+                EmitClassDestructor(node.Name, null);
+            }
+
+            // 5. Emit default constructor if none defined
+            bool hasEmptyCtor = _currentClass.Constructors.Any(c => c.Parameters.Count == 0);
+            if (!hasEmptyCtor)
+            {
+                EmitClassDefaultConstructor(node.Name);
             }
         }
-
-        // If class didn't declare a destructor but its hierarchy has one, emit default chained destructor
-        if (_currentClass.Destructor == null && _typeChecker.HasAnyDestructor(_currentClass))
+        finally
         {
-            EmitClassDestructor(node.Name, null);
+            _currentClass = prevClass;
+            _currentStruct = prevStruct;
         }
-
-        // 5. Emit default constructor if none defined
-        bool hasEmptyCtor = _currentClass.Constructors.Any(c => c.Parameters.Count == 0);
-        if (!hasEmptyCtor)
-        {
-            EmitClassDefaultConstructor(node.Name);
-        }
-
-        _currentClass = prevClass;
     }
 
     private void EmitClassMethod(string className, MethodDeclaration node)
@@ -1181,68 +1212,84 @@ public class LlvmEmitter : IVisitor
         EmitGlobal($"%{node.Name} = type {{ {fields} }}");
 
         TypeChecker.StructInfo? prevStruct = _currentStruct;
+        TypeChecker.ClassInfo? prevClass = _currentClass;
         _currentStruct = _typeChecker.GetStruct(node.Name);
+        _currentClass = null;
 
-        // Emit vtables for implemented interfaces
-        foreach (string ifaceName in node.Interfaces)
+        try
         {
-            TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
-            if (ifaceInfo == null)
+            // Emit vtables for implemented interfaces
+            foreach (string ifaceName in node.Interfaces)
             {
-                continue;
-            }
-
-            if (ifaceInfo.Methods.Count == 0)
-            {
-                EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [0 x i8*] zeroinitializer");
-            }
-            else
-            {
-                List<string> entries = new();
-                foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
+                TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
+                if (ifaceInfo == null)
                 {
-                    MethodDeclaration structMethod = _currentStruct!.Methods[ifaceMethod.Name];
-                    string retType = EmitType(structMethod.ReturnType);
-                    List<string> paramTypes = new() { $"%{node.Name}*" };
-                    foreach (Parameter p in structMethod.Parameters)
-                    {
-                        paramTypes.Add(EmitParamType(p.Type));
-                    }
-                    string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
-                    string methodNs = _typeChecker.GetFunctionNamespace(structMethod);
-                    string mangled = methodNs.Length > 0
-                        ? $"gflat${methodNs}${node.Name}${structMethod.Name}"
-                        : $"gflat${node.Name}${structMethod.Name}";
-                    entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
+                    continue;
                 }
-                string vtableContent = string.Join(", ", entries);
-                EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{ifaceInfo.Methods.Count} x i8*] [ {vtableContent} ]");
+
+                if (ifaceInfo.Methods.Count == 0)
+                {
+                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [0 x i8*] zeroinitializer");
+                }
+                else
+                {
+                    List<string> entries = new();
+                    foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
+                    {
+                        MethodDeclaration structMethod = _currentStruct!.Methods[ifaceMethod.Name];
+                        string retType = EmitType(structMethod.ReturnType);
+                        List<string> paramTypes = new() { $"%{node.Name}*" };
+                        foreach (Parameter p in structMethod.Parameters)
+                        {
+                            paramTypes.Add(EmitParamType(p.Type));
+                        }
+                        string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
+                        string methodNs = _typeChecker.GetFunctionNamespace(structMethod);
+                        string mangled = methodNs.Length > 0
+                            ? $"gflat${methodNs}${node.Name}${structMethod.Name}"
+                            : $"gflat${node.Name}${structMethod.Name}";
+                        entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
+                    }
+                    string vtableContent = string.Join(", ", entries);
+                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{ifaceInfo.Methods.Count} x i8*] [ {vtableContent} ]");
+                }
+            }
+
+            foreach (AstNode member in node.Members)
+            {
+                if (member is MethodDeclaration method)
+                {
+                    EmitStructMethod(node.Name, method);
+                }
+                else if (member is OperatorDeclaration op)
+                {
+                    EmitStructOperator(node.Name, op);
+                }
+                else if (member is ConstructorDeclaration ctor)
+                {
+                    EmitStructConstructor(node.Name, ctor);
+                }
+                else if (member is ClassDeclaration nestedCls)
+                {
+                    nestedCls.Accept(this);
+                }
+                else if (member is StructDeclaration nestedStruct)
+                {
+                    nestedStruct.Accept(this);
+                }
+            }
+
+            bool hasEmptyCtor = _currentStruct!.Constructors.Any(c => c.Parameters.Count == 0);
+            if (!hasEmptyCtor && (_currentStruct.Constructors.Count == 0 || _currentStruct.FieldDeclarations.Any(f => f.Initializer != null)))
+            {
+                EmitStructDefaultConstructor(node.Name);
             }
         }
-
-        foreach (AstNode member in node.Members)
+        finally
         {
-            if (member is MethodDeclaration method)
-            {
-                EmitStructMethod(node.Name, method);
-            }
-            else if (member is OperatorDeclaration op)
-            {
-                EmitStructOperator(node.Name, op);
-            }
-            else if (member is ConstructorDeclaration ctor)
-            {
-                EmitStructConstructor(node.Name, ctor);
-            }
+            _currentStruct = prevStruct;
+            _currentClass = prevClass;
         }
-
-        bool hasEmptyCtor = _currentStruct!.Constructors.Any(c => c.Parameters.Count == 0);
-        if (!hasEmptyCtor && (_currentStruct.Constructors.Count == 0 || _currentStruct.FieldDeclarations.Any(f => f.Initializer != null)))
-        {
-            EmitStructDefaultConstructor(node.Name);
-        }
-
-        _currentStruct = prevStruct;
     }
 
     private string EmitParamType(TypeExpression type) =>

@@ -3553,6 +3553,188 @@ namespace gflat.Tests
             Assert.Equal(1, result.ExitCode);
             Assert.Contains("Fatal error", result.StandardOutput);
         }
+
+        [Fact]
+        public void Execution_NestedClass_Basic()
+        {
+            string code = """
+                class Outer
+                {
+                    public int x;
+
+                    public class Inner
+                    {
+                        public int y;
+                        public Inner(int y)
+                        {
+                            this.y = y;
+                        }
+                        public int GetDouble()
+                        {
+                            return this.y * 2;
+                        }
+                    }
+
+                    public Outer(int x)
+                    {
+                        this.x = x;
+                    }
+                }
+
+                int main()
+                {
+                    Outer* o = new* Outer(10);
+                    Outer.Inner* i = new* Outer.Inner(16);
+                    int res = o.x + i.GetDouble(); // 10 + 32 = 42
+                    i->free();
+                    o->free();
+                    return res;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_NestedStruct_Basic()
+        {
+            string code = """
+                class Collection
+                {
+                    public struct Iterator
+                    {
+                        public int index;
+                        public int step;
+
+                        public Iterator(int start, int step)
+                        {
+                            this.index = start;
+                            this.step = step;
+                        }
+
+                        public int Next()
+                        {
+                            int cur = this.index;
+                            this.index = this.index + this.step;
+                            return cur;
+                        }
+                    }
+                }
+
+                int main()
+                {
+                    Collection.Iterator it = new Collection.Iterator(10, 5);
+                    int a = it.Next(); // 10
+                    int b = it.Next(); // 15
+                    int c = it.Next(); // 20
+                    return a + b + c; // 45
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(45, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_NestedClass_UnqualifiedInsideOuter()
+        {
+            string code = """
+                class Calculator
+                {
+                    public class Worker
+                    {
+                        public int baseVal;
+                        public Worker(int b)
+                        {
+                            this.baseVal = b;
+                        }
+                        public int Compute(int x)
+                        {
+                            return this.baseVal + x;
+                        }
+                    }
+
+                    public Worker* CreateWorker(int b)
+                    {
+                        return new* Worker(b);
+                    }
+                }
+
+                int main()
+                {
+                    Calculator* calc = new* Calculator();
+                    Calculator.Worker* w = calc.CreateWorker(30);
+                    int ans = w.Compute(12); // 42
+                    w->free();
+                    calc->free();
+                    return ans;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_NestedEnumeratorPattern()
+        {
+            string code = """
+                class IntList
+                {
+                    public struct Enumerator
+                    {
+                        public int current;
+                        public int limit;
+
+                        public Enumerator(int start, int limit)
+                        {
+                            this.current = start - 1;
+                            this.limit = limit;
+                        }
+
+                        public bool MoveNext()
+                        {
+                            this.current = this.current + 1;
+                            return this.current < this.limit;
+                        }
+
+                        public int Current()
+                        {
+                            return this.current;
+                        }
+                    }
+
+                    public int count;
+
+                    public IntList(int c)
+                    {
+                        this.count = c;
+                    }
+
+                    public Enumerator GetEnumerator()
+                    {
+                        return new Enumerator(0, this.count);
+                    }
+                }
+
+                int main()
+                {
+                    IntList* list = new* IntList(5);
+                    IntList.Enumerator it = list.GetEnumerator();
+                    int sum = 0;
+                    while (it.MoveNext())
+                    {
+                        sum = sum + it.Current(); // 0 + 1 + 2 + 3 + 4 = 10
+                    }
+                    list->free();
+                    return sum;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(10, result.ExitCode);
+        }
     }
 }
 

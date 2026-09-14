@@ -233,6 +233,15 @@ namespace gflat.ast
                 return new TryStatement(tryBlock, catches, tryStmt.Line);
             }
 
+            if (node is StructDeclaration strDecl)
+            {
+                return CloneStruct(strDecl);
+            }
+            if (node is ClassDeclaration clsDecl)
+            {
+                return CloneClass(clsDecl);
+            }
+
             return node;
         }
     }

@@ -7,7 +7,7 @@ namespace gflat.ast
     public class FieldDeclaration : AstNode
     {
         public string Name { get; }
-        public TypeExpression Type { get; }
+        public TypeExpression Type { get; set; }
         public AstNode? Initializer { get; }
         public TokenKind Accessibility { get; }
         public bool IsConst { get; }

@@ -7,7 +7,7 @@ namespace gflat.ast
     public class Parameter : AstNode
     {
         public string Name { get; }
-        public TypeExpression Type { get; }
+        public TypeExpression Type { get; set; }
         public bool IsConst { get; }
 
         public Parameter(string name, TypeExpression type, int line, bool isConst = false) : base(line)

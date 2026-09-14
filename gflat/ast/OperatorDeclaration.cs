@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace gflat.ast
 {
@@ -6,7 +6,7 @@ namespace gflat.ast
     {
         public TokenKind OperatorKind { get; }
         public string OperatorSymbol { get; }
-        public TypeExpression ReturnType { get; }
+        public TypeExpression ReturnType { get; set; }
         public List<Parameter> Parameters { get; }
         public BlockStatement Body { get; }
         public TokenKind Accessibility { get; }

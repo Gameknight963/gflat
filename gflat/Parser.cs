@@ -258,6 +258,20 @@ namespace gflat
             throw new Exception($"Expected type declaration on line {Current.Line}");
         }
 
+        private string ParseTypeNameString()
+        {
+            string tname = Expect(TokenKind.Identifier).Text;
+            if (Match(TokenKind.DoubleColon))
+            {
+                tname = $"{tname}::{Expect(TokenKind.Identifier).Text}";
+            }
+            while (Match(TokenKind.Dot))
+            {
+                tname = $"{tname}.{Expect(TokenKind.Identifier).Text}";
+            }
+            return tname;
+        }
+
         private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null)
         {
             Expect(TokenKind.Class);
@@ -271,9 +285,9 @@ namespace gflat
             {
                 // first name after : could be base class or interface
                 // we'll treat all as interfaces for now, type checker resolves which is which
-                interfaces.Add(Expect(TokenKind.Identifier).Text);
+                interfaces.Add(ParseTypeNameString());
                 while (Match(TokenKind.Comma))
-                    interfaces.Add(Expect(TokenKind.Identifier).Text);
+                    interfaces.Add(ParseTypeNameString());
             }
 
             Expect(TokenKind.OpenBrace);
@@ -294,9 +308,9 @@ namespace gflat
             List<string> interfaces = new();
             if (Match(TokenKind.Colon))
             {
-                interfaces.Add(Expect(TokenKind.Identifier).Text);
+                interfaces.Add(ParseTypeNameString());
                 while (Match(TokenKind.Comma))
-                    interfaces.Add(Expect(TokenKind.Identifier).Text);
+                    interfaces.Add(ParseTypeNameString());
             }
 
             Expect(TokenKind.OpenBrace);
@@ -347,6 +361,11 @@ namespace gflat
                 else if (Check(TokenKind.Abstract)) { isAbstract = true; Consume(); }
                 else break;
             }
+
+            if (Check(TokenKind.Class))
+                return ParseClassDeclaration(accessibility, isAbstract, line, attributes);
+            if (Check(TokenKind.Struct))
+                return ParseStructDeclaration(accessibility, line, attributes);
 
             if (Check(TokenKind.Tilde))
             {
@@ -613,6 +632,11 @@ namespace gflat
                 Consume();
                 ns = name;
                 name = Expect(TokenKind.Identifier).Text;
+            }
+
+            while (Match(TokenKind.Dot))
+            {
+                name = $"{name}.{Expect(TokenKind.Identifier).Text}";
             }
 
             List<TypeExpression> typeArgs = new();

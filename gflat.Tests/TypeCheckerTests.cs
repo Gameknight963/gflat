@@ -3241,6 +3241,41 @@ namespace gflat.Tests
             Assert.True(checker.CanFunctionThrow(l2));
             Assert.False(checker.CanFunctionThrow(safe));
         }
+
+        [Fact]
+        public void Parser_NestedClassAndStruct_ParsesSuccessfully()
+        {
+            string code = """
+                class Outer
+                {
+                    public int x;
+
+                    public class NestedClass
+                    {
+                        public int y;
+                    }
+
+                    public struct NestedStruct
+                    {
+                        public int z;
+                    }
+                }
+
+                int main()
+                {
+                    Outer.NestedClass* nc = null;
+                    Outer.NestedStruct ns;
+                    return 0;
+                }
+                """;
+
+            var tokens = Lexer.Tokenize(code);
+            CompilationUnit ast = Parser.Parse(tokens);
+            ClassDeclaration? outer = ast.Members.OfType<ClassDeclaration>().FirstOrDefault(c => c.Name == "Outer");
+            Assert.NotNull(outer);
+            Assert.Contains(outer.Members, m => m is ClassDeclaration { Name: "NestedClass" });
+            Assert.Contains(outer.Members, m => m is StructDeclaration { Name: "NestedStruct" });
+        }
     }
 }
 

@@ -13,6 +13,145 @@ public class LlvmEmitter : IVisitor
         _typeChecker = typeChecker;
     }
 
+    private int _constCounter = 0;
+    private readonly Dictionary<ConstValue, string> _emittedConstGlobals = new();
+    private readonly HashSet<string> _usedGlobalNames = new();
+
+    private string EmitConstInitializer(ConstValue val, TypeExpression type)
+    {
+        type = _typeChecker.ResolveAlias(type);
+        string typeStr = EmitType(type);
+
+        switch (val)
+        {
+            case ConstValue.Integer i:
+                return $"{typeStr} {i.Value}";
+            case ConstValue.UInteger u:
+                return $"{typeStr} {u.Value}";
+            case ConstValue.Float f:
+                {
+                    string str = f.Value.ToString("0.0######", System.Globalization.CultureInfo.InvariantCulture);
+                    if (!str.Contains('.')) str += ".0";
+                    return $"{typeStr} {str}";
+                }
+            case ConstValue.Boolean b:
+                return $"i1 {(b.Value ? "1" : "0")}";
+            case ConstValue.Char c:
+                return $"i8 {(int)c.Value}";
+            case ConstValue.String s:
+                {
+                    string raw = s.Value;
+                    string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                    string globalName = NewGlobal();
+                    int len = escaped.Length + 1;
+                    string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                    EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
+                    return $"i8* bitcast ([{len} x i8]* {globalName} to i8*)";
+                }
+            case ConstValue.Pointer ptrVal:
+                {
+                    string targetGlobal = GetOrCreateConstGlobal(ptrVal.Target, ptrVal.GlobalName);
+                    string targetLlvmType = $"%{ptrVal.TypeName}";
+                    if (typeStr == $"{targetLlvmType}*" || typeStr == targetLlvmType)
+                    {
+                        return $"{typeStr} {targetGlobal}";
+                    }
+                    else
+                    {
+                        return $"{typeStr} bitcast ({targetLlvmType}* {targetGlobal} to {typeStr})";
+                    }
+                }
+            case ConstValue.Struct structVal:
+                {
+                    TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(structVal.StructName);
+                    if (sInfo == null) throw new Exception($"Unknown struct {structVal.StructName}");
+                    List<string> fieldInits = new();
+                    foreach ((string Name, TypeExpression Type) fld in sInfo.Fields)
+                    {
+                        if (structVal.Fields.TryGetValue(fld.Name, out ConstValue? fldVal))
+                        {
+                            fieldInits.Add(EmitConstInitializer(fldVal, fld.Type));
+                        }
+                        else
+                        {
+                            fieldInits.Add($"{EmitType(fld.Type)} zeroinitializer");
+                        }
+                    }
+                    return $"%{structVal.StructName} {{ {string.Join(", ", fieldInits)} }}";
+                }
+            case ConstValue.ClassInstance classVal:
+                {
+                    TypeChecker.ClassInfo? cInfo = _typeChecker.GetClass(classVal.ClassName);
+                    if (cInfo == null) throw new Exception($"Unknown class {classVal.ClassName}");
+                    int vtableSize = cInfo.VirtualMethods.Count;
+                    string vtableCast = vtableSize == 0
+                        ? $"i8** bitcast ([0 x i8*]* @{classVal.ClassName}$vtable to i8**)"
+                        : $"i8** bitcast ([{vtableSize} x i8*]* @{classVal.ClassName}$vtable to i8**)";
+                    List<string> fieldInits = new() { vtableCast };
+                    foreach ((string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) fld in cInfo.Fields)
+                    {
+                        if (classVal.Fields.TryGetValue(fld.Name, out ConstValue? fldVal))
+                        {
+                            fieldInits.Add(EmitConstInitializer(fldVal, fld.Type));
+                        }
+                        else
+                        {
+                            fieldInits.Add($"{EmitType(fld.Type)} zeroinitializer");
+                        }
+                    }
+                    return $"%{classVal.ClassName} {{ {string.Join(", ", fieldInits)} }}";
+                }
+            default:
+                throw new Exception($"Cannot create constant initializer for {val.GetType().Name}");
+        }
+    }
+
+    private string GetOrCreateConstGlobal(ConstValue target, string? preferredName = null)
+    {
+        if (_emittedConstGlobals.TryGetValue(target, out string? existing))
+        {
+            return existing;
+        }
+
+        string candidate;
+        if (!string.IsNullOrEmpty(preferredName))
+        {
+            candidate = $"@{preferredName}$data";
+            if (_usedGlobalNames.Contains(candidate))
+            {
+                candidate = $"@{preferredName}${_constCounter++}$data";
+            }
+        }
+        else
+        {
+            candidate = $"@const${_constCounter++}$data";
+        }
+
+        _usedGlobalNames.Add(candidate);
+        _emittedConstGlobals[target] = candidate;
+
+        if (target is ConstValue.Struct sVal)
+        {
+            TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(sVal.StructName);
+            if (sInfo == null) throw new Exception($"Unknown struct {sVal.StructName}");
+            string init = EmitConstInitializer(sVal, new NamedTypeExpression(sVal.StructName, null, 0));
+            EmitGlobal($"{candidate} = internal constant {init}");
+            return candidate;
+        }
+        else if (target is ConstValue.ClassInstance cVal)
+        {
+            TypeChecker.ClassInfo? cInfo = _typeChecker.GetClass(cVal.ClassName);
+            if (cInfo == null) throw new Exception($"Unknown class {cVal.ClassName}");
+            string init = EmitConstInitializer(cVal, new NamedTypeExpression(cVal.ClassName, null, 0));
+            EmitGlobal($"{candidate} = internal constant {init}");
+            return candidate;
+        }
+        else
+        {
+            throw new Exception($"Cannot create constant global for {target.GetType().Name}");
+        }
+    }
+
     private bool TryEmitConstValue(ConstValue constVal, TypeExpression type)
     {
         switch (constVal)
@@ -44,6 +183,24 @@ public class LlvmEmitter : IVisitor
                     Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
                     Push(ptr);
                     return true;
+                }
+            case ConstValue.Pointer ptrVal:
+                {
+                    string globalName = GetOrCreateConstGlobal(ptrVal.Target, ptrVal.GlobalName);
+                    string targetLlvmType = $"%{ptrVal.TypeName}";
+                    string expectedLlvmType = EmitType(type);
+                    if (expectedLlvmType == $"{targetLlvmType}*" || expectedLlvmType == targetLlvmType)
+                    {
+                        Push(globalName);
+                        return true;
+                    }
+                    else
+                    {
+                        string castTemp = NewTemp();
+                        Emit($"    {castTemp} = bitcast {targetLlvmType}* {globalName} to {expectedLlvmType}");
+                        Push(castTemp);
+                        return true;
+                    }
                 }
             case ConstValue.Struct structVal:
                 {
@@ -143,6 +300,22 @@ public class LlvmEmitter : IVisitor
             {
                 Push(ptr);
                 return;
+            }
+
+            if (_typeChecker.TryGetConstValueByName(ident.Name, out ConstValue? constVal) && constVal != null)
+            {
+                if (constVal is ConstValue.Pointer ptrVal)
+                {
+                    string globalData = GetOrCreateConstGlobal(ptrVal.Target, ptrVal.GlobalName ?? ident.Name);
+                    Push(globalData);
+                    return;
+                }
+                if (constVal is ConstValue.Struct or ConstValue.ClassInstance)
+                {
+                    string globalData = GetOrCreateConstGlobal(constVal, ident.Name);
+                    Push(globalData);
+                    return;
+                }
             }
 
             if (_currentStruct != null && _locals.TryGetValue("this", out string? thisPtr))
@@ -1545,6 +1718,11 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(VariableDeclaration node)
     {
+        if (node.IsConst)
+        {
+            return;
+        }
+
         TypeExpression resolvedVarType = _typeChecker.GetType(node);
         string type = EmitType(resolvedVarType);
         string ptr = NewTemp();
@@ -2740,12 +2918,22 @@ public class LlvmEmitter : IVisitor
         }
 
         if (node.Object is IdentifierExpression objIdent &&
-            _typeChecker.TryGetConstValueByName(objIdent.Name, out ConstValue? constObj) &&
-            constObj is ConstValue.Struct constStruct)
+            _typeChecker.TryGetConstValueByName(objIdent.Name, out ConstValue? constObj) && constObj != null)
         {
-            if (constStruct.Fields.TryGetValue(node.Member, out ConstValue? fieldVal))
+            if (constObj is ConstValue.Pointer ptrObj)
+            {
+                constObj = ptrObj.Target;
+            }
+            if (constObj is ConstValue.Struct constStruct && constStruct.Fields.TryGetValue(node.Member, out ConstValue? fieldVal))
             {
                 if (TryEmitConstValue(fieldVal, _typeChecker.GetType(node)))
+                {
+                    return;
+                }
+            }
+            else if (constObj is ConstValue.ClassInstance constClass && constClass.Fields.TryGetValue(node.Member, out ConstValue? cFieldVal))
+            {
+                if (TryEmitConstValue(cFieldVal, _typeChecker.GetType(node)))
                 {
                     return;
                 }

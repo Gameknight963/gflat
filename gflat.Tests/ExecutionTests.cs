@@ -3190,6 +3190,139 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void ConstPointer_Struct_Executes()
+        {
+            string code = """
+                struct Point
+                {
+                    public int x;
+                    public int y;
+                    public Point(int a, int b) { x = a; y = b; }
+                }
+
+                const Point* p = new* Point(10, 25);
+
+                int main()
+                {
+                    return p.x + p.y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(35, result.ExitCode);
+        }
+
+        [Fact]
+        public void ConstPointer_Class_VirtualDispatch_Executes()
+        {
+            string code = """
+                class Exception
+                {
+                    public readonly char* message;
+                    public int code;
+                    public Exception(readonly char* msg, int c)
+                    {
+                        message = msg;
+                        code = c;
+                    }
+                    public readonly virtual int GetCode()
+                    {
+                        return code;
+                    }
+                }
+
+                const Exception* OutOfMemory = new* Exception(c"Out of memory", 42);
+
+                int main()
+                {
+                    return OutOfMemory.GetCode();
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ConstPointer_AddressOf_Executes()
+        {
+            string code = """
+                struct Point
+                {
+                    public int x;
+                    public int y;
+                    public Point(int a, int b) { x = a; y = b; }
+                }
+
+                const Point Origin = new Point(15, 27);
+                const Point* pOrigin = &Origin;
+
+                int main()
+                {
+                    return pOrigin.x + pOrigin.y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void ConstPointer_Dereference_Executes()
+        {
+            string code = """
+                struct Point
+                {
+                    public int x;
+                    public int y;
+                    public Point(int a, int b) { x = a; y = b; }
+                }
+
+                const Point* p = new* Point(10, 20);
+
+                int main()
+                {
+                    Point pt = *p;
+                    return pt.x + pt.y;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(30, result.ExitCode);
+        }
+
+        [Fact]
+        public void ConstPointer_ClassInheritance_Executes()
+        {
+            string code = """
+                class BaseException
+                {
+                    public int code;
+                    public BaseException(int c) { code = c; }
+                    public readonly virtual int GetCode() { return code; }
+                }
+
+                class CustomException : BaseException
+                {
+                    public int extra;
+                    public CustomException(int c, int e) : base(c) { extra = e; }
+                    public readonly override int GetCode() { return code + extra; }
+                }
+
+                const CustomException* oom = new* CustomException(10, 32);
+
+                int main()
+                {
+                    const BaseException* basePtr = oom;
+                    return basePtr.GetCode();
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
 

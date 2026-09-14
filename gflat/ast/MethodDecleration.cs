@@ -18,8 +18,11 @@ namespace gflat.ast
         public bool IsAbstract { get; }
         public bool IsReadOnly { get; }
         public bool IsConst { get; }
+        public List<AttributeNode> Attributes { get; }
+        public List<GenericParameter> GenericParameters { get; }
+        public bool IsGeneric => GenericParameters.Count > 0;
 
-        public MethodDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, BlockStatement? body, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false) : base(line)
+        public MethodDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, BlockStatement? body, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null) : base(line)
         {
             Name = name;
             ReturnType = returnType;
@@ -32,6 +35,8 @@ namespace gflat.ast
             IsAbstract = isAbstract;
             IsReadOnly = isReadOnly;
             IsConst = isConst;
+            Attributes = attributes ?? new List<AttributeNode>();
+            GenericParameters = genericParameters ?? new List<GenericParameter>();
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

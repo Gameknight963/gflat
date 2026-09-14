@@ -384,6 +384,65 @@ namespace gflat.comptime
         public void Visit(UnaryExpression node)
         {
             CheckSteps(node.Line);
+
+            if (node.Operator == TokenKind.PlusPlus)
+            {
+                if (node.Operand is IdentifierExpression ppIdent && TryGetVariable(ppIdent.Name, out ConstValue? ppVal))
+                {
+                    ConstValue one = ppVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                    if (ConstValue.TryAdd(ppVal!, one, out ConstValue? nextVal))
+                    {
+                        SetVariable(ppIdent.Name, nextVal!);
+                        _currentValue = node.IsPrefix ? nextVal : ppVal;
+                        return;
+                    }
+                }
+                else if (node.Operand is MemberAccessExpression ppMem)
+                {
+                    ppMem.Object.Accept(this);
+                    if (_currentValue is ConstValue.Struct ppStruct && ppStruct.Fields.TryGetValue(ppMem.Member, out ConstValue? memVal))
+                    {
+                        ConstValue one = memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                        if (ConstValue.TryAdd(memVal, one, out ConstValue? nextVal))
+                        {
+                            ppStruct.Fields[ppMem.Member] = nextVal!;
+                            _currentValue = node.IsPrefix ? nextVal : memVal;
+                            return;
+                        }
+                    }
+                }
+                throw new ConstEvalException($"Cannot apply '++' to '{node.Operand}' at compile time", node.Line);
+            }
+
+            if (node.Operator == TokenKind.MinusMinus)
+            {
+                if (node.Operand is IdentifierExpression mmIdent && TryGetVariable(mmIdent.Name, out ConstValue? mmVal))
+                {
+                    ConstValue one = mmVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                    if (ConstValue.TrySubtract(mmVal!, one, out ConstValue? nextVal))
+                    {
+                        SetVariable(mmIdent.Name, nextVal!);
+                        _currentValue = node.IsPrefix ? nextVal : mmVal;
+                        return;
+                    }
+                }
+                else if (node.Operand is MemberAccessExpression mmMem)
+                {
+                    mmMem.Object.Accept(this);
+                    if (_currentValue is ConstValue.Struct mmStruct && mmStruct.Fields.TryGetValue(mmMem.Member, out ConstValue? memVal))
+                    {
+                        ConstValue one = memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                        if (ConstValue.TrySubtract(memVal, one, out ConstValue? nextVal))
+                        {
+                            mmStruct.Fields[mmMem.Member] = nextVal!;
+                            _currentValue = node.IsPrefix ? nextVal : memVal;
+                            return;
+                        }
+                    }
+                }
+                throw new ConstEvalException($"Cannot apply '--' to '{node.Operand}' at compile time", node.Line);
+            }
+
             node.Operand.Accept(this);
             ConstValue operand = _currentValue!;
 
@@ -475,9 +534,14 @@ namespace gflat.comptime
 
             if (target is ConstValue.String str)
             {
-                if (idx < 0 || idx >= str.Value.Length)
+                if (idx < 0 || idx > str.Value.Length)
                 {
                     throw new ConstEvalException($"String index {idx} out of bounds (length {str.Value.Length})", node.Line);
+                }
+                if (idx == str.Value.Length)
+                {
+                    _currentValue = new ConstValue.Char('\0');
+                    return;
                 }
                 _currentValue = new ConstValue.Char(str.Value[(int)idx]);
                 return;
@@ -510,25 +574,68 @@ namespace gflat.comptime
                     _currentValue = new ConstValue.Char((char)i.Value);
                     return;
                 }
+                if (node.TargetType is NamedTypeExpression { Name: "uint" or "ulong" or "ushort" or "usize" })
+                {
+                    _currentValue = new ConstValue.UInteger((ulong)i.Value);
+                    return;
+                }
+                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" or "sbyte" or "isize" })
+                {
+                    _currentValue = new ConstValue.Integer(i.Value);
+                    return;
+                }
                 if (node.TargetType is NamedTypeExpression { Name: "float" or "double" })
                 {
                     _currentValue = new ConstValue.Float(i.Value);
                     return;
                 }
             }
+            if (val is ConstValue.UInteger ui)
+            {
+                if (node.TargetType is NamedTypeExpression { Name: "char" })
+                {
+                    _currentValue = new ConstValue.Char((char)ui.Value);
+                    return;
+                }
+                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" or "sbyte" or "isize" })
+                {
+                    _currentValue = new ConstValue.Integer((long)ui.Value);
+                    return;
+                }
+                if (node.TargetType is NamedTypeExpression { Name: "uint" or "ulong" or "ushort" or "usize" })
+                {
+                    _currentValue = new ConstValue.UInteger(ui.Value);
+                    return;
+                }
+                if (node.TargetType is NamedTypeExpression { Name: "float" or "double" })
+                {
+                    _currentValue = new ConstValue.Float(ui.Value);
+                    return;
+                }
+            }
             if (val is ConstValue.Char c)
             {
-                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" })
+                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" or "sbyte" or "isize" })
                 {
-                    _currentValue = new ConstValue.Integer(c.Value);
+                    _currentValue = new ConstValue.Integer((long)c.Value);
+                    return;
+                }
+                if (node.TargetType is NamedTypeExpression { Name: "uint" or "ulong" or "ushort" or "usize" })
+                {
+                    _currentValue = new ConstValue.UInteger((ulong)c.Value);
                     return;
                 }
             }
             if (val is ConstValue.Float f)
             {
-                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" })
+                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" or "sbyte" or "isize" })
                 {
                     _currentValue = new ConstValue.Integer((long)f.Value);
+                    return;
+                }
+                if (node.TargetType is NamedTypeExpression { Name: "uint" or "ulong" or "ushort" or "usize" })
+                {
+                    _currentValue = new ConstValue.UInteger((ulong)f.Value);
                     return;
                 }
             }
@@ -944,6 +1051,86 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             string name = _typeChecker.ExtractName(node.Target);
             _currentValue = new ConstValue.String(name);
+        }
+
+        public void Visit(PrefixedStringLiteralExpression node)
+        {
+            CheckSteps(node.Line);
+
+            if (node.Prefix == "c")
+            {
+                _currentValue = new ConstValue.String(node.Literal.Token.Text[1..^1]);
+                return;
+            }
+
+            TypeChecker.StringPrefixHandler? handler = _typeChecker.GetResolvedPrefixHandler(node);
+            if (handler == null)
+            {
+                throw new ConstEvalException($"Unresolved string prefix '{node.Prefix}'", node.Line);
+            }
+
+            if (!handler.IsConst)
+            {
+                throw new ConstEvalException($"String prefix handler for '{node.Prefix}' is not marked 'const' and cannot be evaluated at compile time", node.Line);
+            }
+
+            string rawText = node.Literal.Token.Text[1..^1];
+            ConstValue strArg = new ConstValue.String(rawText);
+
+            if (handler.IsConstructor)
+            {
+                ConstructorDeclaration ctor = handler.Constructor!;
+                string typeName = handler.EnclosingTypeName!;
+                TypeChecker.StructInfo? structInfo = _typeChecker.GetStruct(typeName);
+                if (structInfo == null)
+                {
+                    throw new ConstEvalException($"Cannot instantiate '{typeName}' at compile time (only structs are supported)", node.Line);
+                }
+
+                Dictionary<string, ConstValue> fields = new();
+                ConstValue.Struct instance = new ConstValue.Struct(structInfo.Name, fields);
+
+                PushScope();
+                _scopes.Peek()["this"] = instance;
+                _scopes.Peek()[ctor.Parameters[0].Name] = strArg;
+
+                ctor.Body.Accept(this);
+                PopScope();
+
+                _currentValue = instance;
+            }
+            else if (handler.Method != null)
+            {
+                MethodDeclaration method = handler.Method;
+                if (_callDepth >= MaxCallDepth)
+                {
+                    throw new ConstEvalException($"Compile-time recursion exceeded maximum call depth of {MaxCallDepth}", node.Line);
+                }
+
+                _callDepth++;
+                PushScope();
+                _scopes.Peek()[method.Parameters[0].Name] = strArg;
+
+                bool prevReturned = _hasReturned;
+                ConstValue? prevReturnVal = _returnValue;
+                _hasReturned = false;
+                _returnValue = null;
+
+                method.Body?.Accept(this);
+
+                ConstValue? callResult = _returnValue;
+
+                _hasReturned = prevReturned;
+                _returnValue = prevReturnVal;
+                PopScope();
+                _callDepth--;
+
+                _currentValue = callResult ?? new ConstValue.Integer(0);
+            }
+            else
+            {
+                throw new ConstEvalException($"Unsupported prefix handler kind for '{node.Prefix}'", node.Line);
+            }
         }
     }
 }

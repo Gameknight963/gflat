@@ -45,6 +45,36 @@ public class LlvmEmitter : IVisitor
                     Push(ptr);
                     return true;
                 }
+            case ConstValue.Struct structVal:
+                {
+                    TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(structVal.StructName);
+                    if (sInfo != null)
+                    {
+                        string temp = NewTemp();
+                        Emit($"    {temp} = alloca %{structVal.StructName}");
+                        Emit($"    store %{structVal.StructName} zeroinitializer, %{structVal.StructName}* {temp}");
+                        for (int fIdx = 0; fIdx < sInfo.Fields.Count; fIdx++)
+                        {
+                            (string Name, TypeExpression Type) fld = sInfo.Fields[fIdx];
+                            if (structVal.Fields.TryGetValue(fld.Name, out ConstValue? fldVal))
+                            {
+                                if (TryEmitConstValue(fldVal, fld.Type))
+                                {
+                                    string v = Pop();
+                                    string fPtr = NewTemp();
+                                    Emit($"    {fPtr} = getelementptr %{structVal.StructName}, %{structVal.StructName}* {temp}, i32 0, i32 {fIdx}");
+                                    string fType = EmitType(fld.Type);
+                                    Emit($"    store {fType} {v}, {fType}* {fPtr}");
+                                }
+                            }
+                        }
+                        string val = NewTemp();
+                        Emit($"    {val} = load %{structVal.StructName}, %{structVal.StructName}* {temp}");
+                        Push(val);
+                        return true;
+                    }
+                    return false;
+                }
             default:
                 return false;
         }
@@ -517,6 +547,8 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(ClassDeclaration node)
     {
+        if (node.IsGeneric) return;
+
         TypeChecker.ClassInfo? prevClass = _currentClass;
         _currentClass = _typeChecker.GetClass(node.Name);
 
@@ -928,6 +960,8 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(StructDeclaration node)
     {
+        if (node.IsGeneric) return;
+
         string fields = string.Join(", ", node.Members
             .OfType<FieldDeclaration>()
             .Select(f => EmitType(f.Type)));
@@ -1264,6 +1298,8 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(MethodDeclaration node)
     {
+        if (node.IsGeneric) return;
+
         _locals.Clear();
         _tempCounter = 0;
 
@@ -2947,6 +2983,74 @@ public class LlvmEmitter : IVisitor
         }
         string name = _typeChecker.ExtractName(node.Target);
         TryEmitConstValue(new ConstValue.String(name), _typeChecker.GetType(node));
+    }
+
+    public void Visit(PrefixedStringLiteralExpression node)
+    {
+        if (node.Prefix == "c")
+        {
+            node.Literal.Accept(this);
+            return;
+        }
+
+        if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
+        {
+            if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
+            {
+                return;
+            }
+        }
+
+        TypeChecker.StringPrefixHandler handler = _typeChecker.GetResolvedPrefixHandler(node)!;
+        node.Literal.Accept(this);
+        string strArg = Pop();
+
+        if (handler.IsConstructor)
+        {
+            string typeName = handler.EnclosingTypeName!;
+            string temp = NewTemp();
+            Emit($"    {temp} = alloca %{typeName}");
+            Emit($"    store %{typeName} zeroinitializer, %{typeName}* {temp}");
+
+            string mangledName = GetConstructorMangledName(typeName, handler.Constructor, handler.Namespace);
+            Emit($"    call void @{mangledName}(%{typeName}* {temp}, i8* {strArg})");
+
+            string val = NewTemp();
+            Emit($"    {val} = load %{typeName}, %{typeName}* {temp}");
+            Push(val);
+        }
+        else if (handler.Method != null)
+        {
+            string ns = handler.Namespace;
+            string funcName;
+            if (ns.Length > 0)
+            {
+                funcName = handler.EnclosingTypeName != null
+                    ? $"gflat${ns}${handler.EnclosingTypeName}${handler.Method.Name}"
+                    : $"gflat${ns}${handler.Method.Name}";
+            }
+            else
+            {
+                funcName = handler.EnclosingTypeName != null
+                    ? $"gflat${handler.EnclosingTypeName}${handler.Method.Name}"
+                    : $"gflat${handler.Method.Name}";
+            }
+            string retType = EmitType(handler.ReturnType);
+            if (retType == "void")
+            {
+                Emit($"    call void @{funcName}(i8* {strArg})");
+            }
+            else
+            {
+                string temp = NewTemp();
+                Emit($"    {temp} = call {retType} @{funcName}(i8* {strArg})");
+                Push(temp);
+            }
+        }
+        else
+        {
+            throw new NotImplementedException("Unsupported string prefix handler kind");
+        }
     }
 
     private string GetDefaultValue(TypeExpression type)

@@ -2907,6 +2907,289 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void CStringPrefix_Execution()
+        {
+            string code = """
+                int main()
+                {
+                    readonly char* s = c"hello";
+                    if (s[0] == 'h' && s[4] == 'o' && s[5] == '\0')
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_Struct_Execution()
+        {
+            string code = """
+                [string_prefix("sql")]
+                struct SqlQuery
+                {
+                    readonly char* query;
+                    const SqlQuery(readonly char* raw)
+                    {
+                        this.query = raw;
+                    }
+                }
+
+                int main()
+                {
+                    SqlQuery q = sql"SELECT * FROM users";
+                    if (q.query[0] == 'S' && q.query[6] == ' ')
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_ConstEvaluation_Execution()
+        {
+            string code = """
+                [string_prefix("hash")]
+                const uint HashString(readonly char* str)
+                {
+                    uint h = 0u;
+                    for (int i = 0; str[i] != '\0'; i++)
+                    {
+                        h = h * 31u + (uint)str[i];
+                    }
+                    return h;
+                }
+
+                int main()
+                {
+                    const uint H = hash"hello";
+                    int[H % 10u + 1u] buffer;
+                    if (sizeof(buffer) > 0 && H > 0u)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_QualifiedDisambiguation_Execution()
+        {
+            string code = """
+                namespace Postgres
+                {
+                    [string_prefix("sql")]
+                    struct PgQuery
+                    {
+                        int dbType;
+                        const PgQuery(readonly char* raw)
+                        {
+                            this.dbType = 1;
+                        }
+                    }
+                }
+
+                namespace Sqlite
+                {
+                    [string_prefix("sql")]
+                    struct LiteQuery
+                    {
+                        int dbType;
+                        const LiteQuery(readonly char* raw)
+                        {
+                            this.dbType = 2;
+                        }
+                    }
+                }
+
+                int main()
+                {
+                    Postgres::PgQuery p = Postgres::sql"SELECT 1";
+                    Sqlite::LiteQuery s = Sqlite::sql"SELECT 2";
+                    if (p.dbType == 1 && s.dbType == 2)
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void GenericStruct_Monomorphization_Executes()
+        {
+            string code = """
+                struct Pair<T, U>
+                {
+                    T first;
+                    U second;
+                }
+
+                int main()
+                {
+                    Pair<int, int> p;
+                    p.first = 30;
+                    p.second = 12;
+                    return p.first + p.second;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void GenericFunction_ExplicitTypeArgs_Executes()
+        {
+            string code = """
+                T Add<T>(T a, T b)
+                {
+                    return a + b;
+                }
+
+                int main()
+                {
+                    return Add<int>(20, 22);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void GenericFunction_InferredTypeArgs_Executes()
+        {
+            string code = """
+                T Max<T>(T a, T b)
+                {
+                    if (a > b) return a;
+                    return b;
+                }
+
+                int main()
+                {
+                    return Max(15, 42);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void GenericConstraint_Interface_Executes()
+        {
+            string code = """
+                interface HasValue
+                {
+                    int GetValue();
+                }
+
+                struct Item : HasValue
+                {
+                    int val;
+                    int GetValue()
+                    {
+                        return this.val;
+                    }
+                }
+
+                int Extract<T : HasValue>(T item)
+                {
+                    return item.GetValue();
+                }
+
+                int main()
+                {
+                    Item it;
+                    it.val = 42;
+                    return Extract(it);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void GenericClass_Monomorphization_Executes()
+        {
+            string code = """
+                class Box<T>
+                {
+                    public T value;
+                    public void Set(T v)
+                    {
+                        this.value = v;
+                    }
+                    public T Get()
+                    {
+                        return this.value;
+                    }
+                }
+
+                int main()
+                {
+                    Box<int> b = new Box<int>();
+                    b.Set(42);
+                    return b.Get();
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void GenericConstraint_BaseClass_Executes()
+        {
+            string code = """
+                class Entity
+                {
+                    public int id;
+                }
+
+                class Player : Entity
+                {
+                    public int score;
+                }
+
+                int GetEntityId<T : Entity>(T e)
+                {
+                    return e.id;
+                }
+
+                int main()
+                {
+                    Player p = new Player();
+                    p.id = 42;
+                    p.score = 100;
+                    return GetEntityId(p);
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
     }
 }
 

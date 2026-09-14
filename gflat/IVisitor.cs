@@ -53,5 +53,6 @@ namespace gflat
         void Visit(DefaultExpression node);
         void Visit(SizeofExpression node);
         void Visit(NameofExpression node);
+        void Visit(PrefixedStringLiteralExpression node);
     }
 }

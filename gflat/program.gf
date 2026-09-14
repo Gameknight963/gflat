@@ -200,6 +200,77 @@ void PrintShape(char* label, IShape* shape)
 }
 
 // ========================================================
+// 6. Custom String Prefixes & Built-in C-Strings
+// ========================================================
+
+[string_prefix("sql")]
+struct SqlQuery
+{
+    readonly char* query;
+
+    const SqlQuery(readonly char* raw)
+    {
+        this.query = raw;
+    }
+}
+
+[string_prefix("hash")]
+const uint HashString(readonly char* str)
+{
+    uint h = 2166136261u; // FNV-1a 32-bit offset basis
+    for (int i = 0; str[i] != '\0'; i++)
+    {
+        h = (h ^ (uint)str[i]) * 16777619u;
+    }
+    return h;
+}
+
+// Compile-time string prefix evaluation!
+const uint UserTableSlots = hash"users" % 8u + 4u;
+
+// ========================================================
+// 7. Compile-Time Generics / Templates (Stage 3)
+// ========================================================
+
+struct Pair<T, U>
+{
+    T first;
+    U second;
+
+    Pair(T first, U second)
+    {
+        this.first = first;
+        this.second = second;
+    }
+
+    readonly void Print()
+    {
+        printf("Pair(%d, %d)\n", this.first, this.second);
+    }
+}
+
+T Max<T>(T a, T b)
+{
+    if (a > b)
+    {
+        return a;
+    }
+    return b;
+}
+
+// Interface-constrained generic function
+int ComputeArea<T : IShape>(T* shape)
+{
+    return shape.Area();
+}
+
+// Base-class constrained generic function
+int GetEntityHealth<T : Entity>(T* e)
+{
+    return e.health;
+}
+
+// ========================================================
 // Main Entry Point
 // ========================================================
 
@@ -268,7 +339,42 @@ int main()
 
     // Lambda expressions
     int(int, int)* addFn = (int a, int b) => a + b;
-    printf("Lambda (20 + 22) = %d\n", addFn(20, 22));
+    printf("Lambda (20 + 22) = %d\n\n", addFn(20, 22));
+
+    // --- 5. Custom String Prefixes & Built-in C-Strings ---
+    printf("-- 5. Custom String Prefixes --\n");
+    readonly char* cstr = c"Built-in C-string literal: Hello from gflat!";
+    printf("%s\n", cstr);
+
+    SqlQuery query = sql"SELECT id, username, email FROM accounts WHERE status = 'active';";
+    printf("SqlQuery.query = '%s'\n", query.query);
+
+    printf("Compile-time FNV-1a hash of 'users' = 0x%08X\n", hash"users");
+    printf("Compile-time sized table slots: %d slots\n", UserTableSlots);
+    int[UserTableSlots] userSlots;
+    printf("sizeof(userSlots) = %d bytes\n\n", sizeof(userSlots));
+
+    // --- 6. Compile-Time Generics / Templates ---
+    printf("-- 6. Compile-Time Generics / Templates --\n");
+    Pair<int, int> intPair = new Pair<int, int>(100, 200);
+    printf("Generic Pair<int, int>: ");
+    intPair.Print();
+
+    // Type inference on generic function call: Max(42, 17) -> Max<int>
+    int maxVal = Max(42, 17);
+    printf("Generic Max(42, 17) with type inference = %d\n", maxVal);
+
+    // Explicit type argument on generic function call: Max<int>(10, 99)
+    int maxExplicit = Max<int>(10, 99);
+    printf("Generic Max<int>(10, 99) = %d\n", maxExplicit);
+
+    // Interface-constrained generic function: ComputeArea<Rect>
+    int shapeArea = ComputeArea(&stackRect);
+    printf("Constrained ComputeArea(&stackRect) = %d\n", shapeArea);
+
+    // Base-class constrained generic function: GetEntityHealth<Player>
+    int pHealth = GetEntityHealth(&player);
+    printf("Constrained GetEntityHealth(&player) = %d\n\n", pHealth);
 
     return 0;
 }

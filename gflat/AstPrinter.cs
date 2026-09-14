@@ -370,5 +370,20 @@ namespace gflat
             Print("NameofExpression");
             Indented(() => node.Target.Accept(this));
         }
+
+        public void Visit(PrefixedStringLiteralExpression node)
+        {
+            Print($"PrefixedStringLiteralExpression ({node.Prefix})");
+            Indented(() =>
+            {
+                if (node.Scope != null)
+                {
+                    Print("Scope:");
+                    Indented(() => node.Scope.Accept(this));
+                }
+                Print("Literal:");
+                Indented(() => node.Literal.Accept(this));
+            });
+        }
     }
 }

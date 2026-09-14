@@ -2600,6 +2600,317 @@ namespace gflat.Tests
 
             Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
         }
+
+        [Fact]
+        public void CStringPrefix_TypeChecks()
+        {
+            string code = """
+                int main()
+                {
+                    readonly char* s = c"hello";
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_StructAttribute_TypeChecks()
+        {
+            string code = """
+                [string_prefix("sql")]
+                struct SqlQuery
+                {
+                    readonly char* text;
+                    const SqlQuery(readonly char* raw)
+                    {
+                        this.text = raw;
+                    }
+                }
+
+                int main()
+                {
+                    SqlQuery q = sql"SELECT * FROM users";
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_ConstructorAttribute_TypeChecks()
+        {
+            string code = """
+                struct SqlQuery
+                {
+                    readonly char* text;
+                    [string_prefix("sql")]
+                    const SqlQuery(readonly char* raw)
+                    {
+                        this.text = raw;
+                    }
+                }
+
+                int main()
+                {
+                    SqlQuery q = sql"SELECT * FROM users";
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_FreeFunction_TypeChecks()
+        {
+            string code = """
+                [string_prefix("hash")]
+                const uint Hash(readonly char* str)
+                {
+                    return 123u;
+                }
+
+                int main()
+                {
+                    uint h = hash"test";
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_QualifiedScope_TypeChecks()
+        {
+            string code = """
+                namespace Postgres
+                {
+                    [string_prefix("sql")]
+                    struct SqlQuery
+                    {
+                        readonly char* text;
+                        const SqlQuery(readonly char* raw) { this.text = raw; }
+                    }
+                }
+
+                namespace Sqlite
+                {
+                    [string_prefix("sql")]
+                    struct SqlQuery
+                    {
+                        readonly char* text;
+                        const SqlQuery(readonly char* raw) { this.text = raw; }
+                    }
+                }
+
+                int main()
+                {
+                    Postgres::SqlQuery q1 = Postgres::sql"SELECT 1";
+                    Sqlite::SqlQuery q2 = Sqlite::sql"SELECT 2";
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_Ambiguity_Throws()
+        {
+            string code = """
+                [string_prefix("test")]
+                struct S1
+                {
+                    const S1(readonly char* s) {}
+                }
+
+                [string_prefix("test")]
+                struct S2
+                {
+                    const S2(readonly char* s) {}
+                }
+
+                int main()
+                {
+                    test"hello";
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Ambiguous string prefix 'test'", ex.Message);
+        }
+
+        [Fact]
+        public void CustomStringPrefix_UnknownPrefix_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    unknown"hello";
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Unknown string prefix 'unknown'", ex.Message);
+        }
+
+        [Fact]
+        public void GenericStruct_TypeChecksCleanly()
+        {
+            string code = """
+                struct Pair<T, U>
+                {
+                    T first;
+                    U second;
+                }
+
+                int main()
+                {
+                    Pair<int, float> p;
+                    p.first = 42;
+                    p.second = 3.14f;
+                    return p.first;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void GenericFunction_Inference_TypeChecksCleanly()
+        {
+            string code = """
+                T Max<T>(T a, T b)
+                {
+                    if (a > b) return a;
+                    return b;
+                }
+
+                int main()
+                {
+                    int m = Max(10, 20);
+                    return m;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void GenericConstraint_Interface_Satisfied()
+        {
+            string code = """
+                interface Describable
+                {
+                    int Describe();
+                }
+
+                struct Widget : Describable
+                {
+                    int id;
+                    int Describe()
+                    {
+                        return this.id;
+                    }
+                }
+
+                int Process<T : Describable>(T w)
+                {
+                    return w.Describe();
+                }
+
+                int main()
+                {
+                    Widget w;
+                    w.id = 100;
+                    return Process(w);
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void GenericConstraint_Interface_Violated_Throws()
+        {
+            string code = """
+                interface Describable
+                {
+                    int Describe();
+                }
+
+                struct Plain
+                {
+                    int id;
+                }
+
+                int Process<T : Describable>(T w)
+                {
+                    return 0;
+                }
+
+                int main()
+                {
+                    Plain p;
+                    return Process(p);
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("does not satisfy constraint 'Describable'", ex.Message);
+        }
+
+        [Fact]
+        public void GenericConstraint_BaseClass_Violated_Throws()
+        {
+            string code = """
+                class BaseObj
+                {
+                    int tag;
+                }
+
+                class OtherObj
+                {
+                    int tag;
+                }
+
+                int Inspect<T : BaseObj>(T item)
+                {
+                    return 0;
+                }
+
+                int main()
+                {
+                    OtherObj o = new OtherObj();
+                    return Inspect(o);
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("does not satisfy constraint 'BaseObj'", ex.Message);
+        }
     }
 }
 

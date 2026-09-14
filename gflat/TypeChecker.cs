@@ -69,6 +69,56 @@ namespace gflat
 
         public TypeExpression GetLambdaReturnType(LambdaExpression node) => _lambdaReturnTypes[node];
 
+        public class StringPrefixHandler
+        {
+            public string Prefix { get; }
+            public string FullName { get; }
+            public string Namespace { get; }
+            public string? EnclosingTypeName { get; }
+            public bool IsConstructor { get; }
+            public ConstructorDeclaration? Constructor { get; }
+            public MethodDeclaration? Method { get; }
+            public TypeExpression ReturnType { get; }
+            public bool IsConst { get; }
+            public Parameter Parameter { get; }
+
+            public StringPrefixHandler(
+                string prefix,
+                string fullName,
+                string ns,
+                string? enclosingTypeName,
+                bool isConstructor,
+                ConstructorDeclaration? constructor,
+                MethodDeclaration? method,
+                TypeExpression returnType,
+                bool isConst,
+                Parameter parameter)
+            {
+                Prefix = prefix;
+                FullName = fullName;
+                Namespace = ns;
+                EnclosingTypeName = enclosingTypeName;
+                IsConstructor = isConstructor;
+                Constructor = constructor;
+                Method = method;
+                ReturnType = returnType;
+                IsConst = isConst;
+                Parameter = parameter;
+            }
+        }
+
+        private readonly List<StringPrefixHandler> _prefixHandlers = new();
+        private readonly Dictionary<PrefixedStringLiteralExpression, StringPrefixHandler> _resolvedPrefixHandlers = new();
+        private readonly HashSet<string> _usingNamespaces = new();
+        private string _currentNamespacePath = "";
+        private readonly Dictionary<string, StructDeclaration> _genericStructs = new();
+        private readonly Dictionary<string, ClassDeclaration> _genericClasses = new();
+        private readonly Dictionary<string, MethodDeclaration> _genericMethods = new();
+        private CompilationUnit? _compilationUnit = null;
+
+        public StringPrefixHandler? GetResolvedPrefixHandler(PrefixedStringLiteralExpression node) =>
+            _resolvedPrefixHandlers.TryGetValue(node, out StringPrefixHandler? handler) ? handler : null;
+
         public string GetFunctionNamespace(MethodDeclaration method) =>
             _functionNamespaces.TryGetValue(method, out string? ns) ? ns : "";
 
@@ -421,10 +471,276 @@ namespace gflat
             ManagedTypeExpression { IsNullable: true } or
             FunctionPointerTypeExpression { IsNullable: true };
 
+        public string GetTypeMangledName(TypeExpression type)
+        {
+            type = ResolveAlias(type);
+            if (type is NamedTypeExpression named)
+            {
+                string baseName = named.Name;
+                if (named.TypeArguments.Count > 0)
+                {
+                    string args = string.Join("$", named.TypeArguments.Select(GetTypeMangledName));
+                    return $"{baseName}${args}";
+                }
+                return baseName;
+            }
+            if (type is PointerTypeExpression ptr)
+            {
+                return $"{GetTypeMangledName(ptr.Inner)}Ptr";
+            }
+            if (type is ManagedTypeExpression mgd)
+            {
+                return $"{GetTypeMangledName(mgd.Inner)}Ref";
+            }
+            if (type is ArrayTypeExpression arr)
+            {
+                return $"{GetTypeMangledName(arr.ElementType)}Arr";
+            }
+            return type.ToString() ?? "Unknown";
+        }
+
+        private bool TypeSatisfiesConstraint(TypeExpression argType, TypeExpression constraint)
+        {
+            argType = ResolveAlias(argType);
+            constraint = ResolveAlias(constraint);
+
+            if (constraint is NamedTypeExpression namedConstraint)
+            {
+                string constraintName = namedConstraint.Name;
+                if (_interfaces.ContainsKey(constraintName))
+                {
+                    return TypeImplementsInterface(argType, constraintName);
+                }
+                if (_classes.ContainsKey(constraintName))
+                {
+                    return TypeDerivesFromClass(argType, constraintName);
+                }
+            }
+            return false;
+        }
+
+        private bool TypeImplementsInterface(TypeExpression type, string ifaceName)
+        {
+            type = ResolveAlias(type);
+            if (type is PointerTypeExpression ptr)
+                type = ResolveAlias(ptr.Inner);
+            if (type is ManagedTypeExpression mgd)
+                type = ResolveAlias(mgd.Inner);
+
+            if (type is NamedTypeExpression named)
+            {
+                if (_structs.TryGetValue(named.Name, out StructInfo? strInfo))
+                {
+                    return strInfo.Interfaces.Contains(ifaceName);
+                }
+                if (_classes.TryGetValue(named.Name, out ClassInfo? clsInfo))
+                {
+                    return ClassImplementsInterface(clsInfo, ifaceName);
+                }
+            }
+            return false;
+        }
+
+        private bool TypeDerivesFromClass(TypeExpression type, string baseClassName)
+        {
+            type = ResolveAlias(type);
+            if (type is PointerTypeExpression ptr)
+                type = ResolveAlias(ptr.Inner);
+            if (type is ManagedTypeExpression mgd)
+                type = ResolveAlias(mgd.Inner);
+
+            if (type is NamedTypeExpression named)
+            {
+                if (named.Name == baseClassName)
+                    return true;
+                if (_classes.TryGetValue(named.Name, out ClassInfo? clsInfo))
+                {
+                    string? currentBase = clsInfo.BaseClass;
+                    while (currentBase != null)
+                    {
+                        if (currentBase == baseClassName)
+                            return true;
+                        if (_classes.TryGetValue(currentBase, out ClassInfo? nextBase))
+                            currentBase = nextBase.BaseClass;
+                        else
+                            break;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private NamedTypeExpression ResolveGenericType(string name, string? ns, List<TypeExpression> typeArgs, int line)
+        {
+            if (_genericStructs.TryGetValue(name, out StructDeclaration? genericStruct))
+            {
+                return MonomorphizeStruct(genericStruct, typeArgs, line);
+            }
+            if (_genericClasses.TryGetValue(name, out ClassDeclaration? genericClass))
+            {
+                return MonomorphizeClass(genericClass, typeArgs, line);
+            }
+            throw new TypeCheckException($"Unknown generic type '{name}'", line);
+        }
+
+        private NamedTypeExpression MonomorphizeStruct(StructDeclaration genericDef, List<TypeExpression> typeArgs, int line)
+        {
+            if (typeArgs.Count != genericDef.GenericParameters.Count)
+            {
+                throw new TypeCheckException($"Generic struct '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
+            }
+
+            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
+            {
+                GenericParameter param = genericDef.GenericParameters[i];
+                TypeExpression arg = typeArgs[i];
+                if (param.Constraint != null && !TypeSatisfiesConstraint(arg, param.Constraint))
+                {
+                    throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on struct '{genericDef.Name}'", line);
+                }
+            }
+
+            string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            if (_structs.ContainsKey(mangledName))
+            {
+                return new NamedTypeExpression(mangledName, null, line);
+            }
+
+            Dictionary<string, TypeExpression> typeMap = new();
+            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
+            {
+                typeMap[genericDef.GenericParameters[i].Name] = typeArgs[i];
+            }
+
+            AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
+            StructDeclaration specialized = cloner.CloneStruct(genericDef);
+
+            _compilationUnit?.Members.Add(specialized);
+            RegisterMemberInScope(specialized, _globalScope, "");
+            specialized.Accept(this);
+
+            return new NamedTypeExpression(mangledName, null, line);
+        }
+
+        private NamedTypeExpression MonomorphizeClass(ClassDeclaration genericDef, List<TypeExpression> typeArgs, int line)
+        {
+            if (typeArgs.Count != genericDef.GenericParameters.Count)
+            {
+                throw new TypeCheckException($"Generic class '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
+            }
+
+            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
+            {
+                GenericParameter param = genericDef.GenericParameters[i];
+                TypeExpression arg = typeArgs[i];
+                if (param.Constraint != null && !TypeSatisfiesConstraint(arg, param.Constraint))
+                {
+                    throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on class '{genericDef.Name}'", line);
+                }
+            }
+
+            string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            if (_classes.ContainsKey(mangledName))
+            {
+                return new NamedTypeExpression(mangledName, null, line);
+            }
+
+            Dictionary<string, TypeExpression> typeMap = new();
+            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
+            {
+                typeMap[genericDef.GenericParameters[i].Name] = typeArgs[i];
+            }
+
+            AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
+            ClassDeclaration specialized = cloner.CloneClass(genericDef);
+
+            _compilationUnit?.Members.Add(specialized);
+            RegisterMemberInScope(specialized, _globalScope, "");
+            if (_classes.TryGetValue(specialized.Name, out ClassInfo? clsInfo))
+            {
+                ResolveClassHierarchy(clsInfo, new HashSet<string>(), new HashSet<string>());
+            }
+            specialized.Accept(this);
+
+            return new NamedTypeExpression(mangledName, null, line);
+        }
+
+        private MethodDeclaration MonomorphizeFunction(MethodDeclaration genericDef, List<TypeExpression> typeArgs, int line)
+        {
+            if (typeArgs.Count != genericDef.GenericParameters.Count)
+            {
+                throw new TypeCheckException($"Generic function '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
+            }
+
+            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
+            {
+                GenericParameter param = genericDef.GenericParameters[i];
+                TypeExpression arg = typeArgs[i];
+                if (param.Constraint != null && !TypeSatisfiesConstraint(arg, param.Constraint))
+                {
+                    throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on function '{genericDef.Name}'", line);
+                }
+            }
+
+            string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            if (_globalScope.Functions.TryGetValue(mangledName, out MethodDeclaration? existing))
+            {
+                return existing;
+            }
+
+            Dictionary<string, TypeExpression> typeMap = new();
+            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
+            {
+                typeMap[genericDef.GenericParameters[i].Name] = typeArgs[i];
+            }
+
+            AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
+            MethodDeclaration specialized = cloner.CloneMethod(genericDef);
+
+            _compilationUnit?.Members.Add(specialized);
+            RegisterMemberInScope(specialized, _globalScope, "");
+            specialized.Accept(this);
+
+            return specialized;
+        }
+
+        private bool InferTypeParameter(TypeExpression paramType, TypeExpression argType, ISet<string> genericParamNames, Dictionary<string, TypeExpression> inferred)
+        {
+            if (paramType is NamedTypeExpression namedParam && genericParamNames.Contains(namedParam.Name) && namedParam.TypeArguments.Count == 0)
+            {
+                TypeExpression resolvedArg = ResolveAlias(argType);
+                if (inferred.TryGetValue(namedParam.Name, out TypeExpression? existing))
+                {
+                    return TypesMatch(existing, resolvedArg);
+                }
+                inferred[namedParam.Name] = resolvedArg;
+                return true;
+            }
+
+            if (paramType is PointerTypeExpression ptrParam && argType is PointerTypeExpression ptrArg)
+            {
+                return InferTypeParameter(ptrParam.Inner, ptrArg.Inner, genericParamNames, inferred);
+            }
+            if (paramType is ManagedTypeExpression mgdParam && argType is ManagedTypeExpression mgdArg)
+            {
+                return InferTypeParameter(mgdParam.Inner, mgdArg.Inner, genericParamNames, inferred);
+            }
+            if (paramType is ArrayTypeExpression arrParam && argType is ArrayTypeExpression arrArg)
+            {
+                return InferTypeParameter(arrParam.ElementType, arrArg.ElementType, genericParamNames, inferred);
+            }
+            return false;
+        }
+
         public TypeExpression ResolveAlias(TypeExpression type)
         {
             if (type is NamedTypeExpression named)
             {
+                if (named.TypeArguments.Count > 0)
+                {
+                    List<TypeExpression> resolvedArgs = named.TypeArguments.Select(ResolveAlias).ToList();
+                    return ResolveGenericType(named.Name, named.Namespace, resolvedArgs, named.Line);
+                }
                 if (named.Namespace != null)
                 {
                     NamespaceScope? ns = ResolveNamespaceByName(named.Namespace);
@@ -1258,6 +1574,12 @@ namespace gflat
 
         public void Visit(CompilationUnit node)
         {
+            _compilationUnit = node;
+            _currentNamespacePath = "";
+            _usingNamespaces.Clear();
+            foreach (UsingDirective u in node.Usings)
+                _usingNamespaces.Add(u.Name);
+
             // first pass: register top-level members in global scope
             foreach (AstNode member in node.Members)
                 RegisterMemberInScope(member, _globalScope, "");
@@ -1271,8 +1593,8 @@ namespace gflat
 
             // second pass: type check bodies
             _currentNamespace = _globalScope;
-            foreach (AstNode member in node.Members)
-                member.Accept(this);
+            for (int i = 0; i < node.Members.Count; i++)
+                node.Members[i].Accept(this);
 
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 ns.Accept(this);
@@ -1456,8 +1778,14 @@ namespace gflat
         {
             if (member is MethodDeclaration method)
             {
+                if (method.IsGeneric)
+                {
+                    _genericMethods[method.Name] = method;
+                    return;
+                }
                 scope.Functions[method.Name] = method;
                 _functionNamespaces[method] = nsPath;
+                RegisterPrefixFromAttributes(method.Attributes, nsPath, null, null, method, null, null, method.Line);
             }
             else if (member is ExternDeclaration ext)
             {
@@ -1492,12 +1820,18 @@ namespace gflat
             }
             else if (member is StructDeclaration str)
             {
+                if (str.IsGeneric)
+                {
+                    _genericStructs[str.Name] = str;
+                    return;
+                }
                 StructInfo info = new StructInfo
                 {
                     Name = str.Name,
                     Namespace = nsPath,
                     Interfaces = new List<string>(str.Interfaces)
                 };
+                RegisterPrefixFromAttributes(str.Attributes, nsPath, str.Name, null, null, str, null, str.Line);
                 foreach (AstNode m in str.Members)
                 {
                     if (m is FieldDeclaration field)
@@ -1510,10 +1844,12 @@ namespace gflat
                     {
                         info.Methods[sm.Name] = sm;
                         _functionNamespaces[sm] = nsPath;
+                        RegisterPrefixFromAttributes(sm.Attributes, nsPath, str.Name, null, sm, null, null, sm.Line);
                     }
                     else if (m is ConstructorDeclaration ctor)
                     {
                         info.Constructors.Add(ctor);
+                        RegisterPrefixFromAttributes(ctor.Attributes, nsPath, str.Name, ctor, null, null, null, ctor.Line);
                     }
                     else if (m is OperatorDeclaration op)
                     {
@@ -1529,6 +1865,11 @@ namespace gflat
             }
             else if (member is ClassDeclaration cls)
             {
+                if (cls.IsGeneric)
+                {
+                    _genericClasses[cls.Name] = cls;
+                    return;
+                }
                 ClassInfo info = new ClassInfo
                 {
                     Name = cls.Name,
@@ -1539,6 +1880,7 @@ namespace gflat
                     Interfaces = new List<string>(cls.Interfaces),
                     Line = cls.Line
                 };
+                RegisterPrefixFromAttributes(cls.Attributes, nsPath, cls.Name, null, null, null, cls, cls.Line);
 
                 foreach (AstNode m in cls.Members)
                 {
@@ -1549,6 +1891,7 @@ namespace gflat
                     else if (m is ConstructorDeclaration ctor)
                     {
                         info.Constructors.Add(ctor);
+                        RegisterPrefixFromAttributes(ctor.Attributes, nsPath, cls.Name, ctor, null, null, null, ctor.Line);
                     }
                     else if (m is DestructorDeclaration dtor)
                     {
@@ -1569,6 +1912,7 @@ namespace gflat
 
                         info.Methods[cm.Name] = (cm, cls.Name);
                         _functionNamespaces[cm] = nsPath;
+                        RegisterPrefixFromAttributes(cm.Attributes, nsPath, cls.Name, null, cm, null, null, cm.Line);
                     }
                 }
 
@@ -1610,15 +1954,20 @@ namespace gflat
         {
             NamespaceScope previous = _currentNamespace;
             _currentNamespace = _namespaceScopes[node];
+            string prevPath = _currentNamespacePath;
+            _currentNamespacePath = _currentNamespacePath.Length > 0 ? $"{_currentNamespacePath}::{node.Name}" : node.Name;
 
             foreach (AstNode member in node.Members)
                 member.Accept(this);
 
             _currentNamespace = previous;
+            _currentNamespacePath = prevPath;
         }
 
         public void Visit(ClassDeclaration node)
         {
+            if (node.IsGeneric) return;
+
             ClassInfo? prevClass = _currentClass;
             _currentClass = _classes[node.Name];
 
@@ -1740,6 +2089,8 @@ namespace gflat
 
         public void Visit(StructDeclaration node)
         {
+            if (node.IsGeneric) return;
+
             StructInfo? previousStruct = _currentStruct;
             _currentStruct = _structs[node.Name];
 
@@ -1966,6 +2317,8 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
+            if (node.IsGeneric) return;
+
             ValidateTypeUsage(node.ReturnType, node.Line);
             PushScope();
             foreach (Parameter p in node.Parameters)
@@ -3096,10 +3449,33 @@ namespace gflat
                     }
                     _resolvedCalls[node] = method;
                 }
+                else if (_genericMethods.TryGetValue(funcName, out MethodDeclaration? genericMethod))
+                {
+                    List<TypeExpression> typeArgs = node.TypeArguments.Select(ResolveAlias).ToList();
+                    if (typeArgs.Count == 0)
+                    {
+                        Dictionary<string, TypeExpression> inferred = new();
+                        HashSet<string> genericParamNames = genericMethod.GenericParameters.Select(p => p.Name).ToHashSet();
+                        for (int i = 0; i < Math.Min(node.Arguments.Count, genericMethod.Parameters.Count); i++)
+                        {
+                            InferTypeParameter(genericMethod.Parameters[i].Type, GetType(node.Arguments[i]), genericParamNames, inferred);
+                        }
+                        typeArgs = genericMethod.GenericParameters.Select(p => inferred.TryGetValue(p.Name, out TypeExpression? t) ? t : throw new TypeCheckException($"Could not infer type parameter '{p.Name}' for generic function '{funcName}'", node.Line)).ToList();
+                    }
+                    method = MonomorphizeFunction(genericMethod, typeArgs, node.Line);
+                }
                 else
                 {
                     method = ResolveFunction(funcName);
+                    if (method != null && node.TypeArguments.Count > 0)
+                    {
+                        throw new TypeCheckException($"Function '{funcName}' is not generic", node.Line);
+                    }
                     ext = method == null ? ResolveExtern(funcName) : null;
+                    if (ext != null && node.TypeArguments.Count > 0)
+                    {
+                        throw new TypeCheckException($"Extern function '{funcName}' is not generic", node.Line);
+                    }
                 }
             }
             else if (node.Callee is NamespaceAccessExpression nsAccess)
@@ -4246,6 +4622,196 @@ namespace gflat
             }
 
             return false;
+        }
+
+        private void RegisterPrefixFromAttributes(List<AttributeNode> attributes, string nsPath, string? enclosingTypeName, ConstructorDeclaration? ctor, MethodDeclaration? method, StructDeclaration? strDecl, ClassDeclaration? clsDecl, int line)
+        {
+            foreach (AttributeNode attr in attributes)
+            {
+                if (attr.Name != "string_prefix")
+                    continue;
+
+                if (attr.Arguments.Count != 1)
+                {
+                    throw new TypeCheckException($"Attribute [string_prefix] requires exactly 1 argument (the prefix name)", line);
+                }
+
+                string prefix = attr.Arguments[0].Trim('\"');
+
+                if (ctor != null)
+                {
+                    if (ctor.Parameters.Count != 1)
+                    {
+                        throw new TypeCheckException($"Constructor marked with [string_prefix] must take exactly 1 parameter", ctor.Line);
+                    }
+                    string typeName = enclosingTypeName!;
+                    string fullName = nsPath.Length > 0 ? $"{nsPath}::{typeName}" : typeName;
+                    if (!_prefixHandlers.Any(h => h.Prefix == prefix && h.FullName == fullName))
+                    {
+                        _prefixHandlers.Add(new StringPrefixHandler(prefix, fullName, nsPath, typeName, true, ctor, null, new NamedTypeExpression(typeName, null, ctor.Line), ctor.IsConst, ctor.Parameters[0]));
+                    }
+                }
+                else if (method != null)
+                {
+                    if (method.Parameters.Count != 1)
+                    {
+                        throw new TypeCheckException($"Method '{method.Name}' marked with [string_prefix] must take exactly 1 parameter", method.Line);
+                    }
+                    string fullName = nsPath.Length > 0
+                        ? (enclosingTypeName != null ? $"{nsPath}::{enclosingTypeName}::{method.Name}" : $"{nsPath}::{method.Name}")
+                        : (enclosingTypeName != null ? $"{enclosingTypeName}::{method.Name}" : method.Name);
+                    if (!_prefixHandlers.Any(h => h.Prefix == prefix && h.FullName == fullName))
+                    {
+                        _prefixHandlers.Add(new StringPrefixHandler(prefix, fullName, nsPath, enclosingTypeName, false, null, method, method.ReturnType, method.IsConst, method.Parameters[0]));
+                    }
+                }
+                else if (strDecl != null)
+                {
+                    ConstructorDeclaration? matchingCtor = strDecl.Members.OfType<ConstructorDeclaration>().FirstOrDefault(c => c.Parameters.Count == 1);
+                    if (matchingCtor == null)
+                    {
+                        throw new TypeCheckException($"Struct '{strDecl.Name}' marked with [string_prefix] must declare a constructor taking 1 parameter", strDecl.Line);
+                    }
+                    string fullName = nsPath.Length > 0 ? $"{nsPath}::{strDecl.Name}" : strDecl.Name;
+                    if (!_prefixHandlers.Any(h => h.Prefix == prefix && h.FullName == fullName))
+                    {
+                        _prefixHandlers.Add(new StringPrefixHandler(prefix, fullName, nsPath, strDecl.Name, true, matchingCtor, null, new NamedTypeExpression(strDecl.Name, null, strDecl.Line), matchingCtor.IsConst, matchingCtor.Parameters[0]));
+                    }
+                }
+                else if (clsDecl != null)
+                {
+                    ConstructorDeclaration? matchingCtor = clsDecl.Members.OfType<ConstructorDeclaration>().FirstOrDefault(c => c.Parameters.Count == 1);
+                    if (matchingCtor == null)
+                    {
+                        throw new TypeCheckException($"Class '{clsDecl.Name}' marked with [string_prefix] must declare a constructor taking 1 parameter", clsDecl.Line);
+                    }
+                    string fullName = nsPath.Length > 0 ? $"{nsPath}::{clsDecl.Name}" : clsDecl.Name;
+                    if (!_prefixHandlers.Any(h => h.Prefix == prefix && h.FullName == fullName))
+                    {
+                        _prefixHandlers.Add(new StringPrefixHandler(prefix, fullName, nsPath, clsDecl.Name, true, matchingCtor, null, new NamedTypeExpression(clsDecl.Name, null, clsDecl.Line), matchingCtor.IsConst, matchingCtor.Parameters[0]));
+                    }
+                }
+            }
+        }
+
+        private string ExtractScopePath(AstNode scope)
+        {
+            if (scope is IdentifierExpression ident)
+                return ident.Name;
+            if (scope is NamespaceAccessExpression nsAccess)
+                return $"{ExtractScopePath(nsAccess.Left)}::{nsAccess.Member}";
+            throw new TypeCheckException($"Invalid scope qualifier for string prefix on line {scope.Line}", scope.Line);
+        }
+
+        private bool IsValidStringParameterType(TypeExpression type)
+        {
+            type = ResolveAlias(type);
+            if (type is PointerTypeExpression ptr)
+            {
+                TypeExpression inner = ResolveAlias(ptr.Inner);
+                return inner is NamedTypeExpression { Name: "char" };
+            }
+            if (type is ArrayTypeExpression arr)
+            {
+                TypeExpression inner = ResolveAlias(arr.ElementType);
+                return inner is NamedTypeExpression { Name: "char" };
+            }
+            if (type is NamedTypeExpression named)
+            {
+                return named.Name is "string" or "char*";
+            }
+            return false;
+        }
+
+        private List<StringPrefixHandler> FindAccessiblePrefixHandlers(string prefix)
+        {
+            List<StringPrefixHandler> matching = new();
+            foreach (StringPrefixHandler handler in _prefixHandlers)
+            {
+                if (handler.Prefix != prefix)
+                    continue;
+
+                string normNs = handler.Namespace.Replace('$', ':');
+                string normCur = _currentNamespacePath.Replace('$', ':');
+
+                if (handler.Namespace == "" ||
+                    normNs == normCur ||
+                    normCur.StartsWith(normNs + "::") ||
+                    _usingNamespaces.Any(u => u.Replace('$', ':') == normNs))
+                {
+                    matching.Add(handler);
+                }
+            }
+            return matching;
+        }
+
+        public void Visit(PrefixedStringLiteralExpression node)
+        {
+            if (node.Prefix == "c")
+            {
+                if (node.Scope != null)
+                {
+                    throw new TypeCheckException($"Built-in C-string prefix 'c' cannot be qualified with a scope", node.Line);
+                }
+                TypeExpression charPtrType = new PointerTypeExpression(Char, false, node.Line, isReadOnly: true);
+                _types[node] = charPtrType;
+                _constValues[node] = new ConstValue.String(node.Literal.Token.Text[1..^1]);
+                return;
+            }
+
+            List<StringPrefixHandler> candidates;
+            if (node.Scope != null)
+            {
+                string scopeName = ExtractScopePath(node.Scope);
+                string normScope = scopeName.Replace('$', ':');
+                candidates = _prefixHandlers.Where(h =>
+                {
+                    if (h.Prefix != node.Prefix)
+                        return false;
+
+                    string normFull = h.FullName.Replace('$', ':');
+                    string normNs = h.Namespace.Replace('$', ':');
+
+                    return normFull == $"{normScope}::{node.Prefix}" ||
+                           normFull == normScope ||
+                           h.EnclosingTypeName == scopeName ||
+                           normNs == normScope ||
+                           normNs.EndsWith($"::{normScope}");
+                }).ToList();
+            }
+            else
+            {
+                candidates = FindAccessiblePrefixHandlers(node.Prefix);
+            }
+
+            if (candidates.Count == 0)
+            {
+                throw new TypeCheckException($"Unknown string prefix '{node.Prefix}' on line {node.Line}", node.Line);
+            }
+            if (candidates.Count > 1)
+            {
+                string candList = string.Join(", ", candidates.Select(c => c.FullName));
+                throw new TypeCheckException($"Ambiguous string prefix '{node.Prefix}' on line {node.Line}. Candidate handlers: {candList}", node.Line);
+            }
+
+            StringPrefixHandler handler = candidates[0];
+            _resolvedPrefixHandlers[node] = handler;
+
+            TypeExpression paramType = ResolveAlias(handler.Parameter.Type);
+            if (!IsValidStringParameterType(paramType))
+            {
+                throw new TypeCheckException($"String prefix handler for '{node.Prefix}' on line {node.Line} must accept a string parameter (e.g. 'readonly char*'), but accepts '{paramType}'", node.Line);
+            }
+
+            _types[node] = handler.ReturnType;
+
+            if (handler.IsConst)
+            {
+                if (_constEvaluator.TryEvaluate(node, out ConstValue? constVal, out string? _))
+                {
+                    _constValues[node] = constVal!;
+                }
+            }
         }
     }
 }

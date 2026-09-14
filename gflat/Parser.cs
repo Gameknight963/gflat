@@ -99,7 +99,7 @@ namespace gflat
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, Current.Line);
             if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface) || Check(TokenKind.Enum) || Check(TokenKind.Abstract))
-                return ParseTypeDeclaration();
+                return ParseTypeDeclaration(attributes);
 
             // free function, field, alias, or type declaration with accessibility modifier
             return ParseFreeFunctionOrField(attributes);
@@ -144,22 +144,73 @@ namespace gflat
             if (Check(TokenKind.Enum))
                 return ParseEnumDeclaration(accessibility, line);
             if (Check(TokenKind.Class))
-                return ParseClassDeclaration(accessibility, isAbstract, line);
+                return ParseClassDeclaration(accessibility, isAbstract, line, attributes);
             if (Check(TokenKind.Struct))
-                return ParseStructDeclaration(accessibility, line);
+                return ParseStructDeclaration(accessibility, line, attributes);
             if (Check(TokenKind.Interface))
                 return ParseInterfaceDeclaration(accessibility, line);
 
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
+            List<GenericParameter> genericParams = ParseGenericParameters();
 
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly, isConst);
+                return ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly, isConst, attributes, genericParams);
 
             return ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, line);
         }
 
-        private AstNode ParseTypeDeclaration()
+        private List<GenericParameter> ParseGenericParameters()
+        {
+            List<GenericParameter> parameters = new();
+            if (Match(TokenKind.Less))
+            {
+                while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
+                {
+                    int line = Current.Line;
+                    string paramName = Expect(TokenKind.Identifier).Text;
+                    TypeExpression? constraint = null;
+                    if (Match(TokenKind.Colon))
+                    {
+                        constraint = ParseTypeExpression();
+                    }
+                    parameters.Add(new GenericParameter(paramName, constraint, line));
+                    if (!Check(TokenKind.Greater))
+                        Expect(TokenKind.Comma);
+                }
+                Expect(TokenKind.Greater);
+            }
+            return parameters;
+        }
+
+        private bool IsGenericCallAhead()
+        {
+            if (!Check(TokenKind.Less))
+                return false;
+            int depth = 0;
+            for (int i = _pos; i < _tokens.Count; i++)
+            {
+                if (_tokens[i].Kind == TokenKind.Less)
+                {
+                    depth++;
+                }
+                else if (_tokens[i].Kind == TokenKind.Greater)
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return i + 1 < _tokens.Count && _tokens[i + 1].Kind == TokenKind.OpenParen;
+                    }
+                }
+                else if (_tokens[i].Kind is TokenKind.Semicolon or TokenKind.OpenBrace or TokenKind.CloseBrace)
+                {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        private AstNode ParseTypeDeclaration(List<AttributeNode>? attributes = null)
         {
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Internal;
@@ -188,18 +239,19 @@ namespace gflat
                 else break;
             }
 
-            if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, isAbstract, line);
-            if (Check(TokenKind.Struct)) return ParseStructDeclaration(accessibility, line);
+            if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, isAbstract, line, attributes);
+            if (Check(TokenKind.Struct)) return ParseStructDeclaration(accessibility, line, attributes);
             if (Check(TokenKind.Interface)) return ParseInterfaceDeclaration(accessibility, line);
             if (Check(TokenKind.Enum)) return ParseEnumDeclaration(accessibility, line);
 
             throw new Exception($"Expected type declaration on line {Current.Line}");
         }
 
-        private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line)
+        private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null)
         {
             Expect(TokenKind.Class);
             string name = Expect(TokenKind.Identifier).Text;
+            List<GenericParameter> genericParams = ParseGenericParameters();
 
             string? baseClass = null;
             List<string> interfaces = new();
@@ -219,13 +271,14 @@ namespace gflat
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
 
-            return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line);
+            return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line, attributes, genericParams);
         }
 
-        private StructDeclaration ParseStructDeclaration(TokenKind accessibility, int line)
+        private StructDeclaration ParseStructDeclaration(TokenKind accessibility, int line, List<AttributeNode>? attributes = null)
         {
             Expect(TokenKind.Struct);
             string name = Expect(TokenKind.Identifier).Text;
+            List<GenericParameter> genericParams = ParseGenericParameters();
 
             List<string> interfaces = new();
             if (Match(TokenKind.Colon))
@@ -240,7 +293,7 @@ namespace gflat
             while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
-            return new StructDeclaration(name, interfaces, members, accessibility, line);
+            return new StructDeclaration(name, interfaces, members, accessibility, line, attributes, genericParams);
         }
 
 
@@ -306,7 +359,7 @@ namespace gflat
             {
                 // constructor - type was actually the name
                 name = ((NamedTypeExpression)type).Name;
-                return ParseConstructorDeclaration(name, accessibility, line);
+                return ParseConstructorDeclaration(name, accessibility, line, attributes, isConst);
             }
 
             if (Match(TokenKind.Operator))
@@ -315,10 +368,11 @@ namespace gflat
             }
 
             name = Expect(TokenKind.Identifier).Text;
+            List<GenericParameter> genericParams = ParseGenericParameters();
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst);
+                return ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst, attributes, genericParams);
 
             return ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line);
         }
@@ -386,7 +440,7 @@ namespace gflat
             return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line);
         }
 
-        private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line)
+        private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, bool isConst = false)
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
@@ -426,7 +480,7 @@ namespace gflat
             }
 
             BlockStatement body = ParseBodyOrBlock();
-            return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments);
+            return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments, attributes, isConst);
         }
 
         private BlockStatement ParseBodyOrBlock()
@@ -478,7 +532,7 @@ namespace gflat
             return new OperatorDeclaration(opToken.Kind, opSymbol, returnType, parameters, body, accessibility, isStatic, line);
         }
 
-        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false)
+        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null)
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
@@ -498,7 +552,7 @@ namespace gflat
             {
                 body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
             }
-            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst);
+            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters);
         }
 
         private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line)
@@ -550,7 +604,20 @@ namespace gflat
                 name = Expect(TokenKind.Identifier).Text;
             }
 
-            TypeExpression type = new NamedTypeExpression(name, ns, line);
+            List<TypeExpression> typeArgs = new();
+            if (Check(TokenKind.Less))
+            {
+                Consume(); // <
+                while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
+                {
+                    typeArgs.Add(ParseTypeExpression());
+                    if (!Check(TokenKind.Greater))
+                        Expect(TokenKind.Comma);
+                }
+                Expect(TokenKind.Greater);
+            }
+
+            TypeExpression type = new NamedTypeExpression(name, ns, line, typeArgs);
 
             // postfix modifiers
             while (true)
@@ -866,6 +933,31 @@ namespace gflat
 
             while (true)
             {
+                if (Check(TokenKind.Less) && IsGenericCallAhead())
+                {
+                    int callLine = Current.Line;
+                    Consume(); // <
+                    List<TypeExpression> typeArgs = new();
+                    while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
+                    {
+                        typeArgs.Add(ParseTypeExpression());
+                        if (!Check(TokenKind.Greater))
+                            Expect(TokenKind.Comma);
+                    }
+                    Expect(TokenKind.Greater);
+                    Expect(TokenKind.OpenParen);
+                    List<AstNode> args = new();
+                    while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+                    {
+                        args.Add(ParseExpression());
+                        if (!Check(TokenKind.CloseParen))
+                            Expect(TokenKind.Comma);
+                    }
+                    Expect(TokenKind.CloseParen);
+                    left = new CallExpression(left, args, callLine, typeArgs);
+                    continue;
+                }
+
                 (int leftPower, int rightPower) = GetInfixBindingPower(Current.Kind);
                 if (leftPower <= minBindingPower) break;
 
@@ -921,8 +1013,14 @@ namespace gflat
 
                 if (op.Kind == TokenKind.DoubleColon)
                 {
-                    string member = Expect(TokenKind.Identifier).Text;
-                    left = new NamespaceAccessExpression(left, member, op.Line);
+                    Token memberToken = Expect(TokenKind.Identifier);
+                    if (Check(TokenKind.StringLiteral) && memberToken.End + 1 == Current.Start)
+                    {
+                        Token strToken = Consume();
+                        left = new PrefixedStringLiteralExpression(left, memberToken.Text!, new LiteralExpression(strToken, strToken.Line), op.Line);
+                        continue;
+                    }
+                    left = new NamespaceAccessExpression(left, memberToken.Text!, op.Line);
                     continue;
                 }
 
@@ -1096,6 +1194,11 @@ namespace gflat
             if (Check(TokenKind.Identifier))
             {
                 Token token = Consume();
+                if (Check(TokenKind.StringLiteral) && token.End + 1 == Current.Start)
+                {
+                    Token strToken = Consume();
+                    return new PrefixedStringLiteralExpression(null, token.Text!, new LiteralExpression(strToken, strToken.Line), line);
+                }
                 return new IdentifierExpression(token.Text, line);
             }
 

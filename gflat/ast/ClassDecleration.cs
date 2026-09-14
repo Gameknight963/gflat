@@ -8,8 +8,11 @@ namespace gflat.ast
         public List<AstNode> Members { get; }
         public TokenKind Accessibility { get; }
         public bool IsAbstract { get; }
+        public List<AttributeNode> Attributes { get; }
+        public List<GenericParameter> GenericParameters { get; }
+        public bool IsGeneric => GenericParameters.Count > 0;
 
-        public ClassDeclaration(string name, string? baseClass, List<string> interfaces, List<AstNode> members, TokenKind accessibility, bool isAbstract, int line) : base(line)
+        public ClassDeclaration(string name, string? baseClass, List<string> interfaces, List<AstNode> members, TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null) : base(line)
         {
             Name = name;
             BaseClass = baseClass;
@@ -17,6 +20,8 @@ namespace gflat.ast
             Members = members;
             Accessibility = accessibility;
             IsAbstract = isAbstract;
+            Attributes = attributes ?? new List<AttributeNode>();
+            GenericParameters = genericParameters ?? new List<GenericParameter>();
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

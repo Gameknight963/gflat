@@ -63,6 +63,7 @@ namespace gflat
 
         public bool CanFunctionThrow(AstNode func) => _canThrowFunctions.Contains(func);
         public bool CanCallThrow(AstNode call) => _throwingCalls.Contains(call);
+        public IEnumerable<ClassInfo> GetAllClasses() => _classes.Values;
 
         public bool TryGetOperatorTarget(BinaryExpression node, out (string StructName, OperatorDeclaration Operator) target) =>
             _operatorTargets.TryGetValue(node, out target);

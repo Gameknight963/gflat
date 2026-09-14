@@ -3323,6 +3323,236 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
         }
+
+        [Fact]
+        public void Execution_ThrowAndCatch_Basic_ReturnsExitCode()
+        {
+            string code = """
+                int Thrower()
+                {
+                    throw new* Exception(c"Error occurred", 42);
+                    return 0;
+                }
+
+                int main()
+                {
+                    try
+                    {
+                        Thrower();
+                    }
+                    catch (Exception* ex)
+                    {
+                        return ex.GetCode();
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_ThrowAndCatch_Polymorphic_DispatchesCorrectCatch()
+        {
+            string code = """
+                class CustomException : Exception
+                {
+                    public int extra;
+                    public CustomException(readonly char* msg, int c, int e) : base(msg, c)
+                    {
+                        extra = e;
+                    }
+                    public readonly override int GetCode()
+                    {
+                        return code + extra;
+                    }
+                }
+
+                int Thrower()
+                {
+                    throw new* CustomException(c"Custom error", 10, 32);
+                    return 0;
+                }
+
+                int main()
+                {
+                    try
+                    {
+                        Thrower();
+                    }
+                    catch (Exception* ex)
+                    {
+                        return ex.GetCode();
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_MultipleCatchBlocks_SelectsSpecificDerivedHandler()
+        {
+            string code = """
+                class SpecificException : Exception
+                {
+                    public SpecificException(int c) : base(c"", c) {}
+                }
+
+                class AnotherException : Exception
+                {
+                    public AnotherException(int c) : base(c"", c) {}
+                }
+
+                int Run(int kind)
+                {
+                    try
+                    {
+                        if (kind == 1)
+                        {
+                            throw new* SpecificException(10);
+                        }
+                        else
+                        {
+                            throw new* AnotherException(20);
+                        }
+                    }
+                    catch (SpecificException* se)
+                    {
+                        return se.GetCode() + 1;
+                    }
+                    catch (AnotherException* ae)
+                    {
+                        return ae.GetCode() + 2;
+                    }
+                    return 0;
+                }
+
+                int main()
+                {
+                    int r1 = Run(1);
+                    int r2 = Run(2);
+                    return r1 + r2;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(33, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_ConstException_NotFreed_Executes()
+        {
+            string code = """
+                const Exception* OutOfMemory = new* Exception(c"Out of memory", 99);
+
+                int ThrowConst()
+                {
+                    throw OutOfMemory;
+                    return 0;
+                }
+
+                int main()
+                {
+                    try
+                    {
+                        ThrowConst();
+                    }
+                    catch (Exception* ex)
+                    {
+                        return ex.GetCode();
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(99, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Defer_ExecutesOnThrowUnwinding()
+        {
+            string code = """
+                void Throwing(int* flag)
+                {
+                    defer *flag += 10;
+                    defer *flag += 20;
+                    throw new* Exception(c"Fail", 1);
+                }
+
+                int main()
+                {
+                    int flag = 0;
+                    try
+                    {
+                        Throwing(&flag);
+                    }
+                    catch (Exception* ex)
+                    {
+                        return flag;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(30, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_CatchAndRethrow_PropagatesToOuterCatch()
+        {
+            string code = """
+                int Sub()
+                {
+                    try
+                    {
+                        throw new* Exception(c"Original", 55);
+                    }
+                    catch (Exception* ex)
+                    {
+                        throw ex;
+                    }
+                    return 0;
+                }
+
+                int main()
+                {
+                    try
+                    {
+                        Sub();
+                    }
+                    catch (Exception* ex)
+                    {
+                        return ex.GetCode();
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(55, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_UnhandledException_PrintsAndExitsWith1()
+        {
+            string code = """
+                int main()
+                {
+                    throw new* Exception(c"Fatal error", 123);
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(1, result.ExitCode);
+            Assert.Contains("Fatal error", result.StandardOutput);
+        }
     }
 }
 

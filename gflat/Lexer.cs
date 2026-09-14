@@ -226,6 +226,9 @@ public class Lexer
             "base" => TokenKind.Base,
             "sizeof" => TokenKind.Sizeof,
             "nameof" => TokenKind.Nameof,
+            "throw" => TokenKind.Throw,
+            "try" => TokenKind.Try,
+            "catch" => TokenKind.Catch,
             _ => TokenKind.Identifier
         };
     }

@@ -1182,6 +1182,9 @@ namespace gflat.comptime
         public void Visit(GlobalExpression node) { }
         public void Visit(AliasDeclaration node) { }
         public void Visit(InterpolatedStringExpression node) { }
+        public void Visit(ThrowStatement node) => throw new ConstEvalException("Throw statement is not supported at compile time", node.Line);
+        public void Visit(TryStatement node) => throw new ConstEvalException("Try statement is not supported at compile time", node.Line);
+        public void Visit(CatchClause node) => throw new ConstEvalException("Catch clause is not supported at compile time", node.Line);
 
         public void Visit(SizeofExpression node)
         {

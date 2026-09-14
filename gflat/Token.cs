@@ -130,6 +130,9 @@ namespace gflat
             TokenKind.Nameof => "nameof",
             TokenKind.InterpolatedStringExprStart => "{",
             TokenKind.InterpolatedStringExprEnd => "}",
+            TokenKind.Throw => "throw",
+            TokenKind.Try => "try",
+            TokenKind.Catch => "catch",
             _ => throw new InvalidOperationException($"Cannot infer token text of '{kind}'")
         };
     }

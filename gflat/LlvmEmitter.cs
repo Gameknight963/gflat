@@ -3416,4 +3416,16 @@ public class LlvmEmitter : IVisitor
         // Push the function address as a function pointer
         Push($"@{funcName}");
     }
+
+    public void Visit(ThrowStatement node)
+    {
+    }
+
+    public void Visit(TryStatement node)
+    {
+    }
+
+    public void Visit(CatchClause node)
+    {
+    }
 }

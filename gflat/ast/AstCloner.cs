@@ -216,6 +216,22 @@ namespace gflat.ast
             {
                 return new NamespaceAccessExpression(CloneNode(nsAcc.Left), nsAcc.Member, nsAcc.Line);
             }
+            if (node is ThrowStatement throwStmt)
+            {
+                return new ThrowStatement(CloneNode(throwStmt.Expression), throwStmt.Line);
+            }
+            if (node is CatchClause catchClause)
+            {
+                TypeExpression? exType = catchClause.ExceptionType != null ? CloneType(catchClause.ExceptionType) : null;
+                BlockStatement body = (BlockStatement)CloneNode(catchClause.Body);
+                return new CatchClause(exType, catchClause.VariableName, body, catchClause.Line);
+            }
+            if (node is TryStatement tryStmt)
+            {
+                BlockStatement tryBlock = (BlockStatement)CloneNode(tryStmt.TryBlock);
+                List<CatchClause> catches = tryStmt.CatchClauses.Select(c => (CatchClause)CloneNode(c)).ToList();
+                return new TryStatement(tryBlock, catches, tryStmt.Line);
+            }
 
             return node;
         }

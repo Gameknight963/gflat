@@ -58,6 +58,17 @@ namespace gflat
                     members.Add(ParseTopLevelMember());
             }
 
+            bool hasException = members.OfType<ClassDeclaration>().Any(c => c.Name == "Exception");
+            if (!hasException)
+            {
+                List<Token> preludeTokens = Lexer.Tokenize(Prelude.Source);
+                Parser preludeParser = new Parser();
+                preludeParser._tokens = preludeTokens;
+                preludeParser._pos = 0;
+                CompilationUnit preludeUnit = preludeParser.ParseCompilationUnit();
+                members.InsertRange(0, preludeUnit.Members);
+            }
+
             return new CompilationUnit(usings, namespaces, members, line);
         }
 
@@ -745,6 +756,10 @@ namespace gflat
                     return new ContinueStatement(line);
                 case TokenKind.Defer:
                     return ParseDeferStatement();
+                case TokenKind.Throw:
+                    return ParseThrowStatement();
+                case TokenKind.Try:
+                    return ParseTryStatement();
                 case TokenKind.Alias:
                     return ParseAliasDeclaration(TokenKind.Private, line);
                 case TokenKind.Enum:
@@ -841,6 +856,50 @@ namespace gflat
             Expect(TokenKind.Defer);
             AstNode stmt = ParseStatement();
             return new DeferStatement(stmt, line);
+        }
+
+        private ThrowStatement ParseThrowStatement()
+        {
+            int line = Current.Line;
+            Expect(TokenKind.Throw);
+            AstNode expr = ParseExpression();
+            Expect(TokenKind.Semicolon);
+            return new ThrowStatement(expr, line);
+        }
+
+        private TryStatement ParseTryStatement()
+        {
+            int line = Current.Line;
+            Expect(TokenKind.Try);
+            BlockStatement tryBlock = ParseBlockStatement();
+            List<CatchClause> catchClauses = new();
+
+            while (Match(TokenKind.Catch))
+            {
+                int catchLine = Current.Line;
+                TypeExpression? exType = null;
+                string? varName = null;
+
+                if (Match(TokenKind.OpenParen))
+                {
+                    exType = ParseTypeExpression();
+                    if (Check(TokenKind.Identifier))
+                    {
+                        varName = Expect(TokenKind.Identifier).Text;
+                    }
+                    Expect(TokenKind.CloseParen);
+                }
+
+                BlockStatement catchBody = ParseBlockStatement();
+                catchClauses.Add(new CatchClause(exType, varName, catchBody, catchLine));
+            }
+
+            if (catchClauses.Count == 0)
+            {
+                throw new Exception($"Expected at least one catch clause after try block on line {line}");
+            }
+
+            return new TryStatement(tryBlock, catchClauses, line);
         }
 
         private ReturnStatement ParseReturnStatement()

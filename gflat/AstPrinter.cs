@@ -385,5 +385,42 @@ namespace gflat
                 Indented(() => node.Literal.Accept(this));
             });
         }
+
+        public void Visit(ThrowStatement node)
+        {
+            Print("Throw");
+            Indented(() => node.Expression.Accept(this));
+        }
+
+        public void Visit(TryStatement node)
+        {
+            Print("Try");
+            Indented(() =>
+            {
+                Print("Body:");
+                Indented(() => node.TryBlock.Accept(this));
+                Print("CatchClauses:");
+                Indented(() =>
+                {
+                    foreach (CatchClause c in node.CatchClauses)
+                        c.Accept(this);
+                });
+            });
+        }
+
+        public void Visit(CatchClause node)
+        {
+            Print($"Catch: {(node.ExceptionType != null ? "" : "all")}{(node.VariableName != null ? $" {node.VariableName}" : "")}");
+            Indented(() =>
+            {
+                if (node.ExceptionType != null)
+                {
+                    Print("Type:");
+                    Indented(() => node.ExceptionType.Accept(this));
+                }
+                Print("Body:");
+                Indented(() => node.Body.Accept(this));
+            });
+        }
     }
 }

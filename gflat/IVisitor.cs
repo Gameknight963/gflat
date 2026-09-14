@@ -54,5 +54,8 @@ namespace gflat
         void Visit(SizeofExpression node);
         void Visit(NameofExpression node);
         void Visit(PrefixedStringLiteralExpression node);
+        void Visit(ThrowStatement node);
+        void Visit(TryStatement node);
+        void Visit(CatchClause node);
     }
 }

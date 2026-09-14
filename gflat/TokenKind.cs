@@ -116,6 +116,9 @@ namespace gflat
         Base,
         Sizeof,
         Nameof,
+        Throw,
+        Try,
+        Catch,
         EndOfFile
     }
 }

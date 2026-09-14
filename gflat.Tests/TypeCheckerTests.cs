@@ -3028,6 +3028,54 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Cannot assign", ex.Message);
         }
+
+        [Fact]
+        public void Parser_ThrowAndTryCatch_ParsesSuccessfully()
+        {
+            string code = """
+                int foo()
+                {
+                    try
+                    {
+                        throw new* Exception(c"test", 1);
+                    }
+                    catch (Exception* ex)
+                    {
+                        return ex.GetCode();
+                    }
+                    catch (readonly Exception* e)
+                    {
+                        return 2;
+                    }
+                    catch (Exception*)
+                    {
+                        return 3;
+                    }
+                    catch
+                    {
+                        return -1;
+                    }
+                    return 0;
+                }
+                """;
+
+            List<Token> tokens = Lexer.Tokenize(code);
+            CompilationUnit ast = Parser.Parse(tokens);
+            Assert.NotNull(ast);
+            Assert.Contains(ast.Members, m => m is ClassDeclaration c && c.Name == "Exception");
+
+            MethodDeclaration? foo = ast.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Name == "foo");
+            Assert.NotNull(foo);
+            Assert.NotNull(foo.Body);
+            TryStatement? tryStmt = foo.Body.Statements.OfType<TryStatement>().FirstOrDefault();
+            Assert.NotNull(tryStmt);
+            Assert.Equal(4, tryStmt.CatchClauses.Count);
+            Assert.True(tryStmt.TryBlock.Statements[0] is ThrowStatement);
+            Assert.Equal("ex", tryStmt.CatchClauses[0].VariableName);
+            Assert.Equal("e", tryStmt.CatchClauses[1].VariableName);
+            Assert.Null(tryStmt.CatchClauses[2].VariableName);
+            Assert.Null(tryStmt.CatchClauses[3].ExceptionType);
+        }
     }
 }
 

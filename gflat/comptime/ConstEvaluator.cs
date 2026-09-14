@@ -177,11 +177,16 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             if (!TryGetVariable(node.Name, out ConstValue? val) || val == null)
             {
-                if (TryGetVariable("this", out ConstValue? thisVal) && thisVal is ConstValue.Struct thisStruct)
+                if (TryGetVariable("this", out ConstValue? thisVal))
                 {
-                    if (thisStruct.Fields.TryGetValue(node.Name, out ConstValue? fieldVal))
+                    if (thisVal is ConstValue.Struct thisStruct && thisStruct.Fields.TryGetValue(node.Name, out ConstValue? sVal))
                     {
-                        _currentValue = fieldVal;
+                        _currentValue = sVal;
+                        return;
+                    }
+                    if (thisVal is ConstValue.ClassInstance thisClass && thisClass.Fields.TryGetValue(node.Name, out ConstValue? cVal))
+                    {
+                        _currentValue = cVal;
                         return;
                     }
                 }
@@ -448,6 +453,29 @@ namespace gflat.comptime
 
             switch (node.Operator)
             {
+                case TokenKind.Ampersand:
+                    if (operand is ConstValue.Struct s)
+                    {
+                        string? gName = node.Operand is IdentifierExpression id ? id.Name : null;
+                        _currentValue = new ConstValue.Pointer(s.StructName, s, gName);
+                        return;
+                    }
+                    if (operand is ConstValue.ClassInstance c)
+                    {
+                        string? gName = node.Operand is IdentifierExpression id ? id.Name : null;
+                        _currentValue = new ConstValue.Pointer(c.ClassName, c, gName);
+                        return;
+                    }
+                    throw new ConstEvalException($"Cannot take address of non-struct/class '{operand}' at compile time", node.Line);
+
+                case TokenKind.Star:
+                    if (operand is ConstValue.Pointer ptr)
+                    {
+                        _currentValue = ptr.Target;
+                        return;
+                    }
+                    throw new ConstEvalException($"Cannot dereference non-pointer '{operand}' at compile time", node.Line);
+
                 case TokenKind.Minus:
                     if (ConstValue.TryNegate(operand, out ConstValue? negRes))
                     {
@@ -483,6 +511,11 @@ namespace gflat.comptime
             node.Object.Accept(this);
             ConstValue obj = _currentValue!;
 
+            if (obj is ConstValue.Pointer ptrVal)
+            {
+                obj = ptrVal.Target;
+            }
+
             if (obj is ConstValue.String strVal)
             {
                 if (node.Member == "length")
@@ -511,6 +544,16 @@ namespace gflat.comptime
                     return;
                 }
                 throw new ConstEvalException($"Struct '{structVal.StructName}' has no field '{node.Member}'", node.Line);
+            }
+
+            if (obj is ConstValue.ClassInstance classVal)
+            {
+                if (classVal.Fields.TryGetValue(node.Member, out ConstValue? fieldVal))
+                {
+                    _currentValue = fieldVal;
+                    return;
+                }
+                throw new ConstEvalException($"Class '{classVal.ClassName}' has no field '{node.Member}'", node.Line);
             }
 
             throw new ConstEvalException($"Cannot access member '{node.Member}' on non-struct/non-string at compile time", node.Line);
@@ -644,20 +687,15 @@ namespace gflat.comptime
         public void Visit(NewExpression node)
         {
             CheckSteps(node.Line);
-            if (node.Kind != AllocationKind.Value)
+            if (node.Kind == AllocationKind.Managed)
             {
-                throw new ConstEvalException("Heap allocation ('new*' or 'new^') is not permitted at compile time", node.Line);
+                throw new ConstEvalException("Managed allocation ('new^') is not permitted at compile time", node.Line);
             }
 
-            if (node.Type is not NamedTypeExpression named)
+            TypeExpression resolvedType = _typeChecker.ResolveAlias(node.Type);
+            if (resolvedType is not NamedTypeExpression named)
             {
                 throw new ConstEvalException("Cannot instantiate anonymous type at compile time", node.Line);
-            }
-
-            TypeChecker.StructInfo? structInfo = _typeChecker.GetStruct(named.Name);
-            if (structInfo == null)
-            {
-                throw new ConstEvalException($"Unknown struct '{named.Name}'", node.Line);
             }
 
             List<ConstValue> args = new();
@@ -667,52 +705,148 @@ namespace gflat.comptime
                 args.Add(_currentValue!);
             }
 
-            Dictionary<string, ConstValue> fields = new();
-
-            // Check if there is an explicit constructor
-            ConstructorDeclaration? matchingCtor = null;
-            foreach (ConstructorDeclaration ctor in structInfo.Constructors)
+            TypeChecker.StructInfo? structInfo = _typeChecker.GetStruct(named.Name);
+            if (structInfo != null)
             {
-                if (ctor.Parameters.Count == args.Count)
+                Dictionary<string, ConstValue> fields = new();
+                foreach ((string Name, TypeExpression Type) f in structInfo.Fields)
                 {
-                    matchingCtor = ctor;
-                    break;
+                    fields[f.Name] = new ConstValue.Integer(0);
                 }
-            }
+                ConstructorDeclaration? matchingCtor = null;
+                foreach (ConstructorDeclaration ctor in structInfo.Constructors)
+                {
+                    if (ctor.Parameters.Count == args.Count)
+                    {
+                        matchingCtor = ctor;
+                        break;
+                    }
+                }
 
-            if (matchingCtor != null)
-            {
-                // Run constructor with a temporary 'this' struct
                 ConstValue.Struct instance = new ConstValue.Struct(structInfo.Name, fields);
-
-                PushScope();
-                _scopes.Peek()["this"] = instance;
-                for (int i = 0; i < matchingCtor.Parameters.Count; i++)
+                if (matchingCtor != null)
                 {
-                    _scopes.Peek()[matchingCtor.Parameters[i].Name] = args[i];
-                }
+                    PushScope();
+                    _scopes.Peek()["this"] = instance;
+                    for (int i = 0; i < matchingCtor.Parameters.Count; i++)
+                    {
+                        _scopes.Peek()[matchingCtor.Parameters[i].Name] = args[i];
+                    }
 
-                matchingCtor.Body.Accept(this);
-                PopScope();
-
-                _currentValue = instance;
-                return;
-            }
-
-            // Memberwise field initialization
-            for (int i = 0; i < structInfo.Fields.Count; i++)
-            {
-                if (i < args.Count)
-                {
-                    fields[structInfo.Fields[i].Name] = args[i];
+                    matchingCtor.Body.Accept(this);
+                    PopScope();
                 }
                 else
                 {
-                    fields[structInfo.Fields[i].Name] = new ConstValue.Integer(0);
+                    for (int i = 0; i < structInfo.Fields.Count; i++)
+                    {
+                        if (i < args.Count)
+                        {
+                            fields[structInfo.Fields[i].Name] = args[i];
+                        }
+                        else
+                        {
+                            fields[structInfo.Fields[i].Name] = new ConstValue.Integer(0);
+                        }
+                    }
                 }
+
+                if (node.Kind == AllocationKind.Pointer)
+                {
+                    _currentValue = new ConstValue.Pointer(structInfo.Name, instance);
+                }
+                else
+                {
+                    _currentValue = instance;
+                }
+                return;
             }
 
-            _currentValue = new ConstValue.Struct(structInfo.Name, fields);
+            TypeChecker.ClassInfo? classInfo = _typeChecker.GetClass(named.Name);
+            if (classInfo != null)
+            {
+                if (classInfo.IsAbstract)
+                {
+                    throw new ConstEvalException($"Cannot instantiate abstract class '{classInfo.Name}' at compile time", node.Line);
+                }
+
+                Dictionary<string, ConstValue> fields = new();
+                foreach ((string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) f in classInfo.Fields)
+                {
+                    fields[f.Name] = new ConstValue.Integer(0);
+                }
+                ConstructorDeclaration? matchingCtor = null;
+                foreach (ConstructorDeclaration ctor in classInfo.Constructors)
+                {
+                    if (ctor.Parameters.Count == args.Count)
+                    {
+                        matchingCtor = ctor;
+                        break;
+                    }
+                }
+
+                ConstValue.ClassInstance instance = new ConstValue.ClassInstance(classInfo.Name, fields);
+                if (matchingCtor != null)
+                {
+                    PushScope();
+                    _scopes.Peek()["this"] = instance;
+                    for (int i = 0; i < matchingCtor.Parameters.Count; i++)
+                    {
+                        _scopes.Peek()[matchingCtor.Parameters[i].Name] = args[i];
+                    }
+
+                    if (matchingCtor.BaseArguments != null && classInfo.BaseClass != null && _typeChecker.GetClass(classInfo.BaseClass) is TypeChecker.ClassInfo baseClassInfo)
+                    {
+                        List<ConstValue> baseArgs = new();
+                        foreach (AstNode bArg in matchingCtor.BaseArguments)
+                        {
+                            bArg.Accept(this);
+                            baseArgs.Add(_currentValue!);
+                        }
+                        ConstructorDeclaration? baseCtor = baseClassInfo.Constructors.FirstOrDefault(c => c.Parameters.Count == baseArgs.Count);
+                        if (baseCtor != null)
+                        {
+                            PushScope();
+                            _scopes.Peek()["this"] = instance;
+                            for (int b = 0; b < baseCtor.Parameters.Count; b++)
+                            {
+                                _scopes.Peek()[baseCtor.Parameters[b].Name] = baseArgs[b];
+                            }
+                            baseCtor.Body.Accept(this);
+                            PopScope();
+                        }
+                    }
+
+                    matchingCtor.Body.Accept(this);
+                    PopScope();
+                }
+                else
+                {
+                    for (int i = 0; i < classInfo.Fields.Count; i++)
+                    {
+                        if (i < args.Count)
+                        {
+                            fields[classInfo.Fields[i].Name] = args[i];
+                        }
+                        else
+                        {
+                            fields[classInfo.Fields[i].Name] = new ConstValue.Integer(0);
+                        }
+                    }
+                }
+
+                if (node.Kind == AllocationKind.Pointer)
+                {
+                    _currentValue = new ConstValue.Pointer(classInfo.Name, instance);
+                }
+                else
+                {
+                    _currentValue = instance;
+                }
+                return;
+            }
+
+            throw new ConstEvalException($"Unknown struct or class '{named.Name}'", node.Line);
         }
 
         public void Visit(CallExpression node)
@@ -813,13 +947,27 @@ namespace gflat.comptime
 
             if (node.Target is IdentifierExpression ident)
             {
-                if (!TryGetVariable(ident.Name, out _) && TryGetVariable("this", out ConstValue? thisVal) && thisVal is ConstValue.Struct thisStruct)
+                if (TryGetVariable("this", out ConstValue? thisVal))
                 {
-                    if (thisStruct.Fields.ContainsKey(ident.Name))
+                    if (thisVal is ConstValue.Struct thisStruct)
                     {
-                        thisStruct.Fields[ident.Name] = val;
-                        _currentValue = val;
-                        return;
+                        TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(thisStruct.StructName);
+                        if ((sInfo != null && sInfo.FieldIndex(ident.Name) >= 0) || thisStruct.Fields.ContainsKey(ident.Name))
+                        {
+                            thisStruct.Fields[ident.Name] = val;
+                            _currentValue = val;
+                            return;
+                        }
+                    }
+                    if (thisVal is ConstValue.ClassInstance thisClass)
+                    {
+                        TypeChecker.ClassInfo? cInfo = _typeChecker.GetClass(thisClass.ClassName);
+                        if ((cInfo != null && cInfo.FieldIndex(ident.Name) >= 0) || thisClass.Fields.ContainsKey(ident.Name))
+                        {
+                            thisClass.Fields[ident.Name] = val;
+                            _currentValue = val;
+                            return;
+                        }
                     }
                 }
                 SetVariable(ident.Name, val);
@@ -831,9 +979,19 @@ namespace gflat.comptime
             {
                 memberAccess.Object.Accept(this);
                 ConstValue obj = _currentValue!;
+                if (obj is ConstValue.Pointer pVal)
+                {
+                    obj = pVal.Target;
+                }
                 if (obj is ConstValue.Struct sVal)
                 {
                     sVal.Fields[memberAccess.Member] = val;
+                    _currentValue = val;
+                    return;
+                }
+                if (obj is ConstValue.ClassInstance cVal)
+                {
+                    cVal.Fields[memberAccess.Member] = val;
                     _currentValue = val;
                     return;
                 }

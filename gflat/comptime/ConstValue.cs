@@ -41,6 +41,16 @@ namespace gflat.comptime
             public override string ToString() => $"{StructName} {{ {string.Join(", ", Fields)} }}";
         }
 
+        public sealed record ClassInstance(string ClassName, Dictionary<string, ConstValue> Fields) : ConstValue
+        {
+            public override string ToString() => $"{ClassName} {{ {string.Join(", ", Fields)} }}";
+        }
+
+        public sealed record Pointer(string TypeName, ConstValue Target, string? GlobalName = null) : ConstValue
+        {
+            public override string ToString() => $"&{Target}";
+        }
+
         public sealed record Array(List<ConstValue> Elements) : ConstValue
         {
             public override string ToString() => $"[{string.Join(", ", Elements)}]";

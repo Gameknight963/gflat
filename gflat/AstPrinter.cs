@@ -134,6 +134,20 @@ namespace gflat
             });
         }
 
+        public void Visit(ForeachStatement node)
+        {
+            Print($"Foreach: {node.VariableName}");
+            Indented(() =>
+            {
+                Print("Type:");
+                Indented(() => node.ElementType.Accept(this));
+                Print("Collection:");
+                Indented(() => node.Collection.Accept(this));
+                Print("Body:");
+                Indented(() => node.Body.Accept(this));
+            });
+        }
+
         public void Visit(VariableDeclaration node)
         {
             Print($"Variable: {(node.IsConst ? "const " : "")}{node.Name}");

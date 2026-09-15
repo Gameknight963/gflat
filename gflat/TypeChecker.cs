@@ -60,6 +60,7 @@ namespace gflat
         private readonly HashSet<AstNode> _throwingCalls = new();
         private readonly List<(AstNode Call, AstNode? Caller, List<TryStatement> Tries)> _callSites = new();
         private readonly List<(ThrowStatement Throw, AstNode? Caller, List<TryStatement> Tries, string ThrownTypeName)> _throwSites = new();
+        private int _foreachCounter = 0;
 
         public bool CanFunctionThrow(AstNode func) => _canThrowFunctions.Contains(func);
         public bool CanCallThrow(AstNode call) => _throwingCalls.Contains(call);
@@ -2864,6 +2865,253 @@ namespace gflat
             node.Increment?.Accept(this);
             node.Body.Accept(this);
             PopScope();
+        }
+
+        public void Visit(ForeachStatement node)
+        {
+            node.ElementType = ResolveAlias(node.ElementType);
+            ValidateTypeUsage(node.ElementType, node.Line);
+
+            node.Collection.Accept(this);
+            TypeExpression rawColType = ResolveAlias(GetType(node.Collection));
+
+            if (rawColType is ArrayTypeExpression arr)
+            {
+                if (!arr.Size.HasValue)
+                {
+                    throw new TypeCheckException("Cannot iterate over an unsized array in foreach", node.Line);
+                }
+
+                if (!IsAssignable(node.ElementType, arr.ElementType, node.Collection))
+                {
+                    throw new TypeCheckException($"Cannot assign array element type '{TypeName(arr.ElementType)}' to foreach variable of type '{TypeName(node.ElementType)}'", node.Line);
+                }
+
+                node.IsArrayIteration = true;
+                PushScope();
+                DeclareVariable(node.VariableName, node.ElementType, node.Line);
+                node.Body.Accept(this);
+                PopScope();
+                return;
+            }
+
+            // Custom collection
+            TypeExpression unwrappedCol = rawColType;
+            if (unwrappedCol is PointerTypeExpression pCol)
+            {
+                unwrappedCol = ResolveAlias(pCol.Inner);
+            }
+            if (unwrappedCol is ManagedTypeExpression mCol)
+            {
+                unwrappedCol = ResolveAlias(mCol.Inner);
+            }
+
+            if (unwrappedCol is not NamedTypeExpression namedCol)
+            {
+                throw new TypeCheckException($"Cannot foreach over expression of type '{TypeName(rawColType)}': type is not an array, class, or struct", node.Line);
+            }
+
+            // Look up GetEnumerator()
+            MethodDeclaration? getEnumMethod = null;
+            if (_classes.TryGetValue(namedCol.Name, out ClassInfo? clsInfo))
+            {
+                if (clsInfo.Methods.TryGetValue("GetEnumerator", out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                {
+                    getEnumMethod = mEntry.Method;
+                }
+            }
+            else if (_structs.TryGetValue(namedCol.Name, out StructInfo? strInfo))
+            {
+                if (strInfo.Methods.TryGetValue("GetEnumerator", out MethodDeclaration? sMethod))
+                {
+                    getEnumMethod = sMethod;
+                }
+            }
+            else if (ResolveInterface(namedCol) is InterfaceInfo ifaceInfo)
+            {
+                if (ifaceInfo.MethodsByName.TryGetValue("GetEnumerator", out MethodDeclaration? ifaceMethod))
+                {
+                    getEnumMethod = ifaceMethod;
+                }
+            }
+
+            if (getEnumMethod == null)
+            {
+                throw new TypeCheckException($"Type '{namedCol.Name}' does not implement 'GetEnumerator()'", node.Line);
+            }
+
+            if (getEnumMethod.Parameters.Count != 0)
+            {
+                throw new TypeCheckException($"'GetEnumerator()' on type '{namedCol.Name}' must take 0 arguments", node.Line);
+            }
+
+            TypeExpression enumRetType = ResolveAlias(getEnumMethod.ReturnType);
+            TypeExpression unwrappedEnum = enumRetType;
+            if (unwrappedEnum is PointerTypeExpression pe)
+            {
+                unwrappedEnum = ResolveAlias(pe.Inner);
+            }
+            if (unwrappedEnum is ManagedTypeExpression me)
+            {
+                unwrappedEnum = ResolveAlias(me.Inner);
+            }
+
+            if (unwrappedEnum is not NamedTypeExpression namedEnum)
+            {
+                throw new TypeCheckException($"'GetEnumerator()' on '{namedCol.Name}' must return a struct or class, but returned '{TypeName(enumRetType)}'", node.Line);
+            }
+
+            // Look up MoveNext() on enumerator type
+            MethodDeclaration? moveNextMethod = null;
+            ClassInfo? enumClsInfo = null;
+            StructInfo? enumStrInfo = null;
+
+            if (_classes.TryGetValue(namedEnum.Name, out enumClsInfo))
+            {
+                if (enumClsInfo.Methods.TryGetValue("MoveNext", out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                {
+                    moveNextMethod = mEntry.Method;
+                }
+            }
+            else if (_structs.TryGetValue(namedEnum.Name, out enumStrInfo))
+            {
+                if (enumStrInfo.Methods.TryGetValue("MoveNext", out MethodDeclaration? sMethod))
+                {
+                    moveNextMethod = sMethod;
+                }
+            }
+            else if (ResolveInterface(namedEnum) is InterfaceInfo enumIfaceInfo)
+            {
+                if (enumIfaceInfo.MethodsByName.TryGetValue("MoveNext", out MethodDeclaration? ifaceMethod))
+                {
+                    moveNextMethod = ifaceMethod;
+                }
+            }
+
+            if (moveNextMethod == null)
+            {
+                throw new TypeCheckException($"Enumerator type '{namedEnum.Name}' does not implement 'MoveNext()'", node.Line);
+            }
+
+            if (moveNextMethod.Parameters.Count != 0)
+            {
+                throw new TypeCheckException($"'MoveNext()' on enumerator '{namedEnum.Name}' must take 0 arguments", node.Line);
+            }
+
+            if (!TypesMatch(ResolveAlias(moveNextMethod.ReturnType), Bool))
+            {
+                throw new TypeCheckException($"'MoveNext()' on enumerator '{namedEnum.Name}' must return 'bool'", node.Line);
+            }
+
+            // Look up Current on enumerator type (method or field)
+            bool isCurrentMethod = false;
+            TypeExpression? currentItemType = null;
+            if (_classes.TryGetValue(namedEnum.Name, out enumClsInfo))
+            {
+                if (enumClsInfo.Methods.TryGetValue("Current", out (MethodDeclaration Method, string DeclaringClass) mEntry))
+                {
+                    isCurrentMethod = true;
+                    if (mEntry.Method.Parameters.Count != 0)
+                    {
+                        throw new TypeCheckException($"'Current()' method on enumerator '{namedEnum.Name}' must take 0 arguments", node.Line);
+                    }
+                    currentItemType = ResolveAlias(mEntry.Method.ReturnType);
+                }
+                else
+                {
+                    int fieldIdx = enumClsInfo.FieldIndex("Current");
+                    if (fieldIdx >= 0)
+                    {
+                        isCurrentMethod = false;
+                        currentItemType = ResolveAlias(enumClsInfo.Fields[fieldIdx].Type);
+                    }
+                }
+            }
+            else if (_structs.TryGetValue(namedEnum.Name, out enumStrInfo))
+            {
+                if (enumStrInfo.Methods.TryGetValue("Current", out MethodDeclaration? sMethod))
+                {
+                    isCurrentMethod = true;
+                    if (sMethod.Parameters.Count != 0)
+                    {
+                        throw new TypeCheckException($"'Current()' method on enumerator '{namedEnum.Name}' must take 0 arguments", node.Line);
+                    }
+                    currentItemType = ResolveAlias(sMethod.ReturnType);
+                }
+                else
+                {
+                    int fieldIdx = enumStrInfo.FieldIndex("Current");
+                    if (fieldIdx >= 0)
+                    {
+                        isCurrentMethod = false;
+                        currentItemType = ResolveAlias(enumStrInfo.Fields[fieldIdx].Type);
+                    }
+                }
+            }
+            else if (ResolveInterface(namedEnum) is InterfaceInfo enumIfaceInfo)
+            {
+                if (enumIfaceInfo.MethodsByName.TryGetValue("Current", out MethodDeclaration? ifaceMethod))
+                {
+                    isCurrentMethod = true;
+                    if (ifaceMethod.Parameters.Count != 0)
+                    {
+                        throw new TypeCheckException($"'Current()' method on enumerator '{namedEnum.Name}' must take 0 arguments", node.Line);
+                    }
+                    currentItemType = ResolveAlias(ifaceMethod.ReturnType);
+                }
+            }
+
+            if (currentItemType == null)
+            {
+                throw new TypeCheckException($"Enumerator type '{namedEnum.Name}' must have a 'Current()' method or 'Current' field", node.Line);
+            }
+
+            if (!IsAssignable(node.ElementType, currentItemType, node.Collection))
+            {
+                throw new TypeCheckException($"Cannot assign collection element of type '{TypeName(currentItemType)}' to foreach variable of type '{TypeName(node.ElementType)}'", node.Line);
+            }
+
+            AstNode targetColExpr;
+            AstNode? colVarDecl = null;
+            if (node.Collection is IdentifierExpression idCol)
+            {
+                targetColExpr = new IdentifierExpression(idCol.Name, node.Line);
+            }
+            else
+            {
+                string colVarName = $"__col_{node.Line}_{_foreachCounter++}";
+                colVarDecl = new VariableDeclaration(colVarName, rawColType, node.Collection, node.Line);
+                targetColExpr = new IdentifierExpression(colVarName, node.Line);
+            }
+
+            string iterVarName = $"__iter_{node.Line}_{_foreachCounter++}";
+            AstNode getEnumCall = new CallExpression(new MemberAccessExpression(targetColExpr, "GetEnumerator", isArrow: false, node.Line), new List<AstNode>(), node.Line);
+            AstNode iterVarDecl = new VariableDeclaration(iterVarName, enumRetType, getEnumCall, node.Line);
+
+            AstNode moveNextCall = new CallExpression(new MemberAccessExpression(new IdentifierExpression(iterVarName, node.Line), "MoveNext", isArrow: false, node.Line), new List<AstNode>(), node.Line);
+
+            AstNode currentAccess = isCurrentMethod
+                ? new CallExpression(new MemberAccessExpression(new IdentifierExpression(iterVarName, node.Line), "Current", isArrow: false, node.Line), new List<AstNode>(), node.Line)
+                : new MemberAccessExpression(new IdentifierExpression(iterVarName, node.Line), "Current", isArrow: false, node.Line);
+
+            AstNode elemVarDecl = new VariableDeclaration(node.VariableName, node.ElementType, currentAccess, node.Line);
+
+            List<AstNode> loopBodyStmts = new List<AstNode> { elemVarDecl };
+            loopBodyStmts.AddRange(node.Body.Statements);
+            BlockStatement loopBody = new BlockStatement(loopBodyStmts, node.Line);
+            WhileStatement whileStmt = new WhileStatement(moveNextCall, loopBody, node.Line);
+
+            List<AstNode> outerStmts = new List<AstNode>();
+            if (colVarDecl != null)
+            {
+                outerStmts.Add(colVarDecl);
+            }
+            outerStmts.Add(iterVarDecl);
+            outerStmts.Add(whileStmt);
+            BlockStatement desugaredBlock = new BlockStatement(outerStmts, node.Line);
+
+            desugaredBlock.Accept(this);
+            node.Desugared = desugaredBlock;
         }
 
         public void Visit(VariableDeclaration node)

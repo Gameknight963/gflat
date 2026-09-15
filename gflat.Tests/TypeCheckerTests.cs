@@ -3373,6 +3373,174 @@ namespace gflat.Tests
             Assert.NotNull(ast);
             Assert.NotNull(checker);
         }
+
+        [Fact]
+        public void TypeCheck_Foreach_Array_Success()
+        {
+            string code = """
+                int main()
+                {
+                    int[3] arr;
+                    int sum = 0;
+                    foreach (int x in arr)
+                    {
+                        sum = sum + x;
+                    }
+                    return sum;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void TypeCheck_Foreach_Array_AssignableType_Success()
+        {
+            string code = """
+                int main()
+                {
+                    int[3] arr;
+                    long sum = 0;
+                    foreach (long x in arr)
+                    {
+                        sum = sum + x;
+                    }
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void TypeCheck_Foreach_Array_MismatchedType_Fails()
+        {
+            string code = """
+                int main()
+                {
+                    int[3] arr;
+                    foreach (string x in arr)
+                    {
+                    }
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void TypeCheck_Foreach_RequiresExplicitType_Fails()
+        {
+            string code = """
+                int main()
+                {
+                    int[3] arr;
+                    foreach (x in arr)
+                    {
+                    }
+                    return 0;
+                }
+                """;
+
+            Exception ex = Assert.ThrowsAny<Exception>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Foreach loop requires an explicit type", ex.Message);
+        }
+
+        [Fact]
+        public void TypeCheck_Foreach_NonIterableType_Fails()
+        {
+            string code = """
+                int main()
+                {
+                    int num = 42;
+                    foreach (int x in num)
+                    {
+                    }
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void TypeCheck_Foreach_MissingGetEnumerator_Fails()
+        {
+            string code = """
+                struct Foo
+                {
+                    int x;
+                }
+
+                int main()
+                {
+                    Foo f;
+                    foreach (int x in f)
+                    {
+                    }
+                    return 0;
+                }
+                """;
+
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void TypeCheck_Foreach_CustomCollection_Success()
+        {
+            string code = """
+                struct RangeEnumerator
+                {
+                    int current;
+                    int max;
+
+                    bool MoveNext()
+                    {
+                        this.current = this.current + 1;
+                        return this.current <= this.max;
+                    }
+
+                    int Current()
+                    {
+                        return this.current;
+                    }
+                }
+
+                struct Range
+                {
+                    int max;
+
+                    RangeEnumerator GetEnumerator()
+                    {
+                        RangeEnumerator it;
+                        it.current = 0;
+                        it.max = this.max;
+                        return it;
+                    }
+                }
+
+                int main()
+                {
+                    Range r;
+                    r.max = 5;
+                    int sum = 0;
+                    foreach (int val in r)
+                    {
+                        sum = sum + val;
+                    }
+                    return sum;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
     }
 }
 

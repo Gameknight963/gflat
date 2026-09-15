@@ -73,6 +73,7 @@ namespace gflat
         While,
         For,
         Foreach,
+        In,
         Repeat,
         Break,
         Continue,

@@ -186,6 +186,7 @@ public class Lexer
             "while" => TokenKind.While,
             "for" => TokenKind.For,
             "foreach" => TokenKind.Foreach,
+            "in" => TokenKind.In,
             "repeat" => TokenKind.Repeat,
             "break" => TokenKind.Break,
             "continue" => TokenKind.Continue,

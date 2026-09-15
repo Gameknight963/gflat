@@ -3735,6 +3735,271 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(10, result.ExitCode);
         }
+
+        [Fact]
+        public void Execution_Foreach_Array_Sum()
+        {
+            string code = """
+                int main()
+                {
+                    int[5] arr;
+                    arr[0] = 1;
+                    arr[1] = 2;
+                    arr[2] = 3;
+                    arr[3] = 4;
+                    arr[4] = 5;
+
+                    int sum = 0;
+                    foreach (int x in arr)
+                    {
+                        sum = sum + x;
+                    }
+                    return sum;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(15, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Foreach_Array_BreakAndContinue()
+        {
+            string code = """
+                int main()
+                {
+                    int[10] arr;
+                    int i = 0;
+                    while (i < 10)
+                    {
+                        arr[i] = i + 1;
+                        i = i + 1;
+                    }
+
+                    int sum = 0;
+                    foreach (int x in arr)
+                    {
+                        if (x == 3)
+                        {
+                            continue;
+                        }
+                        if (x == 7)
+                        {
+                            break;
+                        }
+                        sum = sum + x; // 1 + 2 + 4 + 5 + 6 = 18
+                    }
+                    return sum;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(18, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Foreach_StringLiteral()
+        {
+            string code = """
+                int main()
+                {
+                    int count = 0;
+                    foreach (char c in "Hello")
+                    {
+                        if (c != '\0')
+                        {
+                            count = count + 1;
+                        }
+                    }
+                    return count;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(5, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Foreach_NestedLoops()
+        {
+            string code = """
+                int main()
+                {
+                    int[3] a;
+                    a[0] = 1; a[1] = 2; a[2] = 3;
+
+                    int[2] b;
+                    b[0] = 10; b[1] = 20;
+
+                    int total = 0;
+                    foreach (int x in a)
+                    {
+                        foreach (int y in b)
+                        {
+                            total = total + x * y;
+                        }
+                    }
+                    // (1+2+3) * (10+20) = 6 * 30 = 180
+                    return total;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(180, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Foreach_CustomCollection_Struct()
+        {
+            string code = """
+                struct RangeEnumerator
+                {
+                    int current;
+                    int max;
+
+                    bool MoveNext()
+                    {
+                        this.current = this.current + 1;
+                        return this.current <= this.max;
+                    }
+
+                    int Current()
+                    {
+                        return this.current;
+                    }
+                }
+
+                struct Range
+                {
+                    int max;
+
+                    RangeEnumerator GetEnumerator()
+                    {
+                        RangeEnumerator it;
+                        it.current = 0;
+                        it.max = this.max;
+                        return it;
+                    }
+                }
+
+                int main()
+                {
+                    Range r;
+                    r.max = 5;
+                    int sum = 0;
+                    foreach (int x in r)
+                    {
+                        sum = sum + x; // 1 + 2 + 3 + 4 + 5 = 15
+                    }
+                    return sum;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(15, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Foreach_CustomCollection_ClassWithNestedStruct()
+        {
+            string code = """
+                class IntList
+                {
+                    public struct Enumerator
+                    {
+                        public int current;
+                        public int limit;
+
+                        public bool MoveNext()
+                        {
+                            this.current = this.current + 1;
+                            return this.current < this.limit;
+                        }
+
+                        public int Current()
+                        {
+                            return this.current;
+                        }
+                    }
+
+                    public int count;
+
+                    public IntList(int c)
+                    {
+                        this.count = c;
+                    }
+
+                    public Enumerator GetEnumerator()
+                    {
+                        Enumerator it;
+                        it.current = -1;
+                        it.limit = this.count;
+                        return it;
+                    }
+                }
+
+                int main()
+                {
+                    IntList* list = new* IntList(5);
+                    int sum = 0;
+                    foreach (int x in list)
+                    {
+                        sum = sum + x; // 0 + 1 + 2 + 3 + 4 = 10
+                    }
+                    list->free();
+                    return sum;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(10, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Foreach_CustomCollection_CurrentField()
+        {
+            string code = """
+                struct StepEnumerator
+                {
+                    public int Current;
+                    public int max;
+
+                    public bool MoveNext()
+                    {
+                        this.Current = this.Current + 2;
+                        return this.Current <= this.max;
+                    }
+                }
+
+                struct Stepper
+                {
+                    public int max;
+
+                    public StepEnumerator GetEnumerator()
+                    {
+                        StepEnumerator it;
+                        it.Current = 0;
+                        it.max = this.max;
+                        return it;
+                    }
+                }
+
+                int main()
+                {
+                    Stepper s;
+                    s.max = 8;
+                    int sum = 0;
+                    foreach (int x in s)
+                    {
+                        sum = sum + x; // 2 + 4 + 6 + 8 = 20
+                    }
+                    return sum;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(20, result.ExitCode);
+        }
     }
 }
 

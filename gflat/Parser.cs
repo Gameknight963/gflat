@@ -768,6 +768,8 @@ namespace gflat
                     return ParseWhileStatement();
                 case TokenKind.For:
                     return ParseForStatement();
+                case TokenKind.Foreach:
+                    return ParseForeachStatement();
                 case TokenKind.OpenBrace:
                     return ParseBodyOrBlock();
                 case TokenKind.Break:
@@ -996,6 +998,24 @@ namespace gflat
             Expect(TokenKind.CloseParen);
             BlockStatement body = ParseBodyOrBlock();
             return new ForStatement(initializer, condition, increment, body, line);
+        }
+
+        private ForeachStatement ParseForeachStatement()
+        {
+            int line = Current.Line;
+            Expect(TokenKind.Foreach);
+            Expect(TokenKind.OpenParen);
+            TypeExpression elementType = ParseTypeExpression();
+            if (Check(TokenKind.In))
+            {
+                throw new Exception($"Foreach loop requires an explicit type for loop variable on line {line}");
+            }
+            string variableName = Expect(TokenKind.Identifier).Text;
+            Expect(TokenKind.In);
+            AstNode collection = ParseExpression();
+            Expect(TokenKind.CloseParen);
+            BlockStatement body = ParseBodyOrBlock();
+            return new ForeachStatement(elementType, variableName, collection, body, line);
         }
 
         private VariableDeclaration ParseVariableDeclaration(bool isConst = false)

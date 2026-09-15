@@ -139,6 +139,13 @@ namespace gflat.ast
                 BlockStatement body = (BlockStatement)CloneNode(forStmt.Body);
                 return new ForStatement(init, cond, inc, body, forStmt.Line);
             }
+            if (node is ForeachStatement foreachStmt)
+            {
+                TypeExpression elemType = CloneType(foreachStmt.ElementType);
+                AstNode col = CloneNode(foreachStmt.Collection);
+                BlockStatement body = (BlockStatement)CloneNode(foreachStmt.Body);
+                return new ForeachStatement(elemType, foreachStmt.VariableName, col, body, foreachStmt.Line);
+            }
             if (node is ReturnStatement retStmt)
             {
                 return new ReturnStatement(retStmt.Value != null ? CloneNode(retStmt.Value) : null, retStmt.Line);

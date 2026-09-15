@@ -1115,6 +1115,42 @@ namespace gflat.comptime
             PopScope();
         }
 
+        public void Visit(ForeachStatement node)
+        {
+            if (node.Desugared != null)
+            {
+                node.Desugared.Accept(this);
+                return;
+            }
+
+            CheckSteps(node.Line);
+            node.Collection.Accept(this);
+            if (_currentValue is not ConstValue.Array arr)
+            {
+                throw new ConstEvalException("Cannot iterate over non-array at compile time", node.Line);
+            }
+
+            PushScope();
+            for (int i = 0; i < arr.Elements.Count; i++)
+            {
+                CheckSteps(node.Line);
+                _scopes.Peek()[node.VariableName] = arr.Elements[i];
+                node.Body.Accept(this);
+
+                if (_hasReturned) break;
+                if (_hasBroken)
+                {
+                    _hasBroken = false;
+                    break;
+                }
+                if (_hasContinued)
+                {
+                    _hasContinued = false;
+                }
+            }
+            PopScope();
+        }
+
         public void Visit(ReturnStatement node)
         {
             CheckSteps(node.Line);

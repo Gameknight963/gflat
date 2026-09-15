@@ -1950,6 +1950,94 @@ public class LlvmEmitter : IVisitor
         _hasTerminated = false;
     }
 
+    public void Visit(ForeachStatement node)
+    {
+        if (node.Desugared != null)
+        {
+            node.Desugared.Accept(this);
+            return;
+        }
+
+        // Array iteration
+        TypeExpression colType = _typeChecker.GetType(node.Collection);
+        ArrayTypeExpression arr = (ArrayTypeExpression)_typeChecker.ResolveAlias(colType);
+        int count = arr.Size!.Value;
+
+        string condLabel = NewLabel("foreach_cond");
+        string bodyLabel = NewLabel("foreach_body");
+        string advanceLabel = NewLabel("foreach_adv");
+        string exitLabel = NewLabel("foreach_exit");
+
+        _breakLabels.Push(exitLabel);
+        _continueLabels.Push(advanceLabel);
+        _loopDeferDepths.Push(_deferScopes.Count);
+
+        // Evaluate collection to get base pointer
+        node.Collection.Accept(this);
+        string basePtr = Pop();
+
+        // Allocate index variable
+        string idxPtr = NewTemp();
+        Emit($"    {idxPtr} = alloca i32");
+        Emit($"    store i32 0, i32* {idxPtr}");
+
+        // Allocate loop variable
+        string llvmVarType = EmitType(node.ElementType);
+        string varPtr = NewTemp();
+        Emit($"    {varPtr} = alloca {llvmVarType}");
+        _locals.TryGetValue(node.VariableName, out string? prevLocal);
+        _locals[node.VariableName] = varPtr;
+
+        Emit($"    br label %{condLabel}");
+        Emit($"{condLabel}:");
+
+        string curIdx = NewTemp();
+        Emit($"    {curIdx} = load i32, i32* {idxPtr}");
+        string cond = NewTemp();
+        Emit($"    {cond} = icmp slt i32 {curIdx}, {count}");
+        Emit($"    br i1 {cond}, label %{bodyLabel}, label %{exitLabel}");
+
+        Emit($"{bodyLabel}:");
+        TypeExpression elemType = _typeChecker.ResolveAlias(arr.ElementType);
+        string llvmElemType = EmitType(elemType);
+        string elemPtr = NewTemp();
+        Emit($"    {elemPtr} = getelementptr {llvmElemType}, {llvmElemType}* {basePtr}, i32 {curIdx}");
+        string elemVal = NewTemp();
+        Emit($"    {elemVal} = load {llvmElemType}, {llvmElemType}* {elemPtr}");
+        string castedVal = EmitImplicitCast(elemVal, elemType, node.ElementType);
+        Emit($"    store {llvmVarType} {castedVal}, {llvmVarType}* {varPtr}");
+
+        _hasTerminated = false;
+        node.Body.Accept(this);
+        if (!_hasTerminated)
+        {
+            Emit($"    br label %{advanceLabel}");
+        }
+
+        Emit($"{advanceLabel}:");
+        string idxToInc = NewTemp();
+        Emit($"    {idxToInc} = load i32, i32* {idxPtr}");
+        string nextIdx = NewTemp();
+        Emit($"    {nextIdx} = add i32 {idxToInc}, 1");
+        Emit($"    store i32 {nextIdx}, i32* {idxPtr}");
+        Emit($"    br label %{condLabel}");
+
+        Emit($"{exitLabel}:");
+        if (prevLocal != null)
+        {
+            _locals[node.VariableName] = prevLocal;
+        }
+        else
+        {
+            _locals.Remove(node.VariableName);
+        }
+
+        _breakLabels.Pop();
+        _continueLabels.Pop();
+        _loopDeferDepths.Pop();
+        _hasTerminated = false;
+    }
+
     public void Visit(VariableDeclaration node)
     {
         if (node.IsConst)
@@ -3220,6 +3308,15 @@ public class LlvmEmitter : IVisitor
         EmitMemberAddress(node);
         string fieldPtr = Pop();
         TypeExpression fieldType = _typeChecker.GetType(node);
+        if (fieldType is ArrayTypeExpression arr && arr.Size.HasValue)
+        {
+            string arrType = EmitType(fieldType);
+            string decayed = NewTemp();
+            Emit($"    {decayed} = getelementptr {arrType}, {arrType}* {fieldPtr}, i32 0, i32 0");
+            Push(decayed);
+            return;
+        }
+
         string llvmFieldType = EmitType(fieldType);
         string val = NewTemp();
         Emit($"    {val} = load {llvmFieldType}, {llvmFieldType}* {fieldPtr}");

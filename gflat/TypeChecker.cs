@@ -1509,11 +1509,15 @@ namespace gflat
                     return true;
             }
 
-            // default is assignable to any non-void type
+            // default is assignable to any non-void type (except non-nullable pointers/references)
             if (source is NamedTypeExpression { Name: "default" })
             {
                 if (target is not NamedTypeExpression { Name: "void" })
                 {
+                    TypeExpression resolvedTarget = ResolveAlias(target);
+                    if ((resolvedTarget is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression) && !IsNullable(resolvedTarget))
+                        return false;
+
                     if (valueNode is DefaultExpression def && def.TargetType == null)
                         RecordType(def, target);
                     return true;
@@ -2817,12 +2821,21 @@ namespace gflat
                 throw new TypeCheckException($"Destructor name '~{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
             }
 
-            PushScope();
-            NamedTypeExpression typeExpr = new NamedTypeExpression(ownerName, null, node.Line);
-            PointerTypeExpression thisType = new PointerTypeExpression(typeExpr, false, node.Line);
-            DeclareVariable("this", thisType, node.Line);
-            node.Body.Accept(this);
-            PopScope();
+            AstNode? prevFunc = _currentFunction;
+            _currentFunction = node;
+            try
+            {
+                PushScope();
+                NamedTypeExpression typeExpr = new NamedTypeExpression(ownerName, null, node.Line);
+                PointerTypeExpression thisType = new PointerTypeExpression(typeExpr, false, node.Line);
+                DeclareVariable("this", thisType, node.Line);
+                node.Body.Accept(this);
+                PopScope();
+            }
+            finally
+            {
+                _currentFunction = prevFunc;
+            }
         }
 
         public void Visit(Parameter node) { }
@@ -2864,12 +2877,35 @@ namespace gflat
                 {
                     _actualReturnTypes.Peek().Add(GetType(node.Value));
                 }
+
+                if (_currentFunction is MethodDeclaration method)
+                {
+                    TypeExpression retType = ResolveAlias(method.ReturnType);
+                    TypeExpression valType = GetType(node.Value);
+                    if (!IsAssignable(retType, valType, node.Value))
+                    {
+                        throw new TypeCheckException($"Cannot return '{TypeName(valType)}' from function returning '{TypeName(retType)}'", node.Line);
+                    }
+                }
+                else if (_currentFunction is ConstructorDeclaration or DestructorDeclaration)
+                {
+                    throw new TypeCheckException("Cannot return a value from a constructor or destructor", node.Line);
+                }
             }
             else
             {
                 if (_actualReturnTypes.Count > 0)
                 {
                     _actualReturnTypes.Peek().Add(Void);
+                }
+
+                if (_currentFunction is MethodDeclaration method)
+                {
+                    TypeExpression retType = ResolveAlias(method.ReturnType);
+                    if (retType is not NamedTypeExpression { Name: "void" })
+                    {
+                        throw new TypeCheckException($"Cannot return void from function returning '{TypeName(retType)}'", node.Line);
+                    }
                 }
             }
         }
@@ -4529,15 +4565,17 @@ namespace gflat
                         {
                             AstNode arg = node.Arguments[i];
                             TypeExpression paramType = ResolveAlias(ctor.Parameters[i].Type);
+                            TypeExpression argType;
                             if (arg is DefaultExpression def && def.TargetType == null)
                             {
-                                RecordType(def, paramType);
+                                argType = new NamedTypeExpression("default", null, arg.Line);
                             }
                             else
                             {
-                                arg.Accept(this);
+                                if (!_types.ContainsKey(arg))
+                                    arg.Accept(this);
+                                argType = GetType(arg);
                             }
-                            TypeExpression argType = GetType(arg);
                             if (!IsAssignable(paramType, argType, arg))
                             {
                                 matchesParams = false;
@@ -4566,6 +4604,13 @@ namespace gflat
 
                     matchedCtor = matches[0];
                     _resolvedConstructors[node] = matchedCtor;
+                    for (int i = 0; i < node.Arguments.Count; i++)
+                    {
+                        if (node.Arguments[i] is DefaultExpression def && def.TargetType == null)
+                        {
+                            RecordType(def, ResolveAlias(matchedCtor.Parameters[i].Type));
+                        }
+                    }
                 }
 
                 TypeExpression resultType = node.Kind switch
@@ -4610,15 +4655,17 @@ namespace gflat
                     {
                         AstNode arg = node.Arguments[i];
                         TypeExpression paramType = ResolveAlias(ctor.Parameters[i].Type);
+                        TypeExpression argType;
                         if (arg is DefaultExpression def && def.TargetType == null)
                         {
-                            RecordType(def, paramType);
+                            argType = new NamedTypeExpression("default", null, arg.Line);
                         }
                         else
                         {
-                            arg.Accept(this);
+                            if (!_types.ContainsKey(arg))
+                                arg.Accept(this);
+                            argType = GetType(arg);
                         }
-                        TypeExpression argType = GetType(arg);
                         if (!IsAssignable(paramType, argType, arg))
                         {
                             matchesParams = false;
@@ -4647,6 +4694,13 @@ namespace gflat
 
                 matchedStructCtor = matches[0];
                 _resolvedConstructors[node] = matchedStructCtor;
+                for (int i = 0; i < node.Arguments.Count; i++)
+                {
+                    if (node.Arguments[i] is DefaultExpression def && def.TargetType == null)
+                    {
+                        RecordType(def, ResolveAlias(matchedStructCtor.Parameters[i].Type));
+                    }
+                }
             }
 
             TypeExpression structResultType = node.Kind switch
@@ -4665,7 +4719,12 @@ namespace gflat
             if (node.TargetType != null)
             {
                 ValidateTypeUsage(node.TargetType, node.Line);
-                RecordType(node, ResolveAlias(node.TargetType));
+                TypeExpression resolved = ResolveAlias(node.TargetType);
+                if ((resolved is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression) && !IsNullable(resolved))
+                {
+                    throw new TypeCheckException($"Cannot get default value of non-nullable type '{TypeName(node.TargetType)}'", node.Line);
+                }
+                RecordType(node, resolved);
             }
             else
             {

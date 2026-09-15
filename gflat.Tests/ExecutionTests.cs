@@ -1950,7 +1950,7 @@ namespace gflat.Tests
                         return 1;
                     }
 
-                    int* rawPtr = default;
+                    int*? rawPtr = default;
                     if (!rawPtr->is_null)
                     {
                         return 2;
@@ -4277,6 +4277,189 @@ namespace gflat.Tests
 
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(53, result.ExitCode);
+        }
+
+        [Fact]
+        public void StackClass_Destructor_RunsOnBlockExit()
+        {
+            string code = """
+                class Guard
+                {
+                    public int* pState;
+                    public Guard(int* p)
+                    {
+                        this.pState = p;
+                    }
+                    public ~Guard()
+                    {
+                        *this.pState = *this.pState + 10;
+                    }
+                }
+
+                int main()
+                {
+                    int state = 5;
+                    {
+                        Guard g = new Guard(&state);
+                    }
+                    return state; // 15
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(15, result.ExitCode);
+        }
+
+        [Fact]
+        public void StackClass_Destructor_RunsOnEarlyReturn()
+        {
+            string code = """
+                class Guard
+                {
+                    public int* pState;
+                    public Guard(int* p)
+                    {
+                        this.pState = p;
+                    }
+                    public ~Guard()
+                    {
+                        *this.pState = *this.pState + 20;
+                    }
+                }
+
+                int test(int* p, bool doReturn)
+                {
+                    Guard g = new Guard(p);
+                    if (doReturn)
+                    {
+                        return 1;
+                    }
+                    return 2;
+                }
+
+                int main()
+                {
+                    int state = 0;
+                    int res = test(&state, true);
+                    return state + res; // 20 + 1 = 21
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(21, result.ExitCode);
+        }
+
+        [Fact]
+        public void StackClass_Destructor_RunsOnExceptionUnwind()
+        {
+            string code = """
+                class Guard
+                {
+                    public int* pState;
+                    public Guard(int* p)
+                    {
+                        this.pState = p;
+                    }
+                    public ~Guard()
+                    {
+                        *this.pState = *this.pState + 100;
+                    }
+                }
+
+                void willThrow(int* p)
+                {
+                    Guard g = new Guard(p);
+                    throw new* Exception();
+                }
+
+                int main()
+                {
+                    int state = 0;
+                    try
+                    {
+                        willThrow(&state);
+                    }
+                    catch (Exception* e)
+                    {
+                        state = state + 5;
+                    }
+                    return state; // 100 + 5 = 105
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(105, result.ExitCode);
+        }
+
+        [Fact]
+        public void StackClass_Destructor_ChainsToBaseClass()
+        {
+            string code = """
+                class Base
+                {
+                    public int* pState;
+                    public Base(int* p)
+                    {
+                        this.pState = p;
+                    }
+                    public virtual ~Base()
+                    {
+                        *this.pState = *this.pState + 1;
+                    }
+                }
+
+                class Derived : Base
+                {
+                    public Derived(int* p) : base(p)
+                    {
+                    }
+                    public ~Derived()
+                    {
+                        *this.pState = *this.pState + 10;
+                    }
+                }
+
+                int main()
+                {
+                    int state = 0;
+                    {
+                        Derived d = new Derived(&state);
+                    }
+                    return state; // 11
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(11, result.ExitCode);
+        }
+
+        [Fact]
+        public void StackClass_Uninitialized_DoesNotRunDestructor()
+        {
+            string code = """
+                class Guard
+                {
+                    public int* pState;
+                    public Guard(int* p)
+                    {
+                        this.pState = p;
+                    }
+                    public ~Guard()
+                    {
+                        *this.pState = *this.pState + 42;
+                    }
+                }
+
+                int main()
+                {
+                    int state = 10;
+                    Guard g;
+                    return state; // 10
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(10, result.ExitCode);
         }
     }
 }

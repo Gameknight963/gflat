@@ -132,7 +132,7 @@ namespace gflat
                     accessibility = Current.Kind;
                     Consume();
                 }
-                else if (Check(TokenKind.Readonly))
+                else if (Check(TokenKind.Readonly) && !isReadonly)
                 {
                     isReadonly = true;
                     Consume();
@@ -355,7 +355,7 @@ namespace gflat
                 { accessibility = Current.Kind; Consume(); }
                 else if (Check(TokenKind.Static)) { isStatic = true; Consume(); }
                 else if (Check(TokenKind.Const)) { isConst = true; Consume(); }
-                else if (Check(TokenKind.Readonly)) { isReadonly = true; Consume(); }
+                else if (Check(TokenKind.Readonly) && !isReadonly) { isReadonly = true; Consume(); }
                 else if (Check(TokenKind.Virtual)) { isVirtual = true; Consume(); }
                 else if (Check(TokenKind.Override)) { isOverride = true; Consume(); }
                 else if (Check(TokenKind.Abstract)) { isAbstract = true; Consume(); }

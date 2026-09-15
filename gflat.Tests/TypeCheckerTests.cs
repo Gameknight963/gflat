@@ -1435,7 +1435,7 @@ namespace gflat.Tests
                     Point p2 = default(Point);
                     int x1 = default;
                     int x2 = default(int);
-                    Point* ptr = default;
+                    Point*? ptr = default;
                     p1 = default;
                     return 0;
                 }
@@ -3612,6 +3612,99 @@ namespace gflat.Tests
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("destructor cannot be virtual", ex.Message);
+        }
+
+        [Fact]
+        public void AssigningDefaultToNonNullablePointerThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int* p = default;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign 'default' to 'int*'", ex.Message);
+        }
+
+        [Fact]
+        public void DefaultExplicitNonNullablePointerThrows()
+        {
+            string code = """
+                int main()
+                {
+                    int*? p = default(int*);
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot get default value of non-nullable type 'int*'", ex.Message);
+        }
+
+        [Fact]
+        public void AssigningDefaultToNullablePointerSucceeds()
+        {
+            string code = """
+                int main()
+                {
+                    int*? p1 = default;
+                    int*? p2 = default(int*?);
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void AssigningDefaultToNonNullableManagedRefThrows()
+        {
+            string code = """
+                class Foo { }
+                int main()
+                {
+                    Foo^ f = default;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign 'default' to 'Foo^'", ex.Message);
+        }
+
+        [Fact]
+        public void ReturningDefaultFromFunctionReturningNonNullablePointerThrows()
+        {
+            string code = """
+                int* GetPtr()
+                {
+                    return default;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot return 'default' from function returning 'int*'", ex.Message);
+        }
+
+        [Fact]
+        public void PassingDefaultToNonNullablePointerParameterThrows()
+        {
+            string code = """
+                void TakePtr(int* p) { }
+                int main()
+                {
+                    TakePtr(default);
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("cannot pass 'default' as 'int*'", ex.Message);
         }
     }
 }

@@ -309,6 +309,59 @@ public class LlvmEmitter : IVisitor
         }
     }
 
+    private class ClassDestructorDeferAction : IDeferAction
+    {
+        public TypeChecker.ClassInfo Class { get; }
+        public string LocalPtr { get; }
+        public bool IsVirtual { get; }
+        public int SlotIndex { get; }
+
+        public ClassDestructorDeferAction(TypeChecker.ClassInfo cls, string localPtr, bool isVirtual, int slotIndex)
+        {
+            Class = cls;
+            LocalPtr = localPtr;
+            IsVirtual = isVirtual;
+            SlotIndex = slotIndex;
+        }
+
+        public void Execute(LlvmEmitter emitter)
+        {
+            string vtableSlot = emitter.NewTemp();
+            emitter.Emit($"    {vtableSlot} = getelementptr %{Class.Name}, %{Class.Name}* {LocalPtr}, i32 0, i32 0");
+            string vtablePtr = emitter.NewTemp();
+            emitter.Emit($"    {vtablePtr} = load i8**, i8*** {vtableSlot}");
+            string isNonNull = emitter.NewTemp();
+            emitter.Emit($"    {isNonNull} = icmp ne i8** {vtablePtr}, null");
+            string dtorCallLbl = emitter.NewLabel("dtor.call");
+            string dtorDoneLbl = emitter.NewLabel("dtor.done");
+            emitter.Emit($"    br i1 {isNonNull}, label %{dtorCallLbl}, label %{dtorDoneLbl}");
+            emitter.Emit($"{dtorCallLbl}:");
+            emitter.Emit($"    store i8** null, i8*** {vtableSlot}");
+
+            if (IsVirtual && SlotIndex >= 0)
+            {
+                string slotPtr = emitter.NewTemp();
+                emitter.Emit($"    {slotPtr} = getelementptr i8*, i8** {vtablePtr}, i32 {SlotIndex}");
+                string rawFnPtr = emitter.NewTemp();
+                emitter.Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
+                string dtorFn = emitter.NewTemp();
+                emitter.Emit($"    {dtorFn} = bitcast i8* {rawFnPtr} to void (%{Class.Name}*)*");
+                emitter.Emit($"    call void {dtorFn}(%{Class.Name}* {LocalPtr})");
+            }
+            else
+            {
+                string dtorNs = Class.Namespace;
+                string dtorMangled = dtorNs.Length > 0
+                    ? $"gflat${dtorNs}${Class.Name}$dtor"
+                    : $"gflat${Class.Name}$dtor";
+                emitter.Emit($"    call void @{dtorMangled}(%{Class.Name}* {LocalPtr})");
+            }
+
+            emitter.Emit($"    br label %{dtorDoneLbl}");
+            emitter.Emit($"{dtorDoneLbl}:");
+        }
+    }
+
     private readonly List<List<IDeferAction>> _deferScopes = new();
     private readonly Stack<int> _loopDeferDepths = new();
     private bool _hasTerminated = false;
@@ -2170,6 +2223,14 @@ public class LlvmEmitter : IVisitor
             val = EmitImplicitCast(val, initType, resolvedVarType);
             Emit($"    store {type} {val}, {type}* {ptr}");
         }
+        else
+        {
+            TypeExpression unwrappedInit = _typeChecker.ResolveAlias(resolvedVarType);
+            if (unwrappedInit is NamedTypeExpression namedInit && _typeChecker.GetClass(namedInit.Name) != null)
+            {
+                Emit($"    store {type} zeroinitializer, {type}* {ptr}");
+            }
+        }
 
         if (_deferScopes.Count > 0)
         {
@@ -2180,6 +2241,19 @@ public class LlvmEmitter : IVisitor
                 if (sInfo != null && sInfo.Destructor != null)
                 {
                     _deferScopes[^1].Add(new StructDestructorDeferAction(sInfo.Name, ptr, sInfo.Namespace));
+                }
+                else
+                {
+                    TypeChecker.ClassInfo? cInfo = _typeChecker.GetClass(namedVarType.Name);
+                    if (cInfo != null)
+                    {
+                        bool hasVirtualDtor = cInfo.DestructorSlot >= 0;
+                        bool hasDtor = hasVirtualDtor || _typeChecker.HasAnyDestructor(cInfo);
+                        if (hasDtor)
+                        {
+                            _deferScopes[^1].Add(new ClassDestructorDeferAction(cInfo, ptr, hasVirtualDtor, cInfo.DestructorSlot));
+                        }
+                    }
                 }
             }
         }

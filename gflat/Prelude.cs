@@ -26,7 +26,7 @@ class Exception
         code = c;
     }
 
-    public readonly virtual char* GetMessage()
+    public readonly virtual readonly char* GetMessage()
     {
         return message;
     }

@@ -3570,6 +3570,49 @@ namespace gflat.Tests
             Assert.NotNull(checker.GetStruct("Container$int.Node"));
             Assert.NotNull(checker.GetStruct("Container$double.Node"));
         }
+
+        [Fact]
+        public void StructDestructorMismatchedNameThrows()
+        {
+            string code = """
+                struct Resource
+                {
+                    public ~Other() { }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("does not match struct name", ex.Message);
+        }
+
+        [Fact]
+        public void StructDestructorDuplicateThrows()
+        {
+            string code = """
+                struct Resource
+                {
+                    public ~Resource() { }
+                    public ~Resource() { }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("already defines a destructor", ex.Message);
+        }
+
+        [Fact]
+        public void StructDestructorVirtualThrows()
+        {
+            string code = """
+                struct Resource
+                {
+                    virtual ~Resource() { }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("destructor cannot be virtual", ex.Message);
+        }
     }
 }
 

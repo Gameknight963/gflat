@@ -271,24 +271,62 @@ public class LlvmEmitter : IVisitor
     private readonly Stack<ActiveCatchInfo> _activeCatchStack = new();
     private readonly Dictionary<string, string> _catchVariableOwnedSlots = new();
 
-    private readonly List<List<AstNode>> _deferScopes = new();
+    private interface IDeferAction
+    {
+        void Execute(LlvmEmitter emitter);
+    }
+
+    private class AstNodeDeferAction : IDeferAction
+    {
+        public AstNode Node { get; }
+        public AstNodeDeferAction(AstNode node)
+        {
+            Node = node;
+        }
+        public void Execute(LlvmEmitter emitter) => Node.Accept(emitter);
+    }
+
+    private class StructDestructorDeferAction : IDeferAction
+    {
+        public string StructName { get; }
+        public string LocalPtr { get; }
+        public string? Namespace { get; }
+
+        public StructDestructorDeferAction(string structName, string localPtr, string? ns)
+        {
+            StructName = structName;
+            LocalPtr = localPtr;
+            Namespace = ns;
+        }
+
+        public void Execute(LlvmEmitter emitter)
+        {
+            string dtorNs = Namespace ?? "";
+            string dtorMangled = dtorNs.Length > 0
+                ? $"gflat${dtorNs}${StructName}$dtor"
+                : $"gflat${StructName}$dtor";
+            emitter.Emit($"    call void @{dtorMangled}(%{StructName}* {LocalPtr})");
+        }
+    }
+
+    private readonly List<List<IDeferAction>> _deferScopes = new();
     private readonly Stack<int> _loopDeferDepths = new();
     private bool _hasTerminated = false;
 
     private void EmitDefersDownTo(int targetDepth)
     {
-        List<AstNode> toEmit = new();
+        List<IDeferAction> toEmit = new();
         for (int scopeIdx = _deferScopes.Count - 1; scopeIdx >= targetDepth; scopeIdx--)
         {
-            var scope = _deferScopes[scopeIdx];
+            List<IDeferAction> scope = _deferScopes[scopeIdx];
             for (int i = scope.Count - 1; i >= 0; i--)
             {
                 toEmit.Add(scope[i]);
             }
         }
-        foreach (var stmt in toEmit)
+        foreach (IDeferAction action in toEmit)
         {
-            stmt.Accept(this);
+            action.Execute(this);
         }
     }
 
@@ -1269,6 +1307,10 @@ public class LlvmEmitter : IVisitor
                 {
                     EmitStructConstructor(node.Name, ctor);
                 }
+                else if (member is DestructorDeclaration dtor)
+                {
+                    EmitStructDestructor(node.Name, dtor);
+                }
                 else if (member is ClassDeclaration nestedCls)
                 {
                     nestedCls.Accept(this);
@@ -1554,6 +1596,43 @@ public class LlvmEmitter : IVisitor
         Emit("");
     }
 
+    private void EmitStructDestructor(string structName, DestructorDeclaration node)
+    {
+        _locals.Clear();
+        _tempCounter = 0;
+        _hasTerminated = false;
+
+        _currentFunctionReturnType = "void";
+        _currentFunctionExpectedType = new NamedTypeExpression("void", null, node.Line);
+        string ns = _currentNamespacePath;
+        string mangledName = ns.Length > 0 ? $"gflat${ns}${structName}$dtor" : $"gflat${structName}$dtor";
+
+        Emit($"define void @{mangledName}(%{structName}* %this) {{");
+        Emit("entry:");
+
+        string thisPtr = NewTemp();
+        Emit($"    {thisPtr} = alloca %{structName}*");
+        Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
+        _locals["this"] = thisPtr;
+
+        TypeChecker.StructInfo? prevStruct = _currentStruct;
+        _currentStruct = _typeChecker.GetStruct(structName);
+
+        if (node.Body != null)
+        {
+            node.Body.Accept(this);
+        }
+
+        _currentStruct = prevStruct;
+        if (!_hasTerminated)
+        {
+            Emit("    ret void");
+        }
+
+        Emit("}");
+        Emit("");
+    }
+
     public void Visit(InterfaceDeclaration node) { }
 
     public void Visit(FieldDeclaration node)
@@ -1716,7 +1795,7 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(BlockStatement node)
     {
-        _deferScopes.Add(new List<AstNode>());
+        _deferScopes.Add(new List<IDeferAction>());
         bool terminated = false;
 
         foreach (AstNode statement in node.Statements)
@@ -1730,14 +1809,14 @@ public class LlvmEmitter : IVisitor
                 terminated = true;
         }
 
-        var defers = _deferScopes[^1];
+        List<IDeferAction> defers = _deferScopes[^1];
         _deferScopes.RemoveAt(_deferScopes.Count - 1);
 
         if (!terminated)
         {
             for (int i = defers.Count - 1; i >= 0; i--)
             {
-                defers[i].Accept(this);
+                defers[i].Execute(this);
             }
         }
     }
@@ -2090,6 +2169,19 @@ public class LlvmEmitter : IVisitor
             TypeExpression initType = _typeChecker.GetType(node.Initializer);
             val = EmitImplicitCast(val, initType, resolvedVarType);
             Emit($"    store {type} {val}, {type}* {ptr}");
+        }
+
+        if (_deferScopes.Count > 0)
+        {
+            TypeExpression unwrapped = _typeChecker.ResolveAlias(resolvedVarType);
+            if (unwrapped is NamedTypeExpression namedVarType)
+            {
+                TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(namedVarType.Name);
+                if (sInfo != null && sInfo.Destructor != null)
+                {
+                    _deferScopes[^1].Add(new StructDestructorDeferAction(sInfo.Name, ptr, sInfo.Namespace));
+                }
+            }
         }
     }
     public void Visit(ExpressionStatement node)
@@ -2759,6 +2851,20 @@ public class LlvmEmitter : IVisitor
                         : $"gflat${dtorCall.Class.Name}$dtor";
                     Emit($"    call void @{dtorMangled}(%{dtorCall.Class.Name}* {classPtr})");
                 }
+            }
+            else if (_typeChecker.TryGetStructDestructorCall(node, out TypeChecker.StructInfo? structInfo) && structInfo != null)
+            {
+                string structPtr = ptrVal;
+                if (llvmPtrType != $"%{structInfo.Name}*")
+                {
+                    structPtr = NewTemp();
+                    Emit($"    {structPtr} = bitcast {llvmPtrType} {ptrVal} to %{structInfo.Name}*");
+                }
+                string dtorNs = structInfo.Namespace;
+                string dtorMangled = dtorNs.Length > 0
+                    ? $"gflat${dtorNs}${structInfo.Name}$dtor"
+                    : $"gflat${structInfo.Name}$dtor";
+                Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
             }
 
             if (!_externNames.Contains("free"))
@@ -3663,7 +3769,7 @@ public class LlvmEmitter : IVisitor
         if (_deferScopes.Count == 0)
             throw new Exception($"defer statement outside of block scope on line {node.Line}");
 
-        _deferScopes[^1].Add(node.Statement);
+        _deferScopes[^1].Add(new AstNodeDeferAction(node.Statement));
     }
     public void Visit(BreakStatement node)
     {
@@ -3715,7 +3821,7 @@ public class LlvmEmitter : IVisitor
         string savedReturnType = _currentFunctionReturnType;
         TypeExpression? savedExpectedType = _currentFunctionExpectedType;
         bool savedTerminated = _hasTerminated;
-        List<List<AstNode>> savedDeferScopes = new(_deferScopes);
+        List<List<IDeferAction>> savedDeferScopes = new(_deferScopes);
 
         // Prepare lambda context
         _output = _lambdaFunctions;

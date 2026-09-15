@@ -4088,6 +4088,196 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(16, result.ExitCode);
         }
+
+        [Fact]
+        public void Execution_Struct_Destructor_Free()
+        {
+            string code = """
+                struct Tracker
+                {
+                    public int* pState;
+
+                    public ~Tracker()
+                    {
+                        *this.pState = *this.pState + 10;
+                    }
+                }
+
+                int main()
+                {
+                    int state = 5;
+                    Tracker* t = new* Tracker();
+                    t.pState = &state;
+                    t->free();
+                    return state; // 5 + 10 = 15
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(15, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Struct_AutomaticScopeDestructor_BlockExit()
+        {
+            string code = """
+                struct Guard
+                {
+                    public int* pVal;
+
+                    public ~Guard()
+                    {
+                        *this.pVal = *this.pVal * 2;
+                    }
+                }
+
+                int main()
+                {
+                    int val = 21;
+                    {
+                        Guard g;
+                        g.pVal = &val;
+                    }
+                    return val; // 21 * 2 = 42
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Struct_AutomaticScopeDestructor_EarlyReturn()
+        {
+            string code = """
+                struct Guard
+                {
+                    public int* pVal;
+
+                    public ~Guard()
+                    {
+                        *this.pVal = *this.pVal + 7;
+                    }
+                }
+
+                int test(int* pVal)
+                {
+                    Guard g;
+                    g.pVal = pVal;
+                    return 100;
+                }
+
+                int main()
+                {
+                    int val = 3;
+                    int res = test(&val);
+                    return val; // 3 + 7 = 10
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(10, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Struct_AutomaticScopeDestructor_LIFOOrder()
+        {
+            string code = """
+                struct Stepper
+                {
+                    public int* pState;
+                    public int add;
+
+                    public ~Stepper()
+                    {
+                        *this.pState = *this.pState * 10 + this.add;
+                    }
+                }
+
+                int main()
+                {
+                    int state = 0;
+                    {
+                        Stepper s1;
+                        s1.pState = &state;
+                        s1.add = 1;
+
+                        defer state = state * 10 + 2;
+
+                        Stepper s3;
+                        s3.pState = &state;
+                        s3.add = 3;
+                    }
+                    // LIFO order: s3 (add 3), then defer (add 2), then s1 (add 1)
+                    // 0 -> *10 + 3 = 3 -> *10 + 2 = 32 -> *10 + 1 = 321
+                    return state;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(321, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Foreach_DisposeCalled()
+        {
+            string code = """
+                struct DisposingEnumerator
+                {
+                    public int current;
+                    public int limit;
+                    public int* pDisposed;
+
+                    public bool MoveNext()
+                    {
+                        this.current = this.current + 1;
+                        return this.current < this.limit;
+                    }
+
+                    public int Current()
+                    {
+                        return this.current;
+                    }
+
+                    public void Dispose()
+                    {
+                        *this.pDisposed = *this.pDisposed + 50;
+                    }
+                }
+
+                struct DisposingCollection
+                {
+                    public int* pDisposed;
+
+                    public DisposingEnumerator GetEnumerator()
+                    {
+                        DisposingEnumerator it;
+                        it.current = -1;
+                        it.limit = 3;
+                        it.pDisposed = this.pDisposed;
+                        return it;
+                    }
+                }
+
+                int main()
+                {
+                    int disposedState = 0;
+                    DisposingCollection col;
+                    col.pDisposed = &disposedState;
+
+                    int sum = 0;
+                    foreach (int x in col)
+                    {
+                        sum = sum + x; // 0 + 1 + 2 = 3
+                    }
+
+                    return sum + disposedState; // 3 + 50 = 53
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(53, result.ExitCode);
+        }
     }
 }
 

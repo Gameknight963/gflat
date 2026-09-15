@@ -195,6 +195,7 @@ namespace gflat
             public Dictionary<string, MethodDeclaration> Methods = new();
             public List<OperatorDeclaration> Operators = new();
             public List<string> Interfaces = new();
+            public DestructorDeclaration? Destructor = null;
             public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
         }
 
@@ -324,6 +325,10 @@ namespace gflat
         private readonly Dictionary<CallExpression, (ClassInfo Class, bool IsVirtual, int SlotIndex)> _classDestructorCalls = new();
         public bool TryGetClassDestructorCall(CallExpression node, out (ClassInfo Class, bool IsVirtual, int SlotIndex) call) =>
             _classDestructorCalls.TryGetValue(node, out call);
+
+        private readonly Dictionary<CallExpression, StructInfo> _structDestructorCalls = new();
+        public bool TryGetStructDestructorCall(CallExpression node, out StructInfo? sInfo) =>
+            _structDestructorCalls.TryGetValue(node, out sInfo);
 
         public bool IsSubclassOf(string derivedName, string baseName)
         {
@@ -2069,6 +2074,17 @@ namespace gflat
                         info.Constructors.Add(ctor);
                         RegisterPrefixFromAttributes(ctor.Attributes, nsPath, str.Name, ctor, null, null, null, ctor.Line);
                     }
+                    else if (m is DestructorDeclaration dtor)
+                    {
+                        if (info.Destructor != null)
+                            throw new TypeCheckException($"Struct '{str.Name}' already defines a destructor", dtor.Line);
+                        if (dtor.IsVirtual)
+                            throw new TypeCheckException($"Struct '{str.Name}' destructor cannot be virtual", dtor.Line);
+                        string shortStrName = str.Name.Contains('.') ? str.Name.Substring(str.Name.LastIndexOf('.') + 1) : str.Name;
+                        if (dtor.Name != str.Name && dtor.Name != shortStrName)
+                            throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match struct name '{str.Name}'", dtor.Line);
+                        info.Destructor = dtor;
+                    }
                     else if (m is OperatorDeclaration op)
                     {
                         info.Operators.Add(op);
@@ -2484,6 +2500,10 @@ namespace gflat
                     else if (member is ConstructorDeclaration ctor)
                     {
                         ctor.Accept(this);
+                    }
+                    else if (member is DestructorDeclaration dtor)
+                    {
+                        dtor.Accept(this);
                     }
                     else if (member is MethodDeclaration method)
                     {
@@ -3123,12 +3143,31 @@ namespace gflat
             BlockStatement loopBody = new BlockStatement(loopBodyStmts, node.Line);
             WhileStatement whileStmt = new WhileStatement(moveNextCall, loopBody, node.Line);
 
+            bool hasDispose = false;
+            if (_classes.TryGetValue(namedEnum.Name, out ClassInfo? dispClsInfo))
+            {
+                hasDispose = dispClsInfo.Methods.ContainsKey("Dispose");
+            }
+            else if (_structs.TryGetValue(namedEnum.Name, out StructInfo? dispStrInfo))
+            {
+                hasDispose = dispStrInfo.Methods.ContainsKey("Dispose");
+            }
+            else if (ResolveInterface(namedEnum) is InterfaceInfo dispIfaceInfo)
+            {
+                hasDispose = dispIfaceInfo.MethodsByName.ContainsKey("Dispose");
+            }
+
             List<AstNode> outerStmts = new List<AstNode>();
             if (colVarDecl != null)
             {
                 outerStmts.Add(colVarDecl);
             }
             outerStmts.Add(iterVarDecl);
+            if (hasDispose)
+            {
+                AstNode disposeCall = new CallExpression(new MemberAccessExpression(new IdentifierExpression(iterVarName, node.Line), "Dispose", isArrow: false, node.Line), new List<AstNode>(), node.Line);
+                outerStmts.Add(new DeferStatement(new ExpressionStatement(disposeCall, node.Line), node.Line));
+            }
             outerStmts.Add(whileStmt);
             BlockStatement desugaredBlock = new BlockStatement(outerStmts, node.Line);
 
@@ -3899,6 +3938,13 @@ namespace gflat
                                 if (hasDtor)
                                 {
                                     _classDestructorCalls[node] = (clsInfo, hasVirtualDtor, clsInfo.DestructorSlot);
+                                }
+                            }
+                            else if (resInner is NamedTypeExpression namedStr && _structs.TryGetValue(namedStr.Name, out StructInfo? structInfo))
+                            {
+                                if (structInfo.Destructor != null)
+                                {
+                                    _structDestructorCalls[node] = structInfo;
                                 }
                             }
                         }

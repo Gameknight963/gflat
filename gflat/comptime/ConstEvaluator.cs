@@ -1193,6 +1193,7 @@ namespace gflat.comptime
 
         public void Visit(FunctionPointerTypeExpression node) { }
         public void Visit(NamedTypeExpression node) { }
+        public void Visit(NestedTypeExpression node) { }
         public void Visit(PointerTypeExpression node) { }
         public void Visit(ManagedTypeExpression node) { }
         public void Visit(ArrayTypeExpression node) { }

@@ -244,6 +244,11 @@ namespace gflat
         }
 
         public void Visit(NamedTypeExpression node) => Print($"Type: {(node.Namespace != null ? node.Namespace + "::" : "")}{node.Name}");
+        public void Visit(NestedTypeExpression node)
+        {
+            Print($"NestedType: {node.Member}");
+            Indented(() => node.Parent.Accept(this));
+        }
         public void Visit(PointerTypeExpression node) { Print($"PointerType{(node.IsReadOnly ? " readonly" : "")}{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }
         public void Visit(ManagedTypeExpression node) { Print($"ManagedType{(node.IsReadOnly ? " readonly" : "")}{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }
         public void Visit(ArrayTypeExpression node) { Print($"ArrayType{(node.Size.HasValue ? $"[{node.Size}]" : "[]")}"); Indented(() => node.ElementType.Accept(this)); }

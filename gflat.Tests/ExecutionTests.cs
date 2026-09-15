@@ -4000,6 +4000,94 @@ namespace gflat.Tests
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(20, result.ExitCode);
         }
+
+        [Fact]
+        public void Execution_GenericStruct_DirectNestedTypeAccess()
+        {
+            string code = """
+                struct Wrapper<T>
+                {
+                    public struct Box
+                    {
+                        public T item;
+                    }
+                }
+
+                int main()
+                {
+                    Wrapper<int>.Box b;
+                    b.item = 77;
+                    return b.item;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(77, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_GenericCollection_WithNestedEnumerator()
+        {
+            string code = """
+                class List<T>
+                {
+                    public struct Enumerator
+                    {
+                        public int current;
+                        public int limit;
+
+                        public bool MoveNext()
+                        {
+                            this.current = this.current + 1;
+                            return this.current < this.limit;
+                        }
+
+                        public int Current()
+                        {
+                            return this.current;
+                        }
+                    }
+
+                    public int count;
+
+                    public List(int c)
+                    {
+                        this.count = c;
+                    }
+
+                    public Enumerator GetEnumerator()
+                    {
+                        Enumerator it;
+                        it.current = -1;
+                        it.limit = this.count;
+                        return it;
+                    }
+                }
+
+                int main()
+                {
+                    List<int>* listInt = new* List<int>(4);
+                    int sum = 0;
+                    foreach (int x in listInt)
+                    {
+                        sum = sum + x; // 0 + 1 + 2 + 3 = 6
+                    }
+                    listInt->free();
+
+                    List<double>* listDbl = new* List<double>(5);
+                    foreach (int y in listDbl)
+                    {
+                        sum = sum + y; // 6 + 0 + 1 + 2 + 3 + 4 = 16
+                    }
+                    listDbl->free();
+
+                    return sum;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(16, result.ExitCode);
+        }
     }
 }
 

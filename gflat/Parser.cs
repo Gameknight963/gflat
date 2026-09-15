@@ -654,6 +654,24 @@ namespace gflat
 
             TypeExpression type = new NamedTypeExpression(name, ns, line, typeArgs);
 
+            while (Match(TokenKind.Dot))
+            {
+                string member = Expect(TokenKind.Identifier).Text;
+                List<TypeExpression> memberTypeArgs = new();
+                if (Check(TokenKind.Less))
+                {
+                    Consume();
+                    while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
+                    {
+                        memberTypeArgs.Add(ParseTypeExpression());
+                        if (!Check(TokenKind.Greater))
+                            Expect(TokenKind.Comma);
+                    }
+                    Expect(TokenKind.Greater);
+                }
+                type = new NestedTypeExpression(type, member, memberTypeArgs, line);
+            }
+
             // postfix modifiers
             while (true)
             {

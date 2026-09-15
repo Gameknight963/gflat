@@ -19,36 +19,95 @@ namespace gflat.ast
 
         public StructDeclaration CloneStruct(StructDeclaration s)
         {
-            string structName = (_newName != null && s.Name == _oldName) ? _newName : s.Name;
+            string structName = s.Name;
+            if (_newName != null && _oldName != null)
+            {
+                if (s.Name == _oldName)
+                {
+                    structName = _newName;
+                }
+                else if (s.Name.StartsWith(_oldName + "."))
+                {
+                    structName = _newName + s.Name.Substring(_oldName.Length);
+                }
+            }
             List<AstNode> clonedMembers = s.Members.Select(CloneNode).ToList();
-            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.ToList(), genericParameters: null);
+            List<GenericParameter>? genericParams = s.GenericParameters != null && s.Name != _oldName
+                ? s.GenericParameters.ToList()
+                : null;
+            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.ToList(), genericParameters: genericParams);
         }
 
         public ClassDeclaration CloneClass(ClassDeclaration c)
         {
-            string className = (_newName != null && c.Name == _oldName) ? _newName : c.Name;
+            string className = c.Name;
+            if (_newName != null && _oldName != null)
+            {
+                if (c.Name == _oldName)
+                {
+                    className = _newName;
+                }
+                else if (c.Name.StartsWith(_oldName + "."))
+                {
+                    className = _newName + c.Name.Substring(_oldName.Length);
+                }
+            }
             List<AstNode> clonedMembers = c.Members.Select(CloneNode).ToList();
-            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.ToList(), genericParameters: null);
+            List<GenericParameter>? genericParams = c.GenericParameters != null && c.Name != _oldName
+                ? c.GenericParameters.ToList()
+                : null;
+            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.ToList(), genericParameters: genericParams);
         }
 
         public MethodDeclaration CloneMethod(MethodDeclaration m)
         {
-            string methodName = (_newName != null && m.Name == _oldName) ? _newName : m.Name;
+            string methodName = m.Name;
+            if (_newName != null && _oldName != null)
+            {
+                if (m.Name == _oldName)
+                {
+                    methodName = _newName;
+                }
+                else if (m.Name.StartsWith(_oldName + "."))
+                {
+                    methodName = _newName + m.Name.Substring(_oldName.Length);
+                }
+            }
             TypeExpression retType = CloneType(m.ReturnType);
             List<Parameter> parameters = m.Parameters.Select(p => new Parameter(p.Name, CloneType(p.Type), p.Line, p.IsConst)).ToList();
             BlockStatement? body = m.Body != null ? (BlockStatement)CloneNode(m.Body) : null;
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.ToList(), genericParameters: null);
+            List<GenericParameter>? genericParams = m.GenericParameters != null && m.Name != _oldName
+                ? m.GenericParameters.ToList()
+                : null;
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.ToList(), genericParameters: genericParams);
         }
 
         public TypeExpression CloneType(TypeExpression type)
         {
+            if (type is NestedTypeExpression nested)
+            {
+                TypeExpression parent = CloneType(nested.Parent);
+                List<TypeExpression> typeArgs = nested.TypeArguments.Select(CloneType).ToList();
+                return new NestedTypeExpression(parent, nested.Member, typeArgs, nested.Line);
+            }
             if (type is NamedTypeExpression named)
             {
                 if (named.Namespace == null && _typeMap.TryGetValue(named.Name, out TypeExpression? mapped))
                 {
                     return mapped;
                 }
-                string typeName = (_newName != null && named.Name == _oldName && named.Namespace == null) ? _newName : named.Name;
+                string typeName = named.Name;
+                if (_newName != null && _oldName != null && named.Namespace == null)
+                {
+                    if (named.Name == _oldName)
+                    {
+                        typeName = _newName;
+                    }
+                    else if (named.Name.StartsWith(_oldName + "."))
+                    {
+                        typeName = _newName + named.Name.Substring(_oldName.Length);
+                    }
+                }
                 List<TypeExpression> typeArgs = named.TypeArguments.Select(CloneType).ToList();
                 return new NamedTypeExpression(typeName, named.Namespace, named.Line, typeArgs);
             }
@@ -84,7 +143,18 @@ namespace gflat.ast
             }
             if (node is ConstructorDeclaration ctor)
             {
-                string ctorName = (_newName != null && ctor.Name == _oldName) ? _newName : ctor.Name;
+                string ctorName = ctor.Name;
+                if (_newName != null && _oldName != null)
+                {
+                    if (ctor.Name == _oldName)
+                    {
+                        ctorName = _newName;
+                    }
+                    else if (ctor.Name.StartsWith(_oldName + "."))
+                    {
+                        ctorName = _newName + ctor.Name.Substring(_oldName.Length);
+                    }
+                }
                 List<Parameter> parameters = ctor.Parameters.Select(p => new Parameter(p.Name, CloneType(p.Type), p.Line, p.IsConst)).ToList();
                 BlockStatement body = (BlockStatement)CloneNode(ctor.Body);
                 List<AstNode>? baseArgs = ctor.BaseArguments?.Select(CloneNode).ToList();
@@ -92,7 +162,18 @@ namespace gflat.ast
             }
             if (node is DestructorDeclaration dtor)
             {
-                string dtorName = (_newName != null && dtor.Name == _oldName) ? _newName : dtor.Name;
+                string dtorName = dtor.Name;
+                if (_newName != null && _oldName != null)
+                {
+                    if (dtor.Name == _oldName)
+                    {
+                        dtorName = _newName;
+                    }
+                    else if (dtor.Name.StartsWith(_oldName + "."))
+                    {
+                        dtorName = _newName + dtor.Name.Substring(_oldName.Length);
+                    }
+                }
                 return new DestructorDeclaration(dtorName, (BlockStatement)CloneNode(dtor.Body), dtor.IsVirtual, dtor.Line);
             }
             if (node is OperatorDeclaration op)
@@ -202,6 +283,11 @@ namespace gflat.ast
                 TypeExpression newType = CloneType(newExpr.Type);
                 List<AstNode> args = newExpr.Arguments.Select(CloneNode).ToList();
                 return new NewExpression(newType, args, newExpr.Kind, newExpr.Line);
+            }
+            if (node is DefaultExpression defExpr)
+            {
+                TypeExpression? targetType = defExpr.TargetType != null ? CloneType(defExpr.TargetType) : null;
+                return new DefaultExpression(targetType, defExpr.Line);
             }
             if (node is CastExpression cast)
             {

@@ -3644,6 +3644,7 @@ public class LlvmEmitter : IVisitor
         throw new NotImplementedException();
     }
     public void Visit(NamedTypeExpression node) => throw new NotImplementedException();
+    public void Visit(NestedTypeExpression node) => throw new NotImplementedException();
     public void Visit(PointerTypeExpression node) => throw new NotImplementedException();
     public void Visit(ManagedTypeExpression node) => throw new NotImplementedException();
     public void Visit(ArrayTypeExpression node) => throw new NotImplementedException();

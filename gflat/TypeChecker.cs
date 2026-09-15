@@ -768,6 +768,13 @@ namespace gflat
             {
                 ResolveClassHierarchy(clsInfo, new HashSet<string>(), new HashSet<string>());
             }
+            foreach (AstNode m in specialized.Members)
+            {
+                if (m is ClassDeclaration nestedCls && _classes.TryGetValue(nestedCls.Name, out ClassInfo? nestedClsInfo))
+                {
+                    ResolveClassHierarchy(nestedClsInfo, new HashSet<string>(), new HashSet<string>());
+                }
+            }
             specialized.Accept(this);
 
             return new NamedTypeExpression(mangledName, null, line);
@@ -842,6 +849,21 @@ namespace gflat
 
         public TypeExpression ResolveAlias(TypeExpression type)
         {
+            if (type is NestedTypeExpression nested)
+            {
+                TypeExpression resolvedParent = ResolveAlias(nested.Parent);
+                if (resolvedParent is NamedTypeExpression namedParent)
+                {
+                    string candidate = $"{namedParent.Name}.{nested.Member}";
+                    if (nested.TypeArguments.Count > 0)
+                    {
+                        List<TypeExpression> resolvedArgs = nested.TypeArguments.Select(ResolveAlias).ToList();
+                        return ResolveGenericType(candidate, namedParent.Namespace, resolvedArgs, nested.Line);
+                    }
+                    return ResolveAlias(new NamedTypeExpression(candidate, namedParent.Namespace, nested.Line));
+                }
+                throw new TypeCheckException($"Cannot resolve nested type member '{nested.Member}' on non-named type '{TypeName(resolvedParent)}'", nested.Line);
+            }
             if (type is NamedTypeExpression named)
             {
                 if (named.TypeArguments.Count > 0)
@@ -4636,6 +4658,7 @@ namespace gflat
             _constValues[node] = constVal;
         }
         public void Visit(NamedTypeExpression node) { }
+        public void Visit(NestedTypeExpression node) { }
         public void Visit(PointerTypeExpression node) { }
         public void Visit(ManagedTypeExpression node) { }
         public void Visit(ArrayTypeExpression node) { }
@@ -4672,6 +4695,9 @@ namespace gflat
         private static string TypeName(TypeExpression type) => type switch
         {
             NamedTypeExpression n => n.Name,
+            NestedTypeExpression nested => nested.TypeArguments.Count > 0
+                ? $"{TypeName(nested.Parent)}.{nested.Member}<{string.Join(", ", nested.TypeArguments.Select(TypeName))}>"
+                : $"{TypeName(nested.Parent)}.{nested.Member}",
             PointerTypeExpression p => (p.IsReadOnly ? "readonly " : "") + TypeName(p.Inner) + "*",
             ManagedTypeExpression m => (m.IsReadOnly ? "readonly " : "") + TypeName(m.Inner) + "^",
             ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),

@@ -31,6 +31,7 @@ namespace gflat
         void Visit(AssignmentExpression node);
         void Visit(InterpolatedStringExpression node);
         void Visit(NamedTypeExpression node);
+        void Visit(NestedTypeExpression node);
         void Visit(PointerTypeExpression node);
         void Visit(ManagedTypeExpression node);
         void Visit(ArrayTypeExpression node);

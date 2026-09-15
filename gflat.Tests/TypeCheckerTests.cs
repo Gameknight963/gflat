@@ -3541,6 +3541,35 @@ namespace gflat.Tests
             Assert.NotNull(ast);
             Assert.NotNull(checker);
         }
+
+        [Fact]
+        public void TypeCheck_GenericNestedType_DotAccess()
+        {
+            string code = """
+                struct Container<T>
+                {
+                    public struct Node
+                    {
+                        public T value;
+                    }
+                }
+
+                int main()
+                {
+                    Container<int>.Node node1;
+                    node1.value = 10;
+                    Container<double>.Node node2;
+                    node2.value = 3.14;
+                    return node1.value;
+                }
+                """;
+
+            (AstNode ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+            Assert.NotNull(checker.GetStruct("Container$int.Node"));
+            Assert.NotNull(checker.GetStruct("Container$double.Node"));
+        }
     }
 }
 

@@ -19,7 +19,7 @@ namespace gflat.comptime
         private const int MaxSteps = 100000;
         private const int MaxCallDepth = 256;
 
-        private readonly TypeChecker _typeChecker;
+        private readonly IConstEvaluationContext _context;
         private readonly Stack<Dictionary<string, ConstValue>> _scopes = new();
         private int _stepCount = 0;
         private int _callDepth = 0;
@@ -30,9 +30,9 @@ namespace gflat.comptime
         private bool _hasBroken = false;
         private bool _hasContinued = false;
 
-        public ConstEvaluator(TypeChecker typeChecker)
+        public ConstEvaluator(IConstEvaluationContext context)
         {
-            _typeChecker = typeChecker;
+            _context = context;
         }
 
         public bool TryEvaluate(AstNode node, out ConstValue? result, out string? failureReason)
@@ -109,7 +109,7 @@ namespace gflat.comptime
                 }
             }
 
-            if (_typeChecker.TryGetConstValueByName(name, out value))
+            if (_context.TryGetConstValueByName(name, out value))
             {
                 return true;
             }
@@ -692,7 +692,7 @@ namespace gflat.comptime
                 throw new ConstEvalException("Managed allocation ('new^') is not permitted at compile time", node.Line);
             }
 
-            TypeExpression resolvedType = _typeChecker.ResolveAlias(node.Type);
+            TypeExpression resolvedType = _context.ResolveAlias(node.Type);
             if (resolvedType is not NamedTypeExpression named)
             {
                 throw new ConstEvalException("Cannot instantiate anonymous type at compile time", node.Line);
@@ -705,7 +705,7 @@ namespace gflat.comptime
                 args.Add(_currentValue!);
             }
 
-            TypeChecker.StructInfo? structInfo = _typeChecker.GetStruct(named.Name);
+            TypeChecker.StructInfo? structInfo = _context.GetStruct(named.Name);
             if (structInfo != null)
             {
                 Dictionary<string, ConstValue> fields = new();
@@ -762,7 +762,7 @@ namespace gflat.comptime
                 return;
             }
 
-            TypeChecker.ClassInfo? classInfo = _typeChecker.GetClass(named.Name);
+            TypeChecker.ClassInfo? classInfo = _context.GetClass(named.Name);
             if (classInfo != null)
             {
                 if (classInfo.IsAbstract)
@@ -795,7 +795,7 @@ namespace gflat.comptime
                         _scopes.Peek()[matchingCtor.Parameters[i].Name] = args[i];
                     }
 
-                    if (matchingCtor.BaseArguments != null && classInfo.BaseClass != null && _typeChecker.GetClass(classInfo.BaseClass) is TypeChecker.ClassInfo baseClassInfo)
+                    if (matchingCtor.BaseArguments != null && classInfo.BaseClass != null && _context.GetClass(classInfo.BaseClass) is TypeChecker.ClassInfo baseClassInfo)
                     {
                         List<ConstValue> baseArgs = new();
                         foreach (AstNode bArg in matchingCtor.BaseArguments)
@@ -865,10 +865,10 @@ namespace gflat.comptime
             if (node.Callee is IdentifierExpression ident)
             {
                 funcName = ident.Name;
-                method = _typeChecker.ResolveFunctionForComptime(funcName);
+                method = _context.ResolveFunctionForComptime(funcName);
                 if (method == null && TryGetVariable("this", out ConstValue? thisVal) && thisVal is ConstValue.Struct thisStruct)
                 {
-                    TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(thisStruct.StructName);
+                    TypeChecker.StructInfo? sInfo = _context.GetStruct(thisStruct.StructName);
                     if (sInfo != null && sInfo.Methods.TryGetValue(funcName, out MethodDeclaration? sm))
                     {
                         method = sm;
@@ -882,7 +882,7 @@ namespace gflat.comptime
                 ConstValue targetObj = _currentValue!;
                 if (targetObj is ConstValue.Struct sVal)
                 {
-                    TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(sVal.StructName);
+                    TypeChecker.StructInfo? sInfo = _context.GetStruct(sVal.StructName);
                     if (sInfo != null && sInfo.Methods.TryGetValue(memberAccess.Member, out MethodDeclaration? sm))
                     {
                         method = sm;
@@ -951,7 +951,7 @@ namespace gflat.comptime
                 {
                     if (thisVal is ConstValue.Struct thisStruct)
                     {
-                        TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(thisStruct.StructName);
+                        TypeChecker.StructInfo? sInfo = _context.GetStruct(thisStruct.StructName);
                         if ((sInfo != null && sInfo.FieldIndex(ident.Name) >= 0) || thisStruct.Fields.ContainsKey(ident.Name))
                         {
                             thisStruct.Fields[ident.Name] = val;
@@ -961,7 +961,7 @@ namespace gflat.comptime
                     }
                     if (thisVal is ConstValue.ClassInstance thisClass)
                     {
-                        TypeChecker.ClassInfo? cInfo = _typeChecker.GetClass(thisClass.ClassName);
+                        TypeChecker.ClassInfo? cInfo = _context.GetClass(thisClass.ClassName);
                         if ((cInfo != null && cInfo.FieldIndex(ident.Name) >= 0) || thisClass.Fields.ContainsKey(ident.Name))
                         {
                             thisClass.Fields[ident.Name] = val;
@@ -1227,28 +1227,28 @@ namespace gflat.comptime
         public void Visit(SizeofExpression node)
         {
             CheckSteps(node.Line);
-            TypeExpression targetType = _typeChecker.ResolveAlias(node.TargetType);
+            TypeExpression targetType = _context.ResolveAlias(node.TargetType);
             if (targetType is NamedTypeExpression named &&
                 !TypeChecker.IsPrimitive(named.Name) &&
-                _typeChecker.GetStruct(named.Name) == null &&
-                _typeChecker.GetClass(named.Name) == null &&
-                _typeChecker.GetInterface(named.Name) == null &&
-                _typeChecker.ResolveEnum(named) == null &&
+                _context.GetStruct(named.Name) == null &&
+                _context.GetClass(named.Name) == null &&
+                _context.GetInterface(named.Name) == null &&
+                _context.ResolveEnum(named) == null &&
                 TryGetVariable(named.Name, out _))
             {
-                if (_typeChecker.TryLookupVariable(named.Name, out TypeExpression? varType) && varType != null)
+                if (_context.TryLookupVariable(named.Name, out TypeExpression? varType) && varType != null)
                 {
-                    targetType = _typeChecker.ResolveAlias(varType);
+                    targetType = _context.ResolveAlias(varType);
                 }
             }
-            int size = _typeChecker.GetTypeSize(targetType);
+            int size = _context.GetTypeSize(targetType);
             _currentValue = new ConstValue.Integer(size);
         }
 
         public void Visit(NameofExpression node)
         {
             CheckSteps(node.Line);
-            string name = _typeChecker.ExtractName(node.Target);
+            string name = _context.ExtractName(node.Target);
             _currentValue = new ConstValue.String(name);
         }
 

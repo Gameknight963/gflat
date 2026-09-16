@@ -1,10 +1,12 @@
 using gflat.ast;
 using gflat.CompileExceptions;
 using gflat.comptime;
+using gflat.symbols;
+using gflat.semantics;
 
 namespace gflat
 {
-    public class TypeChecker : IVisitor
+    public class TypeChecker : IVisitor, IConstEvaluationContext
     {
         private readonly Dictionary<AstNode, TypeExpression> _types = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _scopes = new();
@@ -13,10 +15,31 @@ namespace gflat
         private readonly Dictionary<string, ConstValue> _constVariablesByName = new();
         private readonly Dictionary<AstNode, ConstValue> _constValues = new();
         private readonly HashSet<string> _constVariableNames = new();
+        private readonly SymbolTable _symbols;
+        public SymbolTable Symbols => _symbols;
 
         public TypeChecker()
         {
             _constEvaluator = new ConstEvaluator(this);
+            _symbols = new SymbolTable(
+                _classes,
+                _structs,
+                _interfaces,
+                _enums,
+                _genericClasses,
+                _genericStructs,
+                _genericMethods,
+                _namespaceScopes,
+                _globalScope,
+                _functionNamespaces,
+                _operatorNamespaces,
+                _scopes,
+                _localAliases,
+                _localEnums,
+                _usingNamespaces
+            );
+            _symbols.EnclosingTypeNameProvider = () => _currentClass?.Name ?? _currentStruct?.Name;
+            _symbols.AliasResolver = ResolveAlias;
         }
 
         public bool TryGetConstValueByName(string name, out ConstValue? value) =>
@@ -32,7 +55,11 @@ namespace gflat
             ResolveFunction(name);
 
         private readonly NamespaceScope _globalScope = new();
-        private NamespaceScope _currentNamespace = null!;
+        private NamespaceScope _currentNamespace
+        {
+            get => _symbols.CurrentNamespace;
+            set => _symbols.CurrentNamespace = value;
+        }
         private readonly Dictionary<NamespaceDeclaration, NamespaceScope> _namespaceScopes = new();
 
         private Dictionary<string, StructInfo> _structs = new();
@@ -79,7 +106,11 @@ namespace gflat
 
 
         private readonly HashSet<string> _usingNamespaces = new();
-        private string _currentNamespacePath = "";
+        private string _currentNamespacePath
+        {
+            get => _symbols.CurrentNamespacePath;
+            set => _symbols.CurrentNamespacePath = value;
+        }
         private readonly Dictionary<string, StructDeclaration> _genericStructs = new();
         private readonly Dictionary<string, ClassDeclaration> _genericClasses = new();
         private readonly Dictionary<string, MethodDeclaration> _genericMethods = new();
@@ -355,7 +386,7 @@ namespace gflat
             public TokenKind Accessibility = TokenKind.Public;
         }
 
-        private class NamespaceScope
+        public class NamespaceScope
         {
             public Dictionary<string, MethodDeclaration> Functions = new();
             public Dictionary<string, ExternDeclaration> Externs = new();
@@ -753,13 +784,13 @@ namespace gflat
             RegisterMemberInScope(specialized, _globalScope, "");
             if (_classes.TryGetValue(specialized.Name, out ClassInfo? clsInfo))
             {
-                ResolveClassHierarchy(clsInfo, new HashSet<string>(), new HashSet<string>());
+                new HierarchyResolutionPass(_symbols).ResolveHierarchy(clsInfo);
             }
             foreach (AstNode m in specialized.Members)
             {
                 if (m is ClassDeclaration nestedCls && _classes.TryGetValue(nestedCls.Name, out ClassInfo? nestedClsInfo))
                 {
-                    ResolveClassHierarchy(nestedClsInfo, new HashSet<string>(), new HashSet<string>());
+                    new HierarchyResolutionPass(_symbols).ResolveHierarchy(nestedClsInfo);
                 }
             }
             specialized.Accept(this);
@@ -1452,30 +1483,33 @@ namespace gflat
             return false;
         }
 
-        private bool TypesMatch(TypeExpression a, TypeExpression b)
+        public static bool TypesMatchPublic(TypeExpression a, TypeExpression b, SymbolTable? symbols = null)
         {
-            a = ResolveAlias(a);
-            b = ResolveAlias(b);
+            if (symbols != null)
+            {
+                a = symbols.ResolveAlias(a);
+                b = symbols.ResolveAlias(b);
+            }
 
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
-                return pa.IsNullable == pb.IsNullable && pa.IsReadOnly == pb.IsReadOnly && TypesMatch(pa.Inner, pb.Inner);
+                return pa.IsNullable == pb.IsNullable && pa.IsReadOnly == pb.IsReadOnly && TypesMatchPublic(pa.Inner, pb.Inner, symbols);
             if (a is ManagedTypeExpression ma && b is ManagedTypeExpression mb)
-                return ma.IsNullable == mb.IsNullable && ma.IsReadOnly == mb.IsReadOnly && TypesMatch(ma.Inner, mb.Inner);
+                return ma.IsNullable == mb.IsNullable && ma.IsReadOnly == mb.IsReadOnly && TypesMatchPublic(ma.Inner, mb.Inner, symbols);
             if (a is ArrayTypeExpression aa && b is ArrayTypeExpression ab)
-                return TypesMatch(aa.ElementType, ab.ElementType) && (aa.Size == ab.Size || aa.Size == null || ab.Size == null);
+                return TypesMatchPublic(aa.ElementType, ab.ElementType, symbols) && (aa.Size == ab.Size || aa.Size == null || ab.Size == null);
             if (a is FunctionPointerTypeExpression fa && b is FunctionPointerTypeExpression fb)
             {
                 if (fa.IsManaged != fb.IsManaged || fa.IsNullable != fb.IsNullable)
                     return false;
-                if (!TypesMatch(fa.ReturnType, fb.ReturnType))
+                if (!TypesMatchPublic(fa.ReturnType, fb.ReturnType, symbols))
                     return false;
                 if (fa.ParameterTypes.Count != fb.ParameterTypes.Count)
                     return false;
                 for (int i = 0; i < fa.ParameterTypes.Count; i++)
                 {
-                    if (!TypesMatch(fa.ParameterTypes[i], fb.ParameterTypes[i]))
+                    if (!TypesMatchPublic(fa.ParameterTypes[i], fb.ParameterTypes[i], symbols))
                         return false;
                 }
                 return true;
@@ -1483,6 +1517,8 @@ namespace gflat
 
             return false;
         }
+
+        private bool TypesMatch(TypeExpression a, TypeExpression b) => TypesMatchPublic(a, b, _symbols);
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
@@ -1747,254 +1783,31 @@ namespace gflat
         public void Visit(CompilationUnit node)
         {
             _compilationUnit = node;
-            _currentNamespacePath = "";
-            _usingNamespaces.Clear();
-            foreach (UsingDirective u in node.Usings)
-                _usingNamespaces.Add(u.Name);
 
-            // first pass: register top-level members in global scope
-            foreach (AstNode member in node.Members)
-                RegisterMemberInScope(member, _globalScope, "");
+            // Pass 1: Symbol collection
+            SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols);
+            collectionPass.Execute(node);
 
-            // and nested namespaces
-            foreach (NamespaceDeclaration ns in node.Namespaces)
-                BuildNamespaceScope(ns, _globalScope, "");
+            // Pass 2: Hierarchy resolution
+            HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
+            hierarchyPass.Execute();
 
-            // resolve class hierarchies and vtable layouts
-            ResolveClassHierarchies();
-
-            // second pass: type check bodies
+            // Pass 3: Body type checking
             _currentNamespace = _globalScope;
             for (int i = 0; i < node.Members.Count; i++)
+            {
                 node.Members[i].Accept(this);
+            }
 
             foreach (NamespaceDeclaration ns in node.Namespaces)
+            {
                 ns.Accept(this);
+            }
         }
 
         private void ResolveClassHierarchies()
         {
-            // First partition base class vs interfaces for all classes
-            foreach (ClassInfo cls in _classes.Values)
-            {
-                if (cls.BaseClass != null && !_classes.ContainsKey(cls.BaseClass))
-                {
-                    string? current = cls.Name;
-                    while (current != null)
-                    {
-                        int lastDot = current.LastIndexOf('.');
-                        string enclosing = lastDot >= 0 ? current.Substring(0, lastDot) : "";
-                        if (enclosing.Length > 0)
-                        {
-                            string candidate = $"{enclosing}.{cls.BaseClass}";
-                            if (_classes.ContainsKey(candidate))
-                            {
-                                cls.BaseClass = candidate;
-                                break;
-                            }
-                            current = enclosing;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                List<string> remainingInterfaces = new();
-                foreach (string item in cls.Interfaces)
-                {
-                    string resolvedItem = item;
-                    if (!_classes.ContainsKey(resolvedItem))
-                    {
-                        string? current = cls.Name;
-                        while (current != null)
-                        {
-                            int lastDot = current.LastIndexOf('.');
-                            string enclosing = lastDot >= 0 ? current.Substring(0, lastDot) : "";
-                            if (enclosing.Length > 0)
-                            {
-                                string candidate = $"{enclosing}.{item}";
-                                if (_classes.ContainsKey(candidate))
-                                {
-                                    resolvedItem = candidate;
-                                    break;
-                                }
-                                current = enclosing;
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-                    }
-
-                    if (_classes.ContainsKey(resolvedItem))
-                    {
-                        if (cls.BaseClass != null)
-                        {
-                            throw new TypeCheckException($"Class '{cls.Name}' cannot inherit from multiple classes ('{cls.BaseClass}' and '{resolvedItem}')", cls.Line);
-                        }
-                        cls.BaseClass = resolvedItem;
-                    }
-                    else
-                    {
-                        remainingInterfaces.Add(item);
-                    }
-                }
-                cls.Interfaces = remainingInterfaces;
-            }
-
-            HashSet<string> visited = new();
-            HashSet<string> visiting = new();
-
-            foreach (ClassInfo cls in _classes.Values)
-            {
-                ResolveClassHierarchy(cls, visiting, visited);
-            }
-        }
-
-        private void ResolveClassHierarchy(ClassInfo cls, HashSet<string> visiting, HashSet<string> visited)
-        {
-            if (visited.Contains(cls.Name)) return;
-            if (visiting.Contains(cls.Name))
-                throw new TypeCheckException($"Circular inheritance detected involving class '{cls.Name}'", cls.Line);
-
-            visiting.Add(cls.Name);
-
-            if (cls.BaseClass != null)
-            {
-                if (!_classes.TryGetValue(cls.BaseClass, out ClassInfo? baseInfo))
-                {
-                    throw new TypeCheckException($"Class '{cls.Name}' inherits from unknown class '{cls.BaseClass}'", cls.Line);
-                }
-
-                ResolveClassHierarchy(baseInfo, visiting, visited);
-
-                // Inherit base fields in prefix order
-                cls.Fields.AddRange(baseInfo.Fields);
-                foreach (KeyValuePair<string, FieldDeclaration> kvp in baseInfo.FieldDeclarationsByName)
-                {
-                    cls.FieldDeclarationsByName[kvp.Key] = kvp.Value;
-                }
-
-                // Inherit base vtable slots
-                cls.VirtualMethods.AddRange(baseInfo.VirtualMethods);
-                foreach (var kvp in baseInfo.VTableSlots)
-                {
-                    cls.VTableSlots[kvp.Key] = kvp.Value;
-                }
-
-                // Inherit base methods (not overridden)
-                foreach (var kvp in baseInfo.Methods)
-                {
-                    if (!cls.Methods.ContainsKey(kvp.Key))
-                    {
-                        cls.Methods[kvp.Key] = kvp.Value;
-                    }
-                }
-                // Inherit base interfaces
-                foreach (string baseIface in baseInfo.Interfaces)
-                {
-                    if (!cls.Interfaces.Contains(baseIface))
-                    {
-                        cls.Interfaces.Add(baseIface);
-                    }
-                }
-
-                // Inherit base destructor slot
-                if (baseInfo.DestructorSlot >= 0)
-                {
-                    cls.DestructorSlot = baseInfo.DestructorSlot;
-                }
-            }
-
-            // Append cls's own declared fields
-            foreach (FieldDeclaration f in cls.FieldDeclarations)
-            {
-                if (cls.FieldIndex(f.Name) >= 0)
-                    throw new TypeCheckException($"Class '{cls.Name}' cannot declare field '{f.Name}' because it is already declared in a base class", f.Line);
-                cls.Fields.Add((f.Name, f.Type, f.Accessibility, cls.Name));
-                cls.FieldDeclarationsByName[f.Name] = f;
-            }
-
-            // Process methods: override, virtual, abstract, normal
-            foreach (var kvp in cls.Methods.Where(m => m.Value.DeclaringClass == cls.Name).ToList())
-            {
-                MethodDeclaration method = kvp.Value.Method;
-                if (method.IsOverride)
-                {
-                    if (!cls.VTableSlots.TryGetValue(method.Name, out int slot))
-                    {
-                        throw new TypeCheckException($"Method '{method.Name}' in class '{cls.Name}' is marked override but does not override any virtual or abstract method in a base class", method.Line);
-                    }
-                    MethodDeclaration baseMethod = cls.VirtualMethods[slot];
-                    if (baseMethod.Throws != method.Throws)
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' must match throws specification of base method", method.Line);
-                    if (baseMethod.IsReadOnly && !method.IsReadOnly)
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' must be marked readonly to match base method", method.Line);
-                    if (!TypesMatch(ResolveAlias(method.ReturnType), ResolveAlias(baseMethod.ReturnType)))
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' has return type '{TypeName(method.ReturnType)}' which does not match base method return type '{TypeName(baseMethod.ReturnType)}'", method.Line);
-                    if (method.Parameters.Count != baseMethod.Parameters.Count)
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' has {method.Parameters.Count} parameters, but base method has {baseMethod.Parameters.Count}", method.Line);
-                    for (int p = 0; p < method.Parameters.Count; p++)
-                    {
-                        if (!TypesMatch(ResolveAlias(method.Parameters[p].Type), ResolveAlias(baseMethod.Parameters[p].Type)))
-                            throw new TypeCheckException($"Parameter '{method.Parameters[p].Name}' of overriding method '{method.Name}' has type '{TypeName(method.Parameters[p].Type)}' which does not match base parameter type '{TypeName(baseMethod.Parameters[p].Type)}'", method.Parameters[p].Line);
-                    }
-                    if (baseMethod.Accessibility == TokenKind.Public && method.Accessibility != TokenKind.Public)
-                        throw new TypeCheckException($"Overriding method '{method.Name}' cannot reduce accessibility of public base method", method.Line);
-                    if (baseMethod.Accessibility == TokenKind.Protected && method.Accessibility == TokenKind.Private)
-                        throw new TypeCheckException($"Overriding method '{method.Name}' cannot reduce accessibility of protected base method", method.Line);
-
-                    cls.VirtualMethods[slot] = method;
-                    cls.Methods[method.Name] = (method, cls.Name);
-                }
-                else if (method.IsVirtual || method.IsAbstract)
-                {
-                    if (cls.VTableSlots.ContainsKey(method.Name))
-                    {
-                        throw new TypeCheckException($"Method '{method.Name}' in class '{cls.Name}' hides base virtual method without 'override' keyword", method.Line);
-                    }
-                    int slot = cls.VirtualMethods.Count;
-                    cls.VirtualMethods.Add(method);
-                    cls.VTableSlots[method.Name] = slot;
-                    cls.Methods[method.Name] = (method, cls.Name);
-                }
-            }
-
-            // Handle virtual destructor slot
-            bool isVirtualDtor = cls.Destructor?.IsVirtual == true || (cls.Destructor != null && cls.VirtualMethods.Count > 0) || cls.DestructorSlot >= 0;
-            if (isVirtualDtor)
-            {
-                if (cls.DestructorSlot < 0)
-                {
-                    cls.DestructorSlot = cls.VirtualMethods.Count;
-                    cls.VTableSlots["$dtor"] = cls.DestructorSlot;
-                    cls.VirtualMethods.Add(new MethodDeclaration("$dtor", Void, new List<Parameter>(), null, TokenKind.Public, false, true, false, false, cls.Destructor?.Line ?? cls.Line));
-                }
-                else
-                {
-                    cls.VirtualMethods[cls.DestructorSlot] = new MethodDeclaration("$dtor", Void, new List<Parameter>(), null, TokenKind.Public, false, false, true, false, cls.Destructor?.Line ?? cls.Line);
-                }
-            }
-
-            // If concrete class, ensure all abstract methods in vtable are implemented
-            if (!cls.IsAbstract)
-            {
-                for (int slot = 0; slot < cls.VirtualMethods.Count; slot++)
-                {
-                    MethodDeclaration vm = cls.VirtualMethods[slot];
-                    if (vm.IsAbstract)
-                    {
-                        string declaringClass = cls.Methods[vm.Name].DeclaringClass;
-                        throw new TypeCheckException($"Class '{cls.Name}' must implement abstract method '{declaringClass}.{vm.Name}' or be declared abstract", cls.Line);
-                    }
-                }
-            }
-
-            visiting.Remove(cls.Name);
-            visited.Add(cls.Name);
+            new HierarchyResolutionPass(_symbols).Execute();
         }
 
         private void RegisterMemberInScope(AstNode member, NamespaceScope scope, string nsPath)
@@ -4904,7 +4717,7 @@ namespace gflat
         public void Visit(AttributeNode node) { }
         public void Visit(ExternDeclaration node) { }
 
-        private static string TypeName(TypeExpression type) => type switch
+        public static string TypeName(TypeExpression type) => type switch
         {
             NamedTypeExpression n => n.Name,
             NestedTypeExpression nested => nested.TypeArguments.Count > 0
@@ -4916,6 +4729,8 @@ namespace gflat
             FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"
         };
+
+        public static string TypeNamePublic(TypeExpression type) => TypeName(type);
 
         public void Visit(GlobalExpression node) { }
         public void Visit(FunctionPointerTypeExpression node) { }

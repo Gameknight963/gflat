@@ -2816,19 +2816,6 @@ public class LlvmEmitter : IVisitor
                     Push(ptr);
                     break;
                 }
-            case TokenKind.InterpolatedStringSegment:
-                {
-                    string raw = node.Token.Text;
-                    string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
-                    string globalName = NewGlobal();
-                    int len = escaped.Length + 1; // +1 for null terminator
-                    string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
-                    EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
-                    string ptr = NewTemp();
-                    Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
-                    Push(ptr);
-                    break;
-                }
             default:
                 throw new NotImplementedException($"Literal type {node.Token.Kind} not yet supported");
         }
@@ -3631,90 +3618,7 @@ public class LlvmEmitter : IVisitor
         Push(finalVal);
     }
 
-    public void Visit(InterpolatedStringExpression node)
-    {
-        TypeChecker.ResolvedInterpolation info = _typeChecker.GetResolvedInterpolation(node)!;
-        string typeName = info.Handler.EnclosingTypeName!;
-        string ns = info.Handler.Namespace;
-
-        int holeCount = 0;
-        foreach (AstNode p in node.Parts)
-        {
-            if (p is not LiteralExpression lit || lit.Token.Kind != TokenKind.InterpolatedStringSegment)
-                holeCount++;
-        }
-
-        string handlerPtr = NewTemp();
-        Emit($"    {handlerPtr} = alloca %{typeName}");
-        Emit($"    store %{typeName} zeroinitializer, %{typeName}* {handlerPtr}");
-
-        if (info.Constructor != null && info.Constructor.Parameters.Count == 1)
-        {
-            string ctorName = GetConstructorMangledName(typeName, info.Constructor, ns);
-            Emit($"    call void @{ctorName}(%{typeName}* {handlerPtr}, i32 {holeCount})");
-        }
-        else
-        {
-            string ctorName = GetConstructorMangledName(typeName, null, ns);
-            Emit($"    call void @{ctorName}(%{typeName}* {handlerPtr})");
-        }
-
-        for (int i = 0; i < node.Parts.Count; i++)
-        {
-            AstNode part = node.Parts[i];
-            if (part is LiteralExpression lit && lit.Token.Kind == TokenKind.InterpolatedStringSegment)
-            {
-                lit.Accept(this);
-                string strVal = Pop();
-                string appendLitName = GetMethodMangledName(typeName, info.AppendLiteralMethod, ns);
-                string retType = EmitType(info.AppendLiteralMethod.ReturnType);
-                if (retType == "void")
-                {
-                    Emit($"    call void @{appendLitName}(%{typeName}* {handlerPtr}, i8* {strVal})");
-                }
-                else
-                {
-                    string dummy = NewTemp();
-                    Emit($"    {dummy} = call {retType} @{appendLitName}(%{typeName}* {handlerPtr}, i8* {strVal})");
-                }
-            }
-            else
-            {
-                part.Accept(this);
-                string holeVal = Pop();
-                TypeExpression holeType = _typeChecker.GetType(part);
-                MethodDeclaration holeMethod = info.HoleMethods[i];
-                holeVal = EmitImplicitCast(holeVal, holeType, holeMethod.Parameters[0].Type);
-                string llvmParamType = EmitParamType(holeMethod.Parameters[0].Type);
-
-                string appendFmtName = GetMethodMangledName(typeName, holeMethod, ns);
-                string retType = EmitType(holeMethod.ReturnType);
-                if (retType == "void")
-                {
-                    Emit($"    call void @{appendFmtName}(%{typeName}* {handlerPtr}, {llvmParamType} {holeVal})");
-                }
-                else
-                {
-                    string dummy = NewTemp();
-                    Emit($"    {dummy} = call {retType} @{appendFmtName}(%{typeName}* {handlerPtr}, {llvmParamType} {holeVal})");
-                }
-            }
-        }
-
-        string buildName = GetMethodMangledName(typeName, info.BuildMethod, ns);
-        string buildRetType = EmitType(info.BuildMethod.ReturnType);
-        if (buildRetType == "void")
-        {
-            Emit($"    call void @{buildName}(%{typeName}* {handlerPtr})");
-            Push("");
-        }
-        else
-        {
-            string resultVal = NewTemp();
-            Emit($"    {resultVal} = call {buildRetType} @{buildName}(%{typeName}* {handlerPtr})");
-            Push(resultVal);
-        }
-    }
+    public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
     public void Visit(NewExpression node)
     {
         TypeExpression resolvedType = _typeChecker.ResolveAlias(node.Type);
@@ -3844,64 +3748,7 @@ public class LlvmEmitter : IVisitor
             return;
         }
 
-        if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
-        {
-            if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
-            {
-                return;
-            }
-        }
-
-        TypeChecker.StringPrefixHandler handler = _typeChecker.GetResolvedPrefixHandler(node)!;
-        node.Literal.Accept(this);
-        string strArg = Pop();
-
-        if (handler.IsConstructor)
-        {
-            string typeName = handler.EnclosingTypeName!;
-            string temp = NewTemp();
-            Emit($"    {temp} = alloca %{typeName}");
-            Emit($"    store %{typeName} zeroinitializer, %{typeName}* {temp}");
-
-            string mangledName = GetConstructorMangledName(typeName, handler.Constructor, handler.Namespace);
-            Emit($"    call void @{mangledName}(%{typeName}* {temp}, i8* {strArg})");
-
-            string val = NewTemp();
-            Emit($"    {val} = load %{typeName}, %{typeName}* {temp}");
-            Push(val);
-        }
-        else if (handler.Method != null)
-        {
-            string ns = handler.Namespace;
-            string funcName;
-            if (ns.Length > 0)
-            {
-                funcName = handler.EnclosingTypeName != null
-                    ? $"gflat${ns}${handler.EnclosingTypeName}${handler.Method.Name}"
-                    : $"gflat${ns}${handler.Method.Name}";
-            }
-            else
-            {
-                funcName = handler.EnclosingTypeName != null
-                    ? $"gflat${handler.EnclosingTypeName}${handler.Method.Name}"
-                    : $"gflat${handler.Method.Name}";
-            }
-            string retType = EmitType(handler.ReturnType!);
-            if (retType == "void")
-            {
-                Emit($"    call void @{funcName}(i8* {strArg})");
-            }
-            else
-            {
-                string temp = NewTemp();
-                Emit($"    {temp} = call {retType} @{funcName}(i8* {strArg})");
-                Push(temp);
-            }
-        }
-        else
-        {
-            throw new NotImplementedException("Unsupported string prefix handler kind");
-        }
+        throw new NotImplementedException($"Custom string prefix '{node.Prefix}' is not supported");
     }
 
     private string GetDefaultValue(TypeExpression type)

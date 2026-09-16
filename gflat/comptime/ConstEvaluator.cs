@@ -1261,74 +1261,7 @@ namespace gflat.comptime
                 return;
             }
 
-            TypeChecker.StringPrefixHandler? handler = _typeChecker.GetResolvedPrefixHandler(node);
-            if (handler == null)
-            {
-                throw new ConstEvalException($"Unresolved string prefix '{node.Prefix}'", node.Line);
-            }
-
-            if (!handler.IsConst)
-            {
-                throw new ConstEvalException($"String prefix handler for '{node.Prefix}' is not marked 'const' and cannot be evaluated at compile time", node.Line);
-            }
-
-            string rawText = node.Literal.Token.Text[1..^1];
-            ConstValue strArg = new ConstValue.String(rawText);
-
-            if (handler.IsConstructor)
-            {
-                ConstructorDeclaration ctor = handler.Constructor!;
-                string typeName = handler.EnclosingTypeName!;
-                TypeChecker.StructInfo? structInfo = _typeChecker.GetStruct(typeName);
-                if (structInfo == null)
-                {
-                    throw new ConstEvalException($"Cannot instantiate '{typeName}' at compile time (only structs are supported)", node.Line);
-                }
-
-                Dictionary<string, ConstValue> fields = new();
-                ConstValue.Struct instance = new ConstValue.Struct(structInfo.Name, fields);
-
-                PushScope();
-                _scopes.Peek()["this"] = instance;
-                _scopes.Peek()[ctor.Parameters[0].Name] = strArg;
-
-                ctor.Body.Accept(this);
-                PopScope();
-
-                _currentValue = instance;
-            }
-            else if (handler.Method != null)
-            {
-                MethodDeclaration method = handler.Method;
-                if (_callDepth >= MaxCallDepth)
-                {
-                    throw new ConstEvalException($"Compile-time recursion exceeded maximum call depth of {MaxCallDepth}", node.Line);
-                }
-
-                _callDepth++;
-                PushScope();
-                _scopes.Peek()[method.Parameters[0].Name] = strArg;
-
-                bool prevReturned = _hasReturned;
-                ConstValue? prevReturnVal = _returnValue;
-                _hasReturned = false;
-                _returnValue = null;
-
-                method.Body?.Accept(this);
-
-                ConstValue? callResult = _returnValue;
-
-                _hasReturned = prevReturned;
-                _returnValue = prevReturnVal;
-                PopScope();
-                _callDepth--;
-
-                _currentValue = callResult ?? new ConstValue.Integer(0);
-            }
-            else
-            {
-                throw new ConstEvalException($"Unsupported prefix handler kind for '{node.Prefix}'", node.Line);
-            }
+            throw new ConstEvalException($"Unresolved string prefix '{node.Prefix}'", node.Line);
         }
     }
 }

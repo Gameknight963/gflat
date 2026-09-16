@@ -1155,11 +1155,6 @@ namespace gflat
                         left = new PrefixedStringLiteralExpression(left, memberToken.Text!, new LiteralExpression(strToken, strToken.Line), op.Line);
                         continue;
                     }
-                    if (Check(TokenKind.InterpolatedStringStart) && memberToken.End + 1 == Current.Start)
-                    {
-                        left = ParseInterpolatedString(prefix: memberToken.Text!, scope: left);
-                        continue;
-                    }
                     left = new NamespaceAccessExpression(left, memberToken.Text!, op.Line);
                     continue;
                 }
@@ -1253,7 +1248,7 @@ namespace gflat
             }
 
             // interpolated string
-            if (Check(TokenKind.InterpolatedStringStart))
+            if (Check(TokenKind.InterpolatedStringSegment) || Check(TokenKind.InterpolatedStringExprStart))
                 return ParseInterpolatedString();
 
             // literals
@@ -1339,10 +1334,6 @@ namespace gflat
                     Token strToken = Consume();
                     return new PrefixedStringLiteralExpression(null, token.Text!, new LiteralExpression(strToken, strToken.Line), line);
                 }
-                if (Check(TokenKind.InterpolatedStringStart) && token.End + 1 == Current.Start)
-                {
-                    return ParseInterpolatedString(prefix: token.Text, scope: null);
-                }
                 return new IdentifierExpression(token.Text, line);
             }
 
@@ -1388,7 +1379,7 @@ namespace gflat
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
             TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
-            TokenKind.InterpolatedStringStart or TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
+            TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
             TokenKind.Minus or TokenKind.Bang or TokenKind.Star or TokenKind.Ampersand or
             TokenKind.PlusPlus or TokenKind.MinusMinus;
 
@@ -1398,7 +1389,7 @@ namespace gflat
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
             TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
-            TokenKind.InterpolatedStringStart or TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
+            TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
             TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
 
         private LambdaExpression? TryParseLambda(bool isStatic)
@@ -1468,13 +1459,12 @@ namespace gflat
             _ => (0, 0)
         };
 
-        private InterpolatedStringExpression ParseInterpolatedString(string? prefix = null, AstNode? scope = null)
+        private InterpolatedStringExpression ParseInterpolatedString()
         {
             int line = Current.Line;
             List<AstNode> parts = new();
 
-            Expect(TokenKind.InterpolatedStringStart);
-            while (!Check(TokenKind.InterpolatedStringEnd) && !Check(TokenKind.EndOfFile))
+            while (Check(TokenKind.InterpolatedStringSegment) || Check(TokenKind.InterpolatedStringExprStart))
             {
                 if (Check(TokenKind.InterpolatedStringSegment))
                 {
@@ -1487,14 +1477,9 @@ namespace gflat
                     parts.Add(ParseExpression());
                     Expect(TokenKind.InterpolatedStringExprEnd);
                 }
-                else
-                {
-                    Consume();
-                }
             }
-            Expect(TokenKind.InterpolatedStringEnd);
 
-            return new InterpolatedStringExpression(parts, line, prefix, scope);
+            return new InterpolatedStringExpression(parts, line);
         }
     }
 }

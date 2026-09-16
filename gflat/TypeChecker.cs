@@ -80,91 +80,13 @@ namespace gflat
 
         public TypeExpression GetLambdaReturnType(LambdaExpression node) => _lambdaReturnTypes[node];
 
-        public class StringPrefixHandler
-        {
-            public string Prefix { get; }
-            public string FullName { get; }
-            public string Namespace { get; }
-            public string? EnclosingTypeName { get; }
-            public bool IsConstructor { get; }
-            public ConstructorDeclaration? Constructor { get; }
-            public MethodDeclaration? Method { get; }
-            public TypeExpression? ReturnType { get; }
-            public bool IsConst { get; }
-            public Parameter? Parameter { get; }
-            public bool IsInterpolationHandler { get; }
-            public StructDeclaration? StructDecl { get; }
-            public ClassDeclaration? ClassDecl { get; }
 
-            public StringPrefixHandler(
-                string prefix,
-                string fullName,
-                string ns,
-                string? enclosingTypeName,
-                bool isConstructor,
-                ConstructorDeclaration? constructor,
-                MethodDeclaration? method,
-                TypeExpression? returnType,
-                bool isConst,
-                Parameter? parameter,
-                bool isInterpolationHandler = false,
-                StructDeclaration? structDecl = null,
-                ClassDeclaration? classDecl = null)
-            {
-                Prefix = prefix;
-                FullName = fullName;
-                Namespace = ns;
-                EnclosingTypeName = enclosingTypeName;
-                IsConstructor = isConstructor;
-                Constructor = constructor;
-                Method = method;
-                ReturnType = returnType;
-                IsConst = isConst;
-                Parameter = parameter;
-                IsInterpolationHandler = isInterpolationHandler;
-                StructDecl = structDecl;
-                ClassDecl = classDecl;
-            }
-        }
-
-        public class ResolvedInterpolation
-        {
-            public StringPrefixHandler Handler { get; }
-            public ConstructorDeclaration? Constructor { get; }
-            public MethodDeclaration AppendLiteralMethod { get; }
-            public Dictionary<int, MethodDeclaration> HoleMethods { get; }
-            public MethodDeclaration BuildMethod { get; }
-
-            public ResolvedInterpolation(
-                StringPrefixHandler handler,
-                ConstructorDeclaration? constructor,
-                MethodDeclaration appendLiteralMethod,
-                Dictionary<int, MethodDeclaration> holeMethods,
-                MethodDeclaration buildMethod)
-            {
-                Handler = handler;
-                Constructor = constructor;
-                AppendLiteralMethod = appendLiteralMethod;
-                HoleMethods = holeMethods;
-                BuildMethod = buildMethod;
-            }
-        }
-
-        private readonly List<StringPrefixHandler> _prefixHandlers = new();
-        private readonly Dictionary<PrefixedStringLiteralExpression, StringPrefixHandler> _resolvedPrefixHandlers = new();
-        private readonly Dictionary<InterpolatedStringExpression, ResolvedInterpolation> _resolvedInterpolations = new();
         private readonly HashSet<string> _usingNamespaces = new();
         private string _currentNamespacePath = "";
         private readonly Dictionary<string, StructDeclaration> _genericStructs = new();
         private readonly Dictionary<string, ClassDeclaration> _genericClasses = new();
         private readonly Dictionary<string, MethodDeclaration> _genericMethods = new();
         private CompilationUnit? _compilationUnit = null;
-
-        public StringPrefixHandler? GetResolvedPrefixHandler(PrefixedStringLiteralExpression node) =>
-            _resolvedPrefixHandlers.TryGetValue(node, out StringPrefixHandler? handler) ? handler : null;
-
-        public ResolvedInterpolation? GetResolvedInterpolation(InterpolatedStringExpression node) =>
-            _resolvedInterpolations.TryGetValue(node, out ResolvedInterpolation? r) ? r : null;
 
         public string GetFunctionNamespace(MethodDeclaration method) =>
             _functionNamespaces.TryGetValue(method, out string? ns) ? ns : "";
@@ -2022,7 +1944,6 @@ namespace gflat
                 }
                 scope.Functions[method.Name] = method;
                 _functionNamespaces[method] = nsPath;
-                RegisterPrefixFromAttributes(method.Attributes, nsPath, null, null, method, null, null, method.Line);
             }
             else if (member is ExternDeclaration ext)
             {
@@ -2068,7 +1989,6 @@ namespace gflat
                     Namespace = nsPath,
                     Interfaces = new List<string>(str.Interfaces)
                 };
-                RegisterPrefixFromAttributes(str.Attributes, nsPath, str.Name, null, null, str, null, str.Line);
                 for (int i = 0; i < str.Members.Count; i++)
                 {
                     AstNode m = str.Members[i];
@@ -2113,12 +2033,10 @@ namespace gflat
                         info.Methods[sm.Name] = sm;
                         info.AllMethods.Add(sm);
                         _functionNamespaces[sm] = nsPath;
-                        RegisterPrefixFromAttributes(sm.Attributes, nsPath, str.Name, null, sm, null, null, sm.Line);
                     }
                     else if (m is ConstructorDeclaration ctor)
                     {
                         info.Constructors.Add(ctor);
-                        RegisterPrefixFromAttributes(ctor.Attributes, nsPath, str.Name, ctor, null, null, null, ctor.Line);
                     }
                     else if (m is DestructorDeclaration dtor)
                     {
@@ -2160,7 +2078,6 @@ namespace gflat
                     Interfaces = new List<string>(cls.Interfaces),
                     Line = cls.Line
                 };
-                RegisterPrefixFromAttributes(cls.Attributes, nsPath, cls.Name, null, null, null, cls, cls.Line);
 
                 for (int i = 0; i < cls.Members.Count; i++)
                 {
@@ -2202,7 +2119,6 @@ namespace gflat
                     else if (m is ConstructorDeclaration ctor)
                     {
                         info.Constructors.Add(ctor);
-                        RegisterPrefixFromAttributes(ctor.Attributes, nsPath, cls.Name, ctor, null, null, null, ctor.Line);
                     }
                     else if (m is DestructorDeclaration dtor)
                     {
@@ -2225,7 +2141,6 @@ namespace gflat
                         info.Methods[cm.Name] = (cm, cls.Name);
                         info.AllMethods.Add(cm);
                         _functionNamespaces[cm] = nsPath;
-                        RegisterPrefixFromAttributes(cm.Attributes, nsPath, cls.Name, null, cm, null, null, cm.Line);
                     }
                 }
 
@@ -4565,119 +4480,7 @@ namespace gflat
             throw new TypeCheckException($"'{named.Name}' has no field or method '{node.Member}'", node.Line);
         }
 
-        public void Visit(InterpolatedStringExpression node)
-        {
-            string prefix = node.Prefix ?? "s";
-
-            List<StringPrefixHandler> candidates;
-            if (node.Scope != null)
-            {
-                string scopeName = ExtractScopePath(node.Scope);
-                string normScope = scopeName.Replace('$', ':');
-                candidates = _prefixHandlers.Where(h =>
-                {
-                    if (h.Prefix != prefix || !h.IsInterpolationHandler)
-                        return false;
-
-                    string normFull = h.FullName.Replace('$', ':');
-                    string normNs = h.Namespace.Replace('$', ':');
-
-                    return normFull == $"{normScope}::{prefix}" ||
-                           normFull == normScope ||
-                           h.EnclosingTypeName == scopeName ||
-                           normNs == normScope ||
-                           normNs.EndsWith($"::{normScope}");
-                }).ToList();
-            }
-            else
-            {
-                candidates = FindAccessiblePrefixHandlers(prefix).Where(h => h.IsInterpolationHandler).ToList();
-            }
-
-            if (candidates.Count == 0)
-            {
-                throw new TypeCheckException($"Unknown string prefix '{prefix}' on line {node.Line}", node.Line);
-            }
-            if (candidates.Count > 1)
-            {
-                string candList = string.Join(", ", candidates.Select(c => c.FullName));
-                throw new TypeCheckException($"Ambiguous string prefix '{prefix}' on line {node.Line}. Candidate handlers: {candList}", node.Line);
-            }
-
-            StringPrefixHandler handler = candidates[0];
-            string typeName = handler.EnclosingTypeName!;
-            StructInfo? sInfo = GetStruct(typeName);
-            if (sInfo == null)
-            {
-                throw new TypeCheckException($"String prefix handler struct '{typeName}' was not found", node.Line);
-            }
-
-            // Hole count
-            int holeCount = 0;
-            foreach (AstNode p in node.Parts)
-            {
-                if (p is not LiteralExpression lit || lit.Token.Kind != TokenKind.InterpolatedStringSegment)
-                    holeCount++;
-            }
-
-            // Resolve constructor: 1-parameter taking int or default
-            ConstructorDeclaration? ctor = sInfo.Constructors.FirstOrDefault(c => c.Parameters.Count == 1 && IsAssignable(c.Parameters[0].Type, Int));
-            if (ctor == null)
-            {
-                ctor = sInfo.Constructors.FirstOrDefault(c => c.Parameters.Count == 0);
-            }
-
-            // Resolve AppendLiteral(readonly char*)
-            TypeExpression readOnlyCharPtr = new PointerTypeExpression(Char, false, node.Line, isReadOnly: true);
-            MethodDeclaration? appendLit = sInfo.AllMethods.FirstOrDefault(m =>
-                m.Name == "AppendLiteral" &&
-                m.Parameters.Count == 1 &&
-                IsAssignable(m.Parameters[0].Type, readOnlyCharPtr));
-
-            if (appendLit == null)
-            {
-                throw new TypeCheckException($"String prefix handler '{prefix}' must declare a method 'AppendLiteral(readonly char*)'", node.Line);
-            }
-
-            // Check each part
-            Dictionary<int, MethodDeclaration> holeMethods = new();
-            for (int i = 0; i < node.Parts.Count; i++)
-            {
-                AstNode part = node.Parts[i];
-                if (part is LiteralExpression litPart && litPart.Token.Kind == TokenKind.InterpolatedStringSegment)
-                {
-                    RecordType(litPart, readOnlyCharPtr);
-                }
-                else
-                {
-                    part.Accept(this);
-                    TypeExpression holeType = GetType(part);
-
-                    List<MethodDeclaration> matchingMethods = sInfo.AllMethods.Where(m =>
-                        m.Name == "AppendFormatted" &&
-                        m.Parameters.Count == 1 &&
-                        IsAssignable(m.Parameters[0].Type, holeType, part)).ToList();
-
-                    if (matchingMethods.Count == 0)
-                    {
-                        throw new TypeCheckException($"String prefix handler for '{prefix}' does not have an 'AppendFormatted' method accepting '{TypeName(holeType)}' on line {part.Line}", part.Line);
-                    }
-
-                    MethodDeclaration chosenMethod = matchingMethods.FirstOrDefault(m => TypesMatch(m.Parameters[0].Type, holeType)) ?? matchingMethods[0];
-                    holeMethods[i] = chosenMethod;
-                }
-            }
-
-            // Resolve Build()
-            MethodDeclaration? buildMethod = sInfo.AllMethods.FirstOrDefault(m => m.Name == "Build" && m.Parameters.Count == 0);
-            if (buildMethod == null)
-            {
-                throw new TypeCheckException($"String prefix handler for '{prefix}' must declare a parameterless method 'Build()'", node.Line);
-            }
-
-            RecordType(node, buildMethod.ReturnType);
-            _resolvedInterpolations[node] = new ResolvedInterpolation(handler, ctor, appendLit, holeMethods, buildMethod);
-        }
+        public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
         public void Visit(NewExpression node)
         {
             _callSites.Add((node, _currentFunction, _tryStack.ToList()));
@@ -5524,175 +5327,6 @@ namespace gflat
             return false;
         }
 
-        private void RegisterPrefixFromAttributes(List<AttributeNode> attributes, string nsPath, string? enclosingTypeName, ConstructorDeclaration? ctor, MethodDeclaration? method, StructDeclaration? strDecl, ClassDeclaration? clsDecl, int line)
-        {
-            foreach (AttributeNode attr in attributes)
-            {
-                if (attr.Name != "string_prefix")
-                    continue;
-
-                if (attr.Arguments.Count != 1)
-                {
-                    throw new TypeCheckException($"Attribute [string_prefix] requires exactly 1 argument (the prefix name)", line);
-                }
-
-                string prefix = attr.Arguments[0].Trim('\"');
-
-                if (prefix.Contains('$'))
-                {
-                    throw new TypeCheckException($"String prefix '{prefix}' is invalid: prefix names cannot contain '$'", line);
-                }
-
-                if (!System.Text.RegularExpressions.Regex.IsMatch(prefix, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
-                {
-                    throw new TypeCheckException($"String prefix '{prefix}' is invalid: prefix names must be valid identifiers without symbols", line);
-                }
-
-                if (prefix.StartsWith("__"))
-                {
-                    throw new TypeCheckException($"String prefix '{prefix}' is invalid: prefixes starting with '__' are reserved for the compiler", line);
-                }
-
-                if (prefix is "r" or "b" or "c")
-                {
-                    throw new TypeCheckException($"String prefix '{prefix}' is reserved for the compiler", line);
-                }
-
-                if (ctor != null)
-                {
-                    if (ctor.Parameters.Count != 1)
-                    {
-                        throw new TypeCheckException($"Constructor marked with [string_prefix] must take exactly 1 parameter", ctor.Line);
-                    }
-                    string typeName = enclosingTypeName!;
-                    string fullName = nsPath.Length > 0 ? $"{nsPath}::{typeName}" : typeName;
-                    if (!_prefixHandlers.Any(h => h.Prefix == prefix && h.FullName == fullName))
-                    {
-                        _prefixHandlers.Add(new StringPrefixHandler(prefix, fullName, nsPath, typeName, true, ctor, null, new NamedTypeExpression(typeName, null, ctor.Line), ctor.IsConst, ctor.Parameters[0]));
-                    }
-                }
-                else if (method != null)
-                {
-                    if (method.Parameters.Count != 1)
-                    {
-                        throw new TypeCheckException($"Method '{method.Name}' marked with [string_prefix] must take exactly 1 parameter", method.Line);
-                    }
-                    string fullName = nsPath.Length > 0
-                        ? (enclosingTypeName != null ? $"{nsPath}::{enclosingTypeName}::{method.Name}" : $"{nsPath}::{method.Name}")
-                        : (enclosingTypeName != null ? $"{enclosingTypeName}::{method.Name}" : method.Name);
-                    if (!_prefixHandlers.Any(h => h.Prefix == prefix && h.FullName == fullName))
-                    {
-                        _prefixHandlers.Add(new StringPrefixHandler(prefix, fullName, nsPath, enclosingTypeName, false, null, method, method.ReturnType, method.IsConst, method.Parameters[0]));
-                    }
-                }
-                else if (strDecl != null)
-                {
-                    ConstructorDeclaration? matchingCtor = strDecl.Members.OfType<ConstructorDeclaration>().FirstOrDefault(c => c.Parameters.Count == 1 && IsValidStringParameterType(ResolveAlias(c.Parameters[0].Type)));
-                    bool hasAppendLiteral = strDecl.Members.OfType<MethodDeclaration>().Any(m => m.Name == "AppendLiteral");
-                    bool hasBuild = strDecl.Members.OfType<MethodDeclaration>().Any(m => m.Name == "Build");
-                    bool isInterp = hasAppendLiteral && hasBuild;
-
-                    if (matchingCtor == null && !isInterp)
-                    {
-                        throw new TypeCheckException($"Struct '{strDecl.Name}' marked with [string_prefix] must declare a 1-parameter string constructor or interpolated string handler methods ('AppendLiteral' and 'Build')", strDecl.Line);
-                    }
-                    string fullName = nsPath.Length > 0 ? $"{nsPath}::{strDecl.Name}" : strDecl.Name;
-                    if (!_prefixHandlers.Any(h => h.Prefix == prefix && h.FullName == fullName))
-                    {
-                        _prefixHandlers.Add(new StringPrefixHandler(
-                            prefix, fullName, nsPath, strDecl.Name,
-                            isConstructor: matchingCtor != null,
-                            constructor: matchingCtor,
-                            method: null,
-                            returnType: new NamedTypeExpression(strDecl.Name, null, strDecl.Line),
-                            isConst: matchingCtor?.IsConst ?? false,
-                            parameter: matchingCtor?.Parameters[0],
-                            isInterpolationHandler: isInterp,
-                            structDecl: strDecl,
-                            classDecl: null));
-                    }
-                }
-                else if (clsDecl != null)
-                {
-                    ConstructorDeclaration? matchingCtor = clsDecl.Members.OfType<ConstructorDeclaration>().FirstOrDefault(c => c.Parameters.Count == 1 && IsValidStringParameterType(ResolveAlias(c.Parameters[0].Type)));
-                    bool hasAppendLiteral = clsDecl.Members.OfType<MethodDeclaration>().Any(m => m.Name == "AppendLiteral");
-                    bool hasBuild = clsDecl.Members.OfType<MethodDeclaration>().Any(m => m.Name == "Build");
-                    bool isInterp = hasAppendLiteral && hasBuild;
-
-                    if (matchingCtor == null && !isInterp)
-                    {
-                        throw new TypeCheckException($"Class '{clsDecl.Name}' marked with [string_prefix] must declare a 1-parameter string constructor or interpolated string handler methods ('AppendLiteral' and 'Build')", clsDecl.Line);
-                    }
-                    string fullName = nsPath.Length > 0 ? $"{nsPath}::{clsDecl.Name}" : clsDecl.Name;
-                    if (!_prefixHandlers.Any(h => h.Prefix == prefix && h.FullName == fullName))
-                    {
-                        _prefixHandlers.Add(new StringPrefixHandler(
-                            prefix, fullName, nsPath, clsDecl.Name,
-                            isConstructor: matchingCtor != null,
-                            constructor: matchingCtor,
-                            method: null,
-                            returnType: new NamedTypeExpression(clsDecl.Name, null, clsDecl.Line),
-                            isConst: matchingCtor?.IsConst ?? false,
-                            parameter: matchingCtor?.Parameters[0],
-                            isInterpolationHandler: isInterp,
-                            structDecl: null,
-                            classDecl: clsDecl));
-                    }
-                }
-            }
-        }
-
-        private string ExtractScopePath(AstNode scope)
-        {
-            if (scope is IdentifierExpression ident)
-                return ident.Name;
-            if (scope is NamespaceAccessExpression nsAccess)
-                return $"{ExtractScopePath(nsAccess.Left)}::{nsAccess.Member}";
-            throw new TypeCheckException($"Invalid scope qualifier for string prefix on line {scope.Line}", scope.Line);
-        }
-
-        private bool IsValidStringParameterType(TypeExpression type)
-        {
-            type = ResolveAlias(type);
-            if (type is PointerTypeExpression ptr)
-            {
-                TypeExpression inner = ResolveAlias(ptr.Inner);
-                return inner is NamedTypeExpression { Name: "char" };
-            }
-            if (type is ArrayTypeExpression arr)
-            {
-                TypeExpression inner = ResolveAlias(arr.ElementType);
-                return inner is NamedTypeExpression { Name: "char" };
-            }
-            if (type is NamedTypeExpression named)
-            {
-                return named.Name is "string" or "char*";
-            }
-            return false;
-        }
-
-        private List<StringPrefixHandler> FindAccessiblePrefixHandlers(string prefix)
-        {
-            List<StringPrefixHandler> matching = new();
-            foreach (StringPrefixHandler handler in _prefixHandlers)
-            {
-                if (handler.Prefix != prefix)
-                    continue;
-
-                string normNs = handler.Namespace.Replace('$', ':');
-                string normCur = _currentNamespacePath.Replace('$', ':');
-
-                if (handler.Namespace == "" ||
-                    normNs == normCur ||
-                    normCur.StartsWith(normNs + "::") ||
-                    _usingNamespaces.Any(u => u.Replace('$', ':') == normNs))
-                {
-                    matching.Add(handler);
-                }
-            }
-            return matching;
-        }
-
         public void Visit(PrefixedStringLiteralExpression node)
         {
             if (node.Prefix == "c")
@@ -5707,63 +5341,7 @@ namespace gflat
                 return;
             }
 
-            List<StringPrefixHandler> candidates;
-            if (node.Scope != null)
-            {
-                string scopeName = ExtractScopePath(node.Scope);
-                string normScope = scopeName.Replace('$', ':');
-                candidates = _prefixHandlers.Where(h =>
-                {
-                    if (h.Prefix != node.Prefix || (h.Constructor == null && h.Method == null))
-                        return false;
-
-                    string normFull = h.FullName.Replace('$', ':');
-                    string normNs = h.Namespace.Replace('$', ':');
-
-                    return normFull == $"{normScope}::{node.Prefix}" ||
-                           normFull == normScope ||
-                           h.EnclosingTypeName == scopeName ||
-                           normNs == normScope ||
-                           normNs.EndsWith($"::{normScope}");
-                }).ToList();
-            }
-            else
-            {
-                candidates = FindAccessiblePrefixHandlers(node.Prefix).Where(h => h.Constructor != null || h.Method != null).ToList();
-            }
-
-            if (candidates.Count == 0)
-            {
-                if (_prefixHandlers.Any(h => h.Prefix == node.Prefix))
-                {
-                    throw new TypeCheckException($"String prefix '{node.Prefix}' on line {node.Line} does not support static string literals", node.Line);
-                }
-                throw new TypeCheckException($"Unknown string prefix '{node.Prefix}' on line {node.Line}", node.Line);
-            }
-            if (candidates.Count > 1)
-            {
-                string candList = string.Join(", ", candidates.Select(c => c.FullName));
-                throw new TypeCheckException($"Ambiguous string prefix '{node.Prefix}' on line {node.Line}. Candidate handlers: {candList}", node.Line);
-            }
-
-            StringPrefixHandler handler = candidates[0];
-            _resolvedPrefixHandlers[node] = handler;
-
-            TypeExpression paramType = ResolveAlias(handler.Parameter!.Type);
-            if (!IsValidStringParameterType(paramType))
-            {
-                throw new TypeCheckException($"String prefix handler for '{node.Prefix}' on line {node.Line} must accept a string parameter (e.g. 'readonly char*'), but accepts '{paramType}'", node.Line);
-            }
-
-            _types[node] = handler.ReturnType!;
-
-            if (handler.IsConst)
-            {
-                if (_constEvaluator.TryEvaluate(node, out ConstValue? constVal, out string? _))
-                {
-                    _constValues[node] = constVal!;
-                }
-            }
+            throw new TypeCheckException($"Unknown string prefix '{node.Prefix}' on line {node.Line}", node.Line);
         }
 
         public void Visit(ThrowStatement node)

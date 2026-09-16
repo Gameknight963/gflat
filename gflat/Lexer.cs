@@ -249,7 +249,6 @@ public class Lexer
     private static List<Token> ReadInterpolatedString(string source, int startIndex, out int endIndex, int line)
     {
         List<Token> tokens = new();
-        tokens.Add(new Token(TokenKind.InterpolatedStringStart, line, startIndex, startIndex + 1, "$\""));
         int i = startIndex + 2; // skip $"
         int segStart = i;
 
@@ -260,11 +259,8 @@ public class Lexer
 
             if (source[i] == '{')
             {
-                // emit text segment before the expression if non-empty
-                if (i > segStart)
-                {
-                    tokens.Add(new Token(TokenKind.InterpolatedStringSegment, line, segStart, i - 1, source[segStart..i]));
-                }
+                // emit text segment before the expression
+                tokens.Add(new Token(TokenKind.InterpolatedStringSegment, line, segStart, i - 1, source[segStart..i]));
                 tokens.Add(new Token(TokenKind.InterpolatedStringExprStart, line, i, i));
                 i++; // skip {
 
@@ -291,11 +287,7 @@ public class Lexer
 
             if (source[i] == '"')
             {
-                if (i > segStart || tokens.Count == 1)
-                {
-                    tokens.Add(new Token(TokenKind.InterpolatedStringSegment, line, segStart, i - 1, source[segStart..i]));
-                }
-                tokens.Add(new Token(TokenKind.InterpolatedStringEnd, line, i, i, "\""));
+                tokens.Add(new Token(TokenKind.InterpolatedStringSegment, line, segStart, i - 1, source[segStart..i]));
                 endIndex = i + 1;
                 return tokens;
             }

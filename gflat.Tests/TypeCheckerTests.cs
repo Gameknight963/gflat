@@ -632,7 +632,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Color c = Color::Green;
-                    Color c2 = Color.Blue;
+                    Color c2 = Color::Blue;
                     int x = Color::Yellow;
                     return 0;
                 }
@@ -3187,8 +3187,8 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Outer.NestedClass* nc = null;
-                    Outer.NestedStruct ns;
+                    Outer::NestedClass* nc = null;
+                    Outer::NestedStruct ns;
                     return 0;
                 }
                 """;
@@ -3229,8 +3229,8 @@ namespace gflat.Tests
                 int main()
                 {
                     Outer* o = new* Outer();
-                    Outer.Inner* inner1 = o.CreateInner(42);
-                    Outer.Inner* inner2 = new* Outer.Inner(100);
+                    Outer::Inner* inner1 = o.CreateInner(42);
+                    Outer::Inner* inner2 = new* Outer::Inner(100);
                     return inner1.GetValue() + inner2.GetValue();
                 }
                 """;
@@ -3259,7 +3259,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Container.Item item = new Container.Item(5);
+                    Container::Item item = new Container::Item(5);
                     return item.Id;
                 }
                 """;
@@ -3467,7 +3467,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void TypeCheck_GenericNestedType_DotAccess()
+        public void TypeCheck_GenericNestedType_DoubleColonAccess()
         {
             string code = """
                 struct Container<T>
@@ -3480,9 +3480,9 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Container<int>.Node node1;
+                    Container<int>::Node node1;
                     node1.value = 10;
-                    Container<double>.Node node2;
+                    Container<double>::Node node2;
                     node2.value = 3.14;
                     return node1.value;
                 }
@@ -3493,6 +3493,29 @@ namespace gflat.Tests
             Assert.NotNull(checker);
             Assert.NotNull(checker.GetStruct("Container$int.Node"));
             Assert.NotNull(checker.GetStruct("Container$double.Node"));
+        }
+
+        [Fact]
+        public void TypeCheck_GenericNestedType_DotAccess_Throws()
+        {
+            string code = """
+                struct Container<T>
+                {
+                    public struct Node
+                    {
+                        public T value;
+                    }
+                }
+
+                int main()
+                {
+                    alias N = Container<int>.Node;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must use '::' for scoping and nested types, not '.'", ex.Message);
         }
 
         [Fact]
@@ -3754,6 +3777,122 @@ namespace gflat.Tests
             Assert.NotNull(ast);
             Assert.NotNull(checker);
         }
+
+        [Fact]
+        public void EnumMember_AccessedWithDot_Throws()
+        {
+            string code = """
+                enum Color
+                {
+                    Red,
+                    Green,
+                    Blue
+                }
+
+                int main()
+                {
+                    Color c = Color.Red;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must be accessed with '::', not '.'", ex.Message);
+        }
+
+        [Fact]
+        public void NamespaceMember_AccessedWithDot_Throws()
+        {
+            string code = """
+                namespace Math
+                {
+                    int Abs(int x)
+                    {
+                        if (x < 0) return -x;
+                        return x;
+                    }
+                }
+
+                int main()
+                {
+                    int res = Math.Abs(-10);
+                    return res;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must be accessed with '::', not '.'", ex.Message);
+        }
+
+        [Fact]
+        public void NestedType_InTypeName_WithDot_Throws()
+        {
+            string code = """
+                class Outer
+                {
+                    public class Inner
+                    {
+                        public int val;
+                    }
+                }
+
+                int main()
+                {
+                    alias T = Outer.Inner;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must use '::' for scoping and nested types, not '.'", ex.Message);
+        }
+
+        [Fact]
+        public void InstanceMember_AccessedWithDoubleColon_Throws()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    Point pt;
+                    pt::x = 10;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must be accessed with '.', not '::'", ex.Message);
+        }
+
+        [Fact]
+        public void InstanceMethod_CalledWithDoubleColon_Throws()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int GetX()
+                    {
+                        return this.x;
+                    }
+                }
+
+                int main()
+                {
+                    Point pt;
+                    return pt::GetX();
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must be accessed with '.', not '::'", ex.Message);
+        }
     }
 }
+
 

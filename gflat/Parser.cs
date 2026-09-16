@@ -1,4 +1,5 @@
 using gflat.ast;
+using gflat.CompileExceptions;
 
 namespace gflat
 {
@@ -260,14 +261,26 @@ namespace gflat
 
         private string ParseTypeNameString()
         {
-            string tname = Expect(TokenKind.Identifier).Text;
-            if (Match(TokenKind.DoubleColon))
+            if (Check(TokenKind.Dot))
             {
-                tname = $"{tname}::{Expect(TokenKind.Identifier).Text}";
+                throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
             }
-            while (Match(TokenKind.Dot))
+            string tname = Expect(TokenKind.Identifier).Text;
+            if (Check(TokenKind.Dot))
             {
-                tname = $"{tname}.{Expect(TokenKind.Identifier).Text}";
+                throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
+            }
+            while (Match(TokenKind.DoubleColon))
+            {
+                if (Check(TokenKind.Dot))
+                {
+                    throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
+                }
+                tname = $"{tname}::{Expect(TokenKind.Identifier).Text}";
+                if (Check(TokenKind.Dot))
+                {
+                    throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
+                }
             }
             return tname;
         }
@@ -640,20 +653,6 @@ namespace gflat
                 name = Expect(TokenKind.Identifier).Text;
             }
 
-            // namespace qualifier e.g. Program::Foo
-            string? ns = null;
-            if (Check(TokenKind.DoubleColon))
-            {
-                Consume();
-                ns = name;
-                name = Expect(TokenKind.Identifier).Text;
-            }
-
-            while (Match(TokenKind.Dot))
-            {
-                name = $"{name}.{Expect(TokenKind.Identifier).Text}";
-            }
-
             List<TypeExpression> typeArgs = new();
             if (Check(TokenKind.Less))
             {
@@ -667,10 +666,16 @@ namespace gflat
                 Expect(TokenKind.Greater);
             }
 
-            TypeExpression type = new NamedTypeExpression(name, ns, line, typeArgs);
+            TypeExpression type = new NamedTypeExpression(name, null, line, typeArgs);
 
-            while (Match(TokenKind.Dot))
+            if (Check(TokenKind.Dot))
             {
+                throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
+            }
+
+            while (Match(TokenKind.DoubleColon))
+            {
+                int memberLine = Current.Line;
                 string member = Expect(TokenKind.Identifier).Text;
                 List<TypeExpression> memberTypeArgs = new();
                 if (Check(TokenKind.Less))
@@ -684,7 +689,12 @@ namespace gflat
                     }
                     Expect(TokenKind.Greater);
                 }
-                type = new NestedTypeExpression(type, member, memberTypeArgs, line);
+                type = new NestedTypeExpression(type, member, memberTypeArgs, memberLine);
+
+                if (Check(TokenKind.Dot))
+                {
+                    throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
+                }
             }
 
             // postfix modifiers

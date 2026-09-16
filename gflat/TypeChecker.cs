@@ -106,6 +106,11 @@ namespace gflat
 
         public StructInfo? GetStruct(string name)
         {
+            if (name.Contains("::"))
+            {
+                name = name.Replace("::", ".");
+            }
+
             if (_structs.TryGetValue(name, out StructInfo? info))
             {
                 return info;
@@ -120,8 +125,18 @@ namespace gflat
             return null;
         }
 
-        public EnumInfo? GetEnum(string name) =>
-            _enums.TryGetValue(name, out EnumInfo? info) ? info : null;
+        public EnumInfo? GetEnum(string name)
+        {
+            if (_enums.TryGetValue(name, out EnumInfo? info))
+            {
+                return info;
+            }
+            if (name.Contains("::") && _enums.TryGetValue(name.Replace("::", "."), out EnumInfo? dotInfo))
+            {
+                return dotInfo;
+            }
+            return null;
+        }
 
         public bool TryGetEnumMember(AstNode node, out long value, out TypeExpression? underlyingType)
         {
@@ -194,6 +209,11 @@ namespace gflat
         private readonly Dictionary<string, ClassInfo> _classes = new();
         public ClassInfo? GetClass(string name)
         {
+            if (name.Contains("::"))
+            {
+                name = name.Replace("::", ".");
+            }
+
             if (_classes.TryGetValue(name, out ClassInfo? info))
             {
                 return info;
@@ -214,6 +234,11 @@ namespace gflat
 
         private string? ResolveNestedTypeName(string name)
         {
+            if (name.Contains("::"))
+            {
+                name = name.Replace("::", ".");
+            }
+
             if (name.Contains('.'))
             {
                 if (_classes.ContainsKey(name) || _structs.ContainsKey(name))
@@ -816,6 +841,23 @@ namespace gflat
                 TypeExpression resolvedParent = ResolveAlias(nested.Parent);
                 if (resolvedParent is NamedTypeExpression namedParent)
                 {
+                    string parentNs = namedParent.Namespace != null ? $"{namedParent.Namespace}::{namedParent.Name}" : namedParent.Name;
+                    NamespaceScope? ns = ResolveNamespaceByName(parentNs);
+                    if (ns != null)
+                    {
+                        if (ns.Aliases.TryGetValue(nested.Member, out TypeExpression? target))
+                        {
+                            return ResolveAlias(target);
+                        }
+
+                        if (nested.TypeArguments.Count > 0)
+                        {
+                            List<TypeExpression> resolvedArgs = nested.TypeArguments.Select(ResolveAlias).ToList();
+                            return ResolveGenericType(nested.Member, parentNs, resolvedArgs, nested.Line);
+                        }
+                        return ResolveAlias(new NamedTypeExpression(nested.Member, parentNs, nested.Line));
+                    }
+
                     string candidate = $"{namedParent.Name}.{nested.Member}";
                     if (nested.TypeArguments.Count > 0)
                     {
@@ -916,6 +958,20 @@ namespace gflat
 
         private NamespaceScope? ResolveNamespaceByName(string nsName)
         {
+            if (nsName.Contains("::"))
+            {
+                string[] parts = nsName.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
+                NamespaceScope? current = ResolveNamespaceByName(parts[0]);
+                for (int i = 1; i < parts.Length && current != null; i++)
+                {
+                    if (!current.Children.TryGetValue(parts[i], out current))
+                    {
+                        return null;
+                    }
+                }
+                return current;
+            }
+
             NamespaceScope? scope = _currentNamespace;
             while (scope != null)
             {
@@ -3862,6 +3918,18 @@ namespace gflat
 
         public void Visit(AssignmentExpression node)
         {
+            if (node.Target is NamespaceAccessExpression nsTarget)
+            {
+                if (nsTarget.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
+                {
+                    throw new TypeCheckException($"Instance member '{nsTarget.Member}' must be accessed with '.', not '::'", node.Line);
+                }
+                if (nsTarget.Left is not IdentifierExpression && nsTarget.Left is not GlobalExpression && nsTarget.Left is not NamespaceAccessExpression)
+                {
+                    throw new TypeCheckException($"Instance member '{nsTarget.Member}' must be accessed with '.', not '::'", node.Line);
+                }
+            }
+
             if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression))
                 throw new TypeCheckException($"Invalid assignment target '{node.Target.GetType().Name}'", node.Line);
 
@@ -3957,6 +4025,26 @@ namespace gflat
                         throw new TypeCheckException("The '->free()' syntax has been removed. Use 'delete ptr;' for objects allocated with 'new*', or 'free(ptr)' for raw malloc pointers.", node.Line);
                     }
                     throw new TypeCheckException("The '->' operator is no longer supported. Use '.' for member access.", node.Line);
+                }
+
+                EnumInfo? calleeEnum = ResolveEnum(memberAccess.Object);
+                if (calleeEnum != null)
+                {
+                    throw new TypeCheckException($"Enum member '{calleeEnum.Name}::{memberAccess.Member}' must be accessed with '::', not '.'", node.Line);
+                }
+
+                NamespaceScope? calleeNs = ResolveNamespace(memberAccess.Object);
+                if (calleeNs != null)
+                {
+                    throw new TypeCheckException($"Namespace member '{memberAccess.Member}' must be accessed with '::', not '.'", node.Line);
+                }
+
+                if (memberAccess.Object is IdentifierExpression calleeId && !TryLookupVariable(calleeId.Name, out _))
+                {
+                    if (GetClass(calleeId.Name) != null || GetStruct(calleeId.Name) != null || IsInterface(calleeId.Name))
+                    {
+                        throw new TypeCheckException($"Static member '{calleeId.Name}::{memberAccess.Member}' must be accessed with '::', not '.'", node.Line);
+                    }
                 }
 
                 memberAccess.Object.Accept(this);
@@ -4150,6 +4238,28 @@ namespace gflat
             }
             else if (node.Callee is NamespaceAccessExpression nsAccess)
             {
+                if (nsAccess.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
+                {
+                    throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
+                }
+                if (nsAccess.Left is not IdentifierExpression && nsAccess.Left is not GlobalExpression && nsAccess.Left is not NamespaceAccessExpression)
+                {
+                    throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
+                }
+                if (nsAccess.Left is IdentifierExpression typeId && !TryLookupVariable(typeId.Name, out _))
+                {
+                    ClassInfo? cInfo = GetClass(typeId.Name);
+                    if (cInfo != null && cInfo.Methods.ContainsKey(nsAccess.Member))
+                    {
+                        throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
+                    }
+                    StructInfo? sInfo = GetStruct(typeId.Name);
+                    if (sInfo != null && sInfo.Methods.ContainsKey(nsAccess.Member))
+                    {
+                        throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
+                    }
+                }
+
                 nsAccess.Accept(this);
                 RecordType(node, GetType(nsAccess));
                 NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
@@ -4318,6 +4428,28 @@ namespace gflat
 
         public void Visit(NamespaceAccessExpression node)
         {
+            if (node.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
+            {
+                throw new TypeCheckException($"Instance member '{node.Member}' must be accessed with '.', not '::'", node.Line);
+            }
+            if (node.Left is not IdentifierExpression && node.Left is not GlobalExpression && node.Left is not NamespaceAccessExpression)
+            {
+                throw new TypeCheckException($"Instance member '{node.Member}' must be accessed with '.', not '::'", node.Line);
+            }
+            if (node.Left is IdentifierExpression typeId && !TryLookupVariable(typeId.Name, out _))
+            {
+                ClassInfo? cInfo = GetClass(typeId.Name);
+                if (cInfo != null && (cInfo.FieldIndex(node.Member) >= 0 || cInfo.Methods.ContainsKey(node.Member)))
+                {
+                    throw new TypeCheckException($"Instance member '{node.Member}' must be accessed with '.', not '::'", node.Line);
+                }
+                StructInfo? sInfo = GetStruct(typeId.Name);
+                if (sInfo != null && (sInfo.FieldIndex(node.Member) >= 0 || sInfo.Methods.ContainsKey(node.Member)))
+                {
+                    throw new TypeCheckException($"Instance member '{node.Member}' must be accessed with '.', not '::'", node.Line);
+                }
+            }
+
             EnumInfo? enumInfo = ResolveEnum(node.Left);
             if (enumInfo != null)
             {
@@ -4362,6 +4494,8 @@ namespace gflat
                         return child;
                     scope = scope.Parent;
                 }
+                if (_globalScope.Children.TryGetValue(ident.Name, out NamespaceScope? gChild))
+                    return gChild;
                 return null;
             }
 
@@ -4389,15 +4523,21 @@ namespace gflat
             EnumInfo? enumInfo = ResolveEnum(node.Object);
             if (enumInfo != null)
             {
-                if (node.IsArrow)
-                    throw new TypeCheckException($"Cannot use '->' operator on enum '{enumInfo.Name}'", node.Line);
+                throw new TypeCheckException($"Enum member '{enumInfo.Name}::{node.Member}' must be accessed with '::', not '.'", node.Line);
+            }
 
-                if (!enumInfo.Members.TryGetValue(node.Member, out long val))
-                    throw new TypeCheckException($"Enum '{enumInfo.Name}' does not contain member '{node.Member}'", node.Line);
+            NamespaceScope? ns = ResolveNamespace(node.Object);
+            if (ns != null)
+            {
+                throw new TypeCheckException($"Namespace member '{node.Member}' must be accessed with '::', not '.'", node.Line);
+            }
 
-                RecordType(node, new NamedTypeExpression(enumInfo.Name, null, node.Line));
-                _resolvedEnumMembers[node] = (enumInfo, val);
-                return;
+            if (node.Object is IdentifierExpression id && !TryLookupVariable(id.Name, out _))
+            {
+                if (GetClass(id.Name) != null || GetStruct(id.Name) != null || IsInterface(id.Name))
+                {
+                    throw new TypeCheckException($"Static member '{id.Name}::{node.Member}' must be accessed with '::', not '.'", node.Line);
+                }
             }
 
             node.Object.Accept(this);
@@ -4768,8 +4908,8 @@ namespace gflat
         {
             NamedTypeExpression n => n.Name,
             NestedTypeExpression nested => nested.TypeArguments.Count > 0
-                ? $"{TypeName(nested.Parent)}.{nested.Member}<{string.Join(", ", nested.TypeArguments.Select(TypeName))}>"
-                : $"{TypeName(nested.Parent)}.{nested.Member}",
+                ? $"{TypeName(nested.Parent)}::{nested.Member}<{string.Join(", ", nested.TypeArguments.Select(TypeName))}>"
+                : $"{TypeName(nested.Parent)}::{nested.Member}",
             PointerTypeExpression p => (p.IsReadOnly ? "readonly " : "") + TypeName(p.Inner) + "*",
             ManagedTypeExpression m => (m.IsReadOnly ? "readonly " : "") + TypeName(m.Inner) + "^",
             ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),

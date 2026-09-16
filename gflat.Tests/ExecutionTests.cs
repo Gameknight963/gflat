@@ -932,20 +932,20 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void EnumMemberAccessDotAndDoubleColon()
+        public void EnumMemberAccessDoubleColon()
         {
             string code = """
                 enum Status
                 {
                     Pending = 10,
                     Active = 20,
-                    Done = 30
+                    Inactive = 30
                 }
 
                 int main()
                 {
                     Status s1 = Status::Active;
-                    Status s2 = Status.Active;
+                    Status s2 = Status::Active;
                     if (s1 == s2 && s1 == 20)
                     {
                         return 42;
@@ -988,14 +988,14 @@ namespace gflat.Tests
         public void EnumCustomBackingTypesExecution()
         {
             string code = """
-                enum ByteCode : char
+                enum ByteCode : byte
                 {
-                    Start = 1,
-                    Mid = 5,
-                    End = 10
+                    Start = 0,
+                    Middle = 1,
+                    End = 255
                 }
 
-                enum BigVal : long
+                enum BigVal : ulong
                 {
                     Small = 1L,
                     Big = 32L
@@ -1004,7 +1004,7 @@ namespace gflat.Tests
                 int main()
                 {
                     ByteCode b = ByteCode::End;
-                    BigVal bg = BigVal.Big;
+                    BigVal bg = BigVal::Big;
                     if (b == ByteCode::End && bg == BigVal::Big)
                     {
                         return 42;
@@ -1034,7 +1034,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Graphics::Mode m1 = Graphics::Mode::Shaded;
-                    Graphics::Mode m2 = Graphics.Mode.Shaded;
+                    Graphics::Mode m2 = Graphics::Mode::Shaded;
                     if (m1 == m2 && m1 == 42)
                     {
                         return 42;
@@ -3483,7 +3483,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Outer* o = new* Outer(10);
-                    Outer.Inner* i = new* Outer.Inner(16);
+                    Outer::Inner* i = new* Outer::Inner(16);
                     int res = o.x + i.GetDouble(); // 10 + 32 = 42
                     delete i;
                     delete o;
@@ -3523,7 +3523,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Collection.Iterator it = new Collection.Iterator(10, 5);
+                    Collection::Iterator it = new Collection::Iterator(10, 5);
                     int a = it.Next(); // 10
                     int b = it.Next(); // 15
                     int c = it.Next(); // 20
@@ -3563,7 +3563,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Calculator* calc = new* Calculator();
-                    Calculator.Worker* w = calc.CreateWorker(30);
+                    Calculator::Worker* w = calc.CreateWorker(30);
                     int ans = w.Compute(12); // 42
                     delete w;
                     delete calc;
@@ -3620,7 +3620,7 @@ namespace gflat.Tests
                 int main()
                 {
                     IntList* list = new* IntList(5);
-                    IntList.Enumerator it = list.GetEnumerator();
+                    IntList::Enumerator it = list.GetEnumerator();
                     int sum = 0;
                     while (it.MoveNext())
                     {
@@ -3914,7 +3914,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Wrapper<int>.Box b;
+                    Wrapper<int>::Box b;
                     b.item = 77;
                     return b.item;
                 }

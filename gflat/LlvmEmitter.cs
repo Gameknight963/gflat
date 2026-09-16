@@ -1011,9 +1011,7 @@ public class LlvmEmitter : IVisitor
         _isInsideMain = false;
 
         string ns = _currentNamespacePath;
-        string mangledName = ns.Length > 0
-            ? $"gflat${ns}${className}${node.Name}"
-            : $"gflat${className}${node.Name}";
+        string mangledName = GetMethodMangledName(className, node, ns, isClass: true);
 
         List<string> paramList = new() { $"%{className}* %this" };
         foreach (Parameter p in node.Parameters)
@@ -1434,6 +1432,27 @@ public class LlvmEmitter : IVisitor
             : $"gflat${structName}${baseOpName}${paramTypes}";
     }
 
+    private string GetMethodMangledName(string typeName, MethodDeclaration node, string ns, bool isClass = false)
+    {
+        bool isOverloaded = false;
+        if (!isClass && _typeChecker.GetStruct(typeName) is TypeChecker.StructInfo sInfo)
+        {
+            isOverloaded = sInfo.AllMethods.Count(m => m.Name == node.Name) > 1;
+        }
+        else if (isClass && _typeChecker.GetClass(typeName) is TypeChecker.ClassInfo cInfo)
+        {
+            isOverloaded = cInfo.AllMethods.Count(m => m.Name == node.Name) > 1;
+        }
+
+        string baseName = ns.Length > 0 ? $"gflat${ns}${typeName}${node.Name}" : $"gflat${typeName}${node.Name}";
+        if (isOverloaded)
+        {
+            string paramTypes = string.Join("$", node.Parameters.Select(p => GetMangleTypeName(p.Type)));
+            return $"{baseName}${paramTypes}";
+        }
+        return baseName;
+    }
+
     private void EmitStructOperator(string structName, OperatorDeclaration node)
     {
         _locals.Clear();
@@ -1493,9 +1512,7 @@ public class LlvmEmitter : IVisitor
         _isInsideMain = false;
 
         string ns = _currentNamespacePath;
-        string mangledName = ns.Length > 0
-            ? $"gflat${ns}${structName}${node.Name}"
-            : $"gflat${structName}${node.Name}";
+        string mangledName = GetMethodMangledName(structName, node, ns, isClass: false);
 
         List<string> paramList = new() { $"%{structName}* %this" };
         foreach (Parameter p in node.Parameters)
@@ -2799,6 +2816,19 @@ public class LlvmEmitter : IVisitor
                     Push(ptr);
                     break;
                 }
+            case TokenKind.InterpolatedStringSegment:
+                {
+                    string raw = node.Token.Text;
+                    string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                    string globalName = NewGlobal();
+                    int len = escaped.Length + 1; // +1 for null terminator
+                    string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                    EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
+                    string ptr = NewTemp();
+                    Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
+                    Push(ptr);
+                    break;
+                }
             default:
                 throw new NotImplementedException($"Literal type {node.Token.Kind} not yet supported");
         }
@@ -3249,9 +3279,7 @@ public class LlvmEmitter : IVisitor
             }
 
             string ns = _typeChecker.GetFunctionNamespace(structMethod);
-            funcName = ns.Length > 0 
-                ? $"gflat${ns}${typeName}${structMethod.Name}" 
-                : $"gflat${typeName}${structMethod.Name}";
+            funcName = GetMethodMangledName(typeName, structMethod, ns, isClass: _typeChecker.IsClass(rawName));
         }
         else if (node.Callee is IdentifierExpression idMethod && target is MethodDeclaration methodMember && _currentClass != null && _currentClass.Methods.ContainsKey(idMethod.Name))
         {
@@ -3280,9 +3308,7 @@ public class LlvmEmitter : IVisitor
             }
 
             string ns = _typeChecker.GetFunctionNamespace(methodMember);
-            funcName = ns.Length > 0
-                ? $"gflat${ns}${declaringClass}${methodMember.Name}"
-                : $"gflat${declaringClass}${methodMember.Name}";
+            funcName = GetMethodMangledName(declaringClass, methodMember, ns, isClass: true);
         }
         else
         {
@@ -3605,7 +3631,90 @@ public class LlvmEmitter : IVisitor
         Push(finalVal);
     }
 
-    public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
+    public void Visit(InterpolatedStringExpression node)
+    {
+        TypeChecker.ResolvedInterpolation info = _typeChecker.GetResolvedInterpolation(node)!;
+        string typeName = info.Handler.EnclosingTypeName!;
+        string ns = info.Handler.Namespace;
+
+        int holeCount = 0;
+        foreach (AstNode p in node.Parts)
+        {
+            if (p is not LiteralExpression lit || lit.Token.Kind != TokenKind.InterpolatedStringSegment)
+                holeCount++;
+        }
+
+        string handlerPtr = NewTemp();
+        Emit($"    {handlerPtr} = alloca %{typeName}");
+        Emit($"    store %{typeName} zeroinitializer, %{typeName}* {handlerPtr}");
+
+        if (info.Constructor != null && info.Constructor.Parameters.Count == 1)
+        {
+            string ctorName = GetConstructorMangledName(typeName, info.Constructor, ns);
+            Emit($"    call void @{ctorName}(%{typeName}* {handlerPtr}, i32 {holeCount})");
+        }
+        else
+        {
+            string ctorName = GetConstructorMangledName(typeName, null, ns);
+            Emit($"    call void @{ctorName}(%{typeName}* {handlerPtr})");
+        }
+
+        for (int i = 0; i < node.Parts.Count; i++)
+        {
+            AstNode part = node.Parts[i];
+            if (part is LiteralExpression lit && lit.Token.Kind == TokenKind.InterpolatedStringSegment)
+            {
+                lit.Accept(this);
+                string strVal = Pop();
+                string appendLitName = GetMethodMangledName(typeName, info.AppendLiteralMethod, ns);
+                string retType = EmitType(info.AppendLiteralMethod.ReturnType);
+                if (retType == "void")
+                {
+                    Emit($"    call void @{appendLitName}(%{typeName}* {handlerPtr}, i8* {strVal})");
+                }
+                else
+                {
+                    string dummy = NewTemp();
+                    Emit($"    {dummy} = call {retType} @{appendLitName}(%{typeName}* {handlerPtr}, i8* {strVal})");
+                }
+            }
+            else
+            {
+                part.Accept(this);
+                string holeVal = Pop();
+                TypeExpression holeType = _typeChecker.GetType(part);
+                MethodDeclaration holeMethod = info.HoleMethods[i];
+                holeVal = EmitImplicitCast(holeVal, holeType, holeMethod.Parameters[0].Type);
+                string llvmParamType = EmitParamType(holeMethod.Parameters[0].Type);
+
+                string appendFmtName = GetMethodMangledName(typeName, holeMethod, ns);
+                string retType = EmitType(holeMethod.ReturnType);
+                if (retType == "void")
+                {
+                    Emit($"    call void @{appendFmtName}(%{typeName}* {handlerPtr}, {llvmParamType} {holeVal})");
+                }
+                else
+                {
+                    string dummy = NewTemp();
+                    Emit($"    {dummy} = call {retType} @{appendFmtName}(%{typeName}* {handlerPtr}, {llvmParamType} {holeVal})");
+                }
+            }
+        }
+
+        string buildName = GetMethodMangledName(typeName, info.BuildMethod, ns);
+        string buildRetType = EmitType(info.BuildMethod.ReturnType);
+        if (buildRetType == "void")
+        {
+            Emit($"    call void @{buildName}(%{typeName}* {handlerPtr})");
+            Push("");
+        }
+        else
+        {
+            string resultVal = NewTemp();
+            Emit($"    {resultVal} = call {buildRetType} @{buildName}(%{typeName}* {handlerPtr})");
+            Push(resultVal);
+        }
+    }
     public void Visit(NewExpression node)
     {
         TypeExpression resolvedType = _typeChecker.ResolveAlias(node.Type);
@@ -3777,7 +3886,7 @@ public class LlvmEmitter : IVisitor
                     ? $"gflat${handler.EnclosingTypeName}${handler.Method.Name}"
                     : $"gflat${handler.Method.Name}";
             }
-            string retType = EmitType(handler.ReturnType);
+            string retType = EmitType(handler.ReturnType!);
             if (retType == "void")
             {
                 Emit($"    call void @{funcName}(i8* {strArg})");

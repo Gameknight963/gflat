@@ -1,4 +1,4 @@
-extern int printf(char* fmt, ...);
+extern int printf(readonly char* fmt, ...);
 
 // ========================================================
 // 1. Const Functions & Compile-Time Evaluation (Stage 2)
@@ -194,7 +194,7 @@ struct Rect : IShape
     }
 }
 
-void PrintShape(char* label, IShape* shape)
+void PrintShape(readonly char* label, IShape* shape)
 {
     printf("%s -> Area: %d, Perimeter: %d\n", label, shape.Area(), shape.Perimeter());
 }

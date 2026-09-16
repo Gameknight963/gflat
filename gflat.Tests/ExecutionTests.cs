@@ -75,9 +75,9 @@ namespace gflat.Tests
         public void PrintfStandardOutput()
         {
             string code = """
-                extern int printf(char* fmt, ...);
+                extern int printf(readonly char* fmt, ...);
 
-                void Greet(char* name)
+                void Greet(readonly char* name)
                 {
                     printf("Hello, %s!\n", name);
                 }
@@ -4460,6 +4460,159 @@ namespace gflat.Tests
 
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(10, result.ExitCode);
+        }
+
+        [Fact]
+        public void StringLiteralReadOnlyDecayExecution()
+        {
+            string code = """
+                int main()
+                {
+                    readonly char* s = "hello";
+                    if (s[0] == 'h' && s[4] == 'o')
+                    {
+                        return 42;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void CustomStaticStringPrefixExecution()
+        {
+            string code = """
+                [string_prefix("sql")]
+                struct SqlQuery
+                {
+                    public readonly char* text;
+                    SqlQuery(readonly char* raw)
+                    {
+                        this.text = raw;
+                    }
+                }
+
+                int main()
+                {
+                    SqlQuery q = sql"SELECT id FROM users";
+                    if (q.text[0] == 'S' && q.text[6] == ' ')
+                    {
+                        return 88;
+                    }
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(88, result.ExitCode);
+        }
+
+        [Fact]
+        public void CustomInterpolatedStringPrefixExecution()
+        {
+            string code = """
+                [string_prefix("test")]
+                struct IntAccumulator
+                {
+                    public int sum;
+                    public int holeCount;
+
+                    IntAccumulator(int holes)
+                    {
+                        this.sum = 100;
+                        this.holeCount = holes;
+                    }
+
+                    void AppendLiteral(readonly char* lit)
+                    {
+                        int i = 0;
+                        while (lit[i] != '\0')
+                        {
+                            this.sum = this.sum + 1;
+                            i++;
+                        }
+                    }
+
+                    void AppendFormatted(int val)
+                    {
+                        this.sum = this.sum + val;
+                    }
+
+                    int Build()
+                    {
+                        return this.sum + this.holeCount * 10;
+                    }
+                }
+
+                int main()
+                {
+                    int val = test$"a{5}bc{7}";
+                    return val;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(135, result.ExitCode);
+        }
+
+        [Fact]
+        public void DefaultInterpolatedStringPrefixExecution()
+        {
+            string code = """
+                [string_prefix("s")]
+                struct StringHandler
+                {
+                    public int total;
+
+                    StringHandler(int holes)
+                    {
+                        this.total = 50;
+                    }
+
+                    void AppendLiteral(readonly char* lit)
+                    {
+                        int i = 0;
+                        while (lit[i] != '\0')
+                        {
+                            this.total = this.total + 1;
+                            i++;
+                        }
+                    }
+
+                    void AppendFormatted(int val)
+                    {
+                        this.total = this.total + val;
+                    }
+
+                    void AppendFormatted(readonly char* s)
+                    {
+                        int i = 0;
+                        while (s[i] != '\0')
+                        {
+                            this.total = this.total + 2;
+                            i++;
+                        }
+                    }
+
+                    int Build()
+                    {
+                        return this.total;
+                    }
+                }
+
+                int main()
+                {
+                    // 50 (init) + 1 ("X") + 20 (int 20) + 1 ("Y") + 4 (two chars * 2 in "hi") = 76
+                    int res = $"X{20}Y{"hi"}";
+                    return res;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(76, result.ExitCode);
         }
     }
 }

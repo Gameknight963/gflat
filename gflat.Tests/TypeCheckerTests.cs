@@ -3706,6 +3706,213 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("cannot pass 'default' as 'int*'", ex.Message);
         }
+
+        [Fact]
+        public void StringLiteralAssignsToReadOnlyCharPtr()
+        {
+            string code = """
+                int main()
+                {
+                    readonly char* s = "hello";
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void StringLiteralCannotAssignToMutableCharPtr()
+        {
+            string code = """
+                int main()
+                {
+                    char* s = "hello";
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot assign", ex.Message);
+        }
+
+        [Fact]
+        public void StringLiteralInitializesStackArray()
+        {
+            string code = """
+                int main()
+                {
+                    char[10] buf = "hello";
+                    char* p = buf;
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void PrefixNameCannotContainDollar()
+        {
+            string code = """
+                [string_prefix("sql$")]
+                struct SqlHandler
+                {
+                    void AppendLiteral(readonly char* lit) {}
+                    int Build() { return 0; }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("cannot contain '$'", ex.Message);
+        }
+
+        [Fact]
+        public void PrefixNameCannotContainSymbols()
+        {
+            string code = """
+                [string_prefix("sql@test")]
+                struct SqlHandler
+                {
+                    void AppendLiteral(readonly char* lit) {}
+                    int Build() { return 0; }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("valid identifiers without symbols", ex.Message);
+        }
+
+        [Fact]
+        public void PrefixNameCannotStartWithDoubleUnderscore()
+        {
+            string code = """
+                [string_prefix("__internal")]
+                struct InternalHandler
+                {
+                    void AppendLiteral(readonly char* lit) {}
+                    int Build() { return 0; }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("reserved for the compiler", ex.Message);
+        }
+
+        [Theory]
+        [InlineData("r")]
+        [InlineData("b")]
+        [InlineData("c")]
+        public void PrefixNameReservedCompilerPrefixesThrow(string prefix)
+        {
+            string code = $$"""
+                [string_prefix("{{prefix}}")]
+                struct ReservedHandler
+                {
+                    void AppendLiteral(readonly char* lit) {}
+                    int Build() { return 0; }
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("reserved for the compiler", ex.Message);
+        }
+
+        [Fact]
+        public void InterpolatedStringHandlerTypeChecks()
+        {
+            string code = """
+                [string_prefix("sql")]
+                struct SqlHandler
+                {
+                    SqlHandler(int holeCount) {}
+                    void AppendLiteral(readonly char* lit) {}
+                    void AppendFormatted(int val) {}
+                    void AppendFormatted(readonly char* val) {}
+                    readonly char* Build() { return "query"; }
+                }
+
+                int main()
+                {
+                    readonly char* q = sql$"SELECT * FROM users WHERE id = {123} AND name = {"alice"}";
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void DefaultInterpolatedStringPrefixSTypeChecks()
+        {
+            string code = """
+                [string_prefix("s")]
+                struct DefaultHandler
+                {
+                    DefaultHandler() {}
+                    void AppendLiteral(readonly char* lit) {}
+                    void AppendFormatted(int val) {}
+                    int Build() { return 42; }
+                }
+
+                int main()
+                {
+                    int res = $"Number: {100}";
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void InterpolatedStringMissingAppendFormattedThrows()
+        {
+            string code = """
+                [string_prefix("s")]
+                struct DefaultHandler
+                {
+                    DefaultHandler() {}
+                    void AppendLiteral(readonly char* lit) {}
+                    void AppendFormatted(int val) {}
+                    int Build() { return 42; }
+                }
+
+                int main()
+                {
+                    int res = $"Condition: {true}";
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("does not have an 'AppendFormatted' method accepting 'bool'", ex.Message);
+        }
+
+        [Fact]
+        public void InterpolatedStringMissingBuildThrows()
+        {
+            string code = """
+                [string_prefix("s")]
+                struct DefaultHandler
+                {
+                    DefaultHandler() {}
+                    void AppendLiteral(readonly char* lit) {}
+                    void AppendFormatted(int val) {}
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must declare a 1-parameter string constructor or interpolated string handler methods", ex.Message);
+        }
     }
 }
 

@@ -305,6 +305,14 @@ namespace gflat.ast
             {
                 return new PrefixedStringLiteralExpression(pref.Scope != null ? CloneNode(pref.Scope) : null, pref.Prefix, (LiteralExpression)CloneNode(pref.Literal), pref.Line);
             }
+            if (node is InterpolatedStringExpression interp)
+            {
+                return new InterpolatedStringExpression(
+                    interp.Parts.Select(CloneNode).ToList(),
+                    interp.Line,
+                    interp.Prefix,
+                    interp.Scope != null ? CloneNode(interp.Scope) : null);
+            }
             if (node is NamespaceAccessExpression nsAcc)
             {
                 return new NamespaceAccessExpression(CloneNode(nsAcc.Left), nsAcc.Member, nsAcc.Line);

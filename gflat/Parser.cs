@@ -564,6 +564,20 @@ namespace gflat
 
         private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null)
         {
+            if (isReadOnly)
+            {
+                if (returnType is PointerTypeExpression ptr && !ptr.IsReadOnly)
+                {
+                    returnType = new PointerTypeExpression(ptr.Inner, ptr.IsNullable, ptr.Line, isReadOnly: true);
+                    isReadOnly = false;
+                }
+                else if (returnType is ManagedTypeExpression mgd && !mgd.IsReadOnly)
+                {
+                    returnType = new ManagedTypeExpression(mgd.Inner, mgd.IsNullable, mgd.Line, isReadOnly: true);
+                    isReadOnly = false;
+                }
+            }
+
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
             while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
@@ -1141,6 +1155,11 @@ namespace gflat
                         left = new PrefixedStringLiteralExpression(left, memberToken.Text!, new LiteralExpression(strToken, strToken.Line), op.Line);
                         continue;
                     }
+                    if (Check(TokenKind.InterpolatedStringStart) && memberToken.End + 1 == Current.Start)
+                    {
+                        left = ParseInterpolatedString(prefix: memberToken.Text!, scope: left);
+                        continue;
+                    }
                     left = new NamespaceAccessExpression(left, memberToken.Text!, op.Line);
                     continue;
                 }
@@ -1234,7 +1253,7 @@ namespace gflat
             }
 
             // interpolated string
-            if (Check(TokenKind.InterpolatedStringSegment) || Check(TokenKind.InterpolatedStringExprStart))
+            if (Check(TokenKind.InterpolatedStringStart))
                 return ParseInterpolatedString();
 
             // literals
@@ -1320,6 +1339,10 @@ namespace gflat
                     Token strToken = Consume();
                     return new PrefixedStringLiteralExpression(null, token.Text!, new LiteralExpression(strToken, strToken.Line), line);
                 }
+                if (Check(TokenKind.InterpolatedStringStart) && token.End + 1 == Current.Start)
+                {
+                    return ParseInterpolatedString(prefix: token.Text, scope: null);
+                }
                 return new IdentifierExpression(token.Text, line);
             }
 
@@ -1365,7 +1388,7 @@ namespace gflat
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
             TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
-            TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
+            TokenKind.InterpolatedStringStart or TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
             TokenKind.Minus or TokenKind.Bang or TokenKind.Star or TokenKind.Ampersand or
             TokenKind.PlusPlus or TokenKind.MinusMinus;
 
@@ -1375,7 +1398,7 @@ namespace gflat
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
             TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
-            TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
+            TokenKind.InterpolatedStringStart or TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
             TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
 
         private LambdaExpression? TryParseLambda(bool isStatic)
@@ -1445,12 +1468,13 @@ namespace gflat
             _ => (0, 0)
         };
 
-        private InterpolatedStringExpression ParseInterpolatedString()
+        private InterpolatedStringExpression ParseInterpolatedString(string? prefix = null, AstNode? scope = null)
         {
             int line = Current.Line;
             List<AstNode> parts = new();
 
-            while (Check(TokenKind.InterpolatedStringSegment) || Check(TokenKind.InterpolatedStringExprStart))
+            Expect(TokenKind.InterpolatedStringStart);
+            while (!Check(TokenKind.InterpolatedStringEnd) && !Check(TokenKind.EndOfFile))
             {
                 if (Check(TokenKind.InterpolatedStringSegment))
                 {
@@ -1463,9 +1487,14 @@ namespace gflat
                     parts.Add(ParseExpression());
                     Expect(TokenKind.InterpolatedStringExprEnd);
                 }
+                else
+                {
+                    Consume();
+                }
             }
+            Expect(TokenKind.InterpolatedStringEnd);
 
-            return new InterpolatedStringExpression(parts, line);
+            return new InterpolatedStringExpression(parts, line, prefix, scope);
         }
     }
 }

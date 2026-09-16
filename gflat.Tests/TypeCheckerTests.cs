@@ -135,7 +135,7 @@ namespace gflat.Tests
                 """;
 
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot use '->' operator on non-pointer type", ex.Message);
+            Assert.Contains("The '->' operator is no longer supported", ex.Message);
         }
 
         [Fact]
@@ -151,46 +151,40 @@ namespace gflat.Tests
                 {
                     Point p;
                     Point* ptr = &p;
-                    int val = ptr->x;
+                    int a = ptr->x;
                     return 0;
                 }
                 """;
 
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("reserved for pointer metadata and lifecycle operations", ex.Message);
-            Assert.Contains("Use '.' to access member 'x'", ex.Message);
+            Assert.Contains("The '->' operator is no longer supported", ex.Message);
         }
 
         [Fact]
-        public void ArrowOperatorForStructMethodSuggestsDot()
+        public void ArrowOperatorCallSuggestsDot()
         {
             string code = """
                 struct Point
                 {
                     int x;
-
-                    void Reset()
-                    {
-                        this.x = 0;
-                    }
+                    int GetX() { return this.x; }
                 }
 
                 int main()
                 {
                     Point p;
                     Point* ptr = &p;
-                    ptr->Reset();
+                    int a = ptr->GetX();
                     return 0;
                 }
                 """;
 
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("reserved for pointer metadata and lifecycle operations", ex.Message);
-            Assert.Contains("Use '.' to call method 'Reset'", ex.Message);
+            Assert.Contains("The '->' operator is no longer supported", ex.Message);
         }
 
         [Fact]
-        public void ArrowPropertyAssignmentThrows()
+        public void AssigningToPointerAddressThrows()
         {
             string code = """
                 int main()
@@ -203,7 +197,7 @@ namespace gflat.Tests
                 """;
 
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot assign to read-only pointer property", ex.Message);
+            Assert.Contains("Cannot assign using '->'", ex.Message);
         }
 
         [Fact]
@@ -223,7 +217,7 @@ namespace gflat.Tests
                 """;
 
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("is a property, not a method", ex.Message);
+            Assert.Contains("The '->' operator is no longer supported", ex.Message);
         }
 
         [Fact]
@@ -450,13 +444,13 @@ namespace gflat.Tests
                 int main()
                 {
                     int(int, int)* f = &Add;
-                    f->free();
+                    delete f;
                     return 0;
                 }
                 """;
 
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot call '->free' on a function pointer", ex.Message);
+            Assert.Contains("Cannot delete a function pointer", ex.Message);
         }
 
         [Fact]
@@ -582,7 +576,7 @@ namespace gflat.Tests
                 """;
 
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Pointer arithmetic is not allowed on managed pointers ('^')", ex.Message);
+            Assert.Contains("Managed pointers ('^') are not yet supported", ex.Message);
         }
 
         [Fact]
@@ -1411,7 +1405,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Use '.' to call method 'Area' on 'IShape'", ex.Message);
+            Assert.Contains("The '->' operator is no longer supported", ex.Message);
         }
 
         [Fact]
@@ -2837,7 +2831,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    p->free();
+                    delete p;
                     return 0;
                 }
                 """;
@@ -3538,7 +3532,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot assign 'default' to 'Foo^'", ex.Message);
+            Assert.Contains("Managed pointers ('^') are not yet supported", ex.Message);
         }
 
         [Fact]
@@ -3611,6 +3605,82 @@ namespace gflat.Tests
                     char[10] buf = "hello";
                     char* p = buf;
                     return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+        [Fact]
+        public void DeleteStatement_ValidatesPointer()
+        {
+            string code = """
+                class Foo { }
+                int main()
+                {
+                    Foo*? f = null;
+                    delete f;
+                    return 0;
+                }
+                """;
+
+            var (ast, checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void DeleteStatement_RejectsNonPointer()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 5;
+                    delete x;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot delete non-pointer", ex.Message);
+        }
+
+        [Fact]
+        public void DeleteStatement_RejectsVoidPointer()
+        {
+            string code = """
+                int main()
+                {
+                    void*? p = null;
+                    delete p;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot delete 'void*'", ex.Message);
+        }
+
+        [Fact]
+        public void UsingDirective_ResolvesUnqualifiedFunctions()
+        {
+            string code = """
+                using Math;
+
+                namespace Math
+                {
+                    int Abs(int x)
+                    {
+                        if (x < 0) return -x;
+                        return x;
+                    }
+                }
+
+                int main()
+                {
+                    int res = Abs(-10);
+                    return res;
                 }
                 """;
 

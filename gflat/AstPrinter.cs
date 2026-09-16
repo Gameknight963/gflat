@@ -164,6 +164,12 @@ namespace gflat
             Indented(() => node.Statement.Accept(this));
         }
 
+        public void Visit(DeleteStatement node)
+        {
+            Print("Delete");
+            Indented(() => node.Target.Accept(this));
+        }
+
         public void Visit(ExpressionStatement node)
         {
             Print("ExpressionStatement");

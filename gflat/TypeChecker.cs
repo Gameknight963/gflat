@@ -282,12 +282,12 @@ namespace gflat
         public bool TryGetVirtualMethodCall(CallExpression node, out (ClassInfo Class, int SlotIndex, MethodDeclaration Method) call) =>
             _virtualMethodCalls.TryGetValue(node, out call);
 
-        private readonly Dictionary<CallExpression, (ClassInfo Class, bool IsVirtual, int SlotIndex)> _classDestructorCalls = new();
-        public bool TryGetClassDestructorCall(CallExpression node, out (ClassInfo Class, bool IsVirtual, int SlotIndex) call) =>
+        private readonly Dictionary<AstNode, (ClassInfo Class, bool IsVirtual, int SlotIndex)> _classDestructorCalls = new();
+        public bool TryGetClassDestructorCall(AstNode node, out (ClassInfo Class, bool IsVirtual, int SlotIndex) call) =>
             _classDestructorCalls.TryGetValue(node, out call);
 
-        private readonly Dictionary<CallExpression, StructInfo> _structDestructorCalls = new();
-        public bool TryGetStructDestructorCall(CallExpression node, out StructInfo? sInfo) =>
+        private readonly Dictionary<AstNode, StructInfo> _structDestructorCalls = new();
+        public bool TryGetStructDestructorCall(AstNode node, out StructInfo? sInfo) =>
             _structDestructorCalls.TryGetValue(node, out sInfo);
 
         public bool IsSubclassOf(string derivedName, string baseName)
@@ -959,6 +959,10 @@ namespace gflat
         private void ValidateTypeUsage(TypeExpression type, int line)
         {
             TypeExpression resolved = ResolveAlias(type);
+            if (resolved is ManagedTypeExpression)
+            {
+                throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", line);
+            }
             if (resolved is NamedTypeExpression named && IsInterface(named))
             {
                 throw new TypeCheckException($"Cannot use interface '{named.Name}' as a value type. Interfaces must be used as pointers ('{named.Name}*')", line);
@@ -966,6 +970,13 @@ namespace gflat
             else if (resolved is ArrayTypeExpression arr)
             {
                 ValidateTypeUsage(arr.ElementType, line);
+            }
+            else if (resolved is PointerTypeExpression ptr)
+            {
+                if (ResolveAlias(ptr.Inner) is ManagedTypeExpression)
+                {
+                    throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", line);
+                }
             }
         }
 
@@ -2823,6 +2834,46 @@ namespace gflat
             }
         }
 
+        public void Visit(DeleteStatement node)
+        {
+            node.Target.Accept(this);
+            TypeExpression targetType = ResolveAlias(GetType(node.Target));
+            if (targetType is FunctionPointerTypeExpression)
+            {
+                throw new TypeCheckException("Cannot delete a function pointer", node.Line);
+            }
+            if (targetType is not PointerTypeExpression ptr)
+            {
+                throw new TypeCheckException($"Cannot delete non-pointer type '{TypeName(targetType)}'", node.Line);
+            }
+            if (ptr.IsReadOnly)
+            {
+                throw new TypeCheckException("Cannot delete a readonly pointer", node.Line);
+            }
+            if (ptr.Inner is NamedTypeExpression { Name: "void" })
+            {
+                throw new TypeCheckException("Cannot delete 'void*'", node.Line);
+            }
+
+            TypeExpression inner = ResolveAlias(ptr.Inner);
+            if (inner is NamedTypeExpression namedCls && _classes.TryGetValue(namedCls.Name, out ClassInfo? clsInfo))
+            {
+                bool hasVirtualDtor = clsInfo.DestructorSlot >= 0;
+                bool hasDtor = hasVirtualDtor || HasAnyDestructor(clsInfo);
+                if (hasDtor)
+                {
+                    _classDestructorCalls[node] = (clsInfo, hasVirtualDtor, clsInfo.DestructorSlot);
+                }
+            }
+            else if (inner is NamedTypeExpression namedStr && _structs.TryGetValue(namedStr.Name, out StructInfo? structInfo))
+            {
+                if (structInfo.Destructor != null)
+                {
+                    _structDestructorCalls[node] = structInfo;
+                }
+            }
+        }
+
         public void Visit(ReturnStatement node)
         {
             if (_inDefer)
@@ -3137,31 +3188,12 @@ namespace gflat
             BlockStatement loopBody = new BlockStatement(loopBodyStmts, node.Line);
             WhileStatement whileStmt = new WhileStatement(moveNextCall, loopBody, node.Line);
 
-            bool hasDispose = false;
-            if (_classes.TryGetValue(namedEnum.Name, out ClassInfo? dispClsInfo))
-            {
-                hasDispose = dispClsInfo.Methods.ContainsKey("Dispose");
-            }
-            else if (_structs.TryGetValue(namedEnum.Name, out StructInfo? dispStrInfo))
-            {
-                hasDispose = dispStrInfo.Methods.ContainsKey("Dispose");
-            }
-            else if (ResolveInterface(namedEnum) is InterfaceInfo dispIfaceInfo)
-            {
-                hasDispose = dispIfaceInfo.MethodsByName.ContainsKey("Dispose");
-            }
-
             List<AstNode> outerStmts = new List<AstNode>();
             if (colVarDecl != null)
             {
                 outerStmts.Add(colVarDecl);
             }
             outerStmts.Add(iterVarDecl);
-            if (hasDispose)
-            {
-                AstNode disposeCall = new CallExpression(new MemberAccessExpression(new IdentifierExpression(iterVarName, node.Line), "Dispose", isArrow: false, node.Line), new List<AstNode>(), node.Line);
-                outerStmts.Add(new DeferStatement(new ExpressionStatement(disposeCall, node.Line), node.Line));
-            }
             outerStmts.Add(whileStmt);
             BlockStatement desugaredBlock = new BlockStatement(outerStmts, node.Line);
 
@@ -3818,8 +3850,8 @@ namespace gflat
             if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression))
                 throw new TypeCheckException($"Invalid assignment target '{node.Target.GetType().Name}'", node.Line);
 
-            if (node.Target is MemberAccessExpression { IsArrow: true } arrow)
-                throw new TypeCheckException($"Cannot assign to read-only pointer property '->{arrow.Member}'", node.Line);
+            if (node.Target is MemberAccessExpression { IsArrow: true })
+                throw new TypeCheckException("Cannot assign using '->'. Use '.' for member access.", node.Line);
 
             node.Target.Accept(this);
             TypeExpression targetType = GetType(node.Target);
@@ -3907,62 +3939,11 @@ namespace gflat
             {
                 if (memberAccess.IsArrow)
                 {
-                    memberAccess.Object.Accept(this);
-                    TypeExpression targetObjType = GetType(memberAccess.Object);
-                    if (targetObjType is not PointerTypeExpression && targetObjType is not ManagedTypeExpression && targetObjType is not FunctionPointerTypeExpression)
-                        throw new TypeCheckException($"Cannot use '->' operator on non-pointer type '{TypeName(targetObjType)}'", node.Line);
-
                     if (memberAccess.Member == "free")
                     {
-                        if (targetObjType is FunctionPointerTypeExpression)
-                            throw new TypeCheckException("Cannot call '->free' on a function pointer", node.Line);
-                        if ((targetObjType is PointerTypeExpression pFree && pFree.IsReadOnly) || (targetObjType is ManagedTypeExpression mFree && mFree.IsReadOnly))
-                            throw new TypeCheckException("Cannot call '->free' on a readonly pointer", node.Line);
-                        if (node.Arguments.Count != 0)
-                            throw new TypeCheckException("'free()' takes no arguments", node.Line);
-
-                        TypeExpression? innerType = targetObjType is PointerTypeExpression p ? p.Inner : (targetObjType is ManagedTypeExpression m ? m.Inner : null);
-                        if (innerType != null)
-                        {
-                            TypeExpression resInner = ResolveAlias(innerType);
-                            if (resInner is NamedTypeExpression namedCls && _classes.TryGetValue(namedCls.Name, out ClassInfo? clsInfo))
-                            {
-                                bool hasVirtualDtor = clsInfo.DestructorSlot >= 0;
-                                bool hasDtor = hasVirtualDtor || HasAnyDestructor(clsInfo);
-                                if (hasDtor)
-                                {
-                                    _classDestructorCalls[node] = (clsInfo, hasVirtualDtor, clsInfo.DestructorSlot);
-                                }
-                            }
-                            else if (resInner is NamedTypeExpression namedStr && _structs.TryGetValue(namedStr.Name, out StructInfo? structInfo))
-                            {
-                                if (structInfo.Destructor != null)
-                                {
-                                    _structDestructorCalls[node] = structInfo;
-                                }
-                            }
-                        }
-
-                        RecordType(node, Void);
-                        return;
+                        throw new TypeCheckException("The '->free()' syntax has been removed. Use 'delete ptr;' for objects allocated with 'new*', or 'free(ptr)' for raw malloc pointers.", node.Line);
                     }
-                    else if (memberAccess.Member is "address" or "is_null")
-                    {
-                        throw new TypeCheckException($"'->{memberAccess.Member}' is a property, not a method", node.Line);
-                    }
-                    else
-                    {
-                        TypeExpression? innerType = targetObjType is PointerTypeExpression p ? p.Inner : (targetObjType is ManagedTypeExpression m ? m.Inner : null);
-                        if (innerType != null)
-                        {
-                            TypeExpression resInner = ResolveAlias(innerType);
-                            if (resInner is NamedTypeExpression namedStr && (_structs.ContainsKey(namedStr.Name) || IsInterface(namedStr)))
-                            {
-                                throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to call method '{memberAccess.Member}' on '{namedStr.Name}'.", node.Line);
-                            }
-                        }
-                        throw new TypeCheckException($"Unknown pointer operation '->{memberAccess.Member}'. The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free').", node.Line);
-                    }
+                    throw new TypeCheckException("The '->' operator is no longer supported. Use '.' for member access.", node.Line);
                 }
 
                 memberAccess.Object.Accept(this);
@@ -4264,6 +4245,23 @@ namespace gflat
                     return method;
                 scope = scope.Parent;
             }
+
+            MethodDeclaration? foundInUsing = null;
+            foreach (string usingNs in _usingNamespaces)
+            {
+                NamespaceScope? nsScope = ResolveNamespaceByName(usingNs);
+                if (nsScope != null && nsScope.Functions.TryGetValue(name, out MethodDeclaration? candidate))
+                {
+                    if (foundInUsing != null && foundInUsing != candidate)
+                    {
+                        throw new TypeCheckException($"Call to function '{name}' is ambiguous between namespaces", 0);
+                    }
+                    foundInUsing = candidate;
+                }
+            }
+            if (foundInUsing != null)
+                return foundInUsing;
+
             return null;
         }
 
@@ -4276,6 +4274,16 @@ namespace gflat
                     return ext;
                 scope = scope.Parent;
             }
+
+            foreach (string usingNs in _usingNamespaces)
+            {
+                NamespaceScope? nsScope = ResolveNamespaceByName(usingNs);
+                if (nsScope != null && nsScope.Externs.TryGetValue(name, out ExternDeclaration? candidate))
+                {
+                    return candidate;
+                }
+            }
+
             return null;
         }
 
@@ -4368,41 +4376,7 @@ namespace gflat
 
             if (node.IsArrow)
             {
-                if (objType is not PointerTypeExpression && objType is not ManagedTypeExpression && objType is not FunctionPointerTypeExpression)
-                    throw new TypeCheckException($"Cannot use '->' operator on non-pointer type '{TypeName(objType)}'", node.Line);
-
-                if (node.Member == "address")
-                {
-                    RecordType(node, Long);
-                    return;
-                }
-                else if (node.Member == "is_null")
-                {
-                    RecordType(node, Bool);
-                    return;
-                }
-                else if (node.Member == "free")
-                {
-                    if (objType is FunctionPointerTypeExpression)
-                        throw new TypeCheckException("Cannot call '->free' on a function pointer", node.Line);
-                    if ((objType is PointerTypeExpression pFree && pFree.IsReadOnly) || (objType is ManagedTypeExpression mFree && mFree.IsReadOnly))
-                        throw new TypeCheckException("Cannot call '->free' on a readonly pointer", node.Line);
-                    RecordType(node, Void);
-                    return;
-                }
-                else
-                {
-                    TypeExpression? innerType = objType is PointerTypeExpression p ? p.Inner : (objType is ManagedTypeExpression m ? m.Inner : null);
-                    if (innerType != null)
-                    {
-                        TypeExpression resInner = ResolveAlias(innerType);
-                        if (resInner is NamedTypeExpression namedStr && (_structs.ContainsKey(namedStr.Name) || IsInterface(namedStr)))
-                        {
-                            throw new TypeCheckException($"The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free'). Use '.' to access member '{node.Member}' on '{namedStr.Name}'.", node.Line);
-                        }
-                    }
-                    throw new TypeCheckException($"Unknown pointer operation '->{node.Member}'. The '->' operator is reserved for pointer metadata and lifecycle operations ('address', 'is_null', 'free').", node.Line);
-                }
+                throw new TypeCheckException("The '->' operator is no longer supported. Use '.' for member access, 'delete ptr;' to deallocate, and 'ptr == null' to check for null.", node.Line);
             }
 
             // unwrap pointer if needed
@@ -4480,9 +4454,16 @@ namespace gflat
             throw new TypeCheckException($"'{named.Name}' has no field or method '{node.Member}'", node.Line);
         }
 
-        public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
+        public void Visit(InterpolatedStringExpression node) =>
+            throw new TypeCheckException("String interpolation is not yet implemented.", node.Line);
+
         public void Visit(NewExpression node)
         {
+            if (node.Kind == AllocationKind.Managed)
+            {
+                throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", node.Line);
+            }
+
             _callSites.Add((node, _currentFunction, _tryStack.ToList()));
 
             TypeExpression resolvedType = ResolveAlias(node.Type);
@@ -4723,7 +4704,8 @@ namespace gflat
         public void Visit(NamedTypeExpression node) { }
         public void Visit(NestedTypeExpression node) { }
         public void Visit(PointerTypeExpression node) { }
-        public void Visit(ManagedTypeExpression node) { }
+        public void Visit(ManagedTypeExpression node) =>
+            throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", node.Line);
         public void Visit(ArrayTypeExpression node) { }
         public void Visit(IndexExpression node)
         {

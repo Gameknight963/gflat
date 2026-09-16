@@ -243,6 +243,10 @@ namespace gflat.ast
             {
                 return new DeferStatement(CloneNode(def.Statement), def.Line);
             }
+            if (node is DeleteStatement del)
+            {
+                return new DeleteStatement(CloneNode(del.Target), del.Line);
+            }
             if (node is BinaryExpression bin)
             {
                 return new BinaryExpression(CloneNode(bin.Left), CloneNode(bin.Right), bin.Operator, bin.Line);

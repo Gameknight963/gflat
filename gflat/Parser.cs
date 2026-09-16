@@ -814,6 +814,8 @@ namespace gflat
                     return new ContinueStatement(line);
                 case TokenKind.Defer:
                     return ParseDeferStatement();
+                case TokenKind.Delete:
+                    return ParseDeleteStatement();
                 case TokenKind.Throw:
                     return ParseThrowStatement();
                 case TokenKind.Try:
@@ -914,6 +916,15 @@ namespace gflat
             Expect(TokenKind.Defer);
             AstNode stmt = ParseStatement();
             return new DeferStatement(stmt, line);
+        }
+
+        private DeleteStatement ParseDeleteStatement()
+        {
+            int line = Current.Line;
+            Expect(TokenKind.Delete);
+            AstNode expr = ParseExpression();
+            Expect(TokenKind.Semicolon);
+            return new DeleteStatement(expr, line);
         }
 
         private ThrowStatement ParseThrowStatement()

@@ -3450,29 +3450,7 @@ public class LlvmEmitter : IVisitor
 
         if (node.IsArrow)
         {
-            node.Object.Accept(this);
-            string ptrVal = Pop();
-            TypeExpression objType = _typeChecker.GetType(node.Object);
-            string llvmPtrType = EmitType(objType);
-
-            if (node.Member == "address")
-            {
-                string intVal = NewTemp();
-                Emit($"    {intVal} = ptrtoint {llvmPtrType} {ptrVal} to i64");
-                Push(intVal);
-                return;
-            }
-            else if (node.Member == "is_null")
-            {
-                string boolVal = NewTemp();
-                Emit($"    {boolVal} = icmp eq {llvmPtrType} {ptrVal}, null");
-                Push(boolVal);
-                return;
-            }
-            else
-            {
-                throw new NotImplementedException($"Pointer operation '->{node.Member}' not supported as expression");
-            }
+            throw new Exception($"The '->' operator is no longer supported on line {node.Line}");
         }
 
         if (node.Object is IdentifierExpression objIdent &&
@@ -3800,6 +3778,85 @@ public class LlvmEmitter : IVisitor
             throw new Exception($"defer statement outside of block scope on line {node.Line}");
 
         _deferScopes[^1].Add(new AstNodeDeferAction(node.Statement));
+    }
+
+    public void Visit(DeleteStatement node)
+    {
+        node.Target.Accept(this);
+        string ptrVal = Pop();
+        TypeExpression ptrType = _typeChecker.GetType(node.Target);
+        string llvmPtrType = EmitType(ptrType);
+
+        if (_typeChecker.TryGetClassDestructorCall(node, out (TypeChecker.ClassInfo Class, bool IsVirtual, int SlotIndex) dtorCall))
+        {
+            if (dtorCall.IsVirtual)
+            {
+                string classPtr = ptrVal;
+                if (llvmPtrType != $"%{dtorCall.Class.Name}*")
+                {
+                    classPtr = NewTemp();
+                    Emit($"    {classPtr} = bitcast {llvmPtrType} {ptrVal} to %{dtorCall.Class.Name}*");
+                }
+                string vtableSlot = NewTemp();
+                Emit($"    {vtableSlot} = getelementptr %{dtorCall.Class.Name}, %{dtorCall.Class.Name}* {classPtr}, i32 0, i32 0");
+                string vtablePtr = NewTemp();
+                Emit($"    {vtablePtr} = load i8**, i8*** {vtableSlot}");
+                string slotPtr = NewTemp();
+                Emit($"    {slotPtr} = getelementptr i8*, i8** {vtablePtr}, i32 {dtorCall.SlotIndex}");
+                string rawFnPtr = NewTemp();
+                Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
+                string dtorFn = NewTemp();
+                Emit($"    {dtorFn} = bitcast i8* {rawFnPtr} to void (%{dtorCall.Class.Name}*)*");
+                Emit($"    call void {dtorFn}(%{dtorCall.Class.Name}* {classPtr})");
+            }
+            else
+            {
+                string classPtr = ptrVal;
+                if (llvmPtrType != $"%{dtorCall.Class.Name}*")
+                {
+                    classPtr = NewTemp();
+                    Emit($"    {classPtr} = bitcast {llvmPtrType} {ptrVal} to %{dtorCall.Class.Name}*");
+                }
+                string dtorNs = dtorCall.Class.Namespace;
+                string dtorMangled = dtorNs.Length > 0
+                    ? $"gflat${dtorNs}${dtorCall.Class.Name}$dtor"
+                    : $"gflat${dtorCall.Class.Name}$dtor";
+                Emit($"    call void @{dtorMangled}(%{dtorCall.Class.Name}* {classPtr})");
+            }
+        }
+        else if (_typeChecker.TryGetStructDestructorCall(node, out TypeChecker.StructInfo? structInfo) && structInfo != null)
+        {
+            string structPtr = ptrVal;
+            if (llvmPtrType != $"%{structInfo.Name}*")
+            {
+                structPtr = NewTemp();
+                Emit($"    {structPtr} = bitcast {llvmPtrType} {ptrVal} to %{structInfo.Name}*");
+            }
+            string dtorNs = structInfo.Namespace;
+            string dtorMangled = dtorNs.Length > 0
+                ? $"gflat${dtorNs}${structInfo.Name}$dtor"
+                : $"gflat${structInfo.Name}$dtor";
+            Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
+        }
+
+        if (!_externNames.Contains("free"))
+        {
+            _externNames.Add("free");
+            EmitGlobal("declare void @free(i8*)");
+        }
+
+        string castPtr;
+        if (llvmPtrType != "i8*")
+        {
+            castPtr = NewTemp();
+            Emit($"    {castPtr} = bitcast {llvmPtrType} {ptrVal} to i8*");
+        }
+        else
+        {
+            castPtr = ptrVal;
+        }
+
+        Emit($"    call void @free(i8* {castPtr})");
     }
     public void Visit(BreakStatement node)
     {

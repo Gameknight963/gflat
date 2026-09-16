@@ -80,6 +80,7 @@ namespace gflat
             TokenKind.Protected => "protected",
             TokenKind.Internal => "internal",
             TokenKind.New => "new",
+            TokenKind.Delete => "delete",
             TokenKind.Return => "return",
             TokenKind.If => "if",
             TokenKind.Else => "else",

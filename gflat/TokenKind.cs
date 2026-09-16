@@ -67,6 +67,7 @@ namespace gflat
         Protected,
         Internal,
         New,
+        Delete,
         Return,
         If,
         Else,

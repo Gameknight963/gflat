@@ -1216,6 +1216,7 @@ namespace gflat.comptime
         public void Visit(DefaultExpression node) { }
         public void Visit(LambdaExpression node) { }
         public void Visit(DeferStatement node) { }
+        public void Visit(DeleteStatement node) => throw new ConstEvalException("Delete statement is not supported in constant evaluation", node.Line);
         public void Visit(GlobalExpression node) { }
         public void Visit(AliasDeclaration node) { }
         public void Visit(InterpolatedStringExpression node) { }

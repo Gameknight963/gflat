@@ -180,6 +180,7 @@ public class Lexer
             "protected" => TokenKind.Protected,
             "internal" => TokenKind.Internal,
             "new" => TokenKind.New,
+            "delete" => TokenKind.Delete,
             "return" => TokenKind.Return,
             "if" => TokenKind.If,
             "else" => TokenKind.Else,

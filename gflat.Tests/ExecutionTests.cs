@@ -237,15 +237,15 @@ namespace gflat.Tests
                 int main()
                 {
                     Node*? empty = null;
-                    if (!empty->is_null)
+                    if (empty != null)
                     {
                         return 1;
                     }
 
                     Node n;
                     n.value = 42;
-                    Node* ptr = &n;
-                    if (ptr->is_null)
+                    Node*? ptr = &n;
+                    if (ptr == null)
                     {
                         return 2;
                     }
@@ -266,14 +266,14 @@ namespace gflat.Tests
                 {
                     int val = 123;
                     int* ptr = &val;
-                    long addr = ptr->address;
+                    long addr = (long)ptr;
                     if (addr == 0L)
                     {
                         return 1;
                     }
 
                     int*? nullPtr = null;
-                    long nullAddr = nullPtr->address;
+                    long nullAddr = (long)nullPtr;
                     if (nullAddr != 0L)
                     {
                         return 2;
@@ -292,6 +292,7 @@ namespace gflat.Tests
         {
             string code = """
                 extern void* malloc(long size);
+                extern void free(void* ptr);
 
                 struct Item
                 {
@@ -301,8 +302,8 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Item* item = malloc(16L);
-                    if (item->is_null)
+                    Item*? item = (Item*?)malloc(16L);
+                    if (item == null)
                     {
                         return 1;
                     }
@@ -311,7 +312,7 @@ namespace gflat.Tests
                     item.count = 25;
                     int total = item.id + item.count;
 
-                    item->free();
+                    free((void*)item);
                     return total;
                 }
                 """;
@@ -531,12 +532,13 @@ namespace gflat.Tests
         {
             string code = """
                 extern void* malloc(long size);
+                extern void free(void* ptr);
 
                 int main()
                 {
                     int* ptr = malloc(4L);
                     *ptr = 77;
-                    defer ptr->free();
+                    defer free((void*)ptr);
                     return *ptr;
                 }
                 """;
@@ -609,19 +611,19 @@ namespace gflat.Tests
                 {
                     int(int, int)*? fn = null;
                     int isNullBefore = 0;
-                    if (fn->is_null)
+                    if (fn == null)
                     {
                         isNullBefore = 1;
                     }
 
                     fn = &Multiply;
                     int isNullAfter = 0;
-                    if (fn->is_null)
+                    if (fn == null)
                     {
                         isNullAfter = 1;
                     }
 
-                    long addr = fn->address;
+                    long addr = (long)fn;
                     int hasAddress = 0;
                     if (addr != 0L)
                     {
@@ -1721,6 +1723,7 @@ namespace gflat.Tests
         {
             string code = """
                 extern void* malloc(long size);
+                extern void free(void* ptr);
 
                 interface IShape
                 {
@@ -1748,7 +1751,7 @@ namespace gflat.Tests
                     {
                         return 1;
                     }
-                    r->free();
+                    free((void*)r);
                     return 42;
                 }
                 """;
@@ -1951,7 +1954,7 @@ namespace gflat.Tests
                     }
 
                     int*? rawPtr = default;
-                    if (!rawPtr->is_null)
+                    if (rawPtr != null)
                     {
                         return 2;
                     }
@@ -1984,10 +1987,10 @@ namespace gflat.Tests
                     Point* hp = new* Point();
                     if (hp.x != 15 || hp.y != 27)
                     {
-                        hp->free();
+                        delete hp;
                         return 2;
                     }
-                    hp->free();
+                    delete hp;
                     return 42;
                 }
                 """;
@@ -2043,7 +2046,7 @@ namespace gflat.Tests
                 {
                     Point* p = new* Point(20, 22);
                     int sum = p.x + p.y;
-                    p->free();
+                    delete p;
                     return sum;
                 }
                 """;
@@ -2366,7 +2369,7 @@ namespace gflat.Tests
                 {
                     Widget* w = new* Widget(6, 7);
                     int area = w.Area();
-                    w->free();
+                    delete w;
                     return area;
                 }
                 """;
@@ -2430,7 +2433,7 @@ namespace gflat.Tests
 
                     if (ageVal != 7 || pitchVal != 42)
                     {
-                        dog->free();
+                        delete dog;
                         return 1;
                     }
 
@@ -2446,7 +2449,7 @@ namespace gflat.Tests
                     // Invoke slot 0 directly with 'dog' as 'this'
                     int directResult = directFn(dog);
 
-                    dog->free();
+                    delete dog;
 
                     // Expected directResult = 200 + 42 = 242
                     if (directResult != 242)
@@ -2529,7 +2532,7 @@ namespace gflat.Tests
                 {
                     int flag = 5;
                     Resource* r = new* Resource(&flag);
-                    r->free();
+                    delete r;
                     return flag; // 15
                 }
                 """;
@@ -2573,7 +2576,7 @@ namespace gflat.Tests
                 {
                     int c = 0;
                     Base* b = new* Derived(&c);
-                    b->free(); // Virtual destructor dispatch: Derived runs (+10), then Base runs (+1)
+                    delete b; // Virtual destructor dispatch: Derived runs (+10), then Base runs (+1)
                     return c; // 11
                 }
                 """;
@@ -2624,7 +2627,7 @@ namespace gflat.Tests
 
                     int r1 = g.Greet();   // 100 * 2 = 200
                     int r2 = c.Add(3, 4); // (3 + 4) * 2 = 14
-                    s->free();
+                    delete s;
                     return r1 + r2;       // 214
                 }
                 """;
@@ -2681,8 +2684,8 @@ namespace gflat.Tests
                     // b.Value() is virtual slot 0
                     if (b.Value() != 30) return 1;
 
-                    // b->free() invokes virtual destructor
-                    b->free();
+                    // delete b invokes virtual destructor
+                    delete b;
 
                     // Derived destructor (20) + Base destructor (1) = 21
                     if (tracker != 21) return 2;
@@ -2770,7 +2773,7 @@ namespace gflat.Tests
                 {
                     User* u = new* User(10, 32);
                     int total = u.GetTotal();
-                    u->free();
+                    delete u;
                     return total;
                 }
                 """;
@@ -3482,8 +3485,8 @@ namespace gflat.Tests
                     Outer* o = new* Outer(10);
                     Outer.Inner* i = new* Outer.Inner(16);
                     int res = o.x + i.GetDouble(); // 10 + 32 = 42
-                    i->free();
-                    o->free();
+                    delete i;
+                    delete o;
                     return res;
                 }
                 """;
@@ -3562,8 +3565,8 @@ namespace gflat.Tests
                     Calculator* calc = new* Calculator();
                     Calculator.Worker* w = calc.CreateWorker(30);
                     int ans = w.Compute(12); // 42
-                    w->free();
-                    calc->free();
+                    delete w;
+                    delete calc;
                     return ans;
                 }
                 """;
@@ -3623,7 +3626,7 @@ namespace gflat.Tests
                     {
                         sum = sum + it.Current(); // 0 + 1 + 2 + 3 + 4 = 10
                     }
-                    list->free();
+                    delete list;
                     return sum;
                 }
                 """;
@@ -3842,7 +3845,7 @@ namespace gflat.Tests
                     {
                         sum = sum + x; // 0 + 1 + 2 + 3 + 4 = 10
                     }
-                    list->free();
+                    delete list;
                     return sum;
                 }
                 """;
@@ -3968,14 +3971,14 @@ namespace gflat.Tests
                     {
                         sum = sum + x; // 0 + 1 + 2 + 3 = 6
                     }
-                    listInt->free();
+                    delete listInt;
 
                     List<double>* listDbl = new* List<double>(5);
                     foreach (int y in listDbl)
                     {
                         sum = sum + y; // 6 + 0 + 1 + 2 + 3 + 4 = 16
                     }
-                    listDbl->free();
+                    delete listDbl;
 
                     return sum;
                 }
@@ -4004,7 +4007,7 @@ namespace gflat.Tests
                     int state = 5;
                     Tracker* t = new* Tracker();
                     t.pState = &state;
-                    t->free();
+                    delete t;
                     return state; // 5 + 10 = 15
                 }
                 """;
@@ -4115,7 +4118,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void Execution_Foreach_DisposeCalled()
+        public void Execution_Foreach_DestructorCalled()
         {
             string code = """
                 struct DisposingEnumerator
@@ -4135,7 +4138,7 @@ namespace gflat.Tests
                         return this.current;
                     }
 
-                    public void Dispose()
+                    public ~DisposingEnumerator()
                     {
                         *this.pDisposed = *this.pDisposed + 50;
                     }
@@ -4167,12 +4170,12 @@ namespace gflat.Tests
                         sum = sum + x; // 0 + 1 + 2 = 3
                     }
 
-                    return sum + disposedState; // 3 + 50 = 53
+                    return sum + disposedState; // 3 + 50 (local in GetEnumerator) + 50 (foreach iterator exit) = 103
                 }
                 """;
 
             ExecutionResult result = CompilerTestHelper.Run(code);
-            Assert.Equal(53, result.ExitCode);
+            Assert.Equal(103, result.ExitCode);
         }
 
         [Fact]
@@ -4370,6 +4373,61 @@ namespace gflat.Tests
                         return 42;
                     }
                     return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void DeleteStatement_ExecutesDestructorAndFrees()
+        {
+            string code = """
+                class Resource
+                {
+                    public int* counter;
+                    public Resource(int* c)
+                    {
+                        this.counter = c;
+                    }
+                    public ~Resource()
+                    {
+                        *this.counter = *this.counter + 42;
+                    }
+                }
+
+                int main()
+                {
+                    int flag = 0;
+                    Resource* r = new* Resource(&flag);
+                    delete r;
+                    return flag; // 42
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void UsingDirective_ResolvesUnqualifiedFunctionsExecution()
+        {
+            string code = """
+                using Math;
+
+                namespace Math
+                {
+                    int Abs(int x)
+                    {
+                        if (x < 0) return -x;
+                        return x;
+                    }
+                }
+
+                int main()
+                {
+                    return Abs(-42); // 42
                 }
                 """;
 

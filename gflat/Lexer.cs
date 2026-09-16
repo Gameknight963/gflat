@@ -229,6 +229,7 @@ public class Lexer
             "sizeof" => TokenKind.Sizeof,
             "nameof" => TokenKind.Nameof,
             "throw" => TokenKind.Throw,
+            "throws" => TokenKind.Throws,
             "try" => TokenKind.Try,
             "catch" => TokenKind.Catch,
             _ => TokenKind.Identifier

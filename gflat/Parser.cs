@@ -587,6 +587,7 @@ namespace gflat
                     Expect(TokenKind.Comma);
             }
             Expect(TokenKind.CloseParen);
+            bool throws = Match(TokenKind.Throws);
             BlockStatement? body = null;
             if (isAbstract)
             {
@@ -596,7 +597,7 @@ namespace gflat
             {
                 body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
             }
-            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters);
+            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, throws: throws);
         }
 
         private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line)

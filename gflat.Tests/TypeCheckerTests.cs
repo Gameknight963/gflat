@@ -2946,7 +2946,7 @@ namespace gflat.Tests
                     }
                 }
 
-                void ThrowCustom()
+                void ThrowCustom() throws
                 {
                     throw new* CustomException(c"custom error");
                 }
@@ -3064,12 +3064,12 @@ namespace gflat.Tests
         public void TypeChecker_InterproceduralCanThrow_Propagates()
         {
             string code = """
-                void Level1()
+                void Level1() throws
                 {
                     throw new* Exception(c"error");
                 }
 
-                void Level2()
+                void Level2() throws
                 {
                     Level1();
                 }
@@ -3098,6 +3098,72 @@ namespace gflat.Tests
             Assert.True(checker.CanFunctionThrow(l1));
             Assert.True(checker.CanFunctionThrow(l2));
             Assert.False(checker.CanFunctionThrow(safe));
+        }
+
+        [Fact]
+        public void TypeChecker_MissingThrows_ThrowStatement_Throws()
+        {
+            string code = """
+                void Foo()
+                {
+                    throw new* Exception(c"error", 1);
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("function must be marked 'throws'", ex.Message);
+        }
+
+        [Fact]
+        public void TypeChecker_MissingThrows_CallingThrowingFunction_Throws()
+        {
+            string code = """
+                void Callee() throws
+                {
+                    throw new* Exception(c"error", 1);
+                }
+
+                void Caller()
+                {
+                    Callee();
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must be marked 'throws'", ex.Message);
+        }
+
+        [Fact]
+        public void TypeChecker_MainFunction_CannotBeMarkedThrows()
+        {
+            string code = """
+                int main() throws
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("'main' function cannot be declared with 'throws'", ex.Message);
+        }
+
+        [Fact]
+        public void TypeChecker_OverrideThrowsMismatch_Throws()
+        {
+            string code = """
+                class Base
+                {
+                    public virtual void Foo() {}
+                }
+
+                class Derived : Base
+                {
+                    public override void Foo() throws {}
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("must match throws specification", ex.Message);
         }
 
         [Fact]

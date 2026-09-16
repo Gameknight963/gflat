@@ -56,13 +56,10 @@ namespace gflat
         private readonly Dictionary<OperatorDeclaration, string> _operatorNamespaces = new();
         private AstNode? _currentFunction = null;
         private readonly Stack<TryStatement> _tryStack = new();
-        private readonly HashSet<AstNode> _canThrowFunctions = new();
         private readonly HashSet<AstNode> _throwingCalls = new();
-        private readonly List<(AstNode Call, AstNode? Caller, List<TryStatement> Tries)> _callSites = new();
-        private readonly List<(ThrowStatement Throw, AstNode? Caller, List<TryStatement> Tries, string ThrownTypeName)> _throwSites = new();
         private int _foreachCounter = 0;
 
-        public bool CanFunctionThrow(AstNode func) => _canThrowFunctions.Contains(func);
+        public bool CanFunctionThrow(AstNode func) => func is MethodDeclaration m && m.Throws;
         public bool CanCallThrow(AstNode call) => _throwingCalls.Contains(call);
         public IEnumerable<ClassInfo> GetAllClasses() => _classes.Values;
 
@@ -1717,8 +1714,6 @@ namespace gflat
 
             foreach (NamespaceDeclaration ns in node.Namespaces)
                 ns.Accept(this);
-
-            PropagateCanThrow();
         }
 
         private void ResolveClassHierarchies()
@@ -1878,6 +1873,8 @@ namespace gflat
                         throw new TypeCheckException($"Method '{method.Name}' in class '{cls.Name}' is marked override but does not override any virtual or abstract method in a base class", method.Line);
                     }
                     MethodDeclaration baseMethod = cls.VirtualMethods[slot];
+                    if (baseMethod.Throws != method.Throws)
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' must match throws specification of base method", method.Line);
                     if (baseMethod.IsReadOnly && !method.IsReadOnly)
                         throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' must be marked readonly to match base method", method.Line);
                     if (!TypesMatch(ResolveAlias(method.ReturnType), ResolveAlias(baseMethod.ReturnType)))
@@ -2231,6 +2228,12 @@ namespace gflat
                         }
 
                         MethodDeclaration classMethod = mEntry.Method;
+                        if (ifaceMethod.Throws != classMethod.Throws)
+                        {
+                            throw new TypeCheckException(
+                                $"Method '{classMethod.Name}' in class '{node.Name}' must match throws specification of interface method '{ifaceName}.{ifaceMethod.Name}'",
+                                classMethod.Line);
+                        }
                         if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly)
                         {
                             throw new TypeCheckException(
@@ -2391,6 +2394,13 @@ namespace gflat
                         if (!_currentStruct.Methods.TryGetValue(ifaceMethod.Name, out MethodDeclaration? structMethod))
                         {
                             throw new TypeCheckException($"Struct '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                        }
+
+                        if (ifaceMethod.Throws != structMethod.Throws)
+                        {
+                            throw new TypeCheckException(
+                                $"Method '{structMethod.Name}' in struct '{node.Name}' must match throws specification of interface method '{ifaceName}.{ifaceMethod.Name}'",
+                                structMethod.Line);
                         }
 
                         if (ifaceMethod.IsReadOnly && !structMethod.IsReadOnly)
@@ -2659,6 +2669,11 @@ namespace gflat
         public void Visit(MethodDeclaration node)
         {
             if (node.IsGeneric) return;
+
+            if (node.Name == "main" && node.Throws)
+            {
+                throw new TypeCheckException("'main' function cannot be declared with 'throws'", node.Line);
+            }
 
             AstNode? prevFunc = _currentFunction;
             _currentFunction = node;
@@ -3899,8 +3914,6 @@ namespace gflat
 
         public void Visit(CallExpression node)
         {
-            _callSites.Add((node, _currentFunction, _tryStack.ToList()));
-
             foreach (AstNode arg in node.Arguments)
                 arg.Accept(this);
 
@@ -3967,6 +3980,11 @@ namespace gflat
 
                     if (isReceiverReadOnly && !ifaceMethod.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly method '{ifaceMethod.Name}' on readonly instance", node.Line);
+
+                    if (ifaceMethod.Throws)
+                    {
+                        CheckThrowingCall(node, $"{namedIface.Name}.{memberAccess.Member}");
+                    }
 
                     int slotIdx = ifaceInfo.MethodIndices[memberAccess.Member];
                     _interfaceMethodCalls[node] = (ifaceInfo, slotIdx, ifaceMethod);
@@ -4138,7 +4156,13 @@ namespace gflat
                 if (scope != null)
                 {
                     if (scope.Functions.TryGetValue(nsAccess.Member, out MethodDeclaration? m))
+                    {
                         _resolvedCalls[node] = m;
+                        if (m.Throws)
+                        {
+                            CheckThrowingCall(node, $"{nsAccess.Left}.{nsAccess.Member}");
+                        }
+                    }
                     else if (scope.Externs.TryGetValue(nsAccess.Member, out ExternDeclaration? e))
                         _resolvedCalls[node] = e;
                 }
@@ -4178,6 +4202,11 @@ namespace gflat
                 throw new TypeCheckException($"Unknown function '{funcName}'", node.Line);
 
             _resolvedCalls[node] = method;
+
+            if (method.Throws)
+            {
+                CheckThrowingCall(node, funcName ?? method.Name);
+            }
 
             if (node.Arguments.Count != method.Parameters.Count)
                 throw new TypeCheckException(
@@ -4463,8 +4492,6 @@ namespace gflat
             {
                 throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", node.Line);
             }
-
-            _callSites.Add((node, _currentFunction, _tryStack.ToList()));
 
             TypeExpression resolvedType = ResolveAlias(node.Type);
             node.Type = resolvedType;
@@ -5346,7 +5373,30 @@ namespace gflat
                 throw new TypeCheckException($"Cannot throw non-exception type '{TypeName(exprType)}'. Thrown expressions must be a pointer to 'Exception' or a subclass of 'Exception'", node.Line);
             }
 
-            _throwSites.Add((node, _currentFunction, _tryStack.ToList(), named.Name));
+            bool caught = false;
+            foreach (TryStatement tryStmt in _tryStack)
+            {
+                if (TryCatchesType(tryStmt, named.Name))
+                {
+                    caught = true;
+                    break;
+                }
+            }
+
+            if (!caught)
+            {
+                if (_currentFunction is MethodDeclaration method)
+                {
+                    if (method.Name != "main" && !method.Throws)
+                    {
+                        throw new TypeCheckException("Unhandled exception: function must be marked 'throws' or exception must be caught in a try/catch block", node.Line);
+                    }
+                }
+                else
+                {
+                    throw new TypeCheckException("Unhandled exception: exception must be caught in a try/catch block", node.Line);
+                }
+            }
         }
 
         public void Visit(TryStatement node)
@@ -5433,103 +5483,34 @@ namespace gflat
             }
         }
 
-        private void PropagateCanThrow()
+        private void CheckThrowingCall(CallExpression node, string calleeName)
         {
-            foreach (var (throwStmt, caller, tries, thrownType) in _throwSites)
+            _throwingCalls.Add(node);
+
+            bool caught = false;
+            foreach (TryStatement tryStmt in _tryStack)
             {
-                if (caller == null)
+                if (TryCatchesType(tryStmt, "Exception"))
                 {
-                    continue;
-                }
-                bool caught = false;
-                foreach (TryStatement tryStmt in tries)
-                {
-                    if (TryCatchesType(tryStmt, thrownType))
-                    {
-                        caught = true;
-                        break;
-                    }
-                }
-                if (!caught)
-                {
-                    _canThrowFunctions.Add(caller);
+                    caught = true;
+                    break;
                 }
             }
 
-            bool changed = true;
-            while (changed)
+            if (!caught)
             {
-                changed = false;
-
-                // Propagate through virtual overrides
-                foreach (ClassInfo cls in _classes.Values)
+                if (_currentFunction is MethodDeclaration currentMethod)
                 {
-                    if (cls.BaseClass != null && _classes.TryGetValue(cls.BaseClass, out ClassInfo? baseCls))
+                    if (currentMethod.Name != "main" && !currentMethod.Throws)
                     {
-                        foreach (var kvp in cls.Methods)
-                        {
-                            if (baseCls.Methods.TryGetValue(kvp.Key, out var baseMethodEntry))
-                            {
-                                MethodDeclaration derivedMethod = kvp.Value.Method;
-                                MethodDeclaration baseMethod = baseMethodEntry.Method;
-
-                                if (_canThrowFunctions.Contains(derivedMethod) && _canThrowFunctions.Add(baseMethod))
-                                {
-                                    changed = true;
-                                }
-                                if (_canThrowFunctions.Contains(baseMethod) && _canThrowFunctions.Add(derivedMethod))
-                                {
-                                    changed = true;
-                                }
-                            }
-                        }
+                        throw new TypeCheckException($"Call to throwing function '{calleeName}' must be enclosed in a try/catch or the calling function must be marked 'throws'", node.Line);
                     }
                 }
-
-                // Propagate through calls
-                foreach (var (callNode, caller, tries) in _callSites)
+                else if (_currentFunction != null)
                 {
-                    AstNode? callee = null;
-                    if (callNode is CallExpression call)
-                    {
-                        _resolvedCalls.TryGetValue(call, out callee);
-                    }
-                    else if (callNode is NewExpression newExpr)
-                    {
-                        _resolvedConstructors.TryGetValue(newExpr, out ConstructorDeclaration? ctor);
-                        callee = ctor;
-                    }
-
-                    if (callee != null && _canThrowFunctions.Contains(callee))
-                    {
-                        if (_throwingCalls.Add(callNode))
-                        {
-                            changed = true;
-                        }
-
-                        if (caller != null)
-                        {
-                            bool caught = false;
-                            foreach (TryStatement tryStmt in tries)
-                            {
-                                if (TryCatchesType(tryStmt, "Exception"))
-                                {
-                                    caught = true;
-                                    break;
-                                }
-                            }
-
-                            if (!caught && _canThrowFunctions.Add(caller))
-                            {
-                                changed = true;
-                            }
-                        }
-                    }
+                    throw new TypeCheckException($"Call to throwing function '{calleeName}' must be enclosed in a try/catch block", node.Line);
                 }
             }
-
-            // main() is always the top-level entry point with standard C ABI (i32 main())
-            _canThrowFunctions.RemoveWhere(f => f is MethodDeclaration m && m.Name == "main");
         }
 
         private bool TryCatchesType(TryStatement tryStmt, string thrownTypeName)

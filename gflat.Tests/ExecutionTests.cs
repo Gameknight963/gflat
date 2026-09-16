@@ -3227,7 +3227,7 @@ namespace gflat.Tests
         public void Execution_ThrowAndCatch_Basic_ReturnsExitCode()
         {
             string code = """
-                int Thrower()
+                int Thrower() throws
                 {
                     throw new* Exception(c"Error occurred", 42);
                     return 0;
@@ -3268,7 +3268,7 @@ namespace gflat.Tests
                     }
                 }
 
-                int Thrower()
+                int Thrower() throws
                 {
                     throw new* CustomException(c"Custom error", 10, 32);
                     return 0;
@@ -3348,7 +3348,7 @@ namespace gflat.Tests
             string code = """
                 const Exception* OutOfMemory = new* Exception(c"Out of memory", 99);
 
-                int ThrowConst()
+                int ThrowConst() throws
                 {
                     throw OutOfMemory;
                     return 0;
@@ -3376,7 +3376,7 @@ namespace gflat.Tests
         public void Execution_Defer_ExecutesOnThrowUnwinding()
         {
             string code = """
-                void Throwing(int* flag)
+                void Throwing(int* flag) throws
                 {
                     defer *flag += 10;
                     defer *flag += 20;
@@ -3406,7 +3406,7 @@ namespace gflat.Tests
         public void Execution_CatchAndRethrow_PropagatesToOuterCatch()
         {
             string code = """
-                int Sub()
+                int Sub() throws
                 {
                     try
                     {
@@ -4265,7 +4265,7 @@ namespace gflat.Tests
                     }
                 }
 
-                void willThrow(int* p)
+                void willThrow(int* p) throws
                 {
                     Guard g = new Guard(p);
                     throw new* Exception();

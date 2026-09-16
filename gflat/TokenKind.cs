@@ -119,6 +119,7 @@ namespace gflat
         Sizeof,
         Nameof,
         Throw,
+        Throws,
         Try,
         Catch,
         EndOfFile

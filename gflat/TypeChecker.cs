@@ -2928,6 +2928,10 @@ namespace gflat
         {
             node.ElementType = ResolveAlias(node.ElementType);
             ValidateTypeUsage(node.ElementType, node.Line);
+            if (HasDestructor(node.ElementType))
+            {
+                throw new TypeCheckException($"Foreach iteration variable '{node.VariableName}' cannot have type '{TypeName(node.ElementType)}' because types with destructors cannot be copied by value. Use a pointer instead ('{TypeName(node.ElementType)}*').", node.Line);
+            }
 
             node.Collection.Accept(this);
             TypeExpression rawColType = ResolveAlias(GetType(node.Collection));

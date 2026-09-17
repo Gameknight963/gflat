@@ -139,7 +139,16 @@ Unlike C and C++ where `long` is 32 bits on 64-bit Windows (LLP64) and 64 bits o
 
 ### 4.1 Value Types (`struct`)
 
-- **Semantics:** Value type. Stored inline in stack frames, containing structs, or arrays. Copied on assignment.
+- **Semantics:** Value type. Stored inline in stack frames, containing structs, or arrays.
+- **Copy Semantics & Double-Free Protection:**
+  - **Plain Structs (No Destructor):** Copied bitwise on assignment (`b = a;`) and passed by value.
+  - **Types with Destructors (Non-Copyable):** Structs and stack classes defining a destructor (`~Type()`) or containing fields that define destructors cannot be copied by value:
+    - Assignment (`b = a;`) is a compile-time error.
+    - Copy initialization (`Type b = a;`) from an existing variable, field, dereference, or index is a compile-time error.
+    - Pass-by-value (`void foo(Type t)`) is a compile-time error. Must pass by pointer (`Type*` or `readonly Type*`).
+    - Foreach iteration by value (`foreach (Type t in arr)`) is a compile-time error. Must iterate by pointer or index.
+    - Return-by-value (`Type create()`) is allowed and transfers ownership, suppressing the local variable's destructor upon function return.
+    - Explicit cloning (e.g. `Type b = a.clone();`) can be provided as a method on the type.
 - **Methods:** Can define constructors, destructors, instance methods, and static methods.
 - **Destructors (`~StructName()`):**
   - Invoked automatically when a local struct variable leaves its enclosing block scope.
@@ -152,13 +161,14 @@ Unlike C and C++ where `long` is 32 bits on 64-bit Windows (LLP64) and 64 bits o
 
 - **Semantics:** Reference type containing a virtual method table pointer (`vptr`) at offset 0.
 - **Storage Locations:**
-  1. **Stack Classes:** Allocated directly on the stack without `new`:
+  1. **Stack Classes:** Allocated directly on the stack without `new*`:
      ```gflat
      MyClass c(10, 20); // Stack-allocated instance of MyClass
      ```
      - Destructor is automatically queued on the scope's defer stack.
      - Destructors are null-safe and idempotent (clears the vtable slot upon execution).
-  2. **Heap Classes & Objects:** Allocated via `new MyClass(...)`:
+     - Non-copyable by value if a destructor is present.
+  2. **Heap Classes & Objects:** Allocated via `new* MyClass(...)`:
      - Returns a pointer `%MyClass*`.
      - Dynamically allocated via `malloc`.
   3. **Explicit Deletion (`delete` Statement):**

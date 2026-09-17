@@ -4623,6 +4623,30 @@ namespace gflat.Tests
             Assert.NotNull(ast);
             Assert.NotNull(checker);
         }
+
+        [Fact]
+        public void Foreach_StructWithDestructorByValue_Throws()
+        {
+            string code = """
+                struct Tracker
+                {
+                    public int* p;
+                    public ~Tracker() { }
+                }
+
+                int main()
+                {
+                    Tracker[3] arr;
+                    foreach (Tracker t in arr)
+                    {
+                    }
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Foreach iteration variable 't' cannot have type 'Tracker' because types with destructors cannot be copied by value", ex.Message);
+        }
     }
 }
 

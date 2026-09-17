@@ -4391,6 +4391,113 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("Use of unassigned local variable 'x'", ex.Message);
         }
+
+        [Fact]
+        public void BreakOutsideLoop_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    break;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot break outside of a loop", ex.Message);
+        }
+
+        [Fact]
+        public void ContinueOutsideLoop_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    continue;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot continue outside of a loop", ex.Message);
+        }
+
+        [Fact]
+        public void BreakInsideLambdaInsideLoop_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    while (true)
+                    {
+                        fn()* f = () => { break; };
+                    }
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot break outside of a loop", ex.Message);
+        }
+
+        [Fact]
+        public void BreakAndContinueInsideLoops_Succeeds()
+        {
+            string code = """
+                int main()
+                {
+                    while (true)
+                    {
+                        break;
+                    }
+                    for (int i = 0; i < 10; i++)
+                    {
+                        continue;
+                    }
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void DerefVoidPointer_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    void* p = (void*)&x;
+                    *p;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot dereference 'void*'", ex.Message);
+        }
+
+        [Fact]
+        public void DerefVoidPointerPointer_Succeeds()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    void* p = (void*)&x;
+                    void** pp = &p;
+                    void* q = *pp;
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
     }
 }
 

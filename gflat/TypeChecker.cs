@@ -17,6 +17,7 @@ namespace gflat
         private readonly HashSet<string> _constVariableNames = new();
         private readonly SymbolTable _symbols;
         public SymbolTable Symbols => _symbols;
+        private int _loopDepth = 0;
 
         public TypeChecker()
         {
@@ -2827,7 +2828,15 @@ namespace gflat
             TypeExpression condType = GetType(node.Condition);
             if (!TypesMatch(condType, Bool))
                 throw new TypeCheckException("While condition must be bool", node.Line);
-            node.Body.Accept(this);
+            _loopDepth++;
+            try
+            {
+                node.Body.Accept(this);
+            }
+            finally
+            {
+                _loopDepth--;
+            }
         }
 
         public void Visit(ForStatement node)
@@ -2842,7 +2851,15 @@ namespace gflat
                     throw new TypeCheckException("For condition must be bool", node.Line);
             }
             node.Increment?.Accept(this);
-            node.Body.Accept(this);
+            _loopDepth++;
+            try
+            {
+                node.Body.Accept(this);
+            }
+            finally
+            {
+                _loopDepth--;
+            }
             PopScope();
         }
 
@@ -2869,7 +2886,15 @@ namespace gflat
                 node.IsArrayIteration = true;
                 PushScope();
                 DeclareVariable(node.VariableName, node.ElementType, node.Line);
-                node.Body.Accept(this);
+                _loopDepth++;
+                try
+                {
+                    node.Body.Accept(this);
+                }
+                finally
+                {
+                    _loopDepth--;
+                }
                 PopScope();
                 return;
             }
@@ -3430,7 +3455,14 @@ namespace gflat
                     break;
                 case TokenKind.Star:
                     if (operand is not PointerTypeExpression ptr)
+                    {
                         throw new TypeCheckException("Cannot dereference non-pointer", node.Line);
+                    }
+                    TypeExpression resolvedInner = ResolveAlias(ptr.Inner);
+                    if (resolvedInner is NamedTypeExpression namedInner && namedInner.Name == "void")
+                    {
+                        throw new TypeCheckException("Cannot dereference 'void*'", node.Line);
+                    }
                     ValidateTypeUsage(ptr.Inner, node.Line);
                     RecordType(node, ptr.Inner);
                     break;
@@ -4719,8 +4751,21 @@ namespace gflat
                 throw new TypeCheckException($"Cannot index non-array and non-pointer type '{TypeName(targetType)}'", node.Line);
             }
         }
-        public void Visit(BreakStatement node) { }
-        public void Visit(ContinueStatement node) { }
+        public void Visit(BreakStatement node)
+        {
+            if (_loopDepth <= 0)
+            {
+                throw new TypeCheckException("Cannot break outside of a loop", node.Line);
+            }
+        }
+
+        public void Visit(ContinueStatement node)
+        {
+            if (_loopDepth <= 0)
+            {
+                throw new TypeCheckException("Cannot continue outside of a loop", node.Line);
+            }
+        }
 
         public void Visit(AttributeNode node) { }
         public void Visit(ExternDeclaration node) { }
@@ -5158,57 +5203,66 @@ namespace gflat
 
         public void Visit(LambdaExpression node)
         {
-            _lambdaScopeBoundaries.Push(_scopes.Count);
-            _lambdaStaticStack.Push(node.IsStatic);
-            _actualReturnTypes.Push(new List<TypeExpression>());
+            int prevLoopDepth = _loopDepth;
+            _loopDepth = 0;
+            try
+            {
+                _lambdaScopeBoundaries.Push(_scopes.Count);
+                _lambdaStaticStack.Push(node.IsStatic);
+                _actualReturnTypes.Push(new List<TypeExpression>());
 
-            PushScope();
-            List<TypeExpression> paramTypes = new();
-            foreach (Parameter p in node.Parameters)
-            {
-                ValidateTypeUsage(p.Type, p.Line);
-                TypeExpression pType = ResolveAlias(p.Type);
-                paramTypes.Add(pType);
-                DeclareVariable(p.Name, pType, p.Line);
-            }
-
-            TypeExpression returnType;
-            if (node.IsExpressionBody)
-            {
-                node.Body.Accept(this);
-                returnType = ResolveAlias(GetType(node.Body));
-            }
-            else
-            {
-                node.Body.Accept(this);
-                List<TypeExpression> returns = _actualReturnTypes.Peek();
-                if (returns.Count == 0)
+                PushScope();
+                List<TypeExpression> paramTypes = new();
+                foreach (Parameter p in node.Parameters)
                 {
-                    returnType = Void;
+                    ValidateTypeUsage(p.Type, p.Line);
+                    TypeExpression pType = ResolveAlias(p.Type);
+                    paramTypes.Add(pType);
+                    DeclareVariable(p.Name, pType, p.Line);
+                }
+
+                TypeExpression returnType;
+                if (node.IsExpressionBody)
+                {
+                    node.Body.Accept(this);
+                    returnType = ResolveAlias(GetType(node.Body));
                 }
                 else
                 {
-                    returnType = ResolveAlias(returns[0]);
-                    for (int i = 1; i < returns.Count; i++)
+                    node.Body.Accept(this);
+                    List<TypeExpression> returns = _actualReturnTypes.Peek();
+                    if (returns.Count == 0)
                     {
-                        TypeExpression other = ResolveAlias(returns[i]);
-                        if (!TypesMatch(returnType, other) && !IsAssignable(returnType, other))
+                        returnType = Void;
+                    }
+                    else
+                    {
+                        returnType = ResolveAlias(returns[0]);
+                        for (int i = 1; i < returns.Count; i++)
                         {
-                            throw new TypeCheckException($"Inconsistent return types in lambda: '{TypeName(returnType)}' and '{TypeName(other)}'", node.Line);
+                            TypeExpression other = ResolveAlias(returns[i]);
+                            if (!TypesMatch(returnType, other) && !IsAssignable(returnType, other))
+                            {
+                                throw new TypeCheckException($"Inconsistent return types in lambda: '{TypeName(returnType)}' and '{TypeName(other)}'", node.Line);
+                            }
                         }
                     }
                 }
+                ValidateTypeUsage(returnType, node.Line);
+
+                PopScope();
+                _actualReturnTypes.Pop();
+                _lambdaStaticStack.Pop();
+                _lambdaScopeBoundaries.Pop();
+
+                _lambdaReturnTypes[node] = returnType;
+                FunctionPointerTypeExpression fnType = new FunctionPointerTypeExpression(returnType, paramTypes, isManaged: false, isNullable: false, node.Line);
+                RecordType(node, fnType);
             }
-            ValidateTypeUsage(returnType, node.Line);
-
-            PopScope();
-            _actualReturnTypes.Pop();
-            _lambdaStaticStack.Pop();
-            _lambdaScopeBoundaries.Pop();
-
-            _lambdaReturnTypes[node] = returnType;
-            FunctionPointerTypeExpression fnType = new FunctionPointerTypeExpression(returnType, paramTypes, isManaged: false, isNullable: false, node.Line);
-            RecordType(node, fnType);
+            finally
+            {
+                _loopDepth = prevLoopDepth;
+            }
         }
 
         private static TokenKind? GetBinaryOperatorForCompound(TokenKind compoundOp) => compoundOp switch

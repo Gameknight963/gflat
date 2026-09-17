@@ -64,8 +64,8 @@
 | `uint` | `i32` | 32 | Unsigned | **Guaranteed 32-bit unsigned integer** |
 | `long` | `i64` | 64 | Signed | **Guaranteed 64-bit signed integer** |
 | `ulong` | `i64` | 64 | Unsigned | **Guaranteed 64-bit unsigned integer** |
-| `isize` | `i64` (on x64) | Pointer | Signed | Native pointer-sized integer |
-| `usize` | `i64` (on x64) | Pointer | Unsigned | Native pointer-sized unsigned integer |
+| `nint` | `i64` (on x64) | Pointer | Signed | Native pointer-sized integer |
+| `nuint` | `i64` (on x64) | Pointer | Unsigned | Native pointer-sized unsigned integer |
 | `float` | `float` | 32 | IEEE 754 | 32-bit single-precision float |
 | `double` | `double` | 64 | IEEE 754 | 64-bit double-precision float |
 
@@ -73,7 +73,7 @@
 Unlike C and C++ where `long` is 32 bits on 64-bit Windows (LLP64) and 64 bits on 64-bit Linux (LP64), `gflat` enforces **strictly fixed sizes**:
 - `int` is ALWAYS 32 bits.
 - `long` is ALWAYS 64 bits.
-- Pointer-sized integers are explicitly represented by `isize` and `usize`.
+- Pointer-sized integers are explicitly represented by `nint` and `nuint`.
 
 **Status:** **HOLDING UP.** The type checker and LLVM emitter map `int` -> `i32` and `long` -> `i64` uniformly on all platforms.
 

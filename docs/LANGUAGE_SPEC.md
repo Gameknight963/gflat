@@ -25,11 +25,25 @@
 - **Identifiers:** Match `^[a-zA-Z_][a-zA-Z0-9_]*$`. Identifiers beginning with `__` are reserved for internal compiler use.
 - **Sigils:** Sigils like `$` are lexical tokens (e.g. for string interpolation) and are strictly banned inside identifier names.
 - **Reserved Keywords:**
-  `if`, `else`, `while`, `for`, `foreach`, `in`, `return`, `break`, `continue`, `defer`, `throw`, `try`, `catch`, `const`, `readonly`, `static`, `virtual`, `override`, `abstract`, `public`, `private`, `protected`, `internal`, `struct`, `class`, `interface`, `enum`, `alias`, `namespace`, `using`, `extern`, `new`, `sizeof`, `nameof`, `default`, `operator`.
+  `if`, `else`, `while`, `for`, `foreach`, `in`, `return`, `break`, `continue`, `defer`, `throw`, `throws`, `try`, `catch`, `const`, `readonly`, `static`, `virtual`, `override`, `abstract`, `public`, `private`, `protected`, `internal`, `struct`, `class`, `interface`, `enum`, `alias`, `namespace`, `using`, `extern`, `new`, `delete`, `sizeof`, `nameof`, `default`, `operator`.
 
 ### 2.2 Comments
 - Line comments: `// ...`
 - Block comments: `/* ... */` (can span multiple lines).
+
+### 2.3 Member & Scope Resolution Operators (`::` vs `.`)
+`gflat` enforces strict semantic separation between static scope access and instance member access:
+- **Scope Resolution (`::`):** Exclusively used for static members, namespace qualifications, nested types, and enum members:
+  - Namespaces: `Math::PI`, `System::IO::File`
+  - Nested types & static members: `Outer::Inner`, `Math::Sin(x)`
+  - Enum members: `Color::Red`, `Option::None`
+  - Attempting to access static or namespace members using `.` produces a compile error.
+- **Instance Member Access (`.`):** Exclusively used on instance expressions:
+  - Struct and class fields: `person.name`
+  - Instance methods: `list.get(0)`
+  - Direct pointer member access: `ptr.x` (transparent dereference)
+  - Attempting to access instance members using `::` produces a compile error.
+- **Removed Operators:** The C-style `->` operator has been completely removed from the language in favor of uniform `.`.
 
 ---
 
@@ -71,7 +85,8 @@ Unlike C and C++ where `long` is 32 bits on 64-bit Windows (LLP64) and 64 bits o
 
 1. **Non-Nullable Raw Pointer (`T*`):**
    - Unmanaged memory address.
-   - **Guaranteed non-null at initialization.** Cannot be assigned `null`, cannot be assigned `default`, and cannot be initialized without a valid address or allocation.
+   - **Guaranteed non-null.** Cannot be assigned `null`, cannot be assigned `default`, and cannot be initialized without a valid address or allocation.
+   - **Definite Assignment:** Local pointer declarations without an initializer (`T* p;`) cannot be read or dereferenced before being explicitly assigned or initialized via address-of (`&x`).
 2. **Nullable Raw Pointer (`T*?`):**
    - Memory address that may be `null`.
    - Can receive `null` or `default(T*?)`.
@@ -80,8 +95,8 @@ Unlike C and C++ where `long` is 32 bits on 64-bit Windows (LLP64) and 64 bits o
    - Prevents mutation of underlying memory.
    - String literals `"..."` decay to `readonly char*`.
 4. **Managed References (`T^`):**
-   - Syntax for references intended for runtime tracking / managed memory.
-   - Cannot be assigned `default`.
+   - Syntax reserved for future garbage-collected runtime references.
+   - Currently rejected at compile-time with a descriptive diagnostic pending GC runtime engine integration.
 5. **Function Pointers (`fn(param_types)*`):**
    - Low-level function address. Non-nullable by default.
 
@@ -143,13 +158,17 @@ Unlike C and C++ where `long` is 32 bits on 64-bit Windows (LLP64) and 64 bits o
      ```
      - Destructor is automatically queued on the scope's defer stack.
      - Destructors are null-safe and idempotent (clears the vtable slot upon execution).
-  2. **Heap Classes:** Allocated via `new MyClass(...)`:
+  2. **Heap Classes & Objects:** Allocated via `new MyClass(...)`:
      - Returns a pointer `%MyClass*`.
      - Dynamically allocated via `malloc`.
+  3. **Explicit Deletion (`delete` Statement):**
+     - Heap-allocated objects and structs are freed using `delete ptr;`.
+     - `delete` invokes the target type's destructor (`~MyClass()`, virtual if applicable), followed by releasing the underlying memory via `free()`.
+     - Raw memory buffers allocated directly with `malloc()` use standard `free(ptr)`.
 
 ---
 
-### 4.3 Deterministic Cleanup: `defer` & Foreach Disposal
+### 4.3 Deterministic Cleanup: `defer` & Foreach RAII
 
 - **`defer` Statement:** Executes arbitrary statements or blocks when the enclosing lexical scope exits:
   ```gflat
@@ -157,8 +176,9 @@ Unlike C and C++ where `long` is 32 bits on 64-bit Windows (LLP64) and 64 bits o
   defer fclose(f);
   ```
 - **Foreach Loop RAII:**
-  - `foreach (var item in collection)` calls `.GetEnumerator()`.
-  - If the enumerator defines `Dispose()`, it is automatically registered with `defer` to ensure cleanup even if exceptions occur or loops exit early via `break`.
+  - `foreach (item in collection)` calls `.GetEnumerator()`.
+  - gflat adheres to zero-allocation value-type cursor iteration.
+  - The compiler does NOT require or inject an implicit `Dispose()` call. If the enumerator defines a destructor (`~Enumerator()`), gflat's standard scope RAII executes it deterministically when the loop exits or breaks.
 
 ---
 
@@ -215,27 +235,39 @@ Unlike C and C++ where `long` is 32 bits on 64-bit Windows (LLP64) and 64 bits o
 
 ---
 
-## 7. Error Handling Architecture
+## 7. Error Handling & Control Flow Architecture
 
-`gflat` implements structured exception handling with `try`, `catch`, and `throw`:
-
+### 7.1 Explicit `throws` Annotation & Checked Exceptions
+In `gflat`, throwing an exception is part of the function signature contract:
 ```gflat
-try
+int readFile(string path) throws
 {
-    if (failed) throw new Exception("Operation failed");
-}
-catch (Exception* e)
-{
-    printf("Caught: %s\n", e.Message);
+    if (path == null)
+    {
+        throw new Exception("Path cannot be null");
+    }
+    // read file ...
+    return 0;
 }
 ```
+- **Signature Enforcement:** Any function or method that contains a `throw` statement or calls another throwing function must either:
+  1. Handle the exception via an enclosing `try/catch` block, or
+  2. Declare `throws` in its header.
+- **Predictable ABI:** The presence of `throws` on a function deterministically establishes its LLVM ABI without needing whole-program heuristic call graph inference (`PropagateCanThrow` has been eliminated).
+- `main()` cannot be declared `throws`.
 
-### Underlying Implementation: Checked Return Value Unwinding
+### 7.2 Return Path & Control Flow Analysis Guarantee
+- Non-void functions and operator overloads must return a value or throw an exception along **every reachable code path**.
+- The compiler's `ControlFlowPass` performs static path analysis across branches (`if/else`), loops (`while`, `for`), and error handling (`try/catch`).
+- Infinite loops without unhandled `break` statements (`while (true)` or `for (;;)`) are recognized as terminating.
+- Falling off the end of a non-void function is a compile-time error (`TypeCheckException`). Void functions, constructors, and destructors allow implicit return.
+
+### 7.3 Underlying Implementation: Value-Tuple Status Returns
 Unlike C++ or C# which use zero-cost DWARF table unwinding or Windows SEH (`__CxxFrameHandler3`), `gflat` lowers throwing functions in LLVM to **value-tuple status returns**:
-- A function returning `T` that can throw is transformed into returning:
+- A function returning `T` declared `throws` is transformed in LLVM IR to return:
   `{ T, %Exception*, i1 }` (where `i1` is `true` if an exception is in flight).
 - Every call site inspects the status bit:
-  - If `true`, the function runs all pending `defer` actions and scope destructors, then bubbles the exception up the call stack to the nearest enclosing `catch` block.
+  - If `true`, the runtime executes all pending `defer` actions and scope destructors, bubbling the exception up the call stack to the nearest enclosing `catch` block.
 
 ---
 
@@ -278,8 +310,8 @@ This section evaluates the promises of `gflat` against the actual current compil
 
 ---
 
-### Guarantee 3: Non-Nullable Pointer Safety
-> **The Goal:** Non-nullable pointers `T*` can never be null.
+### Guarantee 3: Non-Nullable Pointer & Variable Safety
+> **The Goal:** Non-nullable pointers `T*` can never be null or uninitialized, and variables cannot be read before assignment.
 
 #### Reality Audit:
 1. **What holds up:**
@@ -287,40 +319,58 @@ This section evaluates the promises of `gflat` against the actual current compil
    - `T*` cannot be assigned `default` or `default(T*)`.
    - Functions returning `T*` cannot return `default` or `null`.
    - `readonly char*` prevents string literal mutation.
+   - **Definite Assignment Analysis (`DefiniteAssignmentPass`):**
+     - Declaring any local variable without an initializer (`int* p;`, `int x;`) tracks it as unassigned.
+     - Reading or dereferencing unassigned variables is a compile-time error.
+     - **Rule A (Address-of Initialization):** Taking the address of an uninitialized variable (`&x` or `&x.field`) initializes it, supporting idiomatic C-style out-parameters (`int x; get_val(&x);`).
+     - **Field-by-Field Struct Initialization:** Assigning individual fields (`p.x = 10;`) is permitted as an initialization write. Individual field reads verify that the specific field is assigned, and reading the entire composite struct requires all declared fields to be assigned.
 2. **Where safety escapes exist:**
-   - **Pointer Arithmetic:** `p + 5` or `p - 1` can produce invalid or null addresses without compiler errors.
-   - **Uninitialized Pointers:** Declaring a pointer without an initializer (`int* p;`) leaves an uninitialized LLVM register/memory slot rather than producing a compilation error.
+   - **Pointer Arithmetic:** `p + 5` or `p - 1` can produce out-of-bounds addresses without runtime bounds checking (standard for systems languages).
 
-#### Verdict on Pointer Safety:
-> **PARTIALLY HOLDING UP.** Definite assignment analysis is needed to prevent uninitialized pointer variables (`int* p;`). Once definite assignment is implemented, `T*` will be sound.
+#### Verdict on Pointer & Variable Safety:
+> **HOLDING UP COMPLETELY.** Non-nullable pointers `T*` cannot be null and cannot be read uninitialized. Definite assignment ensures memory is initialized before consumption.
 
 ---
 
 ### Guarantee 4: Deterministic Destruction (RAII)
-> **The Goal:** Stack resources are cleaned up deterministically upon scope exit, returns, or errors.
+> **The Goal:** Resources are cleaned up deterministically upon scope exit, returns, deletion, or errors.
 
 #### Reality Audit:
 - Stack structs with `~StructName()` run destructors via `defer` scopes.
 - Stack classes run destructors via `ClassDestructorDeferAction` and check `icmp ne vtable, null` to prevent executing destructors on uninitialized memory.
+- Heap allocations (`new Class()`, `new Struct()`) are explicitly destroyed and freed via `delete ptr;`, executing destructors before releasing memory.
 - Early `return`, `break`, `continue`, and exception unwinding properly execute defer actions in reverse declaration order.
 
 #### Verdict on RAII:
-> **HOLDING UP FOR STACK ALLOCATIONS.** Heap allocations (`new Class()`) currently do not have automatic garbage collection or reference counting and require manual management or a future memory manager.
+> **HOLDING UP.** Stack resources use scope-based RAII, while heap objects have deterministic destructor execution via `delete`.
 
 ---
 
-## 9. Architectural Pain Points & Roadmap
+## 9. Completed Architecture Milestones & Ongoing Roadmap
 
-1. **`TypeChecker.cs` Monolith (5,500+ lines):**
-   - The type checker currently handles symbol table generation, alias resolution, type inference, monomorphization, operator resolution, and AST mutation in a single pass.
-   - *Roadmap:* Separate into distinct compiler passes:
-     - `SymbolCollectionPass` (namespaces, types, methods)
-     - `TypeResolutionPass` (aliases, type references)
-     - `TypeCheckPass` (expression typing and statement validation)
-2. **Attributes:**
-   - Attributes are currently strings in the AST (`AttributeNode`). 
-   - *Roadmap:* Upgrade to constant expression arguments when a formal compile-time attribute or macro system is built.
-3. **Definite Assignment Analysis:**
-   - Ensure all local variables (especially non-nullable pointers `T*`) are assigned before use.
-4. **C++ ABI Interop Bridge:**
+### Completed Milestones:
+1. **Multi-Pass Compiler Decomposition:**
+   - Extracted standalone `SymbolTable` to isolate type, namespace, and member registration from checking logic.
+   - Decoupled compile-time evaluation engine via `IConstEvaluationContext`.
+   - Pipeline structured into distinct, composable compiler passes:
+     - **Pass 1:** `SymbolCollectionPass` (namespaces, types, methods, structs, classes, interfaces, enums, aliases)
+     - **Pass 2:** `HierarchyResolutionPass` (inheritance validation, vtable slot allocation, interface conformance)
+     - **Pass 3:** `TypeChecker` (expression typing and statement validation)
+     - **Pass 4:** `ControlFlowPass` (return path and fallthrough verification)
+     - **Pass 5:** `DefiniteAssignmentPass` (definite assignment with Rule A and struct field tracking)
+2. **Checked Exceptions & Explicit `throws`:**
+   - Required explicit `throws` annotation on throwing functions.
+   - Strictly verifiable LLVM ABI tuple `{ T, %Exception*, i1 }`.
+3. **Strict Scope Resolution:**
+   - Enforced `::` strictly for static/namespaces/types/enums and `.` strictly for instance members.
+   - Removed C-style `->` operator.
+4. **Deterministic Deletion:**
+   - Added first-class `delete` statement for heap allocations with automatic destructor invocation.
+
+### Ongoing Roadmap:
+1. **Attributes System:**
+   - Upgrade string attributes (`AttributeNode`) to evaluate constant expression arguments when a formal compile-time macro or reflection system is built.
+2. **Custom Allocator Integration:**
+   - Provide clean mechanisms for user-defined allocators to override `new` / `delete`.
+3. **C++ ABI Interop Bridge:**
    - If true C++ interoperability is desired, add an `[abi("c++")]` attribute that enables Itanium/MSVC vtable prefixes and symbol mangling for designated types.

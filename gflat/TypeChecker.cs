@@ -1803,6 +1803,14 @@ namespace gflat
             {
                 ns.Accept(this);
             }
+
+            // Pass 4: Control flow & Return path analysis
+            ControlFlowPass controlFlowPass = new ControlFlowPass(this, _constEvaluator);
+            controlFlowPass.Execute(node);
+
+            // Pass 5: Definite assignment analysis
+            DefiniteAssignmentPass definiteAssignmentPass = new DefiniteAssignmentPass(this, controlFlowPass);
+            definiteAssignmentPass.Execute(node);
         }
 
         private void ResolveClassHierarchies()

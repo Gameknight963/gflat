@@ -3892,6 +3892,505 @@ namespace gflat.Tests
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
             Assert.Contains("must be accessed with '.', not '::'", ex.Message);
         }
+
+        [Fact]
+        public void NonVoidFunction_WithoutReturn_Throws()
+        {
+            string code = """
+                int calculate(int a)
+                {
+                    int b = a * 2;
+                }
+
+                int main()
+                {
+                    return calculate(5);
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Not all code paths return a value in function 'calculate'", ex.Message);
+        }
+
+        [Fact]
+        public void NonVoidFunction_IfWithoutElse_Throws()
+        {
+            string code = """
+                int calculate(int a)
+                {
+                    if (a > 0)
+                    {
+                        return a;
+                    }
+                }
+
+                int main()
+                {
+                    return calculate(5);
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Not all code paths return a value in function 'calculate'", ex.Message);
+        }
+
+        [Fact]
+        public void NonVoidFunction_IfElse_BothReturn_Passes()
+        {
+            string code = """
+                int calculate(int a)
+                {
+                    if (a > 0)
+                    {
+                        return a;
+                    }
+                    else
+                    {
+                        return -a;
+                    }
+                }
+
+                int main()
+                {
+                    return calculate(5);
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void NonVoidFunction_IfElse_OneBranchMissingReturn_Throws()
+        {
+            string code = """
+                int calculate(int a)
+                {
+                    if (a > 0)
+                    {
+                        return a;
+                    }
+                    else
+                    {
+                        int neg = -a;
+                    }
+                }
+
+                int main()
+                {
+                    return calculate(5);
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Not all code paths return a value in function 'calculate'", ex.Message);
+        }
+
+        [Fact]
+        public void NonVoidFunction_WhileTrue_WithoutBreak_Passes()
+        {
+            string code = """
+                int loopForever()
+                {
+                    while (true)
+                    {
+                        int a = 1;
+                    }
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void NonVoidFunction_WhileTrue_WithBreak_Throws()
+        {
+            string code = """
+                int loopWithBreak(int cond)
+                {
+                    while (true)
+                    {
+                        if (cond > 0)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Not all code paths return a value in function 'loopWithBreak'", ex.Message);
+        }
+
+        [Fact]
+        public void NonVoidFunction_TryCatch_BothReturn_Passes()
+        {
+            string code = """
+                int testTry(int val)
+                {
+                    try
+                    {
+                        return val * 2;
+                    }
+                    catch (Exception* e)
+                    {
+                        return -1;
+                    }
+                }
+
+                int main()
+                {
+                    return testTry(10);
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void NonVoidFunction_TryCatch_CatchMissingReturn_Throws()
+        {
+            string code = """
+                int testTry(int val)
+                {
+                    try
+                    {
+                        return val * 2;
+                    }
+                    catch (Exception* e)
+                    {
+                        int err = -1;
+                    }
+                }
+
+                int main()
+                {
+                    return testTry(10);
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Not all code paths return a value in function 'testTry'", ex.Message);
+        }
+
+        [Fact]
+        public void VoidFunction_WithoutReturn_Passes()
+        {
+            string code = """
+                void doWork(int a)
+                {
+                    int b = a + 1;
+                }
+
+                int main()
+                {
+                    doWork(10);
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void UnassignedPrimitive_Read_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    int x;
+                    return x;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Use of unassigned local variable 'x'", ex.Message);
+        }
+
+        [Fact]
+        public void UnassignedPointer_Dereference_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    int* p;
+                    return *p;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Use of unassigned local variable 'p'", ex.Message);
+        }
+
+        [Fact]
+        public void AssignedAtDeclaration_Read_Passes()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 42;
+                    return x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void AssignedAfterDeclaration_Read_Passes()
+        {
+            string code = """
+                int main()
+                {
+                    int x;
+                    x = 42;
+                    return x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void UnassignedVariable_UsedInInitializer_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    int a;
+                    int b = a + 1;
+                    return b;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Use of unassigned local variable 'a'", ex.Message);
+        }
+
+        [Fact]
+        public void RuleA_AddressOfInitializesVariable_Passes()
+        {
+            string code = """
+                void setVal(int* p)
+                {
+                    *p = 100;
+                }
+
+                int main()
+                {
+                    int x;
+                    setVal(&x);
+                    return x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void RuleA_AddressOfPointer_Passes()
+        {
+            string code = """
+                int main()
+                {
+                    int x;
+                    int* p = &x;
+                    *p = 10;
+                    return x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void StructField_AssignedField_Read_Passes()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    Point p;
+                    p.x = 10;
+                    return p.x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void StructField_UnassignedField_Read_Throws()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    Point p;
+                    p.x = 10;
+                    return p.y;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Use of unassigned field 'y' of struct variable 'p'", ex.Message);
+        }
+
+        [Fact]
+        public void Struct_IncompletelyAssigned_WholeRead_Throws()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    Point p;
+                    p.x = 10;
+                    Point p2 = p;
+                    return p2.x;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Use of unassigned local variable 'p'", ex.Message);
+        }
+
+        [Fact]
+        public void Struct_AllFieldsAssigned_WholeRead_Passes()
+        {
+            string code = """
+                struct Point
+                {
+                    int x;
+                    int y;
+                }
+
+                int main()
+                {
+                    Point p;
+                    p.x = 10;
+                    p.y = 20;
+                    Point p2 = p;
+                    return p2.x + p2.y;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void IfElse_BothAssign_Passes()
+        {
+            string code = """
+                int main()
+                {
+                    int x;
+                    if (1 > 0)
+                    {
+                        x = 10;
+                    }
+                    else
+                    {
+                        x = 20;
+                    }
+                    return x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void IfElse_OneBranchAssigns_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    int x;
+                    if (1 > 0)
+                    {
+                        x = 10;
+                    }
+                    return x;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Use of unassigned local variable 'x'", ex.Message);
+        }
+
+        [Fact]
+        public void IfElse_SurvivingBranchAssigns_TerminatingBranchReturns_Passes()
+        {
+            string code = """
+                int main()
+                {
+                    int x;
+                    if (1 < 0)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        x = 42;
+                    }
+                    return x;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+        }
+
+        [Fact]
+        public void CompoundAssignment_Unassigned_Throws()
+        {
+            string code = """
+                int main()
+                {
+                    int x;
+                    x += 5;
+                    return x;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Use of unassigned local variable 'x'", ex.Message);
+        }
     }
 }
 

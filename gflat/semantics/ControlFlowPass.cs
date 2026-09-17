@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using gflat.ast;
 using gflat.CompileExceptions;
 using gflat.comptime;
+using gflat.diagnostics;
 
 namespace gflat.semantics
 {
@@ -10,11 +11,13 @@ namespace gflat.semantics
     {
         private readonly TypeChecker _typeChecker;
         private readonly ConstEvaluator _constEvaluator;
+        private readonly DiagnosticBag _diagnostics;
 
-        public ControlFlowPass(TypeChecker typeChecker, ConstEvaluator constEvaluator)
+        public ControlFlowPass(TypeChecker typeChecker, ConstEvaluator constEvaluator, DiagnosticBag? diagnostics = null)
         {
             _typeChecker = typeChecker;
             _constEvaluator = constEvaluator;
+            _diagnostics = diagnostics ?? new DiagnosticBag();
         }
 
         public void Execute(CompilationUnit cu)
@@ -71,13 +74,10 @@ namespace gflat.semantics
                 return;
             }
 
-            TypeExpression resolvedRet = _typeChecker.ResolveAlias(method.ReturnType);
-            if (IsVoidType(resolvedRet))
-            {
-                return;
-            }
+            bool terminates = StatementTerminates(method.Body);
 
-            if (!StatementTerminates(method.Body))
+            TypeExpression resolvedRet = _typeChecker.ResolveAlias(method.ReturnType);
+            if (!IsVoidType(resolvedRet) && !terminates)
             {
                 throw new TypeCheckException($"Not all code paths return a value in function '{method.Name}'", method.Line);
             }
@@ -90,13 +90,10 @@ namespace gflat.semantics
                 return;
             }
 
-            TypeExpression resolvedRet = _typeChecker.ResolveAlias(op.ReturnType);
-            if (IsVoidType(resolvedRet))
-            {
-                return;
-            }
+            bool terminates = StatementTerminates(op.Body);
 
-            if (!StatementTerminates(op.Body))
+            TypeExpression resolvedRet = _typeChecker.ResolveAlias(op.ReturnType);
+            if (!IsVoidType(resolvedRet) && !terminates)
             {
                 throw new TypeCheckException($"Not all code paths return a value in operator '{op.OperatorSymbol}'", op.Line);
             }
@@ -124,9 +121,15 @@ namespace gflat.semantics
             {
                 for (int i = 0; i < block.Statements.Count; i++)
                 {
-                    if (StatementTerminates(block.Statements[i]))
+                    AstNode current = block.Statements[i];
+                    bool terminates = StatementTerminates(current);
+                    if (terminates || current is BreakStatement || current is ContinueStatement)
                     {
-                        return true;
+                        if (i + 1 < block.Statements.Count)
+                        {
+                            _diagnostics.Report(DiagnosticRules.GF2001_UnreachableCode, block.Statements[i + 1].Line);
+                        }
+                        return terminates;
                     }
                 }
                 return false;
@@ -136,11 +139,16 @@ namespace gflat.semantics
             {
                 if (IsConstantTrue(ifStmt.Condition))
                 {
+                    if (ifStmt.Else != null)
+                    {
+                        _diagnostics.Report(DiagnosticRules.GF2001_UnreachableCode, ifStmt.Else.Line);
+                    }
                     return StatementTerminates(ifStmt.Then);
                 }
 
                 if (IsConstantFalse(ifStmt.Condition))
                 {
+                    _diagnostics.Report(DiagnosticRules.GF2001_UnreachableCode, ifStmt.Then.Line);
                     if (ifStmt.Else != null)
                     {
                         return StatementTerminates(ifStmt.Else);
@@ -150,14 +158,24 @@ namespace gflat.semantics
 
                 if (ifStmt.Else == null)
                 {
+                    StatementTerminates(ifStmt.Then);
                     return false;
                 }
 
-                return StatementTerminates(ifStmt.Then) && StatementTerminates(ifStmt.Else);
+                bool thenTerminates = StatementTerminates(ifStmt.Then);
+                bool elseTerminates = StatementTerminates(ifStmt.Else);
+                return thenTerminates && elseTerminates;
             }
 
             if (stmt is WhileStatement whileStmt)
             {
+                if (IsConstantFalse(whileStmt.Condition))
+                {
+                    _diagnostics.Report(DiagnosticRules.GF2001_UnreachableCode, whileStmt.Body.Line);
+                    return false;
+                }
+
+                StatementTerminates(whileStmt.Body);
                 if (IsConstantTrue(whileStmt.Condition))
                 {
                     if (!HasBreakTargetingCurrentLoop(whileStmt.Body))
@@ -170,6 +188,13 @@ namespace gflat.semantics
 
             if (stmt is ForStatement forStmt)
             {
+                if (forStmt.Condition != null && IsConstantFalse(forStmt.Condition))
+                {
+                    _diagnostics.Report(DiagnosticRules.GF2001_UnreachableCode, forStmt.Body.Line);
+                    return false;
+                }
+
+                StatementTerminates(forStmt.Body);
                 if (forStmt.Condition == null || IsConstantTrue(forStmt.Condition))
                 {
                     if (!HasBreakTargetingCurrentLoop(forStmt.Body))
@@ -177,6 +202,12 @@ namespace gflat.semantics
                         return true;
                     }
                 }
+                return false;
+            }
+
+            if (stmt is ForeachStatement foreachStmt)
+            {
+                StatementTerminates(foreachStmt.Body);
                 return false;
             }
 

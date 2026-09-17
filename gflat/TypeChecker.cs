@@ -3,6 +3,7 @@ using gflat.CompileExceptions;
 using gflat.comptime;
 using gflat.symbols;
 using gflat.semantics;
+using gflat.diagnostics;
 
 namespace gflat
 {
@@ -17,10 +18,13 @@ namespace gflat
         private readonly HashSet<string> _constVariableNames = new();
         private readonly SymbolTable _symbols;
         public SymbolTable Symbols => _symbols;
+        private readonly DiagnosticBag _diagnostics;
+        public DiagnosticBag Diagnostics => _diagnostics;
         private int _loopDepth = 0;
 
-        public TypeChecker()
+        public TypeChecker(DiagnosticBag? diagnostics = null)
         {
+            _diagnostics = diagnostics ?? new DiagnosticBag();
             _constEvaluator = new ConstEvaluator(this);
             _symbols = new SymbolTable(
                 _classes,
@@ -1858,7 +1862,7 @@ namespace gflat
             }
 
             // Pass 4: Control flow & Return path analysis
-            ControlFlowPass controlFlowPass = new ControlFlowPass(this, _constEvaluator);
+            ControlFlowPass controlFlowPass = new ControlFlowPass(this, _constEvaluator, _diagnostics);
             controlFlowPass.Execute(node);
 
             // Pass 5: Definite assignment analysis

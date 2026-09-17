@@ -19,17 +19,19 @@ namespace gflat
             {
                 try
                 {
-                    var dirs = Directory.GetDirectories(vsBase, "*", SearchOption.AllDirectories)
+                    List<string> dirs = Directory.GetDirectories(vsBase, "*", SearchOption.AllDirectories)
                         .Where(d => d.EndsWith(@"VC\Tools\MSVC"))
                         .ToList();
-                    foreach (var vcTools in dirs)
+                    foreach (string vcTools in dirs)
                     {
-                        var versions = Directory.GetDirectories(vcTools);
-                        foreach (var v in versions.OrderByDescending(x => x))
+                        string[] versions = Directory.GetDirectories(vcTools);
+                        foreach (string v in versions.OrderByDescending(x => x))
                         {
                             string x64 = Path.Combine(v, "lib", "x64");
                             if (File.Exists(Path.Combine(x64, "libcmt.lib")))
+                            {
                                 return $"-Xlinker /libpath:\"{x64}\"";
+                            }
                         }
                     }
                 }
@@ -73,6 +75,18 @@ namespace gflat
             CompilationUnit ast = Parser.Parse(tokens);
             TypeChecker checker = new TypeChecker();
             ast.Accept(checker);
+
+            if (checker.Diagnostics.Count > 0)
+            {
+                bool useColor = !Console.IsOutputRedirected;
+                Console.Error.WriteLine(checker.Diagnostics.FormatAll(useColor));
+            }
+
+            if (checker.Diagnostics.HasErrors)
+            {
+                return 1;
+            }
+
             LlvmEmitter emitter = new LlvmEmitter(checker);
             ast.Accept(emitter);
             string ir = emitter.GetOutput();

@@ -378,6 +378,58 @@ namespace gflat
             return false;
         }
 
+        public bool HasDestructor(TypeExpression type)
+        {
+            return HasDestructorInternal(type, new HashSet<string>());
+        }
+
+        private bool HasDestructorInternal(TypeExpression type, HashSet<string> visited)
+        {
+            type = ResolveAlias(type);
+            if (type is NamedTypeExpression named)
+            {
+                if (!visited.Add(named.Name))
+                {
+                    return false;
+                }
+
+                StructInfo? sInfo = GetStruct(named.Name);
+                if (sInfo != null)
+                {
+                    if (sInfo.Destructor != null)
+                    {
+                        return true;
+                    }
+                    foreach ((string Name, TypeExpression Type) f in sInfo.Fields)
+                    {
+                        if (HasDestructorInternal(f.Type, visited))
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+                ClassInfo? cInfo = GetClass(named.Name);
+                if (cInfo != null)
+                {
+                    if (HasAnyDestructor(cInfo))
+                    {
+                        return true;
+                    }
+                    foreach ((string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) f in cInfo.Fields)
+                    {
+                        if (HasDestructorInternal(f.Type, visited))
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            }
+            return false;
+        }
+
         public class EnumInfo
         {
             public string Name = "";
@@ -2562,7 +2614,12 @@ namespace gflat
                 foreach (Parameter p in node.Parameters)
                 {
                     ValidateTypeUsage(p.Type, p.Line);
-                    DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                    TypeExpression pType = ResolveAlias(p.Type);
+                    if (HasDestructor(pType))
+                    {
+                        throw new TypeCheckException($"Parameter '{p.Name}' cannot have type '{TypeName(pType)}' because types with destructors cannot be passed by value. Use a pointer instead ('{TypeName(pType)}*').", p.Line);
+                    }
+                    DeclareVariable(p.Name, pType, p.Line);
                 }
                 node.Body?.Accept(this);
                 PopScope();
@@ -2600,6 +2657,10 @@ namespace gflat
                 {
                     p.Type = ResolveAlias(p.Type);
                     ValidateTypeUsage(p.Type, p.Line);
+                    if (HasDestructor(p.Type))
+                    {
+                        throw new TypeCheckException($"Parameter '{p.Name}' cannot have type '{TypeName(p.Type)}' because types with destructors cannot be passed by value. Use a pointer instead ('{TypeName(p.Type)}*').", p.Line);
+                    }
                     DeclareVariable(p.Name, p.Type, p.Line);
                 }
 
@@ -3130,6 +3191,11 @@ namespace gflat
             {
                 node.Initializer.Accept(this);
                 TypeExpression initType = GetType(node.Initializer);
+
+                if (HasDestructor(varType) && node.Initializer is not (NewExpression or DefaultExpression or CallExpression))
+                {
+                    throw new TypeCheckException($"Cannot copy value of type '{TypeName(varType)}' because it defines a destructor. Pass by pointer, or use an explicit method if available.", node.Line);
+                }
 
                 // Size inference for inferred arrays: char[] a = "string";
                 if (varType is ArrayTypeExpression { Size: null } arr && initType is ArrayTypeExpression { Size: not null } initArr)
@@ -3792,6 +3858,11 @@ namespace gflat
             node.Target.Accept(this);
             TypeExpression targetType = GetType(node.Target);
             CheckAssignmentTarget(node.Target, node.Line);
+
+            if (HasDestructor(targetType))
+            {
+                throw new TypeCheckException($"Cannot assign to '{TypeName(targetType)}': types with destructors cannot be copied or reassigned by value", node.Line);
+            }
 
             node.Value.Accept(this);
             TypeExpression valueType = GetType(node.Value);
@@ -5217,6 +5288,10 @@ namespace gflat
                 {
                     ValidateTypeUsage(p.Type, p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
+                    if (HasDestructor(pType))
+                    {
+                        throw new TypeCheckException($"Parameter '{p.Name}' cannot have type '{TypeName(pType)}' because types with destructors cannot be passed by value. Use a pointer instead ('{TypeName(pType)}*').", p.Line);
+                    }
                     paramTypes.Add(pType);
                     DeclareVariable(p.Name, pType, p.Line);
                 }

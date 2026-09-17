@@ -4498,6 +4498,131 @@ namespace gflat.Tests
             Assert.NotNull(ast);
             Assert.NotNull(checker);
         }
+
+        [Fact]
+        public void StructWithDestructor_Assignment_Throws()
+        {
+            string code = """
+                struct Tracker
+                {
+                    public int* p;
+                    public ~Tracker() { }
+                }
+
+                int main()
+                {
+                    Tracker a;
+                    Tracker b;
+                    b = a;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("types with destructors cannot be copied or reassigned by value", ex.Message);
+        }
+
+        [Fact]
+        public void StructWithDestructor_CopyInit_Throws()
+        {
+            string code = """
+                struct Tracker
+                {
+                    public int* p;
+                    public ~Tracker() { }
+                }
+
+                int main()
+                {
+                    Tracker a;
+                    Tracker b = a;
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Cannot copy value of type 'Tracker' because it defines a destructor", ex.Message);
+        }
+
+        [Fact]
+        public void StructWithDestructor_PassByValue_Throws()
+        {
+            string code = """
+                struct Tracker
+                {
+                    public int* p;
+                    public ~Tracker() { }
+                }
+
+                void process(Tracker t)
+                {
+                }
+
+                int main()
+                {
+                    return 0;
+                }
+                """;
+
+            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("Parameter 't' cannot have type 'Tracker' because types with destructors cannot be passed by value", ex.Message);
+        }
+
+        [Fact]
+        public void StructWithDestructor_PointerPassAndAssign_Succeeds()
+        {
+            string code = """
+                struct Tracker
+                {
+                    public int* p;
+                    public ~Tracker() { }
+                }
+
+                void process(Tracker* t)
+                {
+                }
+
+                int main()
+                {
+                    Tracker a;
+                    Tracker* pA = &a;
+                    Tracker* pB = pA;
+                    process(&a);
+                    return 0;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
+
+        [Fact]
+        public void StructWithoutDestructor_Copy_Succeeds()
+        {
+            string code = """
+                struct Point
+                {
+                    public int x;
+                    public int y;
+                }
+
+                int main()
+                {
+                    Point a;
+                    a.x = 10;
+                    a.y = 20;
+                    Point b = a;
+                    Point c;
+                    c = b;
+                    return c.x + c.y;
+                }
+                """;
+
+            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
+            Assert.NotNull(ast);
+            Assert.NotNull(checker);
+        }
     }
 }
 

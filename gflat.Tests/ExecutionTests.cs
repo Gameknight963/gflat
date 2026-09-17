@@ -4170,12 +4170,12 @@ namespace gflat.Tests
                         sum = sum + x; // 0 + 1 + 2 = 3
                     }
 
-                    return sum + disposedState; // 3 + 50 (local in GetEnumerator) + 50 (foreach iterator exit) = 103
+                    return sum + disposedState; // 3 + 50 (foreach iterator exit) = 53
                 }
                 """;
 
             ExecutionResult result = CompilerTestHelper.Run(code);
-            Assert.Equal(103, result.ExitCode);
+            Assert.Equal(53, result.ExitCode);
         }
 
         [Fact]
@@ -4433,6 +4433,47 @@ namespace gflat.Tests
 
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(42, result.ExitCode);
+        }
+
+        [Fact]
+        public void Execution_Struct_ReturnByValue_TransfersDestructor()
+        {
+            string code = """
+                struct Resource
+                {
+                    public int* pCounter;
+                    public int id;
+
+                    public ~Resource()
+                    {
+                        *this.pCounter = *this.pCounter + 1;
+                    }
+                }
+
+                Resource create(int* pCounter, int id)
+                {
+                    Resource r;
+                    r.pCounter = pCounter;
+                    r.id = id;
+                    return r; // Destructor must NOT run here!
+                }
+
+                int main()
+                {
+                    int counter = 0;
+                    {
+                        Resource res = create(&counter, 42);
+                        if (counter != 0) return 1;
+                        if (res.id != 42) return 2;
+                    }
+
+                    if (counter != 1) return 3;
+                    return 0;
+                }
+                """;
+
+            ExecutionResult result = CompilerTestHelper.Run(code);
+            Assert.Equal(0, result.ExitCode);
         }
     }
 }

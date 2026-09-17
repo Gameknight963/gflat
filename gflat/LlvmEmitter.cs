@@ -366,7 +366,7 @@ public class LlvmEmitter : IVisitor
     private readonly Stack<int> _loopDeferDepths = new();
     private bool _hasTerminated = false;
 
-    private void EmitDefersDownTo(int targetDepth)
+    private void EmitDefersDownTo(int targetDepth, string? skipLocalPtr = null)
     {
         List<IDeferAction> toEmit = new();
         for (int scopeIdx = _deferScopes.Count - 1; scopeIdx >= targetDepth; scopeIdx--)
@@ -374,7 +374,19 @@ public class LlvmEmitter : IVisitor
             List<IDeferAction> scope = _deferScopes[scopeIdx];
             for (int i = scope.Count - 1; i >= 0; i--)
             {
-                toEmit.Add(scope[i]);
+                IDeferAction action = scope[i];
+                if (skipLocalPtr != null)
+                {
+                    if (action is StructDestructorDeferAction sAction && sAction.LocalPtr == skipLocalPtr)
+                    {
+                        continue;
+                    }
+                    if (action is ClassDestructorDeferAction cAction && cAction.LocalPtr == skipLocalPtr)
+                    {
+                        continue;
+                    }
+                }
+                toEmit.Add(action);
             }
         }
         foreach (IDeferAction action in toEmit)
@@ -1928,7 +1940,17 @@ public class LlvmEmitter : IVisitor
             Emit($"{afterFreeLbl}:");
         }
 
-        EmitDefersDownTo(0);
+        string? skipLocalPtr = null;
+        if (node.Value is IdentifierExpression retIdent && _locals.TryGetValue(retIdent.Name, out string? localSlot))
+        {
+            TypeExpression retType = _typeChecker.ResolveAlias(_typeChecker.GetType(node.Value));
+            if (_typeChecker.HasDestructor(retType))
+            {
+                skipLocalPtr = localSlot;
+            }
+        }
+
+        EmitDefersDownTo(0, skipLocalPtr);
 
         if (_currentFunctionIsThrowing)
         {

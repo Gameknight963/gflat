@@ -1,6 +1,7 @@
 using gflat.ast;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace gflat
 {
@@ -93,8 +94,37 @@ namespace gflat
             Console.WriteLine(ir);
             File.WriteAllText("output.ll", ir);
 
+            string fileName = "clang.exe";
+            if (OperatingSystem.IsWindows())
+            {
+                string arch = RuntimeInformation.OSArchitecture switch
+                {
+                    Architecture.X64 => "x64",
+                    Architecture.X86 => "x86",
+                    Architecture.Arm64 => "ARM64",
+                    _ => throw new PlatformNotSupportedException()
+                };
+
+                string vswhere = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                    @"Microsoft Visual Studio\Installer\vswhere.exe");
+
+                ProcessStartInfo psi = new(vswhere,
+                    "-latest -requires Microsoft.VisualStudio.Component.VC.Llvm.Clang " +
+                    $@"-find VC\Tools\Llvm\{arch}\bin\clang.exe")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                };
+                using Process findClangProc = Process.Start(psi)!;
+                string output = findClangProc.StandardOutput.ReadToEnd().Trim();
+                string? clangPath = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                          .FirstOrDefault()
+                          ?.Trim();
+                if (clangPath != null) fileName = clangPath;
+            }
             Process process = new Process();
-            process.StartInfo.FileName = "clang.exe";
+            process.StartInfo.FileName = fileName;
             string libArgs = GetClangLibArgs();
             process.StartInfo.Arguments = string.IsNullOrEmpty(libArgs)
                 ? "output.ll -o output.exe"

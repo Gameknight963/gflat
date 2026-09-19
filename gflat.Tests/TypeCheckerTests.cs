@@ -549,7 +549,7 @@ namespace gflat.Tests
         public void PointerArithmeticOnVoidPointerThrows()
         {
             string code = """
-                extern void* malloc(long size);
+                extern void* malloc(ulong size);
 
                 int main()
                 {
@@ -745,8 +745,8 @@ namespace gflat.Tests
                 {
                     uint u = 100u;
                     ulong ul = 200ul;
-                    int i = u;
-                    long l = ul;
+                    int i = (int)u;
+                    long l = (long)ul;
                     uint shifted = u << 2;
                     uint rshifted = u >> 1;
                     return 0;
@@ -800,7 +800,7 @@ namespace gflat.Tests
                 {
                     int i = 10;
                     uint u = (uint)i;
-                    int* ptr = (int*)0;
+                    int* ptr = &i;
                     nuint addr = (nuint)ptr;
                     void* vp = (void*)ptr;
                     int* ptr2 = (int*)vp;
@@ -2028,7 +2028,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Counter c;
+                    Counter c = new Counter();
                     readonly Counter* ptr = &c;
                     ptr.Increment();
                     return 0;
@@ -2055,7 +2055,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Counter c;
+                    Counter c = new Counter();
                     readonly Counter* ptr = &c;
                     return ptr.GetCount();
                 }
@@ -4183,7 +4183,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void RuleA_AddressOfInitializesVariable_Passes()
+        public void AddressOfInitializesVariable_RequiresInitialization()
         {
             string code = """
                 void setVal(int* p)
@@ -4199,12 +4199,11 @@ namespace gflat.Tests
                 }
                 """;
 
-            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
-            Assert.NotNull(ast);
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
         }
 
         [Fact]
-        public void RuleA_AddressOfPointer_Passes()
+        public void AddressOfPointer_RequiresInitialization()
         {
             string code = """
                 int main()
@@ -4216,8 +4215,7 @@ namespace gflat.Tests
                 }
                 """;
 
-            (CompilationUnit ast, TypeChecker checker) = CompilerTestHelper.Check(code);
-            Assert.NotNull(ast);
+            Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
         }
 
         [Fact]
@@ -4584,7 +4582,9 @@ namespace gflat.Tests
 
                 int main()
                 {
+                    int value = 0;
                     Tracker a;
+                    a.p = &value;
                     Tracker* pA = &a;
                     Tracker* pB = pA;
                     process(&a);
@@ -4636,7 +4636,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    Tracker[3] arr;
+                    Tracker[3] arr = default(Tracker[3]);
                     foreach (Tracker t in arr)
                     {
                     }

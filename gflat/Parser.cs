@@ -33,9 +33,16 @@ namespace gflat
 
         private Token Expect(TokenKind kind)
         {
+            if (kind == TokenKind.Greater && Current.Kind == TokenKind.GreaterGreater)
+            {
+                Token pair = Current;
+                _tokens[_pos] = new Token(TokenKind.Greater, pair.Line, pair.Start, pair.Start);
+                _tokens.Insert(_pos + 1, new Token(TokenKind.Greater, pair.Line, pair.Start + 1, pair.End));
+                return Consume();
+            }
             if (Current.Kind != kind)
             {
-                _diagnostics.Report(DiagnosticRules.GF0005_ExpectedToken, Current.Line, Current.Start, null, kind.ToString(), Current.Kind.ToString(), Current.Text);
+                _diagnostics.Report(DiagnosticRules.GF0005_ExpectedToken, Current.Line, Current.Column, null, kind.ToString(), Current.Kind.ToString(), Current.Text);
 
                 if (kind == TokenKind.Semicolon)
                 {
@@ -53,7 +60,9 @@ namespace gflat
             return Consume();
         }
 
-        private bool Check(TokenKind kind) => Current.Kind == kind;
+        private bool Check(TokenKind kind) => Current.Kind == kind ||
+            (kind == TokenKind.Greater && Current.Kind == TokenKind.GreaterGreater);
+
 
         private bool Match(TokenKind kind)
         {
@@ -312,9 +321,9 @@ namespace gflat
                 {
                     depth++;
                 }
-                else if (_tokens[i].Kind == TokenKind.Greater)
+                else if (_tokens[i].Kind is TokenKind.Greater or TokenKind.GreaterGreater)
                 {
-                    depth--;
+                    depth -= _tokens[i].Kind == TokenKind.GreaterGreater ? 2 : 1;
                     if (depth == 0)
                     {
                         return i + 1 < _tokens.Count && _tokens[i + 1].Kind == TokenKind.OpenParen;
@@ -823,6 +832,7 @@ namespace gflat
                 else if (Check(TokenKind.OpenParen))
                 {
                     int saved = _pos;
+                    var savedTokens = new List<Token>(_tokens);
                     int diagMark = _diagnostics.Count;
                     bool isFnPtr = false;
                     List<TypeExpression> paramTypes = new();
@@ -866,6 +876,7 @@ namespace gflat
                     {
                         _diagnostics.ClearSince(diagMark);
                         _pos = saved;
+                        _tokens = savedTokens;
                         break;
                     }
                 }
@@ -875,14 +886,7 @@ namespace gflat
                     AstNode? sizeExpr = null;
                     if (!Check(TokenKind.CloseBracket))
                     {
-                        if (Check(TokenKind.IntLiteral))
-                        {
-                            size = int.Parse(Consume().Text);
-                        }
-                        else
-                        {
-                            sizeExpr = ParseExpression();
-                        }
+                        sizeExpr = ParseExpression();
                     }
                     Expect(TokenKind.CloseBracket);
                     type = new ArrayTypeExpression(type, size, line, sizeExpr);
@@ -974,6 +978,7 @@ namespace gflat
         {
             // look ahead to see if this is "type name" or "type* name" etc
             int saved = _pos;
+            var savedTokens = new List<Token>(_tokens);
             int diagMark = _diagnostics.Count;
             try
             {
@@ -993,6 +998,7 @@ namespace gflat
             finally
             {
                 _pos = saved;
+                _tokens = savedTokens;
             }
         }
 
@@ -1322,6 +1328,7 @@ namespace gflat
             if (Check(TokenKind.Static))
             {
                 int saved = _pos;
+                var savedTokens = new List<Token>(_tokens);
                 Consume(); // 'static'
                 if (Check(TokenKind.OpenParen))
                 {
@@ -1332,6 +1339,7 @@ namespace gflat
                     }
                 }
                 _pos = saved;
+                _tokens = savedTokens;
             }
 
             // lambda expression
@@ -1348,6 +1356,7 @@ namespace gflat
             if (Check(TokenKind.OpenParen))
             {
                 int saved = _pos;
+                var savedTokens = new List<Token>(_tokens);
                 int diagMark = _diagnostics.Count;
                 bool isCast = false;
                 TypeExpression? castType = null;
@@ -1382,6 +1391,7 @@ namespace gflat
                 // fallback to parenthesized expression
                 _diagnostics.ClearSince(diagMark);
                 _pos = saved;
+                _tokens = savedTokens;
                 Consume(); // '('
                 AstNode expr = ParseExpression();
                 Expect(TokenKind.CloseParen);
@@ -1538,6 +1548,7 @@ namespace gflat
         private LambdaExpression? TryParseLambda(bool isStatic)
         {
             int saved = _pos;
+            var savedTokens = new List<Token>(_tokens);
             int diagMark = _diagnostics.Count;
             try
             {
@@ -1558,6 +1569,7 @@ namespace gflat
                 {
                     _diagnostics.ClearSince(diagMark);
                     _pos = saved;
+                    _tokens = savedTokens;
                     return null;
                 }
 
@@ -1580,6 +1592,7 @@ namespace gflat
             {
                 _diagnostics.ClearSince(diagMark);
                 _pos = saved;
+                _tokens = savedTokens;
                 return null;
             }
         }

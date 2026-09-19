@@ -1,3 +1,5 @@
+using gflat.CompileExceptions;
+
 namespace gflat;
 
 public class Lexer
@@ -25,15 +27,21 @@ public class Lexer
             if (c == '/' && i + 1 < code.Length && code[i + 1] == '*')
             {
                 i += 2;
-                while (i + 1 < code.Length && !(code[i] == '*' && code[i + 1] == '/')) i++;
+                int commentLine = line;
+                while (i + 1 < code.Length && !(code[i] == '*' && code[i + 1] == '/'))
+                {
+                    if (code[i] == '\n') line++;
+                    i++;
+                }
+                if (i + 1 >= code.Length) throw new TypeCheckException("Unterminated block comment", commentLine);
                 i += 2;
                 continue;
             }
 
-            if (char.IsLetter(c) || c == '_')
+            if (char.IsAsciiLetter(c) || c == '_')
             {
                 int start = i;
-                while (i < code.Length && (char.IsLetterOrDigit(code[i]) || code[i] == '_'))
+                while (i < code.Length && (char.IsAsciiLetterOrDigit(code[i]) || code[i] == '_'))
                     i++;
                 string text = code[start..i];
                 TokenKind kind = GetKeyword(text);
@@ -43,7 +51,16 @@ public class Lexer
 
             if (char.IsAsciiDigit(c))
             {
-                tokens.Add(ReadNumber(code, i, out int end, line));
+                Token number = ReadNumber(code, i, out int end, line);
+                string spelling = number.Text;
+                for (int n = 0; n < spelling.Length; n++)
+                    if (spelling[n] == '_' && (n == 0 || n + 1 == spelling.Length ||
+                        !char.IsAsciiDigit(spelling[n - 1]) || !char.IsAsciiDigit(spelling[n + 1])))
+                        throw new TypeCheckException("Numeric separators must occur between digits", line);
+                if (spelling == "0x" || spelling == "0X") throw new TypeCheckException("Expected hexadecimal digits", line);
+                if (spelling.Contains('.') && number.Kind is TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral)
+                    throw new TypeCheckException("Integer suffix on floating-point literal", line);
+                tokens.Add(new Token(number.Kind, line, number.Start, number.End, spelling.Replace("_", "")));
                 i = end;
                 continue;
             }
@@ -114,11 +131,11 @@ public class Lexer
                     {
                         int charStart = i;
                         i++; // skip opening '
-                        if (i >= code.Length) throw new Exception($"Unterminated char literal on line {line}");
+                        if (i >= code.Length) throw new TypeCheckException($"Unterminated char literal on line {line}", line);
                         if (code[i] == '\\')
                         {
                             i++; // skip backslash
-                            if (i >= code.Length) throw new Exception($"Unterminated char literal on line {line}");
+                            if (i >= code.Length) throw new TypeCheckException($"Unterminated char literal on line {line}", line);
                             i++; // skip escaped char
                         }
                         else
@@ -126,7 +143,7 @@ public class Lexer
                             i++; // skip regular char
                         }
                         if (i >= code.Length || code[i] != '\'')
-                            throw new Exception($"Invalid char literal on line {line}");
+                            throw new TypeCheckException($"Invalid char literal on line {line}", line);
                         tokens.Add(new Token(TokenKind.CharLiteral, line, charStart, i, code[charStart..(i + 1)]));
                         break;
                     }
@@ -158,11 +175,20 @@ public class Lexer
                 case ']': tokens.Add(new Token(TokenKind.CloseBracket, line, i, i)); break;
                 case '#': tokens.Add(new Token(TokenKind.Hash, line, i, i)); break;
                 default:
-                    throw new Exception($"Unexpected character '{c}' on line {line}");
+                    throw new TypeCheckException($"Unexpected character '{c}' on line {line}", line);
             }
             i++;
         }
         tokens.Add(new Token(TokenKind.EndOfFile, line, code.Length, code.Length));
+        var lineStarts = new List<int> { 0 };
+        for (int offset = 0; offset < code.Length; offset++) if (code[offset] == '\n') lineStarts.Add(offset + 1);
+        for (int t = 0; t < tokens.Count; t++)
+        {
+            Token token = tokens[t];
+            int row = lineStarts.BinarySearch(token.Start);
+            if (row < 0) row = ~row - 1;
+            tokens[t] = new Token(token.Kind, row + 1, token.Start, token.End, token.Text, token.Start - lineStarts[row] + 1);
+        }
         return tokens;
     }
 
@@ -242,7 +268,8 @@ public class Lexer
         int i = startIndex + 1;
         while (true)
         {
-            if (i >= source.Length) throw new Exception($"Unterminated string literal on line {line}");
+            if (i >= source.Length) throw new TypeCheckException($"Unterminated string literal on line {line}", line);
+            if (source[i] is '\n' or '\r') throw new TypeCheckException("Newline in string literal; use an escape", line);
             if (source[i] == '\\') { i += 2; continue; } // skip escape sequences
             if (source[i] == '"') { endIndex = i + 1; return new Token(TokenKind.StringLiteral, line, startIndex, i, source[startIndex..(i + 1)]); }
             i++;
@@ -257,7 +284,7 @@ public class Lexer
 
         while (true)
         {
-            if (i >= source.Length) throw new Exception($"Unterminated interpolated string on line {line}");
+            if (i >= source.Length) throw new TypeCheckException($"Unterminated interpolated string on line {line}", line);
             if (source[i] == '\\') { i += 2; continue; }
 
             if (source[i] == '{')
@@ -280,7 +307,7 @@ public class Lexer
                 string expr = source[exprStart..i];
                 List<Token> exprTokens = Tokenize(expr);
                 exprTokens.RemoveAt(exprTokens.Count - 1); // remove EOF
-                tokens.AddRange(exprTokens);
+                tokens.AddRange(exprTokens.Select(t => new Token(t.Kind, line + t.Line - 1, exprStart + t.Start, exprStart + t.End, t.Text)));
 
                 tokens.Add(new Token(TokenKind.InterpolatedStringExprEnd, line, i, i));
                 i++; // skip }
@@ -306,6 +333,7 @@ public class Lexer
         {
             i += 2;
             while (i < source.Length && char.IsAsciiHexDigit(source[i])) i++;
+            if (i == startIndex + 2) throw new TypeCheckException("Expected hexadecimal digits", line);
             TokenKind hexKind = TokenKind.HexInt;
             if (i < source.Length && char.ToLower(source[i]) == 'u')
             {

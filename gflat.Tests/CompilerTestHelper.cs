@@ -15,17 +15,7 @@ namespace gflat.Tests
     {
         public static (CompilationUnit Ast, TypeChecker Checker) Check(string code)
         {
-            DiagnosticBag bag = new DiagnosticBag();
-            List<Token> tokens = Lexer.Tokenize(code);
-            CompilationUnit ast = Parser.Parse(tokens, bag);
-            if (bag.HasErrors)
-            {
-                Diagnostic firstError = bag.Items.First(d => d.Severity == DiagnosticSeverity.Error);
-                throw new TypeCheckException(firstError.Message, firstError.Line);
-            }
-            TypeChecker checker = new TypeChecker(bag);
-            ast.Accept(checker);
-            return (ast, checker);
+            return Compiler.Check(code);
         }
 
         public static (CompilationUnit Ast, TypeChecker Checker) CheckDiagnostics(string code)
@@ -70,38 +60,11 @@ namespace gflat.Tests
             {
                 File.WriteAllText(llPath, ir);
 
-                string libArgs = Program.GetClangLibArgs();
-                string clangArgs = string.IsNullOrEmpty(libArgs)
-                    ? $"\"{llPath}\" -o \"{exePath}\""
-                    : $"\"{llPath}\" -o \"{exePath}\" {libArgs}";
-
-                var clang = new Process();
-                clang.StartInfo.FileName = "clang.exe";
-                clang.StartInfo.Arguments = clangArgs;
-                clang.StartInfo.RedirectStandardError = true;
-                clang.StartInfo.RedirectStandardOutput = true;
-                clang.StartInfo.UseShellExecute = false;
-                clang.Start();
-                clang.WaitForExit();
-
-                if (clang.ExitCode != 0)
-                {
-                    string err = clang.StandardError.ReadToEnd();
-                    throw new Exception($"clang compilation failed (exit {clang.ExitCode}): {err}\nIR:\n{ir}");
-                }
-
-                var proc = new Process();
-                proc.StartInfo.FileName = exePath;
-                proc.StartInfo.RedirectStandardOutput = true;
-                proc.StartInfo.RedirectStandardError = true;
-                proc.StartInfo.UseShellExecute = false;
-                proc.Start();
-
-                string stdout = proc.StandardOutput.ReadToEnd();
-                string stderr = proc.StandardError.ReadToEnd();
-                proc.WaitForExit();
-
-                return new ExecutionResult(proc.ExitCode, stdout, stderr);
+                ProcessResult compilation = NativeToolchain.Compile(llPath, exePath);
+                if (compilation.ExitCode != 0)
+                    throw new Exception($"clang compilation failed: {compilation.StandardError}\nIR:\n{ir}");
+                ProcessResult execution = NativeToolchain.Run(exePath, []);
+                return new ExecutionResult(execution.ExitCode, execution.StandardOutput, execution.StandardError);
             }
             finally
             {

@@ -11,13 +11,16 @@ namespace gflat
         public int Line { get; }
         public int Start { get; }
         public int End { get; }
+        public int Column { get; }
+        public SourceSpan Span => new(Start, Kind == TokenKind.EndOfFile ? 0 : End - Start + 1, Line, Column);
 
-        public Token(TokenKind kind, int line, int start, int end, string? text = null)
+        public Token(TokenKind kind, int line, int start, int end, string? text = null, int column = 0)
         {
             Kind = kind;
             Line = line;
             Start = start;
             End = end;
+            Column = column;
             Text = text ?? DefaultText(kind);
         }
 

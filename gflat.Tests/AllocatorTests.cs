@@ -233,7 +233,7 @@ int main()
             string code = @"
 void* __gflat_alloc(ulong size)
 {
-    return (void*)0;
+    return (void*)1;
 }
 
 void __gflat_free(int notAPointer)

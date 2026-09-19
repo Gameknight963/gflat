@@ -197,6 +197,20 @@ namespace gflat.comptime
 
         public void Visit(BinaryExpression node)
         {
+            EvaluateBinary(node);
+            _currentValue = Normalize(_currentValue!, _context.GetType(node), node.Line);
+        }
+
+        private ConstValue Normalize(ConstValue value, TypeExpression type, int line)
+        {
+            if (_context.ResolveAlias(type) is NamedTypeExpression named &&
+                (NumericSemantics.IntegerType(named.Name) != null || named.Name is "float" or "double"))
+                return NumericSemantics.Cast(value, named.Name, line);
+            return value;
+        }
+
+        private void EvaluateBinary(BinaryExpression node)
+        {
             CheckSteps(node.Line);
 
             // Short-circuit logical AND
@@ -609,79 +623,10 @@ namespace gflat.comptime
             node.Operand.Accept(this);
             ConstValue val = _currentValue!;
 
-            // Simple numeric casts
-            if (val is ConstValue.Integer i)
-            {
-                if (node.TargetType is NamedTypeExpression { Name: "char" })
-                {
-                    _currentValue = new ConstValue.Char((char)i.Value);
-                    return;
-                }
-                if (node.TargetType is NamedTypeExpression { Name: "uint" or "ulong" or "ushort" or "usize" })
-                {
-                    _currentValue = new ConstValue.UInteger((ulong)i.Value);
-                    return;
-                }
-                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" or "sbyte" or "isize" })
-                {
-                    _currentValue = new ConstValue.Integer(i.Value);
-                    return;
-                }
-                if (node.TargetType is NamedTypeExpression { Name: "float" or "double" })
-                {
-                    _currentValue = new ConstValue.Float(i.Value);
-                    return;
-                }
-            }
-            if (val is ConstValue.UInteger ui)
-            {
-                if (node.TargetType is NamedTypeExpression { Name: "char" })
-                {
-                    _currentValue = new ConstValue.Char((char)ui.Value);
-                    return;
-                }
-                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" or "sbyte" or "isize" })
-                {
-                    _currentValue = new ConstValue.Integer((long)ui.Value);
-                    return;
-                }
-                if (node.TargetType is NamedTypeExpression { Name: "uint" or "ulong" or "ushort" or "usize" })
-                {
-                    _currentValue = new ConstValue.UInteger(ui.Value);
-                    return;
-                }
-                if (node.TargetType is NamedTypeExpression { Name: "float" or "double" })
-                {
-                    _currentValue = new ConstValue.Float(ui.Value);
-                    return;
-                }
-            }
-            if (val is ConstValue.Char c)
-            {
-                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" or "sbyte" or "isize" })
-                {
-                    _currentValue = new ConstValue.Integer((long)c.Value);
-                    return;
-                }
-                if (node.TargetType is NamedTypeExpression { Name: "uint" or "ulong" or "ushort" or "usize" })
-                {
-                    _currentValue = new ConstValue.UInteger((ulong)c.Value);
-                    return;
-                }
-            }
-            if (val is ConstValue.Float f)
-            {
-                if (node.TargetType is NamedTypeExpression { Name: "int" or "long" or "short" or "byte" or "sbyte" or "isize" })
-                {
-                    _currentValue = new ConstValue.Integer((long)f.Value);
-                    return;
-                }
-                if (node.TargetType is NamedTypeExpression { Name: "uint" or "ulong" or "ushort" or "usize" })
-                {
-                    _currentValue = new ConstValue.UInteger((ulong)f.Value);
-                    return;
-                }
-            }
+            TypeExpression resolved = _context.ResolveAlias(node.TargetType);
+            if (resolved is not NamedTypeExpression target)
+                throw new ConstEvalException("Unsupported constant cast", node.Line);
+            _currentValue = NumericSemantics.Cast(val, target.Name, node.Line);
         }
 
         public void Visit(NewExpression node)
@@ -919,7 +864,7 @@ namespace gflat.comptime
 
             for (int i = 0; i < method.Parameters.Count; i++)
             {
-                _scopes.Peek()[method.Parameters[i].Name] = evaluatedArgs[i];
+                _scopes.Peek()[method.Parameters[i].Name] = Normalize(evaluatedArgs[i], method.Parameters[i].Type, node.Line);
             }
 
             bool prevReturned = _hasReturned;
@@ -936,7 +881,7 @@ namespace gflat.comptime
             PopScope();
             _callDepth--;
 
-            _currentValue = callResult ?? new ConstValue.Integer(0);
+            _currentValue = Normalize(callResult ?? new ConstValue.Integer(0), method.ReturnType, node.Line);
         }
 
         public void Visit(AssignmentExpression node)
@@ -944,6 +889,26 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             node.Value.Accept(this);
             ConstValue val = _currentValue!;
+
+            if (node.Operator != TokenKind.Equals)
+            {
+                node.Target.Accept(this);
+                ConstValue previous = _currentValue!;
+                ConstValue? result = null;
+                string? error = null;
+                bool valid = node.Operator switch
+                {
+                    TokenKind.PlusEquals => ConstValue.TryAdd(previous, val, out result),
+                    TokenKind.MinusEquals => ConstValue.TrySubtract(previous, val, out result),
+                    TokenKind.StarEquals => ConstValue.TryMultiply(previous, val, out result),
+                    TokenKind.SlashEquals => ConstValue.TryDivide(previous, val, out result, out error),
+                    TokenKind.PercentEquals => ConstValue.TryModulo(previous, val, out result, out error),
+                    _ => false
+                };
+                if (!valid || result == null) throw new ConstEvalException(error ?? "Unsupported compound assignment", node.Line);
+                val = result;
+            }
+            val = Normalize(val, _context.GetType(node.Target), node.Line);
 
             if (node.Target is IdentifierExpression ident)
             {
@@ -1007,7 +972,7 @@ namespace gflat.comptime
             {
                 node.Initializer.Accept(this);
                 ConstValue val = _currentValue!;
-                _scopes.Peek()[node.Name] = val;
+                _scopes.Peek()[node.Name] = Normalize(val, node.Type, node.Line);
             }
             else
             {

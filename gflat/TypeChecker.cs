@@ -73,6 +73,8 @@ namespace gflat
         private readonly Dictionary<CallExpression, (InterfaceInfo Interface, int SlotIndex, MethodDeclaration Method)> _interfaceMethodCalls = new();
         private readonly Dictionary<MethodDeclaration, string> _functionNamespaces = new();
         private readonly Dictionary<CallExpression, AstNode> _resolvedCalls = new();
+        private readonly Dictionary<ReturnStatement, string> _ownedReturns = new();
+        public string? GetTransferredLocal(ReturnStatement statement) => _ownedReturns.GetValueOrDefault(statement);
         private readonly Dictionary<UnaryExpression, AstNode> _functionAddressTargets = new();
         private readonly HashSet<CallExpression> _indirectCalls = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _localAliases = new();
@@ -376,10 +378,7 @@ namespace gflat
 
         public bool HasAnyDestructor(ClassInfo c)
         {
-            if (c.Destructor != null) return true;
-            if (c.BaseClass != null && _classes.TryGetValue(c.BaseClass, out ClassInfo? baseInfo))
-                return HasAnyDestructor(baseInfo);
-            return false;
+            return HasDestructor(new NamedTypeExpression(c.Name, null, 0));
         }
 
         public bool HasDestructor(TypeExpression type)
@@ -390,6 +389,8 @@ namespace gflat
         private bool HasDestructorInternal(TypeExpression type, HashSet<string> visited)
         {
             type = ResolveAlias(type);
+            if (type is ArrayTypeExpression array)
+                return HasDestructorInternal(array.ElementType, visited);
             if (type is NamedTypeExpression named)
             {
                 if (!visited.Add(named.Name))
@@ -417,7 +418,8 @@ namespace gflat
                 ClassInfo? cInfo = GetClass(named.Name);
                 if (cInfo != null)
                 {
-                    if (HasAnyDestructor(cInfo))
+                    if (cInfo.Destructor != null || (cInfo.BaseClass != null &&
+                        HasDestructorInternal(new NamedTypeExpression(cInfo.BaseClass, null, 0), visited)))
                     {
                         return true;
                     }
@@ -1063,10 +1065,14 @@ namespace gflat
                     {
                         if (cv is ConstValue.Integer ci)
                         {
+                            if (ci.Value <= 0 || ci.Value > int.MaxValue)
+                                throw new TypeCheckException("Array size must be between 1 and 2147483647", arr.Line);
                             size = (int)ci.Value;
                         }
                         else if (cv is ConstValue.UInteger cui)
                         {
+                            if (cui.Value == 0 || cui.Value > int.MaxValue)
+                                throw new TypeCheckException("Array size must be between 1 and 2147483647", arr.Line);
                             size = (int)cui.Value;
                         }
                         else
@@ -1193,7 +1199,7 @@ namespace gflat
             type = ResolveAlias(type);
             if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
             {
-                return 8;
+                return TargetInfo.Default.PointerBytes;
             }
             if (type is ArrayTypeExpression arr)
             {
@@ -1208,7 +1214,7 @@ namespace gflat
                 }
                 if (IsInterface(named))
                 {
-                    return 8;
+                    return TargetInfo.Default.PointerBytes;
                 }
                 StructInfo? structInfo = GetStruct(named.Name);
                 if (structInfo != null)
@@ -1217,20 +1223,21 @@ namespace gflat
                 }
                 if (GetClass(named.Name) != null)
                 {
-                    return 8;
+                    return TargetInfo.Default.PointerBytes;
                 }
                 return named.Name switch
                 {
                     "bool" or "byte" or "sbyte" or "char" => 1,
                     "short" or "ushort" => 2,
                     "int" or "uint" or "float" => 4,
-                    "long" or "ulong" or "double" or "nint" or "nuint" => 8,
+                    "long" or "ulong" or "double" => 8,
+                    "nint" or "nuint" => TargetInfo.Default.PointerBytes,
                     "extralong" => 16,
                     "void" => 1,
                     _ => 4
                 };
             }
-            return 8;
+            return TargetInfo.Default.PointerBytes;
         }
 
         public int GetStructAlignment(StructInfo structInfo)
@@ -1268,7 +1275,7 @@ namespace gflat
 
         public int GetClassSize(ClassInfo classInfo)
         {
-            int offset = 8; // vtable pointer
+            int offset = TargetInfo.Default.PointerBytes; // vtable pointer
             int maxAlign = 8;
             foreach ((string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field in classInfo.Fields)
             {
@@ -1295,7 +1302,7 @@ namespace gflat
                 {
                     return 16;
                 }
-                return 8;
+                return TargetInfo.Default.PointerBytes;
             }
             if (type is ManagedTypeExpression mgd)
             {
@@ -1304,20 +1311,22 @@ namespace gflat
                 {
                     return 16;
                 }
-                return 8;
+                return TargetInfo.Default.PointerBytes;
             }
             if (type is FunctionPointerTypeExpression)
             {
-                return 8;
+                return TargetInfo.Default.PointerBytes;
             }
             if (type is ArrayTypeExpression arr)
             {
                 int elemSize = GetTypeSize(arr.ElementType);
                 if (arr.Size.HasValue)
                 {
-                    return elemSize * arr.Size.Value;
+                    long bytes = (long)elemSize * arr.Size.Value;
+                    if (bytes > int.MaxValue) throw new TypeCheckException("Array layout exceeds the supported size", arr.Line);
+                    return (int)bytes;
                 }
-                return 8;
+                return TargetInfo.Default.PointerBytes;
             }
             if (type is NamedTypeExpression named)
             {
@@ -1345,7 +1354,8 @@ namespace gflat
                     "bool" or "byte" or "sbyte" or "char" => 1,
                     "short" or "ushort" => 2,
                     "int" or "uint" or "float" => 4,
-                    "long" or "ulong" or "double" or "nint" or "nuint" => 8,
+                    "long" or "ulong" or "double" => 8,
+                    "nint" or "nuint" => TargetInfo.Default.PointerBytes,
                     "extralong" => 16,
                     "void" => 0,
                     _ => throw new TypeCheckException($"Cannot determine size of unknown type '{named.Name}'", named.Line)
@@ -1852,6 +1862,8 @@ namespace gflat
             // Array-to-array assignment (e.g. char[10] a = "string" where string is char[7])
             if (target is ArrayTypeExpression arrTarget && source is ArrayTypeExpression arrSrc)
             {
+                if (HasDestructor(arrTarget) && arrTarget.Size != arrSrc.Size)
+                    return false;
                 if (IsAssignable(arrTarget.ElementType, arrSrc.ElementType))
                 {
                     if (arrTarget.Size == null || arrSrc.Size == null || arrTarget.Size >= arrSrc.Size)
@@ -1870,13 +1882,13 @@ namespace gflat
                     return true;
                 if (s.Name == "ushort" && t.Name is "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "extralong")
                     return true;
-                if (s.Name == "uint" && t.Name is "int" or "long" or "ulong" or "nint" or "nuint" or "extralong")
+                if (s.Name == "uint" && t.Name is "long" or "ulong" or "nint" or "nuint" or "extralong")
                     return true;
                 if (s.Name == "int" && t.Name is "long" or "nint" or "extralong")
                     return true;
                 if (s.Name == "char" && t.Name is "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "extralong")
                     return true;
-                if (s.Name == "ulong" && t.Name is "long" or "nuint" or "extralong")
+                if (s.Name == "ulong" && t.Name is "nuint" or "extralong")
                     return true;
                 if (s.Name == "nint" && t.Name is "long" or "extralong")
                     return true;
@@ -2898,7 +2910,7 @@ namespace gflat
             }
             else if (inner is NamedTypeExpression namedStr && _structs.TryGetValue(namedStr.Name, out StructInfo? structInfo))
             {
-                if (structInfo.Destructor != null)
+                if (HasDestructor(inner))
                 {
                     _structDestructorCalls[node] = structInfo;
                 }
@@ -2922,6 +2934,14 @@ namespace gflat
                 {
                     TypeExpression retType = ResolveAlias(method.ReturnType);
                     TypeExpression valType = GetType(node.Value);
+                    if (HasDestructor(retType) && node.Value is not (IdentifierExpression or NewExpression or CallExpression))
+                        throw new TypeCheckException("Cannot transfer a destructor-bearing value from borrowed storage", node.Line);
+                    if (HasDestructor(retType) && node.Value is IdentifierExpression owned)
+                    {
+                        if (!_scopes.Any(scope => scope.ContainsKey(owned.Name)) || owned.Name == "this")
+                            throw new TypeCheckException("Only a whole owned local can be transferred by return", node.Line);
+                        _ownedReturns[node] = owned.Name;
+                    }
                     if (!IsAssignable(retType, valType, node.Value))
                     {
                         throw new TypeCheckException($"Cannot return '{TypeName(valType)}' from function returning '{TypeName(retType)}'", node.Line);
@@ -3268,6 +3288,8 @@ namespace gflat
                 varType = new PointerTypeExpression(ptr.Inner, ptr.IsNullable, ptr.Line, isReadOnly: true);
             }
             ValidateTypeUsage(varType, node.Line);
+            if (varType is ArrayTypeExpression && HasDestructor(varType) && node.Initializer == null)
+                throw new TypeCheckException("An array with destructor-bearing elements requires an initializer; use default(Type) for zero-initialized elements", node.Line);
             if (node.Initializer != null)
             {
                 node.Initializer.Accept(this);
@@ -5331,6 +5353,13 @@ namespace gflat
             TypeExpression targetType = ResolveAlias(node.TargetType);
             ValidateTypeUsage(targetType, node.Line);
 
+            if (targetType is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false })
+            {
+                if (sourceType is NamedTypeExpression { Name: "null" } ||
+                    (_constEvaluator.TryEvaluate(node.Operand, out ConstValue? castConstant, out _) &&
+                     castConstant is ConstValue.Integer { Value: 0 } or ConstValue.UInteger { Value: 0 }))
+                    throw new TypeCheckException("Cannot cast null or zero to a non-null pointer", node.Line);
+            }
             if (!IsValidCast(sourceType, targetType))
             {
                 throw new TypeCheckException($"Cannot cast '{TypeName(sourceType)}' to '{TypeName(targetType)}'", node.Line);
@@ -5471,6 +5500,8 @@ namespace gflat
         public void Visit(LambdaExpression node)
         {
             int prevLoopDepth = _loopDepth;
+            AstNode? previousFunction = _currentFunction;
+            _currentFunction = node;
             _loopDepth = 0;
             try
             {
@@ -5533,6 +5564,7 @@ namespace gflat
             finally
             {
                 _loopDepth = prevLoopDepth;
+                _currentFunction = previousFunction;
             }
         }
 

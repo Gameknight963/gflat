@@ -12,6 +12,15 @@ namespace gflat.semantics
         private readonly TypeChecker _typeChecker;
         private readonly ConstEvaluator _constEvaluator;
         private readonly DiagnosticBag _diagnostics;
+        private readonly Dictionary<AstNode, ControlFlowGraph> _graphs = new();
+
+        public ControlFlowGraph Graph(AstNode statement)
+        {
+            if (!_graphs.TryGetValue(statement, out var graph))
+                _graphs[statement] = graph = new ControlFlowGraph(statement, expression =>
+                    IsConstantTrue(expression) ? true : IsConstantFalse(expression) ? false : null);
+            return graph;
+        }
 
         public ControlFlowPass(TypeChecker typeChecker, ConstEvaluator constEvaluator, DiagnosticBag? diagnostics = null)
         {
@@ -106,6 +115,12 @@ namespace gflat.semantics
         }
 
         public bool StatementTerminates(AstNode stmt)
+        {
+            if (!_graphs.ContainsKey(stmt)) DiagnoseTermination(stmt);
+            return !Graph(stmt).FallsThrough;
+        }
+
+        private bool DiagnoseTermination(AstNode stmt)
         {
             if (stmt is ReturnStatement)
             {

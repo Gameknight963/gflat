@@ -35,6 +35,42 @@ namespace gflat.semantics
 
         private Dictionary<string, Stack<VariableAssignment>> _state = new();
         private readonly Stack<List<string>> _scopeVars = new();
+        private sealed record DeferredRead(AstNode Body, Dictionary<string, int> Bindings);
+        private readonly List<List<DeferredRead>> _cleanupScopes = new();
+        private readonly Stack<int> _loopCleanupDepths = new();
+        private readonly Stack<List<Dictionary<string, Stack<VariableAssignment>>>> _breakStates = new();
+        private readonly Stack<List<Dictionary<string, Stack<VariableAssignment>>>> _continueStates = new();
+        private readonly Stack<int> _exceptionCleanupDepths = new();
+        private int _functionCleanupDepth;
+        private bool _checkingCleanup;
+
+        private void CheckCleanups(int depth)
+        {
+            if (_checkingCleanup) return;
+            _checkingCleanup = true;
+            try
+            {
+                for (int i = _cleanupScopes.Count - 1; i >= depth; i--)
+                foreach (var action in _cleanupScopes[i].AsEnumerable().Reverse().ToArray())
+                {
+                    var visible = _state;
+                    // Bind names as they were at registration, even across later shadowing.
+                    _state = action.Bindings.Where(b => visible.ContainsKey(b.Key)).ToDictionary(
+                        b => b.Key, b => new Stack<VariableAssignment>(visible[b.Key].Reverse().Take(b.Value)));
+                    CheckStatement(action.Body);
+                    foreach (var binding in action.Bindings)
+                    {
+                        if (!visible.TryGetValue(binding.Key, out var stack) || !_state.TryGetValue(binding.Key, out var updated)) continue;
+                        var values = stack.Reverse().ToArray();
+                        var changes = updated.Reverse().ToArray();
+                        Array.Copy(changes, values, Math.Min(changes.Length, binding.Value));
+                        visible[binding.Key] = new Stack<VariableAssignment>(values);
+                    }
+                    _state = visible;
+                }
+            }
+            finally { _checkingCleanup = false; }
+        }
         private ClassDeclaration? _currentClass = null;
         private StructDeclaration? _currentStruct = null;
 
@@ -211,16 +247,24 @@ namespace gflat.semantics
         {
             _state = new Dictionary<string, Stack<VariableAssignment>>();
             _scopeVars.Clear();
+            _cleanupScopes.Clear();
+            _loopCleanupDepths.Clear();
+            _breakStates.Clear();
+            _continueStates.Clear();
+            _exceptionCleanupDepths.Clear();
+            _functionCleanupDepth = 0;
         }
 
         private void PushScope()
         {
             _scopeVars.Push(new List<string>());
+            _cleanupScopes.Add(new());
         }
 
         private void PopScope()
         {
             List<string> vars = _scopeVars.Pop();
+            _cleanupScopes.RemoveAt(_cleanupScopes.Count - 1);
             for (int i = 0; i < vars.Count; i++)
             {
                 string name = vars[i];
@@ -407,7 +451,10 @@ namespace gflat.semantics
                 for (int i = 0; i < block.Statements.Count; i++)
                 {
                     CheckStatement(block.Statements[i]);
+                    if (block.Statements[i] is ReturnStatement or ThrowStatement or BreakStatement or ContinueStatement ||
+                        _controlFlow.StatementTerminates(block.Statements[i])) break;
                 }
+                CheckCleanups(_cleanupScopes.Count - 1);
                 PopScope();
             }
             else if (stmt is VariableDeclaration varDecl)
@@ -436,7 +483,8 @@ namespace gflat.semantics
             }
             else if (stmt is IfStatement ifStmt)
             {
-                CheckExpression(ifStmt.Condition);
+                var conditionStates = CheckCondition(ifStmt.Condition);
+                _state = IntersectStates(conditionStates.WhenTrue, conditionStates.WhenFalse);
 
                 if (ifStmt.Condition is LiteralExpression litTrue && litTrue.Token.Kind == TokenKind.True)
                 {
@@ -454,7 +502,7 @@ namespace gflat.semantics
 
                 Dictionary<string, Stack<VariableAssignment>> stateBefore = CloneState(_state);
 
-                _state = CloneState(stateBefore);
+                _state = CloneState(conditionStates.WhenTrue);
                 CheckStatement(ifStmt.Then);
                 Dictionary<string, Stack<VariableAssignment>> stateThen = _state;
                 bool thenTerminates = _controlFlow.StatementTerminates(ifStmt.Then);
@@ -463,14 +511,14 @@ namespace gflat.semantics
                 bool elseTerminates = false;
                 if (ifStmt.Else != null)
                 {
-                    _state = CloneState(stateBefore);
+                    _state = CloneState(conditionStates.WhenFalse);
                     CheckStatement(ifStmt.Else);
                     stateElse = _state;
                     elseTerminates = _controlFlow.StatementTerminates(ifStmt.Else);
                 }
                 else
                 {
-                    stateElse = stateBefore;
+                    stateElse = conditionStates.WhenFalse;
                     elseTerminates = false;
                 }
 
@@ -495,8 +543,15 @@ namespace gflat.semantics
             {
                 CheckExpression(whileStmt.Condition);
                 Dictionary<string, Stack<VariableAssignment>> stateBefore = CloneState(_state);
+                _loopCleanupDepths.Push(_cleanupScopes.Count);
+                _breakStates.Push(new());
+                _continueStates.Push(new());
                 CheckStatement(whileStmt.Body);
-                _state = stateBefore;
+                _loopCleanupDepths.Pop();
+                var exits = _breakStates.Pop();
+                _continueStates.Pop();
+                if (whileStmt.Condition is not LiteralExpression { Token.Kind: TokenKind.True }) exits.Add(stateBefore);
+                _state = MergeLoopStates(exits, stateBefore);
             }
             else if (stmt is ForStatement forStmt)
             {
@@ -511,21 +566,38 @@ namespace gflat.semantics
                 }
 
                 Dictionary<string, Stack<VariableAssignment>> stateBeforeBody = CloneState(_state);
+                _loopCleanupDepths.Push(_cleanupScopes.Count);
+                _breakStates.Push(new());
+                _continueStates.Push(new());
                 CheckStatement(forStmt.Body);
+                _loopCleanupDepths.Pop();
+                var continues = _continueStates.Pop();
+                if (!_controlFlow.StatementTerminates(forStmt.Body)) continues.Add(CloneState(_state));
+                _state = MergeLoopStates(continues, stateBeforeBody);
                 if (forStmt.Increment != null)
                 {
                     CheckExpression(forStmt.Increment);
                 }
-                _state = stateBeforeBody;
+                var exits = _breakStates.Pop();
+                if (forStmt.Condition != null && forStmt.Condition is not LiteralExpression { Token.Kind: TokenKind.True }) exits.Add(stateBeforeBody);
+                _state = MergeLoopStates(exits, stateBeforeBody);
                 PopScope();
             }
             else if (stmt is ForeachStatement foreachStmt)
             {
                 CheckExpression(foreachStmt.Collection);
+                var beforeLoop = CloneState(_state);
                 PushScope();
                 DeclareLocal(foreachStmt.VariableName, foreachStmt.ElementType, isAssigned: true);
+                _loopCleanupDepths.Push(_cleanupScopes.Count);
+                _breakStates.Push(new());
+                _continueStates.Push(new());
                 CheckStatement(foreachStmt.Body);
+                _loopCleanupDepths.Pop();
+                _breakStates.Pop();
+                _continueStates.Pop();
                 PopScope();
+                _state = beforeLoop;
             }
             else if (stmt is ReturnStatement retStmt)
             {
@@ -533,17 +605,21 @@ namespace gflat.semantics
                 {
                     CheckExpression(retStmt.Value);
                 }
+                CheckCleanups(_functionCleanupDepth);
             }
             else if (stmt is ThrowStatement throwStmt)
             {
                 CheckExpression(throwStmt.Expression);
+                CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
             }
             else if (stmt is TryStatement tryStmt)
             {
                 Dictionary<string, Stack<VariableAssignment>> stateBefore = CloneState(_state);
 
                 _state = CloneState(stateBefore);
+                _exceptionCleanupDepths.Push(_cleanupScopes.Count);
                 CheckStatement(tryStmt.TryBlock);
+                _exceptionCleanupDepths.Pop();
                 Dictionary<string, Stack<VariableAssignment>> stateTry = _state;
                 bool tryTerminates = _controlFlow.StatementTerminates(tryStmt.TryBlock);
 
@@ -594,12 +670,45 @@ namespace gflat.semantics
             }
             else if (stmt is DeferStatement deferStmt)
             {
-                CheckStatement(deferStmt.Statement);
+                if (_checkingCleanup)
+                    throw new TypeCheckException("Nested defer is not supported", deferStmt.Line);
+                _cleanupScopes[^1].Add(new(deferStmt.Statement, _state.ToDictionary(p => p.Key, p => p.Value.Count)));
+            }
+            else if (stmt is BreakStatement or ContinueStatement)
+            {
+                if (_loopCleanupDepths.Count > 0) CheckCleanups(_loopCleanupDepths.Peek());
+                if (stmt is BreakStatement && _breakStates.Count > 0) _breakStates.Peek().Add(CloneState(_state));
+                if (stmt is ContinueStatement && _continueStates.Count > 0) _continueStates.Peek().Add(CloneState(_state));
             }
             else if (stmt is DeleteStatement delStmt)
             {
                 CheckExpression(delStmt.Target);
             }
+            else if (stmt is AssignmentExpression or CallExpression or UnaryExpression or BinaryExpression)
+            {
+                CheckExpression(stmt);
+            }
+        }
+
+        private (Dictionary<string, Stack<VariableAssignment>> WhenTrue, Dictionary<string, Stack<VariableAssignment>> WhenFalse)
+            CheckCondition(AstNode expression)
+        {
+            if (expression is UnaryExpression { Operator: TokenKind.Bang } not)
+            {
+                var operand = CheckCondition(not.Operand);
+                return (operand.WhenFalse, operand.WhenTrue);
+            }
+            if (expression is BinaryExpression binary && binary.Operator is TokenKind.AmpersandAmpersand or TokenKind.PipePipe)
+            {
+                var left = CheckCondition(binary.Left);
+                bool and = binary.Operator == TokenKind.AmpersandAmpersand;
+                _state = CloneState(and ? left.WhenTrue : left.WhenFalse);
+                var right = CheckCondition(binary.Right);
+                return and ? (right.WhenTrue, IntersectStates(left.WhenFalse, right.WhenFalse))
+                    : (IntersectStates(left.WhenTrue, right.WhenTrue), right.WhenFalse);
+            }
+            CheckExpression(expression);
+            return (CloneState(_state), CloneState(_state));
         }
 
         public void CheckExpression(AstNode? expr)
@@ -647,38 +756,20 @@ namespace gflat.semantics
             }
             else if (expr is UnaryExpression unary)
             {
-                if (unary.Operator == TokenKind.Ampersand)
-                {
-                    // Rule A: Taking the address of a variable or field initializes it!
-                    if (unary.Operand is IdentifierExpression idOp)
-                    {
-                        MarkFullyAssigned(idOp.Name);
-                        return;
-                    }
-                    else if (unary.Operand is MemberAccessExpression memberOp && memberOp.Object is IdentifierExpression targetId)
-                    {
-                        VariableAssignment? va = Lookup(targetId.Name);
-                        if (va != null)
-                        {
-                            va.AssignedFields.Add(memberOp.Member);
-                            if (va.StructInfo != null && va.StructInfo.Fields.Count > 0)
-                            {
-                                if (va.StructInfo.Fields.All(f => va.AssignedFields.Contains(f.Name)))
-                                {
-                                    va.IsFullyAssigned = true;
-                                }
-                            }
-                            return;
-                        }
-                    }
-                }
-
                 CheckExpression(unary.Operand);
             }
             else if (expr is BinaryExpression bin)
             {
                 CheckExpression(bin.Left);
+                var beforeRight = CloneState(_state);
                 CheckExpression(bin.Right);
+                if (bin.Operator is TokenKind.AmpersandAmpersand or TokenKind.PipePipe)
+                {
+                    bool alwaysRight = bin.Left is LiteralExpression literal &&
+                        ((bin.Operator == TokenKind.AmpersandAmpersand && literal.Token.Kind == TokenKind.True) ||
+                         (bin.Operator == TokenKind.PipePipe && literal.Token.Kind == TokenKind.False));
+                    if (!alwaysRight) _state = IntersectStates(beforeRight, _state);
+                }
             }
             else if (expr is CallExpression call)
             {
@@ -686,6 +777,12 @@ namespace gflat.semantics
                 for (int i = 0; i < call.Arguments.Count; i++)
                 {
                     CheckExpression(call.Arguments[i]);
+                }
+                if (_typeChecker.GetResolvedCall(call) is MethodDeclaration { Throws: true })
+                {
+                    var normal = CloneState(_state);
+                    CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
+                    _state = normal;
                 }
             }
             else if (expr is CastExpression cast)
@@ -713,6 +810,9 @@ namespace gflat.semantics
             }
             else if (expr is LambdaExpression lambda)
             {
+                var beforeLambda = CloneState(_state);
+                int outerCleanupDepth = _functionCleanupDepth;
+                _functionCleanupDepth = _cleanupScopes.Count;
                 PushScope();
                 foreach (Parameter p in lambda.Parameters)
                 {
@@ -727,7 +827,22 @@ namespace gflat.semantics
                     CheckStatement(lambda.Body);
                 }
                 PopScope();
+                _state = beforeLambda;
+                _functionCleanupDepth = outerCleanupDepth;
             }
+        }
+
+        private Dictionary<string, Stack<VariableAssignment>> MergeLoopStates(
+            List<Dictionary<string, Stack<VariableAssignment>>> states,
+            Dictionary<string, Stack<VariableAssignment>> template)
+        {
+            Dictionary<string, Stack<VariableAssignment>> Project(Dictionary<string, Stack<VariableAssignment>> state) =>
+                template.ToDictionary(p => p.Key, p => new Stack<VariableAssignment>(
+                    state.TryGetValue(p.Key, out var values) ? values.Reverse().Take(p.Value.Count) : p.Value.Reverse()));
+            if (states.Count == 0) return CloneState(template);
+            var merged = Project(states[0]);
+            foreach (var state in states.Skip(1)) merged = IntersectStates(merged, Project(state));
+            return merged;
         }
 
         private void CheckAssignment(AssignmentExpression assign)

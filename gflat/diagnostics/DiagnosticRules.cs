@@ -78,5 +78,16 @@ namespace gflat.diagnostics
         public static readonly DiagnosticDescriptor GF4004_NonCopyableDestructorForeach = new DiagnosticDescriptor(
             "GF4004", "Non-Copyable Foreach", "Foreach iteration variable '{0}' cannot have type '{1}' because types with destructors cannot be copied by value. Use a pointer instead ('{1}*').",
             DiagnosticSeverity.Error, "Memory");
+
+        // 1010: Allocator hooks
+        public static readonly DiagnosticDescriptor GF1010_MissingCustomAllocator = new DiagnosticDescriptor(
+            "GF1010", "Missing Custom Allocator",
+            "'#no_default_allocator' is set but '{0}' was not defined. Define 'void* __gflat_alloc(ulong size)' and 'void __gflat_free(void* ptr)'.",
+            DiagnosticSeverity.Error, "Memory");
+
+        public static readonly DiagnosticDescriptor GF1011_InvalidAllocatorSignature = new DiagnosticDescriptor(
+            "GF1011", "Invalid Allocator Signature",
+            "Allocator hook '{0}' has an invalid signature: {1}",
+            DiagnosticSeverity.Error, "Memory");
     }
 }

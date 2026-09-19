@@ -156,6 +156,7 @@ public class Lexer
                 case '~': tokens.Add(new Token(TokenKind.Tilde, line, i, i)); break;
                 case '[': tokens.Add(new Token(TokenKind.OpenBracket, line, i, i)); break;
                 case ']': tokens.Add(new Token(TokenKind.CloseBracket, line, i, i)); break;
+                case '#': tokens.Add(new Token(TokenKind.Hash, line, i, i)); break;
                 default:
                     throw new Exception($"Unexpected character '{c}' on line {line}");
             }

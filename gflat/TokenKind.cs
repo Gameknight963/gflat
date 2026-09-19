@@ -55,6 +55,7 @@ namespace gflat
         Dollar,
         Arrow,
         DoubleColon,
+        Hash,
         CharLiteral,
         Namespace,
         Using,

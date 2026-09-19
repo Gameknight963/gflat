@@ -2673,6 +2673,11 @@ namespace gflat
                 throw new TypeCheckException("'main' function cannot be declared with 'throws'", node.Line);
             }
 
+            if (node.Name == "__gflat_alloc" || node.Name == "__gflat_free")
+            {
+                ValidateAllocatorHookSignature(node.Name, node.ReturnType, node.Parameters, node.Line);
+            }
+
             AstNode? prevFunc = _currentFunction;
             _currentFunction = node;
             try
@@ -4996,7 +5001,41 @@ namespace gflat
         }
 
         public void Visit(AttributeNode node) { }
-        public void Visit(ExternDeclaration node) { }
+        public void Visit(ExternDeclaration node)
+        {
+            if (node.Name == "__gflat_alloc" || node.Name == "__gflat_free")
+            {
+                ValidateAllocatorHookSignature(node.Name, node.ReturnType, node.Parameters, node.Line);
+            }
+        }
+
+        private void ValidateAllocatorHookSignature(string name, TypeExpression returnType, IReadOnlyList<Parameter> parameters, int line)
+        {
+            if (name == "__gflat_alloc")
+            {
+                TypeExpression resolvedRet = ResolveAlias(returnType);
+                if (resolvedRet is not PointerTypeExpression)
+                {
+                    ReportError(DiagnosticRules.GF1011_InvalidAllocatorSignature, line, 0, "__gflat_alloc", "return type must be a pointer type (e.g. 'void*')");
+                }
+                if (parameters.Count != 1 || !IsInteger(ResolveAlias(parameters[0].Type)))
+                {
+                    ReportError(DiagnosticRules.GF1011_InvalidAllocatorSignature, line, 0, "__gflat_alloc", "must accept exactly one integer parameter (e.g. 'ulong size')");
+                }
+            }
+            else if (name == "__gflat_free")
+            {
+                TypeExpression resolvedRet = ResolveAlias(returnType);
+                if (resolvedRet is not NamedTypeExpression namedRet || namedRet.Name != "void")
+                {
+                    ReportError(DiagnosticRules.GF1011_InvalidAllocatorSignature, line, 0, "__gflat_free", "return type must be 'void'");
+                }
+                if (parameters.Count != 1 || ResolveAlias(parameters[0].Type) is not PointerTypeExpression)
+                {
+                    ReportError(DiagnosticRules.GF1011_InvalidAllocatorSignature, line, 0, "__gflat_free", "must accept exactly one pointer parameter (e.g. 'void* ptr')");
+                }
+            }
+        }
 
         public static string TypeName(TypeExpression type) => type switch
         {

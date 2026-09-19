@@ -37,5 +37,20 @@ class Exception
     }
 }
 ";
+
+        public const string AllocatorSource = @"
+extern void* malloc(ulong size);
+extern void free(void* ptr);
+
+void* __gflat_alloc(ulong size)
+{
+    return malloc(size);
+}
+
+void __gflat_free(void* ptr)
+{
+    free(ptr);
+}
+";
     }
 }

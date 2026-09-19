@@ -9,6 +9,7 @@ namespace gflat
         private List<Token> _tokens = new();
         private int _pos;
         private readonly DiagnosticBag _diagnostics;
+        private bool _isPrelude; // When true, skip allocator prelude injection (used for internal prelude parsing)
 
         public DiagnosticBag Diagnostics => _diagnostics;
 
@@ -79,6 +80,24 @@ namespace gflat
             List<NamespaceDeclaration> namespaces = new();
             List<AstNode> members = new();
 
+            // Check for compiler directives (#no_default_allocator, etc.) before anything else
+            bool noDefaultAllocator = false;
+            while (Check(TokenKind.Hash))
+            {
+                Consume(); // #
+                if (Current.Kind == TokenKind.Identifier && Current.Text == "no_default_allocator")
+                {
+                    Consume();
+                    noDefaultAllocator = true;
+                }
+                else
+                {
+                    string directiveName = Current.Kind == TokenKind.Identifier ? Current.Text : Current.Kind.ToString();
+                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Line, 0, $"Unknown compiler directive '#{directiveName}'");
+                    Consume();
+                }
+            }
+
             while (Check(TokenKind.Using))
                 usings.Add(ParseUsingDirective());
 
@@ -90,15 +109,71 @@ namespace gflat
                     members.Add(ParseTopLevelMember());
             }
 
-            bool hasException = members.OfType<ClassDeclaration>().Any(c => c.Name == "Exception");
-            if (!hasException)
+            // Only inject preludes for top-level user code (not recursive prelude parsing)
+            if (!_isPrelude)
             {
-                List<Token> preludeTokens = Lexer.Tokenize(Prelude.Source);
-                Parser preludeParser = new Parser();
-                preludeParser._tokens = preludeTokens;
-                preludeParser._pos = 0;
-                CompilationUnit preludeUnit = preludeParser.ParseCompilationUnit();
-                members.InsertRange(0, preludeUnit.Members);
+                bool hasException = members.OfType<ClassDeclaration>().Any(c => c.Name == "Exception");
+                if (!hasException)
+                {
+                    List<Token> preludeTokens = Lexer.Tokenize(Prelude.Source);
+                    Parser preludeParser = new Parser();
+                    preludeParser._tokens = preludeTokens;
+                    preludeParser._pos = 0;
+                    preludeParser._isPrelude = true;
+                    CompilationUnit preludeUnit = preludeParser.ParseCompilationUnit();
+                    members.InsertRange(0, preludeUnit.Members);
+                }
+
+                bool hasUserAllocator = members.OfType<MethodDeclaration>().Any(m => m.Name == "__gflat_alloc") ||
+                                        members.OfType<ExternDeclaration>().Any(e => e.Name == "__gflat_alloc");
+                bool hasUserFree = members.OfType<MethodDeclaration>().Any(m => m.Name == "__gflat_free") ||
+                                   members.OfType<ExternDeclaration>().Any(e => e.Name == "__gflat_free");
+
+                if (noDefaultAllocator)
+                {
+                    if (!hasUserAllocator)
+                    {
+                        _diagnostics.Report(DiagnosticRules.GF1010_MissingCustomAllocator, line, 0, null, "__gflat_alloc");
+                    }
+                    if (!hasUserFree)
+                    {
+                        _diagnostics.Report(DiagnosticRules.GF1010_MissingCustomAllocator, line, 0, null, "__gflat_free");
+                    }
+                }
+                else if (!hasUserAllocator || !hasUserFree)
+                {
+                    // Inject default allocator hooks from the allocator prelude
+                    List<Token> allocatorTokens = Lexer.Tokenize(Prelude.AllocatorSource);
+                    Parser allocatorParser = new Parser();
+                    allocatorParser._tokens = allocatorTokens;
+                    allocatorParser._pos = 0;
+                    allocatorParser._isPrelude = true;
+                    CompilationUnit allocatorUnit = allocatorParser.ParseCompilationUnit();
+                    foreach (AstNode member in allocatorUnit.Members)
+                    {
+                        bool isAllocFn = member is MethodDeclaration m2 && m2.Name == "__gflat_alloc";
+                        bool isFreeFn = member is MethodDeclaration m3 && m3.Name == "__gflat_free";
+                        bool isMallocExtern = member is ExternDeclaration e2 && e2.Name == "malloc";
+                        bool isFreeExtern = member is ExternDeclaration e3 && e3.Name == "free";
+
+                        if (isAllocFn && !hasUserAllocator)
+                        {
+                            members.Add(member);
+                        }
+                        else if (isFreeFn && !hasUserFree)
+                        {
+                            members.Add(member);
+                        }
+                        else if (isMallocExtern && !members.OfType<ExternDeclaration>().Any(e => e.Name == "malloc"))
+                        {
+                            members.Add(member);
+                        }
+                        else if (isFreeExtern && !members.OfType<ExternDeclaration>().Any(e => e.Name == "free"))
+                        {
+                            members.Add(member);
+                        }
+                    }
+                }
             }
 
             return new CompilationUnit(usings, namespaces, members, line);

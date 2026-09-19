@@ -66,6 +66,7 @@ namespace gflat
             TokenKind.Tilde => "~",
             TokenKind.Caret => "^",
             TokenKind.Dollar => "$",
+            TokenKind.Hash => "#",
             TokenKind.EqualsGreater => "=>",
             TokenKind.Percent => "%",
             TokenKind.EndOfFile => "",

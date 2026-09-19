@@ -1763,6 +1763,8 @@ public class LlvmEmitter : IVisitor
         string name;
         if (isMain)
             name = "main";
+        else if (node.Name == "__gflat_alloc" || node.Name == "__gflat_free")
+            name = node.Name; // Well-known hook functions: emit unmangled
         else if (_currentNamespacePath.Length > 0)
             name = $"gflat${_currentNamespacePath}${node.Name}";
         else
@@ -1816,11 +1818,8 @@ public class LlvmEmitter : IVisitor
                 _externNames.Add("puts");
                 EmitGlobal("declare i32 @puts(i8*)");
             }
-            if (!_externNames.Contains("free"))
-            {
-                _externNames.Add("free");
-                EmitGlobal("declare void @free(i8*)");
-            }
+            // __gflat_free is defined in user code (or the prelude), no declare needed
+            _externNames.Add("__gflat_free");
 
             string msgSlot = NewTemp();
             Emit($"    {msgSlot} = getelementptr %Exception, %Exception* {ex}, i32 0, i32 1");
@@ -1845,7 +1844,7 @@ public class LlvmEmitter : IVisitor
             Emit($"{freeLbl}:");
             string rawEx = NewTemp();
             Emit($"    {rawEx} = bitcast %Exception* {ex} to i8*");
-            Emit($"    call void @free(i8* {rawEx})");
+            Emit($"    call void @__gflat_free(i8* {rawEx})");
             Emit($"    br label %{exitLbl}");
 
             Emit($"{exitLbl}:");
@@ -1911,17 +1910,24 @@ public class LlvmEmitter : IVisitor
         if (node.Value != null)
         {
             node.Value.Accept(this);
-            val = Pop();
+            // Void calls (e.g. expression-body `void f() => voidCall();`) don't push a value
             TypeExpression returnType = _typeChecker.GetType(node.Value);
-            llvmReturnType = EmitType(returnType);
+            string valueRetType = EmitType(returnType);
+            bool valueIsVoid = valueRetType == "void";
 
-            string targetRet = _currentFunctionIsThrowing ? _currentFunctionBaseReturnType : _currentFunctionReturnType;
-            if (targetRet.Length > 0 && llvmReturnType != targetRet)
+            if (!valueIsVoid)
             {
-                if (_currentFunctionExpectedType != null)
+                val = Pop();
+                llvmReturnType = valueRetType;
+
+                string targetRet = _currentFunctionIsThrowing ? _currentFunctionBaseReturnType : _currentFunctionReturnType;
+                if (targetRet.Length > 0 && llvmReturnType != targetRet)
                 {
-                    val = EmitImplicitCast(val, returnType, _currentFunctionExpectedType);
-                    llvmReturnType = targetRet;
+                    if (_currentFunctionExpectedType != null)
+                    {
+                        val = EmitImplicitCast(val, returnType, _currentFunctionExpectedType);
+                        llvmReturnType = targetRet;
+                    }
                 }
             }
         }
@@ -1935,7 +1941,7 @@ public class LlvmEmitter : IVisitor
             Emit($"{freeLbl}:");
             string raw = NewTemp();
             Emit($"    {raw} = bitcast %Exception* {activeCatch.Ex} to i8*");
-            Emit($"    call void @free(i8* {raw})");
+            Emit($"    call void @__gflat_free(i8* {raw})");
             Emit($"    br label %{afterFreeLbl}");
             Emit($"{afterFreeLbl}:");
         }
@@ -2980,11 +2986,8 @@ public class LlvmEmitter : IVisitor
                 Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
             }
 
-            if (!_externNames.Contains("free"))
-            {
-                _externNames.Add("free");
-                EmitGlobal("declare void @free(i8*)");
-            }
+            // __gflat_free is defined in user code (or the prelude), no declare needed
+            _externNames.Add("__gflat_free");
 
             string castPtr;
             if (llvmPtrType != "i8*")
@@ -2997,7 +3000,7 @@ public class LlvmEmitter : IVisitor
                 castPtr = ptrVal;
             }
 
-            Emit($"    call void @free(i8* {castPtr})");
+            Emit($"    call void @__gflat_free(i8* {castPtr})");
             return;
         }
 
@@ -3383,6 +3386,10 @@ public class LlvmEmitter : IVisitor
                 {
                     funcName = "main";
                 }
+                else if (method.Name == "__gflat_alloc" || method.Name == "__gflat_free")
+                {
+                    funcName = method.Name; // Well-known hooks: emit unmangled
+                }
                 else
                 {
                     string ns = _typeChecker.GetFunctionNamespace(method);
@@ -3685,11 +3692,8 @@ public class LlvmEmitter : IVisitor
         }
         else if (node.Kind == AllocationKind.Pointer)
         {
-            if (!_externNames.Contains("malloc"))
-            {
-                _externNames.Add("malloc");
-                EmitGlobal("declare i8* @malloc(i64)");
-            }
+            // __gflat_alloc is defined in user code (or the prelude), no declare needed
+            _ = _externNames.Add("__gflat_alloc");
 
             string sizePtr = NewTemp();
             Emit($"    {sizePtr} = getelementptr %{typeName}, %{typeName}* null, i32 1");
@@ -3697,7 +3701,7 @@ public class LlvmEmitter : IVisitor
             Emit($"    {sizeInt} = ptrtoint %{typeName}* {sizePtr} to i64");
 
             string rawMem = NewTemp();
-            Emit($"    {rawMem} = call i8* @malloc(i64 {sizeInt})");
+            Emit($"    {rawMem} = call i8* @__gflat_alloc(i64 {sizeInt})");
             string typedPtr = NewTemp();
             Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{typeName}*");
             Emit($"    store %{typeName} zeroinitializer, %{typeName}* {typedPtr}");
@@ -3883,11 +3887,8 @@ public class LlvmEmitter : IVisitor
             Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
         }
 
-        if (!_externNames.Contains("free"))
-        {
-            _externNames.Add("free");
-            EmitGlobal("declare void @free(i8*)");
-        }
+        // __gflat_free is defined in user code (or the prelude), no declare needed
+        _externNames.Add("__gflat_free");
 
         string castPtr;
         if (llvmPtrType != "i8*")
@@ -3900,7 +3901,7 @@ public class LlvmEmitter : IVisitor
             castPtr = ptrVal;
         }
 
-        Emit($"    call void @free(i8* {castPtr})");
+        Emit($"    call void @__gflat_free(i8* {castPtr})");
     }
     public void Visit(BreakStatement node)
     {
@@ -4341,18 +4342,15 @@ public class LlvmEmitter : IVisitor
 
             if (!_hasTerminated)
             {
-                if (!_externNames.Contains("free"))
-                {
-                    _externNames.Add("free");
-                    EmitGlobal("declare void @free(i8*)");
-                }
+                // __gflat_free is defined in user code (or the prelude), no declare needed
+                _externNames.Add("__gflat_free");
                 string freeLbl = NewLabel("catch_free");
                 string afterFreeLbl = NewLabel("catch_after_free");
                 Emit($"    br i1 {caughtOwned}, label %{freeLbl}, label %{afterFreeLbl}");
                 Emit($"{freeLbl}:");
                 string raw = NewTemp();
                 Emit($"    {raw} = bitcast %Exception* {caughtErr} to i8*");
-                Emit($"    call void @free(i8* {raw})");
+                Emit($"    call void @__gflat_free(i8* {raw})");
                 Emit($"    br label %{afterFreeLbl}");
                 Emit($"{afterFreeLbl}:");
                 Emit($"    br label %{tryEndLbl}");

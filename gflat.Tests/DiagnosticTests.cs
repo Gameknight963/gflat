@@ -400,5 +400,54 @@ namespace gflat.Tests
             (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
             Assert.True(checker.Diagnostics.HasErrors);
         }
+
+        [Fact]
+        public void ComprehensiveMultiBugProgram_CollectsAllDiagnosticsWithoutCrashing()
+        {
+            string code = """
+                extern int printf(readonly char* fmt, ...);
+
+                struct Cool
+                {
+                    int x;
+                    ~Cool()
+                    {
+                        printf("destructor ran");
+                    }
+                }
+
+                int main()
+                {
+                    Cool* l = new* Col();
+                    defer delete l;
+
+                    int num = "this is not an int";
+                    int calc = unknownVar + 10;
+                    int dup = 1;
+                    int dup = 2;
+
+                    return 0;
+
+                    l.x = 2;
+                    printf("The number is: %d\n", 2);
+                    return 0;
+                }
+                """;
+            (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
+
+            Assert.True(checker.Diagnostics.HasErrors);
+            Assert.True(checker.Diagnostics.HasWarnings);
+
+            // Bug 1: Undefined type
+            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF1004_TypeNotFound.Id && d.Message.Contains("Col"));
+            // Bug 2: Type mismatch
+            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF1001_TypeMismatch.Id);
+            // Bug 3: Undeclared identifier
+            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF1003_UndeclaredIdentifier.Id && d.Message.Contains("unknownVar"));
+            // Bug 4: Duplicate variable
+            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF3002_VariableAlreadyDeclared.Id && d.Message.Contains("dup"));
+            // Bug 5: Unreachable code warning
+            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF2001_UnreachableCode.Id);
+        }
     }
 }

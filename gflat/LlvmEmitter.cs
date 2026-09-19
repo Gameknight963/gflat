@@ -739,11 +739,11 @@ public class LlvmEmitter : IVisitor
 
         if (node.Object is IdentifierExpression ident && _locals.TryGetValue(ident.Name, out string? ptr))
         {
-            if (objType is PointerTypeExpression innerPtrType)
+            if (objType is PointerTypeExpression or ManagedTypeExpression)
             {
-                string innerLlvmType = EmitType(innerPtrType.Inner);
+                string pointerType = EmitType(objType);
                 string loadedPtr = NewTemp();
-                Emit($"    {loadedPtr} = load {innerLlvmType}*, {innerLlvmType}** {ptr}");
+                Emit($"    {loadedPtr} = load {pointerType}, {pointerType}* {ptr}");
                 objPtr = loadedPtr;
             }
             else
@@ -2019,7 +2019,7 @@ public class LlvmEmitter : IVisitor
         string name;
         if (isMain)
             name = "main";
-        else if (node.Name == "__gflat_alloc" || node.Name == "__gflat_free")
+        else if (node.Name == "__gflat_alloc" || node.Name == "__gflat_free" || node.Name == "__gflat_gc_alloc")
             name = node.Name; // Well-known hook functions: emit unmangled
         else if (_currentNamespacePath.Length > 0)
             name = $"gflat${_currentNamespacePath}${node.Name}";
@@ -2931,11 +2931,14 @@ public class LlvmEmitter : IVisitor
         {
             node.Operand.Accept(this);
             string ptr = Pop();
-            TypeExpression ptrType = _typeChecker.GetType(node.Operand);
-            if (ptrType is not PointerTypeExpression innerPtr)
-                throw new Exception("Cannot dereference non-pointer");
-
-            string innerType = EmitType(innerPtr.Inner);
+            TypeExpression ptrType = _typeChecker.ResolveAlias(_typeChecker.GetType(node.Operand));
+            TypeExpression pointee = ptrType switch
+            {
+                PointerTypeExpression raw => raw.Inner,
+                ManagedTypeExpression managed => managed.Inner,
+                _ => throw new Exception("Cannot dereference non-pointer")
+            };
+            string innerType = EmitType(pointee);
             string temp = NewTemp();
             Emit($"    {temp} = load {innerType}, {innerType}* {ptr}");
             Push(temp);
@@ -3678,7 +3681,7 @@ public class LlvmEmitter : IVisitor
                 {
                     funcName = "main";
                 }
-                else if (method.Name == "__gflat_alloc" || method.Name == "__gflat_free")
+                else if (method.Name == "__gflat_alloc" || method.Name == "__gflat_free" || method.Name == "__gflat_gc_alloc")
                 {
                     funcName = method.Name; // Well-known hooks: emit unmangled
                 }
@@ -3935,6 +3938,24 @@ public class LlvmEmitter : IVisitor
             throw new Exception($"Cannot emit 'new' for non-named type on line {node.Line}");
         }
         string typeName = namedType.Name;
+        if (node.Kind == AllocationKind.Managed && TypeChecker.IsPrimitive(typeName))
+        {
+            string scalarType = EmitType(resolvedType);
+            string value = GetDefaultValue(resolvedType);
+            if (node.Arguments.Count == 1)
+            {
+                node.Arguments[0].Accept(this);
+                value = EmitImplicitCast(Pop(), _typeChecker.GetType(node.Arguments[0]), resolvedType);
+            }
+            string memory = NewTemp();
+            Emit($"    {memory} = call i8* @__gflat_gc_alloc(i64 {_typeChecker.GetTypeSize(resolvedType)})");
+            GuardNonNull(memory, "i8*");
+            string address = NewTemp();
+            Emit($"    {address} = bitcast i8* {memory} to {scalarType}*");
+            Emit($"    store {scalarType} {value}, {scalarType}* {address}");
+            Push(address);
+            return;
+        }
         bool isClass = _typeChecker.IsClass(typeName);
         TypeChecker.StructInfo? sInfo = isClass ? null : _typeChecker.GetStruct(typeName);
         TypeChecker.ClassInfo? cInfo = isClass ? _typeChecker.GetClass(typeName) : null;
@@ -3985,8 +4006,9 @@ public class LlvmEmitter : IVisitor
             Emit($"    {val} = load %{typeName}, %{typeName}* {temp}");
             Push(val);
         }
-        else if (node.Kind == AllocationKind.Pointer)
+        else if (node.Kind is AllocationKind.Pointer or AllocationKind.Managed)
         {
+            string allocator = node.Kind == AllocationKind.Managed ? "__gflat_gc_alloc" : "__gflat_alloc";
             // __gflat_alloc is defined in user code (or the prelude), no declare needed
             _ = _externNames.Add("__gflat_alloc");
 
@@ -3996,7 +4018,7 @@ public class LlvmEmitter : IVisitor
             Emit($"    {sizeInt} = ptrtoint %{typeName}* {sizePtr} to i64");
 
             string rawMem = NewTemp();
-            Emit($"    {rawMem} = call i8* @__gflat_alloc(i64 {sizeInt})");
+            Emit($"    {rawMem} = call i8* @{allocator}(i64 {sizeInt})");
             GuardNonNull(rawMem, "i8*");
             string typedPtr = NewTemp();
             Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{typeName}*");
@@ -4072,6 +4094,8 @@ public class LlvmEmitter : IVisitor
     private string GetDefaultValue(TypeExpression type)
     {
         type = _typeChecker.ResolveAlias(type);
+        if (type is ManagedTypeExpression managed && _typeChecker.ResolveAlias(managed.Inner) is NamedTypeExpression namedInterface && _typeChecker.IsInterface(namedInterface))
+            return "zeroinitializer";
         if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
             return "null";
         if (type is ArrayTypeExpression)
@@ -4309,7 +4333,7 @@ public class LlvmEmitter : IVisitor
         TypeExpression srcType = _typeChecker.GetType(node.Operand);
         TypeExpression dstType = node.TargetType;
         string castVal = EmitCast(val, srcType, dstType);
-        if (_typeChecker.ResolveAlias(dstType) is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false })
+        if (_typeChecker.ResolveAlias(dstType) is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false } or ManagedTypeExpression { IsNullable: false })
             GuardNonNull(castVal, EmitType(dstType));
         Push(castVal);
     }

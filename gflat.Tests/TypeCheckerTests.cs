@@ -576,7 +576,7 @@ namespace gflat.Tests
                 """;
 
             var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Managed pointers ('^') are not yet supported", ex.Message);
+            Assert.Contains("Pointer arithmetic is not allowed on managed pointers", ex.Message);
         }
 
         [Fact]
@@ -3621,7 +3621,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Managed pointers ('^') are not yet supported", ex.Message);
+            Assert.Contains("default", ex.Message);
         }
 
         [Fact]

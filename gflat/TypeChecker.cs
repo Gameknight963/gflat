@@ -1154,9 +1154,13 @@ namespace gflat
         private void ValidateTypeUsage(TypeExpression type, int line)
         {
             TypeExpression resolved = ResolveAlias(type);
-            if (resolved is ManagedTypeExpression)
+            if (resolved is ManagedTypeExpression managed)
             {
-                throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", line);
+                if (HasDestructor(managed.Inner))
+                    throw new TypeCheckException("Managed pointers cannot reference types with destructors (including base classes and inline fields)", line);
+                if (ResolveAlias(managed.Inner) is not NamedTypeExpression namedInner || !IsInterface(namedInner))
+                    ValidateTypeUsage(managed.Inner, line);
+                return;
             }
             if (resolved is NamedTypeExpression named && IsInterface(named))
             {
@@ -1168,10 +1172,15 @@ namespace gflat
             }
             else if (resolved is PointerTypeExpression ptr)
             {
-                if (ResolveAlias(ptr.Inner) is ManagedTypeExpression)
-                {
-                    throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", line);
-                }
+                if (ResolveAlias(ptr.Inner) is not NamedTypeExpression inner || !IsInterface(inner))
+                    ValidateTypeUsage(ptr.Inner, line);
+            }
+            else if (resolved is FunctionPointerTypeExpression function)
+            {
+                if (function.IsManaged)
+                    throw new TypeCheckException("Managed function pointers are not supported", line);
+                ValidateTypeUsage(function.ReturnType, line);
+                foreach (var parameter in function.ParameterTypes) ValidateTypeUsage(parameter, line);
             }
         }
 
@@ -2684,6 +2693,7 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
+            if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
             if (node.IsGeneric) return;
 
             if (node.Name == "main" && node.Throws)
@@ -3644,6 +3654,8 @@ namespace gflat
 
                 node.Operand.Accept(this);
                 TypeExpression operandType = GetType(node.Operand);
+                if (IsManagedStorage(node.Operand))
+                    throw new TypeCheckException("Cannot take a raw address into managed storage", node.Line);
                 if (IsError(operandType))
                 {
                     RecordType(node, Error);
@@ -3703,17 +3715,22 @@ namespace gflat
                     RecordType(node, operand);
                     break;
                 case TokenKind.Star:
-                    if (operand is not PointerTypeExpression ptr)
+                    TypeExpression? inner = ResolveAlias(operand) switch
                     {
+                        PointerTypeExpression pointer => pointer.Inner,
+                        ManagedTypeExpression { IsNullable: false } managed => managed.Inner,
+                        ManagedTypeExpression => throw new TypeCheckException("Cast a nullable managed pointer to non-null before dereferencing", node.Line),
+                        _ => null
+                    };
+                    if (inner == null)
                         throw new TypeCheckException("Cannot dereference non-pointer", node.Line);
-                    }
-                    TypeExpression resolvedInner = ResolveAlias(ptr.Inner);
+                    TypeExpression resolvedInner = ResolveAlias(inner);
                     if (resolvedInner is NamedTypeExpression namedInner && namedInner.Name == "void")
                     {
                         throw new TypeCheckException("Cannot dereference 'void*'", node.Line);
                     }
-                    ValidateTypeUsage(ptr.Inner, node.Line);
-                    RecordType(node, ptr.Inner);
+                    ValidateTypeUsage(inner, node.Line);
+                    RecordType(node, inner);
                     break;
                 default:
                     throw new NotImplementedException($"Unary operator {node.Operator} not yet supported");
@@ -3850,12 +3867,21 @@ namespace gflat
             return false;
         }
 
+        private bool IsManagedStorage(AstNode node) => node switch
+        {
+            UnaryExpression { Operator: TokenKind.Star } dereference => ResolveAlias(GetType(dereference.Operand)) is ManagedTypeExpression,
+            MemberAccessExpression member => ResolveAlias(GetType(member.Object)) is ManagedTypeExpression ||
+                (ResolveAlias(GetType(member.Object)) is not PointerTypeExpression && IsManagedStorage(member.Object)),
+            IndexExpression index => IsManagedStorage(index.Target),
+            _ => false
+        };
+
         private void CheckAssignmentTarget(AstNode target, int line)
         {
             if (target is UnaryExpression deref && deref.Operator == TokenKind.Star)
             {
                 TypeExpression opType = ResolveAlias(GetType(deref.Operand));
-                if (opType is PointerTypeExpression { IsReadOnly: true })
+                if (opType is PointerTypeExpression { IsReadOnly: true } or ManagedTypeExpression { IsReadOnly: true })
                 {
                     throw new TypeCheckException("Cannot assign to dereference of readonly pointer", line);
                 }
@@ -4159,6 +4185,8 @@ namespace gflat
 
                 memberAccess.Object.Accept(this);
                 TypeExpression rawObjType = GetType(memberAccess.Object);
+                if (ResolveAlias(rawObjType) is ManagedTypeExpression { IsNullable: true })
+                    throw new TypeCheckException("Cast a nullable managed pointer to non-null before calling a method", node.Line);
                 bool isReceiverReadOnly = (rawObjType is PointerTypeExpression pRec && pRec.IsReadOnly)
                                        || (rawObjType is ManagedTypeExpression mRec && mRec.IsReadOnly)
                                        || IsExpressionReadOnly(memberAccess.Object);
@@ -4652,6 +4680,8 @@ namespace gflat
 
             node.Object.Accept(this);
             TypeExpression objType = GetType(node.Object);
+            if (ResolveAlias(objType) is ManagedTypeExpression { IsNullable: true })
+                throw new TypeCheckException("Cast a nullable managed pointer to non-null before accessing members", node.Line);
 
             if (node.IsArrow)
             {
@@ -4738,13 +4768,26 @@ namespace gflat
 
         public void Visit(NewExpression node)
         {
-            if (node.Kind == AllocationKind.Managed)
-            {
-                throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", node.Line);
-            }
-
             TypeExpression resolvedType = ResolveAlias(node.Type);
             node.Type = resolvedType;
+            if (node.Kind == AllocationKind.Managed)
+            {
+                ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line), node.Line);
+                RequireManagedAllocator(node.Line);
+                if (resolvedType is NamedTypeExpression scalar && IsPrimitive(scalar.Name) && scalar.Name is not ("void" or "string"))
+                {
+                    if (node.Arguments.Count > 1)
+                        throw new TypeCheckException("Managed scalar allocation accepts zero or one initializer", node.Line);
+                    if (node.Arguments.Count == 1)
+                    {
+                        node.Arguments[0].Accept(this);
+                        if (!IsAssignable(resolvedType, GetType(node.Arguments[0]), node.Arguments[0]))
+                            throw new TypeCheckException("Invalid managed scalar initializer", node.Line);
+                    }
+                    RecordType(node, new ManagedTypeExpression(resolvedType, false, node.Line));
+                    return;
+                }
+            }
             if (resolvedType is not NamedTypeExpression named)
             {
                 ReportError(DiagnosticRules.GF1000_GeneralTypeError, node.Line, 0, $"Cannot instantiate non-struct and non-class type '{TypeName(node.Type)}'");
@@ -4987,8 +5030,32 @@ namespace gflat
         public void Visit(NamedTypeExpression node) { }
         public void Visit(NestedTypeExpression node) { }
         public void Visit(PointerTypeExpression node) { }
-        public void Visit(ManagedTypeExpression node) =>
-            throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", node.Line);
+        public void Visit(ManagedTypeExpression node) => ValidateTypeUsage(node, node.Line);
+
+        private void RequireManagedAllocator(int line)
+        {
+            TypeExpression result;
+            IReadOnlyList<Parameter> parameters;
+            if (_globalScope.Functions.TryGetValue("__gflat_gc_alloc", out var method))
+            {
+                if (method.Throws || method.IsGeneric || method.Body == null)
+                    throw new TypeCheckException("__gflat_gc_alloc must be a non-throwing, non-generic global function", line);
+                result = method.ReturnType;
+                parameters = method.Parameters;
+            }
+            else if (_globalScope.Externs.TryGetValue("__gflat_gc_alloc", out var external))
+            {
+                if (external.IsVariadic)
+                    throw new TypeCheckException("__gflat_gc_alloc cannot be variadic", line);
+                result = external.ReturnType;
+                parameters = external.Parameters;
+            }
+            else throw new TypeCheckException("Managed allocation requires a user-provided global __gflat_gc_alloc(ulong size) hook; no default GC runtime is supplied", line);
+
+            if (ResolveAlias(result) is not PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" }, IsReadOnly: false } ||
+                parameters.Count != 1 || ResolveAlias(parameters[0].Type) is not NamedTypeExpression { Name: "ulong" })
+                throw new TypeCheckException("__gflat_gc_alloc must have signature void*? __gflat_gc_alloc(ulong size) (void* is also accepted)", line);
+        }
         public void Visit(ArrayTypeExpression node) { }
         public void Visit(ArrayLiteralExpression node)
         {
@@ -5052,6 +5119,9 @@ namespace gflat
         public void Visit(AttributeNode node) { }
         public void Visit(ExternDeclaration node)
         {
+            ValidateTypeUsage(node.ReturnType, node.Line);
+            foreach (var parameter in node.Parameters) ValidateTypeUsage(parameter.Type, parameter.Line);
+            if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
             if (node.Name == "__gflat_alloc" || node.Name == "__gflat_free")
             {
                 ValidateAllocatorHookSignature(node.Name, node.ReturnType, node.Parameters, node.Line);
@@ -5093,7 +5163,7 @@ namespace gflat
                 ? $"{TypeName(nested.Parent)}::{nested.Member}<{string.Join(", ", nested.TypeArguments.Select(TypeName))}>"
                 : $"{TypeName(nested.Parent)}::{nested.Member}",
             PointerTypeExpression p => (p.IsReadOnly ? "readonly " : "") + TypeName(p.Inner) + "*",
-            ManagedTypeExpression m => (m.IsReadOnly ? "readonly " : "") + TypeName(m.Inner) + "^",
+            ManagedTypeExpression m => (m.IsReadOnly ? "readonly " : "") + TypeName(m.Inner) + "^" + (m.IsNullable ? "?" : ""),
             ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"
@@ -5380,7 +5450,7 @@ namespace gflat
             TypeExpression targetType = ResolveAlias(node.TargetType);
             ValidateTypeUsage(targetType, node.Line);
 
-            if (targetType is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false })
+            if (targetType is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false } or ManagedTypeExpression { IsNullable: false })
             {
                 if (sourceType is NamedTypeExpression { Name: "null" } ||
                     (_constEvaluator.TryEvaluate(node.Operand, out ConstValue? castConstant, out _) &&
@@ -5399,6 +5469,8 @@ namespace gflat
         {
             src = ResolveAlias(src);
             dst = ResolveAlias(dst);
+            if (src is ManagedTypeExpression { IsReadOnly: true } && dst is ManagedTypeExpression { IsReadOnly: false })
+                return false;
 
             if (TypesMatch(src, dst))
             {
@@ -5484,9 +5556,10 @@ namespace gflat
             }
 
             // Managed to managed
-            if (src is ManagedTypeExpression && dst is ManagedTypeExpression)
+            if (src is ManagedTypeExpression sourceManaged && dst is ManagedTypeExpression targetManaged)
             {
-                return true;
+                return IsAssignable(new ManagedTypeExpression(targetManaged.Inner, false, targetManaged.Line, targetManaged.IsReadOnly),
+                    new ManagedTypeExpression(sourceManaged.Inner, false, sourceManaged.Line, sourceManaged.IsReadOnly));
             }
 
             // Function pointer to function pointer or void*
@@ -5704,6 +5777,8 @@ namespace gflat
         {
             node.Expression.Accept(this);
             TypeExpression exprType = ResolveAlias(_types[node.Expression]);
+            if (exprType is ManagedTypeExpression)
+                throw new TypeCheckException("Managed exceptions are not supported by the current exception ABI", node.Line);
 
             TypeExpression? innerType = null;
             if (exprType is PointerTypeExpression ptr)
@@ -5810,6 +5885,8 @@ namespace gflat
 
         public void Visit(CatchClause node)
         {
+            if (node.ExceptionType != null && ResolveAlias(node.ExceptionType) is ManagedTypeExpression)
+                throw new TypeCheckException("Managed exception catches are not supported by the current exception ABI", node.Line);
             PushScope();
             try
             {

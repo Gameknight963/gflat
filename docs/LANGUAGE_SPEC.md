@@ -6,7 +6,7 @@ Version 0.3, experimental. This document specifies the supported language contra
 
 gflat is a systems language with explicit heap allocation, inline objects, fixed integer widths, and deterministic scope cleanup. Ordinary expressions do not implicitly allocate heap objects. A class is an inline object with a vtable; use a pointer when reference semantics are needed.
 
-Raw pointers, explicit reinterpretation casts, and extern declarations are the low-level boundary. They do not establish ownership, bounds, or a valid lifetime. `readonly` restricts access through that view; explicit casts can remove it. The language does not claim complete memory safety. Foreign declarations are trusted contracts.
+Raw pointers, explicit reinterpretation casts, and extern declarations are the low-level boundary. They do not establish ownership, bounds, or a valid lifetime. `readonly` restricts access through that view; raw-pointer casts can remove it, but managed-reference casts cannot. The language does not claim complete memory safety. Foreign declarations are trusted contracts.
 
 Taking an address does not initialize storage. Locals must be initialized before their address is passed to an ordinary pointer parameter. There is currently no `out` parameter contract. Initialize a value explicitly before handing it to a foreign output function.
 
@@ -16,7 +16,7 @@ The supported native target is **x86_64-pc-windows-msvc**. Other targets are rej
 
 Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. Double-underscore names are used by compiler hooks. They must not be treated as a security boundary. Comments are `//` to end of line or non-nesting `/* ... */`; unterminated comments are errors.
 
-Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Interpolation and managed references are reserved syntax and diagnosed as unsupported.
+Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Interpolation remains reserved syntax and is diagnosed as unsupported.
 
 The following EBNF describes the core expression/type grammar; declaration modifiers, generics, interfaces, and operators are detailed below. Repetition is `{ ... }`, optional syntax is `[ ... ]`.
 
@@ -112,6 +112,36 @@ int main()
 
 ## Initialization, ownership, and cleanup
 
+### Managed pointers
+
+`T^` is a copyable reference to managed storage; `T^?` additionally permits null. `new^ T(...)` supports structs, classes, and primitive scalars. Scalar allocation accepts zero arguments (zero initialization) or one initial value, for example `new^ int(42)`. Allocation returns a non-null reference, zero-initializes object storage, and runs the selected constructor. A null allocator result traps before initialization.
+
+Managed allocation requires a user-provided **global** hook with this ABI:
+
+```gflat
+extern void*? __gflat_gc_alloc(ulong size);
+
+class Box
+{
+    public int value;
+    public Box(int initial) { value = initial; }
+}
+
+int main()
+{
+    Box^ box = new^ Box(42);
+    Box^ copy = box;
+    copy.value = 7;
+    return box.value;
+}
+```
+
+The hook may instead be defined in gflat. It must be non-generic and non-throwing, accept exactly one `ulong` byte count, and return writable `void*?` or `void*` storage with suitable alignment. An extern declaration requires the implementation to be linked by the native toolchain. No default GC or Boehm adapter is bundled. Merely declaring managed references does not require the allocation hook. The hook is independent of `__gflat_alloc` and `__gflat_free`.
+
+The initial runtime contract is a **conservative, nonmoving collector** that scans live stack/register roots and managed allocations, and recognizes interior pointers used during object access. The adapter supplies collector initialization and any thread registration required by its collector. The compiler does not emit root maps, relocation support, pinning, or finalization. References stored only in unscanned raw allocations or retained by foreign code need runtime-specific root registration; they are not automatically kept alive by the language.
+
+Scope exit does not destroy or free a managed pointee. Types with destructors, including inherited destructors and inline fields or array elements requiring destruction, cannot be managed pointees in this version. `delete`, pointer arithmetic, managed/raw casts, integer casts, and taking raw addresses directly into managed storage are rejected. Managed class upcasts and interface views are supported. Nullable references require an explicit checked non-null cast before dereference, field access, or method calls. Managed exceptions and managed function pointers remain unsupported. Managed allocations cannot execute during constant evaluation.
+
 ### Array literals
 
 `[expression, ...]` creates a fixed-size array. Elements evaluate from left to right and must have the same resolved type, including nested array dimensions. A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected; use explicit casts when elements need a different numeric type. An unsized local declaration infers its size from the initializer.
@@ -185,4 +215,4 @@ Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal c
 
 ## Future work
 
-Additional target ABIs, verified out parameters, full ownership and partial moves, managed references, interpolation, reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.
+Additional target ABIs, verified out parameters, full ownership and partial moves, managed finalizers and moving collectors, interpolation, reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.

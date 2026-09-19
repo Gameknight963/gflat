@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\gflat\gflat.csproj" />
+    <None Include="..\docs\LANGUAGE_SPEC.md" Link="LANGUAGE_SPEC.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

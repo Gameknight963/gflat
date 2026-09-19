@@ -794,6 +794,10 @@ namespace gflat.semantics
                 CheckExpression(index.Target);
                 CheckExpression(index.Index);
             }
+            else if (expr is ArrayLiteralExpression array)
+            {
+                foreach (var element in array.Elements) CheckExpression(element);
+            }
             else if (expr is NewExpression newExpr)
             {
                 for (int i = 0; i < newExpr.Arguments.Count; i++)

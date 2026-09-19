@@ -36,6 +36,7 @@ namespace gflat
         void Visit(ManagedTypeExpression node);
         void Visit(ArrayTypeExpression node);
         void Visit(IndexExpression node);
+        void Visit(ArrayLiteralExpression node);
         void Visit(BreakStatement node);
         void Visit(ContinueStatement node);
         void Visit(NewExpression node);

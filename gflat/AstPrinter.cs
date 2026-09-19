@@ -7,6 +7,11 @@ namespace gflat
 {
     public class AstPrinter : IVisitor
     {
+        public void Visit(ArrayLiteralExpression node)
+        {
+            Print("ArrayLiteral");
+            Indented(() => { foreach (var element in node.Elements) element.Accept(this); });
+        }
         private int _indent = 0;
         private string Indent => new string(' ', _indent * 2);
 

@@ -573,6 +573,18 @@ namespace gflat.comptime
             throw new ConstEvalException($"Cannot access member '{node.Member}' on non-struct/non-string at compile time", node.Line);
         }
 
+        public void Visit(ArrayLiteralExpression node)
+        {
+            CheckSteps(node.Line);
+            var elements = new List<ConstValue>();
+            foreach (var element in node.Elements)
+            {
+                element.Accept(this);
+                elements.Add(_currentValue!);
+            }
+            _currentValue = new ConstValue.Array(elements);
+        }
+
         public void Visit(IndexExpression node)
         {
             CheckSteps(node.Line);

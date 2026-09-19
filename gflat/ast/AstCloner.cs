@@ -278,6 +278,8 @@ namespace gflat.ast
             {
                 return new IndexExpression(CloneNode(idx.Target), CloneNode(idx.Index), idx.Line);
             }
+            if (node is ArrayLiteralExpression array)
+                return new ArrayLiteralExpression(array.Elements.Select(CloneNode).ToList(), array.Line);
             if (node is AssignmentExpression assign)
             {
                 return new AssignmentExpression(CloneNode(assign.Target), CloneNode(assign.Value), assign.Operator, assign.Line);

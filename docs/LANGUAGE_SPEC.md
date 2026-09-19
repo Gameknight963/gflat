@@ -112,6 +112,26 @@ int main()
 
 ## Initialization, ownership, and cleanup
 
+### Array literals
+
+`[expression, ...]` creates a fixed-size array. Elements evaluate from left to right and must have the same resolved type, including nested array dimensions. A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected; use explicit casts when elements need a different numeric type. An unsized local declaration infers its size from the initializer.
+
+```gflat
+int main()
+{
+    int[3] values = [1, 2, 3];
+    int[] more = [4, 5, 6,];
+    int[2][2] grid = [[1, 2], [3, 4]];
+    return values[1] + more[0] + grid[1][1];
+}
+```
+
+Literals can be indexed, returned, used in `foreach`, and passed to pointer parameters. Constant arrays support constant elements. A pointer initialized directly from a literal refers to temporary stack storage in the enclosing scope; pointers must not outlive that storage. Pointer arguments to calls remain valid for that call.
+
+Destructor-bearing elements must be fresh values rather than copies of existing objects. If evaluating an element throws, previously initialized elements are destroyed in reverse order. Once initialization succeeds, the array owns all elements and uses normal array cleanup. Constant arrays cannot contain destructor-bearing elements.
+
+### Scope cleanup
+
 Local scalar reads require definite assignment. Struct fields can be initialized individually. An assignment on only a skipped logical operand or only inside a potentially empty loop does not initialize a value after that operation. Return values are evaluated before deferred actions.
 
 `defer` executes in reverse registration order at lexical scope exit, including return, break, continue, and supported exception paths. Deferred code binds variables at its declaration site, even if a later scope shadows a name. Deferred reads are checked at cleanup; deferred writes do not take effect at registration. Nested defer is not supported.

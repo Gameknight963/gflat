@@ -24,6 +24,8 @@ public class LlvmEmitter : IVisitor
 
         switch (val)
         {
+            case ConstValue.Array array when type is ArrayTypeExpression arrayType:
+                return $"{typeStr} [{string.Join(", ", array.Elements.Select(e => EmitConstInitializer(e, arrayType.ElementType)))}]";
             case ConstValue.Integer i:
                 return $"{typeStr} {i.Value}";
             case ConstValue.UInteger u:
@@ -45,6 +47,8 @@ public class LlvmEmitter : IVisitor
                     string globalName = NewGlobal();
                     int len = escaped.Length + 1;
                     string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                    if (type is ArrayTypeExpression)
+                        return $"{typeStr} c\"{llvmStr}\\00\"";
                     EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
                     return $"i8* bitcast ([{len} x i8]* {globalName} to i8*)";
                 }
@@ -156,6 +160,14 @@ public class LlvmEmitter : IVisitor
     {
         switch (constVal)
         {
+            case ConstValue.Array array when _typeChecker.ResolveAlias(type) is ArrayTypeExpression arrayType:
+                string global = NewGlobal();
+                string llvmType = EmitType(arrayType);
+                EmitGlobal($"{global} = private constant {EmitConstInitializer(array, arrayType)}");
+                string first = NewTemp();
+                Emit($"    {first} = getelementptr {llvmType}, {llvmType}* {global}, i32 0, i32 0");
+                Push(first);
+                return true;
             case ConstValue.Integer i:
                 Push(i.Value.ToString());
                 return true;
@@ -575,6 +587,15 @@ public class LlvmEmitter : IVisitor
 
     private void EmitAddress(AstNode node)
     {
+        if (node is LiteralExpression { Token.Kind: TokenKind.StringLiteral })
+        {
+            node.Accept(this);
+            string data = Pop();
+            string address = NewTemp();
+            Emit($"    {address} = bitcast i8* {data} to {EmitType(_typeChecker.GetType(node))}*");
+            Push(address);
+            return;
+        }
         if (node is IdentifierExpression ident)
         {
             if (_locals.TryGetValue(ident.Name, out string? ptr))
@@ -585,6 +606,13 @@ public class LlvmEmitter : IVisitor
 
             if (_typeChecker.TryGetConstValueByName(ident.Name, out ConstValue? constVal) && constVal != null)
             {
+                if (constVal is ConstValue.Array array)
+                {
+                    string global = NewGlobal();
+                    EmitGlobal($"{global} = private constant {EmitConstInitializer(array, _typeChecker.GetType(node))}");
+                    Push(global);
+                    return;
+                }
                 if (constVal is ConstValue.Pointer ptrVal)
                 {
                     string globalData = GetOrCreateConstGlobal(ptrVal.Target, ptrVal.GlobalName ?? ident.Name);
@@ -643,7 +671,7 @@ public class LlvmEmitter : IVisitor
         {
             deref.Operand.Accept(this);
         }
-        else if (node is NewExpression or CallExpression)
+        else if (node is NewExpression or CallExpression or ArrayLiteralExpression)
         {
             node.Accept(this);
             string value = Pop();
@@ -677,7 +705,7 @@ public class LlvmEmitter : IVisitor
     {
         TypeExpression targetType = _typeChecker.ResolveAlias(_typeChecker.GetType(node.Target));
         string targetPtr;
-        if (targetType is ArrayTypeExpression { Size: not null } && node.Target is UnaryExpression { Operator: TokenKind.Star })
+        if (targetType is ArrayTypeExpression { Size: not null } && node.Target is (UnaryExpression { Operator: TokenKind.Star } or ArrayLiteralExpression or CallExpression))
         {
             EmitAddress(node.Target);
             string arrayAddress = Pop();
@@ -1294,7 +1322,7 @@ public class LlvmEmitter : IVisitor
             string fieldPtr = NewTemp();
             Emit($"    {fieldPtr} = getelementptr %{className}, %{className}* {loadedThis}, i32 0, i32 {fieldIdx + 1}");
 
-            field.Initializer.Accept(this);
+            EmitValueForTarget(field.Initializer, field.Type);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(field.Initializer);
             val = EmitImplicitCast(val, initType, field.Type);
@@ -1355,7 +1383,7 @@ public class LlvmEmitter : IVisitor
                 for (int i = 0; i < node.BaseArguments.Count; i++)
                 {
                     AstNode arg = node.BaseArguments[i];
-                    arg.Accept(this);
+                    EmitArgument(arg);
                     string val = Pop();
                     TypeExpression argType = _typeChecker.GetType(arg);
                     val = EmitImplicitCast(val, argType, resolvedBaseCtor.Parameters[i].Type);
@@ -1817,7 +1845,7 @@ public class LlvmEmitter : IVisitor
             string fieldPtr = NewTemp();
             Emit($"    {fieldPtr} = getelementptr %{structName}, %{structName}* {loadedThis}, i32 0, i32 {fieldIdx}");
 
-            field.Initializer.Accept(this);
+            EmitValueForTarget(field.Initializer, field.Type);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(field.Initializer);
             val = EmitImplicitCast(val, initType, field.Type);
@@ -2143,6 +2171,7 @@ public class LlvmEmitter : IVisitor
                 Emit($"    {value} = load {arrayType}, {arrayType}* {address}");
                 Push(value);
             }
+            else if (_currentFunctionExpectedType != null) EmitValueForTarget(node.Value, _currentFunctionExpectedType);
             else node.Value.Accept(this);
             // Void calls (e.g. expression-body `void f() => voidCall();`) don't push a value
             TypeExpression returnType = _typeChecker.GetType(node.Value);
@@ -2374,7 +2403,7 @@ public class LlvmEmitter : IVisitor
         _loopDeferDepths.Push(_deferScopes.Count);
 
         // Evaluate collection to get base pointer
-        node.Collection.Accept(this);
+        EmitArgument(node.Collection);
         string basePtr = Pop();
 
         // Allocate index variable
@@ -2486,7 +2515,7 @@ public class LlvmEmitter : IVisitor
                 return;
             }
 
-            node.Initializer.Accept(this);
+            EmitValueForTarget(node.Initializer, resolvedVarType);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(node.Initializer);
             val = EmitImplicitCast(val, initType, resolvedVarType);
@@ -2536,7 +2565,7 @@ public class LlvmEmitter : IVisitor
         {
             string result = Pop();
             TypeExpression type = _typeChecker.GetType(node.Expression);
-            if (node.Expression is NewExpression or CallExpression && _typeChecker.HasDestructor(type))
+            if (node.Expression is NewExpression or CallExpression or ArrayLiteralExpression && _typeChecker.HasDestructor(type))
             {
                 string slot = NewTemp();
                 string llvmType = EmitType(type);
@@ -3300,7 +3329,7 @@ public class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                arg.Accept(this);
+                EmitArgument(arg);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(ifaceCall.Method.Parameters[i].Type);
@@ -3401,7 +3430,7 @@ public class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                arg.Accept(this);
+                EmitArgument(arg);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(vcall.Method.Parameters[i].Type);
@@ -3455,7 +3484,7 @@ public class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                arg.Accept(this);
+                EmitArgument(arg);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
@@ -3524,7 +3553,7 @@ public class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                arg.Accept(this);
+                EmitArgument(arg);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
@@ -3573,7 +3602,7 @@ public class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                arg.Accept(this);
+                EmitArgument(arg);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(methodMember.Parameters[i].Type);
@@ -3590,7 +3619,7 @@ public class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                arg.Accept(this);
+                EmitArgument(arg);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
@@ -3791,7 +3820,7 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(AssignmentExpression node)
     {
-        node.Value.Accept(this);
+        EmitValueForTarget(node.Value, _typeChecker.GetType(node.Target));
         string val = Pop();
 
         EmitAddress(node.Target);
@@ -3923,7 +3952,7 @@ public class LlvmEmitter : IVisitor
         List<string> argVals = new();
         foreach (AstNode arg in node.Arguments)
         {
-            arg.Accept(this);
+            EmitArgument(arg);
             argVals.Add(Pop());
         }
 
@@ -4073,7 +4102,75 @@ public class LlvmEmitter : IVisitor
     public void Visit(PointerTypeExpression node) => throw new NotImplementedException();
     public void Visit(ManagedTypeExpression node) => throw new NotImplementedException();
     public void Visit(ArrayTypeExpression node) => throw new NotImplementedException();
+    public void Visit(ArrayLiteralExpression node)
+        => EmitExpressionWithCleanup(() => EmitArrayLiteral(node));
+
+    private void EmitArrayLiteral(ArrayLiteralExpression node)
+    {
+        var type = (ArrayTypeExpression)_typeChecker.GetType(node);
+        string arrayType = EmitType(type);
+        string elementType = EmitType(type.ElementType);
+        string storage = NewTemp();
+        Emit($"    {storage} = alloca {arrayType}");
+        var scope = _deferScopes[^1];
+        var transferred = new List<IDeferAction>();
+        for (int i = 0; i < node.Elements.Count; i++)
+        {
+            var element = node.Elements[i];
+            string value;
+            if (type.ElementType is ArrayTypeExpression && element is IdentifierExpression or MemberAccessExpression or IndexExpression or LiteralExpression { Token.Kind: TokenKind.StringLiteral })
+            {
+                EmitAddress(element);
+                string source = Pop();
+                value = NewTemp();
+                Emit($"    {value} = load {elementType}, {elementType}* {source}");
+            }
+            else
+            {
+                element.Accept(this);
+                value = Pop();
+            }
+            string address = NewTemp();
+            Emit($"    {address} = getelementptr {arrayType}, {arrayType}* {storage}, i32 0, i32 {i}");
+            Emit($"    store {elementType} {value}, {elementType}* {address}");
+            if (_typeChecker.HasDestructor(type.ElementType))
+            {
+                var cleanup = new TemporaryCleanup(type.ElementType, address);
+                scope.Add(cleanup);
+                transferred.Add(cleanup);
+            }
+        }
+        foreach (var cleanup in transferred) scope.Remove(cleanup);
+        string result = NewTemp();
+        Emit($"    {result} = load {arrayType}, {arrayType}* {storage}");
+        Push(result);
+    }
+
+    private void EmitArgument(AstNode argument)
+    {
+        if (argument is ArrayLiteralExpression)
+        {
+            EmitAddress(argument);
+            string address = Pop();
+            string type = EmitType(_typeChecker.GetType(argument));
+            string first = NewTemp();
+            Emit($"    {first} = getelementptr {type}, {type}* {address}, i32 0, i32 0");
+            Push(first);
+        }
+        else argument.Accept(this);
+    }
+
+    private void EmitValueForTarget(AstNode expression, TypeExpression target)
+    {
+        if (expression is ArrayLiteralExpression && _typeChecker.ResolveAlias(target) is PointerTypeExpression)
+            EmitArgument(expression);
+        else expression.Accept(this);
+    }
+
     public void Visit(IndexExpression node)
+        => EmitExpressionWithCleanup(() => EmitIndex(node));
+
+    private void EmitIndex(IndexExpression node)
     {
         EmitIndexAddress(node);
         string elemPtr = Pop();
@@ -4207,7 +4304,7 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(CastExpression node)
     {
-        node.Operand.Accept(this);
+        EmitValueForTarget(node.Operand, node.TargetType);
         string val = Pop();
         TypeExpression srcType = _typeChecker.GetType(node.Operand);
         TypeExpression dstType = node.TargetType;

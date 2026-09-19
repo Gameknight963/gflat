@@ -1642,6 +1642,10 @@ namespace gflat
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
+            if (valueNode is ArrayLiteralExpression && ResolveAlias(target) is ArrayTypeExpression expected)
+                return TypeName(ResolveAlias(source)) == TypeName(expected) ||
+                    (expected.Size == null && ResolveAlias(source) is ArrayTypeExpression actual &&
+                     TypeName(ResolveAlias(expected.ElementType)) == TypeName(ResolveAlias(actual.ElementType)));
             if (IsError(target) || IsError(source))
             {
                 return true;
@@ -2639,6 +2643,8 @@ namespace gflat
         {
             ValidateTypeUsage(node.Type, node.Line);
             TypeExpression fieldType = ResolveAlias(node.Type);
+            if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(fieldType))
+                throw new TypeCheckException("Constant arrays cannot contain destructor-bearing elements", node.Line);
             if (node.IsConst && fieldType is PointerTypeExpression fPtr && !fPtr.IsReadOnly)
             {
                 fieldType = new PointerTypeExpression(fPtr.Inner, fPtr.IsNullable, fPtr.Line, isReadOnly: true);
@@ -2934,7 +2940,7 @@ namespace gflat
                 {
                     TypeExpression retType = ResolveAlias(method.ReturnType);
                     TypeExpression valType = GetType(node.Value);
-                    if (HasDestructor(retType) && node.Value is not (IdentifierExpression or NewExpression or CallExpression))
+                    if (HasDestructor(retType) && node.Value is not (IdentifierExpression or NewExpression or CallExpression or ArrayLiteralExpression))
                         throw new TypeCheckException("Cannot transfer a destructor-bearing value from borrowed storage", node.Line);
                     if (HasDestructor(retType) && node.Value is IdentifierExpression owned)
                     {
@@ -3283,6 +3289,8 @@ namespace gflat
         public void Visit(VariableDeclaration node)
         {
             TypeExpression varType = ResolveAlias(node.Type);
+            if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(varType))
+                throw new TypeCheckException("Constant arrays cannot contain destructor-bearing elements", node.Line);
             if (node.IsConst && varType is PointerTypeExpression ptr && !ptr.IsReadOnly)
             {
                 varType = new PointerTypeExpression(ptr.Inner, ptr.IsNullable, ptr.Line, isReadOnly: true);
@@ -3293,9 +3301,9 @@ namespace gflat
             if (node.Initializer != null)
             {
                 node.Initializer.Accept(this);
-                TypeExpression initType = GetType(node.Initializer);
+                TypeExpression initType = ResolveAlias(GetType(node.Initializer));
 
-                if (HasDestructor(varType) && node.Initializer is not (NewExpression or DefaultExpression or CallExpression))
+                if (HasDestructor(varType) && node.Initializer is not (NewExpression or DefaultExpression or CallExpression or ArrayLiteralExpression))
                 {
                     throw new TypeCheckException($"Cannot copy value of type '{TypeName(varType)}' because it defines a destructor. Pass by pointer, or use an explicit method if available.", node.Line);
                 }
@@ -4982,6 +4990,25 @@ namespace gflat
         public void Visit(ManagedTypeExpression node) =>
             throw new TypeCheckException("Managed pointers ('^') are not yet supported pending GC runtime integration.", node.Line);
         public void Visit(ArrayTypeExpression node) { }
+        public void Visit(ArrayLiteralExpression node)
+        {
+            if (node.Elements.Count == 0)
+                throw new TypeCheckException("Array literals must contain at least one element", node.Line);
+            TypeExpression? elementType = null;
+            foreach (var element in node.Elements)
+            {
+                element.Accept(this);
+                TypeExpression type = ResolveAlias(GetType(element));
+                if (type is NamedTypeExpression { Name: "void" })
+                    throw new TypeCheckException("Array elements cannot have type void", element.Line);
+                elementType ??= type;
+                if (TypeName(elementType) != TypeName(type))
+                    throw new TypeCheckException("Array literal elements must have matching types and dimensions", element.Line);
+                if (HasDestructor(type) && element is not (NewExpression or CallExpression or DefaultExpression or ArrayLiteralExpression))
+                    throw new TypeCheckException("Array literals cannot copy destructor-bearing elements; use fresh values", element.Line);
+            }
+            RecordType(node, new ArrayTypeExpression(elementType!, node.Elements.Count, node.Line));
+        }
         public void Visit(IndexExpression node)
         {
             node.Target.Accept(this);

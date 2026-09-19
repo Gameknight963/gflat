@@ -1314,6 +1314,20 @@ namespace gflat
         private AstNode ParsePrefix()
         {
             int line = Current.Line;
+            if (Match(TokenKind.OpenBracket))
+            {
+                List<AstNode> elements = new();
+                if (!Check(TokenKind.CloseBracket))
+                {
+                    do
+                    {
+                        elements.Add(ParseExpression());
+                        if (!Match(TokenKind.Comma)) break;
+                    } while (!Check(TokenKind.CloseBracket));
+                }
+                Expect(TokenKind.CloseBracket);
+                return new ArrayLiteralExpression(elements, line);
+            }
 
             // unary prefix operators
             if (Check(TokenKind.Bang) || Check(TokenKind.Minus) || Check(TokenKind.Star) ||

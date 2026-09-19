@@ -72,16 +72,25 @@ namespace gflat
             //AstPrinter printer = new AstPrinter();
             //ast.Accept(printer);
 
+            diagnostics.DiagnosticBag diagnostics = new diagnostics.DiagnosticBag();
             List<Token> tokens = Lexer.Tokenize(code);
-            CompilationUnit ast = Parser.Parse(tokens);
-            TypeChecker checker = new TypeChecker();
+            CompilationUnit ast = Parser.Parse(tokens, diagnostics);
+
+            if (diagnostics.HasErrors)
+            {
+                bool useColor = !Console.IsOutputRedirected;
+                Console.Error.WriteLine(diagnostics.FormatAll(useColor));
+                return 1;
+            }
+
+            TypeChecker checker = new TypeChecker(diagnostics);
             try
             {
                 ast.Accept(checker);
             }
             catch (CompileExceptions.TypeCheckException)
             {
-                // Handled via checker.Diagnostics reporting below
+                // Handled via diagnostics reporting below
             }
 
             if (checker.Diagnostics.Count > 0)

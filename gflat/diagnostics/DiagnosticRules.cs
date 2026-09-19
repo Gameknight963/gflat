@@ -15,6 +15,14 @@ namespace gflat.diagnostics
             "GF0003", "Invalid Continue", "Cannot continue outside of a loop",
             DiagnosticSeverity.Error, "ControlFlow");
 
+        public static readonly DiagnosticDescriptor GF0004_SyntaxError = new DiagnosticDescriptor(
+            "GF0004", "Syntax Error", "{0}",
+            DiagnosticSeverity.Error, "Syntax");
+
+        public static readonly DiagnosticDescriptor GF0005_ExpectedToken = new DiagnosticDescriptor(
+            "GF0005", "Expected Token", "Expected {0} but got {1} '{2}'",
+            DiagnosticSeverity.Error, "Syntax");
+
         // 1000 - 1999: Type checking & assignment
         public static readonly DiagnosticDescriptor GF1001_TypeMismatch = new DiagnosticDescriptor(
             "GF1001", "Type Mismatch", "Cannot assign '{0}' to '{1}'",

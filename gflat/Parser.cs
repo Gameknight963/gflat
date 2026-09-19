@@ -1,5 +1,6 @@
 using gflat.ast;
 using gflat.CompileExceptions;
+using gflat.diagnostics;
 
 namespace gflat
 {
@@ -7,6 +8,14 @@ namespace gflat
     {
         private List<Token> _tokens = new();
         private int _pos;
+        private readonly DiagnosticBag _diagnostics;
+
+        public DiagnosticBag Diagnostics => _diagnostics;
+
+        public Parser(DiagnosticBag? diagnostics = null)
+        {
+            _diagnostics = diagnostics ?? new DiagnosticBag();
+        }
 
         private Token Current => _tokens[_pos];
         private Token Peek(int offset = 1) => _tokens[Math.Min(_pos + offset, _tokens.Count - 1)];
@@ -14,14 +23,32 @@ namespace gflat
         private Token Consume()
         {
             Token token = Current;
-            _pos++;
+            if (_pos < _tokens.Count - 1)
+            {
+                _pos++;
+            }
             return token;
         }
 
         private Token Expect(TokenKind kind)
         {
             if (Current.Kind != kind)
-                throw new Exception($"Expected {kind} but got {Current.Kind} '{Current.Text}' on line {Current.Line}");
+            {
+                _diagnostics.Report(DiagnosticRules.GF0005_ExpectedToken, Current.Line, Current.Start, null, kind.ToString(), Current.Kind.ToString(), Current.Text);
+
+                if (kind == TokenKind.Semicolon)
+                {
+                    return new Token(TokenKind.Semicolon, Current.Line, Current.Start, Current.Start, ";");
+                }
+                if (kind is TokenKind.CloseParen or TokenKind.CloseBrace or TokenKind.CloseBracket)
+                {
+                    return new Token(kind, Current.Line, Current.Start, Current.Start);
+                }
+                if (kind == TokenKind.Identifier && Current.Kind is TokenKind.Semicolon or TokenKind.CloseParen or TokenKind.CloseBrace or TokenKind.CloseBracket or TokenKind.Comma or TokenKind.Equals)
+                {
+                    return new Token(TokenKind.Identifier, Current.Line, Current.Start, Current.Start, "<missing>");
+                }
+            }
             return Consume();
         }
 
@@ -29,13 +56,17 @@ namespace gflat
 
         private bool Match(TokenKind kind)
         {
-            if (Check(kind)) { Consume(); return true; }
+            if (Check(kind))
+            {
+                Consume();
+                return true;
+            }
             return false;
         }
 
-        public static CompilationUnit Parse(List<Token> tokens)
+        public static CompilationUnit Parse(List<Token> tokens, DiagnosticBag? diagnostics = null)
         {
-            Parser parser = new Parser();
+            Parser parser = new Parser(diagnostics);
             parser._tokens = tokens;
             parser._pos = 0;
             return parser.ParseCompilationUnit();
@@ -256,7 +287,9 @@ namespace gflat
             if (Check(TokenKind.Interface)) return ParseInterfaceDeclaration(accessibility, line);
             if (Check(TokenKind.Enum)) return ParseEnumDeclaration(accessibility, line);
 
-            throw new Exception($"Expected type declaration on line {Current.Line}");
+            _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Line, Current.Start, null, $"Expected type declaration on line {Current.Line}");
+            Consume();
+            return new StructDeclaration("<error>", new List<AstNode>(), TokenKind.Private, line);
         }
 
         private string ParseTypeNameString()
@@ -508,7 +541,7 @@ namespace gflat
                 }
                 else
                 {
-                    throw new Exception($"Expected 'base' or base class name after ':' in constructor initializer on line {Current.Line}");
+                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Line, Current.Start, null, $"Expected 'base' or base class name after ':' in constructor initializer on line {Current.Line}");
                 }
 
                 Expect(TokenKind.OpenParen);
@@ -557,7 +590,7 @@ namespace gflat
             Token opToken = Current;
             if (!IsOverloadableOperator(opToken.Kind))
             {
-                throw new Exception($"Expected overloadable operator after 'operator', got '{opToken.Text}' on line {opToken.Line}");
+                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, opToken.Line, opToken.Start, null, $"Expected overloadable operator after 'operator', got '{opToken.Text}' on line {opToken.Line}");
             }
             Consume();
             string opSymbol = opToken.Text;
@@ -715,6 +748,7 @@ namespace gflat
                 else if (Check(TokenKind.OpenParen))
                 {
                     int saved = _pos;
+                    int diagMark = _diagnostics.Count;
                     bool isFnPtr = false;
                     List<TypeExpression> paramTypes = new();
                     bool isManaged = false;
@@ -755,6 +789,7 @@ namespace gflat
                     }
                     else
                     {
+                        _diagnostics.ClearSince(diagMark);
                         _pos = saved;
                         break;
                     }
@@ -864,13 +899,20 @@ namespace gflat
         {
             // look ahead to see if this is "type name" or "type* name" etc
             int saved = _pos;
+            int diagMark = _diagnostics.Count;
             try
             {
                 ParseTypeExpression();
-                return Check(TokenKind.Identifier);
+                bool isVar = _diagnostics.Count == diagMark && Check(TokenKind.Identifier);
+                if (!isVar)
+                {
+                    _diagnostics.ClearSince(diagMark);
+                }
+                return isVar;
             }
             catch
             {
+                _diagnostics.ClearSince(diagMark);
                 return false;
             }
             finally
@@ -976,7 +1018,7 @@ namespace gflat
 
             if (catchClauses.Count == 0)
             {
-                throw new Exception($"Expected at least one catch clause after try block on line {line}");
+                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, $"Expected at least one catch clause after try block on line {line}");
             }
 
             return new TryStatement(tryBlock, catchClauses, line);
@@ -1062,7 +1104,7 @@ namespace gflat
             TypeExpression elementType = ParseTypeExpression();
             if (Check(TokenKind.In))
             {
-                throw new Exception($"Foreach loop requires an explicit type for loop variable on line {line}");
+                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, $"Foreach loop requires an explicit type for loop variable on line {line}");
             }
             string variableName = Expect(TokenKind.Identifier).Text;
             Expect(TokenKind.In);
@@ -1231,6 +1273,7 @@ namespace gflat
             if (Check(TokenKind.OpenParen))
             {
                 int saved = _pos;
+                int diagMark = _diagnostics.Count;
                 bool isCast = false;
                 TypeExpression? castType = null;
                 try
@@ -1255,13 +1298,14 @@ namespace gflat
                     isCast = false;
                 }
 
-                if (isCast && castType != null)
+                if (isCast && castType != null && _diagnostics.Count == diagMark)
                 {
                     AstNode operand = ParseExpression(22);
                     return new CastExpression(castType, operand, line);
                 }
 
                 // fallback to parenthesized expression
+                _diagnostics.ClearSince(diagMark);
                 _pos = saved;
                 Consume(); // '('
                 AstNode expr = ParseExpression();
@@ -1371,7 +1415,9 @@ namespace gflat
                 return result;
             }
 
-            throw new Exception($"Unexpected token '{Current.Text}' on line {line}");
+            _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, Current.Start, null, $"Unexpected token '{Current.Text}' on line {line}");
+            Consume();
+            return new IdentifierExpression("<error>", line);
         }
 
         private static bool IsDefiniteType(TypeExpression type)
@@ -1417,6 +1463,7 @@ namespace gflat
         private LambdaExpression? TryParseLambda(bool isStatic)
         {
             int saved = _pos;
+            int diagMark = _diagnostics.Count;
             try
             {
                 int line = Current.Line;
@@ -1432,8 +1479,9 @@ namespace gflat
                 }
                 Expect(TokenKind.CloseParen);
 
-                if (!Match(TokenKind.EqualsGreater))
+                if (!Match(TokenKind.EqualsGreater) || _diagnostics.Count > diagMark)
                 {
+                    _diagnostics.ClearSince(diagMark);
                     _pos = saved;
                     return null;
                 }
@@ -1455,6 +1503,7 @@ namespace gflat
             }
             catch
             {
+                _diagnostics.ClearSince(diagMark);
                 _pos = saved;
                 return null;
             }

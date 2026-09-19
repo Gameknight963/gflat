@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using gflat.ast;
+using gflat.CompileExceptions;
+using gflat.diagnostics;
 
 namespace gflat.Tests
 {
@@ -11,23 +15,30 @@ namespace gflat.Tests
     {
         public static (CompilationUnit Ast, TypeChecker Checker) Check(string code)
         {
-            var tokens = Lexer.Tokenize(code);
-            var ast = Parser.Parse(tokens);
-            var checker = new TypeChecker();
+            DiagnosticBag bag = new DiagnosticBag();
+            List<Token> tokens = Lexer.Tokenize(code);
+            CompilationUnit ast = Parser.Parse(tokens, bag);
+            if (bag.HasErrors)
+            {
+                Diagnostic firstError = bag.Items.First(d => d.Severity == DiagnosticSeverity.Error);
+                throw new TypeCheckException(firstError.Message, firstError.Line);
+            }
+            TypeChecker checker = new TypeChecker(bag);
             ast.Accept(checker);
             return (ast, checker);
         }
 
         public static (CompilationUnit Ast, TypeChecker Checker) CheckDiagnostics(string code)
         {
+            DiagnosticBag bag = new DiagnosticBag();
             List<Token> tokens = Lexer.Tokenize(code);
-            CompilationUnit ast = Parser.Parse(tokens);
-            TypeChecker checker = new TypeChecker();
+            CompilationUnit ast = Parser.Parse(tokens, bag);
+            TypeChecker checker = new TypeChecker(bag);
             try
             {
                 ast.Accept(checker);
             }
-            catch (CompileExceptions.TypeCheckException)
+            catch (TypeCheckException)
             {
                 // Ignored to allow test to inspect checker.Diagnostics
             }
@@ -36,8 +47,8 @@ namespace gflat.Tests
 
         public static string EmitIr(string code)
         {
-            var (ast, checker) = Check(code);
-            var emitter = new LlvmEmitter(checker);
+            (CompilationUnit ast, TypeChecker checker) = Check(code);
+            LlvmEmitter emitter = new LlvmEmitter(checker);
             ast.Accept(emitter);
             return emitter.GetOutput();
         }

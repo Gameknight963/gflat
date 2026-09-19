@@ -334,5 +334,43 @@ namespace gflat.Tests
             Assert.True(checker.Diagnostics.HasErrors);
             Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF3002_VariableAlreadyDeclared.Id);
         }
+
+        [Fact]
+        public void Parser_MissingSemicolon_ReportsDiagnosticInsteadOfCrashing()
+        {
+            string code = """
+                int main()
+                {
+                    int a = 10
+                    return a;
+                }
+                """;
+            (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
+
+            Assert.True(checker.Diagnostics.HasErrors);
+            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF0005_ExpectedToken.Id);
+            Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("Semicolon"));
+
+            // Compatibility: CompilerTestHelper.Check still throws TypeCheckException
+            Assert.Throws<CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void Parser_MultipleMissingSemicolons_ReportsAllDiagnostics()
+        {
+            string code = """
+                int main()
+                {
+                    int a = 10
+                    int b = 20
+                    return a + b;
+                }
+                """;
+            (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
+
+            Assert.True(checker.Diagnostics.HasErrors);
+            Assert.True(checker.Diagnostics.ErrorCount >= 2);
+            Assert.True(checker.Diagnostics.Items.Count(d => d.Descriptor.Id == DiagnosticRules.GF0005_ExpectedToken.Id) >= 2);
+        }
     }
 }

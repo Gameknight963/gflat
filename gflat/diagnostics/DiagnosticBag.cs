@@ -48,6 +48,14 @@ namespace gflat.diagnostics
             _items.Add(new Diagnostic(descriptor, line, column, filePath));
         }
 
+        public void ClearSince(int mark)
+        {
+            if (mark >= 0 && mark < _items.Count)
+            {
+                _items.RemoveRange(mark, _items.Count - mark);
+            }
+        }
+
         public string FormatAll(bool useColor = false)
         {
             StringBuilder sb = new StringBuilder();

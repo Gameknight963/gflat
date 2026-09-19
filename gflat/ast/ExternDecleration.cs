@@ -6,7 +6,6 @@
         public TypeExpression ReturnType { get; }
         public List<Parameter> Parameters { get; }
         public bool IsVariadic { get; }
-        public List<AttributeNode> Attributes { get; }
 
         public ExternDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, bool isVariadic, List<AttributeNode> attributes, int line) : base(line)
         {

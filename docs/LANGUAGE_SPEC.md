@@ -193,6 +193,27 @@ Throwing functions declare `throws`. Callers must catch or declare propagation. 
 
 `const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
 
+## Attributes
+
+Attributes are classes derived, directly or indirectly, from the abstract `Attribute` class in the prelude. The base class has a public parameterless constructor and no libc dependency. Its name is reserved at global scope.
+
+```gflat
+class Priority : Attribute
+{
+    public int level;
+    public Priority(int value) { level = value; }
+}
+
+[Priority(2 + 3)]
+int main() { return 0; }
+```
+
+`[Tag]` and `[Tag()]` invoke the parameterless constructor. `[Tag(arguments)]` uses ordinary constructor overload resolution and conversions, and checks constructor accessibility. Names must match exactly; there is no implicit `Attribute` suffix. Namespace and nested-type qualification use `::`. Multiple annotations are allowed and retained in source order.
+
+Arguments and construction must be evaluable at compile time. Constructors need not be marked `const`; functions they call must be. Evaluation runs base constructors, field initializers, and the selected constructor body, subject to the compile-time execution limits. Runtime input, extern calls, managed allocation, destructors, and unsupported evaluator operations are rejected. Attribute objects exist only as compiler metadata; annotation sites perform no runtime construction or allocation.
+
+Annotations can precede types, functions, extern declarations, fields, constructors, destructors, operators, and aliases. They are retained on generic declarations and copied to specializations; arguments on generic definitions must be evaluable independently of their type parameters. Parameter, local-variable, and assembly annotations are not supported. Arguments are positional; named property arguments, target restrictions, suffix lookup, and runtime reflection remain future work. User-defined attributes do not change compiler behavior by themselves.
+
 ## Compiler use
 
 ```text

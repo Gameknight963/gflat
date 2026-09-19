@@ -11,7 +11,7 @@ namespace gflat.ast
         public BlockStatement Body { get; }
         public TokenKind Accessibility { get; }
         public List<AstNode>? BaseArguments { get; }
-        public List<AttributeNode> Attributes { get; }
+
         public bool IsConst { get; }
 
         public ConstructorDeclaration(string name, List<Parameter> parameters, BlockStatement body, TokenKind accessibility, int line, List<AstNode>? baseArguments = null, List<AttributeNode>? attributes = null, bool isConst = false) : base(line)

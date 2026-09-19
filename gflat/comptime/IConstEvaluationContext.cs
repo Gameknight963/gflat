@@ -5,6 +5,9 @@ namespace gflat.comptime
 {
     public interface IConstEvaluationContext
     {
+        ConstructorDeclaration? GetResolvedConstructor(NewExpression node);
+        ConstructorDeclaration? GetResolvedBaseConstructor(ConstructorDeclaration node);
+        bool TryGetEnumMember(AstNode node, out long value, out TypeExpression? underlyingType);
         bool TryGetConstValueByName(string name, out ConstValue? value);
         TypeExpression ResolveAlias(TypeExpression type);
         TypeExpression GetType(AstNode node);

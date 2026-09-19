@@ -3,6 +3,11 @@ namespace gflat
     public static class Prelude
     {
         public const string Source = @"
+abstract class Attribute
+{
+    public Attribute() {}
+}
+
 class Exception
 {
     public readonly char* message;

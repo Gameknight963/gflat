@@ -35,7 +35,7 @@ namespace gflat.ast
             List<GenericParameter>? genericParams = s.GenericParameters != null && s.Name != _oldName
                 ? s.GenericParameters.ToList()
                 : null;
-            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.ToList(), genericParameters: genericParams);
+            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams);
         }
 
         public ClassDeclaration CloneClass(ClassDeclaration c)
@@ -56,7 +56,7 @@ namespace gflat.ast
             List<GenericParameter>? genericParams = c.GenericParameters != null && c.Name != _oldName
                 ? c.GenericParameters.ToList()
                 : null;
-            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.ToList(), genericParameters: genericParams);
+            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams);
         }
 
         public MethodDeclaration CloneMethod(MethodDeclaration m)
@@ -79,7 +79,7 @@ namespace gflat.ast
             List<GenericParameter>? genericParams = m.GenericParameters != null && m.Name != _oldName
                 ? m.GenericParameters.ToList()
                 : null;
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.ToList(), genericParameters: genericParams, throws: m.Throws);
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, throws: m.Throws);
         }
 
         public TypeExpression CloneType(TypeExpression type)
@@ -130,13 +130,18 @@ namespace gflat.ast
             return type;
         }
 
+        private AttributeNode CloneAttribute(AttributeNode node) => new(node.Name, node.Arguments.Select(CloneNode).ToList(), node.Line);
+
         public AstNode CloneNode(AstNode node)
         {
-            if (node == null)
-            {
-                return null!;
-            }
+            if (node == null) return null!;
+            AstNode clone = CloneNodeCore(node);
+            clone.Attributes = node.Attributes.Select(CloneAttribute).ToList();
+            return clone;
+        }
 
+        private AstNode CloneNodeCore(AstNode node)
+        {
             if (node is FieldDeclaration f)
             {
                 return new FieldDeclaration(f.Name, CloneType(f.Type), f.Initializer != null ? CloneNode(f.Initializer) : null, f.Accessibility, f.IsConst, f.IsStatic, f.Line, f.IsReadOnly);
@@ -158,7 +163,7 @@ namespace gflat.ast
                 List<Parameter> parameters = ctor.Parameters.Select(p => new Parameter(p.Name, CloneType(p.Type), p.Line, p.IsConst)).ToList();
                 BlockStatement body = (BlockStatement)CloneNode(ctor.Body);
                 List<AstNode>? baseArgs = ctor.BaseArguments?.Select(CloneNode).ToList();
-                return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, ctor.Attributes.ToList(), ctor.IsConst);
+                return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, ctor.Attributes.Select(CloneAttribute).ToList(), ctor.IsConst);
             }
             if (node is DestructorDeclaration dtor)
             {

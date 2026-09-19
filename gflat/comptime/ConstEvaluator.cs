@@ -96,7 +96,7 @@ namespace gflat.comptime
                     return;
                 }
             }
-            _scopes.Peek()[name] = value;
+            throw new ConstEvalException($"Cannot modify non-local variable '{name}' at compile time", 0);
         }
 
         private bool TryGetVariable(string name, out ConstValue? value)
@@ -644,6 +644,16 @@ namespace gflat.comptime
         public void Visit(NewExpression node)
         {
             CheckSteps(node.Line);
+            if (_callDepth >= MaxCallDepth)
+                throw new ConstEvalException($"Compile-time recursion exceeded maximum call depth of {MaxCallDepth}", node.Line);
+            _callDepth++;
+            try { EvaluateNew(node); }
+            finally { _callDepth--; }
+        }
+
+        private void EvaluateNew(NewExpression node)
+        {
+            CheckSteps(node.Line);
             if (node.Kind == AllocationKind.Managed)
             {
                 throw new ConstEvalException("Managed allocation ('new^') is not permitted at compile time", node.Line);
@@ -670,28 +680,32 @@ namespace gflat.comptime
                 {
                     fields[f.Name] = new ConstValue.Integer(0);
                 }
-                ConstructorDeclaration? matchingCtor = null;
-                foreach (ConstructorDeclaration ctor in structInfo.Constructors)
-                {
-                    if (ctor.Parameters.Count == args.Count)
-                    {
-                        matchingCtor = ctor;
-                        break;
-                    }
-                }
+                ConstructorDeclaration? matchingCtor = _context.GetResolvedConstructor(node);
 
                 ConstValue.Struct instance = new ConstValue.Struct(structInfo.Name, fields);
                 if (matchingCtor != null)
                 {
+                    var callerScopes = _scopes.Reverse().ToArray();
+                    bool returned = _hasReturned;
+                    ConstValue? returnValue = _returnValue;
+                    _scopes.Clear();
                     PushScope();
-                    _scopes.Peek()["this"] = instance;
-                    for (int i = 0; i < matchingCtor.Parameters.Count; i++)
+                    _hasReturned = false;
+                    _returnValue = null;
+                    try
                     {
-                        _scopes.Peek()[matchingCtor.Parameters[i].Name] = args[i];
+                        _scopes.Peek()["this"] = instance;
+                        for (int i = 0; i < matchingCtor.Parameters.Count; i++)
+                            _scopes.Peek()[matchingCtor.Parameters[i].Name] = Normalize(args[i], matchingCtor.Parameters[i].Type, node.Line);
+                        matchingCtor.Body.Accept(this);
                     }
-
-                    matchingCtor.Body.Accept(this);
-                    PopScope();
+                    finally
+                    {
+                        _scopes.Clear();
+                        foreach (var scope in callerScopes) _scopes.Push(scope);
+                        _hasReturned = returned;
+                        _returnValue = returnValue;
+                    }
                 }
                 else
                 {
@@ -732,65 +746,8 @@ namespace gflat.comptime
                 {
                     fields[f.Name] = new ConstValue.Integer(0);
                 }
-                ConstructorDeclaration? matchingCtor = null;
-                foreach (ConstructorDeclaration ctor in classInfo.Constructors)
-                {
-                    if (ctor.Parameters.Count == args.Count)
-                    {
-                        matchingCtor = ctor;
-                        break;
-                    }
-                }
-
-                ConstValue.ClassInstance instance = new ConstValue.ClassInstance(classInfo.Name, fields);
-                if (matchingCtor != null)
-                {
-                    PushScope();
-                    _scopes.Peek()["this"] = instance;
-                    for (int i = 0; i < matchingCtor.Parameters.Count; i++)
-                    {
-                        _scopes.Peek()[matchingCtor.Parameters[i].Name] = args[i];
-                    }
-
-                    if (matchingCtor.BaseArguments != null && classInfo.BaseClass != null && _context.GetClass(classInfo.BaseClass) is TypeChecker.ClassInfo baseClassInfo)
-                    {
-                        List<ConstValue> baseArgs = new();
-                        foreach (AstNode bArg in matchingCtor.BaseArguments)
-                        {
-                            bArg.Accept(this);
-                            baseArgs.Add(_currentValue!);
-                        }
-                        ConstructorDeclaration? baseCtor = baseClassInfo.Constructors.FirstOrDefault(c => c.Parameters.Count == baseArgs.Count);
-                        if (baseCtor != null)
-                        {
-                            PushScope();
-                            _scopes.Peek()["this"] = instance;
-                            for (int b = 0; b < baseCtor.Parameters.Count; b++)
-                            {
-                                _scopes.Peek()[baseCtor.Parameters[b].Name] = baseArgs[b];
-                            }
-                            baseCtor.Body.Accept(this);
-                            PopScope();
-                        }
-                    }
-
-                    matchingCtor.Body.Accept(this);
-                    PopScope();
-                }
-                else
-                {
-                    for (int i = 0; i < classInfo.Fields.Count; i++)
-                    {
-                        if (i < args.Count)
-                        {
-                            fields[classInfo.Fields[i].Name] = args[i];
-                        }
-                        else
-                        {
-                            fields[classInfo.Fields[i].Name] = new ConstValue.Integer(0);
-                        }
-                    }
-                }
+                ConstValue.ClassInstance instance = new(classInfo.Name, fields);
+                ExecuteClassConstructor(classInfo, _context.GetResolvedConstructor(node), args, instance, node.Line);
 
                 if (node.Kind == AllocationKind.Pointer)
                 {
@@ -804,6 +761,85 @@ namespace gflat.comptime
             }
 
             throw new ConstEvalException($"Unknown struct or class '{named.Name}'", node.Line);
+        }
+
+        private void ExecuteClassConstructor(TypeChecker.ClassInfo info, ConstructorDeclaration? ctor,
+            List<ConstValue> args, ConstValue.ClassInstance instance, int line)
+        {
+            CheckSteps(line);
+            if (_callDepth >= MaxCallDepth)
+                throw new ConstEvalException($"Compile-time recursion exceeded maximum call depth of {MaxCallDepth}", line);
+            _callDepth++;
+            bool returned = _hasReturned;
+            ConstValue? returnValue = _returnValue;
+            _hasReturned = false;
+            _returnValue = null;
+            var callerScopes = _scopes.Reverse().ToArray();
+            _scopes.Clear();
+            PushScope();
+            try
+            {
+                _scopes.Peek()["this"] = instance;
+                if (ctor != null)
+                    for (int i = 0; i < ctor.Parameters.Count; i++)
+                        _scopes.Peek()[ctor.Parameters[i].Name] = Normalize(args[i], ctor.Parameters[i].Type, line);
+                if (info.BaseClass != null && _context.GetClass(info.BaseClass) is TypeChecker.ClassInfo baseInfo)
+                {
+                    List<ConstValue> baseArgs = new();
+                    if (ctor?.BaseArguments != null)
+                        foreach (AstNode arg in ctor.BaseArguments)
+                        {
+                            arg.Accept(this);
+                            baseArgs.Add(_currentValue!);
+                        }
+                    ConstructorDeclaration? baseCtor = ctor?.BaseArguments != null
+                        ? _context.GetResolvedBaseConstructor(ctor)
+                        : baseInfo.Constructors.FirstOrDefault(c => c.Parameters.Count == 0);
+                    ExecuteClassConstructor(baseInfo, baseCtor, baseArgs, instance, line);
+                }
+                // Initializers are bound in the class scope, outside constructor parameters.
+                var parameterScope = _scopes.Pop();
+                PushScope();
+                _scopes.Peek()["this"] = instance;
+                foreach (FieldDeclaration field in info.FieldDeclarations)
+                {
+                    if (field.IsStatic || field.IsConst) continue;
+                    if (field.Initializer != null)
+                    {
+                        field.Initializer.Accept(this);
+                        instance.Fields[field.Name] = Normalize(_currentValue!, field.Type, field.Line);
+                    }
+                    else instance.Fields[field.Name] = DefaultValue(field.Type, field.Line);
+                }
+                PopScope();
+                _scopes.Push(parameterScope);
+                ctor?.Body.Accept(this);
+            }
+            finally
+            {
+                _scopes.Clear();
+                foreach (var scope in callerScopes) _scopes.Push(scope);
+                _hasReturned = returned;
+                _returnValue = returnValue;
+                _callDepth--;
+            }
+        }
+
+        private ConstValue DefaultValue(TypeExpression type, int line)
+        {
+            type = _context.ResolveAlias(type);
+            if (type is ArrayTypeExpression array)
+                return new ConstValue.Array(Enumerable.Range(0, array.Size ?? throw new ConstEvalException("Unsized array has no compile-time default", line)).Select(_ => DefaultValue(array.ElementType, line)).ToList());
+            if (type is NamedTypeExpression named)
+            {
+                if (named.Name == "bool") return new ConstValue.Boolean(false);
+                if (named.Name == "char") return new ConstValue.Char('\0');
+                if (_context.GetStruct(named.Name) is TypeChecker.StructInfo str)
+                    return new ConstValue.Struct(str.Name, str.Fields.ToDictionary(f => f.Name, f => DefaultValue(f.Type, line)));
+                if (_context.GetClass(named.Name) is TypeChecker.ClassInfo cls)
+                    return new ConstValue.ClassInstance(cls.Name, cls.Fields.ToDictionary(f => f.Name, f => DefaultValue(f.Type, line)));
+            }
+            return Normalize(new ConstValue.Integer(0), type, line);
         }
 
         public void Visit(CallExpression node)
@@ -867,33 +903,29 @@ namespace gflat.comptime
             }
 
             _callDepth++;
-            PushScope();
-
-            if (thisReceiver != null)
-            {
-                _scopes.Peek()["this"] = thisReceiver;
-            }
-
-            for (int i = 0; i < method.Parameters.Count; i++)
-            {
-                _scopes.Peek()[method.Parameters[i].Name] = Normalize(evaluatedArgs[i], method.Parameters[i].Type, node.Line);
-            }
-
+            var callerScopes = _scopes.Reverse().ToArray();
             bool prevReturned = _hasReturned;
             ConstValue? prevReturnVal = _returnValue;
+            _scopes.Clear();
+            PushScope();
             _hasReturned = false;
             _returnValue = null;
-
-            method.Body?.Accept(this);
-
-            ConstValue? callResult = _returnValue;
-
-            _hasReturned = prevReturned;
-            _returnValue = prevReturnVal;
-            PopScope();
-            _callDepth--;
-
-            _currentValue = Normalize(callResult ?? new ConstValue.Integer(0), method.ReturnType, node.Line);
+            try
+            {
+                if (thisReceiver != null) _scopes.Peek()["this"] = thisReceiver;
+                for (int i = 0; i < method.Parameters.Count; i++)
+                    _scopes.Peek()[method.Parameters[i].Name] = Normalize(evaluatedArgs[i], method.Parameters[i].Type, node.Line);
+                method.Body?.Accept(this);
+                _currentValue = Normalize(_returnValue ?? new ConstValue.Integer(0), method.ReturnType, node.Line);
+            }
+            finally
+            {
+                _hasReturned = prevReturned;
+                _returnValue = prevReturnVal;
+                _scopes.Clear();
+                foreach (var scope in callerScopes) _scopes.Push(scope);
+                _callDepth--;
+            }
         }
 
         public void Visit(AssignmentExpression node)
@@ -924,6 +956,12 @@ namespace gflat.comptime
 
             if (node.Target is IdentifierExpression ident)
             {
+                if (_scopes.Any(scope => scope.ContainsKey(ident.Name)))
+                {
+                    SetVariable(ident.Name, val);
+                    _currentValue = val;
+                    return;
+                }
                 if (TryGetVariable("this", out ConstValue? thisVal))
                 {
                     if (thisVal is ConstValue.Struct thisStruct)
@@ -1175,7 +1213,13 @@ namespace gflat.comptime
         public void Visit(ManagedTypeExpression node) { }
         public void Visit(ArrayTypeExpression node) { }
         public void Visit(NamespaceDeclaration node) { }
-        public void Visit(NamespaceAccessExpression node) { }
+        public void Visit(NamespaceAccessExpression node)
+        {
+            CheckSteps(node.Line);
+            if (_context.TryGetEnumMember(node, out long value, out TypeExpression? underlying))
+                _currentValue = Normalize(new ConstValue.Integer(value), underlying!, node.Line);
+            else throw new ConstEvalException("Namespace expression is not a compile-time constant", node.Line);
+        }
         public void Visit(UsingDirective node) { }
         public void Visit(StructDeclaration node) { }
         public void Visit(ClassDeclaration node) { }
@@ -1190,13 +1234,13 @@ namespace gflat.comptime
         public void Visit(Parameter node) { }
         public void Visit(AttributeNode node) { }
         public void Visit(ExternDeclaration node) { }
-        public void Visit(DefaultExpression node) { }
-        public void Visit(LambdaExpression node) { }
-        public void Visit(DeferStatement node) { }
+        public void Visit(DefaultExpression node) => _currentValue = DefaultValue(_context.GetType(node), node.Line);
+        public void Visit(LambdaExpression node) => throw new ConstEvalException("LambdaExpression is not supported at compile time", node.Line);
+        public void Visit(DeferStatement node) => throw new ConstEvalException("DeferStatement is not supported at compile time", node.Line);
         public void Visit(DeleteStatement node) => throw new ConstEvalException("Delete statement is not supported in constant evaluation", node.Line);
-        public void Visit(GlobalExpression node) { }
+        public void Visit(GlobalExpression node) => throw new ConstEvalException("GlobalExpression is not supported at compile time", node.Line);
         public void Visit(AliasDeclaration node) { }
-        public void Visit(InterpolatedStringExpression node) { }
+        public void Visit(InterpolatedStringExpression node) => throw new ConstEvalException("InterpolatedStringExpression is not supported at compile time", node.Line);
         public void Visit(ThrowStatement node) => throw new ConstEvalException("Throw statement is not supported at compile time", node.Line);
         public void Visit(TryStatement node) => throw new ConstEvalException("Try statement is not supported at compile time", node.Line);
         public void Visit(CatchClause node) => throw new ConstEvalException("Catch clause is not supported at compile time", node.Line);

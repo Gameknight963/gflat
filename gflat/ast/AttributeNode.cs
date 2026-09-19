@@ -3,9 +3,9 @@
     public class AttributeNode : AstNode
     {
         public string Name { get; }
-        public List<string> Arguments { get; }
+        public List<AstNode> Arguments { get; }
 
-        public AttributeNode(string name, List<string> arguments, int line) : base(line)
+        public AttributeNode(string name, List<AstNode> arguments, int line) : base(line)
         {
             Name = name;
             Arguments = arguments;

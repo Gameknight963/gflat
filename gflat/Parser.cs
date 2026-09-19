@@ -122,16 +122,15 @@ namespace gflat
             if (!_isPrelude)
             {
                 bool hasException = members.OfType<ClassDeclaration>().Any(c => c.Name == "Exception");
-                if (!hasException)
-                {
-                    List<Token> preludeTokens = Lexer.Tokenize(Prelude.Source);
-                    Parser preludeParser = new Parser();
-                    preludeParser._tokens = preludeTokens;
-                    preludeParser._pos = 0;
-                    preludeParser._isPrelude = true;
-                    CompilationUnit preludeUnit = preludeParser.ParseCompilationUnit();
-                    members.InsertRange(0, preludeUnit.Members);
-                }
+                if (members.OfType<ClassDeclaration>().Any(c => c.Name == "Attribute"))
+                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, "Attribute is a reserved prelude class");
+                List<Token> preludeTokens = Lexer.Tokenize(Prelude.Source);
+                Parser preludeParser = new Parser();
+                preludeParser._tokens = preludeTokens;
+                preludeParser._pos = 0;
+                preludeParser._isPrelude = true;
+                CompilationUnit preludeUnit = preludeParser.ParseCompilationUnit();
+                members.InsertRange(0, preludeUnit.Members.Where(m => !(hasException && m is ClassDeclaration c && c.Name == "Exception")));
 
                 bool hasUserAllocator = members.OfType<MethodDeclaration>().Any(m => m.Name == "__gflat_alloc") ||
                                         members.OfType<ExternDeclaration>().Any(e => e.Name == "__gflat_alloc");
@@ -222,7 +221,13 @@ namespace gflat
         private AstNode ParseTopLevelMember()
         {
             List<AttributeNode> attributes = ParseAttributes();
+            AstNode node = ParseTopLevelMemberCore(attributes);
+            node.Attributes = attributes;
+            return node;
+        }
 
+        private AstNode ParseTopLevelMemberCore(List<AttributeNode> attributes)
+        {
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, Current.Line);
             if (Check(TokenKind.Class) || Check(TokenKind.Struct) || Check(TokenKind.Interface) || Check(TokenKind.Enum) || Check(TokenKind.Abstract))
@@ -468,6 +473,13 @@ namespace gflat
         {
             int line = Current.Line;
             List<AttributeNode> attributes = ParseAttributes();
+            AstNode node = ParseMemberCore(attributes, line);
+            node.Attributes = attributes;
+            return node;
+        }
+
+        private AstNode ParseMemberCore(List<AttributeNode> attributes, int line)
+        {
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, line);
             TokenKind accessibility = TokenKind.Private;
@@ -554,12 +566,14 @@ namespace gflat
                 int line = Current.Line;
                 Consume(); // [
                 string name = Expect(TokenKind.Identifier).Text;
-                List<string> args = new();
+                while (Match(TokenKind.DoubleColon))
+                    name += "::" + Expect(TokenKind.Identifier).Text;
+                List<AstNode> args = new();
                 if (Match(TokenKind.OpenParen))
                 {
                     while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
                     {
-                        args.Add(Expect(TokenKind.StringLiteral).Text);
+                        args.Add(ParseExpression());
                         if (!Check(TokenKind.CloseParen))
                             Expect(TokenKind.Comma);
                     }

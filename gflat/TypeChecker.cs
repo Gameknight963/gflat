@@ -1944,6 +1944,10 @@ namespace gflat
                 ns.Accept(this);
             }
 
+            // Attribute constructors run after all declaration bodies have been checked.
+            foreach (NamespaceDeclaration ns in node.Namespaces) CheckDeclarationAttributes(ns);
+            for (int i = 0; i < node.Members.Count; i++) CheckDeclarationAttributes(node.Members[i]);
+
             // Pass 4: Control flow & Return path analysis
             ControlFlowPass controlFlowPass = new ControlFlowPass(this, _constEvaluator, _diagnostics);
             controlFlowPass.Execute(node);
@@ -5116,7 +5120,83 @@ namespace gflat
             }
         }
 
-        public void Visit(AttributeNode node) { }
+        public sealed record EvaluatedAttribute(ClassInfo Type, ConstructorDeclaration? Constructor, ConstValue.ClassInstance Value);
+        private readonly Dictionary<AttributeNode, EvaluatedAttribute> _evaluatedAttributes = new();
+        public IReadOnlyList<EvaluatedAttribute> GetAttributes(AstNode declaration) =>
+            declaration.Attributes.Select(a => _evaluatedAttributes[a]).ToList();
+
+        private void CheckDeclarationAttributes(AstNode node)
+        {
+            var previousNamespace = _currentNamespace;
+            var previousClass = _currentClass;
+            var previousStruct = _currentStruct;
+            try
+            {
+                if (node is NamespaceDeclaration ns)
+                {
+                    _currentNamespace = _namespaceScopes[ns];
+                    foreach (AstNode member in ns.Members.ToList()) CheckDeclarationAttributes(member);
+                    return;
+                }
+                foreach (AttributeNode attribute in node.Attributes) attribute.Accept(this);
+                IEnumerable<AstNode> members = Array.Empty<AstNode>();
+                if (node is ClassDeclaration cls)
+                {
+                    _currentClass = GetClass(cls.Name);
+                    _currentStruct = null;
+                    members = cls.Members;
+                }
+                else if (node is StructDeclaration str)
+                {
+                    _currentStruct = GetStruct(str.Name);
+                    _currentClass = null;
+                    members = str.Members;
+                }
+                else if (node is InterfaceDeclaration iface) members = iface.Members;
+                foreach (AstNode member in members.ToList()) CheckDeclarationAttributes(member);
+            }
+            finally
+            {
+                _currentNamespace = previousNamespace;
+                _currentClass = previousClass;
+                _currentStruct = previousStruct;
+            }
+        }
+
+        public void Visit(AttributeNode node)
+        {
+            if (_evaluatedAttributes.ContainsKey(node)) return;
+            ClassInfo? info = null;
+            int separator = node.Name.LastIndexOf("::", StringComparison.Ordinal);
+            if (separator >= 0)
+            {
+                var scope = ResolveNamespaceByName(node.Name[..separator]);
+                scope?.Classes.TryGetValue(node.Name[(separator + 2)..], out info);
+            }
+            else
+            {
+                for (var scope = _currentNamespace; scope != null && info == null; scope = scope.Parent)
+                    scope.Classes.TryGetValue(node.Name, out info);
+            }
+            info ??= GetClass(node.Name);
+            if (info == null || !IsSubclassOf(info.Name, "Attribute") || info.Name == "Attribute")
+                throw new TypeCheckException($"Attribute '{node.Name}' must be a class derived from Attribute", node.Line);
+            if (info.IsAbstract)
+                throw new TypeCheckException($"Cannot instantiate abstract attribute '{node.Name}'", node.Line);
+            if (HasAnyDestructor(info))
+                throw new TypeCheckException($"Attribute '{node.Name}' cannot contain destructors", node.Line);
+            var creation = new NewExpression(new NamedTypeExpression(info.Name, null, node.Line), node.Arguments, AllocationKind.Value, node.Line);
+            creation.Accept(this);
+            ConstructorDeclaration? ctor = GetResolvedConstructor(creation);
+            string? accessor = _currentClass?.Name ?? _currentStruct?.Name;
+            if (ctor != null && ctor.Accessibility != TokenKind.Public &&
+                !CanAccessPrivate(accessor, info.Name) &&
+                !(ctor.Accessibility == TokenKind.Protected && accessor != null && IsSubclassOf(accessor, info.Name)))
+                throw new TypeCheckException($"Constructor of attribute '{node.Name}' is inaccessible", node.Line);
+            if (!_constEvaluator.TryEvaluate(creation, out ConstValue? value, out string? error) || value is not ConstValue.ClassInstance instance)
+                throw new TypeCheckException($"Attribute '{node.Name}' must be evaluable at compile time: {error}", node.Line);
+            _evaluatedAttributes[node] = new EvaluatedAttribute(info, ctor, instance);
+        }
         public void Visit(ExternDeclaration node)
         {
             ValidateTypeUsage(node.ReturnType, node.Line);

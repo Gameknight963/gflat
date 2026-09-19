@@ -18,7 +18,7 @@ namespace gflat.ast
         public bool IsAbstract { get; }
         public bool IsReadOnly { get; }
         public bool IsConst { get; }
-        public List<AttributeNode> Attributes { get; }
+
         public List<GenericParameter> GenericParameters { get; }
         public bool IsGeneric => GenericParameters.Count > 0;
         public bool Throws { get; set; }

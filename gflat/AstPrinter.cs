@@ -275,7 +275,11 @@ namespace gflat
         public void Visit(BreakStatement node) => Print("Break");
         public void Visit(ContinueStatement node) => Print("Continue");
 
-        public void Visit(AttributeNode node) => Print($"AttributeNode");
+        public void Visit(AttributeNode node)
+        {
+            Print($"Attribute {node.Name}");
+            Indented(() => { foreach (AstNode argument in node.Arguments) argument.Accept(this); });
+        }
 
         public void Visit(ExternDeclaration node) => Print($"ExternDecleration");
         public void Visit(GlobalExpression node) => Print($"GlobalExpression");

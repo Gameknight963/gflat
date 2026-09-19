@@ -8,7 +8,7 @@ namespace gflat.ast
         public List<AstNode> Members { get; }
         public TokenKind Accessibility { get; }
         public bool IsAbstract { get; }
-        public List<AttributeNode> Attributes { get; }
+
         public List<GenericParameter> GenericParameters { get; }
         public bool IsGeneric => GenericParameters.Count > 0;
 

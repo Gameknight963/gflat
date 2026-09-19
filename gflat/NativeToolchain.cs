@@ -67,7 +67,10 @@ public static class NativeToolchain
 
     public static ProcessResult Compile(string irPath, string outputPath, string? clang = null)
     {
-        var args = new List<string> { irPath, "-o", outputPath };
+        string optimization = Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
+        if (optimization is not ("0" or "1" or "2" or "3"))
+            throw new ArgumentException("GFLAT_OPT_LEVEL must be 0, 1, 2, or 3.");
+        var args = new List<string> { irPath, "-O" + optimization, "-o", outputPath };
         if (OperatingSystem.IsWindows() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LIB")))
         {
             if (LibraryDirectory.Value is string lib) args.AddRange(["-Xlinker", "/libpath:" + lib]);

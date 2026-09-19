@@ -3,6 +3,12 @@ on: [push, pull_request]
 jobs:
   windows-x64:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        optimization: ['0', '2']
+    env:
+      GFLAT_OPT_LEVEL: ${{ matrix.optimization }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -13,5 +19,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results
+          name: test-results-O${{ matrix.optimization }}
           path: '**/TestResults/**'

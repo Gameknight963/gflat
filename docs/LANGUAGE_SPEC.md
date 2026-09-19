@@ -153,6 +153,14 @@ dotnet run --project gflat -- source.gf --run
 
 Compilation does not execute output unless `--run` is requested. `--clang path` or `GFLAT_CLANG` selects Clang; otherwise PATH and Visual Studio installations are searched. `--target` accepts the supported triple only. Native compilation and execution have timeouts and concurrently captured output.
 
+`GFLAT_OPT_LEVEL` selects Clang optimization (`0`, `1`, `2`, or `3`; default `0`). It applies to native CLI compilation and executable tests. CI runs the suite at both `-O0` and `-O2`. To reproduce the optimized run in PowerShell:
+
+```powershell
+$env:GFLAT_OPT_LEVEL = '2'
+dotnet test
+Remove-Item Env:GFLAT_OPT_LEVEL
+```
+
 Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal compiler errors. With `--run`, successful compilation returns the program's exit status. Source/output paths must differ.
 
 ## Future work

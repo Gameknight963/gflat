@@ -9,13 +9,29 @@ public static class NativeToolchain
     private static readonly Lazy<string> DefaultClang = new(DiscoverClang);
     private static readonly Lazy<string?> LibraryDirectory = new(() =>
     {
-        string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio");
-        if (!OperatingSystem.IsWindows() || !Directory.Exists(root)) return null;
-        string? lib = Directory.EnumerateFiles(root, "libcmt.lib", SearchOption.AllDirectories)
-            .Where(p => p.EndsWith(@"\lib\x64\libcmt.lib", StringComparison.OrdinalIgnoreCase))
+        string? lib = VisualStudioInstallations()
+            .Select(installation => Path.Combine(installation, "VC", "Tools", "MSVC"))
+            .Where(Directory.Exists)
+            .SelectMany(root => Directory.EnumerateDirectories(root))
+            .Select(version => Path.Combine(version, "lib", "x64", "libcmt.lib"))
+            .Where(File.Exists)
             .OrderDescending().FirstOrDefault();
         return lib == null ? null : Path.GetDirectoryName(lib);
     });
+
+    private static IEnumerable<string> VisualStudioInstallations()
+    {
+        if (!OperatingSystem.IsWindows()) yield break;
+        // Only visit version/edition directories, not the entire installation tree.
+        // A recursive search can take minutes on a fresh CI runner, outside Run's timeout.
+        var roots = new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86 }
+            .Select(folder => Path.Combine(Environment.GetFolderPath(folder), "Microsoft Visual Studio"))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (string root in roots.Where(Directory.Exists))
+            foreach (string version in Directory.EnumerateDirectories(root))
+                foreach (string edition in Directory.EnumerateDirectories(version))
+                    yield return edition;
+    }
     public static string FindClang(string? requested = null)
     {
         requested ??= Environment.GetEnvironmentVariable("GFLAT_CLANG");
@@ -31,15 +47,10 @@ public static class NativeToolchain
             string candidate = Path.Combine(dir, name);
             if (File.Exists(candidate)) return candidate;
         }
-        if (OperatingSystem.IsWindows())
+        foreach (string installation in VisualStudioInstallations())
         {
-            string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio");
-            if (Directory.Exists(root))
-            {
-                string? candidate = Directory.EnumerateFiles(root, "clang.exe", SearchOption.AllDirectories)
-                    .FirstOrDefault(p => p.Contains(@"\Llvm\x64\bin\", StringComparison.OrdinalIgnoreCase));
-                if (candidate != null) return candidate;
-            }
+            string candidate = Path.Combine(installation, "VC", "Tools", "Llvm", "x64", "bin", "clang.exe");
+            if (File.Exists(candidate)) return candidate;
         }
         throw new FileNotFoundException("Clang was not found. Install LLVM or set GFLAT_CLANG to its executable path.");
     }

@@ -259,5 +259,80 @@ namespace gflat.Tests
             string[] lines = output.Split('\n');
             Assert.True(lines.Length >= 2);
         }
+
+        [Fact]
+        public void MultipleUndeclaredVariables_ReportedInDiagnosticBag()
+        {
+            string code = """
+                int main()
+                {
+                    int a = unknownVar1;
+                    int b = unknownVar2;
+                    return 0;
+                }
+                """;
+            (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
+
+            Assert.True(checker.Diagnostics.HasErrors);
+            Assert.Equal(2, checker.Diagnostics.ErrorCount);
+            Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("unknownVar1"));
+            Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("unknownVar2"));
+
+            // Compatibility: CompilerTestHelper.Check still throws TypeCheckException
+            Assert.Throws<CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(code));
+        }
+
+        [Fact]
+        public void MultipleTypeMismatches_ReportedInDiagnosticBag()
+        {
+            string code = """
+                int main()
+                {
+                    int a = false;
+                    bool b = 123;
+                    return 0;
+                }
+                """;
+            (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
+
+            Assert.True(checker.Diagnostics.HasErrors);
+            Assert.Equal(2, checker.Diagnostics.ErrorCount);
+            Assert.All(checker.Diagnostics.Items, d => Assert.Equal(DiagnosticRules.GF1001_TypeMismatch.Id, d.Descriptor.Id));
+        }
+
+        [Fact]
+        public void CascadeErrors_SuppressedWhenUsingErrorType()
+        {
+            string code = """
+                int main()
+                {
+                    int a = unknownVariable + 5;
+                    return 0;
+                }
+                """;
+            (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
+
+            Assert.True(checker.Diagnostics.HasErrors);
+            // Exactly 1 error for unknownVariable; no secondary binary operator mismatch
+            Assert.Equal(1, checker.Diagnostics.ErrorCount);
+            Assert.Equal(DiagnosticRules.GF1003_UndeclaredIdentifier.Id, checker.Diagnostics.Items[0].Descriptor.Id);
+        }
+
+        [Fact]
+        public void DuplicateVariableDeclaration_ReportedInDiagnosticBag()
+        {
+            string code = """
+                int main()
+                {
+                    int x = 10;
+                    int x = 20;
+                    return x;
+                }
+                """;
+            (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
+
+            Assert.True(checker.Diagnostics.HasErrors);
+            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF3002_VariableAlreadyDeclared.Id);
+        }
     }
 }

@@ -75,7 +75,14 @@ namespace gflat
             List<Token> tokens = Lexer.Tokenize(code);
             CompilationUnit ast = Parser.Parse(tokens);
             TypeChecker checker = new TypeChecker();
-            ast.Accept(checker);
+            try
+            {
+                ast.Accept(checker);
+            }
+            catch (CompileExceptions.TypeCheckException)
+            {
+                // Handled via checker.Diagnostics reporting below
+            }
 
             if (checker.Diagnostics.Count > 0)
             {
@@ -91,7 +98,7 @@ namespace gflat
             LlvmEmitter emitter = new LlvmEmitter(checker);
             ast.Accept(emitter);
             string ir = emitter.GetOutput();
-            Console.WriteLine(ir);
+            //Console.WriteLine(ir);
             File.WriteAllText("output.ll", ir);
 
             string fileName = "clang.exe";

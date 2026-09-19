@@ -20,6 +20,14 @@ namespace gflat.diagnostics
             "GF1001", "Type Mismatch", "Cannot assign '{0}' to '{1}'",
             DiagnosticSeverity.Error, "Types");
 
+        public static readonly DiagnosticDescriptor GF1002_BinaryOperatorMismatch = new DiagnosticDescriptor(
+            "GF1002", "Operator Mismatch", "Operator '{0}' cannot be applied to operands of type '{1}' and '{2}'",
+            DiagnosticSeverity.Error, "Types");
+
+        public static readonly DiagnosticDescriptor GF1003_UndeclaredIdentifier = new DiagnosticDescriptor(
+            "GF1003", "Undeclared Identifier", "The name '{0}' does not exist in the current context",
+            DiagnosticSeverity.Error, "Symbols");
+
         // 2000 - 2999: Control flow & reachability
         public static readonly DiagnosticDescriptor GF2001_UnreachableCode = new DiagnosticDescriptor(
             "GF2001", "Unreachable Code", "Unreachable code detected",
@@ -33,6 +41,10 @@ namespace gflat.diagnostics
         public static readonly DiagnosticDescriptor GF3001_UseOfUnassignedVariable = new DiagnosticDescriptor(
             "GF3001", "Unassigned Variable", "Use of unassigned local variable '{0}'",
             DiagnosticSeverity.Error, "DefiniteAssignment");
+
+        public static readonly DiagnosticDescriptor GF3002_VariableAlreadyDeclared = new DiagnosticDescriptor(
+            "GF3002", "Duplicate Variable", "Variable '{0}' already declared in this scope",
+            DiagnosticSeverity.Error, "Variables");
 
         // 4000 - 4999: Memory, destructors, lifecycles
         public static readonly DiagnosticDescriptor GF4001_NonCopyableDestructorAssign = new DiagnosticDescriptor(

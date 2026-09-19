@@ -471,8 +471,20 @@ namespace gflat
         public TypeExpression GetType(AstNode node)
         {
             if (_types.TryGetValue(node, out TypeExpression? type))
+            {
                 return type;
-            throw new Exception($"No type recorded for node {node.GetType().Name}");
+            }
+            return Error;
+        }
+
+        private void ReportError(DiagnosticDescriptor descriptor, int line, int column = 0, params object[] args)
+        {
+            _diagnostics.Report(descriptor, line, column, null, args);
+        }
+
+        private void ReportError(string message, int line, int column = 0)
+        {
+            _diagnostics.ReportError(message, line, column);
         }
 
         private void RecordType(AstNode node, TypeExpression type) => _types[node] = type;
@@ -494,7 +506,10 @@ namespace gflat
         private void DeclareVariable(string name, TypeExpression type, int line)
         {
             if (_scopes.Peek().ContainsKey(name))
-                throw new TypeCheckException($"Variable '{name}' already declared in this scope", line);
+            {
+                ReportError(DiagnosticRules.GF3002_VariableAlreadyDeclared, line, 0, name);
+                return;
+            }
             _scopes.Peek()[name] = type;
         }
 
@@ -576,9 +591,13 @@ namespace gflat
             }
 
             if (ResolveFunction(name) != null || ResolveExtern(name) != null)
-                throw new TypeCheckException($"Cannot use function '{name}' as a value without '&'. Did you mean '&{name}'?", line);
+            {
+                ReportError($"Cannot use function '{name}' as a value without '&'. Did you mean '&{name}'?", line);
+                return Error;
+            }
 
-            throw new TypeCheckException($"Unknown variable '{name}'", line);
+            ReportError(DiagnosticRules.GF1003_UndeclaredIdentifier, line, 0, name);
+            return Error;
         }
 
         public bool TryLookupVariable(string name, out TypeExpression? type)
@@ -645,6 +664,12 @@ namespace gflat
         //private static NamedTypeExpression String => new NamedTypeExpression("string", null, 0);
         private static NamedTypeExpression Void => new NamedTypeExpression("void", null, 0);
         private static NamedTypeExpression Null => new NamedTypeExpression("null", null, 0);
+        public static NamedTypeExpression Error => new NamedTypeExpression("<error>", null, 0);
+
+        public static bool IsError(TypeExpression? type)
+        {
+            return type is NamedTypeExpression { Name: "<error>" };
+        }
 
         private static bool IsNumeric(TypeExpression type) =>
             type is NamedTypeExpression n && n.Name is "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "float" or "double" or "extralong" or "char";
@@ -653,6 +678,29 @@ namespace gflat
             type is PointerTypeExpression { IsNullable: true } or
             ManagedTypeExpression { IsNullable: true } or
             FunctionPointerTypeExpression { IsNullable: true };
+
+        private static string OperatorText(TokenKind kind) => kind switch
+        {
+            TokenKind.Plus => "+",
+            TokenKind.Minus => "-",
+            TokenKind.Star => "*",
+            TokenKind.Slash => "/",
+            TokenKind.Percent => "%",
+            TokenKind.EqualsEquals => "==",
+            TokenKind.NotEquals => "!=",
+            TokenKind.Less => "<",
+            TokenKind.Greater => ">",
+            TokenKind.LessEquals => "<=",
+            TokenKind.GreaterEquals => ">=",
+            TokenKind.AmpersandAmpersand => "&&",
+            TokenKind.PipePipe => "||",
+            TokenKind.LessLess => "<<",
+            TokenKind.GreaterGreater => ">>",
+            TokenKind.Ampersand => "&",
+            TokenKind.Pipe => "|",
+            TokenKind.Caret => "^",
+            _ => kind.ToString()
+        };
 
         public string GetTypeMangledName(TypeExpression type)
         {
@@ -1542,6 +1590,11 @@ namespace gflat
 
         public static bool TypesMatchPublic(TypeExpression a, TypeExpression b, SymbolTable? symbols = null)
         {
+            if (IsError(a) || IsError(b))
+            {
+                return true;
+            }
+
             if (symbols != null)
             {
                 a = symbols.ResolveAlias(a);
@@ -1579,6 +1632,11 @@ namespace gflat
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
+            if (IsError(target) || IsError(source))
+            {
+                return true;
+            }
+
             target = ResolveAlias(target);
             source = ResolveAlias(source);
 
@@ -1868,6 +1926,12 @@ namespace gflat
             // Pass 5: Definite assignment analysis
             DefiniteAssignmentPass definiteAssignmentPass = new DefiniteAssignmentPass(this, controlFlowPass);
             definiteAssignmentPass.Execute(node);
+
+            if (_diagnostics.HasErrors)
+            {
+                Diagnostic firstError = _diagnostics.Items.First(d => d.Severity == DiagnosticSeverity.Error);
+                throw new TypeCheckException(firstError.Message, firstError.Line);
+            }
         }
 
         private void ResolveClassHierarchies()
@@ -3212,8 +3276,9 @@ namespace gflat
                 }
 
                 if (!IsAssignable(varType, initType, node.Initializer))
-                    throw new TypeCheckException(
-                        $"Cannot assign '{TypeName(initType)}' to '{TypeName(varType)}'", node.Line);
+                {
+                    ReportError(DiagnosticRules.GF1001_TypeMismatch, node.Line, 0, TypeName(initType), TypeName(varType));
+                }
             }
             else if (node.IsConst)
             {
@@ -3252,6 +3317,12 @@ namespace gflat
             TypeExpression left = GetType(node.Left);
             TypeExpression right = GetType(node.Right);
 
+            if (IsError(left) || IsError(right))
+            {
+                RecordType(node, Error);
+                return;
+            }
+
             if (TryResolveBinaryOperatorForTypes(node.Operator, left, right, out string opStruct, out OperatorDeclaration opDecl))
             {
                 _operatorTargets[node] = (opStruct, opDecl);
@@ -3269,14 +3340,21 @@ namespace gflat
             if (isLogical)
             {
                 if (!TypesMatch(left, Bool) || !TypesMatch(right, Bool))
-                    throw new TypeCheckException("Logical operators require bool operands", node.Line);
+                {
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), TypeName(left), TypeName(right));
+                    RecordType(node, Error);
+                    return;
+                }
                 RecordType(node, Bool);
             }
             else if (isComparison)
             {
                 if (!TypesMatch(left, right) && !IsAssignable(left, right) && !IsAssignable(right, left) && !(IsAssignable(Int, left) && IsAssignable(Int, right)))
-                    throw new TypeCheckException(
-                        $"Cannot compare '{TypeName(left)}' with '{TypeName(right)}'", node.Line);
+                {
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), TypeName(left), TypeName(right));
+                    RecordType(node, Error);
+                    return;
+                }
                 RecordType(node, Bool);
             }
             else if (node.Operator == TokenKind.Plus)
@@ -3287,7 +3365,9 @@ namespace gflat
                 if ((resolvedLeft is PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression) &&
                     (resolvedRight is PointerTypeExpression or FunctionPointerTypeExpression or ManagedTypeExpression))
                 {
-                    throw new TypeCheckException("Cannot add two pointers together", node.Line);
+                    ReportError("Cannot add two pointers together", node.Line);
+                    RecordType(node, Error);
+                    return;
                 }
 
                 string? errLeft = null;
@@ -3295,21 +3375,37 @@ namespace gflat
                 if (IsValidPointerForArithmetic(resolvedLeft, out errLeft) && IsInteger(resolvedRight))
                 {
                     if (errLeft != null)
-                        throw new TypeCheckException(errLeft, node.Line);
+                    {
+                        ReportError(errLeft, node.Line);
+                        RecordType(node, Error);
+                        return;
+                    }
                     RecordType(node, left);
                     return;
                 }
                 if (IsInteger(resolvedLeft) && IsValidPointerForArithmetic(resolvedRight, out errRight))
                 {
                     if (errRight != null)
-                        throw new TypeCheckException(errRight, node.Line);
+                    {
+                        ReportError(errRight, node.Line);
+                        RecordType(node, Error);
+                        return;
+                    }
                     RecordType(node, right);
                     return;
                 }
                 if (errLeft != null)
-                    throw new TypeCheckException(errLeft, node.Line);
+                {
+                    ReportError(errLeft, node.Line);
+                    RecordType(node, Error);
+                    return;
+                }
                 if (errRight != null)
-                    throw new TypeCheckException(errRight, node.Line);
+                {
+                    ReportError(errRight, node.Line);
+                    RecordType(node, Error);
+                    return;
+                }
 
                 if (!TypesMatch(left, right))
                 {
@@ -3331,8 +3427,9 @@ namespace gflat
                             return;
                         }
                     }
-                    throw new TypeCheckException(
-                        $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, "+", TypeName(left), TypeName(right));
+                    RecordType(node, Error);
+                    return;
                 }
                 RecordType(node, left);
             }
@@ -3346,27 +3443,50 @@ namespace gflat
                 if (IsValidPointerForArithmetic(resolvedLeft, out errLeft) && IsInteger(resolvedRight))
                 {
                     if (errLeft != null)
-                        throw new TypeCheckException(errLeft, node.Line);
+                    {
+                        ReportError(errLeft, node.Line);
+                        RecordType(node, Error);
+                        return;
+                    }
                     RecordType(node, left);
                     return;
                 }
                 if (IsValidPointerForArithmetic(resolvedLeft, out string? errL) && IsValidPointerForArithmetic(resolvedRight, out string? errR))
                 {
                     if (errL != null)
-                        throw new TypeCheckException(errL, node.Line);
+                    {
+                        ReportError(errL, node.Line);
+                        RecordType(node, Error);
+                        return;
+                    }
                     if (errR != null)
-                        throw new TypeCheckException(errR, node.Line);
+                    {
+                        ReportError(errR, node.Line);
+                        RecordType(node, Error);
+                        return;
+                    }
 
                     if (!TypesMatch(resolvedLeft, resolvedRight))
-                        throw new TypeCheckException(
-                            $"Cannot subtract pointers of different types '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                    {
+                        ReportError($"Cannot subtract pointers of different types '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                        RecordType(node, Error);
+                        return;
+                    }
                     RecordType(node, Long);
                     return;
                 }
                 if (errLeft != null)
-                    throw new TypeCheckException(errLeft, node.Line);
+                {
+                    ReportError(errLeft, node.Line);
+                    RecordType(node, Error);
+                    return;
+                }
                 if (errRight != null)
-                    throw new TypeCheckException(errRight, node.Line);
+                {
+                    ReportError(errRight, node.Line);
+                    RecordType(node, Error);
+                    return;
+                }
 
                 if (!TypesMatch(left, right))
                 {
@@ -3388,16 +3508,20 @@ namespace gflat
                             return;
                         }
                     }
-                    throw new TypeCheckException(
-                        $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, "-", TypeName(left), TypeName(right));
+                    RecordType(node, Error);
+                    return;
                 }
                 RecordType(node, left);
             }
             else if (node.Operator is TokenKind.LessLess or TokenKind.GreaterGreater)
             {
                 if (!IsInteger(left) || !IsInteger(right))
-                    throw new TypeCheckException(
-                        $"Bit shift operators require integer operands, got '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                {
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), TypeName(left), TypeName(right));
+                    RecordType(node, Error);
+                    return;
+                }
                 RecordType(node, left);
             }
             else
@@ -3422,8 +3546,9 @@ namespace gflat
                             return;
                         }
                     }
-                    throw new TypeCheckException(
-                        $"Cannot apply operator to '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), TypeName(left), TypeName(right));
+                    RecordType(node, Error);
+                    return;
                 }
                 RecordType(node, left);
             }
@@ -3480,6 +3605,11 @@ namespace gflat
 
                 node.Operand.Accept(this);
                 TypeExpression operandType = GetType(node.Operand);
+                if (IsError(operandType))
+                {
+                    RecordType(node, Error);
+                    return;
+                }
                 bool isReadOnly = IsExpressionReadOnly(node.Operand);
                 RecordType(node, new PointerTypeExpression(operandType, false, node.Line, isReadOnly: isReadOnly));
                 if (_constEvaluator.TryEvaluate(node, out ConstValue? constPtr, out _))
@@ -3491,6 +3621,12 @@ namespace gflat
 
             node.Operand.Accept(this);
             TypeExpression operand = GetType(node.Operand);
+
+            if (IsError(operand))
+            {
+                RecordType(node, Error);
+                return;
+            }
 
             if (TryResolveUnaryOperatorForType(node.Operator, operand, out string opStruct, out OperatorDeclaration opDecl))
             {
@@ -3906,8 +4042,11 @@ namespace gflat
             }
 
             if (!IsAssignable(targetType, valueType, node.Value))
-                throw new TypeCheckException(
-                    $"Cannot assign '{TypeName(valueType)}' to '{TypeName(targetType)}'", node.Line);
+            {
+                ReportError(DiagnosticRules.GF1001_TypeMismatch, node.Line, 0, TypeName(valueType), TypeName(targetType));
+                RecordType(node, Error);
+                return;
+            }
 
             RecordType(node, targetType);
         }

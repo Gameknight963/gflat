@@ -18,6 +18,22 @@ namespace gflat.Tests
             return (ast, checker);
         }
 
+        public static (CompilationUnit Ast, TypeChecker Checker) CheckDiagnostics(string code)
+        {
+            List<Token> tokens = Lexer.Tokenize(code);
+            CompilationUnit ast = Parser.Parse(tokens);
+            TypeChecker checker = new TypeChecker();
+            try
+            {
+                ast.Accept(checker);
+            }
+            catch (CompileExceptions.TypeCheckException)
+            {
+                // Ignored to allow test to inspect checker.Diagnostics
+            }
+            return (ast, checker);
+        }
+
         public static string EmitIr(string code)
         {
             var (ast, checker) = Check(code);

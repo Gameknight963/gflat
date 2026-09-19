@@ -84,13 +84,26 @@ namespace gflat
             }
 
             TypeChecker checker = new TypeChecker(diagnostics);
+            bool typeCheckFailed = false;
             try
             {
                 ast.Accept(checker);
             }
-            catch (CompileExceptions.TypeCheckException)
+            catch (CompileExceptions.TypeCheckException ex)
             {
-                // Handled via diagnostics reporting below
+                typeCheckFailed = true;
+                if (!checker.Diagnostics.HasErrors)
+                {
+                    checker.Diagnostics.Report(gflat.diagnostics.DiagnosticRules.GF1000_GeneralTypeError, ex.Line, 0, null, ex.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                typeCheckFailed = true;
+                if (!checker.Diagnostics.HasErrors)
+                {
+                    checker.Diagnostics.Report(gflat.diagnostics.DiagnosticRules.GF1000_GeneralTypeError, 0, 0, null, ex.Message);
+                }
             }
 
             if (checker.Diagnostics.Count > 0)
@@ -99,7 +112,7 @@ namespace gflat
                 Console.Error.WriteLine(checker.Diagnostics.FormatAll(useColor));
             }
 
-            if (checker.Diagnostics.HasErrors)
+            if (checker.Diagnostics.HasErrors || typeCheckFailed)
             {
                 return 1;
             }

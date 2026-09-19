@@ -24,6 +24,10 @@ namespace gflat.diagnostics
             DiagnosticSeverity.Error, "Syntax");
 
         // 1000 - 1999: Type checking & assignment
+        public static readonly DiagnosticDescriptor GF1000_GeneralTypeError = new DiagnosticDescriptor(
+            "GF1000", "Type Error", "{0}",
+            DiagnosticSeverity.Error, "Types");
+
         public static readonly DiagnosticDescriptor GF1001_TypeMismatch = new DiagnosticDescriptor(
             "GF1001", "Type Mismatch", "Cannot assign '{0}' to '{1}'",
             DiagnosticSeverity.Error, "Types");
@@ -35,6 +39,10 @@ namespace gflat.diagnostics
         public static readonly DiagnosticDescriptor GF1003_UndeclaredIdentifier = new DiagnosticDescriptor(
             "GF1003", "Undeclared Identifier", "The name '{0}' does not exist in the current context",
             DiagnosticSeverity.Error, "Symbols");
+
+        public static readonly DiagnosticDescriptor GF1004_TypeNotFound = new DiagnosticDescriptor(
+            "GF1004", "Type Not Found", "The type or namespace '{0}' could not be found",
+            DiagnosticSeverity.Error, "Types");
 
         // 2000 - 2999: Control flow & reachability
         public static readonly DiagnosticDescriptor GF2001_UnreachableCode = new DiagnosticDescriptor(

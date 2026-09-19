@@ -38,9 +38,12 @@ namespace gflat.Tests
             {
                 ast.Accept(checker);
             }
-            catch (TypeCheckException)
+            catch (TypeCheckException ex)
             {
-                // Ignored to allow test to inspect checker.Diagnostics
+                if (!bag.HasErrors)
+                {
+                    bag.Report(DiagnosticRules.GF1000_GeneralTypeError, ex.Line, 0, null, ex.Message);
+                }
             }
             return (ast, checker);
         }

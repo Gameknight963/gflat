@@ -372,5 +372,33 @@ namespace gflat.Tests
             Assert.True(checker.Diagnostics.ErrorCount >= 2);
             Assert.True(checker.Diagnostics.Items.Count(d => d.Descriptor.Id == DiagnosticRules.GF0005_ExpectedToken.Id) >= 2);
         }
+
+        [Fact]
+        public void UndefinedTypeInNewExpression_DoesNotThrowNullReferenceException()
+        {
+            string code = """
+                extern int printf(readonly char* fmt, ...);
+
+                struct Cool
+                {
+                    int x;
+                    ~Cool()
+                    {
+                        printf("destructor ran");
+                    }
+                }
+                int main()
+                {
+                    Cool* l = new* Col();
+                    defer delete l;
+                    return 0;
+                    l.x = 2;
+                    printf("The number is: %d\n", 2);
+                    return 0;
+                }
+                """;
+            (ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
+            Assert.True(checker.Diagnostics.HasErrors);
+        }
     }
 }

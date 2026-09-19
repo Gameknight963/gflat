@@ -3621,11 +3621,29 @@ public class LlvmEmitter : IVisitor
     public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
     public void Visit(NewExpression node)
     {
+        if (TypeChecker.IsError(_typeChecker.GetType(node)))
+        {
+            Push("null");
+            return;
+        }
+
         TypeExpression resolvedType = _typeChecker.ResolveAlias(node.Type);
-        string typeName = ((NamedTypeExpression)resolvedType).Name;
+        if (resolvedType is not NamedTypeExpression namedType)
+        {
+            throw new Exception($"Cannot emit 'new' for non-named type on line {node.Line}");
+        }
+        string typeName = namedType.Name;
         bool isClass = _typeChecker.IsClass(typeName);
-        TypeChecker.StructInfo? sInfo = isClass ? null : _typeChecker.GetStruct(typeName)!;
-        TypeChecker.ClassInfo? cInfo = isClass ? _typeChecker.GetClass(typeName)! : null;
+        TypeChecker.StructInfo? sInfo = isClass ? null : _typeChecker.GetStruct(typeName);
+        TypeChecker.ClassInfo? cInfo = isClass ? _typeChecker.GetClass(typeName) : null;
+        if (isClass && cInfo == null)
+        {
+            throw new Exception($"Cannot emit 'new' for unknown class '{typeName}' on line {node.Line}");
+        }
+        if (!isClass && sInfo == null)
+        {
+            throw new Exception($"Cannot emit 'new' for unknown struct '{typeName}' on line {node.Line}");
+        }
         string typeNs = isClass ? cInfo!.Namespace : sInfo!.Namespace;
         ConstructorDeclaration? ctor = _typeChecker.GetResolvedConstructor(node);
 
@@ -3807,6 +3825,10 @@ public class LlvmEmitter : IVisitor
         node.Target.Accept(this);
         string ptrVal = Pop();
         TypeExpression ptrType = _typeChecker.GetType(node.Target);
+        if (TypeChecker.IsError(ptrType))
+        {
+            return;
+        }
         string llvmPtrType = EmitType(ptrType);
 
         if (_typeChecker.TryGetClassDestructorCall(node, out (TypeChecker.ClassInfo Class, bool IsVirtual, int SlotIndex) dtorCall))

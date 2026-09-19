@@ -2860,6 +2860,10 @@ namespace gflat
         {
             node.Target.Accept(this);
             TypeExpression targetType = ResolveAlias(GetType(node.Target));
+            if (IsError(targetType))
+            {
+                return;
+            }
             if (targetType is FunctionPointerTypeExpression)
             {
                 throw new TypeCheckException("Cannot delete a function pointer", node.Line);
@@ -4708,14 +4712,18 @@ namespace gflat
             node.Type = resolvedType;
             if (resolvedType is not NamedTypeExpression named)
             {
-                throw new TypeCheckException($"Cannot instantiate non-struct and non-class type '{TypeName(node.Type)}'", node.Line);
+                ReportError(DiagnosticRules.GF1000_GeneralTypeError, node.Line, 0, $"Cannot instantiate non-struct and non-class type '{TypeName(node.Type)}'");
+                RecordType(node, Error);
+                return;
             }
 
             if (_classes.TryGetValue(named.Name, out ClassInfo? cInfo))
             {
                 if (cInfo.IsAbstract)
                 {
-                    throw new TypeCheckException($"Cannot instantiate abstract class '{cInfo.Name}'", node.Line);
+                    ReportError(DiagnosticRules.GF1000_GeneralTypeError, node.Line, 0, $"Cannot instantiate abstract class '{cInfo.Name}'");
+                    RecordType(node, Error);
+                    return;
                 }
 
                 ConstructorDeclaration? matchedCtor = null;
@@ -4804,7 +4812,9 @@ namespace gflat
 
             if (!_structs.TryGetValue(named.Name, out StructInfo? sInfo))
             {
-                throw new TypeCheckException($"Cannot instantiate non-struct and non-class type '{TypeName(node.Type)}'", node.Line);
+                ReportError(DiagnosticRules.GF1004_TypeNotFound, node.Line, 0, named.Name);
+                RecordType(node, Error);
+                return;
             }
 
             ConstructorDeclaration? matchedStructCtor = null;

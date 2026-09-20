@@ -213,7 +213,39 @@ Struct and class destruction runs the destructor body, then inline object fields
 
 Fixed-size arrays with destructor-bearing elements clean up from the last element to the first, recursively for nested arrays, on scope exit and exception propagation. This also applies to inline array fields and returned array values. Deleting a pointer to a fixed-size array destroys its elements before freeing the allocation. Such local arrays require an initializer, cannot be copied or reassigned, and cannot be initialized from a differently sized array. `default(T[N])` zero-initializes the elements without calling constructors; zero-initialized class elements remain unconstructed and are skipped during cleanup. Arrays of raw pointers do not destroy their pointees.
 
-Structs provide inline fields, constructors, methods, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method contracts with fat pointer dispatch. These are gflat layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests; use pointers and primitive C interfaces for interoperation.
+Structs provide inline fields, constructors, methods, properties, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method and property contracts with fat pointer dispatch. These are gflat layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests; use pointers and primitive C interfaces for interoperation.
+
+## Properties
+
+Classes and structs support explicit accessors, expression-bodied getters, and auto-properties:
+
+```gflat
+class Player
+{
+    int score;
+    public int Score
+    {
+        readonly get => score;
+        private set { score = value; }
+    }
+    public int DoubleScore => score * 2;
+    public int Id { get; }
+    public int Level { get; set; } = 1;
+
+    public Player(int id) { Id = id; }
+    public void Award(int points) { Score += points; }
+}
+```
+
+`get` and `set` are contextual identifiers. The setter receives an implicit parameter named `value` with the property's type and returns `void`. Accessors accept blocks or `=> expression;`; a property-level `=> expression;` is shorthand for a getter. An explicit property may have only a getter or only a setter. An auto-property must have a getter, and all its accessors must use `;`. Auto-property storage is private, is zero-initialized by ordinary construction, and participates in field initialization in declaration order. A get-only auto-property can also be assigned through `this` in its declaring instance constructor.
+
+Properties use ordinary member accessibility. On a property with both accessors, one accessor may declare more restrictive access, such as `private set` or `protected set`. Access is checked separately for reads and writes. `readonly get` allows calls through a readonly receiver while permitting a mutable setter. Non-virtual auto-getters are implicitly readonly. As with method declarations, `readonly` before a pointer property type qualifies the pointee; use an accessor modifier to qualify the receiver.
+
+Reads call the getter. Assignments call the setter and evaluate to the assigned value, even if the setter changes its `value` parameter. Compound assignments and `++`/`--` evaluate the receiver once, then read, update, and write. Postfix updates return the old value; prefix updates return the new value. The receiver is evaluated before the right-hand side. Normal operator resolution, definite-assignment checks, and temporary cleanup apply. A property is not addressable storage: taking its address or assigning to a field of an inline property result is rejected. A pointer returned by a property still permits access to its pointee under ordinary pointer rules.
+
+Classes support `virtual`, `override`, and `abstract` properties through their accessors. Interface property contracts use accessor signatures, for example `interface ICount { int Count { get; set; } }`; implementing accessors must be public. A declaration in a derived class hides the whole inherited property, rather than borrowing missing accessors from it. Explicit static properties use `Type::Property`. Explicit class/struct accessors may declare `get throws` or `set throws` and follow ordinary exception rules.
+
+Current restrictions: static auto-properties await static field storage; indexers, `init`, ref returns, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays or destructor-bearing values by value, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
 
 ## Control flow, exceptions, and constants
 
@@ -280,7 +312,7 @@ int main() { return 0; }
 
 Arguments and construction must be evaluable at compile time. Constructors need not be marked `const`; functions they call must be. Evaluation runs base constructors, field initializers, and the selected constructor body, subject to the compile-time execution limits. Runtime input, extern calls, managed allocation, destructors, and unsupported evaluator operations are rejected. Attribute objects exist only as compiler metadata; annotation sites perform no runtime construction or allocation.
 
-Annotations can precede types, functions, extern declarations, fields, constructors, destructors, operators, and aliases. They are retained on generic declarations and copied to specializations; arguments on generic definitions must be evaluable independently of their type parameters. Parameter, local-variable, and assembly annotations are not supported. Arguments are positional; named property arguments, target restrictions, suffix lookup, and runtime reflection remain future work. User-defined attributes do not change compiler behavior by themselves.
+Annotations can precede types, functions, extern declarations, fields, properties, constructors, destructors, operators, and aliases. They are retained on generic declarations and copied to specializations; arguments on generic definitions must be evaluable independently of their type parameters. Parameter, local-variable, and assembly annotations are not supported. Arguments are positional; named property arguments, target restrictions, suffix lookup, and runtime reflection remain future work. User-defined attributes do not change compiler behavior by themselves.
 
 ## Compilation across source files
 

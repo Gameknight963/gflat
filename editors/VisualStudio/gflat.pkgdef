@@ -1,0 +1,8 @@
+[$RootKey$\TextMate\Repositories]
+"gflat"="$PackageFolder$\Grammars"
+
+[$RootKey$\TextMate\LanguageConfiguration\GrammarMapping]
+"source.gflat"="$PackageFolder$\gflat-language-configuration.json"
+
+[$RootKey$\TextMate\LanguageConfiguration\ContentTypeMapping]
+"gflat"="$PackageFolder$\gflat-language-configuration.json"

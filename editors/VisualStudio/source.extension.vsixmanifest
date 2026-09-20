@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="gflat.LanguageSupport.72c57259-8ade-48ad-9c74-1ec89cb65515" Version="0.1.0" Language="en-US" Publisher="gflat" />
+    <Identity Id="gflat.LanguageSupport.72c57259-8ade-48ad-9c74-1ec89cb65515" Version="0.2.0" Language="en-US" Publisher="gflat" />
     <DisplayName>gflat Language Support</DisplayName>
-    <Description xml:space="preserve">Live compiler diagnostics for gflat source files, using the bundled gflat language server.</Description>
+    <Description xml:space="preserve">Syntax highlighting, bracket and quote completion, indentation, and live compiler diagnostics for gflat source files.</Description>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.14,19.0)">
@@ -17,6 +17,7 @@
     <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.14,19.0)" DisplayName="Visual Studio core editor" />
   </Prerequisites>
   <Assets>
+    <Asset Type="Microsoft.VisualStudio.VsPackage" Path="gflat.pkgdef" />
     <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;GetTargetPath|" />
   </Assets>
 </PackageManifest>

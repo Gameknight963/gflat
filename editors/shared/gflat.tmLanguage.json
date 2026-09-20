@@ -1,0 +1,108 @@
+{
+  "name": "gflat",
+  "scopeName": "source.gflat",
+  "fileTypes": [
+    "gf"
+  ],
+  "patterns": [
+    {
+      "name": "comment.line.double-slash.gflat",
+      "begin": "//",
+      "end": "$"
+    },
+    {
+      "name": "comment.block.gflat",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+    {
+      "name": "string.quoted.double.gflat",
+      "begin": "(?:(\\b[A-Za-z_][A-Za-z0-9_]*|\\$))?(\")",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.name.function.literal.gflat"
+        },
+        "2": {
+          "name": "punctuation.definition.string.begin.gflat"
+        }
+      },
+      "end": "\"|$",
+      "patterns": [
+        {
+          "name": "constant.character.escape.gflat",
+          "match": "\\\\[nrt0\\\\\"\\x27]"
+        },
+        {
+          "name": "invalid.illegal.escape.gflat",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single.gflat",
+      "begin": "'",
+      "end": "'|$",
+      "patterns": [
+        {
+          "name": "constant.character.escape.gflat",
+          "match": "\\\\[nrt0\\\\\"\\x27]"
+        },
+        {
+          "name": "invalid.illegal.escape.gflat",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "match": "\\b(class|struct|interface|enum)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": {
+          "name": "storage.type.gflat"
+        },
+        "2": {
+          "name": "entity.name.type.gflat"
+        }
+      }
+    },
+    {
+      "name": "constant.language.gflat",
+      "match": "\\b(true|false|null|this|base)\\b"
+    },
+    {
+      "name": "storage.type.gflat",
+      "match": "\\b(void|int|float|double|bool|char|long|extralong|uint|ulong|nint|nuint|byte|sbyte|short|ushort|string|class|struct|interface|enum)\\b"
+    },
+    {
+      "name": "storage.modifier.gflat",
+      "match": "\\b(public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern)\\b"
+    },
+    {
+      "name": "keyword.control.gflat",
+      "match": "\\b(namespace|using|new|delete|return|if|else|while|for|foreach|in|repeat|break|continue|switch|case|default|defer|alias|global|operator|sizeof|nameof|throw|throws|try|catch)\\b"
+    },
+    {
+      "name": "keyword.other.accessor.gflat",
+      "match": "\\b(get|set)\\b(?=\\s*(?:\\{|=>|;|throws\\b))"
+    },
+    {
+      "name": "constant.numeric.gflat",
+      "match": "\\b(?:0x[0-9a-fA-F]+(?:[uU][lL]?|[lL][uU]?)?|[0-9][0-9_]*(?:\\.[0-9][0-9_]*)?(?:[uU][lL]?|[lL][uU]?|[fFdDmM])?)\\b"
+    },
+    {
+      "name": "entity.name.function.gflat",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    },
+    {
+      "name": "keyword.operator.gflat",
+      "match": "::|=>|[+*/%=!<>~&|^?:-]"
+    },
+    {
+      "name": "punctuation.section.gflat",
+      "match": "[{}\\[\\]()]"
+    },
+    {
+      "name": "punctuation.separator.gflat",
+      "match": "[;,.]"
+    }
+  ]
+}

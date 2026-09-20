@@ -1,7 +1,9 @@
 # Editor support
 
-The first editor milestone provides live compiler diagnostics. Hover, navigation,
-completion, syntax coloring, build commands, and debugging are not implemented yet.
+The Visual Studio extension provides live compiler diagnostics, syntax highlighting,
+bracket matching, automatic bracket/quote closing, selection surrounding, block
+indentation, and line/block comment commands. Hover, navigation, completion, build
+commands, and debugging are not implemented yet.
 
 ## Project layout
 
@@ -11,7 +13,8 @@ completion, syntax coloring, build commands, and debugging are not implemented y
 | `gflat` | Command-line driver and native toolchain invocation |
 | `gflat.LanguageServer` | LSP process; document snapshots, workspace sources, and analysis scheduling |
 | `gflat.Tests` | Compiler, native execution, and CLI regression tests |
-| `gflat.LanguageServer.Tests` | Workspace and protocol tests, including a real server process |
+| `gflat.LanguageServer.Tests` | Workspace, protocol, and editor grammar tests |
+| `editors/shared` | Portable TextMate grammar and language configuration |
 | `editors/VisualStudio` | Windows VSIX client and packaging; launches the server over stdio |
 
 The root solution builds the compiler, CLI, server, and tests. The VS extension has
@@ -44,6 +47,31 @@ The installed server is the packaged copy; it does not automatically track this
 checkout. For an update, increment the VSIX manifest and client assembly versions,
 then rebuild and install the VSIX. For a development rebuild with the same version,
 uninstall the old extension first.
+
+## Editing features
+
+Version 0.2.0 adds theme-aware highlighting for keywords, built-in types, type
+declarations, function names, numbers, comments, strings, escapes, and custom
+string prefixes such as `my_2string"hello"`. This is lexical highlighting; names
+are not classified using type information. An unfinished quote stops coloring at
+the end of its line, while block comments continue until `*/`.
+
+The editor matches `{}`, `[]`, and `()`, closes brackets and quotes outside
+comments/strings, and supports surrounding selected text with these pairs.
+Angle brackets are not automatically closed because they also mean comparisons.
+Pressing Enter between `{}` creates an indented line. Use Visual Studio's standard
+comment/uncomment commands (`Ctrl+K, Ctrl+C` / `Ctrl+K, Ctrl+U`).
+
+These features use [Visual Studio's TextMate and language configuration support](https://learn.microsoft.com/en-us/visualstudio/extensibility/language-configuration).
+Editor options can disable automatic brace completion or selection surrounding;
+check Text Editor settings if a feature is disabled. Colors follow the current
+theme. The portable definitions live in `editors/shared`; another editor can
+register the same grammar and configuration without depending on Visual Studio.
+
+After installing an update, manually check a `.gf` file in your IDE: keyword and
+comment colors, typing quotes/brackets, Enter inside `{}`, selection surrounding,
+and comment/uncomment commands. Automated tests exercise grammar tokenization and
+packaged assets, but do not drive the Visual Studio UI.
 
 ## Source files in a workspace
 
@@ -101,14 +129,16 @@ can prevent semantic checking, and a semantic error may stop checking later memb
 An unexpected compiler exception is reported as `GFLS0002` instead of being presented
 as an ordinary source error; the server can analyze the next edit afterward.
 
-Run the portable server tests with:
+Run the portable server and editor grammar tests with:
 
 ```text
 dotnet test gflat.LanguageServer.Tests
 ```
 
 The root `dotnet test` also runs these tests. The VS packaging CI job builds the VSIX
-and runs the server tests against the executable extracted from the package. Manual
+and runs tests against the server, grammar, and configuration extracted from the
+package. TextMateSharp is a test-only dependency used to tokenize the grammar; it
+is not bundled into the extension or server. Manual
 IDE checks are still needed for activation, squiggles, and the Error List UI.
 
 Implementation references: [LSP 3.17](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using gflat.diagnostics;
+using gflat.Projects;
 
 namespace gflat.LanguageServer;
 
@@ -10,7 +11,7 @@ public sealed record Location(string Uri, TextRange Range);
 public sealed record RelatedInformation(Location Location, string Message);
 public sealed record EditorDiagnostic(TextRange Range, int Severity, string Code, string Source, string Message,
     RelatedInformation[]? RelatedInformation = null);
-public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths);
+public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null);
 
 public static class Workspace
 {
@@ -24,11 +25,44 @@ public static class Workspace
     }
     public static string FileUri(string path) => new Uri(Path.GetFullPath(path)).AbsoluteUri;
 
-    public static Analysis Analyze(string? root, IReadOnlyDictionary<string, OpenDocument> documents)
+    public static Analysis Analyze(string? root, IReadOnlyDictionary<string, OpenDocument> documents, ProjectWorkspace? projects = null)
     {
         var output = new Dictionary<string, List<EditorDiagnostic>>(Paths);
         var configured = new HashSet<string>(Paths);
         var watched = new HashSet<string>(Paths);
+        var projectDirectories = new HashSet<string>(Paths);
+        var evaluated = new HashSet<string>(Paths);
+        projects ??= new();
+        foreach (var document in documents.Values.Where(d => d.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                string? project = ProjectWorkspace.FindProject(document.Path);
+                if (project == null || !evaluated.Add(project)) continue;
+                var result = projects.Load(project);
+                watched.UnionWith(result.Paths);
+                foreach (string file in result.Paths) projectDirectories.Add(Path.GetDirectoryName(file)!);
+                if (result.Error != null)
+                {
+                    var error = result.Error;
+                    output[error.ProjectPath] = [new(new(new(Math.Max(0, error.Line - 1), Math.Max(0, error.Column - 1)),
+                        new(Math.Max(0, error.Line - 1), Math.Max(0, error.Column - 1))), 1, "GFPROJ", "gflat", error.Message)];
+                    // Make configuration errors visible on the source file too, even
+                    // when the project's XML editor is not attached to this LSP.
+                    output[document.Path] = [Problem("GFPROJ", error.ProjectPath + ": " + error.Message)];
+                }
+                if (result.Graph != null)
+                {
+                    var files = result.Graph.Sources.Concat(documents.Keys.Where(path =>
+                        result.Graph.Projects.Any(p => p.IncludesFile(path) && Paths.Equals(ProjectWorkspace.FindProject(path), p.FilePath)))).Distinct(Paths).ToArray();
+                    configured.UnionWith(files);
+                    watched.UnionWith(files);
+                    Check(files);
+                }
+                else configured.Add(document.Path);
+            }
+            catch (ProjectException error) { output[document.Path] = [Problem("GFPROJ", error.Message)]; configured.Add(document.Path); }
+        }
         string? config = root == null ? null : Path.Combine(root, ConfigurationName);
         if (config != null) watched.Add(config);
         if (config != null && File.Exists(config))
@@ -39,16 +73,18 @@ public static class Workspace
                 var sources = json.RootElement.GetProperty("sources");
                 if (sources.ValueKind != JsonValueKind.Array || sources.GetArrayLength() == 0)
                     throw new ArgumentException("'sources' must be a nonempty array of relative file paths");
+                var legacySources = new HashSet<string>(Paths);
                 foreach (var item in sources.EnumerateArray())
                 {
                     string relative = item.GetString() ?? throw new ArgumentException("Source paths must be strings");
                     if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative) || relative.IndexOfAny(['*', '?']) >= 0)
                         throw new ArgumentException("Source paths must be relative paths without wildcards");
                     string path = Path.GetFullPath(Path.Combine(root!, relative));
-                    if (!configured.Add(path)) throw new ArgumentException($"Duplicate source path: {relative}");
+                    if (!legacySources.Add(path)) throw new ArgumentException($"Duplicate source path: {relative}");
                     watched.Add(path);
                 }
-                Check(configured);
+                Check(legacySources.Where(path => !configured.Contains(path)));
+                configured.UnionWith(legacySources);
             }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException)
             {
@@ -56,8 +92,8 @@ public static class Workspace
             }
         }
         foreach (var document in documents.Values)
-            if (!configured.Contains(document.Path)) Check([document.Path]);
-        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), Paths), watched.ToArray());
+            if (!configured.Contains(document.Path) && document.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)) Check([document.Path]);
+        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray());
 
         void Check(IEnumerable<string> paths)
         {

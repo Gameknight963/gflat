@@ -160,6 +160,28 @@ public sealed class ServerTests
     }
 
     [Fact]
+    public async Task ProjectGlobsAndXmlChangesReloadWithoutRestartingServer()
+    {
+        await using var s = new Session();
+        string project = s.File("app.gfproj");
+        const string xml = """<GflatProject Kind="Executable"/>""";
+        System.IO.File.WriteAllText(project, xml);
+        await s.Initialize();
+        await s.Open("main.gf", "int main() => answer();");
+        Assert.Contains("answer", (await s.Diagnostics("main.gf", 1)).ToString());
+        System.IO.File.WriteAllText(s.File("helper.gf"), "int answer() => 42;");
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").GetArrayLength() == 0);
+        System.IO.File.WriteAllText(project, "<GflatProject");
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("code").GetString() == "GFPROJ"));
+        System.IO.File.WriteAllText(project, xml);
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").GetArrayLength() == 0);
+        await s.Stop();
+
+        bool IsMainDiagnostics(JsonElement x) => x.TryGetProperty("method", out var method) && method.GetString() == "textDocument/publishDiagnostics" &&
+            x.GetProperty("params").GetProperty("uri").GetString() == s.Uri("main.gf");
+    }
+
+    [Fact]
     public async Task RapidEditsPublishLatestVersionAndIgnoreOlderVersions()
     {
         await using var s = new Session();

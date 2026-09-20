@@ -15,10 +15,13 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     private readonly Dictionary<string, OpenDocument> documents = new(Workspace.Paths);
     private readonly HashSet<string> published = new(Workspace.Paths);
     private readonly HashSet<string> watchedPaths = new(Workspace.Paths);
+    private readonly HashSet<string> projectDirectories = new(Workspace.Paths);
+    private readonly ProjectWorkspace projects = new();
     private readonly List<FileSystemWatcher> watchers = new();
     private readonly SemaphoreSlim analysisGate = new(1, 1);
     private CancellationTokenSource? pending;
     private long generation;
+    private long projectRevision, evaluatedProjectRevision = -1;
     private string? root;
     private bool initialized, shutdown;
 
@@ -40,11 +43,16 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         if (exit != null) return exit.Value;
                         break;
                     case Changed changed when !shutdown:
-                        if (watchedPaths.Contains(changed.Path) || root != null && Workspace.Paths.Equals(changed.Path, Path.Combine(root, Workspace.ConfigurationName))) Schedule();
+                        if (watchedPaths.Contains(changed.Path) ||
+                            projectDirectories.Any(dir => changed.Path.StartsWith(dir + Path.DirectorySeparatorChar, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) ||
+                            root != null && Workspace.Paths.Equals(changed.Path, Path.Combine(root, Workspace.ConfigurationName)))
+                        { Schedule(invalidateProjects: true); }
                         break;
                     case Finished result when result.Generation == generation && !shutdown:
                         watchedPaths.Clear();
                         watchedPaths.UnionWith(result.Result.WatchedPaths);
+                        projectDirectories.Clear();
+                        projectDirectories.UnionWith(result.Result.ProjectDirectories ?? []);
                         UpdateWatchers();
                         foreach (string path in published.Union(result.Result.Diagnostics.Keys, Workspace.Paths).ToArray())
                         {
@@ -169,7 +177,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         Schedule();
                         break;
                     case "workspace/didChangeWatchedFiles":
-                    case "workspace/didChangeConfiguration": Schedule(); break;
+                    case "workspace/didChangeConfiguration": Schedule(invalidateProjects: true); break;
                     case "$/cancelRequest":
                     case "$/setTrace": break;
                     default: if (hasId) await Error(id, -32601, "Method not supported: " + method); break;
@@ -184,8 +192,10 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
         return null;
     }
 
-    private void Schedule()
+    private void Schedule(bool invalidateProjects = false)
     {
+        if (invalidateProjects) projectRevision++;
+        long requestedProjectRevision = projectRevision;
         pending?.Cancel();
         pending?.Dispose();
         pending = new();
@@ -202,7 +212,9 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                 try
                 {
                     cancellation.ThrowIfCancellationRequested();
-                    var result = Workspace.Analyze(workspaceRoot, snapshot);
+                    if (requestedProjectRevision != evaluatedProjectRevision)
+                    { projects.Invalidate(); evaluatedProjectRevision = requestedProjectRevision; }
+                    var result = Workspace.Analyze(workspaceRoot, snapshot, projects);
                     if (!cancellation.IsCancellationRequested) events.Writer.TryWrite(new Finished(revision, result));
                 }
                 finally { analysisGate.Release(); }
@@ -220,16 +232,21 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
         foreach (var watcher in watchers) watcher.Dispose();
         watchers.Clear();
         // Watch only source/config directories, never recursively scan or watch build output trees.
-        foreach (string directory in watchedPaths.Select(Path.GetDirectoryName).OfType<string>().Distinct(Workspace.Paths))
+        foreach (string directory in watchedPaths.Select(Path.GetDirectoryName).OfType<string>().Concat(projectDirectories).Distinct(Workspace.Paths))
         {
             if (!Directory.Exists(directory)) continue;
             try
             {
-                var watcher = new FileSystemWatcher(directory) { NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size };
-                watcher.Changed += (_, e) => events.Writer.TryWrite(new Changed(e.FullPath));
-                watcher.Created += (_, e) => events.Writer.TryWrite(new Changed(e.FullPath));
-                watcher.Deleted += (_, e) => events.Writer.TryWrite(new Changed(e.FullPath));
-                watcher.Renamed += (_, e) => { events.Writer.TryWrite(new Changed(e.OldFullPath)); events.Writer.TryWrite(new Changed(e.FullPath)); };
+                var watcher = new FileSystemWatcher(directory) { IncludeSubdirectories = projectDirectories.Contains(directory), NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size };
+                void ChangedPath(string path)
+                {
+                    if (!path.Split(Path.DirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory))
+                        events.Writer.TryWrite(new Changed(path));
+                }
+                watcher.Changed += (_, e) => ChangedPath(e.FullPath);
+                watcher.Created += (_, e) => ChangedPath(e.FullPath);
+                watcher.Deleted += (_, e) => ChangedPath(e.FullPath);
+                watcher.Renamed += (_, e) => { ChangedPath(e.OldFullPath); ChangedPath(e.FullPath); };
                 watcher.Error += (_, _) => events.Writer.TryWrite(new Changed(Path.Combine(root!, Workspace.ConfigurationName)));
                 watcher.EnableRaisingEvents = true;
                 watchers.Add(watcher);

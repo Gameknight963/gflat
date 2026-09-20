@@ -87,6 +87,27 @@ int main()
 
 Enums are distinct integral types, optionally with an underlying type such as `uint`. Bitwise operations on the same enum preserve its type. Aliases use `alias Name = Type;`.
 
+## Weak defaults and explicit replacements
+
+`weak` marks a function's default implementation. `replace` explicitly selects a different body for that function in the same namespace or containing type. Declaration order does not matter; reopened namespace blocks share the same scope.
+
+```gflat
+namespace Settings {
+    public weak int Capacity() => 16;
+    public replace int Capacity() => 64;
+}
+class Buffer {
+    public static weak int Capacity() => 16;
+    public static replace int Capacity() => 64;
+}
+```
+
+Selection happens in the compiler before body checking, const evaluation, hierarchy resolution, and code generation. With no replacement, the default is used. With a replacement, the discarded body is parsed but is not type-checked or emitted. All calls and function addresses bind to the selected definition. LLVM receives one ordinary definition, with no weak linkage or linker-level override behavior.
+
+A replacement must match parameter types, return type, generic arity and constraints, accessibility, `static`, `virtual`, `override`, `readonly`, `const`, const parameters, and `throws`. Parameter names and generic parameter names may differ. Duplicate defaults, multiple replacements, unmatched replacements, and ordinary definitions attempting to replace a default are errors. Weak functions cannot be overloaded or combined with an extern declaration.
+
+Free functions and concrete class/struct methods support these modifiers. Static methods use `Type::Method(...)` and have no implicit `this`; instance methods use `value.Method(...)`. Replacement stays within the same containing type: inherited dispatch still uses `override`. Constructors, destructors, operators, abstract methods, and interface declarations cannot be weak or replaced. Partial classes are not implemented.
+
 ## Pointers and allocation
 
 `T*` expresses non-null intent; `T*?` permits null. Null and zero constants cannot be explicitly cast to a non-null pointer. Explicit casts to non-null pointer types check their result at runtime and trap on null. This check proves neither bounds nor lifetime. Default construction and foreign contracts must not be assumed to prove complete object validity.

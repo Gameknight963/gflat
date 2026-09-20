@@ -5,9 +5,12 @@ using System.Text;
 
 namespace gflat.ast
 {
+    public enum FunctionImplementationKind { Ordinary, Weak, Replace }
+
     public class MethodDeclaration : AstNode
     {
         public string Name { get; }
+        public FunctionImplementationKind ImplementationKind { get; set; }
         public string? StringLiteralPrefix { get; set; }
         public TypeExpression ReturnType { get; set; }
         public List<Parameter> Parameters { get; }

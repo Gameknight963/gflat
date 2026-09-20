@@ -227,6 +227,8 @@ public class Lexer
             "readonly" => TokenKind.Readonly,
             "virtual" => TokenKind.Virtual,
             "override" => TokenKind.Override,
+            "weak" => TokenKind.Weak,
+            "replace" => TokenKind.Replace,
             "abstract" => TokenKind.Abstract,
             "null" => TokenKind.Null,
             "true" => TokenKind.True,

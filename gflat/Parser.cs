@@ -246,6 +246,8 @@ namespace gflat
             bool isReadonly = false;
             bool isConst = false;
             bool isAbstract = false;
+            FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
+            AstNode Finish(AstNode node) => ApplyImplementationKind(node, implementation);
 
             while (true)
             {
@@ -270,28 +272,43 @@ namespace gflat
                     isAbstract = true;
                     Consume();
                 }
+                else if (Check(TokenKind.Weak) || Check(TokenKind.Replace))
+                {
+                    if (implementation != FunctionImplementationKind.Ordinary)
+                        throw new TypeCheckException("Use exactly one of weak or replace", Current.Line);
+                    implementation = Consume().Kind == TokenKind.Weak ? FunctionImplementationKind.Weak : FunctionImplementationKind.Replace;
+                }
                 else break;
             }
 
             if (Check(TokenKind.Alias))
-                return ParseAliasDeclaration(accessibility, line);
+                return Finish(ParseAliasDeclaration(accessibility, line));
             if (Check(TokenKind.Enum))
-                return ParseEnumDeclaration(accessibility, line);
+                return Finish(ParseEnumDeclaration(accessibility, line));
             if (Check(TokenKind.Class))
-                return ParseClassDeclaration(accessibility, isAbstract, line, attributes);
+                return Finish(ParseClassDeclaration(accessibility, isAbstract, line, attributes));
             if (Check(TokenKind.Struct))
-                return ParseStructDeclaration(accessibility, line, attributes);
+                return Finish(ParseStructDeclaration(accessibility, line, attributes));
             if (Check(TokenKind.Interface))
-                return ParseInterfaceDeclaration(accessibility, line);
+                return Finish(ParseInterfaceDeclaration(accessibility, line));
 
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
             List<GenericParameter> genericParams = ParseGenericParameters();
 
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly, isConst, attributes, genericParams);
+                return Finish(ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly, isConst, attributes, genericParams));
 
-            return ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, line);
+            return Finish(ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, line));
+        }
+
+        private static AstNode ApplyImplementationKind(AstNode node, FunctionImplementationKind kind)
+        {
+            if (kind == FunctionImplementationKind.Ordinary) return node;
+            if (node is not MethodDeclaration method || method.StringLiteralPrefix != null)
+                throw new TypeCheckException("weak and replace apply only to ordinary functions and methods", node.Line);
+            method.ImplementationKind = kind;
+            return method;
         }
 
         private List<GenericParameter> ParseGenericParameters()
@@ -491,6 +508,8 @@ namespace gflat
             bool isVirtual = false;
             bool isOverride = false;
             bool isAbstract = false;
+            FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
+            AstNode Finish(AstNode node) => ApplyImplementationKind(node, implementation);
 
             while (true)
             {
@@ -503,13 +522,19 @@ namespace gflat
                 else if (Check(TokenKind.Virtual)) { isVirtual = true; Consume(); }
                 else if (Check(TokenKind.Override)) { isOverride = true; Consume(); }
                 else if (Check(TokenKind.Abstract)) { isAbstract = true; Consume(); }
+                else if (Check(TokenKind.Weak) || Check(TokenKind.Replace))
+                {
+                    if (implementation != FunctionImplementationKind.Ordinary)
+                        throw new TypeCheckException("Use exactly one of weak or replace", Current.Line);
+                    implementation = Consume().Kind == TokenKind.Weak ? FunctionImplementationKind.Weak : FunctionImplementationKind.Replace;
+                }
                 else break;
             }
 
             if (Check(TokenKind.Class))
-                return ParseClassDeclaration(accessibility, isAbstract, line, attributes);
+                return Finish(ParseClassDeclaration(accessibility, isAbstract, line, attributes));
             if (Check(TokenKind.Struct))
-                return ParseStructDeclaration(accessibility, line, attributes);
+                return Finish(ParseStructDeclaration(accessibility, line, attributes));
 
             if (Check(TokenKind.Tilde))
             {
@@ -518,13 +543,13 @@ namespace gflat
                 Expect(TokenKind.OpenParen);
                 Expect(TokenKind.CloseParen);
                 BlockStatement dtorBody = ParseBodyOrBlock();
-                return new DestructorDeclaration(dtorName, dtorBody, isVirtual, line);
+                return Finish(new DestructorDeclaration(dtorName, dtorBody, isVirtual, line));
             }
 
             if (Check(TokenKind.Alias))
-                return ParseAliasDeclaration(accessibility, line);
+                return Finish(ParseAliasDeclaration(accessibility, line));
             if (Check(TokenKind.Enum))
-                return ParseEnumDeclaration(accessibility, line);
+                return Finish(ParseEnumDeclaration(accessibility, line));
 
             TypeExpression type = ParseTypeExpression();
             string name;
@@ -533,7 +558,7 @@ namespace gflat
             {
                 // constructor - type was actually the name
                 name = ((NamedTypeExpression)type).Name;
-                return ParseConstructorDeclaration(name, accessibility, line, attributes, isConst);
+                return Finish(ParseConstructorDeclaration(name, accessibility, line, attributes, isConst));
             }
 
             if (Match(TokenKind.Operator))
@@ -548,9 +573,9 @@ namespace gflat
                         throw new TypeCheckException("String literal operators must be static, non-const, non-virtual methods", line);
                     MethodDeclaration method = ParseMethodDeclaration(type, "$literal$" + prefix.Text, accessibility, true, false, false, false, line, attributes: attributes);
                     method.StringLiteralPrefix = prefix.Text;
-                    return method;
+                    return Finish(method);
                 }
-                return ParseOperatorDeclaration(type, accessibility, true, line);
+                return Finish(ParseOperatorDeclaration(type, accessibility, true, line));
             }
 
             name = Expect(TokenKind.Identifier).Text;
@@ -558,9 +583,9 @@ namespace gflat
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
-                return ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst, attributes, genericParams);
+                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst, attributes, genericParams));
 
-            return ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line);
+            return Finish(ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line));
         }
 
         private Parameter ParseParameter()

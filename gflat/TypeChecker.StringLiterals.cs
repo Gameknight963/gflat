@@ -68,12 +68,6 @@ public partial class TypeChecker
         }
     }
 
-    private void CheckStringLiteralOperatorBody(MethodDeclaration method)
-    {
-        // Keep the owning type for private access and nested names, but do not declare this.
-        Visit(method);
-    }
-
     private void CheckStringLiteralCall(PrefixedStringLiteralExpression node)
     {
         var visible = new HashSet<NamespaceScope>();

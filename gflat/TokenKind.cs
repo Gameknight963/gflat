@@ -88,6 +88,8 @@ namespace gflat
         Readonly,
         Virtual,
         Override,
+        Weak,
+        Replace,
         Abstract,
         Null,
         Extern,

@@ -130,6 +130,8 @@ namespace gflat
             TokenKind.Operator => "operator",
             TokenKind.Virtual => "virtual",
             TokenKind.Override => "override",
+                TokenKind.Weak => "weak",
+                TokenKind.Replace => "replace",
             TokenKind.Abstract => "abstract",
             TokenKind.Base => "base",
             TokenKind.Sizeof => "sizeof",

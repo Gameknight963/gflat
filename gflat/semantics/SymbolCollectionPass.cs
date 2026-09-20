@@ -98,7 +98,7 @@ namespace gflat.semantics
                     if (m is ClassDeclaration nestedCls)
                     {
                         ClassDeclaration qualifiedCls = new ClassDeclaration(
-                            $"{str.Name}.{nestedCls.Name}",
+                            nestedCls.Name.StartsWith(str.Name + ".") ? nestedCls.Name : $"{str.Name}.{nestedCls.Name}",
                             nestedCls.BaseClass,
                             nestedCls.Interfaces,
                             nestedCls.Members,
@@ -114,7 +114,7 @@ namespace gflat.semantics
                     else if (m is StructDeclaration nestedStruct)
                     {
                         StructDeclaration qualifiedStruct = new StructDeclaration(
-                            $"{str.Name}.{nestedStruct.Name}",
+                            nestedStruct.Name.StartsWith(str.Name + ".") ? nestedStruct.Name : $"{str.Name}.{nestedStruct.Name}",
                             nestedStruct.Interfaces,
                             nestedStruct.Members,
                             nestedStruct.Accessibility,
@@ -169,6 +169,7 @@ namespace gflat.semantics
                     }
                 }
                 _symbols.Structs[str.Name] = info;
+                scope.Structs[str.Name] = info;
             }
             else if (member is ClassDeclaration cls)
             {
@@ -194,7 +195,7 @@ namespace gflat.semantics
                     if (m is ClassDeclaration nestedCls)
                     {
                         ClassDeclaration qualifiedCls = new ClassDeclaration(
-                            $"{cls.Name}.{nestedCls.Name}",
+                            nestedCls.Name.StartsWith(cls.Name + ".") ? nestedCls.Name : $"{cls.Name}.{nestedCls.Name}",
                             nestedCls.BaseClass,
                             nestedCls.Interfaces,
                             nestedCls.Members,
@@ -210,7 +211,7 @@ namespace gflat.semantics
                     else if (m is StructDeclaration nestedStruct)
                     {
                         StructDeclaration qualifiedStruct = new StructDeclaration(
-                            $"{cls.Name}.{nestedStruct.Name}",
+                            nestedStruct.Name.StartsWith(cls.Name + ".") ? nestedStruct.Name : $"{cls.Name}.{nestedStruct.Name}",
                             nestedStruct.Interfaces,
                             nestedStruct.Members,
                             nestedStruct.Accessibility,

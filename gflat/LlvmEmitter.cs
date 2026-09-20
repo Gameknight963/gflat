@@ -1196,7 +1196,7 @@ public class LlvmEmitter : IVisitor
                 {
                     if (!method.IsAbstract)
                     {
-                        if (method.StringLiteralPrefix != null) Visit(method);
+                        if (method.IsStatic) Visit(method);
                         else EmitClassMethod(node.Name, method);
                     }
                 }
@@ -1606,7 +1606,7 @@ public class LlvmEmitter : IVisitor
             {
                 if (member is MethodDeclaration method)
                 {
-                    if (method.StringLiteralPrefix != null) Visit(method);
+                    if (method.IsStatic) Visit(method);
                     else EmitStructMethod(node.Name, method);
                 }
                 else if (member is OperatorDeclaration op)
@@ -2003,7 +2003,7 @@ public class LlvmEmitter : IVisitor
         _locals.Clear();
         _tempCounter = 0;
 
-        bool isMain = (node.Name == "main");
+        bool isMain = node.Name == "main" && !_typeChecker.TryGetMethodOwner(node, out _, out _);
         bool isThrowing = _typeChecker.CanFunctionThrow(node);
         string baseReturnType = EmitType(node.ReturnType);
         bool isVoid = baseReturnType == "void";
@@ -2021,6 +2021,8 @@ public class LlvmEmitter : IVisitor
         string name;
         if (node.StringLiteralPrefix != null)
             name = _typeChecker.GetStringLiteralOperatorName(node);
+        else if (node.IsStatic && _typeChecker.TryGetMethodOwner(node, out string owner, out bool ownerIsClass))
+            name = GetMethodMangledName(owner, node, _typeChecker.GetFunctionNamespace(node), ownerIsClass);
         else if (isMain)
             name = "main";
         else if (node.Name == "__gflat_alloc" || node.Name == "__gflat_free" || node.Name == "__gflat_gc_alloc")
@@ -2915,6 +2917,11 @@ public class LlvmEmitter : IVisitor
                 }
                 if (fnTarget is MethodDeclaration method)
                 {
+                    if (method.IsStatic && _typeChecker.TryGetMethodOwner(method, out string owner, out bool isClass))
+                    {
+                        Push("@" + GetMethodMangledName(owner, method, _typeChecker.GetFunctionNamespace(method), isClass));
+                        return;
+                    }
                     if (method.Name == "main")
                     {
                         Push("@main");
@@ -3529,7 +3536,7 @@ public class LlvmEmitter : IVisitor
         string funcName;
         AstNode? target = _typeChecker.GetResolvedCall(node);
 
-        if (node.Callee is MemberAccessExpression memberAccess && target is MethodDeclaration structMethod)
+        if (node.Callee is MemberAccessExpression memberAccess && target is MethodDeclaration structMethod && !structMethod.IsStatic)
         {
             TypeExpression objType = _typeChecker.GetType(memberAccess.Object);
             string thisVal;
@@ -3592,7 +3599,7 @@ public class LlvmEmitter : IVisitor
             string ns = _typeChecker.GetFunctionNamespace(structMethod);
             funcName = GetMethodMangledName(typeName, structMethod, ns, isClass: _typeChecker.IsClass(rawName));
         }
-        else if (node.Callee is IdentifierExpression idMethod && target is MethodDeclaration methodMember && _currentClass != null && methodMember.StringLiteralPrefix == null && _currentClass.Methods.ContainsKey(idMethod.Name))
+        else if (node.Callee is IdentifierExpression idMethod && target is MethodDeclaration methodMember && _currentClass != null && !methodMember.IsStatic && _currentClass.Methods.ContainsKey(idMethod.Name))
         {
             string declaringClass = _currentClass.Methods[idMethod.Name].DeclaringClass;
             string loadedThis = NewTemp();
@@ -3684,6 +3691,10 @@ public class LlvmEmitter : IVisitor
                 if (method.StringLiteralPrefix != null)
                 {
                     funcName = _typeChecker.GetStringLiteralOperatorName(method);
+                }
+                else if (method.IsStatic && _typeChecker.TryGetMethodOwner(method, out string owner, out bool ownerIsClass))
+                {
+                    funcName = GetMethodMangledName(owner, method, _typeChecker.GetFunctionNamespace(method), ownerIsClass);
                 }
                 else if (method.Name == "main")
                 {

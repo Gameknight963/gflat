@@ -88,6 +88,7 @@ namespace gflat.symbols
             GlobalScope.Aliases.Clear();
             GlobalScope.Enums.Clear();
             GlobalScope.Classes.Clear();
+            GlobalScope.Structs.Clear();
             GlobalScope.Interfaces.Clear();
             GlobalScope.Fields.Clear();
             CurrentNamespace = GlobalScope;

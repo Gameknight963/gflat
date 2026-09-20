@@ -453,6 +453,7 @@ namespace gflat
             public Dictionary<string, EnumInfo> Enums = new();
             public Dictionary<string, InterfaceInfo> Interfaces = new();
             public Dictionary<string, ClassInfo> Classes = new();
+            public Dictionary<string, StructInfo> Structs = new();
             public Dictionary<string, FieldDeclaration> Fields = new();
             public Dictionary<string, NamespaceScope> Children = new();
             public NamespaceScope? Parent;
@@ -539,7 +540,7 @@ namespace gflat
                 depth--;
             }
 
-            if (_currentStruct != null && _currentFunction is not MethodDeclaration { StringLiteralPrefix: not null })
+            if (_currentStruct != null && _currentFunction is not MethodDeclaration { IsStatic: true })
             {
                 int idx = _currentStruct.FieldIndex(name);
                 if (idx >= 0)
@@ -560,7 +561,7 @@ namespace gflat
                 }
             }
 
-            if (_currentClass != null && _currentFunction is not MethodDeclaration { StringLiteralPrefix: not null })
+            if (_currentClass != null && _currentFunction is not MethodDeclaration { IsStatic: true })
             {
                 int idx = _currentClass.FieldIndex(name);
                 if (idx >= 0)
@@ -610,7 +611,7 @@ namespace gflat
                     return true;
             }
 
-            if (_currentStruct != null && _currentFunction is not MethodDeclaration { StringLiteralPrefix: not null })
+            if (_currentStruct != null && _currentFunction is not MethodDeclaration { IsStatic: true })
             {
                 int idx = _currentStruct.FieldIndex(name);
                 if (idx >= 0)
@@ -620,7 +621,7 @@ namespace gflat
                 }
             }
 
-            if (_currentClass != null && _currentFunction is not MethodDeclaration { StringLiteralPrefix: not null })
+            if (_currentClass != null && _currentFunction is not MethodDeclaration { IsStatic: true })
             {
                 int idx = _currentClass.FieldIndex(name);
                 if (idx >= 0)
@@ -1915,6 +1916,8 @@ namespace gflat
             // Pass 1: Symbol collection
             SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols);
             collectionPass.Execute(node);
+            ResolveFunctionReplacements(node);
+            collectionPass.Execute(node);
 
             // Pass 2: Hierarchy resolution
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
@@ -2021,7 +2024,7 @@ namespace gflat
                     if (m is ClassDeclaration nestedCls)
                     {
                         ClassDeclaration qualifiedCls = new ClassDeclaration(
-                            $"{str.Name}.{nestedCls.Name}",
+                            nestedCls.Name.StartsWith(str.Name + ".") ? nestedCls.Name : $"{str.Name}.{nestedCls.Name}",
                             nestedCls.BaseClass,
                             nestedCls.Interfaces,
                             nestedCls.Members,
@@ -2037,7 +2040,7 @@ namespace gflat
                     else if (m is StructDeclaration nestedStruct)
                     {
                         StructDeclaration qualifiedStruct = new StructDeclaration(
-                            $"{str.Name}.{nestedStruct.Name}",
+                            nestedStruct.Name.StartsWith(str.Name + ".") ? nestedStruct.Name : $"{str.Name}.{nestedStruct.Name}",
                             nestedStruct.Interfaces,
                             nestedStruct.Members,
                             nestedStruct.Accessibility,
@@ -2086,6 +2089,7 @@ namespace gflat
                     }
                 }
                 _structs[str.Name] = info;
+                scope.Structs[str.Name] = info;
             }
             else if (member is ClassDeclaration cls)
             {
@@ -2111,7 +2115,7 @@ namespace gflat
                     if (m is ClassDeclaration nestedCls)
                     {
                         ClassDeclaration qualifiedCls = new ClassDeclaration(
-                            $"{cls.Name}.{nestedCls.Name}",
+                            nestedCls.Name.StartsWith(cls.Name + ".") ? nestedCls.Name : $"{cls.Name}.{nestedCls.Name}",
                             nestedCls.BaseClass,
                             nestedCls.Interfaces,
                             nestedCls.Members,
@@ -2127,7 +2131,7 @@ namespace gflat
                     else if (m is StructDeclaration nestedStruct)
                     {
                         StructDeclaration qualifiedStruct = new StructDeclaration(
-                            $"{cls.Name}.{nestedStruct.Name}",
+                            nestedStruct.Name.StartsWith(cls.Name + ".") ? nestedStruct.Name : $"{cls.Name}.{nestedStruct.Name}",
                             nestedStruct.Interfaces,
                             nestedStruct.Members,
                             nestedStruct.Accessibility,
@@ -2341,9 +2345,9 @@ namespace gflat
                     }
                     else if (member is MethodDeclaration method)
                     {
-                        if (method.StringLiteralPrefix != null)
+                        if (method.IsStatic)
                         {
-                            CheckStringLiteralOperatorBody(method);
+                            Visit(method); // Static methods have no implicit this parameter.
                             continue;
                         }
                         method.ReturnType = ResolveAlias(method.ReturnType);
@@ -2516,9 +2520,9 @@ namespace gflat
                     }
                     else if (member is MethodDeclaration method)
                     {
-                        if (method.StringLiteralPrefix != null)
+                        if (method.IsStatic)
                         {
-                            CheckStringLiteralOperatorBody(method);
+                            Visit(method); // Static methods have no implicit this parameter.
                             continue;
                         }
                         method.ReturnType = ResolveAlias(method.ReturnType);
@@ -3638,6 +3642,16 @@ namespace gflat
                 }
                 else if (node.Operand is NamespaceAccessExpression nsAccess)
                 {
+                    MethodDeclaration? staticMethod = ResolveStaticMethod(nsAccess);
+                    if (staticMethod != null)
+                    {
+                        if (staticMethod.Throws)
+                            throw new TypeCheckException("Taking the address of a throwing static method is not supported", node.Line);
+                        var parameters = staticMethod.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
+                        RecordType(node, new FunctionPointerTypeExpression(ResolveAlias(staticMethod.ReturnType), parameters, false, false, node.Line));
+                        _functionAddressTargets[node] = staticMethod;
+                        return;
+                    }
                     NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
                     if (scope != null)
                     {
@@ -4324,9 +4338,10 @@ namespace gflat
             else if (node.Callee is IdentifierExpression ident)
             {
                 funcName = ident.Name;
-                if (_currentFunction is MethodDeclaration { StringLiteralPrefix: not null } &&
-                    ((_currentClass?.Methods.ContainsKey(funcName) ?? false) || (_currentStruct?.Methods.ContainsKey(funcName) ?? false)))
-                    throw new TypeCheckException("Instance methods require an explicit receiver in a string literal operator", node.Line);
+                if (_currentFunction is MethodDeclaration { IsStatic: true } &&
+                    ((_currentClass?.Methods.TryGetValue(funcName, out var instance) == true && !instance.Method.IsStatic) ||
+                     (_currentStruct?.Methods.TryGetValue(funcName, out var structInstance) == true && !structInstance.IsStatic)))
+                    throw new TypeCheckException("Instance methods require an explicit receiver in a static method", node.Line);
                 if (_currentClass != null && _currentClass.Methods.TryGetValue(funcName, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                 {
                     method = mEntry.Method;
@@ -4395,42 +4410,24 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
                 }
-                if (nsAccess.Left is IdentifierExpression typeId && !TryLookupVariable(typeId.Name, out _))
+                method = ResolveStaticMethod(nsAccess);
+                funcName = nsAccess.Member;
+                if (method == null)
                 {
-                    ClassInfo? cInfo = GetClass(typeId.Name);
-                    if (cInfo != null && cInfo.Methods.ContainsKey(nsAccess.Member))
-                    {
-                        throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
-                    }
-                    StructInfo? sInfo = GetStruct(typeId.Name);
-                    if (sInfo != null && sInfo.Methods.ContainsKey(nsAccess.Member))
-                    {
-                        throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
-                    }
+                    NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
+                    if (scope == null) throw new TypeCheckException($"Unknown namespace or type for '{nsAccess.Member}'", node.Line);
+                    scope.Functions.TryGetValue(nsAccess.Member, out method);
+                    if (method == null) scope.Externs.TryGetValue(nsAccess.Member, out ext);
                 }
 
-                nsAccess.Accept(this);
-                RecordType(node, GetType(nsAccess));
-                NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
-                if (scope != null)
-                {
-                    if (scope.Functions.TryGetValue(nsAccess.Member, out MethodDeclaration? m))
-                    {
-                        _resolvedCalls[node] = m;
-                        if (m.Throws)
-                        {
-                            CheckThrowingCall(node, $"{nsAccess.Left}.{nsAccess.Member}");
-                        }
-                    }
-                    else if (scope.Externs.TryGetValue(nsAccess.Member, out ExternDeclaration? e))
-                        _resolvedCalls[node] = e;
-                }
-                return;
             }
             else
             {
                 throw new NotImplementedException("Complex callee not supported");
             }
+
+            if (method?.IsStatic == true && node.Callee is MemberAccessExpression)
+                throw new TypeCheckException($"Static method '{method.Name}' must be accessed through its type with '::'", node.Line);
 
             if (ext != null)
             {

@@ -1911,6 +1911,7 @@ namespace gflat
 
         public void Visit(CompilationUnit node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
 
             // Pass 1: Symbol collection
@@ -2210,10 +2211,12 @@ namespace gflat
                 RegisterMemberInScope(member, scope, nsPath);
         }
 
-        public void Visit(UsingDirective node) { }
+        public void Visit(UsingDirective node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
 
         public void Visit(NamespaceDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             NamespaceScope previous = _currentNamespace;
             _currentNamespace = _namespaceScopes[node];
             string prevPath = _currentNamespacePath;
@@ -2228,6 +2231,7 @@ namespace gflat
 
         public void Visit(ClassDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.IsGeneric) return;
 
             ClassInfo? prevClass = _currentClass;
@@ -2402,6 +2406,7 @@ namespace gflat
 
         public void Visit(StructDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.IsGeneric) return;
 
             StructInfo? previousStruct = _currentStruct;
@@ -2583,6 +2588,7 @@ namespace gflat
 
         public void Visit(OperatorDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (_currentStruct == null)
             {
                 throw new TypeCheckException("Operator overloads must be declared inside a struct", node.Line);
@@ -2640,6 +2646,7 @@ namespace gflat
 
         public void Visit(InterfaceDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             foreach (AstNode member in node.Members)
             {
                 if (member is MethodDeclaration method)
@@ -2663,6 +2670,7 @@ namespace gflat
 
         public void Visit(FieldDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.Type, node.Line);
             TypeExpression fieldType = ResolveAlias(node.Type);
             if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(fieldType))
@@ -2706,6 +2714,7 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
             if (node.IsGeneric) return;
 
@@ -2742,6 +2751,7 @@ namespace gflat
 
         public void Visit(ConstructorDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (_currentStruct == null && _currentClass == null)
             {
                 throw new TypeCheckException("Constructor must be declared inside a struct or class", node.Line);
@@ -2842,6 +2852,7 @@ namespace gflat
 
         public void Visit(DestructorDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (_currentClass == null && _currentStruct == null)
             {
                 throw new TypeCheckException("Destructor must be declared inside a class or struct", node.Line);
@@ -2871,10 +2882,12 @@ namespace gflat
             }
         }
 
-        public void Visit(Parameter node) { }
+        public void Visit(Parameter node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
 
         public void Visit(BlockStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             PushScope();
             foreach (AstNode statement in node.Statements)
                 statement.Accept(this);
@@ -2883,6 +2896,7 @@ namespace gflat
 
         public void Visit(DeferStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Statement is ReturnStatement)
                 throw new TypeCheckException("Cannot return from within a defer statement", node.Line);
 
@@ -2900,6 +2914,7 @@ namespace gflat
 
         public void Visit(DeleteStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.Target.Accept(this);
             TypeExpression targetType = ResolveAlias(GetType(node.Target));
             if (IsError(targetType))
@@ -2944,6 +2959,7 @@ namespace gflat
 
         public void Visit(ReturnStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (_inDefer)
                 throw new TypeCheckException("Cannot return from within a defer statement", node.Line);
 
@@ -2997,6 +3013,7 @@ namespace gflat
 
         public void Visit(IfStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.Condition.Accept(this);
             TypeExpression condType = GetType(node.Condition);
             if (!TypesMatch(condType, Bool))
@@ -3007,6 +3024,7 @@ namespace gflat
 
         public void Visit(WhileStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.Condition.Accept(this);
             TypeExpression condType = GetType(node.Condition);
             if (!TypesMatch(condType, Bool))
@@ -3024,6 +3042,7 @@ namespace gflat
 
         public void Visit(ForStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             PushScope();
             node.Initializer?.Accept(this);
             if (node.Condition != null)
@@ -3048,6 +3067,7 @@ namespace gflat
 
         public void Visit(ForeachStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.ElementType = ResolveAlias(node.ElementType);
             ValidateTypeUsage(node.ElementType, node.Line);
             if (HasDestructor(node.ElementType))
@@ -3307,6 +3327,7 @@ namespace gflat
 
         public void Visit(VariableDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression varType = ResolveAlias(node.Type);
             if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(varType))
                 throw new TypeCheckException("Constant arrays cannot contain destructor-bearing elements", node.Line);
@@ -3365,11 +3386,13 @@ namespace gflat
 
         public void Visit(ExpressionStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.Expression.Accept(this);
         }
 
         public void Visit(BinaryExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.Left.Accept(this);
             node.Right.Accept(this);
             TypeExpression left = GetType(node.Left);
@@ -3614,6 +3637,7 @@ namespace gflat
 
         public void Visit(UnaryExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Operator == TokenKind.Ampersand)
             {
                 if (node.Operand is IdentifierExpression identOperand)
@@ -3758,6 +3782,7 @@ namespace gflat
 
         public void Visit(LiteralExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression type = node.Token.Kind switch
             {
                 TokenKind.IntLiteral => Int,
@@ -3782,6 +3807,7 @@ namespace gflat
 
         public void Visit(IdentifierExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression type = LookupVariable(node.Name, node.Line);
             RecordType(node, type);
             if (TryGetConstValueByName(node.Name, out ConstValue? cv) && cv != null)
@@ -4065,6 +4091,7 @@ namespace gflat
 
         public void Visit(AssignmentExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Target is NamespaceAccessExpression nsTarget)
             {
                 if (nsTarget.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
@@ -4137,6 +4164,7 @@ namespace gflat
 
         public void Visit(CallExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             foreach (AstNode arg in node.Arguments)
                 arg.Accept(this);
 
@@ -4571,6 +4599,7 @@ namespace gflat
 
         public void Visit(NamespaceAccessExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
             {
                 throw new TypeCheckException($"Instance member '{node.Member}' must be accessed with '.', not '::'", node.Line);
@@ -4663,6 +4692,7 @@ namespace gflat
 
         public void Visit(MemberAccessExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             EnumInfo? enumInfo = ResolveEnum(node.Object);
             if (enumInfo != null)
             {
@@ -4773,6 +4803,7 @@ namespace gflat
 
         public void Visit(NewExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression resolvedType = ResolveAlias(node.Type);
             node.Type = resolvedType;
             if (node.Kind == AllocationKind.Managed)
@@ -4986,6 +5017,7 @@ namespace gflat
 
         public void Visit(DefaultExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.TargetType != null)
             {
                 ValidateTypeUsage(node.TargetType, node.Line);
@@ -5004,6 +5036,7 @@ namespace gflat
 
         public void Visit(SizeofExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression targetType = ResolveAlias(node.TargetType);
             if (targetType is NamedTypeExpression named &&
                 !IsPrimitive(named.Name) &&
@@ -5025,6 +5058,7 @@ namespace gflat
 
         public void Visit(NameofExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             ValidateNameofTarget(node.Target);
             string name = ExtractName(node.Target);
             TypeExpression strType = new ArrayTypeExpression(Char, name.Length + 1, node.Line);
@@ -5032,9 +5066,12 @@ namespace gflat
             ConstValue.String constVal = new ConstValue.String(name);
             _constValues[node] = constVal;
         }
-        public void Visit(NamedTypeExpression node) { }
-        public void Visit(NestedTypeExpression node) { }
-        public void Visit(PointerTypeExpression node) { }
+        public void Visit(NamedTypeExpression node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
+        public void Visit(NestedTypeExpression node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
+        public void Visit(PointerTypeExpression node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
         public void Visit(ManagedTypeExpression node) => ValidateTypeUsage(node, node.Line);
 
         private void RequireManagedAllocator(int line)
@@ -5061,9 +5098,11 @@ namespace gflat
                 parameters.Count != 1 || ResolveAlias(parameters[0].Type) is not NamedTypeExpression { Name: "ulong" })
                 throw new TypeCheckException("__gflat_gc_alloc must have signature void*? __gflat_gc_alloc(ulong size) (void* is also accepted)", line);
         }
-        public void Visit(ArrayTypeExpression node) { }
+        public void Visit(ArrayTypeExpression node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
         public void Visit(ArrayLiteralExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Elements.Count == 0)
                 throw new TypeCheckException("Array literals must contain at least one element", node.Line);
             TypeExpression? elementType = null;
@@ -5083,6 +5122,7 @@ namespace gflat
         }
         public void Visit(IndexExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.Target.Accept(this);
             node.Index.Accept(this);
 
@@ -5107,6 +5147,7 @@ namespace gflat
         }
         public void Visit(BreakStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (_loopDepth <= 0)
             {
                 throw new TypeCheckException("Cannot break outside of a loop", node.Line);
@@ -5115,6 +5156,7 @@ namespace gflat
 
         public void Visit(ContinueStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (_loopDepth <= 0)
             {
                 throw new TypeCheckException("Cannot continue outside of a loop", node.Line);
@@ -5166,6 +5208,7 @@ namespace gflat
 
         public void Visit(AttributeNode node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (_evaluatedAttributes.ContainsKey(node)) return;
             ClassInfo? info = null;
             int separator = node.Name.LastIndexOf("::", StringComparison.Ordinal);
@@ -5200,6 +5243,7 @@ namespace gflat
         }
         public void Visit(ExternDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.ReturnType, node.Line);
             foreach (var parameter in node.Parameters) ValidateTypeUsage(parameter.Type, parameter.Line);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
@@ -5220,10 +5264,13 @@ namespace gflat
 
         public static string TypeNamePublic(TypeExpression type) => TypeName(type);
 
-        public void Visit(GlobalExpression node) { }
-        public void Visit(FunctionPointerTypeExpression node) { }
+        public void Visit(GlobalExpression node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
+        public void Visit(FunctionPointerTypeExpression node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
         public void Visit(AliasDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (_localAliases.Count > 0)
                 _localAliases.Peek()[node.Name] = node.TargetType;
             else if (_currentNamespace != null)
@@ -5483,6 +5530,7 @@ namespace gflat
 
         public void Visit(EnumDeclaration node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             NamespaceScope scope = _currentNamespace ?? _globalScope;
             if (!scope.Enums.ContainsKey(node.Name))
             {
@@ -5490,10 +5538,12 @@ namespace gflat
             }
         }
 
-        public void Visit(EnumMemberDeclaration node) { }
+        public void Visit(EnumMemberDeclaration node) {
+            using var sourceContext = SourceContext.Enter(node.Span); }
 
         public void Visit(CastExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.Operand.Accept(this);
             TypeExpression sourceType = ResolveAlias(GetType(node.Operand));
             TypeExpression targetType = ResolveAlias(node.TargetType);
@@ -5648,6 +5698,7 @@ namespace gflat
 
         public void Visit(LambdaExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             int prevLoopDepth = _loopDepth;
             AstNode? previousFunction = _currentFunction;
             _currentFunction = node;
@@ -5807,6 +5858,7 @@ namespace gflat
 
         public void Visit(PrefixedStringLiteralExpression node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Prefix == "c")
             {
                 if (node.Scope != null)
@@ -5825,6 +5877,7 @@ namespace gflat
 
         public void Visit(ThrowStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             node.Expression.Accept(this);
             TypeExpression exprType = ResolveAlias(_types[node.Expression]);
             if (exprType is ManagedTypeExpression)
@@ -5873,6 +5926,7 @@ namespace gflat
 
         public void Visit(TryStatement node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             _tryStack.Push(node);
             try
             {
@@ -5935,6 +5989,7 @@ namespace gflat
 
         public void Visit(CatchClause node)
         {
+            using var sourceContext = SourceContext.Enter(node.Span);
             if (node.ExceptionType != null && ResolveAlias(node.ExceptionType) is ManagedTypeExpression)
                 throw new TypeCheckException("Managed exception catches are not supported by the current exception ABI", node.Line);
             PushScope();

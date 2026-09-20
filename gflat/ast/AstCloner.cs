@@ -19,6 +19,14 @@ namespace gflat.ast
 
         public StructDeclaration CloneStruct(StructDeclaration s)
         {
+            using var context = SourceContext.Enter(s.Span);
+            var result = CloneStructLocated(s);
+            result.Span = s.Span;
+            return result;
+        }
+
+        private StructDeclaration CloneStructLocated(StructDeclaration s)
+        {
             string structName = s.Name;
             if (_newName != null && _oldName != null)
             {
@@ -40,6 +48,14 @@ namespace gflat.ast
 
         public ClassDeclaration CloneClass(ClassDeclaration c)
         {
+            using var context = SourceContext.Enter(c.Span);
+            var result = CloneClassLocated(c);
+            result.Span = c.Span;
+            return result;
+        }
+
+        private ClassDeclaration CloneClassLocated(ClassDeclaration c)
+        {
             string className = c.Name;
             if (_newName != null && _oldName != null)
             {
@@ -60,6 +76,14 @@ namespace gflat.ast
         }
 
         public MethodDeclaration CloneMethod(MethodDeclaration m)
+        {
+            using var context = SourceContext.Enter(m.Span);
+            var result = CloneMethodLocated(m);
+            result.Span = m.Span;
+            return result;
+        }
+
+        private MethodDeclaration CloneMethodLocated(MethodDeclaration m)
         {
             string methodName = m.Name;
             if (_newName != null && _oldName != null)
@@ -83,6 +107,14 @@ namespace gflat.ast
         }
 
         public TypeExpression CloneType(TypeExpression type)
+        {
+            using var context = SourceContext.Enter(type.Span);
+            var result = CloneTypeLocated(type);
+            result.Span = type.Span;
+            return result;
+        }
+
+        private TypeExpression CloneTypeLocated(TypeExpression type)
         {
             if (type is NestedTypeExpression nested)
             {
@@ -133,6 +165,14 @@ namespace gflat.ast
         private AttributeNode CloneAttribute(AttributeNode node) => new(node.Name, node.Arguments.Select(CloneNode).ToList(), node.Line);
 
         public AstNode CloneNode(AstNode node)
+        {
+            using var context = SourceContext.Enter(node.Span);
+            var result = CloneNodeLocated(node);
+            result.Span = node.Span;
+            return result;
+        }
+
+        private AstNode CloneNodeLocated(AstNode node)
         {
             if (node == null) return null!;
             AstNode clone = CloneNodeCore(node);

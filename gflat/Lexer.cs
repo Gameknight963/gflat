@@ -4,6 +4,14 @@ namespace gflat;
 
 public class Lexer
 {
+    public static List<Token> Tokenize(SourceFile source)
+    {
+        using var context = SourceContext.Enter(source.Span(0));
+        var tokens = Tokenize(source.Text);
+        foreach (var token in tokens) token.Source = source;
+        return tokens;
+    }
+
     public static List<Token> Tokenize(string code)
     {
         List<Token> tokens = new();

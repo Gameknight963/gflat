@@ -12,7 +12,8 @@ namespace gflat
         public int Start { get; }
         public int End { get; }
         public int Column { get; }
-        public SourceSpan Span => new(Start, Kind == TokenKind.EndOfFile ? 0 : End - Start + 1, Line, Column);
+        public SourceFile? Source { get; internal set; }
+        public SourceSpan Span => new(Start, Kind == TokenKind.EndOfFile ? 0 : End - Start + 1, Line, Column, Source);
 
         public Token(TokenKind kind, int line, int start, int end, string? text = null, int column = 0)
         {

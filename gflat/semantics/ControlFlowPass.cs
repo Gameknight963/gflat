@@ -52,6 +52,7 @@ namespace gflat.semantics
 
         private void CheckMember(AstNode member)
         {
+            using var context = SourceContext.Enter(member.Span);
             if (member is NamespaceDeclaration ns)
             {
                 CheckNamespace(ns);

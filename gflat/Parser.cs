@@ -18,6 +18,19 @@ namespace gflat
             _diagnostics = diagnostics ?? new DiagnosticBag();
         }
 
+        private T Located<T>(Func<T> parse) where T : AstNode?
+        {
+            Token start = Current;
+            using var context = SourceContext.Enter(start.Span);
+            T result = parse();
+            if (result != null && start.Source != null)
+            {
+                int end = _pos > 0 ? _tokens[_pos - 1].End + 1 : start.Start;
+                result.Span = start.Source.Span(start.Start, Math.Max(0, end - start.Start));
+            }
+            return result;
+        }
+
         private Token Current => _tokens[_pos];
         private Token Peek(int offset = 1) => _tokens[Math.Min(_pos + offset, _tokens.Count - 1)];
 
@@ -36,8 +49,8 @@ namespace gflat
             if (kind == TokenKind.Greater && Current.Kind == TokenKind.GreaterGreater)
             {
                 Token pair = Current;
-                _tokens[_pos] = new Token(TokenKind.Greater, pair.Line, pair.Start, pair.Start);
-                _tokens.Insert(_pos + 1, new Token(TokenKind.Greater, pair.Line, pair.Start + 1, pair.End));
+                _tokens[_pos] = new Token(TokenKind.Greater, pair.Line, pair.Start, pair.Start, column: pair.Column) { Source = pair.Source };
+                _tokens.Insert(_pos + 1, new Token(TokenKind.Greater, pair.Line, pair.Start + 1, pair.End, column: pair.Column + 1) { Source = pair.Source });
                 return Consume();
             }
             if (Current.Kind != kind)
@@ -76,13 +89,16 @@ namespace gflat
 
         public static CompilationUnit Parse(List<Token> tokens, DiagnosticBag? diagnostics = null)
         {
+            using var sourceContext = SourceContext.Enter(tokens[0].Span);
             Parser parser = new Parser(diagnostics);
             parser._tokens = tokens;
             parser._pos = 0;
             return parser.ParseCompilationUnit();
         }
 
-        private CompilationUnit ParseCompilationUnit()
+        private CompilationUnit ParseCompilationUnit() => Located(() => ParseCompilationUnitCoreLocated());
+
+        private CompilationUnit ParseCompilationUnitCoreLocated()
         {
             int line = Current.Line;
             List<UsingDirective> usings = new();
@@ -142,7 +158,9 @@ namespace gflat
             return new CompilationUnit(usings, namespaces, members, line);
         }
 
-        private UsingDirective ParseUsingDirective()
+        private UsingDirective ParseUsingDirective() => Located(() => ParseUsingDirectiveCoreLocated());
+
+        private UsingDirective ParseUsingDirectiveCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.Using);
@@ -153,7 +171,9 @@ namespace gflat
             return new UsingDirective(name, line);
         }
 
-        private NamespaceDeclaration ParseNamespaceDeclaration()
+        private NamespaceDeclaration ParseNamespaceDeclaration() => Located(() => ParseNamespaceDeclarationCoreLocated());
+
+        private NamespaceDeclaration ParseNamespaceDeclarationCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.Namespace);
@@ -175,7 +195,9 @@ namespace gflat
             return new NamespaceDeclaration(name, members, line);
         }
 
-        private AstNode ParseTopLevelMember()
+        private AstNode ParseTopLevelMember() => Located(() => ParseTopLevelMemberCoreLocated());
+
+        private AstNode ParseTopLevelMemberCoreLocated()
         {
             List<AttributeNode> attributes = ParseAttributes();
             AstNode node = ParseTopLevelMemberCore(attributes);
@@ -183,7 +205,9 @@ namespace gflat
             return node;
         }
 
-        private AstNode ParseTopLevelMemberCore(List<AttributeNode> attributes)
+        private AstNode ParseTopLevelMemberCore(List<AttributeNode> attributes) => Located(() => ParseTopLevelMemberCoreCoreLocated(attributes));
+
+        private AstNode ParseTopLevelMemberCoreCoreLocated(List<AttributeNode> attributes)
         {
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, Current.Line);
@@ -194,7 +218,9 @@ namespace gflat
             return ParseFreeFunctionOrField(attributes);
         }
 
-        private AstNode ParseFreeFunctionOrField(List<AttributeNode> attributes)
+        private AstNode ParseFreeFunctionOrField(List<AttributeNode> attributes) => Located(() => ParseFreeFunctionOrFieldCoreLocated(attributes));
+
+        private AstNode ParseFreeFunctionOrFieldCoreLocated(List<AttributeNode> attributes)
         {
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Public; // default for free functions
@@ -316,7 +342,9 @@ namespace gflat
             return false;
         }
 
-        private AstNode ParseTypeDeclaration(List<AttributeNode>? attributes = null)
+        private AstNode ParseTypeDeclaration(List<AttributeNode>? attributes = null) => Located(() => ParseTypeDeclarationCoreLocated(attributes));
+
+        private AstNode ParseTypeDeclarationCoreLocated(List<AttributeNode>? attributes = null)
         {
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Internal;
@@ -381,7 +409,9 @@ namespace gflat
             return tname;
         }
 
-        private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null)
+        private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null) => Located(() => ParseClassDeclarationCoreLocated(accessibility, isAbstract, line, attributes));
+
+        private ClassDeclaration ParseClassDeclarationCoreLocated(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null)
         {
             Expect(TokenKind.Class);
             string name = Expect(TokenKind.Identifier).Text;
@@ -408,7 +438,9 @@ namespace gflat
             return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line, attributes, genericParams);
         }
 
-        private StructDeclaration ParseStructDeclaration(TokenKind accessibility, int line, List<AttributeNode>? attributes = null)
+        private StructDeclaration ParseStructDeclaration(TokenKind accessibility, int line, List<AttributeNode>? attributes = null) => Located(() => ParseStructDeclarationCoreLocated(accessibility, line, attributes));
+
+        private StructDeclaration ParseStructDeclarationCoreLocated(TokenKind accessibility, int line, List<AttributeNode>? attributes = null)
         {
             Expect(TokenKind.Struct);
             string name = Expect(TokenKind.Identifier).Text;
@@ -431,7 +463,9 @@ namespace gflat
         }
 
 
-        private InterfaceDeclaration ParseInterfaceDeclaration(TokenKind accessibility, int line)
+        private InterfaceDeclaration ParseInterfaceDeclaration(TokenKind accessibility, int line) => Located(() => ParseInterfaceDeclarationCoreLocated(accessibility, line));
+
+        private InterfaceDeclaration ParseInterfaceDeclarationCoreLocated(TokenKind accessibility, int line)
         {
             Expect(TokenKind.Interface);
             string name = Expect(TokenKind.Identifier).Text;
@@ -443,7 +477,9 @@ namespace gflat
             return new InterfaceDeclaration(name, members, accessibility, line);
         }
 
-        private AstNode ParseMember()
+        private AstNode ParseMember() => Located(() => ParseMemberCoreLocated());
+
+        private AstNode ParseMemberCoreLocated()
         {
             int line = Current.Line;
             List<AttributeNode> attributes = ParseAttributes();
@@ -452,7 +488,9 @@ namespace gflat
             return node;
         }
 
-        private AstNode ParseMemberCore(List<AttributeNode> attributes, int line)
+        private AstNode ParseMemberCore(List<AttributeNode> attributes, int line) => Located(() => ParseMemberCoreCoreLocated(attributes, line));
+
+        private AstNode ParseMemberCoreCoreLocated(List<AttributeNode> attributes, int line)
         {
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, line);
@@ -543,7 +581,9 @@ namespace gflat
             return Finish(ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line));
         }
 
-        private Parameter ParseParameter()
+        private Parameter ParseParameter() => Located(() => ParseParameterCoreLocated());
+
+        private Parameter ParseParameterCoreLocated()
         {
             int line = Current.Line;
             bool isConst = Match(TokenKind.Const);
@@ -579,7 +619,9 @@ namespace gflat
             return attributes;
         }
 
-        private ExternDeclaration ParseExternDeclaration(List<AttributeNode> attributes, int line)
+        private ExternDeclaration ParseExternDeclaration(List<AttributeNode> attributes, int line) => Located(() => ParseExternDeclarationCoreLocated(attributes, line));
+
+        private ExternDeclaration ParseExternDeclarationCoreLocated(List<AttributeNode> attributes, int line)
         {
             Expect(TokenKind.Extern);
             TypeExpression returnType = ParseTypeExpression();
@@ -608,7 +650,9 @@ namespace gflat
             return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line);
         }
 
-        private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, bool isConst = false)
+        private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, bool isConst = false) => Located(() => ParseConstructorDeclarationCoreLocated(name, accessibility, line, attributes, isConst));
+
+        private ConstructorDeclaration ParseConstructorDeclarationCoreLocated(string name, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, bool isConst = false)
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
@@ -651,7 +695,9 @@ namespace gflat
             return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments, attributes, isConst);
         }
 
-        private BlockStatement ParseBodyOrBlock()
+        private BlockStatement ParseBodyOrBlock() => Located(() => ParseBodyOrBlockCoreLocated());
+
+        private BlockStatement ParseBodyOrBlockCoreLocated()
         {
             int line = Current.Line;
             if (Check(TokenKind.OpenBrace))
@@ -677,7 +723,9 @@ namespace gflat
             _ => false
         };
 
-        private OperatorDeclaration ParseOperatorDeclaration(TypeExpression returnType, TokenKind accessibility, bool isStatic, int line)
+        private OperatorDeclaration ParseOperatorDeclaration(TypeExpression returnType, TokenKind accessibility, bool isStatic, int line) => Located(() => ParseOperatorDeclarationCoreLocated(returnType, accessibility, isStatic, line));
+
+        private OperatorDeclaration ParseOperatorDeclarationCoreLocated(TypeExpression returnType, TokenKind accessibility, bool isStatic, int line)
         {
             Token opToken = Current;
             if (!IsOverloadableOperator(opToken.Kind))
@@ -700,7 +748,9 @@ namespace gflat
             return new OperatorDeclaration(opToken.Kind, opSymbol, returnType, parameters, body, accessibility, isStatic, line);
         }
 
-        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null)
+        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null) => Located(() => ParseMethodDeclarationCoreLocated(returnType, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters));
+
+        private MethodDeclaration ParseMethodDeclarationCoreLocated(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null)
         {
             if (isReadOnly)
             {
@@ -738,7 +788,9 @@ namespace gflat
             return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, throws: throws);
         }
 
-        private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line)
+        private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line) => Located(() => ParseFieldDeclarationCoreLocated(type, name, accessibility, isStatic, isConst, isReadonly, line));
+
+        private FieldDeclaration ParseFieldDeclarationCoreLocated(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line)
         {
             AstNode? initializer = null;
             if (Match(TokenKind.Equals))
@@ -758,7 +810,9 @@ namespace gflat
             return new FieldDeclaration(name, type, initializer, accessibility, isConst, isStatic, line, isReadonly);
         }
 
-        private TypeExpression ParseTypeExpression()
+        private TypeExpression ParseTypeExpression() => Located(() => ParseTypeExpressionCoreLocated());
+
+        private TypeExpression ParseTypeExpressionCoreLocated()
         {
             int line = Current.Line;
             bool isReadOnly = Match(TokenKind.Readonly);
@@ -908,7 +962,9 @@ namespace gflat
             return type;
         }
 
-        private BlockStatement ParseBlockStatement()
+        private BlockStatement ParseBlockStatement() => Located(() => ParseBlockStatementCoreLocated());
+
+        private BlockStatement ParseBlockStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.OpenBrace);
@@ -919,7 +975,9 @@ namespace gflat
             return new BlockStatement(statements, line);
         }
 
-        private AstNode ParseStatement()
+        private AstNode ParseStatement() => Located(() => ParseStatementCoreLocated());
+
+        private AstNode ParseStatementCoreLocated()
         {
             int line = Current.Line;
 
@@ -1010,7 +1068,9 @@ namespace gflat
             }
         }
 
-        private AliasDeclaration ParseAliasDeclaration(TokenKind accessibility, int line)
+        private AliasDeclaration ParseAliasDeclaration(TokenKind accessibility, int line) => Located(() => ParseAliasDeclarationCoreLocated(accessibility, line));
+
+        private AliasDeclaration ParseAliasDeclarationCoreLocated(TokenKind accessibility, int line)
         {
             Expect(TokenKind.Alias);
             string name = Expect(TokenKind.Identifier).Text;
@@ -1020,7 +1080,9 @@ namespace gflat
             return new AliasDeclaration(name, target, accessibility, line);
         }
 
-        private EnumDeclaration ParseEnumDeclaration(TokenKind accessibility, int line)
+        private EnumDeclaration ParseEnumDeclaration(TokenKind accessibility, int line) => Located(() => ParseEnumDeclarationCoreLocated(accessibility, line));
+
+        private EnumDeclaration ParseEnumDeclarationCoreLocated(TokenKind accessibility, int line)
         {
             Expect(TokenKind.Enum);
             string name = Expect(TokenKind.Identifier).Text;
@@ -1052,7 +1114,9 @@ namespace gflat
             return new EnumDeclaration(name, underlyingType, members, accessibility, line);
         }
 
-        private DeferStatement ParseDeferStatement()
+        private DeferStatement ParseDeferStatement() => Located(() => ParseDeferStatementCoreLocated());
+
+        private DeferStatement ParseDeferStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.Defer);
@@ -1060,7 +1124,9 @@ namespace gflat
             return new DeferStatement(stmt, line);
         }
 
-        private DeleteStatement ParseDeleteStatement()
+        private DeleteStatement ParseDeleteStatement() => Located(() => ParseDeleteStatementCoreLocated());
+
+        private DeleteStatement ParseDeleteStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.Delete);
@@ -1069,7 +1135,9 @@ namespace gflat
             return new DeleteStatement(expr, line);
         }
 
-        private ThrowStatement ParseThrowStatement()
+        private ThrowStatement ParseThrowStatement() => Located(() => ParseThrowStatementCoreLocated());
+
+        private ThrowStatement ParseThrowStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.Throw);
@@ -1078,7 +1146,9 @@ namespace gflat
             return new ThrowStatement(expr, line);
         }
 
-        private TryStatement ParseTryStatement()
+        private TryStatement ParseTryStatement() => Located(() => ParseTryStatementCoreLocated());
+
+        private TryStatement ParseTryStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.Try);
@@ -1113,7 +1183,9 @@ namespace gflat
             return new TryStatement(tryBlock, catchClauses, line);
         }
 
-        private ReturnStatement ParseReturnStatement()
+        private ReturnStatement ParseReturnStatement() => Located(() => ParseReturnStatementCoreLocated());
+
+        private ReturnStatement ParseReturnStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.Return);
@@ -1124,7 +1196,9 @@ namespace gflat
             return new ReturnStatement(value, line);
         }
 
-        private IfStatement ParseIfStatement()
+        private IfStatement ParseIfStatement() => Located(() => ParseIfStatementCoreLocated());
+
+        private IfStatement ParseIfStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.If);
@@ -1138,7 +1212,9 @@ namespace gflat
             return new IfStatement(condition, then, else_, line);
         }
 
-        private WhileStatement ParseWhileStatement()
+        private WhileStatement ParseWhileStatement() => Located(() => ParseWhileStatementCoreLocated());
+
+        private WhileStatement ParseWhileStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.While);
@@ -1149,7 +1225,9 @@ namespace gflat
             return new WhileStatement(condition, body, line);
         }
 
-        private ForStatement ParseForStatement()
+        private ForStatement ParseForStatement() => Located(() => ParseForStatementCoreLocated());
+
+        private ForStatement ParseForStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.For);
@@ -1185,7 +1263,9 @@ namespace gflat
             return new ForStatement(initializer, condition, increment, body, line);
         }
 
-        private ForeachStatement ParseForeachStatement()
+        private ForeachStatement ParseForeachStatement() => Located(() => ParseForeachStatementCoreLocated());
+
+        private ForeachStatement ParseForeachStatementCoreLocated()
         {
             int line = Current.Line;
             Expect(TokenKind.Foreach);
@@ -1203,7 +1283,9 @@ namespace gflat
             return new ForeachStatement(elementType, variableName, collection, body, line);
         }
 
-        private VariableDeclaration ParseVariableDeclaration(bool isConst = false)
+        private VariableDeclaration ParseVariableDeclaration(bool isConst = false) => Located(() => ParseVariableDeclarationCoreLocated(isConst));
+
+        private VariableDeclaration ParseVariableDeclarationCoreLocated(bool isConst = false)
         {
             int line = Current.Line;
             TypeExpression type = ParseTypeExpression();
@@ -1215,7 +1297,9 @@ namespace gflat
             return new VariableDeclaration(name, type, initializer, line, isConst);
         }
 
-        private AstNode ParseExpression(int minBindingPower = 0)
+        private AstNode ParseExpression(int minBindingPower = 0) => Located(() => ParseExpressionCoreLocated(minBindingPower));
+
+        private AstNode ParseExpressionCoreLocated(int minBindingPower = 0)
         {
             AstNode left = ParsePrefix();
 
@@ -1319,7 +1403,9 @@ namespace gflat
             return left;
         }
 
-        private AstNode ParsePrefix()
+        private AstNode ParsePrefix() => Located(() => ParsePrefixCoreLocated());
+
+        private AstNode ParsePrefixCoreLocated()
         {
             int line = Current.Line;
             if (Match(TokenKind.OpenBracket))
@@ -1567,7 +1653,9 @@ namespace gflat
             TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
             TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
 
-        private LambdaExpression? TryParseLambda(bool isStatic)
+        private LambdaExpression? TryParseLambda(bool isStatic) => Located(() => TryParseLambdaCoreLocated(isStatic));
+
+        private LambdaExpression? TryParseLambdaCoreLocated(bool isStatic)
         {
             int saved = _pos;
             var savedTokens = new List<Token>(_tokens);
@@ -1640,7 +1728,9 @@ namespace gflat
             _ => (0, 0)
         };
 
-        private InterpolatedStringExpression ParseInterpolatedString()
+        private InterpolatedStringExpression ParseInterpolatedString() => Located(() => ParseInterpolatedStringCoreLocated());
+
+        private InterpolatedStringExpression ParseInterpolatedStringCoreLocated()
         {
             int line = Current.Line;
             List<AstNode> parts = new();

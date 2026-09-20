@@ -8,14 +8,19 @@ namespace gflat.diagnostics
         public int Line { get; }
         public int Column { get; }
         public string? FilePath { get; }
+        public SourceSpan Span { get; }
+        public List<SourceSpan> RelatedLocations { get; } = new();
 
         public Diagnostic(DiagnosticDescriptor descriptor, int line, int column = 0, string? filePath = null, params object[] messageArgs)
         {
             Descriptor = descriptor;
             Severity = descriptor.DefaultSeverity;
-            Line = line;
-            Column = column;
-            FilePath = filePath;
+            var location = SourceContext.ForLine(line);
+            Span = column > 0 && location.Source != null
+                ? location.Source.Span(location.Start - location.Column + column) : location;
+            Line = Span.Line;
+            Column = column > 0 ? column : Span.Column;
+            FilePath = filePath ?? Span.Source?.Path;
             Message = messageArgs != null && messageArgs.Length > 0
                 ? string.Format(descriptor.MessageFormat, messageArgs)
                 : descriptor.MessageFormat;
@@ -25,9 +30,12 @@ namespace gflat.diagnostics
         {
             Descriptor = descriptor;
             Severity = overrideSeverity;
-            Line = line;
-            Column = column;
-            FilePath = filePath;
+            var location = SourceContext.ForLine(line);
+            Span = column > 0 && location.Source != null
+                ? location.Source.Span(location.Start - location.Column + column) : location;
+            Line = Span.Line;
+            Column = column > 0 ? column : Span.Column;
+            FilePath = filePath ?? Span.Source?.Path;
             Message = messageArgs != null && messageArgs.Length > 0
                 ? string.Format(descriptor.MessageFormat, messageArgs)
                 : descriptor.MessageFormat;

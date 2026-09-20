@@ -10,7 +10,8 @@ public static class Program
         var diagnostics = new DiagnosticBag();
         try
         {
-            string? sourcePath = null, outputPath = null, clang = null;
+            var sourcePaths = new List<string>();
+            string? outputPath = null, clang = null;
             bool run = false, irOnly = false;
             for (int i = 0; i < args.Length; i++)
             {
@@ -18,7 +19,7 @@ public static class Program
                 switch (args[i])
                 {
                     case "--help": case "-h":
-                        Console.WriteLine("gflat <source.gf> [-o output] [--emit-ir] [--run] [--clang path] [--target x86_64-pc-windows-msvc]");
+                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--clang path] [--target x86_64-pc-windows-msvc]");
                         return 0;
                     case "-o": outputPath = Value(); break;
                     case "--clang": clang = Value(); break;
@@ -26,15 +27,20 @@ public static class Program
                     case "--run": run = true; break;
                     case "--emit-ir": irOnly = true; break;
                     default:
-                        if (args[i].StartsWith('-') || sourcePath != null) throw new ArgumentException($"Unexpected argument '{args[i]}'");
-                        sourcePath = args[i]; break;
+                        if (args[i].StartsWith('-')) throw new ArgumentException($"Unexpected argument '{args[i]}'");
+                        sourcePaths.Add(Path.GetFullPath(args[i])); break;
                 }
             }
-            if (sourcePath == null) throw new ArgumentException("Specify a source file. Use --help for usage.");
+            if (sourcePaths.Count == 0) throw new ArgumentException("Specify a source file. Use --help for usage.");
             if (run && irOnly) throw new ArgumentException("--run cannot be combined with --emit-ir.");
-            outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePath, irOnly ? ".ll" : ".exe"));
-            if (string.Equals(outputPath, Path.GetFullPath(sourcePath), StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Output must differ from the source file.");
-            string ir = Compiler.Emit(File.ReadAllText(sourcePath), diagnostics);
+            outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : ".exe"));
+            var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)
+                throw new ArgumentException("A source file may only be supplied once.");
+            if (sourcePaths.Contains(outputPath, pathComparer))
+                throw new ArgumentException("Output must differ from every source file.");
+            var sources = sourcePaths.Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
+            string ir = Compiler.Emit(sources, diagnostics);
             if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
             if (irOnly) { File.WriteAllText(outputPath, ir); return 0; }
             string temporaryIr = Path.Combine(Path.GetTempPath(), "gflat_" + Guid.NewGuid().ToString("N") + ".ll");

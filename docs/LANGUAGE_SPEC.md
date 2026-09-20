@@ -295,10 +295,12 @@ The C# compiler API accepts immutable `SourceFile(path, text)` snapshots through
 ## Compiler use
 
 ```text
-dotnet run --project gflat -- source.gf -o program.exe
+dotnet run --project gflat -- main.gf helpers.gf -o program.exe
 dotnet run --project gflat -- source.gf --emit-ir -o program.ll
 dotnet run --project gflat -- source.gf --run
 ```
+
+The CLI accepts one or more explicit source paths. No project file is required, and `using` does not load files. Without `-o`, the output name is derived from the first input path. Duplicate input paths are rejected; output may not overwrite any input.
 
 Compilation does not execute output unless `--run` is requested. `--clang path` or `GFLAT_CLANG` selects Clang; otherwise PATH and Visual Studio installations are searched. `--target` accepts the supported triple only. Native compilation and execution have timeouts and concurrently captured output.
 

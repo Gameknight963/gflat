@@ -1,0 +1,4 @@
+<GflatProject Kind="SourceLibrary">
+  <!-- Portable facilities belong in core; libc wrappers belong in libc. -->
+  <Sources Include="**/*.gf" />
+</GflatProject>

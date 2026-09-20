@@ -16,4 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\gflat.Compiler\gflat.Compiler.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../gflat.Projects/gflat.Projects.csproj" />
+  </ItemGroup>
 </Project>

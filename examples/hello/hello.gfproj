@@ -1,0 +1,4 @@
+<GflatProject Kind="Executable">
+  <Sources Include="**/*.gf" />
+  <Reference Path="../../std/std.gfproj" />
+</GflatProject>

@@ -108,4 +108,24 @@ public class WeakReplacementTests
     [InlineData("class C { public static int f(int x) => x; } int main() => C::f(null);")]
     public void StaticMethodsEnforceReceiverAccessAndArguments(string source)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(source));
+
+    [Theory]
+    [InlineData("public replace void*? Allocate(ulong size) => null;")]
+    [InlineData("public replace void Free(void* p) {}")]
+    public void AllocatorMustBeReplacedAsPair(string source)
+        => Assert.Contains("together", Assert.Throws<TypeCheckException>(() => Compiler.Check("namespace Allocator { " + source + " } int main() => 0;")).Message);
+
+    [Fact]
+    public void DirectAllocatorCallsUseSelectedImplementation()
+    {
+        string source = "namespace Allocator { public replace void*? Allocate(ulong size) => null; public replace void Free(void* p) {} } int main() { if (Allocator::Allocate(1UL) == null) return 42; return 0; }";
+        Assert.Equal(42, CompilerTestHelper.Run(source).ExitCode);
+        string ir = CompilerTestHelper.EmitIr(source);
+        Assert.DoesNotContain("call i8* @malloc", ir);
+        Assert.DoesNotContain("call void @free", ir);
+    }
+
+    [Fact]
+    public void LegacyHookGivesMigrationDiagnostic()
+        => Assert.Contains("replace Allocator::Allocate", Assert.Throws<TypeCheckException>(() => Compiler.Check("void*? __gflat_alloc(ulong size) => null; int main() => 0;")).Message);
 }

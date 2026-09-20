@@ -36,15 +36,15 @@ int main()
 extern void* malloc(ulong size);
 extern void free(void* ptr);
 
-void* __gflat_alloc(ulong size)
+namespace Allocator { public replace void*? Allocate(ulong size)
 {
     byte* raw = (byte*)malloc(size + 8UL);
     ulong* header = (ulong*)raw;
     *header = 12345UL;
     return (void*)(raw + 8UL);
-}
+} }
 
-void __gflat_free(void* ptr)
+namespace Allocator { public replace void Free(void* ptr)
 {
     byte* raw = (byte*)ptr - 8UL;
     ulong* header = (ulong*)raw;
@@ -53,7 +53,7 @@ void __gflat_free(void* ptr)
         *header = 0UL;
     }
     free((void*)raw);
-}
+} }
 
 struct Point
 {
@@ -90,8 +90,8 @@ int main()
 extern void* malloc(ulong size);
 extern void free(void* ptr);
 
-void* __gflat_alloc(ulong size) => malloc(size);
-void __gflat_free(void* ptr) => free(ptr);
+namespace Allocator { public replace void*? Allocate(ulong size) => malloc(size); }
+namespace Allocator { public replace void Free(void* ptr) => free(ptr); }
 
 struct Data
 {
@@ -124,27 +124,27 @@ int main()
 ";
             (gflat.ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
             Assert.True(checker.Diagnostics.HasErrors);
-            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == "GF1010");
+            Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("obsolete"));
         }
 
         [Fact]
-        public void Directive_NoDefaultAllocator_WithCustom_Succeeds()
+        public void CustomAllocator_BlockBodies_Succeeds()
         {
             string code = @"
-#no_default_allocator
+
 
 extern void* malloc(ulong size);
 extern void free(void* ptr);
 
-void* __gflat_alloc(ulong size)
+namespace Allocator { public replace void*? Allocate(ulong size)
 {
     return malloc(size);
-}
+} }
 
-void __gflat_free(void* ptr)
+namespace Allocator { public replace void Free(void* ptr)
 {
     free(ptr);
-}
+} }
 
 struct Node
 {
@@ -171,16 +171,16 @@ int main()
 extern void* malloc(ulong size);
 extern void free(void* ptr);
 
-void* __gflat_alloc(ulong size)
+namespace Allocator { public replace void*? Allocate(ulong size)
 {
     ulong aligned = ((size + 15UL) / 16UL) * 16UL;
     return malloc(aligned);
-}
+} }
 
-void __gflat_free(void* ptr)
+namespace Allocator { public replace void Free(void* ptr)
 {
     free(ptr);
-}
+} }
 
 struct Vec
 {
@@ -208,14 +208,14 @@ int main()
         public void AllocatorSignature_InvalidReturnType_ReportsDiagnostic()
         {
             string code = @"
-int __gflat_alloc(ulong size)
+namespace Allocator { public replace int Allocate(ulong size)
 {
     return 0;
-}
+} }
 
-void __gflat_free(void* ptr)
+namespace Allocator { public replace void Free(void* ptr)
 {
-}
+} }
 
 int main()
 {
@@ -224,21 +224,21 @@ int main()
 ";
             (gflat.ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
             Assert.True(checker.Diagnostics.HasErrors);
-            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == "GF1011");
+            Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("weak"));
         }
 
         [Fact]
         public void AllocatorSignature_InvalidFreeParameter_ReportsDiagnostic()
         {
             string code = @"
-void* __gflat_alloc(ulong size)
+namespace Allocator { public replace void*? Allocate(ulong size)
 {
     return (void*)1;
-}
+} }
 
-void __gflat_free(int notAPointer)
+namespace Allocator { public replace void Free(int notAPointer)
 {
-}
+} }
 
 int main()
 {
@@ -247,7 +247,7 @@ int main()
 ";
             (gflat.ast.CompilationUnit _, TypeChecker checker) = CompilerTestHelper.CheckDiagnostics(code);
             Assert.True(checker.Diagnostics.HasErrors);
-            Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == "GF1011");
+            Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("weak"));
         }
     }
 }

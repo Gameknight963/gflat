@@ -47,14 +47,17 @@ class Exception
 extern void*? malloc(ulong size);
 extern void free(void* ptr);
 
-void*? __gflat_alloc(ulong size)
+namespace Allocator
+{
+public weak void*? Allocate(ulong size)
 {
     return malloc(size);
 }
 
-void __gflat_free(void* ptr)
+public weak void Free(void* ptr)
 {
     free(ptr);
+}
 }
 ";
     }

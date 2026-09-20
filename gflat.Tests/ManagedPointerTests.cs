@@ -56,7 +56,7 @@ public class ManagedPointerTests
     [Fact]
     public void ScopeExitDoesNotCallRawFree()
     {
-        var result = CompilerTestHelper.Run(Runtime + "void __gflat_free(void* p) { printf(\"F\"); } int main() { { int^ p = new^ int(7); } return 0; }");
+        var result = CompilerTestHelper.Run(Runtime + "namespace Allocator { public replace void*? Allocate(ulong size) => malloc(size); } namespace Allocator { public replace void Free(void* p) { printf(\"F\"); } } int main() { { int^ p = new^ int(7); } return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("A", result.StandardOutput);
     }
@@ -119,8 +119,8 @@ public class ManagedPointerTests
     public void ManagedAndRawAllocationHooksAreIndependent()
     {
         var result = CompilerTestHelper.Run(Runtime + """
-            void*? __gflat_alloc(ulong size) { printf("R"); return malloc(size); }
-            void __gflat_free(void* p) { printf("F"); }
+            namespace Allocator { public replace void*? Allocate(ulong size) { printf("R"); return malloc(size); } }
+            namespace Allocator { public replace void Free(void* p) { printf("F"); } }
             struct S { public int value; }
             int main() { S* raw = new* S(); S^ managed = new^ S(); delete raw; return 0; }
             """);

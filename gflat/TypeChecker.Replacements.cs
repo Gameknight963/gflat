@@ -77,8 +77,12 @@ public partial class TypeChecker
             {
                 if (node is MethodDeclaration method)
                 {
+                    if (owner == null && scope == _globalScope && method.Name is "__gflat_alloc" or "__gflat_free")
+                        throw new TypeCheckException("Legacy allocator hooks are no longer supported; replace Allocator::Allocate and Allocator::Free together", method.Line);
                     if (method.StringLiteralPrefix == null) entries.Add(new(method, members, scope, owner));
                 }
+                else if (node is ExternDeclaration ext && owner == null && scope == _globalScope && ext.Name is "__gflat_alloc" or "__gflat_free")
+                    throw new TypeCheckException("Legacy allocator hooks are no longer supported; replace Allocator::Allocate and Allocator::Free together", ext.Line);
                 else if (node is NamespaceDeclaration ns) Collect(ns.Members, _namespaceScopes[ns], null);
                 else if (node is ClassDeclaration cls) Collect(cls.Members, scope, cls);
                 else if (node is StructDeclaration str) Collect(str.Members, scope, str);
@@ -127,4 +131,13 @@ public partial class TypeChecker
         first.Parameters.Select(p => p.IsConst).SequenceEqual(second.Parameters.Select(p => p.IsConst)) &&
         first.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, first))
             .SequenceEqual(second.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, second)));
+
+    private void ValidateAllocatorPair()
+    {
+        NamespaceScope scope = _globalScope.Children["Allocator"];
+        MethodDeclaration allocate = scope.Functions["Allocate"];
+        MethodDeclaration free = scope.Functions["Free"];
+        if ((allocate.ImplementationKind == FunctionImplementationKind.Replace) != (free.ImplementationKind == FunctionImplementationKind.Replace))
+            throw new TypeCheckException("Replace Allocator::Allocate and Allocator::Free together", allocate.Line);
+    }
 }

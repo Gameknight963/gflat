@@ -137,8 +137,8 @@ public class StabilityTests
         extern int printf(readonly char* format, ...);
         extern void* malloc(ulong size);
         extern void free(void* ptr);
-        void* __gflat_alloc(ulong size) { return malloc(size); }
-        void __gflat_free(void* ptr) { printf("F"); free(ptr); }
+        namespace Allocator { public replace void*? Allocate(ulong size) { return malloc(size); } }
+        namespace Allocator { public replace void Free(void* ptr) { printf("F"); free(ptr); } }
         """;
 
     [Theory]

@@ -38,8 +38,8 @@ public class ArrayCleanupTests
         Check("""
             extern void* malloc(ulong size);
             extern void free(void* ptr);
-            void* __gflat_alloc(ulong size) { return malloc(size); }
-            void __gflat_free(void* ptr) { printf("F"); free(ptr); }
+            namespace Allocator { public replace void*? Allocate(ulong size) { return malloc(size); } }
+            namespace Allocator { public replace void Free(void* ptr) { printf("F"); free(ptr); } }
             int main() {
                 Item[2]* items = (Item[2]*)malloc((ulong)sizeof(Item[2]));
                 (*items)[0].id = 1;

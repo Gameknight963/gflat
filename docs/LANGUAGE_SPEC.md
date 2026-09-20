@@ -114,7 +114,16 @@ Free functions and concrete class/struct methods support these modifiers. Static
 
 `new Type(...)` constructs an inline value. `new* Type(...)` allocates storage, checks for allocation failure, initializes it, and invokes its constructor. Failed allocation traps before any store or constructor call. This fail-fast operation does not add a checked exception effect. `delete p` destroys and frees an allocated object; it does not make aliases safe or permit repeated deletion.
 
-Allocation hooks are already implemented: `__gflat_alloc(ulong size)` returns a pointer, potentially nullable, and `__gflat_free(void* ptr)` releases it. The default allocation declaration is `extern void*? malloc(ulong size)`. The same failure check applies to custom allocation hooks. Extern declarations with stronger contracts are the programmer's responsibility.
+The public allocation hooks are `Allocator::Allocate(ulong size) -> void*?` and `Allocator::Free(void* ptr) -> void`. Prelude provides public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
+
+```gflat
+namespace Allocator {
+    public replace void*? Allocate(ulong size) { return malloc(size); }
+    public replace void Free(void* ptr) { free(ptr); }
+}
+```
+
+`Allocate` must return suitably aligned storage or null. Compiler-generated allocations trap on null before initialization; direct calls expose the nullable result. The default extern declaration is `extern void*? malloc(ulong size)`. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
 
 Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers; allocation alone does not guarantee initialized elements. Initialize elements before reading them.
 
@@ -157,7 +166,7 @@ int main()
 }
 ```
 
-The hook may instead be defined in gflat. It must be non-generic and non-throwing, accept exactly one `ulong` byte count, and return writable `void*?` or `void*` storage with suitable alignment. An extern declaration requires the implementation to be linked by the native toolchain. No default GC or Boehm adapter is bundled. Merely declaring managed references does not require the allocation hook. The hook is independent of `__gflat_alloc` and `__gflat_free`.
+The hook may instead be defined in gflat. It must be non-generic and non-throwing, accept exactly one `ulong` byte count, and return writable `void*?` or `void*` storage with suitable alignment. An extern declaration requires the implementation to be linked by the native toolchain. No default GC or Boehm adapter is bundled. Merely declaring managed references does not require the allocation hook. The hook is independent of `Allocator::Allocate` and `Allocator::Free`.
 
 The initial runtime contract is a **conservative, nonmoving collector** that scans live stack/register roots and managed allocations, and recognizes interior pointers used during object access. The adapter supplies collector initialization and any thread registration required by its collector. The compiler does not emit root maps, relocation support, pinning, or finalization. References stored only in unscanned raw allocations or retained by foreign code need runtime-specific root registration; they are not automatically kept alive by the language.
 

@@ -90,14 +90,13 @@ namespace gflat
             List<AstNode> members = new();
 
             // Check for compiler directives (#no_default_allocator, etc.) before anything else
-            bool noDefaultAllocator = false;
             while (Check(TokenKind.Hash))
             {
                 Consume(); // #
                 if (Current.Kind == TokenKind.Identifier && Current.Text == "no_default_allocator")
                 {
                     Consume();
-                    noDefaultAllocator = true;
+                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, "#no_default_allocator is obsolete; use replace on Allocator::Allocate and Allocator::Free");
                 }
                 else
                 {
@@ -132,56 +131,12 @@ namespace gflat
                 CompilationUnit preludeUnit = preludeParser.ParseCompilationUnit();
                 members.InsertRange(0, preludeUnit.Members.Where(m => !(hasException && m is ClassDeclaration c && c.Name == "Exception")));
 
-                bool hasUserAllocator = members.OfType<MethodDeclaration>().Any(m => m.Name == "__gflat_alloc") ||
-                                        members.OfType<ExternDeclaration>().Any(e => e.Name == "__gflat_alloc");
-                bool hasUserFree = members.OfType<MethodDeclaration>().Any(m => m.Name == "__gflat_free") ||
-                                   members.OfType<ExternDeclaration>().Any(e => e.Name == "__gflat_free");
-
-                if (noDefaultAllocator)
-                {
-                    if (!hasUserAllocator)
-                    {
-                        _diagnostics.Report(DiagnosticRules.GF1010_MissingCustomAllocator, line, 0, null, "__gflat_alloc");
-                    }
-                    if (!hasUserFree)
-                    {
-                        _diagnostics.Report(DiagnosticRules.GF1010_MissingCustomAllocator, line, 0, null, "__gflat_free");
-                    }
-                }
-                else if (!hasUserAllocator || !hasUserFree)
-                {
-                    // Inject default allocator hooks from the allocator prelude
-                    List<Token> allocatorTokens = Lexer.Tokenize(Prelude.AllocatorSource);
-                    Parser allocatorParser = new Parser();
-                    allocatorParser._tokens = allocatorTokens;
-                    allocatorParser._pos = 0;
-                    allocatorParser._isPrelude = true;
-                    CompilationUnit allocatorUnit = allocatorParser.ParseCompilationUnit();
-                    foreach (AstNode member in allocatorUnit.Members)
-                    {
-                        bool isAllocFn = member is MethodDeclaration m2 && m2.Name == "__gflat_alloc";
-                        bool isFreeFn = member is MethodDeclaration m3 && m3.Name == "__gflat_free";
-                        bool isMallocExtern = member is ExternDeclaration e2 && e2.Name == "malloc";
-                        bool isFreeExtern = member is ExternDeclaration e3 && e3.Name == "free";
-
-                        if (isAllocFn && !hasUserAllocator)
-                        {
-                            members.Add(member);
-                        }
-                        else if (isFreeFn && !hasUserFree)
-                        {
-                            members.Add(member);
-                        }
-                        else if (isMallocExtern && !members.OfType<ExternDeclaration>().Any(e => e.Name == "malloc"))
-                        {
-                            members.Add(member);
-                        }
-                        else if (isFreeExtern && !members.OfType<ExternDeclaration>().Any(e => e.Name == "free"))
-                        {
-                            members.Add(member);
-                        }
-                    }
-                }
+                Parser allocatorParser = new Parser { _tokens = Lexer.Tokenize(Prelude.AllocatorSource), _isPrelude = true };
+                CompilationUnit allocatorUnit = allocatorParser.ParseCompilationUnit();
+                namespaces.InsertRange(0, allocatorUnit.Namespaces);
+                foreach (AstNode member in allocatorUnit.Members)
+                    if (member is not ExternDeclaration ext || !members.OfType<ExternDeclaration>().Any(e => e.Name == ext.Name))
+                        members.Add(member);
             }
 
             return new CompilationUnit(usings, namespaces, members, line);

@@ -11,6 +11,8 @@ namespace gflat.comptime
         bool TryGetConstValueByName(string name, out ConstValue? value);
         TypeExpression ResolveAlias(TypeExpression type);
         TypeExpression GetType(AstNode node);
+        CallExpression? GetPropertyRead(AstNode node);
+        TypeChecker.PropertyWrite? GetPropertyWrite(AstNode node);
         TypeChecker.StructInfo? GetStruct(string name);
         TypeChecker.ClassInfo? GetClass(string name);
         bool IsInterface(string name);

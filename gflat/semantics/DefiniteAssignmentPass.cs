@@ -725,6 +725,20 @@ namespace gflat.semantics
                 return;
             }
 
+            if (_typeChecker.GetPropertyWrite(expr) is TypeChecker.PropertyWrite write)
+            {
+                CheckExpression(write.Receiver);
+                if (write.Getter != null) CheckExpression(write.Getter);
+                CheckExpression(write.Value);
+                CheckExpression(write.Setter);
+                return;
+            }
+            if (_typeChecker.GetPropertyRead(expr) is CallExpression getter)
+            {
+                CheckExpression(getter);
+                return;
+            }
+
             if (expr is IdentifierExpression id)
             {
                 VariableAssignment? va = Lookup(id.Name);

@@ -555,7 +555,95 @@ namespace gflat
             if (Check(TokenKind.OpenParen))
                 return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst, attributes, genericParams));
 
+            if (Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater))
+            {
+                if (genericParams.Count != 0 || implementation != FunctionImplementationKind.Ordinary || isConst)
+                    throw new TypeCheckException("Properties cannot be generic, const, weak, or replace", line);
+                return ParseProperty(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, isReadonly, line);
+            }
+
             return Finish(ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line));
+        }
+
+        private PropertyDeclaration ParseProperty(TypeExpression type, string name, TokenKind accessibility,
+            bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, bool isReadonly, int line)
+        {
+            // Match method declarations: readonly before a pointer return type qualifies
+            // the pointee. Use `readonly get` to qualify the accessor's receiver.
+            if (isReadonly && type is PointerTypeExpression pointer && !pointer.IsReadOnly)
+            {
+                type = new PointerTypeExpression(pointer.Inner, pointer.IsNullable, pointer.Line, isReadOnly: true);
+                isReadonly = false;
+            }
+            else if (isReadonly && type is ManagedTypeExpression managed && !managed.IsReadOnly)
+            {
+                type = new ManagedTypeExpression(managed.Inner, managed.IsNullable, managed.Line, isReadOnly: true);
+                isReadonly = false;
+            }
+            MethodDeclaration Accessor(bool getter, TokenKind access, BlockStatement? body, int accessorLine) =>
+                new MethodDeclaration((getter ? "$get$" : "$set$") + name,
+                    getter ? type : new NamedTypeExpression("void", null, line),
+                    getter ? new() : new() { new Parameter("value", type, accessorLine) },
+                    body, access, isStatic, isVirtual, isOverride, isAbstract, accessorLine, isReadonly)
+                { PropertyName = name };
+
+            if (Check(TokenKind.EqualsGreater))
+                return new PropertyDeclaration(name, type, Accessor(true, accessibility, ParseBodyOrBlock(), line), null, null, line);
+
+            Expect(TokenKind.OpenBrace);
+            MethodDeclaration? get = null, set = null;
+            int restricted = 0;
+            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
+            {
+                Token start = Current;
+                TokenKind access = accessibility;
+                if (Check(TokenKind.Public) || Check(TokenKind.Private) || Check(TokenKind.Protected) || Check(TokenKind.Internal))
+                {
+                    access = Consume().Kind;
+                    restricted++;
+                    bool narrower = access == TokenKind.Private && accessibility != TokenKind.Private ||
+                        accessibility == TokenKind.Public && access is TokenKind.Protected or TokenKind.Internal;
+                    if (!narrower) throw new TypeCheckException("An accessor must be more restrictive than its property", start.Line);
+                }
+                bool accessorReadOnly = Match(TokenKind.Readonly);
+                Token keyword = Expect(TokenKind.Identifier);
+                bool getter = keyword.Text == "get";
+                if (!getter && keyword.Text != "set")
+                    throw new TypeCheckException("Expected get or set accessor", keyword.Line);
+                if (getter ? get != null : set != null)
+                    throw new TypeCheckException($"Duplicate {keyword.Text} accessor", keyword.Line);
+                bool throws = Match(TokenKind.Throws);
+                BlockStatement? body = null;
+                if (!Match(TokenKind.Semicolon))
+                {
+                    if (!getter && Match(TokenKind.EqualsGreater))
+                    {
+                        AstNode expression = ParseExpression();
+                        Expect(TokenKind.Semicolon);
+                        body = new BlockStatement(new() { new ExpressionStatement(expression, keyword.Line) }, keyword.Line);
+                    }
+                    else body = ParseBodyOrBlock();
+                }
+                MethodDeclaration method = Accessor(getter, access, body, keyword.Line);
+                if (accessorReadOnly)
+                    method = new MethodDeclaration(method.Name, method.ReturnType, method.Parameters, method.Body,
+                        method.Accessibility, method.IsStatic, method.IsVirtual, method.IsOverride, method.IsAbstract,
+                        method.Line, isReadOnly: true) { PropertyName = name };
+                method.Span = start.Span;
+                method.Throws = throws;
+                if (getter) get = method; else set = method;
+            }
+            Expect(TokenKind.CloseBrace);
+            if (get == null && set == null) throw new TypeCheckException("A property needs at least one accessor", line);
+            if (restricted > 1 || restricted != 0 && (get == null || set == null))
+                throw new TypeCheckException("Only one accessor of a get/set property may have restricted accessibility", line);
+            AstNode? initializer = null;
+            if (Match(TokenKind.Equals))
+            {
+                initializer = ParseExpression();
+                Expect(TokenKind.Semicolon);
+            }
+            return new PropertyDeclaration(name, type, get, set, initializer, line);
         }
 
         private Parameter ParseParameter() => Located(() => ParseParameterCoreLocated());

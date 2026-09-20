@@ -12,6 +12,8 @@ namespace gflat.ast
         public string Name { get; }
         public FunctionImplementationKind ImplementationKind { get; set; }
         public string? StringLiteralPrefix { get; set; }
+        public string? PropertyName { get; set; }
+        public bool IsPropertyInitializer { get; set; }
         public TypeExpression ReturnType { get; set; }
         public List<Parameter> Parameters { get; }
         public BlockStatement? Body { get; }

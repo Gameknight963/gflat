@@ -1950,6 +1950,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
+            ExpandProperties(node);
 
             CheckDeclarationConflicts(node);
             QualifyTypeDeclarations(node);
@@ -2311,6 +2312,8 @@ namespace gflat
                         }
 
                         MethodDeclaration classMethod = mEntry.Method;
+                        if (classMethod.PropertyName != null && classMethod.Accessibility != TokenKind.Public)
+                            throw new TypeCheckException($"Property accessor '{classMethod.PropertyName}' must be public to implement an interface", classMethod.Line);
                         if (ifaceMethod.Throws != classMethod.Throws)
                         {
                             throw new TypeCheckException(
@@ -2403,6 +2406,7 @@ namespace gflat
                     }
                     else if (member is MethodDeclaration method)
                     {
+                        ValidatePropertyAccessor(method);
                         if (method.IsStatic)
                         {
                             Visit(method); // Static methods have no implicit this parameter.
@@ -2485,6 +2489,8 @@ namespace gflat
                             throw new TypeCheckException($"Struct '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
                         }
 
+                        if (structMethod.PropertyName != null && structMethod.Accessibility != TokenKind.Public)
+                            throw new TypeCheckException($"Property accessor '{structMethod.PropertyName}' must be public to implement an interface", structMethod.Line);
                         if (ifaceMethod.Throws != structMethod.Throws)
                         {
                             throw new TypeCheckException(
@@ -2579,6 +2585,7 @@ namespace gflat
                     }
                     else if (member is MethodDeclaration method)
                     {
+                        ValidatePropertyAccessor(method);
                         if (method.IsStatic)
                         {
                             Visit(method); // Static methods have no implicit this parameter.
@@ -2702,8 +2709,10 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             foreach (AstNode member in node.Members)
             {
+                if (member is PropertyDeclaration) continue;
                 if (member is MethodDeclaration method)
                 {
+                    ValidatePropertyAccessor(method);
                     if (method.Body != null)
                     {
                         throw new TypeCheckException($"Interface method '{node.Name}.{method.Name}' cannot have a body", method.Line);
@@ -2768,6 +2777,7 @@ namespace gflat
         public void Visit(MethodDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            ValidatePropertyAccessor(node);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
             if (node.IsGeneric) return;
 
@@ -3691,6 +3701,10 @@ namespace gflat
         public void Visit(UnaryExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.Operator is TokenKind.PlusPlus or TokenKind.MinusMinus &&
+                CheckPropertyWrite(node, node.Operand, node.Operand, null, !node.IsPrefix, node.Operator)) return;
+            if (node.Operator == TokenKind.Ampersand && FindProperty(node.Operand) != null)
+                throw new TypeCheckException("Cannot take the address of a property", node.Line);
             if (node.Operator == TokenKind.Ampersand)
             {
                 if (node.Operand is IdentifierExpression identOperand)
@@ -3750,6 +3764,8 @@ namespace gflat
 
                 node.Operand.Accept(this);
                 TypeExpression operandType = GetType(node.Operand);
+                if (IsPropertyValueStorage(node.Operand))
+                    throw new TypeCheckException("Cannot take the address of a value returned by a property", node.Line);
                 if (IsManagedStorage(node.Operand))
                     throw new TypeCheckException("Cannot take a raw address into managed storage", node.Line);
                 if (IsError(operandType))
@@ -3861,6 +3877,7 @@ namespace gflat
         public void Visit(IdentifierExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (CheckPropertyRead(node)) return;
             TypeExpression type = LookupVariable(node.Name, node.Line);
             RecordType(node, type);
             if (TryGetConstValueByName(node.Name, out ConstValue? cv) && cv != null)
@@ -3976,6 +3993,8 @@ namespace gflat
 
         private void CheckAssignmentTarget(AstNode target, int line)
         {
+            if (IsPropertyValueStorage(target))
+                throw new TypeCheckException("Cannot modify a value returned by a property", line);
             if (target is UnaryExpression deref && deref.Operator == TokenKind.Star)
             {
                 TypeExpression opType = ResolveAlias(GetType(deref.Operand));
@@ -4145,6 +4164,7 @@ namespace gflat
         public void Visit(AssignmentExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (CheckPropertyWrite(node, node.Target, node.Value, GetBinaryOperatorForCompound(node.Operator), false)) return;
             if (node.Target is NamespaceAccessExpression nsTarget)
             {
                 if (nsTarget.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
@@ -4667,6 +4687,7 @@ namespace gflat
         public void Visit(NamespaceAccessExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (CheckPropertyRead(node)) return;
             if (node.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
             {
                 throw new TypeCheckException($"Instance member '{node.Member}' must be accessed with '.', not '::'", node.Line);
@@ -4760,6 +4781,7 @@ namespace gflat
         public void Visit(MemberAccessExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (CheckPropertyRead(node)) return;
             EnumInfo? enumInfo = ResolveEnum(node.Object);
             if (enumInfo != null)
             {

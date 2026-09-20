@@ -11,6 +11,7 @@ namespace gflat
         void Visit(StructDeclaration node);
         void Visit(InterfaceDeclaration node);
         void Visit(FieldDeclaration node);
+        void Visit(PropertyDeclaration node) { }
         void Visit(MethodDeclaration node);
         void Visit(Parameter node);
         void Visit(BlockStatement node);

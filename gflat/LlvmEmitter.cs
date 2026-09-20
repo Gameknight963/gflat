@@ -4,7 +4,7 @@ using gflat.comptime;
 
 namespace gflat;
 
-public class LlvmEmitter : IVisitor
+public partial class LlvmEmitter : IVisitor
 {
     private readonly TypeChecker _typeChecker;
 
@@ -587,6 +587,7 @@ public class LlvmEmitter : IVisitor
 
     private void EmitAddress(AstNode node)
     {
+        if (_typeChecker.GetPropertyRead(node) is CallExpression getter) { EmitAddress(getter); return; }
         if (node is LiteralExpression { Token.Kind: TokenKind.StringLiteral })
         {
             node.Accept(this);
@@ -2905,6 +2906,7 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(UnaryExpression node)
     {
+        if (EmitPropertyWrite(node)) return;
         if (node.Operator == TokenKind.Ampersand)
         {
             AstNode? fnTarget = _typeChecker.GetFunctionAddressTarget(node);
@@ -3154,6 +3156,7 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(IdentifierExpression node)
     {
+        if (EmitPropertyRead(node)) return;
         if (_typeChecker.TryGetConstValueByName(node.Name, out ConstValue? constVal) && constVal != null)
         {
             if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
@@ -3788,6 +3791,7 @@ public class LlvmEmitter : IVisitor
 
     private void EmitMember(MemberAccessExpression node)
     {
+        if (EmitPropertyRead(node)) return;
         if (_typeChecker.TryGetEnumMember(node, out long enumVal, out _))
         {
             Push(enumVal.ToString());
@@ -3842,6 +3846,7 @@ public class LlvmEmitter : IVisitor
 
     public void Visit(AssignmentExpression node)
     {
+        if (EmitPropertyWrite(node)) return;
         EmitValueForTarget(node.Value, _typeChecker.GetType(node.Target));
         string val = Pop();
 
@@ -4133,6 +4138,7 @@ public class LlvmEmitter : IVisitor
     }
     public void Visit(NamespaceAccessExpression node)
     {
+        if (EmitPropertyRead(node)) return;
         if (_typeChecker.TryGetEnumMember(node, out long val, out _))
         {
             Push(val.ToString());

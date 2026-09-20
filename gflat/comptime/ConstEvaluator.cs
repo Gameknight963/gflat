@@ -174,6 +174,8 @@ namespace gflat.comptime
 
         public void Visit(IdentifierExpression node)
         {
+            if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
+                throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
             if (!TryGetVariable(node.Name, out ConstValue? val) || val == null)
             {
@@ -402,6 +404,8 @@ namespace gflat.comptime
 
         public void Visit(UnaryExpression node)
         {
+            if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
+                throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
 
             if (node.Operator == TokenKind.PlusPlus)
@@ -521,6 +525,8 @@ namespace gflat.comptime
 
         public void Visit(MemberAccessExpression node)
         {
+            if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
+                throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
             node.Object.Accept(this);
             ConstValue obj = _currentValue!;
@@ -930,6 +936,8 @@ namespace gflat.comptime
 
         public void Visit(AssignmentExpression node)
         {
+            if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
+                throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
             node.Value.Accept(this);
             ConstValue val = _currentValue!;
@@ -1215,6 +1223,8 @@ namespace gflat.comptime
         public void Visit(NamespaceDeclaration node) { }
         public void Visit(NamespaceAccessExpression node)
         {
+            if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
+                throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
             if (_context.TryGetEnumMember(node, out long value, out TypeExpression? underlying))
                 _currentValue = Normalize(new ConstValue.Integer(value), underlying!, node.Line);

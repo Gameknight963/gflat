@@ -21,6 +21,7 @@ public partial class TypeChecker
                     ClassDeclaration c => c.Name, StructDeclaration s => s.Name,
                     InterfaceDeclaration i => i.Name, EnumDeclaration e => e.Name,
                     AliasDeclaration a => a.Name, FieldDeclaration f => f.Name,
+                    PropertyDeclaration p => p.Name,
                     ExternDeclaration e => e.Name, MethodDeclaration m => m.Name, _ => null
                 };
                 if (name == null) continue;

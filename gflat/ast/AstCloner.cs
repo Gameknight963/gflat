@@ -103,7 +103,7 @@ namespace gflat.ast
             List<GenericParameter>? genericParams = m.GenericParameters != null && m.Name != _oldName
                 ? m.GenericParameters.ToList()
                 : null;
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, throws: m.Throws) { StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind };
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, throws: m.Throws) { StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, IsPropertyInitializer = m.IsPropertyInitializer };
         }
 
         public TypeExpression CloneType(TypeExpression type)
@@ -228,6 +228,12 @@ namespace gflat.ast
                 BlockStatement body = (BlockStatement)CloneNode(op.Body);
                 return new OperatorDeclaration(op.OperatorKind, op.OperatorSymbol, retType, parameters, body, op.Accessibility, op.IsStatic, op.Line);
             }
+            if (node is PropertyDeclaration property)
+                return new PropertyDeclaration(property.Name, CloneType(property.Type),
+                    property.Getter != null ? CloneMethod(property.Getter) : null,
+                    property.Setter != null ? CloneMethod(property.Setter) : null,
+                    property.Initializer != null ? CloneNode(property.Initializer) : null, property.Line)
+                { Expanded = property.Expanded, Attributes = property.Attributes.Select(CloneAttribute).ToList() };
             if (node is MethodDeclaration m)
             {
                 return CloneMethod(m);

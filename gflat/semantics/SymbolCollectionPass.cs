@@ -65,6 +65,7 @@ namespace gflat.semantics
                 int slotIndex = 0;
                 foreach (AstNode m in iface.Members)
                 {
+                    if (m is PropertyDeclaration) continue;
                     if (m is MethodDeclaration sm)
                     {
                         if (info.MethodsByName.ContainsKey(sm.Name))

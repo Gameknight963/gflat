@@ -1,5 +1,6 @@
 <Solution>
   <Configurations>
+    <ProjectType Extension="gfproj" TypeId="6423f711-946a-41ab-b95b-0f9b5911f803" />
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
@@ -9,4 +10,13 @@
   <Project Path="gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj" />
   <Project Path="gflat.LanguageServer/gflat.LanguageServer.csproj" />
   <Project Path="gflat.Tests/gflat.Tests.csproj" />
+  <Project Path="gflat.Projects/gflat.Projects.csproj" />
+  <Folder Name="/gflat sources/">
+    <Project Path="std/std.gfproj">
+      <Build Project="false" />
+    </Project>
+    <Project Path="examples/hello/hello.gfproj">
+      <Build Project="false" />
+    </Project>
+  </Folder>
 </Solution>

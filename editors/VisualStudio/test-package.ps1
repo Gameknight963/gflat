@@ -17,11 +17,21 @@ try {
     Copy-Item -LiteralPath (Join-Path $extracted 'gflat-language-configuration.json') -Destination (Join-Path $extracted 'Grammars')
     $env:GFLAT_EDITOR_ASSETS = Join-Path $extracted 'Grammars'
     [xml]$manifest = Get-Content -LiteralPath (Join-Path $extracted 'extension.vsixmanifest')
+    [xml]$sourceManifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'source.extension.vsixmanifest')
+    if ($manifest.PackageManifest.Metadata.Identity.Version -ne $sourceManifest.PackageManifest.Metadata.Identity.Version) {
+        throw 'Packaged manifest is stale. Rebuild the VSIX.'
+    }
     if (-not ($manifest.PackageManifest.Assets.Asset | Where-Object { $_.Type -eq 'Microsoft.VisualStudio.VsPackage' -and $_.Path -eq 'gflat.pkgdef' })) {
         throw 'VSIX does not register the editor package definition'
     }
     dotnet test (Join-Path $repoRoot 'gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
+    $compiler = Join-Path $extracted 'Compiler/gflat.exe'
+    if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
+    & $compiler check (Join-Path $repoRoot 'examples/hello/hello.gfproj')
+    if ($LASTEXITCODE -ne 0) { throw 'Bundled compiler project check failed' }
+    & $compiler build (Join-Path $repoRoot 'examples/hello/hello.gfproj') --emit-ir -o (Join-Path $extracted 'hello.ll')
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $extracted 'hello.ll'))) { throw 'Bundled compiler project build failed' }
 }
 finally {
     $env:GFLAT_LSP_EXECUTABLE = $oldExecutable

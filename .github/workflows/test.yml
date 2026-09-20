@@ -32,6 +32,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - run: dotnet test gflat.LanguageServer.Tests --blame-hang-timeout 2m
+      - run: dotnet run --project gflat -- check examples/hello/hello.gfproj
   visual-studio-extension:
     runs-on: windows-latest
     timeout-minutes: 15

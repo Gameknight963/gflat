@@ -22,18 +22,28 @@
     <AssemblySearchPaths>{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName}</AssemblySearchPaths>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Shell.15.0" Version="17.14.40264" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.LanguageServer.Client" Version="17.14.60" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.CoreUtility" Version="17.14.249" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.Text.Logic" Version="17.14.249" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.VisualStudio.Telemetry" Version="17.14.2" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.VisualStudio.Utilities" Version="17.13.40008" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Telemetry" Version="17.14.18" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Utilities" Version="17.14.40264" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2142" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.ComponentModel.Composition" />
     <Compile Include="GflatLanguageClient.cs" />
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="../../gflat.Projects/ProjectModel.cs"><Link>ProjectModel.cs</Link></Compile>
+    <Compile Include="GflatProjectPackage.cs" />
+    <Compile Include="GflatProject.cs" />
+    <Compile Include="GflatProjectConfiguration.cs" />
+    <Compile Include="GflatAutomationProject.cs" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
@@ -50,6 +60,10 @@
     <Content Include="gflat.pkgdef">
       <IncludeInVSIX>true</IncludeInVSIX>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="obj/compiler/**/*">
+      <Link>Compiler/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="obj/server/**/*">
       <Link>Server/%(RecursiveDir)%(Filename)%(Extension)</Link>

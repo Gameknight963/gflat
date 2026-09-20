@@ -2,13 +2,15 @@
 
 The Visual Studio extension provides live compiler diagnostics, syntax highlighting,
 bracket matching, automatic bracket/quote closing, selection surrounding, block
-indentation, and line/block comment commands. Hover, navigation, completion, build
-commands, and debugging are not implemented yet.
+indentation, and line/block comment commands. Hover, navigation, completion, and debugging are not implemented yet.
+Version 0.3.0 adds the [XML project prototype](PROJECTS.md), including project
+trees and Build/Clean commands inside an existing solution.
 
 ## Project layout
 
 | Project | Responsibility |
 | --- | --- |
+| `gflat.Projects` | Portable XML project loading, source patterns, and references |
 | `gflat.Compiler` | Shared parser, type checker, diagnostics, and LLVM IR emitter |
 | `gflat` | Command-line driver and native toolchain invocation |
 | `gflat.LanguageServer` | LSP process; document snapshots, workspace sources, and analysis scheduling |
@@ -40,7 +42,7 @@ editors/VisualStudio/bin/Release/net472/gflat.VisualStudio.vsix
 
 Open that VSIX to install it, follow the installer's restart instructions, and open
 a `.gf` file. Errors and warnings appear through Visual Studio's LSP support. The
-package does not install the CLI, Clang, or a gflat project system. Building the
+package bundles a compiler for project builds; Clang must be installed separately. Building the
 package does not install it into your IDE automatically.
 
 The installed server is the packaged copy; it does not automatically track this

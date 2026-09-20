@@ -84,6 +84,8 @@ namespace gflat.symbols
             NamespaceScopes.Clear();
             GlobalScope.Children.Clear();
             GlobalScope.Functions.Clear();
+            GlobalScope.GenericFunctions.Clear();
+            GlobalScope.TypeNames.Clear();
             GlobalScope.Externs.Clear();
             GlobalScope.Aliases.Clear();
             GlobalScope.Enums.Clear();

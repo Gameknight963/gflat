@@ -36,11 +36,14 @@ namespace gflat.semantics
 
         private void RegisterMemberInScope(AstNode member, TypeChecker.NamespaceScope scope, string nsPath)
         {
+            using var context = SourceContext.Enter(member.Span);
             if (member is MethodDeclaration method)
             {
+                _symbols.FunctionNamespaces[method] = nsPath;
                 if (method.IsGeneric)
                 {
-                    _symbols.GenericMethods[method.Name] = method;
+                    scope.GenericFunctions[method.Name] = method;
+                    _symbols.GenericMethods[nsPath.Length > 0 ? nsPath + "$" + method.Name : method.Name] = method;
                     return;
                 }
                 scope.Functions[method.Name] = method;
@@ -52,6 +55,7 @@ namespace gflat.semantics
             }
             else if (member is InterfaceDeclaration iface)
             {
+                scope.TypeNames[iface.SourceName] = iface.Name;
                 TypeChecker.InterfaceInfo info = new TypeChecker.InterfaceInfo
                 {
                     Name = iface.Name,
@@ -77,10 +81,11 @@ namespace gflat.semantics
                     }
                 }
                 _symbols.Interfaces[iface.Name] = info;
-                scope.Interfaces[iface.Name] = info;
+                scope.Interfaces[iface.SourceName] = info;
             }
             else if (member is StructDeclaration str)
             {
+                scope.TypeNames[str.SourceName] = str.Name;
                 if (str.IsGeneric)
                 {
                     _symbols.GenericStructs[str.Name] = str;
@@ -108,6 +113,7 @@ namespace gflat.semantics
                             nestedCls.Attributes,
                             nestedCls.GenericParameters
                         );
+                        qualifiedCls.Span = nestedCls.Span;
                         str.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath);
                     }
@@ -122,6 +128,7 @@ namespace gflat.semantics
                             nestedStruct.Attributes,
                             nestedStruct.GenericParameters
                         );
+                        qualifiedStruct.Span = nestedStruct.Span;
                         str.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath);
                     }
@@ -151,7 +158,7 @@ namespace gflat.semantics
                         {
                             throw new TypeCheckException($"Struct '{str.Name}' destructor cannot be virtual", dtor.Line);
                         }
-                        string shortStrName = str.Name.Contains('.') ? str.Name.Substring(str.Name.LastIndexOf('.') + 1) : str.Name;
+                        string shortStrName = str.Name.Split('.').Last().Split('$').Last();
                         if (dtor.Name != str.Name && dtor.Name != shortStrName)
                         {
                             throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match struct name '{str.Name}'", dtor.Line);
@@ -169,10 +176,11 @@ namespace gflat.semantics
                     }
                 }
                 _symbols.Structs[str.Name] = info;
-                scope.Structs[str.Name] = info;
+                scope.Structs[str.SourceName] = info;
             }
             else if (member is ClassDeclaration cls)
             {
+                scope.TypeNames[cls.SourceName] = cls.Name;
                 if (cls.IsGeneric)
                 {
                     _symbols.GenericClasses[cls.Name] = cls;
@@ -186,7 +194,8 @@ namespace gflat.semantics
                     IsAbstract = cls.IsAbstract,
                     Accessibility = cls.Accessibility,
                     Interfaces = new List<string>(cls.Interfaces),
-                    Line = cls.Line
+                    Line = cls.Line,
+                    Span = cls.Span
                 };
 
                 for (int i = 0; i < cls.Members.Count; i++)
@@ -205,6 +214,7 @@ namespace gflat.semantics
                             nestedCls.Attributes,
                             nestedCls.GenericParameters
                         );
+                        qualifiedCls.Span = nestedCls.Span;
                         cls.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath);
                     }
@@ -219,6 +229,7 @@ namespace gflat.semantics
                             nestedStruct.Attributes,
                             nestedStruct.GenericParameters
                         );
+                        qualifiedStruct.Span = nestedStruct.Span;
                         cls.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath);
                     }
@@ -265,7 +276,7 @@ namespace gflat.semantics
                 }
 
                 _symbols.Classes[cls.Name] = info;
-                scope.Classes[cls.Name] = info;
+                scope.Classes[cls.SourceName] = info;
             }
             else if (member is NamespaceDeclaration nested)
             {
@@ -352,11 +363,12 @@ namespace gflat.semantics
                 nextValue++;
             }
 
-            scope.Enums[enumDecl.Name] = info;
+            scope.Enums[enumDecl.SourceName] = info;
+            scope.TypeNames[enumDecl.SourceName] = enumDecl.Name;
             _symbols.Enums[enumDecl.Name] = info;
             if (nsPath.Length > 0)
             {
-                _symbols.Enums[$"{nsPath}::{enumDecl.Name}"] = info;
+                _symbols.Enums[$"{nsPath}::{enumDecl.SourceName}"] = info;
             }
         }
 

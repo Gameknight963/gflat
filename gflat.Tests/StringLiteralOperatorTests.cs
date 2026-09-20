@@ -36,7 +36,7 @@ public class StringLiteralOperatorTests
 
     [Fact]
     public void NamespaceQualificationDoesNotNeedUsing()
-        => Assert.Equal(4, CompilerTestHelper.Run(View + " int main() { View v = Text::s\"text\"; return (int)v.length; }").ExitCode);
+        => Assert.Equal(4, CompilerTestHelper.Run(View + " int main() { Text::View v = Text::s\"text\"; return (int)v.length; }").ExitCode);
 
     [Fact]
     public void PrefixIsVisibleInsideItsNamespace()
@@ -48,7 +48,7 @@ public class StringLiteralOperatorTests
 
     [Fact]
     public void UnknownUnimportedPrefixIsRejected()
-        => Assert.Contains("Unknown string prefix", Assert.Throws<TypeCheckException>(() => Compiler.Check(View + " int main() { View v = s\"text\"; return 0; }")).Message);
+        => Assert.Contains("Unknown string prefix", Assert.Throws<TypeCheckException>(() => Compiler.Check(View + " int main() { Text::View v = s\"text\"; return 0; }")).Message);
 
     [Fact]
     public void ConflictingImportsRequireQualification()

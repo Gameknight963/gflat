@@ -7,28 +7,22 @@ namespace gflat;
 public static class Compiler
 {
     public static (CompilationUnit Ast, TypeChecker Checker) Check(string source, DiagnosticBag? diagnostics = null)
-    {
-        return Check(new SourceFile("<input>", source), diagnostics);
-    }
+        => Check(new SourceFile("<input>", source), diagnostics);
 
     public static (CompilationUnit Ast, TypeChecker Checker) Check(SourceFile source, DiagnosticBag? diagnostics = null)
+        => Check(new[] { source }, diagnostics);
+
+    public static (CompilationUnit Ast, TypeChecker Checker) Check(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null)
     {
         diagnostics ??= new();
-        using var context = SourceContext.Enter(source.Span(0));
         try
         {
-        CompilationUnit ast = Parser.Parse(Lexer.Tokenize(source), diagnostics);
-        void Validate()
-        {
-            if (!diagnostics.HasErrors) return;
-            Diagnostic error = diagnostics.Items.First(d => d.Severity == DiagnosticSeverity.Error);
-            throw new TypeCheckException(error.Message, error.Line);
-        }
-        Validate();
-        var checker = new TypeChecker(diagnostics);
-        ast.Accept(checker);
-        Validate();
-        return (ast, checker);
+            var compilation = new Compilation(sources, diagnostics);
+            Validate();
+            var checker = new TypeChecker(diagnostics);
+            compilation.Unit.Accept(checker);
+            Validate();
+            return (compilation.Unit, checker);
         }
         catch (TypeCheckException ex)
         {
@@ -39,11 +33,20 @@ public static class Compiler
             }
             throw;
         }
+        void Validate()
+        {
+            if (!diagnostics.HasErrors) return;
+            Diagnostic error = diagnostics.Items.First(d => d.Severity == DiagnosticSeverity.Error);
+            throw new TypeCheckException(error.Message, error.Span);
+        }
     }
 
     public static string Emit(string source, DiagnosticBag? diagnostics = null)
+        => Emit(new[] { new SourceFile("<input>", source) }, diagnostics);
+
+    public static string Emit(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null)
     {
-        var (ast, checker) = Check(source, diagnostics);
+        var (ast, checker) = Check(sources, diagnostics);
         var emitter = new LlvmEmitter(checker);
         ast.Accept(emitter);
         return emitter.GetOutput();

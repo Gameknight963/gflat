@@ -113,6 +113,8 @@ namespace gflat
 
 
         private readonly HashSet<string> _usingNamespaces = new();
+        private IEnumerable<string> CurrentUsings => SourceContext.Current?.SourceId is SourceId id &&
+            _compilationUnit?.FileUsings.TryGetValue(id, out var usings) == true ? usings : _usingNamespaces;
         private string _currentNamespacePath
         {
             get => _symbols.CurrentNamespacePath;
@@ -144,6 +146,7 @@ namespace gflat
 
         public StructInfo? GetStruct(string name)
         {
+            name = ResolveTypeIdentity(name, null) ?? name;
             if (name.Contains("::"))
             {
                 name = name.Replace("::", ".");
@@ -241,12 +244,14 @@ namespace gflat
             public DestructorDeclaration? Destructor = null;
             public int DestructorSlot = -1; // -1 if non-virtual or no destructor
             public int Line = 0;
+            public SourceSpan Span;
             public int FieldIndex(string name) => Fields.FindIndex(f => f.Name == name);
         }
 
         private readonly Dictionary<string, ClassInfo> _classes = new();
         public ClassInfo? GetClass(string name)
         {
+            name = ResolveTypeIdentity(name, null) ?? name;
             if (name.Contains("::"))
             {
                 name = name.Replace("::", ".");
@@ -448,6 +453,8 @@ namespace gflat
         public class NamespaceScope
         {
             public Dictionary<string, MethodDeclaration> Functions = new();
+            public Dictionary<string, MethodDeclaration> GenericFunctions = new();
+            public Dictionary<string, string> TypeNames = new();
             public Dictionary<string, ExternDeclaration> Externs = new();
             public Dictionary<string, TypeExpression> Aliases = new();
             public Dictionary<string, EnumInfo> Enums = new();
@@ -806,6 +813,7 @@ namespace gflat
 
         private NamedTypeExpression ResolveGenericType(string name, string? ns, List<TypeExpression> typeArgs, int line)
         {
+            name = ResolveTypeIdentity(name, ns) ?? name;
             if (_genericStructs.TryGetValue(name, out StructDeclaration? genericStruct))
             {
                 return MonomorphizeStruct(genericStruct, typeArgs, line);
@@ -851,7 +859,7 @@ namespace gflat
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
-            specialized.Accept(this);
+            CheckSpecialization(genericDef, specialized);
 
             return new NamedTypeExpression(mangledName, null, line);
         }
@@ -901,7 +909,7 @@ namespace gflat
                     new HierarchyResolutionPass(_symbols).ResolveHierarchy(nestedClsInfo);
                 }
             }
-            specialized.Accept(this);
+            CheckSpecialization(genericDef, specialized);
 
             return new NamedTypeExpression(mangledName, null, line);
         }
@@ -923,7 +931,8 @@ namespace gflat
                 }
             }
 
-            string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            string definitionNamespace = GetFunctionNamespace(genericDef);
+            string mangledName = (definitionNamespace.Length > 0 ? definitionNamespace + "$" : "") + $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
             if (_globalScope.Functions.TryGetValue(mangledName, out MethodDeclaration? existing))
             {
                 return existing;
@@ -940,7 +949,7 @@ namespace gflat
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
-            specialized.Accept(this);
+            CheckSpecialization(genericDef, specialized);
 
             return specialized;
         }
@@ -973,8 +982,10 @@ namespace gflat
             return false;
         }
 
+        private readonly Dictionary<TypeExpression, TypeExpression> resolvedSourceTypes = new();
         public TypeExpression ResolveAlias(TypeExpression type)
         {
+            if (resolvedSourceTypes.TryGetValue(type, out var bound)) return bound;
             if (type is NestedTypeExpression nested)
             {
                 TypeExpression resolvedParent = ResolveAlias(nested.Parent);
@@ -1009,6 +1020,9 @@ namespace gflat
             }
             if (type is NamedTypeExpression named)
             {
+                string? identity = ResolveTypeIdentity(named.Name, named.Namespace);
+                if (identity != null && (identity != named.Name || named.Namespace != null))
+                    return resolvedSourceTypes[type] = ResolveAlias(new NamedTypeExpression(identity, null, named.Line, named.TypeArguments) { Span = named.Span });
                 if (named.TypeArguments.Count > 0)
                 {
                     List<TypeExpression> resolvedArgs = named.TypeArguments.Select(ResolveAlias).ToList();
@@ -1037,10 +1051,29 @@ namespace gflat
                     if (_globalScope.Aliases.TryGetValue(named.Name, out var gTarget))
                         return ResolveAlias(gTarget);
 
+                    TypeExpression? importedAlias = null;
+                    NamespaceScope? aliasScope = null;
+                    foreach (string imported in CurrentUsings)
+                    {
+                        var importedScope = ResolveNamespaceByName(imported);
+                        if (importedScope?.Aliases.TryGetValue(named.Name, out var alias) != true) continue;
+                        if (importedAlias != null && importedAlias != alias)
+                            throw new TypeCheckException($"Alias '{named.Name}' is ambiguous between namespaces", named.Line);
+                        importedAlias = alias;
+                        aliasScope = importedScope;
+                    }
+                    if (importedAlias != null)
+                    {
+                        var previousScope = _currentNamespace;
+                        _currentNamespace = aliasScope!;
+                        try { return resolvedSourceTypes[type] = ResolveAlias(importedAlias); }
+                        finally { _currentNamespace = previousScope; }
+                    }
+
                     string? resolvedNested = ResolveNestedTypeName(named.Name);
                     if (resolvedNested != null && resolvedNested != named.Name)
                     {
-                        return new NamedTypeExpression(resolvedNested, named.Namespace, named.Line);
+                        return resolvedSourceTypes[type] = new NamedTypeExpression(resolvedNested, named.Namespace, named.Line) { Span = named.Span };
                     }
                 }
             }
@@ -1155,6 +1188,10 @@ namespace gflat
         private void ValidateTypeUsage(TypeExpression type, int line)
         {
             TypeExpression resolved = ResolveAlias(type);
+            if (resolved is NamedTypeExpression unknown && !IsPrimitive(unknown.Name) && !IsError(unknown) &&
+                !_classes.ContainsKey(unknown.Name) && !_structs.ContainsKey(unknown.Name) &&
+                !_interfaces.ContainsKey(unknown.Name) && ResolveEnum(unknown) == null)
+                throw new TypeCheckException($"Unknown type '{unknown.Name}'", line);
             if (resolved is ManagedTypeExpression managed)
             {
                 if (HasDestructor(managed.Inner))
@@ -1914,12 +1951,18 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
 
+            CheckDeclarationConflicts(node);
+            QualifyTypeDeclarations(node);
+
             // Pass 1: Symbol collection
             SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols);
             collectionPass.Execute(node);
             ResolveFunctionReplacements(node);
             collectionPass.Execute(node);
             ValidateAllocatorPair();
+
+            ResolveDeclaredBaseTypes(node);
+            ResolveDeclarationSignatures(node);
 
             // Pass 2: Hierarchy resolution
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
@@ -1932,7 +1975,7 @@ namespace gflat
             _currentNamespace = _globalScope;
             for (int i = 0; i < node.Members.Count; i++)
             {
-                node.Members[i].Accept(this);
+                CheckSpecialization(node.Members[i], node.Members[i]);
             }
 
             foreach (NamespaceDeclaration ns in node.Namespaces)
@@ -1955,7 +1998,7 @@ namespace gflat
             if (_diagnostics.HasErrors)
             {
                 Diagnostic firstError = _diagnostics.Items.First(d => d.Severity == DiagnosticSeverity.Error);
-                throw new TypeCheckException(firstError.Message, firstError.Line);
+                throw new TypeCheckException(firstError.Message, firstError.Span);
             }
         }
 
@@ -1968,9 +2011,11 @@ namespace gflat
         {
             if (member is MethodDeclaration method)
             {
+                _functionNamespaces[method] = nsPath;
                 if (method.IsGeneric)
                 {
-                    _genericMethods[method.Name] = method;
+                    scope.GenericFunctions[method.Name] = method;
+                    _genericMethods[nsPath.Length > 0 ? nsPath + "$" + method.Name : method.Name] = method;
                     return;
                 }
                 scope.Functions[method.Name] = method;
@@ -1982,6 +2027,7 @@ namespace gflat
             }
             else if (member is InterfaceDeclaration iface)
             {
+                scope.TypeNames[iface.SourceName] = iface.Name;
                 InterfaceInfo info = new InterfaceInfo
                 {
                     Name = iface.Name,
@@ -2005,10 +2051,11 @@ namespace gflat
                     }
                 }
                 _interfaces[iface.Name] = info;
-                scope.Interfaces[iface.Name] = info;
+                scope.Interfaces[iface.SourceName] = info;
             }
             else if (member is StructDeclaration str)
             {
+                scope.TypeNames[str.SourceName] = str.Name;
                 if (str.IsGeneric)
                 {
                     _genericStructs[str.Name] = str;
@@ -2036,6 +2083,7 @@ namespace gflat
                             nestedCls.Attributes,
                             nestedCls.GenericParameters
                         );
+                        qualifiedCls.Span = nestedCls.Span;
                         str.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath);
                     }
@@ -2050,6 +2098,7 @@ namespace gflat
                             nestedStruct.Attributes,
                             nestedStruct.GenericParameters
                         );
+                        qualifiedStruct.Span = nestedStruct.Span;
                         str.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath);
                     }
@@ -2075,7 +2124,7 @@ namespace gflat
                             throw new TypeCheckException($"Struct '{str.Name}' already defines a destructor", dtor.Line);
                         if (dtor.IsVirtual)
                             throw new TypeCheckException($"Struct '{str.Name}' destructor cannot be virtual", dtor.Line);
-                        string shortStrName = str.Name.Contains('.') ? str.Name.Substring(str.Name.LastIndexOf('.') + 1) : str.Name;
+                        string shortStrName = str.Name.Split('.').Last().Split('$').Last();
                         if (dtor.Name != str.Name && dtor.Name != shortStrName)
                             throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match struct name '{str.Name}'", dtor.Line);
                         info.Destructor = dtor;
@@ -2091,10 +2140,11 @@ namespace gflat
                     }
                 }
                 _structs[str.Name] = info;
-                scope.Structs[str.Name] = info;
+                scope.Structs[str.SourceName] = info;
             }
             else if (member is ClassDeclaration cls)
             {
+                scope.TypeNames[cls.SourceName] = cls.Name;
                 if (cls.IsGeneric)
                 {
                     _genericClasses[cls.Name] = cls;
@@ -2108,7 +2158,8 @@ namespace gflat
                     IsAbstract = cls.IsAbstract,
                     Accessibility = cls.Accessibility,
                     Interfaces = new List<string>(cls.Interfaces),
-                    Line = cls.Line
+                    Line = cls.Line,
+                    Span = cls.Span
                 };
 
                 for (int i = 0; i < cls.Members.Count; i++)
@@ -2127,6 +2178,7 @@ namespace gflat
                             nestedCls.Attributes,
                             nestedCls.GenericParameters
                         );
+                        qualifiedCls.Span = nestedCls.Span;
                         cls.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath);
                     }
@@ -2141,6 +2193,7 @@ namespace gflat
                             nestedStruct.Attributes,
                             nestedStruct.GenericParameters
                         );
+                        qualifiedStruct.Span = nestedStruct.Span;
                         cls.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath);
                     }
@@ -2177,7 +2230,7 @@ namespace gflat
                 }
 
                 _classes[cls.Name] = info;
-                scope.Classes[cls.Name] = info;
+                scope.Classes[cls.SourceName] = info;
             }
             else if (member is NamespaceDeclaration nested)
             {
@@ -2757,7 +2810,7 @@ namespace gflat
                 throw new TypeCheckException("Constructor must be declared inside a struct or class", node.Line);
             }
             string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
-            string shortOwnerName = ownerName.Contains('.') ? ownerName.Substring(ownerName.LastIndexOf('.') + 1) : ownerName;
+            string shortOwnerName = ownerName.Split('.').Last().Split('$').Last();
             if (node.Name != ownerName && node.Name != shortOwnerName)
             {
                 string kindStr = _currentStruct != null ? "struct" : "class";
@@ -2858,7 +2911,7 @@ namespace gflat
                 throw new TypeCheckException("Destructor must be declared inside a class or struct", node.Line);
             }
             string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
-            string shortOwnerName = ownerName.Contains('.') ? ownerName.Substring(ownerName.LastIndexOf('.') + 1) : ownerName;
+            string shortOwnerName = ownerName.Split('.').Last().Split('$').Last();
             if (node.Name != ownerName && node.Name != shortOwnerName)
             {
                 string kindStr = _currentStruct != null ? "struct" : "class";
@@ -4396,7 +4449,7 @@ namespace gflat
                     }
                     _resolvedCalls[node] = method;
                 }
-                else if (_genericMethods.TryGetValue(funcName, out MethodDeclaration? genericMethod))
+                else if (ResolveGenericFunction(funcName) is MethodDeclaration genericMethod)
                 {
                     List<TypeExpression> typeArgs = node.TypeArguments.Select(ResolveAlias).ToList();
                     if (typeArgs.Count == 0)
@@ -4442,6 +4495,7 @@ namespace gflat
                     NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
                     if (scope == null) throw new TypeCheckException($"Unknown namespace or type for '{nsAccess.Member}'", node.Line);
                     scope.Functions.TryGetValue(nsAccess.Member, out method);
+                    method ??= scope.GenericFunctions.GetValueOrDefault(nsAccess.Member);
                     if (method == null) scope.Externs.TryGetValue(nsAccess.Member, out ext);
                 }
 
@@ -4482,6 +4536,19 @@ namespace gflat
             if (method == null)
                 throw new TypeCheckException($"Unknown function '{funcName}'", node.Line);
 
+            if (method.IsGeneric)
+            {
+                var arguments = node.TypeArguments.Select(ResolveAlias).ToList();
+                if (arguments.Count == 0)
+                {
+                    var inferred = new Dictionary<string, TypeExpression>();
+                    var names = method.GenericParameters.Select(p => p.Name).ToHashSet();
+                    for (int i = 0; i < Math.Min(node.Arguments.Count, method.Parameters.Count); i++)
+                        InferTypeParameter(method.Parameters[i].Type, GetType(node.Arguments[i]), names, inferred);
+                    arguments = method.GenericParameters.Select(p => inferred.TryGetValue(p.Name, out var type) ? type : throw new TypeCheckException($"Could not infer type parameter '{p.Name}'", node.Line)).ToList();
+                }
+                method = MonomorphizeFunction(method, arguments, node.Line);
+            }
             _resolvedCalls[node] = method;
 
             if (method.Throws)
@@ -4557,7 +4624,7 @@ namespace gflat
             }
 
             MethodDeclaration? foundInUsing = null;
-            foreach (string usingNs in _usingNamespaces)
+            foreach (string usingNs in CurrentUsings)
             {
                 NamespaceScope? nsScope = ResolveNamespaceByName(usingNs);
                 if (nsScope != null && nsScope.Functions.TryGetValue(name, out MethodDeclaration? candidate))
@@ -4585,7 +4652,7 @@ namespace gflat
                 scope = scope.Parent;
             }
 
-            foreach (string usingNs in _usingNamespaces)
+            foreach (string usingNs in CurrentUsings)
             {
                 NamespaceScope? nsScope = ResolveNamespaceByName(usingNs);
                 if (nsScope != null && nsScope.Externs.TryGetValue(name, out ExternDeclaration? candidate))
@@ -5170,6 +5237,7 @@ namespace gflat
 
         private void CheckDeclarationAttributes(AstNode node)
         {
+            using var context = SourceContext.Enter(node.Span);
             var previousNamespace = _currentNamespace;
             var previousClass = _currentClass;
             var previousStruct = _currentStruct;
@@ -5319,11 +5387,12 @@ namespace gflat
                 nextValue++;
             }
 
-            scope.Enums[enumDecl.Name] = info;
+            scope.Enums[enumDecl.SourceName] = info;
+            scope.TypeNames[enumDecl.SourceName] = enumDecl.Name;
             _enums[enumDecl.Name] = info;
             if (nsPath.Length > 0)
             {
-                _enums[$"{nsPath}::{enumDecl.Name}"] = info;
+                _enums[$"{nsPath}::{enumDecl.SourceName}"] = info;
             }
         }
 
@@ -5445,7 +5514,7 @@ namespace gflat
                 }
                 if (_globalScope.Enums.TryGetValue(ident.Name, out EnumInfo? gInfo))
                     return gInfo;
-                if (_enums.TryGetValue(ident.Name, out EnumInfo? fallback))
+                if (_enums.TryGetValue(ResolveTypeIdentity(ident.Name, null) ?? ident.Name, out EnumInfo? fallback))
                     return fallback;
                 return null;
             }

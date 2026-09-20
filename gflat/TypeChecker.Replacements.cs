@@ -20,6 +20,7 @@ public partial class TypeChecker
         {
             foreach (var group in entries.GroupBy(e => (e.Scope, e.Owner, e.Method.Name)))
             {
+                using var groupContext = SourceContext.Enter(group.First().Method.Span);
                 _currentNamespace = group.Key.Scope;
                 _currentClass = group.Key.Owner is ClassDeclaration cls ? GetClass(cls.Name) : null;
                 _currentStruct = group.Key.Owner is StructDeclaration str ? GetStruct(str.Name) : null;
@@ -27,6 +28,7 @@ public partial class TypeChecker
                 foreach (FunctionEntry entry in functions)
                 {
                     MethodDeclaration method = entry.Method;
+                    using var methodContext = SourceContext.Enter(method.Span);
                     if (method.IsStatic && (method.IsVirtual || method.IsOverride || method.IsAbstract))
                         throw new TypeCheckException("Static methods cannot be virtual, override or abstract", method.Line);
                     if (method.ImplementationKind != FunctionImplementationKind.Ordinary &&
@@ -54,11 +56,11 @@ public partial class TypeChecker
                     var weak = declarations.Where(e => e.Method.ImplementationKind == FunctionImplementationKind.Weak).ToList();
                     var replace = declarations.Where(e => e.Method.ImplementationKind == FunctionImplementationKind.Replace).ToList();
                     if (weak.Count > 1)
-                        throw new TypeCheckException($"Multiple weak defaults for '{group.Key.Name}'", weak[1].Method.Line);
+                        DuplicateDeclaration(weak[0].Method, weak[1].Method, $"Multiple weak defaults for '{group.Key.Name}'");
                     if (replace.Count > 1)
-                        throw new TypeCheckException($"Multiple replacements for '{group.Key.Name}'", replace[1].Method.Line);
+                        DuplicateDeclaration(replace[0].Method, replace[1].Method, $"Multiple replacements for '{group.Key.Name}'");
                     if (weak.Count != 1 || replace.Count != 1 || declarations.Count != 2)
-                        throw new TypeCheckException($"Duplicate definition of '{group.Key.Name}'; replacing a weak function requires replace", declarations[1].Method.Line);
+                        DuplicateDeclaration(declarations[0].Method, declarations[1].Method, $"Duplicate definition of '{group.Key.Name}'; replacing a weak function requires replace");
                     // Remove the unused body before checking bodies or generating code.
                     weak[0].Members.Remove(weak[0].Method);
                 }
@@ -93,6 +95,7 @@ public partial class TypeChecker
 
     private string SignatureType(TypeExpression type, MethodDeclaration method)
     {
+        using var context = SourceContext.Enter(method.Span);
         if (type is NamedTypeExpression generic && generic.Namespace == null)
         {
             int index = method.GenericParameters.FindIndex(p => p.Name == generic.Name);
@@ -100,7 +103,7 @@ public partial class TypeChecker
         }
         // Preserve generic shapes without instantiating them during symbol selection.
         if (type is NamedTypeExpression { TypeArguments.Count: > 0 } applied)
-            return applied.Namespace + "::" + applied.Name + "<" + string.Join(",", applied.TypeArguments.Select(t => SignatureType(t, method))) + ">";
+            return (ResolveTypeIdentity(applied.Name, applied.Namespace) ?? applied.Namespace + "::" + applied.Name) + "<" + string.Join(",", applied.TypeArguments.Select(t => SignatureType(t, method))) + ">";
         // Resolve aliases without instantiating generic pointees during this pre-body pass.
         if (type is NamedTypeExpression or NestedTypeExpression)
         {
@@ -109,7 +112,7 @@ public partial class TypeChecker
         }
         return type switch
         {
-            NamedTypeExpression named => (named.Namespace == null ? "" : named.Namespace + "::") + named.Name,
+            NamedTypeExpression named => ResolveTypeIdentity(named.Name, named.Namespace) ?? (named.Namespace == null ? "" : named.Namespace + "::") + named.Name,
             PointerTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}*{(p.IsNullable ? "?" : "")}",
             ManagedTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}^{(p.IsNullable ? "?" : "")}",
             ArrayTypeExpression a => SignatureType(a.ElementType, method) + $"[{((ArrayTypeExpression)ResolveAlias(new ArrayTypeExpression(Int, a.Size, a.Line, a.SizeExpression))).Size}]",

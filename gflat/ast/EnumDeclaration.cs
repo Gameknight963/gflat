@@ -4,7 +4,8 @@ namespace gflat.ast
 {
     public class EnumDeclaration : AstNode
     {
-        public string Name { get; }
+        public string Name { get; internal set; }
+        public string SourceName { get; }
         public TypeExpression? UnderlyingType { get; }
         public List<EnumMemberDeclaration> Members { get; }
         public TokenKind Accessibility { get; }
@@ -12,6 +13,7 @@ namespace gflat.ast
         public EnumDeclaration(string name, TypeExpression? underlyingType, List<EnumMemberDeclaration> members, TokenKind accessibility, int line) : base(line)
         {
             Name = name;
+            SourceName = name;
             UnderlyingType = underlyingType;
             Members = members;
             Accessibility = accessibility;

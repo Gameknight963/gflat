@@ -62,7 +62,7 @@ namespace gflat.diagnostics
 
             if (!useColor)
             {
-                return $"{loc}: {severityStr} {Descriptor.Id}: {Message}";
+                return $"{loc}: {severityStr} {Descriptor.Id}: {Message}" + string.Concat(RelatedLocations.Select(span => $"{Environment.NewLine}{span.Source?.Path ?? "<input>"}({span.Line},{span.Column}): note: previous declaration"));
             }
 
             string severityColor = Severity switch

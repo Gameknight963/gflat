@@ -6,7 +6,7 @@ namespace gflat.ast
 {
     public class ConstructorDeclaration : AstNode
     {
-        public string Name { get; }
+        public string Name { get; internal set; }
         public List<Parameter> Parameters { get; }
         public BlockStatement Body { get; }
         public TokenKind Accessibility { get; }

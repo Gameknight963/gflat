@@ -80,7 +80,7 @@ public partial class TypeChecker
         else
         {
             for (NamespaceScope? scope = _currentNamespace; scope != null; scope = scope.Parent) visible.Add(scope);
-            foreach (string name in _usingNamespaces)
+            foreach (string name in CurrentUsings)
                 if (ResolveNamespaceByName(name) is NamespaceScope scope) visible.Add(scope);
         }
         var candidates = _literalOperators.Where(o => o.Method.StringLiteralPrefix == node.Prefix && visible.Contains(o.Scope)).ToList();

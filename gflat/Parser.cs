@@ -9,7 +9,6 @@ namespace gflat
         private List<Token> _tokens = new();
         private int _pos;
         private readonly DiagnosticBag _diagnostics;
-        private bool _isPrelude; // When true, skip allocator prelude injection (used for internal prelude parsing)
 
         public DiagnosticBag Diagnostics => _diagnostics;
 
@@ -117,7 +116,7 @@ namespace gflat
                 else
                 {
                     string directiveName = Current.Kind == TokenKind.Identifier ? Current.Text : Current.Kind.ToString();
-                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Line, 0, $"Unknown compiler directive '#{directiveName}'");
+                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Line, 0, null, $"Unknown compiler directive '#{directiveName}'");
                     Consume();
                 }
             }
@@ -131,28 +130,6 @@ namespace gflat
                     namespaces.Add(ParseNamespaceDeclaration());
                 else
                     members.Add(ParseTopLevelMember());
-            }
-
-            // Only inject preludes for top-level user code (not recursive prelude parsing)
-            if (!_isPrelude)
-            {
-                bool hasException = members.OfType<ClassDeclaration>().Any(c => c.Name == "Exception");
-                if (members.OfType<ClassDeclaration>().Any(c => c.Name == "Attribute"))
-                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, "Attribute is a reserved prelude class");
-                List<Token> preludeTokens = Lexer.Tokenize(Prelude.Source);
-                Parser preludeParser = new Parser();
-                preludeParser._tokens = preludeTokens;
-                preludeParser._pos = 0;
-                preludeParser._isPrelude = true;
-                CompilationUnit preludeUnit = preludeParser.ParseCompilationUnit();
-                members.InsertRange(0, preludeUnit.Members.Where(m => !(hasException && m is ClassDeclaration c && c.Name == "Exception")));
-
-                Parser allocatorParser = new Parser { _tokens = Lexer.Tokenize(Prelude.AllocatorSource), _isPrelude = true };
-                CompilationUnit allocatorUnit = allocatorParser.ParseCompilationUnit();
-                namespaces.InsertRange(0, allocatorUnit.Namespaces);
-                foreach (AstNode member in allocatorUnit.Members)
-                    if (member is not ExternDeclaration ext || !members.OfType<ExternDeclaration>().Any(e => e.Name == ext.Name))
-                        members.Add(member);
             }
 
             return new CompilationUnit(usings, namespaces, members, line);

@@ -3,6 +3,7 @@ namespace gflat.ast
     public class CompilationUnit : AstNode
     {
         public List<UsingDirective> Usings { get; }
+        public Dictionary<SourceId, string[]> FileUsings { get; } = new();
         public List<NamespaceDeclaration> Namespaces { get; }
         public List<AstNode> Members { get; }
 

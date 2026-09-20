@@ -2,7 +2,8 @@ namespace gflat.ast
 {
     public class ClassDeclaration : AstNode
     {
-        public string Name { get; }
+        public string Name { get; internal set; }
+        public string SourceName { get; }
         public string? BaseClass { get; }
         public List<string> Interfaces { get; }
         public List<AstNode> Members { get; }
@@ -15,6 +16,7 @@ namespace gflat.ast
         public ClassDeclaration(string name, string? baseClass, List<string> interfaces, List<AstNode> members, TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null) : base(line)
         {
             Name = name;
+            SourceName = name;
             BaseClass = baseClass;
             Interfaces = interfaces;
             Members = members;

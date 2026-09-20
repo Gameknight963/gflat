@@ -23,6 +23,7 @@ namespace gflat.Tests
             DiagnosticBag bag = new DiagnosticBag();
             List<Token> tokens = Lexer.Tokenize(code);
             CompilationUnit ast = Parser.Parse(tokens, bag);
+            Compilation.AddPrelude(ast, bag);
             TypeChecker checker = new TypeChecker(bag);
             try
             {
@@ -48,7 +49,13 @@ namespace gflat.Tests
 
         public static ExecutionResult Run(string code)
         {
-            string ir = EmitIr(code);
+            return RunIr(EmitIr(code));
+        }
+
+        public static ExecutionResult Run(IEnumerable<SourceFile> sources) => RunIr(Compiler.Emit(sources));
+
+        private static ExecutionResult RunIr(string ir)
+        {
             string testId = Guid.NewGuid().ToString("N");
             string tempDir = Path.Combine(Path.GetTempPath(), $"gflat_test_{testId}");
             Directory.CreateDirectory(tempDir);

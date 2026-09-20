@@ -18,6 +18,7 @@ public class Lexer
         int line = 1;
         for (int i = 0; i < code.Length;)
         {
+            using var context = SourceContext.Enter(SourceContext.Current?.Source is { } source && source.Text == code ? source.Span(i, 1) : default);
             char c = code[i];
 
             if (char.IsWhiteSpace(c))

@@ -101,6 +101,7 @@ namespace gflat.semantics
 
         public void ResolveHierarchy(TypeChecker.ClassInfo cls)
         {
+            using var context = SourceContext.Enter(cls.Span);
             ResolveClassHierarchy(cls, new HashSet<string>(), new HashSet<string>());
         }
 

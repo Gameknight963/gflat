@@ -2,7 +2,8 @@ namespace gflat.ast
 {
     public class StructDeclaration : AstNode
     {
-        public string Name { get; }
+        public string Name { get; internal set; }
+        public string SourceName { get; }
         public List<string> Interfaces { get; }
         public List<AstNode> Members { get; }
         public TokenKind Accessibility { get; }
@@ -13,6 +14,7 @@ namespace gflat.ast
         public StructDeclaration(string name, List<string>? interfaces, List<AstNode> members, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null) : base(line)
         {
             Name = name;
+            SourceName = name;
             Interfaces = interfaces ?? new List<string>();
             Members = members;
             Accessibility = accessibility;

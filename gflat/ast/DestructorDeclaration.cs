@@ -5,7 +5,7 @@ namespace gflat.ast
 {
     public class DestructorDeclaration : AstNode
     {
-        public string Name { get; }
+        public string Name { get; internal set; }
         public BlockStatement Body { get; }
         public bool IsVirtual { get; }
 

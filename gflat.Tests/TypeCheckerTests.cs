@@ -2919,6 +2919,7 @@ namespace gflat.Tests
 
             List<Token> tokens = Lexer.Tokenize(code);
             CompilationUnit ast = Parser.Parse(tokens);
+            Compilation.AddPrelude(ast, new gflat.diagnostics.DiagnosticBag());
             Assert.NotNull(ast);
             Assert.Contains(ast.Members, m => m is ClassDeclaration c && c.Name == "Exception");
 
@@ -4428,7 +4429,7 @@ namespace gflat.Tests
                 {
                     while (true)
                     {
-                        fn()* f = () => { break; };
+                        void()* f = () => { break; };
                     }
                     return 0;
                 }

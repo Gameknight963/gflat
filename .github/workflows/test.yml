@@ -23,3 +23,26 @@ jobs:
         with:
           name: test-results-O${{ matrix.optimization }}
           path: '**/TestResults/**'
+  language-server-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test gflat.LanguageServer.Tests --blame-hang-timeout 2m
+  visual-studio-extension:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: ./editors/VisualStudio/build.ps1
+      - run: ./editors/VisualStudio/test-package.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gflat-visual-studio
+          path: editors/VisualStudio/bin/Release/net472/*.vsix

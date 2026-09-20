@@ -56,6 +56,10 @@ public class WeakReplacementTests
         => Assert.Equal(42, CompilerTestHelper.Run("class Outer { public class Inner { public weak int f() => 7; public replace int f() => 42; } } int main() { Outer::Inner x = new Outer::Inner(); return x.f(); }").ExitCode);
 
     [Fact]
+    public void GenericPointerShapesMatchWithoutEarlyInstantiation()
+        => Assert.Equal(42, CompilerTestHelper.Run("class Box<T> { public T value; } weak T f<T>(Box<T>* x) => x.value; replace U f<U>(Box<U>* x) => x.value; int main() { Box<int> x = new Box<int>(); x.value = 42; return f<int>(&x); }").ExitCode);
+
+    [Fact]
     public void SelectionEmitsOneOrdinaryDefinition()
     {
         string ir = CompilerTestHelper.EmitIr("weak int value() => 7; replace int value() => 42; int main() => value();");

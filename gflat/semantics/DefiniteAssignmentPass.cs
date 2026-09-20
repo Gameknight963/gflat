@@ -113,6 +113,7 @@ namespace gflat.semantics
             }
             else if (member is ClassDeclaration classDecl)
             {
+                if (classDecl.IsGeneric) return;
                 ClassDeclaration? prevClass = _currentClass;
                 _currentClass = classDecl;
                 try
@@ -129,6 +130,7 @@ namespace gflat.semantics
             }
             else if (member is StructDeclaration structDecl)
             {
+                if (structDecl.IsGeneric) return;
                 StructDeclaration? prevStruct = _currentStruct;
                 _currentStruct = structDecl;
                 try
@@ -159,7 +161,7 @@ namespace gflat.semantics
 
         public void CheckMethod(MethodDeclaration method)
         {
-            if (method.Body == null || method.IsAbstract)
+            if (method.IsGeneric || method.Body == null || method.IsAbstract)
             {
                 return;
             }

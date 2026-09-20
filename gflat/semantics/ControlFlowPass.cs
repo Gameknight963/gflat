@@ -62,6 +62,7 @@ namespace gflat.semantics
             }
             else if (member is ClassDeclaration classDecl)
             {
+                if (classDecl.IsGeneric) return;
                 for (int i = 0; i < classDecl.Members.Count; i++)
                 {
                     CheckMember(classDecl.Members[i]);
@@ -69,6 +70,7 @@ namespace gflat.semantics
             }
             else if (member is StructDeclaration structDecl)
             {
+                if (structDecl.IsGeneric) return;
                 for (int i = 0; i < structDecl.Members.Count; i++)
                 {
                     CheckMember(structDecl.Members[i]);
@@ -82,7 +84,7 @@ namespace gflat.semantics
 
         public void CheckMethod(MethodDeclaration method)
         {
-            if (method.Body == null || method.IsAbstract)
+            if (method.IsGeneric || method.Body == null || method.IsAbstract)
             {
                 return;
             }

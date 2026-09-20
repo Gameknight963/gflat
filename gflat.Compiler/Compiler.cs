@@ -6,6 +6,15 @@ namespace gflat;
 
 public static class Compiler
 {
+    /// <summary>Editor analysis: expected source errors are returned as diagnostics, without invoking LLVM.</summary>
+    public static IReadOnlyList<Diagnostic> Analyze(IEnumerable<SourceFile> sources)
+    {
+        var diagnostics = new DiagnosticBag();
+        try { Check(sources, diagnostics); }
+        catch (TypeCheckException) { /* Check has recorded the source error. */ }
+        return diagnostics.Items.ToArray();
+    }
+
     public static (CompilationUnit Ast, TypeChecker Checker) Check(string source, DiagnosticBag? diagnostics = null)
         => Check(new SourceFile("<input>", source), diagnostics);
 

@@ -6,5 +6,7 @@
   </Configurations>
   <Project Path="gflat/gflat.csproj" />
   <Project Path="gflat.Compiler/gflat.Compiler.csproj" />
+  <Project Path="gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj" />
+  <Project Path="gflat.LanguageServer/gflat.LanguageServer.csproj" />
   <Project Path="gflat.Tests/gflat.Tests.csproj" />
 </Solution>

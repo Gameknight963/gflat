@@ -13,4 +13,7 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\gflat.Compiler\gflat.Compiler.csproj" />
+  </ItemGroup>
 </Project>

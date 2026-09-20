@@ -33,6 +33,18 @@ namespace gflat
         private Token Current => _tokens[_pos];
         private Token Peek(int offset = 1) => _tokens[Math.Min(_pos + offset, _tokens.Count - 1)];
 
+        private AstNode ParseDeclaration(Func<AstNode> parse)
+        {
+            int start = _pos;
+            AstNode declaration = Located(parse);
+            // Expect may synthesize missing identifiers and semicolons. At a stray
+            // delimiter an entire declaration can therefore consume nothing, causing
+            // its enclosing member loop to allocate error nodes forever.
+            if (_pos == start)
+                throw new TypeCheckException($"Unexpected token '{Current.Text}' in declaration", Current.Span);
+            return declaration;
+        }
+
         private Token Consume()
         {
             Token token = Current;
@@ -172,7 +184,7 @@ namespace gflat
             return new NamespaceDeclaration(name, members, line);
         }
 
-        private AstNode ParseTopLevelMember() => Located(() => ParseTopLevelMemberCoreLocated());
+        private AstNode ParseTopLevelMember() => ParseDeclaration(() => ParseTopLevelMemberCoreLocated());
 
         private AstNode ParseTopLevelMemberCoreLocated()
         {
@@ -454,7 +466,7 @@ namespace gflat
             return new InterfaceDeclaration(name, members, accessibility, line);
         }
 
-        private AstNode ParseMember() => Located(() => ParseMemberCoreLocated());
+        private AstNode ParseMember() => ParseDeclaration(() => ParseMemberCoreLocated());
 
         private AstNode ParseMemberCoreLocated()
         {

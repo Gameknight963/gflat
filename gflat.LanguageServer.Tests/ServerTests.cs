@@ -82,6 +82,34 @@ public sealed class ServerTests
     }
 
     [Fact]
+    public async Task IncompleteReturnBeforeMemberAssignmentReportsErrorAndRecovers()
+    {
+        await using var session = new Session();
+        await session.Initialize();
+        const string source = """
+            extern int printf(readonly char* fmt, ...);
+            struct Cool {
+                int x;
+                ~Cool() { printf("destructor ran"); }
+            }
+            int main() {
+                Cool* l = new* Cool();
+                defer delete l;
+                retu
+                l.x = 2;
+                printf("The number is: %d\n", 2);
+                return 0;
+            }
+            """;
+        await session.Open("program.gf", source);
+        var broken = (await session.Diagnostics("program.gf", 1)).GetProperty("params").GetProperty("diagnostics");
+        Assert.Contains(broken.EnumerateArray(), d => d.GetProperty("severity").GetInt32() == 1);
+        await session.Change("program.gf", source.Replace("retu\r\n", "\r\n").Replace("retu\n", "\n"), 2);
+        Assert.Empty((await session.Diagnostics("program.gf", 2)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Stop();
+    }
+
+    [Fact]
     public async Task WorkspaceUsesUnsavedDependenciesAndRevertsToDiskOnClose()
     {
         await using var s = new Session();
@@ -94,6 +122,26 @@ public sealed class ServerTests
         await s.Notify("textDocument/didClose", new { textDocument = new { uri = s.Uri("helper.gf") } });
         var result = await s.Diagnostics("main.gf", 1);
         Assert.Empty(result.GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await s.Stop();
+    }
+
+    [Theory]
+    [InlineData("}")]
+    [InlineData(")")]
+    [InlineData("]")]
+    [InlineData(",")]
+    [InlineData("class C { ) }")]
+    [InlineData("namespace N { ] }")]
+    [InlineData("int main() { return 0; } }")]
+    public async Task UnexpectedDeclarationDelimiterDoesNotHangAnalysis(string source)
+    {
+        await using var s = new Session();
+        await s.Initialize();
+        await s.Open("broken.gf", source);
+        var diagnostics = (await s.Diagnostics("broken.gf", 1)).GetProperty("params").GetProperty("diagnostics");
+        Assert.Contains(diagnostics.EnumerateArray(), d => d.GetProperty("severity").GetInt32() == 1);
+        await s.Change("broken.gf", "int main() => 0;", 2);
+        Assert.Empty((await s.Diagnostics("broken.gf", 2)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
         await s.Stop();
     }
 

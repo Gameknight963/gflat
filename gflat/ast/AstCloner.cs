@@ -79,7 +79,7 @@ namespace gflat.ast
             List<GenericParameter>? genericParams = m.GenericParameters != null && m.Name != _oldName
                 ? m.GenericParameters.ToList()
                 : null;
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, throws: m.Throws);
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, throws: m.Throws) { StringLiteralPrefix = m.StringLiteralPrefix };
         }
 
         public TypeExpression CloneType(TypeExpression type)
@@ -268,6 +268,10 @@ namespace gflat.ast
             {
                 return new IdentifierExpression(ident.Name, ident.Line);
             }
+            if (node is PrefixedStringLiteralExpression pref)
+            {
+                return new PrefixedStringLiteralExpression(pref.Scope != null ? CloneNode(pref.Scope) : null, pref.Prefix, (LiteralExpression)CloneNode(pref.Literal), pref.Line);
+            }
             if (node is CallExpression call)
             {
                 AstNode callee = CloneNode(call.Callee);
@@ -311,10 +315,6 @@ namespace gflat.ast
             if (node is NameofExpression no)
             {
                 return new NameofExpression(CloneNode(no.Target), no.Line);
-            }
-            if (node is PrefixedStringLiteralExpression pref)
-            {
-                return new PrefixedStringLiteralExpression(pref.Scope != null ? CloneNode(pref.Scope) : null, pref.Prefix, (LiteralExpression)CloneNode(pref.Literal), pref.Line);
             }
             if (node is NamespaceAccessExpression nsAcc)
             {

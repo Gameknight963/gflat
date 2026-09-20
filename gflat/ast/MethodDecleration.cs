@@ -8,6 +8,7 @@ namespace gflat.ast
     public class MethodDeclaration : AstNode
     {
         public string Name { get; }
+        public string? StringLiteralPrefix { get; set; }
         public TypeExpression ReturnType { get; set; }
         public List<Parameter> Parameters { get; }
         public BlockStatement? Body { get; }

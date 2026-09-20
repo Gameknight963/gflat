@@ -43,10 +43,10 @@ public class LlvmEmitter : IVisitor
             case ConstValue.String s:
                 {
                     string raw = s.Value;
-                    string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                    byte[] escaped = StringLiteralEncoding.Bytes(raw);
                     string globalName = NewGlobal();
                     int len = escaped.Length + 1;
-                    string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                    string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
                     if (type is ArrayTypeExpression)
                         return $"{typeStr} c\"{llvmStr}\\00\"";
                     EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
@@ -186,10 +186,10 @@ public class LlvmEmitter : IVisitor
             case ConstValue.String s:
                 {
                     string raw = s.Value;
-                    string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                    byte[] escaped = StringLiteralEncoding.Bytes(raw);
                     string globalName = NewGlobal();
                     int len = escaped.Length + 1;
-                    string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                    string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
                     EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
                     string ptr = NewTemp();
                     Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
@@ -1196,7 +1196,8 @@ public class LlvmEmitter : IVisitor
                 {
                     if (!method.IsAbstract)
                     {
-                        EmitClassMethod(node.Name, method);
+                        if (method.StringLiteralPrefix != null) Visit(method);
+                        else EmitClassMethod(node.Name, method);
                     }
                 }
                 else if (member is ConstructorDeclaration ctor)
@@ -1605,7 +1606,8 @@ public class LlvmEmitter : IVisitor
             {
                 if (member is MethodDeclaration method)
                 {
-                    EmitStructMethod(node.Name, method);
+                    if (method.StringLiteralPrefix != null) Visit(method);
+                    else EmitStructMethod(node.Name, method);
                 }
                 else if (member is OperatorDeclaration op)
                 {
@@ -2017,7 +2019,9 @@ public class LlvmEmitter : IVisitor
         _isInsideMain = isMain;
 
         string name;
-        if (isMain)
+        if (node.StringLiteralPrefix != null)
+            name = _typeChecker.GetStringLiteralOperatorName(node);
+        else if (isMain)
             name = "main";
         else if (node.Name == "__gflat_alloc" || node.Name == "__gflat_free" || node.Name == "__gflat_gc_alloc")
             name = node.Name; // Well-known hook functions: emit unmangled
@@ -2487,10 +2491,10 @@ public class LlvmEmitter : IVisitor
                 node.Initializer is LiteralExpression { Token.Kind: TokenKind.StringLiteral } strLit)
             {
                 string raw = strLit.Token.Text[1..^1];
-                string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                byte[] escaped = StringLiteralEncoding.Bytes(raw);
                 string globalName = NewGlobal();
                 int litLen = escaped.Length + 1;
-                string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
                 EmitGlobal($"{globalName} = private constant [{litLen} x i8] c\"{llvmStr}\\00\"");
 
                 if (targetArr.Size.Value == litLen)
@@ -3126,10 +3130,10 @@ public class LlvmEmitter : IVisitor
             case TokenKind.StringLiteral:
                 {
                     string raw = node.Token.Text[1..^1]; // strip quotes
-                    string escaped = raw.Replace("\\n", "\n").Replace("\\t", "\t");
+                    byte[] escaped = StringLiteralEncoding.Bytes(raw);
                     string globalName = NewGlobal();
                     int len = escaped.Length + 1; // +1 for null terminator
-                    string llvmStr = escaped.Replace("\n", "\\0A").Replace("\t", "\\09");
+                    string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
                     EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
                     string ptr = NewTemp();
                     Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
@@ -3588,7 +3592,7 @@ public class LlvmEmitter : IVisitor
             string ns = _typeChecker.GetFunctionNamespace(structMethod);
             funcName = GetMethodMangledName(typeName, structMethod, ns, isClass: _typeChecker.IsClass(rawName));
         }
-        else if (node.Callee is IdentifierExpression idMethod && target is MethodDeclaration methodMember && _currentClass != null && _currentClass.Methods.ContainsKey(idMethod.Name))
+        else if (node.Callee is IdentifierExpression idMethod && target is MethodDeclaration methodMember && _currentClass != null && methodMember.StringLiteralPrefix == null && _currentClass.Methods.ContainsKey(idMethod.Name))
         {
             string declaringClass = _currentClass.Methods[idMethod.Name].DeclaringClass;
             string loadedThis = NewTemp();
@@ -3677,7 +3681,11 @@ public class LlvmEmitter : IVisitor
             }
             else if (target is MethodDeclaration method)
             {
-                if (method.Name == "main")
+                if (method.StringLiteralPrefix != null)
+                {
+                    funcName = _typeChecker.GetStringLiteralOperatorName(method);
+                }
+                else if (method.Name == "main")
                 {
                     funcName = "main";
                 }
@@ -4088,7 +4096,7 @@ public class LlvmEmitter : IVisitor
             return;
         }
 
-        throw new NotImplementedException($"Custom string prefix '{node.Prefix}' is not supported");
+        Visit((CallExpression)node);
     }
 
     private string GetDefaultValue(TypeExpression type)

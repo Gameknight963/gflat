@@ -7,7 +7,7 @@ using gflat.diagnostics;
 
 namespace gflat
 {
-    public class TypeChecker : IVisitor, IConstEvaluationContext
+    public partial class TypeChecker : IVisitor, IConstEvaluationContext
     {
         private readonly Dictionary<AstNode, TypeExpression> _types = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _scopes = new();
@@ -539,7 +539,7 @@ namespace gflat
                 depth--;
             }
 
-            if (_currentStruct != null)
+            if (_currentStruct != null && _currentFunction is not MethodDeclaration { StringLiteralPrefix: not null })
             {
                 int idx = _currentStruct.FieldIndex(name);
                 if (idx >= 0)
@@ -560,7 +560,7 @@ namespace gflat
                 }
             }
 
-            if (_currentClass != null)
+            if (_currentClass != null && _currentFunction is not MethodDeclaration { StringLiteralPrefix: not null })
             {
                 int idx = _currentClass.FieldIndex(name);
                 if (idx >= 0)
@@ -610,7 +610,7 @@ namespace gflat
                     return true;
             }
 
-            if (_currentStruct != null)
+            if (_currentStruct != null && _currentFunction is not MethodDeclaration { StringLiteralPrefix: not null })
             {
                 int idx = _currentStruct.FieldIndex(name);
                 if (idx >= 0)
@@ -620,7 +620,7 @@ namespace gflat
                 }
             }
 
-            if (_currentClass != null)
+            if (_currentClass != null && _currentFunction is not MethodDeclaration { StringLiteralPrefix: not null })
             {
                 int idx = _currentClass.FieldIndex(name);
                 if (idx >= 0)
@@ -1184,19 +1184,7 @@ namespace gflat
             }
         }
 
-        private static int GetStringLiteralLength(string raw)
-        {
-            int length = 0;
-            for (int i = 0; i < raw.Length; i++)
-            {
-                if (raw[i] == '\\' && i + 1 < raw.Length)
-                {
-                    i++;
-                }
-                length++;
-            }
-            return length + 1; // +1 for null terminator \0
-        }
+        private static int GetStringLiteralLength(string raw, int line) => StringLiteralEncoding.Bytes(raw, line).Length + 1;
 
         public static bool IsPrimitive(string name) =>
             name is "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or
@@ -1932,6 +1920,9 @@ namespace gflat
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
             hierarchyPass.Execute();
 
+            // Resolve literal operators before checking uses, including forward references.
+            RegisterStringLiteralOperators(node);
+
             // Pass 3: Body type checking
             _currentNamespace = _globalScope;
             for (int i = 0; i < node.Members.Count; i++)
@@ -2184,7 +2175,7 @@ namespace gflat
             }
             else if (member is NamespaceDeclaration nested)
             {
-                BuildNamespaceScope(nested, scope, nsPath.Length > 0 ? $"{nsPath}${nested.Name}" : nested.Name);
+                BuildNamespaceScope(nested, scope, nsPath);
             }
             else if (member is AliasDeclaration alias)
             {
@@ -2203,8 +2194,11 @@ namespace gflat
         private void BuildNamespaceScope(NamespaceDeclaration ns, NamespaceScope parent, string parentPath)
         {
             string nsPath = parentPath.Length > 0 ? $"{parentPath}${ns.Name}" : ns.Name;
-            NamespaceScope scope = new NamespaceScope { Parent = parent };
-            parent.Children[ns.Name] = scope;
+            if (!parent.Children.TryGetValue(ns.Name, out NamespaceScope? scope))
+            {
+                scope = new NamespaceScope { Parent = parent };
+                parent.Children[ns.Name] = scope;
+            }
             _namespaceScopes[ns] = scope;
 
             foreach (AstNode member in ns.Members)
@@ -2347,6 +2341,11 @@ namespace gflat
                     }
                     else if (member is MethodDeclaration method)
                     {
+                        if (method.StringLiteralPrefix != null)
+                        {
+                            CheckStringLiteralOperatorBody(method);
+                            continue;
+                        }
                         method.ReturnType = ResolveAlias(method.ReturnType);
                         foreach (Parameter p in method.Parameters)
                         {
@@ -2517,6 +2516,11 @@ namespace gflat
                     }
                     else if (member is MethodDeclaration method)
                     {
+                        if (method.StringLiteralPrefix != null)
+                        {
+                            CheckStringLiteralOperatorBody(method);
+                            continue;
+                        }
                         method.ReturnType = ResolveAlias(method.ReturnType);
                         foreach (Parameter p in method.Parameters)
                         {
@@ -3754,7 +3758,7 @@ namespace gflat
                 TokenKind.DoubleLiteral => Double,
                 TokenKind.LongLiteral => Long,
                 TokenKind.ULongLiteral => ULong,
-                TokenKind.StringLiteral => new ArrayTypeExpression(Char, GetStringLiteralLength(node.Token.Text[1..^1]), node.Line),
+                TokenKind.StringLiteral => new ArrayTypeExpression(Char, GetStringLiteralLength(node.Token.Text[1..^1], node.Line), node.Line),
                 TokenKind.CharLiteral => Char,
                 TokenKind.True => Bool,
                 TokenKind.False => Bool,
@@ -4320,6 +4324,9 @@ namespace gflat
             else if (node.Callee is IdentifierExpression ident)
             {
                 funcName = ident.Name;
+                if (_currentFunction is MethodDeclaration { StringLiteralPrefix: not null } &&
+                    ((_currentClass?.Methods.ContainsKey(funcName) ?? false) || (_currentStruct?.Methods.ContainsKey(funcName) ?? false)))
+                    throw new TypeCheckException("Instance methods require an explicit receiver in a string literal operator", node.Line);
                 if (_currentClass != null && _currentClass.Methods.TryGetValue(funcName, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                 {
                     method = mEntry.Method;
@@ -5844,13 +5851,14 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Built-in C-string prefix 'c' cannot be qualified with a scope", node.Line);
                 }
+                node.Literal.Accept(this);
                 TypeExpression charPtrType = new PointerTypeExpression(Char, false, node.Line, isReadOnly: true);
                 _types[node] = charPtrType;
                 _constValues[node] = new ConstValue.String(node.Literal.Token.Text[1..^1]);
                 return;
             }
 
-            throw new TypeCheckException($"Unknown string prefix '{node.Prefix}' on line {node.Line}", node.Line);
+            CheckStringLiteralCall(node);
         }
 
         public void Visit(ThrowStatement node)

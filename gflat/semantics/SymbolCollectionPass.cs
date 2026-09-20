@@ -268,7 +268,7 @@ namespace gflat.semantics
             }
             else if (member is NamespaceDeclaration nested)
             {
-                BuildNamespaceScope(nested, scope, nsPath.Length > 0 ? $"{nsPath}${nested.Name}" : nested.Name);
+                BuildNamespaceScope(nested, scope, nsPath);
             }
             else if (member is AliasDeclaration alias)
             {
@@ -287,8 +287,11 @@ namespace gflat.semantics
         private void BuildNamespaceScope(NamespaceDeclaration ns, TypeChecker.NamespaceScope parent, string parentPath)
         {
             string nsPath = parentPath.Length > 0 ? $"{parentPath}${ns.Name}" : ns.Name;
-            TypeChecker.NamespaceScope scope = new TypeChecker.NamespaceScope { Parent = parent };
-            parent.Children[ns.Name] = scope;
+            if (!parent.Children.TryGetValue(ns.Name, out TypeChecker.NamespaceScope? scope))
+            {
+                scope = new TypeChecker.NamespaceScope { Parent = parent };
+                parent.Children[ns.Name] = scope;
+            }
             _symbols.NamespaceScopes[ns] = scope;
 
             foreach (AstNode member in ns.Members)

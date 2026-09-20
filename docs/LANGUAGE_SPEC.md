@@ -193,6 +193,44 @@ Throwing functions declare `throws`. Callers must catch or declare propagation. 
 
 `const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
 
+## Custom string literals
+
+A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly char* data, ulong length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and may declare `throws`; callers must follow the normal exception rules.
+
+```gflat
+using Text;
+
+namespace Text
+{
+    class View
+    {
+        public readonly char* data;
+        public ulong length;
+
+        public View(readonly char* p, ulong n) { data = p; length = n; }
+
+        public static View operator s""(readonly char* p, ulong n)
+        {
+            return new View(p, n);
+        }
+    }
+}
+
+int main()
+{
+    View message = s"hello\n";
+    return (int)message.length; // 6
+}
+```
+
+The prefix is an ordinary case-sensitive identifier, including names such as `my_2string`. The empty `""` marker must immediately follow the identifier in the declaration. At the use site, the prefix must immediately precede the literal's opening quote. `c` remains reserved for built-in C strings.
+
+Prefixes are visible in their declaring namespace, its descendants, and namespaces imported by `using`. An explicit qualifier such as `Text::s"hello"` works without an import. Nested namespaces use `::`, including in `using` directives. Duplicate prefixes within one namespace are errors; multiple visible candidates from different namespaces require qualification. Result types do not disambiguate prefixes.
+
+`data` points to immutable, null-terminated static storage containing UTF-8 bytes after escape processing. Supported escapes are `\n`, `\r`, `\t`, `\0`, `\\`, `\"`, and `\'`; unknown escapes are errors. `length` is the number of bytes excluding the final terminator; embedded null bytes count toward it. The storage lasts for the program's lifetime. An operator may keep a readonly view or copy the bytes into its own storage, and decides whether to allocate. The compiler adds no intermediate string object. Returned objects follow normal scope and temporary cleanup rules.
+
+Literal operators have no implicit instance (`this`), but retain access to their containing type's private members through explicit instances. `const` literal operators, generic owners, interpolation operators, and raw-literal extensions are not supported in this version.
+
 ## Attributes
 
 Attributes are classes derived, directly or indirectly, from the abstract `Attribute` class in the prelude. The base class has a public parameterless constructor and no libc dependency. Its name is reserved at global scope.

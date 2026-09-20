@@ -192,6 +192,8 @@ namespace gflat
             int line = Current.Line;
             Expect(TokenKind.Using);
             string name = Expect(TokenKind.Identifier).Text;
+            while (Match(TokenKind.DoubleColon))
+                name += "::" + Expect(TokenKind.Identifier).Text;
             Expect(TokenKind.Semicolon);
             return new UsingDirective(name, line);
         }
@@ -536,6 +538,18 @@ namespace gflat
 
             if (Match(TokenKind.Operator))
             {
+                if (Check(TokenKind.Identifier))
+                {
+                    Token prefix = Consume();
+                    Token marker = Expect(TokenKind.StringLiteral);
+                    if (marker.Text != "\"\"" || prefix.End + 1 != marker.Start)
+                        throw new TypeCheckException("A string literal operator must use an identifier immediately followed by empty quotes", line);
+                    if (!isStatic || isConst || isVirtual || isOverride || isAbstract || isReadonly)
+                        throw new TypeCheckException("String literal operators must be static, non-const, non-virtual methods", line);
+                    MethodDeclaration method = ParseMethodDeclaration(type, "$literal$" + prefix.Text, accessibility, true, false, false, false, line, attributes: attributes);
+                    method.StringLiteralPrefix = prefix.Text;
+                    return method;
+                }
                 return ParseOperatorDeclaration(type, accessibility, true, line);
             }
 

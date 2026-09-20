@@ -103,7 +103,11 @@ namespace gflat.semantics
 
         private void CheckMember(AstNode member)
         {
-            if (member is MethodDeclaration method)
+            if (member is NamespaceDeclaration ns)
+            {
+                CheckNamespace(ns);
+            }
+            else if (member is MethodDeclaration method)
             {
                 CheckMethod(method);
             }

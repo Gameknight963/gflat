@@ -1,0 +1,6 @@
+<Rule Name="None" DisplayName="None" PageTemplate="generic" xmlns="http://schemas.microsoft.com/build/2009/properties">
+  <Rule.DataSource><DataSource Persistence="ProjectFile" ItemType="None" HasConfigurationCondition="false" /></Rule.DataSource>
+  <StringProperty Name="Identity" DisplayName="Path" ReadOnly="true" />
+  <BoolProperty Name="Visible" Visible="false" />
+  <StringProperty Name="Link" Visible="false" />
+</Rule>

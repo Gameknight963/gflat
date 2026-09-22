@@ -231,6 +231,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     {
         foreach (var watcher in watchers) watcher.Dispose();
         watchers.Clear();
+        var explicitPaths = new HashSet<string>(watchedPaths, Workspace.Paths);
         // Watch only source/config directories, never recursively scan or watch build output trees.
         foreach (string directory in watchedPaths.Select(Path.GetDirectoryName).OfType<string>().Concat(projectDirectories).Distinct(Workspace.Paths))
         {
@@ -240,7 +241,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                 var watcher = new FileSystemWatcher(directory) { IncludeSubdirectories = projectDirectories.Contains(directory), NotifyFilter = NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size };
                 void ChangedPath(string path)
                 {
-                    if (!path.Split(Path.DirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory))
+                    if (explicitPaths.Contains(path) || !Path.GetRelativePath(directory, path).Split(Path.DirectorySeparatorChar).Any(gflat.Projects.ProjectModel.IsGeneratedDirectory))
                         events.Writer.TryWrite(new Changed(path));
                 }
                 watcher.Changed += (_, e) => ChangedPath(e.FullPath);

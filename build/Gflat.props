@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
+    <GflatProjectKind Condition="'$(GflatProjectKind)' == ''">Executable</GflatProjectKind>
+    <EnableDefaultCompileItems Condition="'$(EnableDefaultCompileItems)' == ''">true</EnableDefaultCompileItems>
+    <GflatDefaultExcludes>**/bin/**;**/obj/**;**/.git/**;**/.vs/**;**/.local-notes/**</GflatDefaultExcludes>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="**/*.gf" Exclude="$(GflatDefaultExcludes)" Condition="'$(EnableDefaultCompileItems)' == 'true'" />
+    <None Include="**/*" Exclude="**/*.gf;**/*.gfproj;$(GflatDefaultExcludes)" />
+  </ItemGroup>
+</Project>

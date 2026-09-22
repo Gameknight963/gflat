@@ -1,0 +1,11 @@
+<ProjectSchemaDefinitions xmlns="http://schemas.microsoft.com/build/2009/properties">
+  <ContentType Name="Gflat" DisplayName="gflat source" ItemType="Compile" />
+  <ContentType Name="Text" DisplayName="Text" ItemType="None" />
+  <ItemType Name="Compile" DisplayName="Compile" />
+  <ItemType Name="None" DisplayName="None" />
+  <ItemType Name="Folder" DisplayName="Folder" />
+  <ItemType Name="ProjectReference" DisplayName="Project reference" />
+  <FileExtension Name=".gf" ContentType="Gflat" />
+  <FileExtension Name=".txt" ContentType="Text" />
+  <FileExtension Name=".md" ContentType="Text" />
+</ProjectSchemaDefinitions>

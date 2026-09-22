@@ -1,0 +1,8 @@
+<Rule Name="ConfigurationGeneral" DisplayName="General" PageTemplate="generic" xmlns="http://schemas.microsoft.com/build/2009/properties">
+  <Rule.DataSource><DataSource Persistence="ProjectFile" HasConfigurationCondition="false" /></Rule.DataSource>
+  <EnumProperty Name="GflatProjectKind" DisplayName="Project kind">
+    <EnumValue Name="Executable" DisplayName="Executable" /><EnumValue Name="SourceLibrary" DisplayName="Source library" />
+  </EnumProperty>
+  <StringProperty Name="OutputPath" DisplayName="Output directory" />
+  <StringProperty Name="GflatCompilerCommand" DisplayName="Compiler command" />
+</Rule>

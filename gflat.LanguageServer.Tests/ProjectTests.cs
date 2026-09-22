@@ -1,4 +1,5 @@
 using gflat.Projects;
+using gflat.TestSupport;
 
 namespace gflat.LanguageServer.Tests;
 
@@ -15,49 +16,55 @@ public sealed class ProjectTests : IDisposable
     public void Dispose() { if (Directory.Exists(root)) Directory.Delete(root, true); }
 
     [Fact]
-    public void CommentsGlobsAndExclusionsResolveRelativeToProject()
+    public void MSBuildEvaluatesCommentsImportsConditionsAndRemovesWithoutRunningTargets()
     {
-        string project = Write("app/app.gfproj", """
-            <GflatProject Kind="Executable">
-              <!-- A hand-written project file. -->
-              <Sources Include="**/*.gf" />
-              <Sources Exclude="scratch/**" />
-            </GflatProject>
+        string imported = Write("shared/items.props", """
+            <Project>
+              <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+                <Compile Remove="scratch/**/*.gf" />
+              </ItemGroup>
+            </Project>
             """);
+        string project = Write("app/app.gfproj", ProjectFileFixture.Xml(content: """
+            <!-- Imported conditions must agree with MSBuild, including for unsaved files. -->
+            <Import Project="../shared/items.props" />
+            <Target Name="DoNotRun" BeforeTargets="Build"><Error Text="Evaluation ran a build!" /></Target>
+            """));
         string main = Write("app/main.gf", "int main() => 0;");
         string helper = Write("app/nested/helper.gf", "int helper() => 0;");
-        Write("app/scratch/invalid.gf", "invalid");
+        string scratch = Write("app/scratch/invalid.gf", "invalid");
         Write("app/bin/generated.gf", "invalid");
-        Write("app/obj/generated.gf", "invalid");
-        Write("app/nested/other.txt", "ignored");
-        Assert.Equal(new[] { main, helper }, ProjectGraph.Load(project).Sources);
+        var model = ProjectModel.Load(project);
+        Assert.Equal(new[] { main, helper }, model.SourceFiles());
+        Assert.Contains(imported, model.Imports);
+        Assert.True(model.IncludesFile(Path.Combine(root, "app/new.gf")));
+        Assert.False(model.IncludesFile(Path.Combine(root, "app/scratch/new.gf")));
+        Assert.Contains(scratch, ProjectModel.Load(project, "Release", "AnyCPU").SourceFiles());
     }
 
     [Fact]
     public void ReferencesDeduplicateDiamondDependencies()
     {
-        string rootProject = Write("app/app.gfproj", """<GflatProject Kind="Executable"><Reference Path="../a/a.gfproj"/><Reference Path="../b/b.gfproj"/></GflatProject>""");
-        Write("a/a.gfproj", """<GflatProject Kind="SourceLibrary"><Reference Path="../shared/shared.gfproj"/></GflatProject>""");
-        Write("b/b.gfproj", """<GflatProject Kind="SourceLibrary"><Reference Path="../shared/shared.gfproj"/></GflatProject>""");
-        Write("shared/shared.gfproj", """<GflatProject Kind="SourceLibrary"/>""");
+        string project = Write("app/app.gfproj", ProjectFileFixture.Xml(content: """
+            <ItemGroup><ProjectReference Include="../a/a.gfproj;../b/b.gfproj"/></ItemGroup>
+            """));
+        foreach (string name in new[] { "a", "b" })
+            Write(name + "/" + name + ".gfproj", ProjectFileFixture.Xml("SourceLibrary", """
+                <ItemGroup><ProjectReference Include="../shared/shared.gfproj"/></ItemGroup>
+                """));
+        Write("shared/shared.gfproj", ProjectFileFixture.Xml("SourceLibrary"));
         string shared = Write("shared/shared.gf", "int answer() => 42;");
         Write("app/main.gf", "int main() => answer();");
-        var graph = ProjectGraph.Load(rootProject);
+        var graph = ProjectGraph.Load(project);
         Assert.Equal(4, graph.Projects.Count);
         Assert.Single(graph.Sources, s => s == shared);
     }
 
     [Theory]
     [InlineData("<Project/>")]
-    [InlineData("<GflatProject Kind=\"Wrong\"/>")]
-    [InlineData("<GflatProject Kind=\"Executable\" Unknown=\"1\"/>")]
-    [InlineData("<GflatProject Kind=\"Executable\"><Source Include=\"*.gf\"/></GflatProject>")]
-    [InlineData("<GflatProject Kind=\"Executable\"><Sources Include=\"../*.gf\"/></GflatProject>")]
-    [InlineData("<GflatProject Kind=\"Executable\"><Sources Include=\"*.gf\" Exclude=\"*.gf\"/></GflatProject>")]
-    [InlineData("<GflatProject Kind=\"Executable\"><Reference Path=\"C:/a.gfproj\"/></GflatProject>")]
-    [InlineData("<GflatProject Kind=\"Executable\"><Reference Path=\"\\absolute.gfproj\"/></GflatProject>")]
-    [InlineData("<GflatProject Kind=\"Executable\"><Reference Path=\"\\\\server/share/a.gfproj\"/></GflatProject>")]
-    [InlineData("<!DOCTYPE GflatProject [<!ENTITY x SYSTEM 'file:///secret'>]><GflatProject Kind=\"Executable\">&x;</GflatProject>")]
+    [InlineData("<GflatProject Kind=\"Executable\"/>")]
+    [InlineData("<Project")]
+    [InlineData("<Project><Import Project=\"missing.props\"/></Project>")]
     public void InvalidProjectsProduceLocatedErrors(string xml)
     {
         string project = Write("app.gfproj", xml);
@@ -69,28 +76,24 @@ public sealed class ProjectTests : IDisposable
     [Fact]
     public void CyclesAndExecutableReferencesAreRejected()
     {
-        string project = Write("app.gfproj", """<GflatProject Kind="Executable"><Reference Path="lib/lib.gfproj"/></GflatProject>""");
-        Write("lib/lib.gfproj", """<GflatProject Kind="SourceLibrary"><Reference Path="../app.gfproj"/></GflatProject>""");
+        string project = Write("app.gfproj", ProjectFileFixture.Xml(content: """
+            <ItemGroup><ProjectReference Include="lib/lib.gfproj"/></ItemGroup>
+            """));
+        Write("lib/lib.gfproj", ProjectFileFixture.Xml("SourceLibrary", """
+            <ItemGroup><ProjectReference Include="../app.gfproj"/></ItemGroup>
+            """));
         Assert.Contains("Cyclic", Assert.Throws<ProjectException>(() => ProjectGraph.Load(project)).Message);
-        Write("lib/lib.gfproj", """<GflatProject Kind="Executable"/>""");
+        Write("lib/lib.gfproj", ProjectFileFixture.Xml());
         Assert.Contains("SourceLibrary", Assert.Throws<ProjectException>(() => ProjectGraph.Load(project)).Message);
-    }
-
-    [Fact]
-    public void NestedProjectsOwnTheirSources()
-    {
-        string project = Write("app.gfproj", """<GflatProject Kind="Executable"/>""");
-        string main = Write("main.gf", "int main() => 0;");
-        Write("nested/nested.gfproj", """<GflatProject Kind="Executable"/>""");
-        Write("nested/main.gf", "int main() => 1;");
-        Assert.Equal(new[] { main }, ProjectGraph.Load(project).Sources);
     }
 
     [Fact]
     public void AnalysisUsesUnsavedReferenceAndKeepsLastGoodProjectAfterInvalidXml()
     {
-        string project = Write("app/app.gfproj", """<GflatProject Kind="Executable"><Reference Path="../lib/lib.gfproj"/></GflatProject>""");
-        Write("lib/lib.gfproj", """<GflatProject Kind="SourceLibrary"/>""");
+        string project = Write("app/app.gfproj", ProjectFileFixture.Xml(content: """
+            <ItemGroup><ProjectReference Include="../lib/lib.gfproj"/></ItemGroup>
+            """));
+        Write("lib/lib.gfproj", ProjectFileFixture.Xml("SourceLibrary"));
         string main = Write("app/main.gf", "int main() => answer();");
         string library = Write("lib/lib.gf", "int other() => 0;");
         var open = new Dictionary<string, OpenDocument>(Workspace.Paths)
@@ -99,14 +102,13 @@ public sealed class ProjectTests : IDisposable
             [library] = new(library, "int answer() => 42;", 1)
         };
         var state = new ProjectWorkspace();
-        var good = Workspace.Analyze(root, open, state);
-        Assert.Empty(good.Diagnostics[main]);
-        File.WriteAllText(project, "<GflatProject");
+        Assert.Empty(Workspace.Analyze(root, open, state).Diagnostics[main]);
+        File.WriteAllText(project, "<Project");
         state.Invalidate();
         var broken = Workspace.Analyze(root, open, state);
         Assert.Contains(broken.Diagnostics[project], d => d.Code == "GFPROJ");
         Assert.DoesNotContain(broken.Diagnostics[main], d => d.Code != "GFPROJ");
-        File.WriteAllText(project, """<GflatProject Kind="Executable"/>""");
+        File.WriteAllText(project, ProjectFileFixture.Xml());
         state.Invalidate();
         var changed = Workspace.Analyze(root, open, state);
         Assert.Contains(changed.Diagnostics[main], d => d.Message.Contains("answer"));
@@ -114,12 +116,21 @@ public sealed class ProjectTests : IDisposable
     }
 
     [Fact]
-    public void MissingReferenceIsWatchedSoCreatingItCanRecover()
+    public void MissingReferencesAndImportsAreWatched()
     {
-        string project = Write("app.gfproj", """<GflatProject Kind="Executable"><Reference Path="missing.gfproj"/></GflatProject>""");
+        string imported = Write("settings.props", "<Project/>");
+        string project = Write("app.gfproj", ProjectFileFixture.Xml(content: """
+            <Import Project="settings.props"/>
+            """));
         var state = new ProjectWorkspace();
+        Assert.Contains(imported, state.Load(project).Paths);
+        File.WriteAllText(project, ProjectFileFixture.Xml(content: """
+            <ItemGroup><ProjectReference Include="missing.gfproj"/></ItemGroup>
+            """));
+        state.Invalidate();
         var result = state.Load(project);
         Assert.NotNull(result.Error);
         Assert.Contains(Path.Combine(root, "missing.gfproj"), result.Paths);
+        Assert.Contains(imported, result.Paths);
     }
 }

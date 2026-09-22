@@ -17,12 +17,21 @@ public sealed class ProjectWorkspace
         try
         {
             var graph = ProjectGraph.Load(file, path => { attempted.Add(path); return ProjectModel.Load(path); });
+            foreach (var project in graph.Projects) attempted.UnionWith(project.Imports);
             previous[file] = graph;
             return cache[file] = (graph, null, attempted.ToArray());
         }
         catch (ProjectException error)
         {
-            return cache[file] = (previous.GetValueOrDefault(file), error, attempted.ToArray());
+            var graph = previous.GetValueOrDefault(file);
+            attempted.Add(error.ProjectPath);
+            if (graph != null)
+                foreach (var project in graph.Projects)
+                {
+                    attempted.Add(project.FilePath);
+                    attempted.UnionWith(project.Imports);
+                }
+            return cache[file] = (graph, error, attempted.ToArray());
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
         {

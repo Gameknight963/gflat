@@ -13,6 +13,7 @@ public static class Program
         {
             var sourcePaths = new List<string>();
             string? outputPath = null, clang = null;
+            string configuration = "Debug", platform = "AnyCPU";
             bool run = false, irOnly = false, check = false, clean = false;
             string? projectPath = null;
             for (int i = 0; i < args.Length; i++)
@@ -21,7 +22,7 @@ public static class Program
                 switch (args[i])
                 {
                     case "--help": case "-h":
-                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target x86_64-pc-windows-msvc]\ngflat [build|check|clean] <project.gfproj> [--run] [-o output] [--emit-ir]");
+                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target x86_64-pc-windows-msvc]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]");
                         return 0;
                     case "build" when i == 0: break;
                     case "check" when i == 0: check = true; break;
@@ -29,6 +30,9 @@ public static class Program
                     case "--check": check = true; break;
                     case "-o": outputPath = Value(); break;
                     case "--clang": clang = Value(); break;
+                    case "--configuration": configuration = Value(); break;
+                    case "--platform": platform = Value(); break;
+                    case "--source-list": sourcePaths.AddRange(File.ReadAllLines(Value()).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath)); break;
                     case "--target": TargetInfo.Parse(Value()); break;
                     case "--run": run = true; break;
                     case "--emit-ir": irOnly = true; break;
@@ -42,13 +46,12 @@ public static class Program
             {
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
                 projectPath = sourcePaths[0];
-                graph = ProjectGraph.Load(projectPath);
+                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Load(path, configuration, platform));
                 sourcePaths = graph.Sources.ToList();
-                outputPath ??= Path.Combine(graph.Root.DirectoryPath, "bin", graph.Root.Name + (irOnly ? ".ll" : OperatingSystem.IsWindows() ? ".exe" : ""));
+                outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
                 if (graph.Root.Kind == ProjectKind.SourceLibrary)
                 {
                     if (run || irOnly || args.Contains("-o")) throw new ArgumentException("SourceLibrary projects have no standalone output; build an executable referencing them.");
-                    check = true;
                 }
             }
             if (clean)
@@ -57,13 +60,14 @@ public static class Program
                 // Delete only the two known output files, never a directory or an arbitrary path.
                 if (graph.Root.Kind == ProjectKind.Executable)
                 {
-                    File.Delete(outputPath!);
-                    File.Delete(Path.Combine(graph.Root.DirectoryPath, "bin", graph.Root.Name + ".ll"));
+                    var protectedFiles = graph.Sources.Concat(graph.Projects.Select(p => p.FilePath));
+                    if (protectedFiles.Contains(outputPath!, ProjectModel.Paths) ||
+                        protectedFiles.Contains(Path.ChangeExtension(graph.Root.TargetPath, ".ll"), ProjectModel.Paths))
+                        throw new ArgumentException("Clean output must differ from source and project files.");
                 }
-                return 0;
+                return ProjectBuild.Run(graph.Root, "Clean", configuration, platform);
             }
-            if (sourcePaths.Count == 0 && graph?.Root.Kind == ProjectKind.SourceLibrary) return 0;
-            if (sourcePaths.Count == 0) throw new ArgumentException("Specify a source file. Use --help for usage.");
+            if (sourcePaths.Count == 0 && graph == null) throw new ArgumentException("Specify a source file. Use --help for usage.");
             if (check && (run || irOnly)) throw new ArgumentException("--check cannot be combined with --run or --emit-ir.");
             if (run && irOnly) throw new ArgumentException("--run cannot be combined with --emit-ir.");
             outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : ".exe"));
@@ -72,6 +76,16 @@ public static class Program
                 throw new ArgumentException("A source file may only be supplied once.");
             if (sourcePaths.Contains(outputPath, pathComparer) || graph?.Projects.Any(p => pathComparer.Equals(p.FilePath, outputPath)) == true)
                 throw new ArgumentException("Output must differ from every source file.");
+            if (graph != null)
+            {
+                int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
+                    irOnly, args.Contains("-o") ? outputPath : null, clang);
+                if (result != 0 || !run) return result;
+                var execution = NativeToolchain.Run(outputPath, []);
+                Console.Write(execution.StandardOutput);
+                Console.Error.Write(execution.StandardError);
+                return execution.ExitCode;
+            }
             var sources = sourcePaths.Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
             if (check)
             {

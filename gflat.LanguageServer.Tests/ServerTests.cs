@@ -164,7 +164,7 @@ public sealed class ServerTests
     {
         await using var s = new Session();
         string project = s.File("app.gfproj");
-        const string xml = """<GflatProject Kind="Executable"/>""";
+        string xml = gflat.TestSupport.ProjectFileFixture.Xml();
         System.IO.File.WriteAllText(project, xml);
         await s.Initialize();
         await s.Open("main.gf", "int main() => answer();");

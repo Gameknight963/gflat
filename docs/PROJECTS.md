@@ -1,93 +1,120 @@
-# XML project prototype
+# MSBuild projects
 
-`.gfproj` is gflat's own project format. It is not an MSBuild project. The CLI,
-language server, and Visual Studio adapter use the same loader in `gflat.Projects`.
+A `.gfproj` is an MSBuild XML project. Visual Studio opens that same file through
+Microsoft's Common Project System (CPS). No companion project is generated.
+The CLI and language server evaluate it using MSBuild from the installed .NET SDK.
 
 ```xml
-<GflatProject Kind="Executable">
-  <!-- Paths are relative to this file, not the working directory. -->
-  <Sources Include="**/*.gf" />
-  <Sources Exclude="scratch/**" />
-  <Reference Path="../../std/std.gfproj" />
-</GflatProject>
+<Project DefaultTargets="Build">
+  <Import Project="../../build/Gflat.props" />
+  <!-- Paths are relative to this project. Adjust the imports for your directory. -->
+  <ItemGroup>
+    <Compile Remove="scratch/**/*.gf" />
+    <ProjectReference Include="../../std/std.gfproj" />
+  </ItemGroup>
+  <Import Project="../../build/Gflat.targets" />
+</Project>
 ```
 
-`Kind` is required and is either `Executable` or `SourceLibrary`. A source library
-contributes sources to consumers; it does not produce a binary library. Only source
-libraries can be referenced. References are transitive, diamond dependencies are
-deduplicated, and cycles are errors.
+`Gflat.props` includes `**/*.gf`, excluding `bin`, `obj`, `.git`, `.vs`, and
+`.local-notes`. MSBuild `Compile` items, conditions, imports, and `Remove` entries
+control the source list. Nested projects do not implicitly exclude their sources:
+use `Compile Remove="nested/**/*.gf"` when necessary. Set
+`EnableDefaultCompileItems` to `false` **before** importing the props file if you
+want to list sources explicitly. Use one `.gfproj` per directory for editor discovery.
 
-Without any `Sources Include`, the default is `**/*.gf`. Use one Include or Exclude
-per Sources element. Patterns support `*`, `?`, and `**`; use `/` for portable paths.
-Exclusions apply to every include. `bin`, `obj`, `.git`, `.vs`, and `.local-notes`
-directories are always excluded. Directory symlinks are not followed, and nested
-directories containing another `.gfproj` belong to that project. Source patterns
-stay inside the project directory; references may use `..`. Use one project per
-directory. Unknown elements/attributes and malformed XML are errors. XML comments
-are supported; DTDs and external entities are not.
+The default `GflatProjectKind` is `Executable`. A source library declares:
 
-## Command line
+```xml
+<PropertyGroup>
+  <GflatProjectKind>SourceLibrary</GflatProjectKind>
+</PropertyGroup>
+```
+
+Put this between the imports. Source libraries contribute sources to consumers;
+they do not produce binary libraries. References must point to source libraries.
+Transitive references are supported, diamond dependencies are deduplicated, and
+cycles are errors. Building a source library checks its sources.
+
+## Building
+
+Install the .NET 10 SDK, then build the compiler once:
 
 ```text
-dotnet run --project gflat -- check examples/hello/hello.gfproj
-dotnet run --project gflat -- build examples/hello/hello.gfproj --run
-dotnet run --project gflat -- build examples/hello/hello.gfproj --emit-ir
-dotnet run --project gflat -- clean examples/hello/hello.gfproj
+dotnet build gflat
+dotnet msbuild examples/hello/hello.gfproj -t:Build
+dotnet msbuild examples/hello/hello.gfproj -t:Check
+dotnet msbuild examples/hello/hello.gfproj -t:Build -p:GflatEmitIR=true
+dotnet msbuild examples/hello/hello.gfproj -t:Clean
 ```
 
-With a published compiler, replace `dotnet run --project gflat --` with `gflat`.
-Existing explicit `.gf` command lines still work. Executables default to
-`bin/<project-name>.exe` on Windows. `--emit-ir` writes `bin/<project-name>.ll`.
-`-o` overrides the output path. Source-library builds perform semantic checking;
-an empty source library is valid. Clean deletes only the known default outputs,
-not arbitrary files in `bin` or custom `-o` outputs.
+`Rebuild` and a no-op `Restore` target are also provided. `Configuration` defaults
+to `Debug`; use `-p:Configuration=Release` to select another configuration. This
+selects project conditions and output paths; it does not yet set LLVM optimization.
+Native optimization still uses `GFLAT_OPT_LEVEL`.
 
-Project loading and checking are portable .NET code. **Native code generation
-still has the compiler's existing Windows x64 ABI limitation.** This prototype
-does not add a Linux target or claim that existing generated IR has a Linux ABI.
+The compiler CLI delegates project commands to these same targets:
+
+```text
+gflat check examples/hello/hello.gfproj
+gflat build examples/hello/hello.gfproj --configuration Release --run
+gflat build examples/hello/hello.gfproj --emit-ir
+gflat clean examples/hello/hello.gfproj
+```
+
+In a checkout, substitute `dotnet run --project gflat --` for `gflat`.
+Executables default to `bin/<Configuration>/<project-name>.exe`; LLVM output uses
+`.ll`. `-o` overrides the CLI output. Clean removes the configured executable,
+its default `.ll`, and the generated source list, preserving other files. Custom
+IR outputs are retained. Clean currently requires an `.exe` target name.
+
+The targets choose `GflatCompilerCommand` if explicitly configured, otherwise the
+VSIX's bundled compiler when building in Visual Studio, the checkout's Debug
+compiler if available, or `gflat` from PATH. Outside this checkout, distribute
+`build/Gflat.props`, `build/Gflat.targets`, and `build/Rules` with your build setup
+and adjust imports. An SDK/package distribution mechanism is not implemented yet.
+
+MSBuild runs build hooks normally. Editor evaluation does not execute targets.
+Files generated by build targets are not automatically generated for editor analysis.
+Explicit source commands (`gflat main.gf helper.gf`) still work without loading
+MSBuild; a future compiler written in gflat can keep that interface.
+
+Project evaluation and checking work with the .NET SDK on Linux as well as Windows.
+**Native code generation still uses the compiler's Windows x64 ABI.** Native builds
+need Clang and the Windows native linking tools; this change adds no Linux target.
 
 ## Visual Studio
 
-Build and install VSIX 0.3.0 or later, restart Visual Studio, then open `gflat.slnx`.
-The `gflat sources` solution folder contains `std` and `hello` beside the C# projects.
-For your own project, create its XML file and use **Add > Existing Project**.
-If a solution was opened before the extension was installed, VS may remember its
-gflat projects as unloaded; use **Reload Project** after installing the extension.
+Build and install VSIX 0.4.0, restart Visual Studio, and open `gflat.slnx`.
+The `gflat sources` solution folder contains `std` and `hello` beside the C# tools.
+Use **Add > Existing Project** for another `.gfproj`.
 
-The prototype provides a project tree and a context menu with:
+CPS owns the project tree, standard file commands, project-file editing and reload,
+configurations, property pages, and MSBuild invocation. The old handwritten
+hierarchy and its custom file dialogs have been removed. The extension supplies a
+`.gf` item template and the bundled compiler location.
 
-- Open / Edit project file, without unloading the project.
-- New `.gf` file, New folder, Add existing file (copies into the selected folder).
-- Rename and Delete. Only empty folders can be renamed or deleted by this prototype.
-- Build and Clean, using the bundled CLI, with output and compiler errors in VS.
+The gflat projects remain excluded from the checked-in solution's automatic build
+so `dotnet build/test gflat.slnx` can bootstrap the tools. Build a gflat project
+explicitly in VS, or enable it in Configuration Manager after the compiler exists.
+The available configurations are `Debug|AnyCPU` and `Release|AnyCPU`; `AnyCPU` is
+an MSBuild configuration label, not a native ABI selection.
 
-Save an edit to `.gfproj` to apply it. Reload is debounced; malformed XML produces
-an Error List entry and leaves the previous valid tree in place. Building always
-reads the current file and fails on invalid configuration. File-system additions
-and removals update the tree. Source files are included by patterns rather than
-rewriting XML on every file operation, so comments are preserved. A rename that
-would exclude a file is rejected; edit the source patterns first.
+The language server discovers the nearest project and includes referenced sources
+and unsaved buffers. Evaluation is cached between edits; source and imported
+project-file changes invalidate it. Invalid project files produce diagnostics while
+the previous valid source graph remains available. Editor evaluation currently
+uses `Debug|AnyCPU` independently of the active VS build configuration.
 
-The gflat projects are excluded from the checked-in solution's automatic build
-configuration so plain `dotnet build/test gflat.slnx` can still build the C# tools.
-Use the gflat project's **Build** context menu in VS. The prototype exposes one
-`Debug|Any CPU` project configuration; this does not change the native target ABI.
+## Remaining work
 
-Diagnostics discover the nearest `.gfproj` above each open `.gf` file and include
-referenced libraries, including unsaved source buffers. The server caches project
-evaluation between edits and invalidates it on file-system changes. Invalid XML
-is reported while the last valid project graph remains available. Existing
-`gflat-workspace.json` files continue to work for sources not owned by a project.
+Debugger/startup-project support, completion, hover, incremental native builds,
+package management, and binary libraries are not included. There is no New Project
+wizard yet; create a `.gfproj` from the example and add it to your solution.
 
-## Prototype boundaries
+The previous `<GflatProject>` XML prototype is no longer supported. Convert it to
+`<Project>`, import the build files, and replace `Sources`/`Reference` with MSBuild
+`Compile`/`ProjectReference` items as shown above.
 
-There are no project templates, property pages, debugger/startup-project support,
-configuration-specific options, incremental builds, package restore, binary
-libraries, or general build scripting yet. File operations use a small custom menu;
-full VS automation, drag-and-drop, source-control integration, and folder rename
-refactoring are not implemented. This is intended to test whether the everyday
-editing/building workflow is useful before investing in those features.
-
-The Visual Studio adapter uses the native project/hierarchy interfaces. This is
-more maintenance than an MSBuild-backed project, but project semantics remain
-independent of Visual Studio and can be reimplemented in gflat later.
+References: [Microsoft's CPS documentation](https://github.com/microsoft/VSProjectSystem)
+and [MSBuild project files](https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-project-file-schema-reference).

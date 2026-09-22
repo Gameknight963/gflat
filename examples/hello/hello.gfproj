@@ -1,4 +1,5 @@
-<GflatProject Kind="Executable">
-  <Sources Include="**/*.gf" />
-  <Reference Path="../../std/std.gfproj" />
-</GflatProject>
+<Project DefaultTargets="Build">
+  <Import Project="../../build/Gflat.props" />
+  <ItemGroup><ProjectReference Include="../../std/std.gfproj" /></ItemGroup>
+  <Import Project="../../build/Gflat.targets" />
+</Project>

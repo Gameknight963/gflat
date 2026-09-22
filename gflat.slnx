@@ -11,12 +11,10 @@
   <Project Path="gflat.LanguageServer/gflat.LanguageServer.csproj" />
   <Project Path="gflat.Tests/gflat.Tests.csproj" />
   <Project Path="gflat.Projects/gflat.Projects.csproj" />
-  <Folder Name="/gflat sources/">
-    <Project Path="std/std.gfproj">
-      <Build Project="false" />
-    </Project>
-    <Project Path="examples/hello/hello.gfproj">
-      <Build Project="false" />
-    </Project>
-  </Folder>
+  <Project Path="std/std.gfproj">
+    <Build Project="false" />
+  </Project>
+  <Project Path="examples/hello/hello.gfproj">
+    <Build Project="false" />
+  </Project>
 </Solution>

@@ -86,8 +86,12 @@ need Clang and the Windows native linking tools; this change adds no Linux targe
 ## Visual Studio
 
 Build and install VSIX 0.4.0, restart Visual Studio, and open `gflat.slnx`.
-The `gflat sources` solution folder contains `std` and `hello` beside the C# tools.
+The `std` and `hello` projects appear directly under the solution beside the C# tools.
 Use **Add > Existing Project** for another `.gfproj`.
+
+No special solution folder is required. Visual Studio's optional
+[solution folders](https://learn.microsoft.com/en-us/visualstudio/ide/solutions-and-projects-in-visual-studio#solution-folder)
+only group projects in Solution Explorer; they do not change project loading or builds.
 
 CPS owns the project tree, standard file commands, project-file editing and reload,
 configurations, property pages, and MSBuild invocation. The old handwritten

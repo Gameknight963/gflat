@@ -1,0 +1,10 @@
+<VSTemplate Version="3.0.0" Type="Item" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>gflat source file</Name>
+    <Description>An empty gflat source file.</Description>
+    <ProjectType>gflat</ProjectType>
+    <DefaultName>Source.gf</DefaultName>
+    <SortOrder>10</SortOrder>
+  </TemplateData>
+  <TemplateContent><ProjectItem ReplaceParameters="true" TargetFileName="$fileinputname$.gf">Source.gf</ProjectItem></TemplateContent>
+</VSTemplate>

@@ -7,21 +7,23 @@
 [$RootKey$\TextMate\LanguageConfiguration\ContentTypeMapping]
 "gflat"="$PackageFolder$\gflat-language-configuration.json"
 
-[$RootKey$\Packages\{315FB02C-BD6D-4B6A-9A89-4A5F9D5E9162}]
-@="gflat projects"
-"InprocServer32"="$WinDir$\SYSTEM32\MSCOREE.DLL"
-"Class"="gflat.VisualStudio.GflatProjectPackage"
-"CodeBase"="$PackageFolder$\gflat.VisualStudio.dll"
-
 [$RootKey$\Projects\{6423F711-946A-41AB-B95B-0F9B5911F803}]
-@="gflat"
-"Package"="{315FB02C-BD6D-4B6A-9A89-4A5F9D5E9162}"
+@="ProjectFactory"
+"ProjectFactoryPackage"="{3347BEE8-D7A1-4082-95E4-38A439553CC2}"
+"Package"="{3347BEE8-D7A1-4082-95E4-38A439553CC2}"
 "DisplayName"="gflat"
 "DisplayProjectFileExtensions"="gflat Projects (*.gfproj);*.gfproj"
 "DefaultProjectExtension"="gfproj"
 "PossibleProjectExtensions"="gfproj"
-"ProjectSubType"=""
+"Capabilities"="Gflat;HandlesOwnReload;OpenProjectFile;UseFileGlobs"
+"DisableAsynchronousSolutionLoad"=dword:00000000
+"PrefetchFactory"="{3998970A-AEE1-4216-A54F-0A99D20A1FAB}"
 "Language(VsTemplate)"="gflat"
+
+[$RootKey$\Projects\{6423F711-946A-41AB-B95B-0F9B5911F803}\AddItemTemplates\TemplateDirs\{6423F711-946A-41AB-B95B-0F9B5911F803}\/1]
+@="gflat"
+"TemplatesDir"="$PackageFolder$\ItemTemplates"
+"SortPriority"=dword:00000064
 
 [$RootKey$\Editors\{FA3CD31E-987B-443A-9B81-186104E8DAC1}\Extensions]
 "gfproj"=dword:00000020

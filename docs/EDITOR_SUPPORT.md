@@ -3,14 +3,13 @@
 The Visual Studio extension provides live compiler diagnostics, syntax highlighting,
 bracket matching, automatic bracket/quote closing, selection surrounding, block
 indentation, and line/block comment commands. Hover, navigation, completion, and debugging are not implemented yet.
-Version 0.3.0 adds the [XML project prototype](PROJECTS.md), including project
-trees and Build/Clean commands inside an existing solution.
+Version 0.4.0 uses [MSBuild projects and CPS](PROJECTS.md) for integration into an existing solution.
 
 ## Project layout
 
 | Project | Responsibility |
 | --- | --- |
-| `gflat.Projects` | Portable XML project loading, source patterns, and references |
+| `gflat.Projects` | MSBuild evaluation snapshots, source membership, and project references |
 | `gflat.Compiler` | Shared parser, type checker, diagnostics, and LLVM IR emitter |
 | `gflat` | Command-line driver and native toolchain invocation |
 | `gflat.LanguageServer` | LSP process; document snapshots, workspace sources, and analysis scheduling |
@@ -43,7 +42,7 @@ editors/VisualStudio/bin/Release/net472/gflat.VisualStudio.vsix
 Open that VSIX to install it, follow the installer's restart instructions, and open
 a `.gf` file. Errors and warnings appear through Visual Studio's LSP support. The
 package bundles a compiler for project builds; Clang must be installed separately. Building the
-package does not install it into your IDE automatically.
+package does not install it into your IDE automatically. Project evaluation and builds also require the .NET 10 SDK, including when using the bundled server.
 
 The installed server is the packaged copy; it does not automatically track this
 checkout. For an update, increment the VSIX manifest and client assembly versions,
@@ -142,6 +141,12 @@ and runs tests against the server, grammar, and configuration extracted from the
 package. TextMateSharp is a test-only dependency used to tokenize the grammar; it
 is not bundled into the extension or server. Manual
 IDE checks are still needed for activation, squiggles, and the Error List UI.
+
+For CPS changes, also load a `.gfproj` in a solution, add and rename a source file,
+rename its nonempty folder, edit a `Compile Remove` entry externally, and verify
+the tree updates. Check Build and Clean from Visual Studio. Setting
+`GflatEmitIR` to `true` lets this project-system smoke test run without Clang.
+Run these checks in an experimental VS profile when developing the extension.
 
 Implementation references: [LSP 3.17](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)
 and [Visual Studio LSP integration](https://learn.microsoft.com/en-us/visualstudio/extensibility/adding-an-lsp-extension?view=vs-2022).

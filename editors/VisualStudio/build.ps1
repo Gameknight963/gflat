@@ -18,6 +18,12 @@ if (-not $MSBuild -or -not (Test-Path -LiteralPath $MSBuild)) {
     throw 'Visual Studio MSBuild was not found. Pass -MSBuild with its full path.'
 }
 $serverOutput = Join-Path $PSScriptRoot 'obj/server'
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$itemsOutput = Join-Path $PSScriptRoot 'obj/items'
+New-Item -ItemType Directory -Force -Path $itemsOutput | Out-Null
+$itemArchive = Join-Path $itemsOutput 'gflat-source.zip'
+if (Test-Path -LiteralPath $itemArchive) { Remove-Item -LiteralPath $itemArchive }
+[IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $PSScriptRoot 'Templates/Items/SourceFile'), $itemArchive)
 dotnet publish (Join-Path $repoRoot 'gflat.LanguageServer/gflat.LanguageServer.csproj') -c $Configuration -r win-x64 --self-contained true -o $serverOutput
 if ($LASTEXITCODE -ne 0) { throw 'Language server publishing failed' }
 dotnet publish (Join-Path $repoRoot 'gflat/gflat.csproj') -c $Configuration -r win-x64 --self-contained true -o (Join-Path $PSScriptRoot 'obj/compiler')

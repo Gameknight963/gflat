@@ -20,7 +20,7 @@ public sealed class GflatLanguageClient : ILanguageClient, IDisposable
     public string Name => "gflat";
     public IEnumerable<string> ConfigurationSections => Array.Empty<string>();
     public object? InitializationOptions => null;
-    public IEnumerable<string> FilesToWatch => new[] { "gflat-workspace.json", "**/*.gf" };
+    public IEnumerable<string> FilesToWatch => new[] { "gflat-workspace.json", "**/*.gf", "**/*.gfproj", "**/*.props", "**/*.targets" };
     public bool ShowNotificationOnInitializeFailed => true;
     public event AsyncEventHandler<EventArgs>? StartAsync;
 #pragma warning disable CS0067 // Required by ILanguageClient; VS owns normal shutdown.

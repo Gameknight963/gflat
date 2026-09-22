@@ -28,6 +28,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
     $compiler = Join-Path $extracted 'Compiler/gflat.exe'
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
+    if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
+    dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal
+    if ($LASTEXITCODE -ne 0) { throw 'MSBuild could not invoke the bundled compiler' }
     & $compiler check (Join-Path $repoRoot 'examples/hello/hello.gfproj')
     if ($LASTEXITCODE -ne 0) { throw 'Bundled compiler project check failed' }
     & $compiler build (Join-Path $repoRoot 'examples/hello/hello.gfproj') --emit-ir -o (Join-Path $extracted 'hello.ll')

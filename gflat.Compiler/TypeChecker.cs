@@ -1619,6 +1619,11 @@ namespace gflat
         private bool IsValidPointerForArithmetic(TypeExpression type, out string? error)
         {
             type = ResolveAlias(type);
+            if (IsNullable(type) && type is not ManagedTypeExpression)
+            {
+                error = "Cast a nullable pointer to non-null before pointer arithmetic";
+                return false;
+            }
             if (type is ManagedTypeExpression)
             {
                 error = "Pointer arithmetic is not allowed on managed pointers ('^')";
@@ -1892,22 +1897,27 @@ namespace gflat
                     return false;
                 if (fs.IsNullable && !ft.IsNullable)
                     return false;
-                if (!IsAssignable(ft.ReturnType, fs.ReturnType))
+                if (!TypesMatchPublic(ft.ReturnType, fs.ReturnType, _symbols))
                     return false;
                 if (ft.ParameterTypes.Count != fs.ParameterTypes.Count)
                     return false;
                 for (int i = 0; i < ft.ParameterTypes.Count; i++)
                 {
-                    if (!TypesMatch(ft.ParameterTypes[i], fs.ParameterTypes[i]))
+                    if (!TypesMatchPublic(ft.ParameterTypes[i], fs.ParameterTypes[i], _symbols))
                         return false;
                 }
                 return true;
             }
 
+            // Nullability must survive conversions between raw and function pointers.
+            if (IsNullable(source) && !IsNullable(target) &&
+                target is PointerTypeExpression or FunctionPointerTypeExpression)
+                return false;
+
             // void* is implicitly convertible to/from unmanaged function pointers
             if (target is PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" } } && source is FunctionPointerTypeExpression { IsManaged: false })
                 return true;
-            if (source is PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" } } && target is FunctionPointerTypeExpression { IsManaged: false })
+            if (source is PointerTypeExpression { IsReadOnly: false, Inner: NamedTypeExpression { Name: "void" } } && target is FunctionPointerTypeExpression { IsManaged: false })
                 return true;
 
             // Array-to-pointer decay: T[N] or T[] can be assigned to T*
@@ -3847,7 +3857,8 @@ namespace gflat
                 case TokenKind.Star:
                     TypeExpression? inner = ResolveAlias(operand) switch
                     {
-                        PointerTypeExpression pointer => pointer.Inner,
+                        PointerTypeExpression { IsNullable: false } pointer => pointer.Inner,
+                        PointerTypeExpression => throw new TypeCheckException("Cast a nullable pointer to non-null before dereferencing", node.Line),
                         ManagedTypeExpression { IsNullable: false } managed => managed.Inner,
                         ManagedTypeExpression => throw new TypeCheckException("Cast a nullable managed pointer to non-null before dereferencing", node.Line),
                         _ => null
@@ -4333,8 +4344,8 @@ namespace gflat
 
                 memberAccess.Object.Accept(this);
                 TypeExpression rawObjType = GetType(memberAccess.Object);
-                if (ResolveAlias(rawObjType) is ManagedTypeExpression { IsNullable: true })
-                    throw new TypeCheckException("Cast a nullable managed pointer to non-null before calling a method", node.Line);
+                if (IsNullable(ResolveAlias(rawObjType)))
+                    throw new TypeCheckException("Cast a nullable pointer to non-null before calling a method", node.Line);
                 bool isReceiverReadOnly = (rawObjType is PointerTypeExpression pRec && pRec.IsReadOnly)
                                        || (rawObjType is ManagedTypeExpression mRec && mRec.IsReadOnly)
                                        || IsExpressionReadOnly(memberAccess.Object);
@@ -4646,6 +4657,8 @@ namespace gflat
 
         private void CheckIndirectCall(CallExpression node, FunctionPointerTypeExpression fnPtr)
         {
+            if (fnPtr.IsNullable)
+                throw new TypeCheckException("Cast a nullable function pointer to non-null before calling", node.Line);
             _indirectCalls.Add(node);
 
             if (node.Arguments.Count != fnPtr.ParameterTypes.Count)
@@ -4837,8 +4850,8 @@ namespace gflat
 
             node.Object.Accept(this);
             TypeExpression objType = GetType(node.Object);
-            if (ResolveAlias(objType) is ManagedTypeExpression { IsNullable: true })
-                throw new TypeCheckException("Cast a nullable managed pointer to non-null before accessing members", node.Line);
+            if (IsNullable(ResolveAlias(objType)))
+                throw new TypeCheckException("Cast a nullable pointer to non-null before accessing members", node.Line);
 
             if (node.IsArrow)
             {
@@ -5250,6 +5263,8 @@ namespace gflat
             }
             else if (targetType is PointerTypeExpression ptr)
             {
+                if (ptr.IsNullable)
+                    throw new TypeCheckException("Cast a nullable pointer to non-null before indexing", node.Line);
                 RecordType(node, ptr.Inner);
             }
             else

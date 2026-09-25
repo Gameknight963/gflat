@@ -308,9 +308,10 @@ namespace gflat.Tests
                         return 1;
                     }
 
-                    item.id = 100;
-                    item.count = 25;
-                    int total = item.id + item.count;
+                    Item* checkedItem = (Item*)item;
+                    checkedItem.id = 100;
+                    checkedItem.count = 25;
+                    int total = checkedItem.id + checkedItem.count;
 
                     free((void*)item);
                     return total;
@@ -630,7 +631,8 @@ namespace gflat.Tests
                         hasAddress = 1;
                     }
 
-                    int val = fn(6, 7);
+                    int(int, int)* callable = (int(int, int)*)fn;
+                    int val = callable(6, 7);
                     return isNullBefore * 100 + isNullAfter * 10 + hasAddress * val;
                 }
                 """;

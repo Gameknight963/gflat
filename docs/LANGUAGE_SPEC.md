@@ -133,6 +133,8 @@ Arrays have inline storage. Array-to-pointer decay does not establish bounds or 
 
 Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Unsized array parameters are rejected; spell buffer parameters as pointers. Array value conversions preserve dimensions and element representation; cast individual elements explicitly when changing numeric types. Values requiring destruction cannot be passed by value.
 
+Nullable raw pointers and function pointers require an explicit checked non-null cast before dereference, indexing, member access, calls, or pointer arithmetic. A comparison with `null` does not change the variable's static type. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
+
 ```gflat
 struct Point { int x; int y; }
 int main()

@@ -633,7 +633,7 @@ namespace gflat.Tests
                 {
                     Color c = Color::Green;
                     Color c2 = Color::Blue;
-                    int x = Color::Yellow;
+                    int x = (int)Color::Yellow;
                     return 0;
                 }
                 """;

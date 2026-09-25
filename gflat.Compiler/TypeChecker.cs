@@ -1741,22 +1741,16 @@ namespace gflat
                     return true;
             }
 
+            // Enum identities survive assignments and calls. Default remains contextual.
+            if (source is not NamedTypeExpression { Name: "default" } &&
+                (target is NamedTypeExpression enumTarget && ResolveEnum(enumTarget) != null ||
+                 source is NamedTypeExpression enumSource && ResolveEnum(enumSource) != null))
+                return false;
+
             // Integer constant literal in-range assignment
             if (valueNode != null && IsInteger(source) && target is NamedTypeExpression targetNamed && TryGetIntegerConstant(valueNode, out long constVal))
             {
                 if (FitsInIntegerType(targetNamed.Name, constVal))
-                    return true;
-            }
-
-            // Enum assignability with underlying type
-            if (target is NamedTypeExpression nt && ResolveEnum(nt) is EnumInfo targetEnum)
-            {
-                if (IsAssignable(targetEnum.UnderlyingType, source, valueNode))
-                    return true;
-            }
-            if (source is NamedTypeExpression ns && ResolveEnum(ns) is EnumInfo sourceEnum)
-            {
-                if (IsAssignable(target, sourceEnum.UnderlyingType, valueNode))
                     return true;
             }
 

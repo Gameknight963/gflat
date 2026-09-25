@@ -85,7 +85,7 @@ int main()
 }
 ```
 
-Enums are distinct integral types, optionally with an underlying type such as `uint`. Bitwise operations on the same enum preserve its type. Aliases use `alias Name = Type;`.
+Enums are distinct integral types, optionally with an underlying type such as `uint`. Conversions between enums and numbers, or between different enum types, require explicit casts, including assignments, arguments, returns, and comparisons. Bitwise operations on the same enum preserve its type. Aliases use `alias Name = Type;`.
 
 ## Weak defaults and explicit replacements
 

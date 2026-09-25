@@ -925,7 +925,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Color c = Color::Blue;
-                    return c;
+                    return (int)c;
                 }
                 """;
 
@@ -948,7 +948,7 @@ namespace gflat.Tests
                 {
                     Status s1 = Status::Active;
                     Status s2 = Status::Active;
-                    if (s1 == s2 && s1 == 20)
+                    if (s1 == s2 && (int)s1 == 20)
                     {
                         return 42;
                     }
@@ -974,7 +974,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    if (Steps::Second == 11 && Steps::Fourth == 26)
+                    if ((int)Steps::Second == 11 && (int)Steps::Fourth == 26)
                     {
                         return 42;
                     }
@@ -1037,7 +1037,7 @@ namespace gflat.Tests
                 {
                     Graphics::Mode m1 = Graphics::Mode::Shaded;
                     Graphics::Mode m2 = Graphics::Mode::Shaded;
-                    if (m1 == m2 && m1 == 42)
+                    if (m1 == m2 && (int)m1 == 42)
                     {
                         return 42;
                     }
@@ -1098,7 +1098,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Flags f = Flags::Read | Flags::Execute;
-                    if ((f & Flags::Execute) == Flags::Execute && (f & Flags::Write) == 0)
+                    if ((f & Flags::Execute) == Flags::Execute && (f & Flags::Write) == Flags::None)
                     {
                         return 42;
                     }

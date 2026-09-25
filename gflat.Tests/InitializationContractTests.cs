@@ -20,6 +20,7 @@ public class InitializationContractTests
     [InlineData("struct S { int* p; } struct T { S s; } int main() { T t = default(T); return 0; }")]
     [InlineData("class B { int* p; } class D : B { public D() {} }")]
     [InlineData("struct S { readonly(char)* first = second; readonly(char)* second = \"x\"; }")]
+    [InlineData("class Outer { public struct Inner { int* p; public Inner() {} } }")]
     public void InvalidInitializationIsRejected(string source)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(source));
 
@@ -68,4 +69,8 @@ public class InitializationContractTests
     [Fact]
     public void FreeHelperMaySupplyAFieldInitializer()
         => Assert.Equal(42, CompilerTestHelper.Run("int* Identity(int* p) => p; struct S { public int* p; public S(int* q) { p = Identity(q); } } int main() { int n = 42; S s = new S(&n); return *s.p; }").ExitCode);
+
+    [Fact]
+    public void ConcreteDefaultMayHaveAnAbstractBaseWithoutUserConstructors()
+        => Assert.Equal(42, CompilerTestHelper.Run("abstract class B { public abstract int Get(); } class D : B { public override int Get() => 42; } int main() { D d = default(D); B* p = &d; return p.Get(); }").ExitCode);
 }

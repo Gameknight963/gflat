@@ -7,7 +7,7 @@ public partial class TypeChecker
 {
     public bool CanDefaultInitialize(TypeExpression type) => CanDefaultInitialize(type, new HashSet<string>());
 
-    private bool CanDefaultInitialize(TypeExpression type, HashSet<string> visiting)
+    private bool CanDefaultInitialize(TypeExpression type, HashSet<string> visiting, bool isBase = false)
     {
         type = ResolveAlias(type);
         if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
@@ -22,8 +22,8 @@ public partial class TypeChecker
             if (GetStruct(named.Name) is StructInfo str)
                 return str.Constructors.Count == 0 && str.Fields.All(f => CanDefaultInitialize(f.Type, visiting));
             if (GetClass(named.Name) is ClassInfo cls)
-                return !cls.IsAbstract && cls.Constructors.Count == 0 &&
-                    (cls.BaseClass == null || CanDefaultInitialize(new NamedTypeExpression(cls.BaseClass, null, type.Line), visiting)) &&
+                return (!cls.IsAbstract || isBase) && cls.Constructors.Count == 0 &&
+                    (cls.BaseClass == null || CanDefaultInitialize(new NamedTypeExpression(cls.BaseClass, null, type.Line), visiting, isBase: true)) &&
                     cls.Fields.All(f => CanDefaultInitialize(f.Type, visiting));
             return !IsInterface(named);
         }

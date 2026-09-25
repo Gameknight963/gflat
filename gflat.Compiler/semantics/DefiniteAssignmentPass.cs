@@ -116,6 +116,8 @@ namespace gflat.semantics
             {
                 if (classDecl.IsGeneric) return;
                 ClassDeclaration? prevClass = _currentClass;
+                StructDeclaration? outerStruct = _currentStruct;
+                _currentStruct = null;
                 _currentClass = classDecl;
                 try
                 {
@@ -128,12 +130,15 @@ namespace gflat.semantics
                 finally
                 {
                     _currentClass = prevClass;
+                    _currentStruct = outerStruct;
                 }
             }
             else if (member is StructDeclaration structDecl)
             {
                 if (structDecl.IsGeneric) return;
                 StructDeclaration? prevStruct = _currentStruct;
+                ClassDeclaration? outerClass = _currentClass;
+                _currentClass = null;
                 _currentStruct = structDecl;
                 try
                 {
@@ -146,6 +151,7 @@ namespace gflat.semantics
                 finally
                 {
                     _currentStruct = prevStruct;
+                    _currentClass = outerClass;
                 }
             }
             else if (member is OperatorDeclaration op)

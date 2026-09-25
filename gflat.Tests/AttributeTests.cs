@@ -92,7 +92,7 @@ public class AttributeTests
     [Fact]
     public void StringArgumentsAreExpressions()
     {
-        var attr = Read("class Tag : Attribute { public readonly char* text; public Tag(readonly char* s) { text = s; } } [Tag(\"hello\")] int main() { return 0; }");
+        var attr = Read("class Tag : Attribute { public readonly(char*) text; public Tag(readonly(char)* s) { text = s; } } [Tag(\"hello\")] int main() { return 0; }");
         Assert.Equal(new ConstValue.String("hello"), attr.Value.Fields["text"]);
     }
 

@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public class ArrayCleanupTests
 {
     private const string Prelude = """
-        extern int printf(readonly char* format, ...);
+        extern int printf(readonly(char)* format, ...);
         struct Item { public int id; ~Item() { printf("%d", id); } }
         """;
     private const string Items = "Item[3] items = default(Item[3]); items[0].id = 1; items[1].id = 2; items[2].id = 3;";

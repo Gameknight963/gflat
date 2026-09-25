@@ -227,7 +227,7 @@ namespace gflat
                     accessibility = Current.Kind;
                     Consume();
                 }
-                else if (Check(TokenKind.Readonly) && !isReadonly)
+                else if (Check(TokenKind.Readonly) && Peek().Kind != TokenKind.OpenParen && !isReadonly)
                 {
                     isReadonly = true;
                     Consume();
@@ -500,7 +500,7 @@ namespace gflat
                 { accessibility = Current.Kind; Consume(); }
                 else if (Check(TokenKind.Static)) { isStatic = true; Consume(); }
                 else if (Check(TokenKind.Const)) { isConst = true; Consume(); }
-                else if (Check(TokenKind.Readonly) && !isReadonly) { isReadonly = true; Consume(); }
+                else if (Check(TokenKind.Readonly) && Peek().Kind != TokenKind.OpenParen && !isReadonly) { isReadonly = true; Consume(); }
                 else if (Check(TokenKind.Virtual)) { isVirtual = true; Consume(); }
                 else if (Check(TokenKind.Override)) { isOverride = true; Consume(); }
                 else if (Check(TokenKind.Abstract)) { isAbstract = true; Consume(); }
@@ -580,18 +580,6 @@ namespace gflat
         private PropertyDeclaration ParseProperty(TypeExpression type, string name, TokenKind accessibility,
             bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, bool isReadonly, int line)
         {
-            // Match method declarations: readonly before a pointer return type qualifies
-            // the pointee. Use `readonly get` to qualify the accessor's receiver.
-            if (isReadonly && type is PointerTypeExpression pointer && !pointer.IsReadOnly)
-            {
-                type = new PointerTypeExpression(pointer.Inner, pointer.IsNullable, pointer.Line, isReadOnly: true);
-                isReadonly = false;
-            }
-            else if (isReadonly && type is ManagedTypeExpression managed && !managed.IsReadOnly)
-            {
-                type = new ManagedTypeExpression(managed.Inner, managed.IsNullable, managed.Line, isReadOnly: true);
-                isReadonly = false;
-            }
             MethodDeclaration Accessor(bool getter, TokenKind access, BlockStatement? body, int accessorLine) =>
                 new MethodDeclaration((getter ? "$get$" : "$set$") + name,
                     getter ? type : new NamedTypeExpression("void", null, line),
@@ -829,20 +817,6 @@ namespace gflat
 
         private MethodDeclaration ParseMethodDeclarationCoreLocated(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null)
         {
-            if (isReadOnly)
-            {
-                if (returnType is PointerTypeExpression ptr && !ptr.IsReadOnly)
-                {
-                    returnType = new PointerTypeExpression(ptr.Inner, ptr.IsNullable, ptr.Line, isReadOnly: true);
-                    isReadOnly = false;
-                }
-                else if (returnType is ManagedTypeExpression mgd && !mgd.IsReadOnly)
-                {
-                    returnType = new ManagedTypeExpression(mgd.Inner, mgd.IsNullable, mgd.Line, isReadOnly: true);
-                    isReadOnly = false;
-                }
-            }
-
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
             while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
@@ -874,17 +848,8 @@ namespace gflat
                 initializer = ParseExpression();
             Expect(TokenKind.Semicolon);
             if (isReadonly)
-            {
-                if (type is PointerTypeExpression ptr && !ptr.IsReadOnly)
-                {
-                    type = new PointerTypeExpression(ptr.Inner, ptr.IsNullable, ptr.Line, isReadOnly: true);
-                }
-                else if (type is ManagedTypeExpression mgd && !mgd.IsReadOnly)
-                {
-                    type = new ManagedTypeExpression(mgd.Inner, mgd.IsNullable, mgd.Line, isReadOnly: true);
-                }
-            }
-            return new FieldDeclaration(name, type, initializer, accessibility, isConst, isStatic, line, isReadonly);
+                throw new TypeCheckException("Use readonly(T) for a field type; bare readonly is a method modifier", line);
+            return new FieldDeclaration(name, type, initializer, accessibility, isConst, isStatic, line, type.IsReadOnlyValue);
         }
 
         private TypeExpression ParseTypeExpression() => Located(() => ParseTypeExpressionCoreLocated());
@@ -892,65 +857,77 @@ namespace gflat
         private TypeExpression ParseTypeExpressionCoreLocated()
         {
             int line = Current.Line;
-            bool isReadOnly = Match(TokenKind.Readonly);
-            string name = "";
-
-            // handle built-in type keywords
-            if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
-                TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
-                TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or TokenKind.ExtraLong or
-                TokenKind.String or TokenKind.Void)
+            TypeExpression type;
+            if (Match(TokenKind.Readonly))
             {
-                name = Current.Text;
+                if (!Check(TokenKind.OpenParen))
+                    throw new TypeCheckException("Use readonly(T) to qualify a type", line);
                 Consume();
+                type = TypeQualifiers.ReadOnly(ParseTypeExpression());
+                Expect(TokenKind.CloseParen);
             }
             else
             {
-                name = Expect(TokenKind.Identifier).Text;
-            }
+                string name = "";
 
-            List<TypeExpression> typeArgs = new();
-            if (Check(TokenKind.Less))
-            {
-                Consume(); // <
-                while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
+                // handle built-in type keywords
+                if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
+                    TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
+                    TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or TokenKind.ExtraLong or
+                    TokenKind.String or TokenKind.Void)
                 {
-                    typeArgs.Add(ParseTypeExpression());
-                    if (!Check(TokenKind.Greater))
-                        Expect(TokenKind.Comma);
+                    name = Current.Text;
+                    Consume();
                 }
-                Expect(TokenKind.Greater);
-            }
+                else
+                {
+                    name = Expect(TokenKind.Identifier).Text;
+                }
 
-            TypeExpression type = new NamedTypeExpression(name, null, line, typeArgs);
-
-            if (Check(TokenKind.Dot))
-            {
-                throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
-            }
-
-            while (Match(TokenKind.DoubleColon))
-            {
-                int memberLine = Current.Line;
-                string member = Expect(TokenKind.Identifier).Text;
-                List<TypeExpression> memberTypeArgs = new();
+                List<TypeExpression> typeArgs = new();
                 if (Check(TokenKind.Less))
                 {
-                    Consume();
+                    Consume(); // <
                     while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
                     {
-                        memberTypeArgs.Add(ParseTypeExpression());
+                        typeArgs.Add(ParseTypeExpression());
                         if (!Check(TokenKind.Greater))
                             Expect(TokenKind.Comma);
                     }
                     Expect(TokenKind.Greater);
                 }
-                type = new NestedTypeExpression(type, member, memberTypeArgs, memberLine);
+
+                type = new NamedTypeExpression(name, null, line, typeArgs);
 
                 if (Check(TokenKind.Dot))
                 {
                     throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
                 }
+
+                while (Match(TokenKind.DoubleColon))
+                {
+                    int memberLine = Current.Line;
+                    string member = Expect(TokenKind.Identifier).Text;
+                    List<TypeExpression> memberTypeArgs = new();
+                    if (Check(TokenKind.Less))
+                    {
+                        Consume();
+                        while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
+                        {
+                            memberTypeArgs.Add(ParseTypeExpression());
+                            if (!Check(TokenKind.Greater))
+                                Expect(TokenKind.Comma);
+                        }
+                        Expect(TokenKind.Greater);
+                    }
+                    type = new NestedTypeExpression(type, member, memberTypeArgs, memberLine);
+
+                    if (Check(TokenKind.Dot))
+                    {
+                        throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
+                    }
+                }
+
             }
 
             // postfix modifiers
@@ -959,14 +936,12 @@ namespace gflat
                 if (Match(TokenKind.Star))
                 {
                     bool nullable = Match(TokenKind.QuestionMark);
-                    type = new PointerTypeExpression(type, nullable, line, isReadOnly);
-                    isReadOnly = false;
+                    type = new PointerTypeExpression(type, nullable, line);
                 }
                 else if (Match(TokenKind.Caret))
                 {
                     bool nullable = Match(TokenKind.QuestionMark);
-                    type = new ManagedTypeExpression(type, nullable, line, isReadOnly);
-                    isReadOnly = false;
+                    type = new ManagedTypeExpression(type, nullable, line);
                 }
                 else if (Check(TokenKind.OpenParen))
                 {

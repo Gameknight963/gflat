@@ -53,7 +53,7 @@ public partial class TypeChecker
                             method.Parameters[0].Type is not PointerTypeExpression
                             { IsReadOnly: true, IsNullable: false, Inner: NamedTypeExpression { Name: "char" } } ||
                             method.Parameters[1].Type is not NamedTypeExpression { Name: "ulong" })
-                            throw new TypeCheckException("String literal operators must take (readonly char* data, ulong length)", method.Line);
+                            throw new TypeCheckException("String literal operators must take (readonly(char)* data, ulong length)", method.Line);
                         if (method.ReturnType is not NamedTypeExpression result ||
                             (result.Name != owner && result.Name != owner.Split('.').Last()))
                             throw new TypeCheckException("A string literal operator must return its containing class or struct", method.Line);

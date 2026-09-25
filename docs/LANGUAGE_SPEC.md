@@ -21,7 +21,7 @@ Strings use double quotes and escape sequences; raw newlines are rejected. Decim
 The following EBNF describes the core expression/type grammar; declaration modifiers, generics, interfaces, and operators are detailed below. Repetition is `{ ... }`, optional syntax is `[ ... ]`.
 
 ```ebnf
-type          = [ "readonly" ], qualifiedType, { suffix } ;
+type          = ( qualifiedType | "readonly", "(", type, ")" ), { suffix } ;
 qualifiedType = name, [ "<", type, { ",", type }, ">" ],
                 { "::", name, [ "<", type, { ",", type }, ">" ] } ;
 suffix        = "*", [ "?" ] | "^", [ "?" ]
@@ -140,6 +140,27 @@ int main()
 }
 ```
 
+## Readonly types and methods
+
+`readonly(T)` is a transitive readonly view of `T`. Ordinary types remain mutable. It restricts writes through that view, including through fields, pointers, managed pointers, and array elements. It does not freeze an object globally: an existing mutable alias can still change it.
+
+| Declaration | Meaning |
+| --- | --- |
+| `readonly(int) n` | A value that cannot be reassigned after initialization |
+| `readonly(int)* p` | A reassignable pointer through which the integer cannot be changed |
+| `readonly(int*) p` | Neither the pointer nor its pointee can be changed through this view |
+| `readonly(Buffer)* p` | Only readonly methods can be called; reads of fields retain transitive readonly qualification |
+
+Bare `readonly` on a method qualifies its receiver independently of its return type. For example, `public readonly readonly(char)* Data()` is a readonly method returning a pointer to readonly characters. `public readonly(char)* Data()` has a mutable receiver and the same return type. A readonly method may return a mutable pointer obtained independently of its receiver, such as a pointer parameter.
+
+Fields use the same type syntax. A `readonly(T)` field can be initialized by its declaration or assigned on `this` in its declaring constructor. Other instances and nested storage do not gain a constructor exception. Normal destructor cleanup still runs for readonly values.
+
+Copying a readonly scalar into a mutable scalar is allowed. Copying a pointer retains its pointee qualification. Copying an aggregate into a mutable aggregate is rejected if that would expose mutable aliases through pointer fields. Arrays of scalar values can be copied by value. Nested pointer conversions must preserve readonly at every writable level: `int**` can become `readonly(int*)*`, but cannot become `readonly(int)**`.
+
+Aliases and generic arguments preserve qualification. Explicit raw-pointer casts may remove readonly; managed-pointer casts cannot. `const` remains the compile-time constant mechanism.
+
+This replaces the old prefix type syntax: write `readonly(char)*` instead of `readonly char*`. For an old readonly pointer field, use `readonly(char*)` to keep both the field and pointee readonly. Bare `readonly` is now exclusively a receiver modifier on methods and property accessors.
+
 ## Initialization, ownership, and cleanup
 
 ### Managed pointers
@@ -239,7 +260,9 @@ class Player
 
 `get` and `set` are contextual identifiers. The setter receives an implicit parameter named `value` with the property's type and returns `void`. Accessors accept blocks or `=> expression;`; a property-level `=> expression;` is shorthand for a getter. An explicit property may have only a getter or only a setter. An auto-property must have a getter, and all its accessors must use `;`. Auto-property storage is private, is zero-initialized by ordinary construction, and participates in field initialization in declaration order. A get-only auto-property can also be assigned through `this` in its declaring instance constructor.
 
-Properties use ordinary member accessibility. On a property with both accessors, one accessor may declare more restrictive access, such as `private set` or `protected set`. Access is checked separately for reads and writes. `readonly get` allows calls through a readonly receiver while permitting a mutable setter. Non-virtual auto-getters are implicitly readonly. As with method declarations, `readonly` before a pointer property type qualifies the pointee; use an accessor modifier to qualify the receiver.
+Properties use ordinary member accessibility. On a property with both accessors, one accessor may declare more restrictive access, such as `private set` or `protected set`. Access is checked separately for reads and writes. `readonly get` allows calls through a readonly receiver while permitting a mutable setter. Non-virtual auto-getters are implicitly readonly. `readonly(T)` qualifies the property's result type; bare `readonly` qualifies the receiver, as on methods.
+
+An implicitly readonly auto-getter cannot return a writable pointer stored in its receiver. Declare a pointer to readonly storage, or use an explicit mutable getter when callers need writable access. The same restriction applies to returned aggregates containing writable pointers.
 
 Reads call the getter. Assignments call the setter and evaluate to the assigned value, even if the setter changes its `value` parameter. Compound assignments and `++`/`--` evaluate the receiver once, then read, update, and write. Postfix updates return the old value; prefix updates return the new value. The receiver is evaluated before the right-hand side. Normal operator resolution, definite-assignment checks, and temporary cleanup apply. A property is not addressable storage: taking its address or assigning to a field of an inline property result is rejected. A pointer returned by a property still permits access to its pointee under ordinary pointer rules.
 
@@ -257,7 +280,7 @@ Throwing functions declare `throws`. Callers must catch or declare propagation. 
 
 ## Custom string literals
 
-A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly char* data, ulong length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and may declare `throws`; callers must follow the normal exception rules.
+A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly(char)* data, ulong length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and may declare `throws`; callers must follow the normal exception rules.
 
 ```gflat
 using Text;
@@ -266,12 +289,12 @@ namespace Text
 {
     class View
     {
-        public readonly char* data;
+        public readonly(char*) data;
         public ulong length;
 
-        public View(readonly char* p, ulong n) { data = p; length = n; }
+        public View(readonly(char)* p, ulong n) { data = p; length = n; }
 
-        public static View operator s""(readonly char* p, ulong n)
+        public static View operator s""(readonly(char)* p, ulong n)
         {
             return new View(p, n);
         }

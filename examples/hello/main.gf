@@ -1,5 +1,5 @@
 // A small executable for trying the project integration.
-extern int printf(readonly char* format, ...);
+extern int printf(readonly(char)* format, ...);
 
 int main()
 {

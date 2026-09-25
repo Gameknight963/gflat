@@ -75,9 +75,9 @@ namespace gflat.Tests
         public void PrintfStandardOutput()
         {
             string code = """
-                extern int printf(readonly char* fmt, ...);
+                extern int printf(readonly(char)* fmt, ...);
 
-                void Greet(readonly char* name)
+                void Greet(readonly(char)* name)
                 {
                     printf("Hello, %s!\n", name);
                 }
@@ -2702,7 +2702,7 @@ namespace gflat.Tests
         public void ReadonlyPointerExecution()
         {
             string code = """
-                int Sum(readonly int* a, readonly int* b)
+                int Sum(readonly(int)* a, readonly(int)* b)
                 {
                     return *a + *b;
                 }
@@ -2739,7 +2739,7 @@ namespace gflat.Tests
                     Rectangle r;
                     r.width = 6;
                     r.height = 7;
-                    readonly Rectangle* ptr = &r;
+                    readonly(Rectangle)* ptr = &r;
                     return ptr.Area();
                 }
                 """;
@@ -2754,7 +2754,7 @@ namespace gflat.Tests
             string code = """
                 class User
                 {
-                    readonly int id;
+                    readonly(int) id;
                     int score;
 
                     public User(int id, int score)
@@ -2917,7 +2917,7 @@ namespace gflat.Tests
             string code = """
                 int main()
                 {
-                    readonly char* s = c"hello";
+                    readonly(char)* s = c"hello";
                     if (s[0] == 'h' && s[4] == 'o' && s[5] == '\0')
                     {
                         return 42;
@@ -3119,9 +3119,9 @@ namespace gflat.Tests
             string code = """
                 class Exception
                 {
-                    public readonly char* message;
+                    public readonly(char*) message;
                     public int code;
-                    public Exception(readonly char* msg, int c)
+                    public Exception(readonly(char)* msg, int c)
                     {
                         message = msg;
                         code = c;
@@ -3258,7 +3258,7 @@ namespace gflat.Tests
                 class CustomException : Exception
                 {
                     public int extra;
-                    public CustomException(readonly char* msg, int c, int e) : base(msg, c)
+                    public CustomException(readonly(char)* msg, int c, int e) : base(msg, c)
                     {
                         extra = e;
                     }
@@ -4367,7 +4367,7 @@ namespace gflat.Tests
             string code = """
                 int main()
                 {
-                    readonly char* s = "hello";
+                    readonly(char)* s = "hello";
                     if (s[0] == 'h' && s[4] == 'o')
                     {
                         return 42;

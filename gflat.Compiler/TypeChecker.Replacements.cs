@@ -96,6 +96,8 @@ public partial class TypeChecker
     private string SignatureType(TypeExpression type, MethodDeclaration method)
     {
         using var context = SourceContext.Enter(method.Span);
+        if (type.IsReadOnlyValue)
+            return "readonly(" + SignatureType(type.WithReadOnlyValue(false), method) + ")";
         if (type is NamedTypeExpression generic && generic.Namespace == null)
         {
             int index = method.GenericParameters.FindIndex(p => p.Name == generic.Name);

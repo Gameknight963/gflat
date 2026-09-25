@@ -99,7 +99,7 @@ public class ReviewRegressionTests
     [Fact]
     public void DeferKeepsLexicalBindings()
     {
-        string source = "extern int printf(readonly char* f, ...); int main() { int x = 1; defer printf(\"%d\", x); { int x = 2; return 0; } }";
+        string source = "extern int printf(readonly(char)* f, ...); int main() { int x = 1; defer printf(\"%d\", x); { int x = 2; return 0; } }";
         Assert.Equal("1", CompilerTestHelper.Run(source).StandardOutput);
     }
 

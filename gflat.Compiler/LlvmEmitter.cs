@@ -1675,6 +1675,8 @@ public partial class LlvmEmitter : IVisitor
     private string GetMangleTypeName(TypeExpression type)
     {
         type = _typeChecker.ResolveAlias(type);
+        if (type.IsReadOnlyValue)
+            return "ReadOnly$" + GetMangleTypeName(type.WithReadOnlyValue(false));
         if (type is NamedTypeExpression named)
             return named.Name;
         if (type is PointerTypeExpression ptr)
@@ -4211,7 +4213,17 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitValueForTarget(AstNode expression, TypeExpression target)
     {
-        if (expression is ArrayLiteralExpression && _typeChecker.ResolveAlias(target) is PointerTypeExpression)
+        if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression &&
+            expression is IdentifierExpression or MemberAccessExpression or IndexExpression)
+        {
+            EmitAddress(expression);
+            string address = Pop();
+            string type = EmitType(target);
+            string value = NewTemp();
+            Emit($"    {value} = load {type}, {type}* {address}");
+            Push(value);
+        }
+        else if (expression is ArrayLiteralExpression && _typeChecker.ResolveAlias(target) is PointerTypeExpression)
             EmitArgument(expression);
         else expression.Accept(this);
     }

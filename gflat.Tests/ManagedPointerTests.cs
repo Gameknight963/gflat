@@ -6,7 +6,7 @@ public class ManagedPointerTests
 {
     // Test adapter only: malloc does not implement garbage collection.
     private const string Runtime = """
-        extern int printf(readonly char* format, ...);
+        extern int printf(readonly(char)* format, ...);
         extern void*? malloc(ulong size);
         void*? __gflat_gc_alloc(ulong size) { printf("A"); return malloc(size); }
         """;
@@ -18,7 +18,7 @@ public class ManagedPointerTests
     [InlineData("int^[2] a = [new^ int(3), new^ int(4)]; return *a[0] + *a[1];", 7, "AA")]
     [InlineData("int^? p = new^ int(6); int^ q = (int^)p; return *q;", 6, "A")]
     [InlineData("int^? p = null; if (p == null) { return 7; } return 0;", 7, "")]
-    [InlineData("int^ p = new^ int(7); readonly int^ q = p; return *q;", 7, "A")]
+    [InlineData("int^ p = new^ int(7); readonly(int)^ q = p; return *q;", 7, "A")]
     public void ScalarReferencesExecute(string body, int expected, string output)
     {
         var result = CompilerTestHelper.Run(Runtime + "int main() { " + body + " }");
@@ -90,8 +90,8 @@ public class ManagedPointerTests
     [InlineData("int^ p = new^ int(); p++;")]
     [InlineData("int^ p = new^ int(); int* q = &*p;")]
     [InlineData("int^? p = null; int x = *p;")]
-    [InlineData("readonly int^ p = new^ int(); *p = 3;")]
-    [InlineData("readonly int^ p = new^ int(); int^ q = (int^)p;")]
+    [InlineData("readonly(int)^ p = new^ int(); *p = 3;")]
+    [InlineData("readonly(int)^ p = new^ int(); int^ q = (int^)p;")]
     [InlineData("int^ p = new^ int(); float^ q = (float^)p;")]
     [InlineData("int^ p = new^ int(1, 2);")]
     [InlineData("int^ p = new^ int(true);")]

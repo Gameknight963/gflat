@@ -110,6 +110,11 @@ namespace gflat.symbols
 
         public TypeExpression ResolveAliasDirect(TypeExpression type)
         {
+            var resolved = ResolveAliasDirectCore(type);
+            return type.IsReadOnlyValue ? TypeQualifiers.ReadOnly(resolved) : resolved;
+        }
+        private TypeExpression ResolveAliasDirectCore(TypeExpression type)
+        {
             if (type is NestedTypeExpression nested)
             {
                 TypeExpression resolvedParent = ResolveAlias(nested.Parent);

@@ -12,9 +12,9 @@ namespace gflat.ast
 
         public ManagedTypeExpression(TypeExpression inner, bool isNullable, int line, bool isReadOnly = false) : base(line)
         {
-            Inner = inner;
+            Inner = isReadOnly ? TypeQualifiers.ReadOnly(inner) : inner;
             IsNullable = isNullable;
-            IsReadOnly = isReadOnly;
+            IsReadOnly = isReadOnly || inner.IsReadOnlyValue;
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

@@ -45,7 +45,7 @@ public class ArrayLiteralTests
     }
 
     private const string Resource = """
-        extern int printf(readonly char* format, ...);
+        extern int printf(readonly(char)* format, ...);
         struct Item {
             public int id;
             public Item(int value) { id = value; printf("N%d", id); }

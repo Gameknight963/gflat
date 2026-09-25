@@ -1834,7 +1834,7 @@ namespace gflat.Tests
                 int main()
                 {
                     int x = 42;
-                    readonly int* p = &x;
+                    readonly(int)* p = &x;
                     *p = 10;
                     return 0;
                 }
@@ -1851,7 +1851,7 @@ namespace gflat.Tests
                 int main()
                 {
                     int x = 42;
-                    readonly int* p = &x;
+                    readonly(int)* p = &x;
                     p[0] = 10;
                     return 0;
                 }
@@ -1868,7 +1868,7 @@ namespace gflat.Tests
                 int main()
                 {
                     int x = 42;
-                    readonly int* p = &x;
+                    readonly(int)* p = &x;
                     (*p)++;
                     return 0;
                 }
@@ -1890,21 +1890,21 @@ namespace gflat.Tests
                 int main()
                 {
                     int x = 42;
-                    readonly int* p = &x;
+                    readonly(int)* p = &x;
                     Modify(p);
                     return 0;
                 }
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("cannot pass 'readonly int*' as 'int*'", ex.Message);
+            Assert.Contains("cannot pass 'readonly(int)*' as 'int*'", ex.Message);
         }
 
         [Fact]
         public void WritablePointerToReadonlyPointerConversionAllowed()
         {
             string code = """
-                int ReadVal(readonly int* ptr)
+                int ReadVal(readonly(int)* ptr)
                 {
                     return *ptr;
                 }
@@ -1913,7 +1913,7 @@ namespace gflat.Tests
                 {
                     int x = 42;
                     int* p = &x;
-                    readonly int* ro = p;
+                    readonly(int)* ro = p;
                     return ReadVal(p);
                 }
                 """;
@@ -1929,7 +1929,7 @@ namespace gflat.Tests
             string code = """
                 struct User
                 {
-                    readonly int id;
+                    readonly(int) id;
                     int age;
 
                     public User(int i, int a)
@@ -1957,7 +1957,7 @@ namespace gflat.Tests
             string code = """
                 class User
                 {
-                    readonly int id;
+                    readonly(int) id;
 
                     public User(int i)
                     {
@@ -2029,7 +2029,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Counter c = new Counter();
-                    readonly Counter* ptr = &c;
+                    readonly(Counter)* ptr = &c;
                     ptr.Increment();
                     return 0;
                 }
@@ -2056,7 +2056,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Counter c = new Counter();
-                    readonly Counter* ptr = &c;
+                    readonly(Counter)* ptr = &c;
                     return ptr.GetCount();
                 }
                 """;
@@ -2073,7 +2073,7 @@ namespace gflat.Tests
                 int main()
                 {
                     int x = 42;
-                    readonly int* ro = &x;
+                    readonly(int)* ro = &x;
                     int* w = (int*)ro;
                     *w = 100;
                     return *w;
@@ -2601,7 +2601,7 @@ namespace gflat.Tests
             string code = """
                 int main()
                 {
-                    readonly char* s = c"hello";
+                    readonly(char)* s = c"hello";
                     return 0;
                 }
                 """;
@@ -2901,7 +2901,7 @@ namespace gflat.Tests
                     {
                         return ex.GetCode();
                     }
-                    catch (readonly Exception* e)
+                    catch (readonly(Exception)* e)
                     {
                         return 2;
                     }
@@ -2942,7 +2942,7 @@ namespace gflat.Tests
             string code = """
                 class CustomException : Exception
                 {
-                    public CustomException(readonly char* msg) : base(msg, 100)
+                    public CustomException(readonly(char)* msg) : base(msg, 100)
                     {
                     }
                 }
@@ -3661,7 +3661,7 @@ namespace gflat.Tests
             string code = """
                 int main()
                 {
-                    readonly char* s = "hello";
+                    readonly(char)* s = "hello";
                     return 0;
                 }
                 """;

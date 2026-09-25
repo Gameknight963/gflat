@@ -49,7 +49,7 @@ public class PropertyTests
     public void ReceiverEvaluatedOnceAndBeforeValue()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly char* text, ...);
+            extern int printf(readonly(char)* text, ...);
             struct Counter { public int Count { get; set; } }
             Counter* receiver(Counter* c) { printf("R"); return c; }
             int value() { printf("V"); return 7; }
@@ -69,7 +69,7 @@ public class PropertyTests
     public void StaticAndWriteOnlyAccessors()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly char* text, ...);
+            extern int printf(readonly(char)* text, ...);
             class Constants {
                 public static int Answer => 42;
                 public static int Output { set => printf("%d", value); }
@@ -127,7 +127,7 @@ public class PropertyTests
             struct S { public int Value { get; set; } = 5; }
             int main() {
                 Counter c = new Counter(); Base* b = (Base*)&c; b.Count = 7;
-                S s = new S(); readonly S* p = &s;
+                S s = new S(); readonly(S)* p = &s;
                 return b.Count + p.Value;
             }
             """).ExitCode);
@@ -147,7 +147,7 @@ public class PropertyTests
     public void InitializersKeepDeclarationOrder()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly char* text, ...);
+            extern int printf(readonly(char)* text, ...);
             int init(int n) { printf("%d", n); return n; }
             struct S {
                 public int A = init(1);
@@ -176,7 +176,7 @@ public class PropertyTests
     {
         Assert.Equal(9, CompilerTestHelper.Run("""
             struct S { int n; public int P { readonly get => n; set => n = value; } }
-            int main() { S s = new S(); s.P = 9; readonly S* p = &s; return p.P; }
+            int main() { S s = new S(); s.P = 9; readonly(S)* p = &s; return p.P; }
             """).ExitCode);
     }
 
@@ -204,7 +204,7 @@ public class PropertyTests
     public void ReadOnlyPointerPropertyPreservesPointeeQualifier()
     {
         Assert.Equal(65, CompilerTestHelper.Run("""
-            struct Text { public readonly char* Data => "A"; }
+            struct Text { public readonly(char)* Data => "A"; }
             int main() { Text text = new Text(); return (int)text.Data[0]; }
             """).ExitCode);
     }
@@ -213,7 +213,7 @@ public class PropertyTests
     public void TemporaryReceiverLivesThroughSetterAndThrowingValue()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly char* text, ...);
+            extern int printf(readonly(char)* text, ...);
             struct S {
                 int n;
                 public int P { get { printf("G"); return n; } set { printf("S"); n = value; } }
@@ -235,7 +235,7 @@ public class PropertyTests
     public void ThrowingAccessorsUseNormalExceptionCleanup()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly char* text, ...);
+            extern int printf(readonly(char)* text, ...);
             struct S {
                 public int P {
                     get throws { printf("G"); throw new* Exception(); }
@@ -265,7 +265,7 @@ public class PropertyTests
     [InlineData("struct S { public int P { get; public set; } }", "more restrictive")]
     [InlineData("struct S { public int P; public int P => 1; }", "Duplicate declaration")]
     [InlineData("struct S { public int P { get; set; } } int main() { S s; s.P = 1; return 0; }", "unassigned")]
-    [InlineData("struct S { public int P { get; set; } } int main() { S s = new S(); readonly S* p = &s; p.P = 1; return 0; }", "readonly")]
+    [InlineData("struct S { public int P { get; set; } } int main() { S s = new S(); readonly(S)* p = &s; p.P = 1; return 0; }", "readonly")]
     [InlineData("struct V { public int X; } struct S { public V P => new V(); } int main() { S s = new S(); s.P.X = 1; return 0; }", "value returned by a property")]
     [InlineData("struct S { public void P { get; set; } }", "Properties cannot")]
     [InlineData("struct V { ~V() {} } struct S { public V P { get; set; } }", "values with destructors")]

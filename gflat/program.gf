@@ -1,4 +1,4 @@
-extern int printf(readonly char* fmt, ...);
+extern int printf(readonly(char)* fmt, ...);
 
 struct Cool
 {

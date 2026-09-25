@@ -10,7 +10,7 @@ abstract class Attribute
 
 class Exception
 {
-    public readonly char* message;
+    public readonly(char*) message;
     public int code;
 
     public Exception()
@@ -19,19 +19,19 @@ class Exception
         code = 0;
     }
 
-    public Exception(readonly char* msg)
+    public Exception(readonly(char)* msg)
     {
         message = msg;
         code = 0;
     }
 
-    public Exception(readonly char* msg, int c)
+    public Exception(readonly(char)* msg, int c)
     {
         message = msg;
         code = c;
     }
 
-    public readonly virtual readonly char* GetMessage()
+    public readonly virtual readonly(char)* GetMessage()
     {
         return message;
     }

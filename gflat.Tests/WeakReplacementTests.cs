@@ -79,7 +79,7 @@ public class WeakReplacementTests
     [InlineData("public weak int f() => 1; private replace int f() => 2;", "must match")]
     [InlineData("weak int f() => 1; replace int f() throws => 2;", "must match")]
     [InlineData("const weak int f() => 1; replace int f() => 2;", "must match")]
-    [InlineData("weak int f(readonly char* p) => 1; replace int f(char* p) => 2;", "matching weak")]
+    [InlineData("weak int f(readonly(char)* p) => 1; replace int f(char* p) => 2;", "matching weak")]
     [InlineData("weak int f(void*? p) => 1; replace int f(void* p) => 2;", "matching weak")]
     [InlineData("class C { public weak int f() => 1; public static replace int f() => 2; }", "must match")]
     [InlineData("class C { public weak int f() => 1; } class D : C { public replace int f() => 2; }", "matching weak")]

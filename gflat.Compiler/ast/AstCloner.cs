@@ -110,6 +110,7 @@ namespace gflat.ast
         {
             using var context = SourceContext.Enter(type.Span);
             var result = CloneTypeLocated(type);
+            if (type.IsReadOnlyValue) result = TypeQualifiers.ReadOnly(result);
             result.Span = type.Span;
             return result;
         }

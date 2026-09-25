@@ -497,7 +497,12 @@ namespace gflat
             _diagnostics.ReportError(message, line, column);
         }
 
-        private void RecordType(AstNode node, TypeExpression type) => _types[node] = type;
+        private void RecordType(AstNode node, TypeExpression type)
+        {
+            _types[node] = ResolveAlias(type);
+            if (node is MemberAccessExpression or IdentifierExpression && IsExpressionReadOnly(node))
+                _types[node] = TypeQualifiers.ReadOnly(_types[node]);
+        }
 
         private void PushScope()
         {
@@ -715,6 +720,8 @@ namespace gflat
         public string GetTypeMangledName(TypeExpression type)
         {
             type = ResolveAlias(type);
+            if (type.IsReadOnlyValue)
+                return "ReadOnly$" + GetTypeMangledName(type.WithReadOnlyValue(false));
             if (type is NamedTypeExpression named)
             {
                 string baseName = named.Name;
@@ -984,6 +991,12 @@ namespace gflat
 
         private readonly Dictionary<TypeExpression, TypeExpression> resolvedSourceTypes = new();
         public TypeExpression ResolveAlias(TypeExpression type)
+        {
+            var resolved = ResolveAliasCore(type);
+            return type.IsReadOnlyValue ? TypeQualifiers.ReadOnly(resolved) : resolved;
+        }
+
+        private TypeExpression ResolveAliasCore(TypeExpression type)
         {
             if (resolvedSourceTypes.TryGetValue(type, out var bound)) return bound;
             if (type is NestedTypeExpression nested)
@@ -1646,6 +1659,7 @@ namespace gflat
                 b = symbols.ResolveAlias(b);
             }
 
+            if (a.IsReadOnlyValue != b.IsReadOnlyValue) return false;
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
@@ -1673,14 +1687,11 @@ namespace gflat
             return false;
         }
 
-        private bool TypesMatch(TypeExpression a, TypeExpression b) => TypesMatchPublic(a, b, _symbols);
+        private bool TypesMatch(TypeExpression a, TypeExpression b) => TypesMatchPublic(
+            ResolveAlias(a).WithReadOnlyValue(false), ResolveAlias(b).WithReadOnlyValue(false), _symbols);
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
-            if (valueNode is ArrayLiteralExpression && ResolveAlias(target) is ArrayTypeExpression expected)
-                return TypeName(ResolveAlias(source)) == TypeName(expected) ||
-                    (expected.Size == null && ResolveAlias(source) is ArrayTypeExpression actual &&
-                     TypeName(ResolveAlias(expected.ElementType)) == TypeName(ResolveAlias(actual.ElementType)));
             if (IsError(target) || IsError(source))
             {
                 return true;
@@ -1689,28 +1700,37 @@ namespace gflat
             target = ResolveAlias(target);
             source = ResolveAlias(source);
 
+            if (source.IsReadOnlyValue && !target.IsReadOnlyValue && !CanCopyReadOnlyValue(source))
+                return false;
+            target = target.WithReadOnlyValue(false);
+            source = source.WithReadOnlyValue(false);
             if (TypesMatch(target, source))
                 return true;
 
-            // Pointer to pointer assignability (handles readonly conversion: T* to readonly T*)
+            if (target is ArrayTypeExpression ta && source is ArrayTypeExpression sa)
+                return (ta.Size == null || sa.Size == null || ta.Size == sa.Size ||
+                    valueNode is LiteralExpression { Token.Kind: TokenKind.StringLiteral } && ta.Size >= sa.Size) &&
+                    IsAssignable(ta.ElementType, sa.ElementType);
+
+            // Pointer to pointer assignability (handles readonly conversion: T* to readonly(T)*)
             if (target is PointerTypeExpression ptExact && source is PointerTypeExpression psExact)
             {
                 if (psExact.IsReadOnly && !ptExact.IsReadOnly)
                     return false;
                 if (psExact.IsNullable && !ptExact.IsNullable)
                     return false;
-                if (TypesMatch(ptExact.Inner, psExact.Inner))
+                if (ptExact.IsReadOnly ? CanReadOnlyView(ptExact.Inner, psExact.Inner) : TypesMatchPublic(ptExact.Inner, psExact.Inner, _symbols))
                     return true;
             }
 
-            // Managed ref to managed ref assignability (handles readonly conversion: T^ to readonly T^)
+            // Managed ref to managed ref assignability (handles readonly conversion: T^ to readonly(T)^)
             if (target is ManagedTypeExpression mtExact && source is ManagedTypeExpression msExact)
             {
                 if (msExact.IsReadOnly && !mtExact.IsReadOnly)
                     return false;
                 if (msExact.IsNullable && !mtExact.IsNullable)
                     return false;
-                if (TypesMatch(mtExact.Inner, msExact.Inner))
+                if (mtExact.IsReadOnly ? CanReadOnlyView(mtExact.Inner, msExact.Inner) : TypesMatchPublic(mtExact.Inner, msExact.Inner, _symbols))
                     return true;
             }
 
@@ -1894,7 +1914,8 @@ namespace gflat
                 if (valueNode is LiteralExpression { Token.Kind: TokenKind.StringLiteral } && !ptrTarget.IsReadOnly)
                     return false;
 
-                if (IsAssignable(ptrTarget.Inner, arrSource.ElementType))
+                if (ptrTarget.IsReadOnly ? CanReadOnlyView(ptrTarget.Inner, arrSource.ElementType) :
+                    TypesMatchPublic(ptrTarget.Inner, arrSource.ElementType, _symbols))
                     return true;
             }
 
@@ -3414,7 +3435,7 @@ namespace gflat
                 // Size inference for inferred arrays: char[] a = "string";
                 if (varType is ArrayTypeExpression { Size: null } arr && initType is ArrayTypeExpression { Size: not null } initArr)
                 {
-                    varType = new ArrayTypeExpression(arr.ElementType, initArr.Size, node.Line, arr.SizeExpression);
+                    varType = new ArrayTypeExpression(arr.ElementType, initArr.Size, node.Line, arr.SizeExpression).WithReadOnlyValue(varType.IsReadOnlyValue);
                 }
 
                 if (!IsAssignable(varType, initType, node.Initializer))
@@ -3888,6 +3909,9 @@ namespace gflat
 
         private bool IsExpressionReadOnly(AstNode node)
         {
+            if (ResolveAlias(GetType(node)).IsReadOnlyValue) return true;
+            // A property produces the getter's result, not a view of receiver storage.
+            if (_propertyReads.ContainsKey(node)) return false;
             if (node is IdentifierExpression ident)
             {
                 if (_constVariableNames.Contains(ident.Name))
@@ -3992,6 +4016,13 @@ namespace gflat
         };
 
         private void CheckAssignmentTarget(AstNode target, int line)
+        {
+            CheckAssignmentTargetCore(target, line);
+            if (ResolveAlias(GetType(target)).IsReadOnlyValue && !CanInitializeReadOnlyField(target))
+                throw new TypeCheckException("Cannot assign to readonly storage", line);
+        }
+
+        private void CheckAssignmentTargetCore(AstNode target, int line)
         {
             if (IsPropertyValueStorage(target))
                 throw new TypeCheckException("Cannot modify a value returned by a property", line);
@@ -5339,14 +5370,16 @@ namespace gflat
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
         }
 
-        public static string TypeName(TypeExpression type) => type switch
+        public static string TypeName(TypeExpression type) => type.IsReadOnlyValue
+            ? "readonly(" + TypeNameCore(type.WithReadOnlyValue(false)) + ")" : TypeNameCore(type);
+        private static string TypeNameCore(TypeExpression type) => type switch
         {
             NamedTypeExpression n => n.Name,
             NestedTypeExpression nested => nested.TypeArguments.Count > 0
                 ? $"{TypeName(nested.Parent)}::{nested.Member}<{string.Join(", ", nested.TypeArguments.Select(TypeName))}>"
                 : $"{TypeName(nested.Parent)}::{nested.Member}",
-            PointerTypeExpression p => (p.IsReadOnly ? "readonly " : "") + TypeName(p.Inner) + "*",
-            ManagedTypeExpression m => (m.IsReadOnly ? "readonly " : "") + TypeName(m.Inner) + "^" + (m.IsNullable ? "?" : ""),
+            PointerTypeExpression p => TypeName(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
+            ManagedTypeExpression m => TypeName(m.Inner) + "^" + (m.IsNullable ? "?" : ""),
             ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"
@@ -5659,6 +5692,8 @@ namespace gflat
         {
             src = ResolveAlias(src);
             dst = ResolveAlias(dst);
+            if (src.IsReadOnlyValue && !dst.IsReadOnlyValue && !CanCopyReadOnlyValue(src))
+                return false;
             if (src is ManagedTypeExpression { IsReadOnly: true } && dst is ManagedTypeExpression { IsReadOnly: false })
                 return false;
 

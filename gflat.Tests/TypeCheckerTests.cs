@@ -4564,7 +4564,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Parameter 't' cannot have type 'Tracker' because types with destructors cannot be passed by value", ex.Message);
+            Assert.Contains("Types with destructors cannot be passed by value ('Tracker')", ex.Message);
         }
 
         [Fact]
@@ -4650,5 +4650,4 @@ namespace gflat.Tests
         }
     }
 }
-
 

@@ -1233,7 +1233,7 @@ namespace gflat
                 if (function.IsManaged)
                     throw new TypeCheckException("Managed function pointers are not supported", line);
                 ValidateTypeUsage(function.ReturnType, line);
-                foreach (var parameter in function.ParameterTypes) ValidateTypeUsage(parameter, line);
+                foreach (var parameter in function.ParameterTypes) ValidateParameterType(parameter, line);
             }
         }
 
@@ -1712,7 +1712,7 @@ namespace gflat
             if (target is ArrayTypeExpression ta && source is ArrayTypeExpression sa)
                 return (ta.Size == null || sa.Size == null || ta.Size == sa.Size ||
                     valueNode is LiteralExpression { Token.Kind: TokenKind.StringLiteral } && ta.Size >= sa.Size) &&
-                    IsAssignable(ta.ElementType, sa.ElementType);
+                    CanReadOnlyView(ta.ElementType, sa.ElementType) && IsAssignable(ta.ElementType, sa.ElementType);
 
             // Pointer to pointer assignability (handles readonly conversion: T* to readonly(T)*)
             if (target is PointerTypeExpression ptExact && source is PointerTypeExpression psExact)
@@ -1919,18 +1919,6 @@ namespace gflat
                 if (ptrTarget.IsReadOnly ? CanReadOnlyView(ptrTarget.Inner, arrSource.ElementType) :
                     TypesMatchPublic(ptrTarget.Inner, arrSource.ElementType, _symbols))
                     return true;
-            }
-
-            // Array-to-array assignment (e.g. char[10] a = "string" where string is char[7])
-            if (target is ArrayTypeExpression arrTarget && source is ArrayTypeExpression arrSrc)
-            {
-                if (HasDestructor(arrTarget) && arrTarget.Size != arrSrc.Size)
-                    return false;
-                if (IsAssignable(arrTarget.ElementType, arrSrc.ElementType))
-                {
-                    if (arrTarget.Size == null || arrSrc.Size == null || arrTarget.Size >= arrSrc.Size)
-                        return true;
-                }
             }
 
             // Implicit numeric conversions
@@ -2455,7 +2443,7 @@ namespace gflat
 
                                 foreach (Parameter p in method.Parameters)
                                 {
-                                    ValidateTypeUsage(p.Type, p.Line);
+                                    ValidateParameterType(p.Type, p.Line);
                                     DeclareVariable(p.Name, p.Type, p.Line);
                                 }
 
@@ -2633,7 +2621,7 @@ namespace gflat
 
                             foreach (Parameter p in method.Parameters)
                             {
-                                ValidateTypeUsage(p.Type, p.Line);
+                                ValidateParameterType(p.Type, p.Line);
                                 DeclareVariable(p.Name, p.Type, p.Line);
                             }
 
@@ -2697,7 +2685,7 @@ namespace gflat
             bool hasContainingType = false;
             foreach (Parameter p in node.Parameters)
             {
-                ValidateTypeUsage(p.Type, p.Line);
+                ValidateParameterType(p.Type, p.Line);
                 TypeExpression resolvedParam = ResolveAlias(p.Type);
                 if (resolvedParam is NamedTypeExpression named && named.Name == _currentStruct.Name)
                 {
@@ -2745,7 +2733,7 @@ namespace gflat
                     ValidateTypeUsage(method.ReturnType, method.Line);
                     foreach (Parameter p in method.Parameters)
                     {
-                        ValidateTypeUsage(p.Type, p.Line);
+                        ValidateParameterType(p.Type, p.Line);
                     }
                 }
                 else
@@ -2820,7 +2808,7 @@ namespace gflat
                 PushScope();
                 foreach (Parameter p in node.Parameters)
                 {
-                    ValidateTypeUsage(p.Type, p.Line);
+                    ValidateParameterType(p.Type, p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
                     if (HasDestructor(pType))
                     {
@@ -2864,7 +2852,7 @@ namespace gflat
                 foreach (Parameter p in node.Parameters)
                 {
                     p.Type = ResolveAlias(p.Type);
-                    ValidateTypeUsage(p.Type, p.Line);
+                    ValidateParameterType(p.Type, p.Line);
                     if (HasDestructor(p.Type))
                     {
                         throw new TypeCheckException($"Parameter '{p.Name}' cannot have type '{TypeName(p.Type)}' because types with destructors cannot be passed by value. Use a pointer instead ('{TypeName(p.Type)}*').", p.Line);
@@ -5370,7 +5358,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.ReturnType, node.Line);
-            foreach (var parameter in node.Parameters) ValidateTypeUsage(parameter.Type, parameter.Line);
+            foreach (var parameter in node.Parameters) ValidateParameterType(parameter.Type, parameter.Line);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
         }
 
@@ -5843,7 +5831,7 @@ namespace gflat
                 List<TypeExpression> paramTypes = new();
                 foreach (Parameter p in node.Parameters)
                 {
-                    ValidateTypeUsage(p.Type, p.Line);
+                    ValidateParameterType(p.Type, p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
                     if (HasDestructor(pType))
                     {

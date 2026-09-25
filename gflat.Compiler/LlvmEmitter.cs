@@ -1388,7 +1388,7 @@ public partial class LlvmEmitter : IVisitor
                 for (int i = 0; i < node.BaseArguments.Count; i++)
                 {
                     AstNode arg = node.BaseArguments[i];
-                    EmitArgument(arg);
+                    EmitArgument(arg, resolvedBaseCtor.Parameters[i].Type);
                     string val = Pop();
                     TypeExpression argType = _typeChecker.GetType(arg);
                     val = EmitImplicitCast(val, argType, resolvedBaseCtor.Parameters[i].Type);
@@ -1653,8 +1653,7 @@ public partial class LlvmEmitter : IVisitor
         }
     }
 
-    private string EmitParamType(TypeExpression type) =>
-        type is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(type);
+    private string EmitParamType(TypeExpression type) => EmitType(type);
 
     private static string GetOperatorMethodName(TokenKind kind, int paramCount) => kind switch
     {
@@ -3345,7 +3344,7 @@ public partial class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                EmitArgument(arg);
+                EmitArgument(arg, ifaceCall.Method.Parameters[i].Type);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(ifaceCall.Method.Parameters[i].Type);
@@ -3453,7 +3452,7 @@ public partial class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                EmitArgument(arg);
+                EmitArgument(arg, vcall.Method.Parameters[i].Type);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(vcall.Method.Parameters[i].Type);
@@ -3507,7 +3506,7 @@ public partial class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                EmitArgument(arg);
+                EmitArgument(arg, fnPtr.ParameterTypes[i]);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
@@ -3576,7 +3575,7 @@ public partial class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                EmitArgument(arg);
+                EmitArgument(arg, structMethod.Parameters[i].Type);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
@@ -3625,7 +3624,7 @@ public partial class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                EmitArgument(arg);
+                EmitArgument(arg, methodMember.Parameters[i].Type);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(methodMember.Parameters[i].Type);
@@ -3642,7 +3641,7 @@ public partial class LlvmEmitter : IVisitor
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 AstNode arg = node.Arguments[i];
-                EmitArgument(arg);
+                EmitArgument(arg, target is MethodDeclaration mt ? mt.Parameters[i].Type : target is ExternDeclaration et && i < et.Parameters.Count ? et.Parameters[i].Type : null);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
@@ -4003,7 +4002,7 @@ public partial class LlvmEmitter : IVisitor
         List<string> argVals = new();
         foreach (AstNode arg in node.Arguments)
         {
-            EmitArgument(arg);
+            EmitArgument(arg, ctor?.Parameters[argVals.Count].Type);
             argVals.Add(Pop());
         }
 
@@ -4201,9 +4200,13 @@ public partial class LlvmEmitter : IVisitor
         Push(result);
     }
 
-    private void EmitArgument(AstNode argument)
+    private void EmitArgument(AstNode argument, TypeExpression? target = null)
     {
-        if (argument is ArrayLiteralExpression)
+        if (target != null && _typeChecker.ResolveAlias(target) is ArrayTypeExpression)
+        {
+            EmitValueForTarget(argument, target);
+        }
+        else if (_typeChecker.ResolveAlias(_typeChecker.GetType(argument)) is ArrayTypeExpression)
         {
             EmitAddress(argument);
             string address = Pop();
@@ -4217,7 +4220,13 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitValueForTarget(AstNode expression, TypeExpression target)
     {
-        if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression &&
+        if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression { Size: not null } array &&
+            expression is LiteralExpression { Token.Kind: TokenKind.StringLiteral } literal)
+        {
+            byte[] bytes = StringLiteralEncoding.Bytes(literal.Token.Text[1..^1]);
+            Push("[" + string.Join(", ", Enumerable.Range(0, array.Size.Value).Select(i => "i8 " + (i < bytes.Length ? bytes[i] : 0))) + "]");
+        }
+        else if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression &&
             expression is IdentifierExpression or MemberAccessExpression or IndexExpression)
         {
             EmitAddress(expression);

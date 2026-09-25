@@ -7,8 +7,8 @@ public class ManagedPointerTests
     // Test adapter only: malloc does not implement garbage collection.
     private const string Runtime = """
         extern int printf(readonly(char)* format, ...);
-        extern void*? malloc(ulong size);
-        void*? __gflat_gc_alloc(ulong size) { printf("A"); return malloc(size); }
+        extern void*? malloc(nuint size);
+        void*? __gflat_gc_alloc(nuint size) { printf("A"); return malloc(size); }
         """;
 
     [Theory]
@@ -56,7 +56,7 @@ public class ManagedPointerTests
     [Fact]
     public void ScopeExitDoesNotCallRawFree()
     {
-        var result = CompilerTestHelper.Run(Runtime + "namespace Allocator { public replace void*? Allocate(ulong size) => malloc(size); } namespace Allocator { public replace void Free(void* p) { printf(\"F\"); } } int main() { { int^ p = new^ int(7); } return 0; }");
+        var result = CompilerTestHelper.Run(Runtime + "namespace Allocator { public replace void*? Allocate(nuint size) => malloc(size); } namespace Allocator { public replace void Free(void* p) { printf(\"F\"); } } int main() { { int^ p = new^ int(7); } return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("A", result.StandardOutput);
     }
@@ -66,10 +66,10 @@ public class ManagedPointerTests
         => Assert.Contains("__gflat_gc_alloc", Assert.Throws<TypeCheckException>(() => Compiler.Check("int main() { int^ p = new^ int(); return 0; }")).Message);
 
     [Theory]
-    [InlineData("int __gflat_gc_alloc(ulong size) { return 0; }")]
+    [InlineData("int __gflat_gc_alloc(nuint size) { return 0; }")]
     [InlineData("void*? __gflat_gc_alloc(int size) { return null; }")]
-    [InlineData("void*? __gflat_gc_alloc(ulong size) throws { return null; }")]
-    [InlineData("extern void*? __gflat_gc_alloc(ulong size, ...);")]
+    [InlineData("void*? __gflat_gc_alloc(nuint size) throws { return null; }")]
+    [InlineData("extern void*? __gflat_gc_alloc(nuint size, ...);")]
     public void IncorrectRuntimeSignatureIsRejected(string declaration)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(declaration + "int main() { int^ p = new^ int(); return 0; }"));
 
@@ -119,7 +119,7 @@ public class ManagedPointerTests
     public void ManagedAndRawAllocationHooksAreIndependent()
     {
         var result = CompilerTestHelper.Run(Runtime + """
-            namespace Allocator { public replace void*? Allocate(ulong size) { printf("R"); return malloc(size); } }
+            namespace Allocator { public replace void*? Allocate(nuint size) { printf("R"); return malloc(size); } }
             namespace Allocator { public replace void Free(void* p) { printf("F"); } }
             struct S { public int value; }
             int main() { S* raw = new* S(); S^ managed = new^ S(); delete raw; return 0; }
@@ -155,7 +155,7 @@ public class ManagedPointerTests
 
     [Fact]
     public void ForeignRuntimeDeclarationIsAccepted()
-        => Assert.Contains("call i8* @__gflat_gc_alloc", Compiler.Emit("extern void*? __gflat_gc_alloc(ulong size); int main() { int^ p = new^ int(1); return *p; }"));
+        => Assert.Contains("call i8* @__gflat_gc_alloc", Compiler.Emit("extern void*? __gflat_gc_alloc(nuint size); int main() { int^ p = new^ int(1); return *p; }"));
 
     [Fact]
     public void RawAddressOfManagedFieldIsRejected()
@@ -164,7 +164,7 @@ public class ManagedPointerTests
     [Fact]
     public void AllocationFailureTrapsBeforeUse()
     {
-        var result = CompilerTestHelper.Run("void*? __gflat_gc_alloc(ulong size) { return null; } int main() { int^ p = new^ int(1); return *p; }");
+        var result = CompilerTestHelper.Run("void*? __gflat_gc_alloc(nuint size) { return null; } int main() { int^ p = new^ int(1); return *p; }");
         Assert.NotEqual(0, result.ExitCode);
         Assert.NotEqual(1, result.ExitCode);
     }

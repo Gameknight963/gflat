@@ -33,10 +33,10 @@ int main()
         public void CustomAllocator_HeaderTagging_InterceptsNewAndDelete()
         {
             string code = @"
-extern void* malloc(ulong size);
+extern void* malloc(nuint size);
 extern void free(void* ptr);
 
-namespace Allocator { public replace void*? Allocate(ulong size)
+namespace Allocator { public replace void*? Allocate(nuint size)
 {
     byte* raw = (byte*)malloc(size + 8UL);
     ulong* header = (ulong*)raw;
@@ -87,10 +87,10 @@ int main()
         public void CustomAllocator_ExpressionBodyHooks_Succeeds()
         {
             string code = @"
-extern void* malloc(ulong size);
+extern void* malloc(nuint size);
 extern void free(void* ptr);
 
-namespace Allocator { public replace void*? Allocate(ulong size) => malloc(size); }
+namespace Allocator { public replace void*? Allocate(nuint size) => malloc(size); }
 namespace Allocator { public replace void Free(void* ptr) => free(ptr); }
 
 struct Data
@@ -133,10 +133,10 @@ int main()
             string code = @"
 
 
-extern void* malloc(ulong size);
+extern void* malloc(nuint size);
 extern void free(void* ptr);
 
-namespace Allocator { public replace void*? Allocate(ulong size)
+namespace Allocator { public replace void*? Allocate(nuint size)
 {
     return malloc(size);
 } }
@@ -168,12 +168,12 @@ int main()
         public void CustomAllocator_AlignedWrapper_Succeeds()
         {
             string code = @"
-extern void* malloc(ulong size);
+extern void* malloc(nuint size);
 extern void free(void* ptr);
 
-namespace Allocator { public replace void*? Allocate(ulong size)
+namespace Allocator { public replace void*? Allocate(nuint size)
 {
-    ulong aligned = ((size + 15UL) / 16UL) * 16UL;
+    nuint aligned = ((size + 15u) / 16u) * 16u;
     return malloc(aligned);
 } }
 
@@ -208,7 +208,7 @@ int main()
         public void AllocatorSignature_InvalidReturnType_ReportsDiagnostic()
         {
             string code = @"
-namespace Allocator { public replace int Allocate(ulong size)
+namespace Allocator { public replace int Allocate(nuint size)
 {
     return 0;
 } }
@@ -231,7 +231,7 @@ int main()
         public void AllocatorSignature_InvalidFreeParameter_ReportsDiagnostic()
         {
             string code = @"
-namespace Allocator { public replace void*? Allocate(ulong size)
+namespace Allocator { public replace void*? Allocate(nuint size)
 {
     return (void*)1;
 } }

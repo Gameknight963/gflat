@@ -52,7 +52,7 @@ public class MultiFileTests
 
     [Fact]
     public void AllocatorReplacementSpansFiles()
-        => Assert.Equal(42, CompilerTestHelper.Run([new("main.gf", "int main() { if (Allocator::Allocate(1UL) == null) return 42; return 0; }"), new("alloc.gf", "namespace Allocator { public replace void*? Allocate(ulong size) => null; public replace void Free(void* p) {} }")]).ExitCode);
+        => Assert.Equal(42, CompilerTestHelper.Run([new("main.gf", "int main() { if (Allocator::Allocate(1u) == null) return 42; return 0; }"), new("alloc.gf", "namespace Allocator { public replace void*? Allocate(nuint size) => null; public replace void Free(void* p) {} }")]).ExitCode);
 
     [Fact]
     public void GenericBodyUsesDefinitionImports()

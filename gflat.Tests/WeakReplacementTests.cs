@@ -110,7 +110,7 @@ public class WeakReplacementTests
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(source));
 
     [Theory]
-    [InlineData("public replace void*? Allocate(ulong size) => null;")]
+    [InlineData("public replace void*? Allocate(nuint size) => null;")]
     [InlineData("public replace void Free(void* p) {}")]
     public void AllocatorMustBeReplacedAsPair(string source)
         => Assert.Contains("together", Assert.Throws<TypeCheckException>(() => Compiler.Check("namespace Allocator { " + source + " } int main() => 0;")).Message);
@@ -118,7 +118,7 @@ public class WeakReplacementTests
     [Fact]
     public void DirectAllocatorCallsUseSelectedImplementation()
     {
-        string source = "namespace Allocator { public replace void*? Allocate(ulong size) => null; public replace void Free(void* p) {} } int main() { if (Allocator::Allocate(1UL) == null) return 42; return 0; }";
+        string source = "namespace Allocator { public replace void*? Allocate(nuint size) => null; public replace void Free(void* p) {} } int main() { if (Allocator::Allocate(1u) == null) return 42; return 0; }";
         Assert.Equal(42, CompilerTestHelper.Run(source).ExitCode);
         string ir = CompilerTestHelper.EmitIr(source);
         Assert.DoesNotContain("call i8* @malloc", ir);

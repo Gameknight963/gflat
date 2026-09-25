@@ -8,9 +8,9 @@ public class StringLiteralOperatorTests
         namespace Text {
             class View {
                 public readonly(char*) data;
-                public ulong length;
-                public View(readonly(char)* p, ulong n) { data = p; length = n; }
-                public static View operator s""(readonly(char)* p, ulong n) {
+                public nuint length;
+                public View(readonly(char)* p, nuint n) { data = p; length = n; }
+                public static View operator s""(readonly(char)* p, nuint n) {
                     return new View(p, n);
                 }
             }
@@ -26,7 +26,7 @@ public class StringLiteralOperatorTests
     [InlineData("s\"é\"", 2, 195)]
     public void LiteralBytesAndLength(string literal, int length, int first)
     {
-        string source = "using Text; " + View + $" int main() {{ View v = {literal}; if (v.length != {length}ul) return 1; if ((byte)v.data[0] != {first}) return 2; if (v.data[v.length] != '\\0') return 3; return 0; }}";
+        string source = "using Text; " + View + $" int main() {{ View v = {literal}; if (v.length != {length}u) return 1; if ((byte)v.data[0] != {first}) return 2; if (v.data[v.length] != '\\0') return 3; return 0; }}";
         Assert.Equal(0, CompilerTestHelper.Run(source).ExitCode);
     }
 
@@ -44,7 +44,7 @@ public class StringLiteralOperatorTests
 
     [Fact]
     public void ForwardDeclarationsAndIdentifierPrefixesWork()
-        => Assert.Equal(3, CompilerTestHelper.Run("int main() { S v = my_2string\"abc\"; return v.n; } struct S { public int n; public S(int value) { n = value; } public static S operator my_2string\"\"(readonly(char)* p, ulong n) { return new S((int)n); } }").ExitCode);
+        => Assert.Equal(3, CompilerTestHelper.Run("int main() { S v = my_2string\"abc\"; return v.n; } struct S { public int n; public S(int value) { n = value; } public static S operator my_2string\"\"(readonly(char)* p, nuint n) { return new S((int)n); } }").ExitCode);
 
     [Fact]
     public void UnknownUnimportedPrefixIsRejected()
@@ -53,30 +53,30 @@ public class StringLiteralOperatorTests
     [Fact]
     public void ConflictingImportsRequireQualification()
     {
-        string other = "namespace Other { struct OtherView { public static OtherView operator s\"\"(readonly(char)* p, ulong n) { return new OtherView(); } } }";
+        string other = "namespace Other { struct OtherView { public static OtherView operator s\"\"(readonly(char)* p, nuint n) { return new OtherView(); } } }";
         Assert.Contains("Ambiguous", Assert.Throws<TypeCheckException>(() => Compiler.Check("using Text; using Other; " + View + other + " int main() { View v = s\"text\"; return 0; }")).Message);
         Compiler.Check("using Text; using Other; " + View + other + " int main() { View v = Text::s\"text\"; return 0; }");
     }
 
     [Theory]
-    [InlineData("public S", "s", "readonly(char)* p, ulong n", "static")]
-    [InlineData("private static S", "s", "readonly(char)* p, ulong n", "public static")]
-    [InlineData("public static S", "c", "readonly(char)* p, ulong n", "reserved")]
-    [InlineData("public static S", "s", "char* p, ulong n", "readonly(char)*")]
-    [InlineData("public static S", "s", "readonly(char)* p, int n", "ulong")]
-    [InlineData("public static S", "s", "readonly(char)* p", "ulong")]
-    [InlineData("public static S", "s", "readonly(char)*? p, ulong n", "readonly(char)*")]
-    [InlineData("public const static S", "s", "readonly(char)* p, ulong n", "non-const")]
+    [InlineData("public S", "s", "readonly(char)* p, nuint n", "static")]
+    [InlineData("private static S", "s", "readonly(char)* p, nuint n", "public static")]
+    [InlineData("public static S", "c", "readonly(char)* p, nuint n", "reserved")]
+    [InlineData("public static S", "s", "char* p, nuint n", "readonly(char)*")]
+    [InlineData("public static S", "s", "readonly(char)* p, int n", "nuint")]
+    [InlineData("public static S", "s", "readonly(char)* p", "nuint")]
+    [InlineData("public static S", "s", "readonly(char)*? p, nuint n", "readonly(char)*")]
+    [InlineData("public const static S", "s", "readonly(char)* p, nuint n", "non-const")]
     public void InvalidDeclarationsAreRejected(string modifiers, string prefix, string parameters, string error)
         => Assert.Contains(error, Assert.Throws<TypeCheckException>(() => Compiler.Check($"struct S {{ {modifiers} operator {prefix}\"\"({parameters}) {{ return new S(); }} }}")).Message);
 
     [Fact]
     public void ResultMustBeContainingType()
-        => Assert.Contains("containing", Assert.Throws<TypeCheckException>(() => Compiler.Check("class S { public static int operator s\"\"(readonly(char)* p, ulong n) { return 1; } }")).Message);
+        => Assert.Contains("containing", Assert.Throws<TypeCheckException>(() => Compiler.Check("class S { public static int operator s\"\"(readonly(char)* p, nuint n) { return 1; } }")).Message);
 
     [Fact]
     public void DuplicatePrefixIsRejected()
-        => Assert.Contains("Duplicate string prefix", Assert.Throws<TypeCheckException>(() => Compiler.Check("struct S { public static S operator s\"\"(readonly(char)* p, ulong n) { return new S(); } public static S operator s\"\"(readonly(char)* p, ulong n) { return new S(); } }")).Message);
+        => Assert.Contains("Duplicate string prefix", Assert.Throws<TypeCheckException>(() => Compiler.Check("struct S { public static S operator s\"\"(readonly(char)* p, nuint n) { return new S(); } public static S operator s\"\"(readonly(char)* p, nuint n) { return new S(); } }")).Message);
 
     [Fact]
     public void ReturnedObjectsAreDestroyedOnce()
@@ -87,7 +87,7 @@ public class StringLiteralOperatorTests
                 public int n;
                 public S(int value) { n = value; }
                 ~S() { putchar(48 + n); }
-                public static S operator s""(readonly(char)* p, ulong n) { return new S((int)n); }
+                public static S operator s""(readonly(char)* p, nuint n) { return new S((int)n); }
             }
             S make() { return s"ab"; }
             int main() { s"a"; { S value = make(); } return 0; }
@@ -108,7 +108,7 @@ public class StringLiteralOperatorTests
                 struct S {
                     public int length;
                     public S(int n) { length = n; }
-                    public static S operator s""(readonly(char)* p, ulong n) { return new S((int)n); }
+                    public static S operator s""(readonly(char)* p, nuint n) { return new S((int)n); }
                 }
             } }
             int main() { S a = s"ab"; S b = Outer::Inner::s"c"; return a.length + b.length; }
@@ -123,7 +123,7 @@ public class StringLiteralOperatorTests
             class S {
                 private int length;
                 public int Length() { return length; }
-                public static S operator s""(readonly(char)* p, ulong n) {
+                public static S operator s""(readonly(char)* p, nuint n) {
                     S value = new S(); value.length = (int)n; return value;
                 }
             }
@@ -136,7 +136,7 @@ public class StringLiteralOperatorTests
     [InlineData("int n = length; return new S();", "length")]
     [InlineData("int n = Length(); return new S();", "explicit receiver")]
     public void FactoryCannotUseAnImplicitInstance(string body, string error)
-        => Assert.Contains(error, Assert.Throws<TypeCheckException>(() => Compiler.Check("class S { int length; public int Length() { return length; } public static S operator s\"\"(readonly(char)* p, ulong n) { " + body + " } }")).Message);
+        => Assert.Contains(error, Assert.Throws<TypeCheckException>(() => Compiler.Check("class S { int length; public int Length() { return length; } public static S operator s\"\"(readonly(char)* p, nuint n) { " + body + " } }")).Message);
 
     [Fact]
     public void ThrowingFactoryUsesNormalExceptionCleanup()
@@ -145,7 +145,7 @@ public class StringLiteralOperatorTests
             extern int putchar(int c);
             class S {
                 ~S() { putchar(68); }
-                public static S operator s""(readonly(char)* p, ulong n) throws {
+                public static S operator s""(readonly(char)* p, nuint n) throws {
                     putchar(78); throw new* Exception();
                 }
             }
@@ -155,7 +155,7 @@ public class StringLiteralOperatorTests
 
     [Fact]
     public void ThrowingFactoryRequiresThrowsOrCatch()
-        => Assert.Contains("throws", Assert.Throws<TypeCheckException>(() => Compiler.Check("class S { public static S operator s\"\"(readonly(char)* p, ulong n) throws { throw new* Exception(); } } S make() { return s\"abc\"; }")).Message);
+        => Assert.Contains("throws", Assert.Throws<TypeCheckException>(() => Compiler.Check("class S { public static S operator s\"\"(readonly(char)* p, nuint n) throws { throw new* Exception(); } } S make() { return s\"abc\"; }")).Message);
 
     [Fact]
     public void ShortCircuitOnlyDestroysConstructedTemporaries()
@@ -165,7 +165,7 @@ public class StringLiteralOperatorTests
             class S {
                 public bool Test() { return true; }
                 ~S() { putchar(68); }
-                public static S operator s""(readonly(char)* p, ulong n) { putchar(78); return new S(); }
+                public static S operator s""(readonly(char)* p, nuint n) { putchar(78); return new S(); }
             }
             int main() { false && s"skip".Test(); true && s"make".Test(); return 0; }
             """).StandardOutput);
@@ -175,11 +175,11 @@ public class StringLiteralOperatorTests
     [InlineData("s \"\"", "immediately followed")]
     [InlineData("s\"text\"", "empty quotes")]
     public void OperatorMarkerMustBeAdjacentAndEmpty(string marker, string error)
-        => Assert.Contains(error, Assert.Throws<TypeCheckException>(() => Compiler.Check("struct S { public static S operator " + marker + "(readonly(char)* p, ulong n) { return new S(); } }")).Message);
+        => Assert.Contains(error, Assert.Throws<TypeCheckException>(() => Compiler.Check("struct S { public static S operator " + marker + "(readonly(char)* p, nuint n) { return new S(); } }")).Message);
 
     [Fact]
     public void GenericOwnerIsRejectedExplicitly()
-        => Assert.Contains("non-generic", Assert.Throws<TypeCheckException>(() => Compiler.Check("class S<T> { public static S<T> operator s\"\"(readonly(char)* p, ulong n) { return new S<T>(); } }")).Message);
+        => Assert.Contains("non-generic", Assert.Throws<TypeCheckException>(() => Compiler.Check("class S<T> { public static S<T> operator s\"\"(readonly(char)* p, nuint n) { return new S<T>(); } }")).Message);
 
     [Fact]
     public void CustomInterpolationRemainsUnsupported()

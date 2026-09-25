@@ -139,8 +139,8 @@ public sealed class ReadOnlyTypeTests
     public void ManagedViewsPreserveTransitiveQualification()
     {
         const string source = """
-            extern void*? malloc(ulong size);
-            void*? __gflat_gc_alloc(ulong size) => malloc(size);
+            extern void*? malloc(nuint size);
+            void*? __gflat_gc_alloc(nuint size) => malloc(size);
             struct S { public int^ data; public S(int^ p) { data = p; } }
             """;
         Assert.Equal(42, CompilerTestHelper.Run(source + "int main() { int^ p = new^ int(42); readonly(S)^ view = new^ S(p); readonly(int)^ q = view.data; return *q; }").ExitCode);

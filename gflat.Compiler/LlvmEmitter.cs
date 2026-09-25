@@ -3977,7 +3977,7 @@ public partial class LlvmEmitter : IVisitor
                 value = EmitImplicitCast(Pop(), _typeChecker.GetType(node.Arguments[0]), resolvedType);
             }
             string memory = NewTemp();
-            Emit($"    {memory} = call i8* @__gflat_gc_alloc(i64 {_typeChecker.GetTypeSize(resolvedType)})");
+            Emit($"    {memory} = call i8* @__gflat_gc_alloc(i{TargetInfo.Default.PointerBits} {_typeChecker.GetTypeSize(resolvedType)})");
             GuardNonNull(memory, "i8*");
             string address = NewTemp();
             Emit($"    {address} = bitcast i8* {memory} to {scalarType}*");
@@ -4044,10 +4044,10 @@ public partial class LlvmEmitter : IVisitor
             string sizePtr = NewTemp();
             Emit($"    {sizePtr} = getelementptr %{typeName}, %{typeName}* null, i32 1");
             string sizeInt = NewTemp();
-            Emit($"    {sizeInt} = ptrtoint %{typeName}* {sizePtr} to i64");
+            Emit($"    {sizeInt} = ptrtoint %{typeName}* {sizePtr} to i{TargetInfo.Default.PointerBits}");
 
             string rawMem = NewTemp();
-            Emit($"    {rawMem} = call i8* @{allocator}(i64 {sizeInt})");
+            Emit($"    {rawMem} = call i8* @{allocator}(i{TargetInfo.Default.PointerBits} {sizeInt})");
             GuardNonNull(rawMem, "i8*");
             string typedPtr = NewTemp();
             Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{typeName}*");

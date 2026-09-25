@@ -119,7 +119,7 @@ public class ReviewRegressionTests
     [Fact]
     public void FailingAllocatorTrapsBeforeConstruction()
     {
-        var result = CompilerTestHelper.Run("namespace Allocator { public replace void*? Allocate(ulong size) { return null; } } namespace Allocator { public replace void Free(void* p) {} } struct S { int x; } int main() { S* p = new* S(); return 0; }");
+        var result = CompilerTestHelper.Run("namespace Allocator { public replace void*? Allocate(nuint size) { return null; } } namespace Allocator { public replace void Free(void* p) {} } struct S { int x; } int main() { S* p = new* S(); return 0; }");
         Assert.NotEqual(0, result.ExitCode);
     }
 

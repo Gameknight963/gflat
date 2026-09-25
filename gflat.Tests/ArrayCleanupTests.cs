@@ -36,12 +36,12 @@ public class ArrayCleanupTests
     public void DeletePointerToArrayDestroysElementsBeforeFree()
     {
         Check("""
-            extern void* malloc(ulong size);
+            extern void* malloc(nuint size);
             extern void free(void* ptr);
-            namespace Allocator { public replace void*? Allocate(ulong size) { return malloc(size); } }
+            namespace Allocator { public replace void*? Allocate(nuint size) { return malloc(size); } }
             namespace Allocator { public replace void Free(void* ptr) { printf("F"); free(ptr); } }
             int main() {
-                Item[2]* items = (Item[2]*)malloc((ulong)sizeof(Item[2]));
+                Item[2]* items = (Item[2]*)malloc((nuint)sizeof(Item[2]));
                 (*items)[0].id = 1;
                 (*items)[1].id = 2;
                 delete items;

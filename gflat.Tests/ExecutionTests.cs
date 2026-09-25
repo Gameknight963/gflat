@@ -291,7 +291,7 @@ namespace gflat.Tests
         public void PointerFreeTest()
         {
             string code = """
-                extern void* malloc(ulong size);
+                extern void* malloc(nuint size);
                 extern void free(void* ptr);
 
                 struct Item
@@ -532,7 +532,7 @@ namespace gflat.Tests
         public void DeferPointerFreeOnScopeExit()
         {
             string code = """
-                extern void* malloc(ulong size);
+                extern void* malloc(nuint size);
                 extern void free(void* ptr);
 
                 int main()
@@ -1724,7 +1724,7 @@ namespace gflat.Tests
         public void HeapStructInterfaceCallExecution()
         {
             string code = """
-                extern void* malloc(ulong size);
+                extern void* malloc(nuint size);
                 extern void free(void* ptr);
 
                 interface IShape

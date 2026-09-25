@@ -5208,11 +5208,11 @@ namespace gflat
                 result = external.ReturnType;
                 parameters = external.Parameters;
             }
-            else throw new TypeCheckException("Managed allocation requires a user-provided global __gflat_gc_alloc(ulong size) hook; no default GC runtime is supplied", line);
+            else throw new TypeCheckException("Managed allocation requires a user-provided global __gflat_gc_alloc(nuint size) hook; no default GC runtime is supplied", line);
 
             if (ResolveAlias(result) is not PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" }, IsReadOnly: false } ||
-                parameters.Count != 1 || ResolveAlias(parameters[0].Type) is not NamedTypeExpression { Name: "ulong" })
-                throw new TypeCheckException("__gflat_gc_alloc must have signature void*? __gflat_gc_alloc(ulong size) (void* is also accepted)", line);
+                parameters.Count != 1 || ResolveAlias(parameters[0].Type) is not NamedTypeExpression { Name: "nuint" })
+                throw new TypeCheckException("__gflat_gc_alloc must have signature void*? __gflat_gc_alloc(nuint size) (void* is also accepted)", line);
         }
         public void Visit(ArrayTypeExpression node) {
             using var sourceContext = SourceContext.Enter(node.Span); }

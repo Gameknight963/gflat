@@ -124,16 +124,16 @@ Constructors must initialize fields that cannot have a default value on every no
 
 `default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates; their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
 
-The public allocation hooks are `Allocator::Allocate(ulong size) -> void*?` and `Allocator::Free(void* ptr) -> void`. Prelude provides public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
+The public allocation hooks are `Allocator::Allocate(nuint size) -> void*?` and `Allocator::Free(void* ptr) -> void`. Prelude provides public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
 
 ```gflat
 namespace Allocator {
-    public replace void*? Allocate(ulong size) { return malloc(size); }
+    public replace void*? Allocate(nuint size) { return malloc(size); }
     public replace void Free(void* ptr) { free(ptr); }
 }
 ```
 
-`Allocate` must return suitably aligned storage or null. Compiler-generated allocations trap on null before initialization; direct calls expose the nullable result. The default extern declaration is `extern void*? malloc(ulong size)`. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
+`Allocate` must return suitably aligned storage or null. Compiler-generated allocations trap on null before initialization; direct calls expose the nullable result. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`; hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
 
 Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers; allocation alone does not guarantee initialized elements. Initialize elements before reading them.
 
@@ -184,7 +184,7 @@ This replaces the old prefix type syntax: write `readonly(char)*` instead of `re
 Managed allocation requires a user-provided **global** hook with this ABI:
 
 ```gflat
-extern void*? __gflat_gc_alloc(ulong size);
+extern void*? __gflat_gc_alloc(nuint size);
 
 class Box
 {
@@ -292,7 +292,7 @@ Instance indexers use property syntax with `this` and one or more typed paramete
 struct IntBuffer {
     int* data;
     public IntBuffer(int* storage) { data = storage; }
-    public int this[ulong index] {
+    public int this[nuint index] {
         readonly get => data[index];
         set { data[index] = value; }
     }
@@ -316,7 +316,7 @@ Throwing functions declare `throws`. Callers must catch or declare propagation. 
 
 ## Custom string literals
 
-A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly(char)* data, ulong length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and may declare `throws`; callers must follow the normal exception rules.
+A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly(char)* data, nuint length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and may declare `throws`; callers must follow the normal exception rules.
 
 ```gflat
 using Text;
@@ -326,11 +326,11 @@ namespace Text
     class View
     {
         public readonly(char*) data;
-        public ulong length;
+        public nuint length;
 
-        public View(readonly(char)* p, ulong n) { data = p; length = n; }
+        public View(readonly(char)* p, nuint n) { data = p; length = n; }
 
-        public static View operator s""(readonly(char)* p, ulong n)
+        public static View operator s""(readonly(char)* p, nuint n)
         {
             return new View(p, n);
         }

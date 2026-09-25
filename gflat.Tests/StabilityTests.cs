@@ -135,9 +135,9 @@ public class StabilityTests
 
     private const string TrackedAllocator = """
         extern int printf(readonly(char)* format, ...);
-        extern void* malloc(ulong size);
+        extern void* malloc(nuint size);
         extern void free(void* ptr);
-        namespace Allocator { public replace void*? Allocate(ulong size) { return malloc(size); } }
+        namespace Allocator { public replace void*? Allocate(nuint size) { return malloc(size); } }
         namespace Allocator { public replace void Free(void* ptr) { printf("F"); free(ptr); } }
         """;
 

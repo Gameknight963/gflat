@@ -52,8 +52,8 @@ public partial class TypeChecker
                         if (method.Parameters.Count != 2 || method.Parameters.Any(p => p.IsConst) ||
                             method.Parameters[0].Type is not PointerTypeExpression
                             { IsReadOnly: true, IsNullable: false, Inner: NamedTypeExpression { Name: "char" } } ||
-                            method.Parameters[1].Type is not NamedTypeExpression { Name: "ulong" })
-                            throw new TypeCheckException("String literal operators must take (readonly(char)* data, ulong length)", method.Line);
+                            method.Parameters[1].Type is not NamedTypeExpression { Name: "nuint" })
+                            throw new TypeCheckException("String literal operators must take (readonly(char)* data, nuint length)", method.Line);
                         if (method.ReturnType is not NamedTypeExpression result ||
                             (result.Name != owner && result.Name != owner.Split('.').Last()))
                             throw new TypeCheckException("A string literal operator must return its containing class or struct", method.Line);
@@ -90,7 +90,8 @@ public partial class TypeChecker
         node.Literal.Accept(this);
         int length = StringLiteralEncoding.Bytes(node.Literal.Token.Text[1..^1], node.Line).Length;
         if (node.Arguments.Count == 1)
-            node.Arguments.Add(new LiteralExpression(new Token(TokenKind.ULongLiteral, node.Line, 0, 0, length + "ul"), node.Line));
+            node.Arguments.Add(new CastExpression(new NamedTypeExpression("nuint", null, node.Line),
+                new LiteralExpression(new Token(TokenKind.ULongLiteral, node.Line, 0, 0, length + "ul"), node.Line), node.Line) { Span = node.Span });
         node.Arguments[1].Accept(this);
         _resolvedCalls[node] = method;
         if (method.Throws) CheckThrowingCall(node, node.Prefix + "\"\"");

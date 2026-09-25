@@ -44,12 +44,12 @@ class Exception
 ";
 
         public const string AllocatorSource = @"
-extern void*? malloc(ulong size);
+extern void*? malloc(nuint size);
 extern void free(void* ptr);
 
 namespace Allocator
 {
-public weak void*? Allocate(ulong size)
+public weak void*? Allocate(nuint size)
 {
     return malloc(size);
 }

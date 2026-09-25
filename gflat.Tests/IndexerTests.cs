@@ -8,7 +8,7 @@ public class IndexerTests
         struct Buffer<T> {
             T* data;
             public Buffer(T* p) { data = p; }
-            public T this[ulong i] { readonly get { return data[i]; } set { data[i] = value; } }
+            public T this[nuint i] { readonly get { return data[i]; } set { data[i] = value; } }
         }
         """;
 
@@ -107,8 +107,8 @@ public class IndexerTests
     [Fact]
     public void ManagedReceiversAndInterfaceViewsSupportIndexers()
         => Assert.Equal(42, CompilerTestHelper.Run("""
-            extern void*? malloc(ulong n);
-            void*? __gflat_gc_alloc(ulong n) => malloc(n);
+            extern void*? malloc(nuint n);
+            void*? __gflat_gc_alloc(nuint n) => malloc(n);
             interface I { int this[int i] { get; set; } }
             struct S : I { int n; public int this[int i] { get => n + i; set => n = value; } }
             int main() { S^ s = new^ S(); s[0] = 40; I^ p = s; return p[2]; }

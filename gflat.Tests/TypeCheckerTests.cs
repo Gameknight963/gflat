@@ -549,7 +549,7 @@ namespace gflat.Tests
         public void PointerArithmeticOnVoidPointerThrows()
         {
             string code = """
-                extern void* malloc(ulong size);
+                extern void* malloc(nuint size);
 
                 int main()
                 {

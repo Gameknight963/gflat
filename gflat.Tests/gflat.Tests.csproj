@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\gflat\gflat.csproj" />
+    <None Include="..\std\**\*.gf" Link="Std\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\docs\LANGUAGE_SPEC.md" Link="LANGUAGE_SPEC.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

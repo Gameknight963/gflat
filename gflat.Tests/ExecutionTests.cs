@@ -3997,6 +3997,7 @@ namespace gflat.Tests
                 struct Tracker
                 {
                     public int* pState;
+                    public Tracker(int* state) { pState = state; }
 
                     public ~Tracker()
                     {
@@ -4007,8 +4008,7 @@ namespace gflat.Tests
                 int main()
                 {
                     int state = 5;
-                    Tracker* t = new* Tracker();
-                    t.pState = &state;
+                    Tracker* t = new* Tracker(&state);
                     delete t;
                     return state; // 5 + 10 = 15
                 }

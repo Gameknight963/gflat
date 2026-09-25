@@ -1766,7 +1766,7 @@ namespace gflat
                 if (target is not NamedTypeExpression { Name: "void" })
                 {
                     TypeExpression resolvedTarget = ResolveAlias(target);
-                    if ((resolvedTarget is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression) && !IsNullable(resolvedTarget))
+                    if (!CanDefaultInitialize(resolvedTarget))
                         return false;
 
                     if (valueNode is DefaultExpression def && def.TargetType == null)
@@ -2910,16 +2910,12 @@ namespace gflat
                         string argTypes = string.Join(", ", node.BaseArguments.Select(a => TypeName(GetType(a))));
                         throw new TypeCheckException($"No matching base constructor found for '{baseClass.Name}' with arguments ({argTypes})", node.Line);
                     }
-                    if (matches.Count > 1)
-                    {
-                        throw new TypeCheckException($"Call to base constructor of '{baseClass.Name}' is ambiguous", node.Line);
-                    }
-
-                    _resolvedBaseConstructors[node] = matches[0];
+                    _resolvedBaseConstructors[node] = SelectBestOverload(matches, c => c.Parameters, node.BaseArguments, baseClass.Name, node.Line);
                 }
                 else if (_currentClass != null && _currentClass.BaseClass != null)
                 {
                     ClassInfo baseClass = _classes[_currentClass.BaseClass];
+                    if (baseClass.Constructors.Count == 0) ValidateImplicitConstruction(baseClass.Name, node.Line);
                     if (baseClass.Constructors.Count > 0 && !baseClass.Constructors.Any(c => c.Parameters.Count == 0))
                     {
                         throw new TypeCheckException($"Class '{ownerName}' must explicitly call a base constructor because base class '{baseClass.Name}' does not define a parameterless constructor", node.Line);
@@ -4978,6 +4974,7 @@ namespace gflat
                 ConstructorDeclaration? matchedCtor = null;
                 if (cInfo.Constructors.Count == 0)
                 {
+                    ValidateImplicitConstruction(cInfo.Name, node.Line);
                     foreach (AstNode arg in node.Arguments)
                         arg.Accept(this);
 
@@ -5065,6 +5062,7 @@ namespace gflat
 
             if (sInfo.Constructors.Count == 0)
             {
+                ValidateImplicitConstruction(sInfo.Name, node.Line);
                 foreach (AstNode arg in node.Arguments)
                     arg.Accept(this);
 
@@ -5147,9 +5145,9 @@ namespace gflat
             {
                 ValidateTypeUsage(node.TargetType, node.Line);
                 TypeExpression resolved = ResolveAlias(node.TargetType);
-                if ((resolved is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression) && !IsNullable(resolved))
+                if (!CanDefaultInitialize(resolved))
                 {
-                    throw new TypeCheckException($"Cannot get default value of non-nullable type '{TypeName(node.TargetType)}'", node.Line);
+                    throw new TypeCheckException($"Cannot get default value of type '{TypeName(node.TargetType)}': it requires explicit initialization (non-nullable fields or user constructors)", node.Line);
                 }
                 RecordType(node, resolved);
             }

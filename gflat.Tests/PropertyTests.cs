@@ -189,7 +189,7 @@ public class PropertyTests
                 public Number(int n) { N = n; }
                 public static Number operator +(Number a, Number b) => new Number(a.N + b.N);
             }
-            struct S { public Number P { get; set; } }
+            struct S { public Number P { get; set; } = new Number(0); }
             int main() {
                 S s = new S(); s.P = new Number(3);
                 Number old = s.P;

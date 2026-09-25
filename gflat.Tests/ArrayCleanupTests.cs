@@ -99,9 +99,9 @@ public class ArrayCleanupTests
     }
 
     [Fact]
-    public void DefaultClassArraySkipsUnconstructedElements()
+    public void DefaultClassArrayHasValidObjectsAndRunsDestructors()
     {
-        Check("class C { ~C() { printf(\"X\"); } } int main() { C[2] a = default(C[2]); return 0; }", "");
+        Check("class C { ~C() { printf(\"X\"); } } int main() { C[2] a = default(C[2]); return 0; }", "XX");
     }
 
     [Fact]

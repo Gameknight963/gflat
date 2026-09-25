@@ -4013,7 +4013,7 @@ public partial class LlvmEmitter : IVisitor
         {
             string temp = NewTemp();
             Emit($"    {temp} = alloca %{typeName}");
-            Emit($"    store %{typeName} zeroinitializer, %{typeName}* {temp}");
+            Emit($"    store %{typeName} {GetDefaultValue(node.Type)}, %{typeName}* {temp}");
 
             if (hasCtor)
             {
@@ -4051,7 +4051,7 @@ public partial class LlvmEmitter : IVisitor
             GuardNonNull(rawMem, "i8*");
             string typedPtr = NewTemp();
             Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{typeName}*");
-            Emit($"    store %{typeName} zeroinitializer, %{typeName}* {typedPtr}");
+            Emit($"    store %{typeName} {GetDefaultValue(node.Type)}, %{typeName}* {typedPtr}");
 
             if (hasCtor)
             {
@@ -4123,21 +4123,29 @@ public partial class LlvmEmitter : IVisitor
     private string GetDefaultValue(TypeExpression type)
     {
         type = _typeChecker.ResolveAlias(type);
-        if (type is ManagedTypeExpression managed && _typeChecker.ResolveAlias(managed.Inner) is NamedTypeExpression namedInterface && _typeChecker.IsInterface(namedInterface))
+        TypeExpression? pointee = type switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, _ => null };
+        if (pointee != null && _typeChecker.ResolveAlias(pointee) is NamedTypeExpression iface && _typeChecker.IsInterface(iface))
             return "zeroinitializer";
         if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
             return "null";
-        if (type is ArrayTypeExpression)
-            return "zeroinitializer";
+        if (type is ArrayTypeExpression array)
+        {
+            string element = GetDefaultValue(array.ElementType);
+            if (element is "0" or "0.0" or "null" or "zeroinitializer") return "zeroinitializer";
+            return "[ " + string.Join(", ", Enumerable.Repeat($"{EmitType(array.ElementType)} {element}", (int)array.Size!)) + " ]";
+        }
         if (type is NamedTypeExpression named)
         {
-            if (_typeChecker.GetStruct(named.Name) != null || _typeChecker.IsInterface(named.Name))
-                return "zeroinitializer";
-            if (_typeChecker.GetEnum(named.Name) != null)
-                return "0";
-            if (named.Name is "float" or "double")
-                return "0.0";
-            return "0";
+            if (_typeChecker.GetStruct(named.Name) is TypeChecker.StructInfo str)
+                return "{ " + string.Join(", ", str.Fields.Select(f => $"{EmitType(f.Type)} {GetDefaultValue(f.Type)}")) + " }";
+            if (_typeChecker.GetClass(named.Name) is TypeChecker.ClassInfo cls)
+            {
+                var fields = new List<string> { $"i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**)" };
+                fields.AddRange(cls.Fields.Select(f => $"{EmitType(f.Type)} {GetDefaultValue(f.Type)}"));
+                return "{ " + string.Join(", ", fields) + " }";
+            }
+            if (_typeChecker.IsInterface(named)) return "zeroinitializer";
+            if (named.Name is "float" or "double") return "0.0";
         }
         return "0";
     }

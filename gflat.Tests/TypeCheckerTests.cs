@@ -3589,7 +3589,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot get default value of non-nullable type 'int*'", ex.Message);
+            Assert.Contains("Cannot get default value of type 'int*'", ex.Message);
         }
 
         [Fact]
@@ -4631,7 +4631,7 @@ namespace gflat.Tests
             string code = """
                 struct Tracker
                 {
-                    public int* p;
+                    public int*? p;
                     public ~Tracker() { }
                 }
 

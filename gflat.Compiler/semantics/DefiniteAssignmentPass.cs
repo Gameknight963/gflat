@@ -7,7 +7,7 @@ using gflat.comptime;
 
 namespace gflat.semantics
 {
-    public class DefiniteAssignmentPass
+    public partial class DefiniteAssignmentPass
     {
         private readonly TypeChecker _typeChecker;
         private readonly ControlFlowPass _controlFlow;
@@ -123,6 +123,7 @@ namespace gflat.semantics
                     {
                         CheckMember(classDecl.Members[i]);
                     }
+                    if (!classDecl.Members.OfType<ConstructorDeclaration>().Any()) CheckImplicitFieldInitializers(classDecl.Name, classDecl.Line);
                 }
                 finally
                 {
@@ -140,6 +141,7 @@ namespace gflat.semantics
                     {
                         CheckMember(structDecl.Members[i]);
                     }
+                    if (!structDecl.Members.OfType<ConstructorDeclaration>().Any()) CheckImplicitFieldInitializers(structDecl.Name, structDecl.Line);
                 }
                 finally
                 {
@@ -216,6 +218,9 @@ namespace gflat.semantics
             NamedTypeExpression dummyThisType = new NamedTypeExpression(ctor.Name, null, ctor.Line);
             DeclareLocal("this", dummyThisType, isAssigned: true);
 
+            BeginConstructorFields(initialize: false);
+            PushScope();
+
             foreach (Parameter p in ctor.Parameters)
             {
                 DeclareLocal(p.Name, p.Type, isAssigned: true);
@@ -229,7 +234,14 @@ namespace gflat.semantics
                 }
             }
 
+            PopScope();
+            CheckDeclaredFieldInitializers();
+            PushScope();
+            foreach (Parameter p in ctor.Parameters) DeclareLocal(p.Name, p.Type, isAssigned: true);
             CheckStatement(ctor.Body);
+            if (!_controlFlow.StatementTerminates(ctor.Body)) RequireConstructorFields("", ctor.Line);
+            _inConstructor = false;
+            PopScope();
             PopScope();
         }
 
@@ -252,6 +264,8 @@ namespace gflat.semantics
 
         private void ResetState()
         {
+            _requiredFields.Clear();
+            _inConstructor = false;
             _state = new Dictionary<string, Stack<VariableAssignment>>();
             _scopeVars.Clear();
             _cleanupScopes.Clear();
@@ -613,6 +627,7 @@ namespace gflat.semantics
                     CheckExpression(retStmt.Value);
                 }
                 CheckCleanups(_functionCleanupDepth);
+                RequireConstructorFields("", retStmt.Line);
             }
             else if (stmt is ThrowStatement throwStmt)
             {
@@ -727,6 +742,15 @@ namespace gflat.semantics
 
             if (_typeChecker.GetPropertyWrite(expr) is TypeChecker.PropertyWrite write)
             {
+                if (_inConstructor && (write.Receiver == null || write.Receiver is IdentifierExpression { Name: "this" }) &&
+                    _typeChecker.GetResolvedCall(write.Setter) is MethodDeclaration setter &&
+                    AutoPropertyStorage(setter) is string storage)
+                {
+                    if (write.Getter != null) RequireConstructorFields(storage, expr.Line);
+                    CheckExpression(write.Value);
+                    MarkConstructorField(storage);
+                    return;
+                }
                 CheckExpression(write.Receiver);
                 if (write.Getter != null) CheckExpression(write.Getter);
                 CheckExpression(write.Value);
@@ -738,6 +762,9 @@ namespace gflat.semantics
                 CheckExpression(getter);
                 return;
             }
+
+            if (ConstructorFieldPath(expr) is string fieldPath)
+                RequireConstructorFields(fieldPath, expr.Line);
 
             if (expr is IdentifierExpression id)
             {
@@ -769,7 +796,7 @@ namespace gflat.semantics
                     }
                 }
 
-                CheckExpression(member.Object);
+                if (member.Object is not IdentifierExpression { Name: "this" }) CheckExpression(member.Object);
             }
             else if (expr is AssignmentExpression assign)
             {
@@ -794,6 +821,12 @@ namespace gflat.semantics
             }
             else if (expr is CallExpression call)
             {
+                if (_inConstructor && call.Callee is IdentifierExpression &&
+                    _typeChecker.GetResolvedCall(call) is MethodDeclaration { IsStatic: false } method &&
+                    IsCurrentInstanceMethod(method))
+                    RequireConstructorFields("", call.Line);
+                if (_inConstructor && call.Callee is MemberAccessExpression { Object: IdentifierExpression { Name: "this" } })
+                    RequireConstructorFields("", call.Line);
                 CheckExpression(call.Callee);
                 for (int i = 0; i < call.Arguments.Count; i++)
                 {
@@ -836,6 +869,10 @@ namespace gflat.semantics
             else if (expr is LambdaExpression lambda)
             {
                 var beforeLambda = CloneState(_state);
+                bool outerConstructor = _inConstructor;
+                // Capturing a partially initialized receiver is not permitted.
+                if (_inConstructor) RequireConstructorFields("", lambda.Line);
+                _inConstructor = false;
                 int outerCleanupDepth = _functionCleanupDepth;
                 _functionCleanupDepth = _cleanupScopes.Count;
                 PushScope();
@@ -854,6 +891,7 @@ namespace gflat.semantics
                 PopScope();
                 _state = beforeLambda;
                 _functionCleanupDepth = outerCleanupDepth;
+                _inConstructor = outerConstructor;
             }
         }
 
@@ -876,6 +914,13 @@ namespace gflat.semantics
             {
                 // 1. Evaluate RHS Value FIRST!
                 CheckExpression(assign.Value);
+
+                if (ConstructorFieldPath(assign.Target) is string fieldPath &&
+                    _requiredFields.Any(f => f == fieldPath || f.StartsWith(fieldPath + ".")))
+                {
+                    MarkConstructorField(fieldPath);
+                    return;
+                }
 
                 // 2. Perform write to LHS Target
                 if (assign.Target is IdentifierExpression id)

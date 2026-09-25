@@ -68,6 +68,26 @@
       }
     },
     {
+      "match": "\\b((?:(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern)\\s+)+)((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)(?=\\s*$)",
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "name": "storage.modifier.gflat",
+              "match": "\\b(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern)\\b"
+            }
+          ]
+        },
+        "2": {
+          "patterns": [
+            {
+              "include": "#type-reference"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "constant.language.gflat",
       "match": "\\b(true|false|null|this|base)\\b"
     },
@@ -94,6 +114,81 @@
     {
       "name": "entity.name.type.gflat",
       "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=[A-Za-z0-9_ \\t:<>,()*^?\\[\\]]*\\boperator\\b)"
+    },
+    {
+      "match": "\\b((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+([A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:<[A-Za-z0-9_ \\t:,<>*^?\\[\\]]+>)?\\s*\\()",
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "include": "#type-reference"
+            }
+          ]
+        },
+        "2": {
+          "name": "entity.name.function.gflat"
+        }
+      }
+    },
+    {
+      "match": "\\b((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+([A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:[;=,){\\[]|=>|$))",
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "include": "#type-reference"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "match": "(?<=\\bnew)\\s*[*^]?\\s+((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)(?=\\s*\\()",
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "include": "#type-reference"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "match": "(?<=\\breadonly)\\s*\\(((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\)",
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "include": "#type-reference"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "match": "(?<=\\bsizeof)\\s*\\(((?:sizeof\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\)",
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "include": "#type-reference"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "match": "(?<!:):(?!:)\\s*([A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*,\\s*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*)*)(?=\\s*(?:\\{|$))",
+      "captures": {
+        "1": {
+          "patterns": [
+            {
+              "include": "#type-reference"
+            }
+          ]
+        }
+      }
     },
     {
       "name": "entity.name.function.gflat",
@@ -177,6 +272,30 @@
         },
         {
           "include": "$self"
+        }
+      ]
+    },
+    "type-reference": {
+      "patterns": [
+        {
+          "name": "storage.modifier.gflat",
+          "match": "\\b(public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern)\\b"
+        },
+        {
+          "name": "storage.type.gflat",
+          "match": "\\b(void|int|float|double|bool|char|long|extralong|uint|ulong|nint|nuint|byte|sbyte|short|ushort|string|class|struct|interface|enum)\\b"
+        },
+        {
+          "name": "entity.name.type.gflat",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+        },
+        {
+          "name": "keyword.operator.gflat",
+          "match": "::|[<>*^?]"
+        },
+        {
+          "name": "punctuation.section.gflat",
+          "match": "[()\\[\\]]"
         }
       ]
     }

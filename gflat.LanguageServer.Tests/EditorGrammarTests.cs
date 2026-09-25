@@ -61,11 +61,65 @@ public class EditorGrammarTests
     [InlineData("s$\"hello {42}\"", "hello", "string.quoted.double")]
     [InlineData("s$\"{{literal}} {s$\"{true}\"}\"", "true", "constant.language")]
     [InlineData("s$\"{Read(c\"}\")}\"; return 1;", "return", "keyword.control")]
+    [InlineData("public static String From(readonly(char)* text) throws", "String", "entity.name.type")]
+    [InlineData("public static String", "String", "entity.name.type")]
+    [InlineData("struct String : IInterpolatedString, IStringConvertible", "IInterpolatedString", "entity.name.type")]
+    [InlineData("struct String : IInterpolatedString, IStringConvertible", "IStringConvertible", "entity.name.type")]
+    [InlineData("sizeof(String)", "String", "entity.name.type")]
+    [InlineData("public String Make<T>()", "String", "entity.name.type")]
+    [InlineData("public readonly(List<readonly(String)*>)* Get()", "String", "entity.name.type")]
+    [InlineData("public readonly String Clone() throws", "String", "entity.name.type")]
+    [InlineData("String message = s\"hello\";", "String", "entity.name.type")]
+    [InlineData("private String name;", "String", "entity.name.type")]
+    [InlineData("void Use(readonly(String)* text, String* output)", "String", "entity.name.type")]
+    [InlineData("public List<String> Make()", "String", "entity.name.type")]
+    [InlineData("public std::String Make()", "String", "entity.name.type")]
+    [InlineData("public readonly(String)* Data {", "String", "entity.name.type")]
+    [InlineData("return new String();", "String", "entity.name.type")]
+    [InlineData("public String Name { readonly get => name; }", "String", "entity.name.type")]
+    [InlineData("public static String From(readonly(char)* text) throws", "From", "entity.name.function")]
+    [InlineData("public static int Count()", "int", "storage.type")]
     [InlineData("value.Set(1);", "Set", "entity.name.function")]
     public void ColorsLanguageConstructs(string line, string text, string scope)
     {
         var result = Grammar().TokenizeLine(line, null, TimeSpan.FromSeconds(2));
         AssertScope(result, line.IndexOf(text, StringComparison.Ordinal), scope);
+    }
+
+    [Fact]
+    public void StandardStringDeclarationsAreHighlightedInWholeFileContext()
+    {
+        var grammar = Grammar();
+        ITokenizeLineResult? previous = null;
+        int checkedReferences = 0;
+        foreach (string line in File.ReadLines(Path.Combine(AppContext.BaseDirectory, "EditorFixtures", "String.gf")))
+        {
+            var result = grammar.TokenizeLine(line, previous?.RuleStack, TimeSpan.FromSeconds(2));
+            previous = result;
+            // Follow the actual library declarations, including new overloads, instead
+            // of maintaining a separate hand-copied miniature String implementation.
+            foreach (Match match in Regex.Matches(line, @"^\s*(?:(?:public|private|protected|internal|static|readonly)\s+)*(String)(?=\s+[A-Za-z_][A-Za-z0-9_]*\b)"))
+            {
+                AssertScope(result, match.Groups[1].Index, "entity.name.type");
+                checkedReferences++;
+            }
+        }
+        Assert.True(checkedReferences >= 5, "The fixture must exercise real custom-type declarations.");
+    }
+
+    [Theory]
+    [InlineData("value = left + right;", "left")]
+    [InlineData("Consume(left, right);", "right")]
+    [InlineData("if (left < right && other > value) { }", "left")]
+    [InlineData("public static String From()", "From")]
+    [InlineData("// public static String From()", "String")]
+    [InlineData("c\"public static String From()\"", "String")]
+    public void TypeRulesDoNotReclassifyExpressionsCommentsOrStrings(string line, string text)
+    {
+        var result = Grammar().TokenizeLine(line, null, TimeSpan.FromSeconds(2));
+        int position = line.IndexOf(text, StringComparison.Ordinal);
+        var token = Assert.Single(result.Tokens, t => t.StartIndex <= position && t.EndIndex > position);
+        Assert.DoesNotContain(token.Scopes, scope => scope.StartsWith("entity.name.type."));
     }
 
     [Fact]

@@ -3660,7 +3660,14 @@ public partial class LlvmEmitter : IVisitor
                     }
                     else if (extDecl.IsVariadic)
                     {
-                        if (llvmArgType == "i1")
+                        if (llvmArgType == "float")
+                        {
+                            string promoted = NewTemp();
+                            Emit($"    {promoted} = fpext float {val} to double");
+                            val = promoted;
+                            llvmArgType = "double";
+                        }
+                        else if (llvmArgType == "i1")
                         {
                             string promoted = NewTemp();
                             Emit($"    {promoted} = zext i1 {val} to i32");
@@ -3744,6 +3751,9 @@ public partial class LlvmEmitter : IVisitor
         string retType = EmitType(callType);
         string args = string.Join(", ", argValues.Zip(argTypes, (v, t) => $"{t} {v}"));
 
+        string callSignature = retType;
+        if (target is ExternDeclaration { IsVariadic: true } variadic)
+            callSignature += " (" + string.Join(", ", variadic.Parameters.Select(p => EmitParamType(p.Type)).Append("...")) + ")";
         if (isThrowing)
         {
             if (retType == "void")
@@ -3764,12 +3774,12 @@ public partial class LlvmEmitter : IVisitor
         {
             if (retType == "void")
             {
-                Emit($"    call void @{funcName}({args})");
+                Emit($"    call {callSignature} @{funcName}({args})");
             }
             else
             {
                 string temp = NewTemp();
-                Emit($"    {temp} = call {retType} @{funcName}({args})");
+                Emit($"    {temp} = call {callSignature} @{funcName}({args})");
                 Push(temp);
             }
         }

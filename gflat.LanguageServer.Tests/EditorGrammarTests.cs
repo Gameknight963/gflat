@@ -32,7 +32,7 @@ public class EditorGrammarTests
     [Theory]
     [InlineData("public class Player {", "public", "storage.modifier")]
     [InlineData("public class Player {", "Player", "entity.name.type")]
-    [InlineData("readonly int^ value;", "int", "storage.type")]
+    [InlineData("readonly(int)^ value;", "int", "storage.type")]
     [InlineData("replace int Allocate() {", "replace", "storage.modifier")]
     [InlineData("return 0xFFul;", "0xFFul", "constant.numeric")]
     [InlineData("float n = 1_000.25f;", "1_000.25f", "constant.numeric")]

@@ -68,6 +68,20 @@ public sealed class ServerTests
     }
 
     [Fact]
+    public async Task ReadOnlyTypeDiagnosticsRecoverAfterRemovingTheWrite()
+    {
+        await using var session = new Session();
+        await session.Initialize();
+        const string source = "struct S { public int* data; } int main() { readonly(S) s = default(S); s.data[0] = 1; return 0; }";
+        await session.Open("readonly.gf", source);
+        var broken = await session.Diagnostics("readonly.gf", 1);
+        Assert.Contains("readonly", broken.GetProperty("params").GetProperty("diagnostics").ToString());
+        await session.Change("readonly.gf", source.Replace("s.data[0] = 1;", ""), 2);
+        Assert.Empty((await session.Diagnostics("readonly.gf", 2)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Stop();
+    }
+
+    [Fact]
     public async Task ReportsUnsavedErrorsAndClearsThemAfterAnEdit()
     {
         await using var session = new Session();
@@ -87,7 +101,7 @@ public sealed class ServerTests
         await using var session = new Session();
         await session.Initialize();
         const string source = """
-            extern int printf(readonly char* fmt, ...);
+            extern int printf(readonly(char)* fmt, ...);
             struct Cool {
                 int x;
                 ~Cool() { printf("destructor ran"); }
@@ -227,7 +241,7 @@ public sealed class ServerTests
     [InlineData("int main() { int x = ; }")]
     [InlineData("struct S { int P { get => ; } }")]
     [InlineData("int main() { /*")]
-    [InlineData("int main() { readonly char* s = \"")]
+    [InlineData("int main() { readonly(char)* s = \"")]
     [InlineData("class C { int P { get")]
     [InlineData("int main() { foo(")]
     [InlineData("int main() { int x = new")]

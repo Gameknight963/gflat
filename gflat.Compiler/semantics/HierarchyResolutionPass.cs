@@ -206,7 +206,7 @@ namespace gflat.semantics
                     }
                     for (int p = 0; p < method.Parameters.Count; p++)
                     {
-                        if (!TypeChecker.TypesMatchPublic(_symbols.ResolveAlias(method.Parameters[p].Type), _symbols.ResolveAlias(baseMethod.Parameters[p].Type), _symbols))
+                        if (!TypeChecker.TypesMatchPublic(_symbols.ResolveAlias(method.Parameters[p].Type), _symbols.ResolveAlias(baseMethod.Parameters[p].Type), _symbols) || method.Parameters[p].IsConst != baseMethod.Parameters[p].IsConst)
                         {
                             throw new TypeCheckException($"Parameter '{method.Parameters[p].Name}' of overriding method '{method.Name}' has type '{TypeChecker.TypeNamePublic(method.Parameters[p].Type)}' which does not match base parameter type '{TypeChecker.TypeNamePublic(baseMethod.Parameters[p].Type)}'", method.Parameters[p].Line);
                         }

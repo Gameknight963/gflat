@@ -1183,6 +1183,8 @@ public partial class LlvmEmitter : IVisitor
                         {
                             paramTypes.Add(EmitParamType(p.Type));
                         }
+                        if (_currentClass.VTableSlots.TryGetValue(classMethod.Name, out int virtualSlot))
+                            mangled = EmitInterfaceVirtualThunk(_currentClass, ifaceName, classMethod, virtualSlot, retType, paramTypes);
                         string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
                         entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
                     }
@@ -3333,7 +3335,11 @@ public partial class LlvmEmitter : IVisitor
             string rawFnPtr = NewTemp();
             Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
 
-            string returnType = EmitType(ifaceCall.Method.ReturnType);
+            string baseReturnType = EmitType(ifaceCall.Method.ReturnType);
+            bool isThrowingInterface = ifaceCall.Method.Throws;
+            string returnType = isThrowingInterface
+                ? (baseReturnType == "void" ? "{ %Exception*, i1 }" : $"{{ {baseReturnType}, %Exception*, i1 }}")
+                : baseReturnType;
             List<string> fnParamTypes = new() { "i8*" };
             foreach (Parameter p in ifaceCall.Method.Parameters)
             {
@@ -3357,7 +3363,14 @@ public partial class LlvmEmitter : IVisitor
             }
 
             string argsStr = string.Join(", ", callArgs);
-            if (returnType == "void")
+            if (isThrowingInterface)
+            {
+                string result = NewTemp();
+                Emit($"    {result} = call {returnType} {typedFn}({argsStr})");
+                string value = EmitCheckAndHandleCallException(result, baseReturnType == "void", baseReturnType);
+                if (baseReturnType != "void") Push(value);
+            }
+            else if (returnType == "void")
             {
                 Emit($"    call void {typedFn}({argsStr})");
             }

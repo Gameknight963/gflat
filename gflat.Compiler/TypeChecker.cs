@@ -2347,7 +2347,7 @@ namespace gflat
                                 $"Method '{classMethod.Name}' in class '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
                                 classMethod.Line);
                         }
-                        if (!TypesMatch(ResolveAlias(classMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
+                        if (!TypesMatchPublic(ResolveAlias(classMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
                         {
                             throw new TypeCheckException(
                                 $"Method '{classMethod.Name}' in class '{node.Name}' has return type '{TypeName(classMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
@@ -2365,7 +2365,7 @@ namespace gflat
                         {
                             TypeExpression classParamType = ResolveAlias(classMethod.Parameters[i].Type);
                             TypeExpression ifaceParamType = ResolveAlias(ifaceMethod.Parameters[i].Type);
-                            if (!TypesMatch(classParamType, ifaceParamType))
+                            if (!TypesMatchPublic(classParamType, ifaceParamType) || classMethod.Parameters[i].IsConst != ifaceMethod.Parameters[i].IsConst)
                             {
                                 throw new TypeCheckException(
                                     $"Parameter '{classMethod.Parameters[i].Name}' of method '{classMethod.Name}' in class '{node.Name}' has type '{TypeName(classParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
@@ -2526,7 +2526,7 @@ namespace gflat
                                 structMethod.Line);
                         }
 
-                        if (!TypesMatch(ResolveAlias(structMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
+                        if (!TypesMatchPublic(ResolveAlias(structMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
                         {
                             throw new TypeCheckException(
                                 $"Method '{structMethod.Name}' in struct '{node.Name}' has return type '{TypeName(structMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
@@ -2544,7 +2544,7 @@ namespace gflat
                         {
                             TypeExpression structParamType = ResolveAlias(structMethod.Parameters[i].Type);
                             TypeExpression ifaceParamType = ResolveAlias(ifaceMethod.Parameters[i].Type);
-                            if (!TypesMatch(structParamType, ifaceParamType))
+                            if (!TypesMatchPublic(structParamType, ifaceParamType) || structMethod.Parameters[i].IsConst != ifaceMethod.Parameters[i].IsConst)
                             {
                                 throw new TypeCheckException(
                                     $"Parameter '{structMethod.Parameters[i].Name}' of method '{structMethod.Name}' in struct '{node.Name}' has type '{TypeName(structParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
@@ -3737,6 +3737,7 @@ namespace gflat
                         var paramTypes = method.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
                         var fnType = new FunctionPointerTypeExpression(ResolveAlias(method.ReturnType), paramTypes, false, false, node.Line);
                         RecordType(node, fnType);
+                        ValidateFunctionAddress(method, node.Line);
                         _functionAddressTargets[node] = method;
                         return;
                     }
@@ -3745,6 +3746,7 @@ namespace gflat
                         var paramTypes = ext.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
                         var fnType = new FunctionPointerTypeExpression(ResolveAlias(ext.ReturnType), paramTypes, false, false, node.Line);
                         RecordType(node, fnType);
+                        ValidateFunctionAddress(ext, node.Line);
                         _functionAddressTargets[node] = ext;
                         return;
                     }
@@ -3758,6 +3760,7 @@ namespace gflat
                             throw new TypeCheckException("Taking the address of a throwing static method is not supported", node.Line);
                         var parameters = staticMethod.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
                         RecordType(node, new FunctionPointerTypeExpression(ResolveAlias(staticMethod.ReturnType), parameters, false, false, node.Line));
+                        ValidateFunctionAddress(staticMethod, node.Line);
                         _functionAddressTargets[node] = staticMethod;
                         return;
                     }
@@ -3769,7 +3772,8 @@ namespace gflat
                             var paramTypes = m.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
                             var fnType = new FunctionPointerTypeExpression(ResolveAlias(m.ReturnType), paramTypes, false, false, node.Line);
                             RecordType(node, fnType);
-                            _functionAddressTargets[node] = m;
+                            ValidateFunctionAddress(m, node.Line);
+                        _functionAddressTargets[node] = m;
                             return;
                         }
                         if (scope.Externs.TryGetValue(nsAccess.Member, out ExternDeclaration? e))
@@ -3777,7 +3781,8 @@ namespace gflat
                             var paramTypes = e.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
                             var fnType = new FunctionPointerTypeExpression(ResolveAlias(e.ReturnType), paramTypes, false, false, node.Line);
                             RecordType(node, fnType);
-                            _functionAddressTargets[node] = e;
+                            ValidateFunctionAddress(e, node.Line);
+                        _functionAddressTargets[node] = e;
                             return;
                         }
                     }

@@ -89,6 +89,10 @@ Enums are distinct integral types, optionally with an underlying type such as `u
 
 ## Weak defaults and explicit replacements
 
+Ordinary free functions, static methods, and concrete instance methods support overloads by parameter type and count. Exact argument types are preferred over implicit conversions; a candidate must be no worse for every argument and better for at least one. Equally applicable candidates are ambiguous, independent of declaration order. Constructor calls use the same ranking. Return types, readonly qualifications, and declaration modifiers cannot distinguish overloads.
+
+Overloaded generic function families and overloaded virtual/interface declarations are not yet supported and are diagnosed. An ordinary overloaded implementation can satisfy an interface's matching signature. Taking an overloaded function's address requires an unambiguous wrapper. Function addresses cannot discard `throws`, const-parameter requirements, or a variadic calling convention; those forms are rejected until callable types can express them.
+
 `weak` marks a function's default implementation. `replace` explicitly selects a different body for that function in the same namespace or containing type. Declaration order does not matter; reopened namespace blocks share the same scope.
 
 ```gflat

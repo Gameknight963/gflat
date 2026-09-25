@@ -866,6 +866,7 @@ namespace gflat
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
+            if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
             CheckSpecialization(genericDef, specialized);
 
             return new NamedTypeExpression(mangledName, null, line);
@@ -916,6 +917,7 @@ namespace gflat
                     new HierarchyResolutionPass(_symbols).ResolveHierarchy(nestedClsInfo);
                 }
             }
+            if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
             CheckSpecialization(genericDef, specialized);
 
             return new NamedTypeExpression(mangledName, null, line);
@@ -1985,6 +1987,7 @@ namespace gflat
 
             ResolveDeclaredBaseTypes(node);
             ResolveDeclarationSignatures(node);
+            PrepareOverloads(node);
 
             // Pass 2: Hierarchy resolution
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
@@ -2332,7 +2335,7 @@ namespace gflat
                             throw new TypeCheckException($"Class '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
                         }
 
-                        MethodDeclaration classMethod = mEntry.Method;
+                        MethodDeclaration classMethod = InterfaceImplementation(mEntry.Method, ifaceMethod);
                         if (classMethod.PropertyName != null && classMethod.Accessibility != TokenKind.Public)
                             throw new TypeCheckException($"Property accessor '{classMethod.PropertyName}' must be public to implement an interface", classMethod.Line);
                         if (ifaceMethod.Throws != classMethod.Throws)
@@ -2510,6 +2513,7 @@ namespace gflat
                             throw new TypeCheckException($"Struct '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
                         }
 
+                        structMethod = InterfaceImplementation(structMethod, ifaceMethod);
                         if (structMethod.PropertyName != null && structMethod.Accessibility != TokenKind.Public)
                             throw new TypeCheckException($"Property accessor '{structMethod.PropertyName}' must be public to implement an interface", structMethod.Line);
                         if (ifaceMethod.Throws != structMethod.Throws)
@@ -4425,7 +4429,8 @@ namespace gflat
                     if (!classInfo.Methods.TryGetValue(memberAccess.Member, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                         throw new TypeCheckException($"Class '{named.Name}' has no method '{memberAccess.Member}'", node.Line);
 
-                    method = mEntry.Method;
+                    method = SelectOverload(mEntry.Method, node);
+                    method = SelectOverload(method, node);
                     if (isReceiverReadOnly && !method.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
                     if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
@@ -4458,6 +4463,7 @@ namespace gflat
                     if (!sInfo.Methods.TryGetValue(memberAccess.Member, out method))
                         throw new TypeCheckException($"'{named.Name}' has no method '{memberAccess.Member}'", node.Line);
 
+                    method = SelectOverload(method, node);
                     if (isReceiverReadOnly && !method.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
 
@@ -4478,7 +4484,7 @@ namespace gflat
                     throw new TypeCheckException("Instance methods require an explicit receiver in a static method", node.Line);
                 if (_currentClass != null && _currentClass.Methods.TryGetValue(funcName, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                 {
-                    method = mEntry.Method;
+                    method = SelectOverload(mEntry.Method, node);
                     if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
                     {
                         TypeExpression resThisType = ResolveAlias(thisType);
@@ -4495,6 +4501,7 @@ namespace gflat
                 }
                 else if (_currentStruct != null && _currentStruct.Methods.TryGetValue(funcName, out method))
                 {
+                    method = SelectOverload(method, node);
                     if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
                     {
                         TypeExpression resThisType = ResolveAlias(thisType);
@@ -4560,6 +4567,8 @@ namespace gflat
             {
                 throw new NotImplementedException("Complex callee not supported");
             }
+
+            if (method != null) method = SelectOverload(method, node);
 
             if (method?.IsStatic == true && node.Callee is MemberAccessExpression)
                 throw new TypeCheckException($"Static method '{method.Name}' must be accessed through its type with '::'", node.Line);
@@ -5021,12 +5030,7 @@ namespace gflat
                         string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
                         throw new TypeCheckException($"No matching constructor found for '{cInfo.Name}' with arguments ({argTypes})", node.Line);
                     }
-                    if (matches.Count > 1)
-                    {
-                        throw new TypeCheckException($"Call to constructor of '{cInfo.Name}' is ambiguous", node.Line);
-                    }
-
-                    matchedCtor = matches[0];
+                    matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line);
                     _resolvedConstructors[node] = matchedCtor;
                     for (int i = 0; i < node.Arguments.Count; i++)
                     {
@@ -5113,12 +5117,7 @@ namespace gflat
                     string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
                     throw new TypeCheckException($"No matching constructor found for '{sInfo.Name}' with arguments ({argTypes})", node.Line);
                 }
-                if (matches.Count > 1)
-                {
-                    throw new TypeCheckException($"Call to constructor of '{sInfo.Name}' is ambiguous", node.Line);
-                }
-
-                matchedStructCtor = matches[0];
+                matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line);
                 _resolvedConstructors[node] = matchedStructCtor;
                 for (int i = 0; i < node.Arguments.Count; i++)
                 {
@@ -6206,4 +6205,3 @@ namespace gflat
         }
     }
 }
-

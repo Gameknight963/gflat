@@ -7,6 +7,8 @@ public partial class TypeChecker
 {
     private void ValidateFunctionAddress(AstNode function, int line)
     {
+        if (function is MethodDeclaration overloaded && overloadFamilies.ContainsKey(overloaded))
+            throw new TypeCheckException("Taking the address of an overloaded function requires an unambiguous wrapper", line);
         if (function is MethodDeclaration { Throws: true })
             throw new TypeCheckException("Taking the address of a throwing function is not supported: function pointers cannot represent throws", line);
         var parameters = function switch

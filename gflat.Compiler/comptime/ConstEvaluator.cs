@@ -891,6 +891,9 @@ namespace gflat.comptime
                 }
             }
 
+            if (_context is TypeChecker checker && checker.GetResolvedCall(node) is MethodDeclaration selected)
+                method = selected;
+
             if (method == null)
             {
                 throw new ConstEvalException($"Cannot call '{funcName}' at compile time", node.Line);

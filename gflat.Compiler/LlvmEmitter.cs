@@ -1164,7 +1164,7 @@ public partial class LlvmEmitter : IVisitor
                     foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
                     {
                         (MethodDeclaration Method, string DeclaringClass) mEntry = _currentClass.Methods[ifaceMethod.Name];
-                        MethodDeclaration classMethod = mEntry.Method;
+                        MethodDeclaration classMethod = _typeChecker.InterfaceImplementation(mEntry.Method, ifaceMethod);
                         string declaringClass = mEntry.DeclaringClass;
                         TypeChecker.ClassInfo declaringInfo = _typeChecker.GetClass(declaringClass)!;
                         string methodNs = declaringInfo.Namespace;
@@ -1172,6 +1172,7 @@ public partial class LlvmEmitter : IVisitor
                             ? $"gflat${methodNs}${declaringClass}${classMethod.Name}"
                             : $"gflat${declaringClass}${classMethod.Name}";
 
+                        mangled += _typeChecker.GetOverloadSuffix(classMethod);
                         bool isThrowing = _typeChecker.CanFunctionThrow(classMethod);
                         string baseRet = EmitType(classMethod.ReturnType);
                         string retType = isThrowing
@@ -1586,8 +1587,10 @@ public partial class LlvmEmitter : IVisitor
                     List<string> entries = new();
                     foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
                     {
-                        MethodDeclaration structMethod = _currentStruct!.Methods[ifaceMethod.Name];
-                        string retType = EmitType(structMethod.ReturnType);
+                        MethodDeclaration structMethod = _typeChecker.InterfaceImplementation(_currentStruct!.Methods[ifaceMethod.Name], ifaceMethod);
+                        string baseRet = EmitType(structMethod.ReturnType);
+                        string retType = structMethod.Throws
+                            ? (baseRet == "void" ? "{ %Exception*, i1 }" : $"{{ {baseRet}, %Exception*, i1 }}") : baseRet;
                         List<string> paramTypes = new() { $"%{node.Name}*" };
                         foreach (Parameter p in structMethod.Parameters)
                         {
@@ -1598,6 +1601,7 @@ public partial class LlvmEmitter : IVisitor
                         string mangled = methodNs.Length > 0
                             ? $"gflat${methodNs}${node.Name}${structMethod.Name}"
                             : $"gflat${node.Name}${structMethod.Name}";
+                        mangled += _typeChecker.GetOverloadSuffix(structMethod);
                         entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
                     }
                     string vtableContent = string.Join(", ", entries);
@@ -1682,9 +1686,11 @@ public partial class LlvmEmitter : IVisitor
         if (type is NamedTypeExpression named)
             return named.Name;
         if (type is PointerTypeExpression ptr)
-            return GetMangleTypeName(ptr.Inner) + "Ptr";
+            return GetMangleTypeName(ptr.Inner) + "Ptr" + (ptr.IsNullable ? "Nullable" : "");
+        if (type is ManagedTypeExpression managed)
+            return GetMangleTypeName(managed.Inner) + "Managed" + (managed.IsNullable ? "Nullable" : "");
         if (type is ArrayTypeExpression arr)
-            return GetMangleTypeName(arr.ElementType) + "Arr";
+            return GetMangleTypeName(arr.ElementType) + "Arr" + arr.Size;
         return "val";
     }
 
@@ -1700,23 +1706,8 @@ public partial class LlvmEmitter : IVisitor
 
     private string GetMethodMangledName(string typeName, MethodDeclaration node, string ns, bool isClass = false)
     {
-        bool isOverloaded = false;
-        if (!isClass && _typeChecker.GetStruct(typeName) is TypeChecker.StructInfo sInfo)
-        {
-            isOverloaded = sInfo.AllMethods.Count(m => m.Name == node.Name) > 1;
-        }
-        else if (isClass && _typeChecker.GetClass(typeName) is TypeChecker.ClassInfo cInfo)
-        {
-            isOverloaded = cInfo.AllMethods.Count(m => m.Name == node.Name) > 1;
-        }
-
         string baseName = ns.Length > 0 ? $"gflat${ns}${typeName}${node.Name}" : $"gflat${typeName}${node.Name}";
-        if (isOverloaded)
-        {
-            string paramTypes = string.Join("$", node.Parameters.Select(p => GetMangleTypeName(p.Type)));
-            return $"{baseName}${paramTypes}";
-        }
-        return baseName;
+        return baseName + _typeChecker.GetOverloadSuffix(node);
     }
 
     private void EmitStructOperator(string structName, OperatorDeclaration node)
@@ -2033,9 +2024,9 @@ public partial class LlvmEmitter : IVisitor
         else if (node.Name == "__gflat_gc_alloc")
             name = node.Name; // Well-known hook functions: emit unmangled
         else if (_currentNamespacePath.Length > 0)
-            name = $"gflat${_currentNamespacePath}${node.Name}";
+            name = $"gflat${_currentNamespacePath}${node.Name}" + _typeChecker.GetOverloadSuffix(node);
         else
-            name = $"gflat${node.Name}";
+            name = $"gflat${node.Name}" + _typeChecker.GetOverloadSuffix(node);
 
         string parameters = string.Join(", ", node.Parameters.Select(p =>
             $"{EmitParamType(p.Type)} %{p.Name}"));
@@ -2934,7 +2925,7 @@ public partial class LlvmEmitter : IVisitor
                         return;
                     }
                     string ns = _typeChecker.GetFunctionNamespace(method);
-                    string mangled = ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}";
+                    string mangled = (ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}") + _typeChecker.GetOverloadSuffix(method);
                     Push($"@{mangled}");
                     return;
                 }
@@ -3725,7 +3716,7 @@ public partial class LlvmEmitter : IVisitor
                 else
                 {
                     string ns = _typeChecker.GetFunctionNamespace(method);
-                    funcName = ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}";
+                    funcName = (ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}") + _typeChecker.GetOverloadSuffix(method);
                 }
             }
             else if (node.Callee is IdentifierExpression ident)

@@ -66,7 +66,10 @@ namespace gflat
             }
             if (Current.Kind != kind)
             {
-                _diagnostics.Report(DiagnosticRules.GF0005_ExpectedToken, Current.Line, Current.Column, null, kind.ToString(), Current.Kind.ToString(), Current.Text);
+                var span = Current.Span;
+                if (kind is TokenKind.Semicolon or TokenKind.CloseParen or TokenKind.CloseBrace or TokenKind.CloseBracket)
+                    span = span with { Length = 0 };
+                _diagnostics.Report(DiagnosticRules.GF0005_ExpectedToken, span, kind.ToString(), Current.Kind.ToString(), Current.Text);
 
                 if (kind == TokenKind.Semicolon)
                 {

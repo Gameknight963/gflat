@@ -140,7 +140,7 @@ public static class Workspace
     {
         if (span.Source == null) return new(new(Math.Max(0, span.Line - 1), Math.Max(0, span.Column - 1)), new(Math.Max(0, span.Line - 1), Math.Max(0, span.Column - 1)));
         var start = span.Source.Span(span.Start);
-        var end = span.Source.Span(span.Start + Math.Max(1, span.Length));
+        var end = span.Source.Span(span.Start + span.Length);
         return new(new(start.Line - 1, start.Column - 1), new(end.Line - 1, end.Column - 1));
     }
 

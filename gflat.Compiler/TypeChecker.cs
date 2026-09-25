@@ -2392,7 +2392,7 @@ namespace gflat
                             TypeExpression initType = ResolveAlias(GetType(field.Initializer));
                             if (!IsAssignable(fieldType, initType, field.Initializer))
                             {
-                                throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
+                                throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Initializer.Span);
                             }
                         }
                         if (field.IsConst)
@@ -2572,7 +2572,7 @@ namespace gflat
                             TypeExpression initType = ResolveAlias(GetType(field.Initializer));
                             if (!IsAssignable(fieldType, initType, field.Initializer))
                             {
-                                throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Line);
+                                throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Initializer.Span);
                             }
                         }
                         if (field.IsConst)
@@ -2764,7 +2764,7 @@ namespace gflat
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
                 if (!IsAssignable(fieldType, initType, node.Initializer))
                 {
-                    throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{node.Name}' of type '{TypeName(fieldType)}'", node.Line);
+                    throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{node.Name}' of type '{TypeName(fieldType)}'", node.Initializer.Span);
                 }
             }
             else if (node.IsConst)
@@ -3432,7 +3432,7 @@ namespace gflat
 
                 if (!IsAssignable(varType, initType, node.Initializer))
                 {
-                    ReportError(DiagnosticRules.GF1001_TypeMismatch, node.Line, 0, TypeName(initType), TypeName(varType));
+                    _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Initializer.Span, TypeName(initType), TypeName(varType));
                 }
             }
             else if (node.IsConst)
@@ -4256,7 +4256,7 @@ namespace gflat
 
             if (!IsAssignable(targetType, valueType, node.Value))
             {
-                ReportError(DiagnosticRules.GF1001_TypeMismatch, node.Line, 0, TypeName(valueType), TypeName(targetType));
+                _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Value.Span, TypeName(valueType), TypeName(targetType));
                 RecordType(node, Error);
                 return;
             }
@@ -4571,7 +4571,7 @@ namespace gflat
                     if (!IsAssignable(paramType, argType, node.Arguments[i]))
                         throw new TypeCheckException(
                             $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
-                            node.Line);
+                            node.Arguments[i].Span);
 
                     if (ext.Parameters[i].IsConst)
                     {
@@ -4621,7 +4621,7 @@ namespace gflat
                 if (!IsAssignable(paramType, argType, node.Arguments[i]))
                     throw new TypeCheckException(
                         $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
-                        node.Line);
+                        node.Arguments[i].Span);
 
                 if (method.Parameters[i].IsConst)
                 {
@@ -4662,7 +4662,7 @@ namespace gflat
                 if (!IsAssignable(paramType, argType, node.Arguments[i]))
                     throw new TypeCheckException(
                         $"Argument {i + 1} of indirect call: cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
-                        node.Line);
+                        node.Arguments[i].Span);
             }
 
             RecordType(node, fnPtr.ReturnType);

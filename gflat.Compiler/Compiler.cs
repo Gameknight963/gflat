@@ -38,7 +38,7 @@ public static class Compiler
             if (!diagnostics.HasErrors)
             {
                 using var location = SourceContext.Enter(ex.Span);
-                diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, ex.Line, ex.Span.Column, ex.FilePath, ex.Description);
+                diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, ex.Span, ex.Description);
             }
             throw;
         }

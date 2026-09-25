@@ -11,34 +11,33 @@ namespace gflat.diagnostics
         public SourceSpan Span { get; }
         public List<SourceSpan> RelatedLocations { get; } = new();
 
-        public Diagnostic(DiagnosticDescriptor descriptor, int line, int column = 0, string? filePath = null, params object[] messageArgs)
+        public Diagnostic(DiagnosticDescriptor descriptor, SourceSpan span, params object[] messageArgs)
+            : this(descriptor, descriptor.DefaultSeverity, span, messageArgs) { }
+
+        public Diagnostic(DiagnosticDescriptor descriptor, DiagnosticSeverity severity, SourceSpan span, params object[] messageArgs)
         {
             Descriptor = descriptor;
-            Severity = descriptor.DefaultSeverity;
-            var location = SourceContext.ForLine(line);
-            Span = column > 0 && location.Source != null
-                ? location.Source.Span(location.Start - location.Column + column) : location;
-            Line = Span.Line;
-            Column = column > 0 ? column : Span.Column;
-            FilePath = filePath ?? Span.Source?.Path;
-            Message = messageArgs != null && messageArgs.Length > 0
-                ? string.Format(descriptor.MessageFormat, messageArgs)
-                : descriptor.MessageFormat;
+            Severity = severity;
+            Span = span;
+            Line = span.Line;
+            Column = span.Column;
+            FilePath = span.Source?.Path;
+            Message = messageArgs.Length > 0 ? string.Format(descriptor.MessageFormat, messageArgs) : descriptor.MessageFormat;
         }
 
+        public Diagnostic(DiagnosticDescriptor descriptor, int line, int column = 0, string? filePath = null, params object[] messageArgs)
+            : this(descriptor, descriptor.DefaultSeverity, LegacySpan(line, column), messageArgs)
+        { FilePath = filePath ?? Span.Source?.Path; }
+
         public Diagnostic(DiagnosticDescriptor descriptor, DiagnosticSeverity overrideSeverity, int line, int column = 0, string? filePath = null, params object[] messageArgs)
+            : this(descriptor, overrideSeverity, LegacySpan(line, column), messageArgs)
+        { FilePath = filePath ?? Span.Source?.Path; }
+
+        private static SourceSpan LegacySpan(int line, int column)
         {
-            Descriptor = descriptor;
-            Severity = overrideSeverity;
-            var location = SourceContext.ForLine(line);
-            Span = column > 0 && location.Source != null
-                ? location.Source.Span(location.Start - location.Column + column) : location;
-            Line = Span.Line;
-            Column = column > 0 ? column : Span.Column;
-            FilePath = filePath ?? Span.Source?.Path;
-            Message = messageArgs != null && messageArgs.Length > 0
-                ? string.Format(descriptor.MessageFormat, messageArgs)
-                : descriptor.MessageFormat;
+            var span = SourceContext.ForLine(line);
+            if (column <= 0 || column == span.Column) return span;
+            return span.Source?.Span(span.Start - span.Column + column) ?? span with { Column = column };
         }
 
         public override string ToString()

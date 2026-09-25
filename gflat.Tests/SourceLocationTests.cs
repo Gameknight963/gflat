@@ -5,6 +5,29 @@ namespace gflat.Tests;
 
 public class SourceLocationTests
 {
+    [Theory]
+    [InlineData("int main() => missing;", "missing")]
+    [InlineData("int main() { int n = true; return 0; }", "true")]
+    [InlineData("int main() { int n = 0; n = true; return n; }", "true")]
+    [InlineData("struct S { int n = true; }", "true")]
+    [InlineData("int main() { int n = (true\n || false); return 0; }", "(true\n || false)")]
+    public void DiagnosticsPreserveTheOffendingExpression(string text, string expected)
+    {
+        var error = Compiler.Analyze([new SourceFile("range.gf", text)])
+            .First(d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Equal(expected, text.Substring(error.Span.Start, error.Span.Length));
+        Assert.Equal("range.gf", error.Span.Source!.Path);
+    }
+
+    [Fact]
+    public void MissingSemicolonHasAnInsertionRange()
+    {
+        const string text = "int main() { return 0 }";
+        var error = Compiler.Analyze([new SourceFile("range.gf", text)]).First();
+        Assert.Equal(text.IndexOf('}'), error.Span.Start);
+        Assert.Equal(0, error.Span.Length);
+    }
+
     [Fact]
     public void TokensRetainFileAndUtf16Offsets()
     {

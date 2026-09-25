@@ -31,6 +31,9 @@ namespace gflat.diagnostics
             _items.Add(diagnostic);
         }
 
+        public void Report(DiagnosticDescriptor descriptor, SourceSpan span, params object[] args)
+            => _items.Add(new Diagnostic(descriptor, span, args));
+
         public void Report(DiagnosticDescriptor descriptor, int line, int column = 0, string? filePath = null, params object[] args)
         {
             _items.Add(new Diagnostic(descriptor, line, column, filePath, args));

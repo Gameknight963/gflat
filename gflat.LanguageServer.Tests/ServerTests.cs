@@ -7,6 +7,24 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ServerTests
 {
+    [Theory]
+    [InlineData("int main() => missing;", 0, 14, 0, 21)]
+    [InlineData("// 😀\r\nint main() { int n = (true\r\n || false); return 0; }", 1, 21, 2, 10)]
+    [InlineData("int main() { return 0 }", 0, 22, 0, 22)]
+    public async Task PublishedDiagnosticsHaveExactRanges(string source, int startLine, int startColumn, int endLine, int endColumn)
+    {
+        await using var session = new Session();
+        await session.Initialize();
+        await session.Open("ranges.gf", source);
+        var diagnostics = (await session.Diagnostics("ranges.gf", 1)).GetProperty("params").GetProperty("diagnostics");
+        var range = diagnostics.EnumerateArray().First(d => d.GetProperty("severity").GetInt32() == 1).GetProperty("range");
+        Assert.Equal(startLine, range.GetProperty("start").GetProperty("line").GetInt32());
+        Assert.Equal(startColumn, range.GetProperty("start").GetProperty("character").GetInt32());
+        Assert.Equal(endLine, range.GetProperty("end").GetProperty("line").GetInt32());
+        Assert.Equal(endColumn, range.GetProperty("end").GetProperty("character").GetInt32());
+        await session.Stop();
+    }
+
     private sealed class Session : IAsyncDisposable
     {
         public string Root { get; } = Path.Combine(Path.GetTempPath(), "gflat_lsp_" + Guid.NewGuid().ToString("N"));

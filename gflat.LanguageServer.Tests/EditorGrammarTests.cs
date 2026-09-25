@@ -42,6 +42,10 @@ public class EditorGrammarTests
     [InlineData("'\\n'", "\\n", "constant.character.escape")]
     [InlineData("// return \"text\"", "return", "comment.line")]
     [InlineData("get => value;", "get", "keyword.other.accessor")]
+    [InlineData("namespace std::Collections;", "namespace", "keyword.control")]
+    [InlineData("namespace std::Collections;", "::", "keyword.operator")]
+    [InlineData("public int this[int i] { readonly get => data[i]; }", "this", "constant.language")]
+    [InlineData("public int this[int i] { readonly get => data[i]; }", "get", "keyword.other.accessor")]
     [InlineData("value.Set(1);", "Set", "entity.name.function")]
     public void ColorsLanguageConstructs(string line, string text, string scope)
     {

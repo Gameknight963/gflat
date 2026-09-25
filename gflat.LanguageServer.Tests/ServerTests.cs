@@ -97,6 +97,22 @@ public sealed class ServerTests
     }
 
     [Fact]
+    public async Task QualifiedNamespacesAndIndexersRecoverAcrossUnsavedFiles()
+    {
+        await using var session = new Session();
+        System.IO.File.WriteAllText(session.File("app.gfproj"), gflat.TestSupport.ProjectFileFixture.Xml());
+        await session.Initialize();
+        const string library = "namespace Lib::Collections; public struct S { public int this[int i] => i; }";
+        await session.Open("library.gf", library);
+        Assert.Empty((await session.Diagnostics("library.gf", 1)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Open("use.gf", "using Lib::Collections; int main() { S s = new S(); return s[1, 2]; }");
+        Assert.NotEmpty((await session.Diagnostics("use.gf", 1)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Change("use.gf", "using Lib::Collections; int main() { S s = new S(); return s[42]; }", 2);
+        Assert.Empty((await session.Diagnostics("use.gf", 2)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Stop();
+    }
+
+    [Fact]
     public async Task ReportsUnsavedErrorsAndClearsThemAfterAnEdit()
     {
         await using var session = new Session();
@@ -262,6 +278,10 @@ public sealed class ServerTests
     [InlineData("int main() { int x = new")]
     [InlineData("struct S<T")]
     [InlineData("using A::")]
+    [InlineData("namespace std::")]
+    [InlineData("namespace std; struct S { public int this[")]
+    [InlineData("namespace std::Collections { struct S { public int this[int i] { get")]
+    [InlineData("struct S { public int this[int i] => i; } int main() { S s = new S(); return s[0,")]
     public void IncompleteCodeReturnsSourceDiagnostics(string source)
     {
         var result = Workspace.Analyze(null, new Dictionary<string, OpenDocument> { ["broken.gf"] = new("broken.gf", source, 1) });

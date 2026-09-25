@@ -381,7 +381,7 @@ namespace gflat
             if (Check(TokenKind.Interface)) return ParseInterfaceDeclaration(accessibility, line);
             if (Check(TokenKind.Enum)) return ParseEnumDeclaration(accessibility, line);
 
-            _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Line, Current.Start, null, $"Expected type declaration on line {Current.Line}");
+            _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Span, $"Expected type declaration on line {Current.Line}");
             Consume();
             return new StructDeclaration("<error>", new List<AstNode>(), TokenKind.Private, line);
         }
@@ -771,7 +771,7 @@ namespace gflat
                 }
                 else
                 {
-                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Line, Current.Start, null, $"Expected 'base' or base class name after ':' in constructor initializer on line {Current.Line}");
+                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Span, $"Expected 'base' or base class name after ':' in constructor initializer on line {Current.Line}");
                 }
 
                 Expect(TokenKind.OpenParen);
@@ -824,7 +824,7 @@ namespace gflat
             Token opToken = Current;
             if (!IsOverloadableOperator(opToken.Kind))
             {
-                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, opToken.Line, opToken.Start, null, $"Expected overloadable operator after 'operator', got '{opToken.Text}' on line {opToken.Line}");
+                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, opToken.Span, $"Expected overloadable operator after 'operator', got '{opToken.Text}' on line {opToken.Line}");
             }
             Consume();
             string opSymbol = opToken.Text;
@@ -1383,9 +1383,14 @@ namespace gflat
         private AstNode ParseExpressionCoreLocated(int minBindingPower = 0)
         {
             AstNode left = ParsePrefix();
+            SourceSpan start = left.Span;
 
             while (true)
             {
+                // Keep intermediate nodes located too: in f().member, both f()
+                // and the final access need their own complete source ranges.
+                if (start.Source != null && _pos > 0)
+                    left.Span = start.Source.Span(start.Start, Math.Max(0, _tokens[_pos - 1].End + 1 - start.Start));
                 if (Check(TokenKind.Less) && IsGenericCallAhead())
                 {
                     int callLine = Current.Line;
@@ -1694,7 +1699,7 @@ namespace gflat
                 return result;
             }
 
-            _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, Current.Start, null, $"Unexpected token '{Current.Text}' on line {line}");
+            _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Span, $"Unexpected token '{Current.Text}' on line {line}");
             Consume();
             return new IdentifierExpression("<error>", line);
         }

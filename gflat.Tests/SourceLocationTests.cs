@@ -5,6 +5,19 @@ namespace gflat.Tests;
 
 public class SourceLocationTests
 {
+    [Fact]
+    public void IntermediateCallAndMemberNodesKeepTheirOwnRanges()
+    {
+        const string text = "int main() => Make().field + 1;";
+        var tree = Parser.Parse(Lexer.Tokenize(new SourceFile("ranges.gf", text)));
+        var method = Assert.IsType<gflat.ast.MethodDeclaration>(tree.Members.Single());
+        var statement = Assert.IsType<gflat.ast.ReturnStatement>(method.Body!.Statements.Single());
+        var binary = Assert.IsType<gflat.ast.BinaryExpression>(statement.Value);
+        var member = Assert.IsType<gflat.ast.MemberAccessExpression>(binary.Left);
+        Assert.Equal("Make().field", text.Substring(member.Span.Start, member.Span.Length));
+        Assert.Equal("Make()", text.Substring(member.Object.Span.Start, member.Object.Span.Length));
+    }
+
     [Theory]
     [InlineData("int main() => missing;", "missing")]
     [InlineData("int main() { int n = true; return 0; }", "true")]

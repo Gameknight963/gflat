@@ -826,6 +826,20 @@ namespace gflat.semantics
                     if (!alwaysRight) _state = IntersectStates(beforeRight, _state);
                 }
             }
+            else if (expr is InterpolatedStringExpression interp)
+            {
+                var plan = _typeChecker.GetInterpolation(interp);
+                CheckExpression(plan.Factory);
+                foreach (var part in plan.Parts)
+                {
+                    if (part.Convert != null) CheckExpression(part.Convert);
+                    // Synthetic locals are initialized by lowering, not source declarations.
+                    // Append may throw before the next hole has been evaluated.
+                    var normal = CloneState(_state);
+                    CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
+                    _state = normal;
+                }
+            }
             else if (expr is CallExpression call)
             {
                 if (_inConstructor && call.Callee is IdentifierExpression &&
@@ -864,13 +878,6 @@ namespace gflat.semantics
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     CheckExpression(newExpr.Arguments[i]);
-                }
-            }
-            else if (expr is InterpolatedStringExpression interp)
-            {
-                for (int i = 0; i < interp.Parts.Count; i++)
-                {
-                    CheckExpression(interp.Parts[i]);
                 }
             }
             else if (expr is LambdaExpression lambda)

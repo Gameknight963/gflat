@@ -3962,7 +3962,7 @@ public partial class LlvmEmitter : IVisitor
         Push(finalVal);
     }
 
-    public void Visit(InterpolatedStringExpression node) => throw new NotImplementedException();
+    public void Visit(InterpolatedStringExpression node) => EmitExpressionWithCleanup(() => EmitInterpolation(node));
     public void Visit(NewExpression node)
     {
         if (TypeChecker.IsError(_typeChecker.GetType(node)))

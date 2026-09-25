@@ -164,6 +164,7 @@ public class Lexer
                     if (i + 1 < code.Length && code[i + 1] == '"')
                     {
                         tokens.AddRange(ReadInterpolatedString(code, i, out int istrEnd, line));
+                        for (int offset = i; offset < istrEnd; offset++) if (code[offset] == '\n') line++;
                         i = istrEnd;
                         continue;
                     }
@@ -287,54 +288,79 @@ public class Lexer
         }
     }
 
-    private static List<Token> ReadInterpolatedString(string source, int startIndex, out int endIndex, int line)
+    private static List<Token> ReadInterpolatedString(string source, int startIndex, out int endIndex, int line, bool tokenizeExpressions = true)
     {
-        List<Token> tokens = new();
-        int i = startIndex + 2; // skip $"
-        int segStart = i;
-
-        while (true)
+        var tokens = new List<Token> { new(TokenKind.InterpolatedStringStart, line, startIndex, startIndex + 1) };
+        int i = startIndex + 2, segmentStart = i;
+        var segment = new System.Text.StringBuilder();
+        void Flush()
         {
-            if (i >= source.Length) throw new TypeCheckException($"Unterminated interpolated string on line {line}", line);
-            if (source[i] == '\\') { i += 2; continue; }
-
-            if (source[i] == '{')
+            tokens.Add(new(TokenKind.InterpolatedStringSegment, line, segmentStart, Math.Max(segmentStart, i - 1), segment.ToString()));
+            segment.Clear();
+        }
+        while (i < source.Length)
+        {
+            char c = source[i];
+            if (c is '\n' or '\r') throw new TypeCheckException("Newline in interpolated string; use an escape", line);
+            if (c == '\\')
             {
-                // emit text segment before the expression
-                tokens.Add(new Token(TokenKind.InterpolatedStringSegment, line, segStart, i - 1, source[segStart..i]));
-                tokens.Add(new Token(TokenKind.InterpolatedStringExprStart, line, i, i));
-                i++; // skip {
-
-                // tokenize the expression inside {}
-                int depth = 1;
-                int exprStart = i;
-                while (i < source.Length && depth > 0)
-                {
-                    if (source[i] == '{') depth++;
-                    else if (source[i] == '}') depth--;
-                    if (depth > 0) i++;
-                }
-
-                string expr = source[exprStart..i];
-                List<Token> exprTokens = Tokenize(expr);
-                exprTokens.RemoveAt(exprTokens.Count - 1); // remove EOF
-                tokens.AddRange(exprTokens.Select(t => new Token(t.Kind, line + t.Line - 1, exprStart + t.Start, exprStart + t.End, t.Text)));
-
-                tokens.Add(new Token(TokenKind.InterpolatedStringExprEnd, line, i, i));
-                i++; // skip }
-                segStart = i;
-                continue;
+                if (i + 1 >= source.Length) break;
+                segment.Append(source[i++]); segment.Append(source[i++]); continue;
             }
-
-            if (source[i] == '"')
+            if ((c == '{' || c == '}') && i + 1 < source.Length && source[i + 1] == c)
+            { segment.Append(c); i += 2; continue; }
+            if (c == '}') throw new TypeCheckException("Unmatched '}' in interpolated string; use '}}' for literal text", line);
+            if (c == '"')
             {
-                tokens.Add(new Token(TokenKind.InterpolatedStringSegment, line, segStart, i - 1, source[segStart..i]));
+                Flush();
+                tokens.Add(new(TokenKind.InterpolatedStringEnd, line, i, i));
                 endIndex = i + 1;
                 return tokens;
             }
-
-            i++;
+            if (c != '{') { segment.Append(c); i++; continue; }
+            Flush();
+            tokens.Add(new(TokenKind.InterpolatedStringExprStart, line, i, i));
+            int expressionStart = ++i, depth = 1;
+            while (i < source.Length && depth > 0)
+            {
+                if (source[i] == '$' && i + 1 < source.Length && source[i + 1] == '"')
+                { ReadInterpolatedString(source, i, out i, line, tokenizeExpressions: false); continue; }
+                if (source[i] == '"') { ReadString(source, i, out i, line); continue; }
+                if (source[i] == '\'')
+                {
+                    i++;
+                    while (i < source.Length && source[i] != '\'')
+                    { if (source[i] == '\\') i++; i++; }
+                    if (i >= source.Length) break;
+                    i++; continue;
+                }
+                if (source[i] == '/' && i + 1 < source.Length && source[i + 1] == '/')
+                { while (i < source.Length && source[i] != '\n') i++; continue; }
+                if (source[i] == '/' && i + 1 < source.Length && source[i + 1] == '*')
+                {
+                    i += 2;
+                    while (i + 1 < source.Length && !(source[i] == '*' && source[i + 1] == '/')) i++;
+                    if (i + 1 >= source.Length) break;
+                    i += 2; continue;
+                }
+                if (source[i] == '{') depth++;
+                if (source[i] == '}') depth--;
+                if (depth == 0) break;
+                i++;
+            }
+            if (i >= source.Length || depth != 0) throw new TypeCheckException("Unterminated interpolation expression", line);
+            // The delimiter scan must not tokenize nested expressions: doing so
+            // here and again when tokenizing the hole grows exponentially with nesting.
+            if (tokenizeExpressions)
+            {
+                var expressionTokens = Tokenize(source[expressionStart..i]);
+                tokens.AddRange(expressionTokens.Take(expressionTokens.Count - 1).Select(t =>
+                    new Token(t.Kind, line + t.Line - 1, expressionStart + t.Start, expressionStart + t.End, t.Text)));
+            }
+            tokens.Add(new(TokenKind.InterpolatedStringExprEnd, line, i, i));
+            segmentStart = ++i;
         }
+        throw new TypeCheckException("Unterminated interpolated string", line);
     }
     private static Token ReadNumber(string source, int startIndex, out int endIndex, int line)
     {

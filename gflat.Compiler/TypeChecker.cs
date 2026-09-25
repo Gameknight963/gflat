@@ -4922,8 +4922,7 @@ namespace gflat
             throw new TypeCheckException($"'{named.Name}' has no field or method '{node.Member}'", node.Line);
         }
 
-        public void Visit(InterpolatedStringExpression node) =>
-            throw new TypeCheckException("String interpolation is not yet implemented.", node.Line);
+        public void Visit(InterpolatedStringExpression node) => CheckInterpolation(node);
 
         public void Visit(NewExpression node)
         {

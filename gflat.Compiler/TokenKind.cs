@@ -113,6 +113,8 @@ namespace gflat
         Short,
         UShort,
         String,
+        InterpolatedStringStart,
+        InterpolatedStringEnd,
         InterpolatedStringSegment,
         InterpolatedStringExprStart,
         InterpolatedStringExprEnd,

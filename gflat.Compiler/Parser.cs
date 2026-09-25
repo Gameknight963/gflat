@@ -1465,6 +1465,8 @@ namespace gflat
                 if (op.Kind == TokenKind.DoubleColon)
                 {
                     Token memberToken = Expect(TokenKind.Identifier);
+                    if (Check(TokenKind.InterpolatedStringStart) && memberToken.End + 1 == Current.Start)
+                    { left = ParseInterpolatedString(left, memberToken.Text!); continue; }
                     if (Check(TokenKind.StringLiteral) && memberToken.End + 1 == Current.Start)
                     {
                         Token strToken = Consume();
@@ -1586,7 +1588,7 @@ namespace gflat
             }
 
             // interpolated string
-            if (Check(TokenKind.InterpolatedStringSegment) || Check(TokenKind.InterpolatedStringExprStart))
+            if (Check(TokenKind.InterpolatedStringStart))
                 return ParseInterpolatedString();
 
             // literals
@@ -1667,6 +1669,8 @@ namespace gflat
             if (Check(TokenKind.Identifier))
             {
                 Token token = Consume();
+                if (Check(TokenKind.InterpolatedStringStart) && token.End + 1 == Current.Start)
+                    return ParseInterpolatedString(null, token.Text!);
                 if (Check(TokenKind.StringLiteral) && token.End + 1 == Current.Start)
                 {
                     Token strToken = Consume();
@@ -1719,7 +1723,7 @@ namespace gflat
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
             TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
-            TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
+            TokenKind.InterpolatedStringStart or
             TokenKind.Minus or TokenKind.Bang or TokenKind.Star or TokenKind.Ampersand or
             TokenKind.PlusPlus or TokenKind.MinusMinus;
 
@@ -1729,7 +1733,7 @@ namespace gflat
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
             TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
-            TokenKind.InterpolatedStringSegment or TokenKind.InterpolatedStringExprStart or
+            TokenKind.InterpolatedStringStart or
             TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
 
         private LambdaExpression? TryParseLambda(bool isStatic) => Located(() => TryParseLambdaCoreLocated(isStatic));
@@ -1807,11 +1811,12 @@ namespace gflat
             _ => (0, 0)
         };
 
-        private InterpolatedStringExpression ParseInterpolatedString() => Located(() => ParseInterpolatedStringCoreLocated());
+        private InterpolatedStringExpression ParseInterpolatedString(AstNode? scope = null, string? prefix = null) => Located(() => ParseInterpolatedStringCoreLocated(scope, prefix));
 
-        private InterpolatedStringExpression ParseInterpolatedStringCoreLocated()
+        private InterpolatedStringExpression ParseInterpolatedStringCoreLocated(AstNode? scope, string? prefix)
         {
             int line = Current.Line;
+            Expect(TokenKind.InterpolatedStringStart);
             List<AstNode> parts = new();
 
             while (Check(TokenKind.InterpolatedStringSegment) || Check(TokenKind.InterpolatedStringExprStart))
@@ -1829,7 +1834,8 @@ namespace gflat
                 }
             }
 
-            return new InterpolatedStringExpression(parts, line);
+            Expect(TokenKind.InterpolatedStringEnd);
+            return new InterpolatedStringExpression(parts, line, prefix, scope);
         }
     }
 }

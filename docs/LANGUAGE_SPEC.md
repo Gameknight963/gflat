@@ -16,7 +16,7 @@ The supported native target is **x86_64-pc-windows-msvc**. Other targets are rej
 
 Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. Double-underscore names are used by compiler hooks. They must not be treated as a security boundary. Comments are `//` to end of line or non-nesting `/* ... */`; unterminated comments are errors.
 
-Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Interpolation remains reserved syntax and is diagnosed as unsupported.
+Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Prefixed interpolation uses `s$"text {expression}"`; doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
 
 The following EBNF describes the core expression/type grammar; declaration modifiers, generics, interfaces, and operators are detailed below. Repetition is `{ ... }`, optional syntax is `[ ... ]`.
 
@@ -350,7 +350,69 @@ Prefixes are visible in their declaring namespace, its descendants, and namespac
 
 `data` points to immutable, null-terminated static storage containing UTF-8 bytes after escape processing. Supported escapes are `\n`, `\r`, `\t`, `\0`, `\\`, `\"`, and `\'`; unknown escapes are errors. `length` is the number of bytes excluding the final terminator; embedded null bytes count toward it. The storage lasts for the program's lifetime. An operator may keep a readonly view or copy the bytes into its own storage, and decides whether to allocate. The compiler adds no intermediate string object. Returned objects follow normal scope and temporary cleanup rules.
 
-Literal operators have no implicit instance (`this`), but retain access to their containing type's private members through explicit instances. `const` literal operators, generic owners, interpolation operators, and raw-literal extensions are not supported in this version.
+Literal operators have no implicit instance (`this`), but retain access to their containing type's private members through explicit instances. `const` literal operators, generic owners, and raw-literal extensions are not supported in this version.
+
+## String interpolation
+
+```gflat
+using std;
+
+int main()
+{
+    String text = s$"Score: {42}; status: {true}";
+    String nested = s$"[{text}] {{literal braces}}";
+    return 0;
+}
+```
+
+Include `std/core/String.gf` and `std/core/Formatting.gf`, or reference `std/std.gfproj`.
+Floating-point conversion additionally uses `std/libc/Formatting.gf` and libc's `snprintf`.
+
+The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,
+including qualified syntax such as `std::s$"{42}"`. Unprefixed `$"..."` and `c$"..."` are
+not supported. Implementing a literal operator alone does not opt into interpolation.
+Its containing/result type must implement the global prelude interface:
+
+```gflat
+interface IInterpolatedString
+{
+    void AppendLiteral(readonly(char)* data, nuint length) throws;
+}
+interface IStringConvertible
+{
+    readonly char* ToString() throws;
+}
+```
+
+The compiler constructs the destination by calling its literal operator with empty text.
+It then processes literal segments and hole expressions in source order. Literal segments
+supply UTF-8 byte lengths (including any embedded null bytes). `AppendLiteral` must consume
+or copy the supplied bytes before returning; it must not retain the input pointer.
+
+A custom value, pointer, or managed reference must implement `IStringConvertible` to appear
+in a hole; an `IStringConvertible*` or `IStringConvertible^` also supports interface dispatch.
+Nullable receivers must first be explicitly checked/cast to a non-null reference.
+Primitives use the exact corresponding overload of `global::std::ToString`, independent of
+local `using` directives or unrelated functions named `ToString`. Supported primitives are
+`bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `nint`,
+`nuint`, `float`, and `double`. Raw character pointers and arrays are not implicitly text
+conversions. Convert them explicitly to a string first.
+
+`ToString` returns a non-null, newly allocated, null-terminated `char*`, allocated through
+`Allocator::Allocate`. It must not return borrowed or static storage. The compiler scans
+for the terminator, appends the bytes, and calls `Allocator::Free`. Consequently, converted
+text ends at its first null; this differs from a literal segment's explicit length.
+A `readonly` conversion may allocate; readonly only restricts mutation through the receiver.
+
+Each hole is evaluated exactly once. Its returned text is freed immediately after append,
+before the next hole; temporary receiver objects remain alive through that append. Cleanup
+also runs if append throws. A partial destination is destroyed when conversion or append
+fails. A conversion that throws before returning remains responsible for its own partial
+allocation. Completed results follow normal owned-value return, scope, and temporary cleanup
+rules. Throwing factory/conversion/append calls require the usual `throws` or `try/catch`.
+
+This version does not define alignment, format specifiers (`{value:format}`), raw strings,
+implicit interpolation-to-type conversions, or compile-time interpolation.
 
 ## Attributes
 
@@ -407,4 +469,4 @@ Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal c
 
 ## Future work
 
-Additional target ABIs, verified out parameters, full ownership and partial moves, managed finalizers and moving collectors, interpolation, reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.
+Additional target ABIs, verified out parameters, full ownership and partial moves, managed finalizers and moving collectors, reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.

@@ -315,6 +315,8 @@ namespace gflat.ast
             {
                 return new IdentifierExpression(ident.Name, ident.Line);
             }
+            if (node is InterpolatedStringExpression interpolation)
+                return new InterpolatedStringExpression(interpolation.Parts.Select(CloneNode).ToList(), interpolation.Line, interpolation.Prefix, interpolation.Scope != null ? CloneNode(interpolation.Scope) : null);
             if (node is PrefixedStringLiteralExpression pref)
             {
                 return new PrefixedStringLiteralExpression(pref.Scope != null ? CloneNode(pref.Scope) : null, pref.Prefix, (LiteralExpression)CloneNode(pref.Literal), pref.Line);

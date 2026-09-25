@@ -222,7 +222,7 @@ namespace gflat
 
         public void Visit(InterpolatedStringExpression node)
         {
-            Print("InterpolatedString");
+            Print($"InterpolatedString ({node.Prefix ?? "<no prefix>"})");
             Indented(() => { foreach (AstNode p in node.Parts) p.Accept(this); });
         }
 

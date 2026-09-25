@@ -4419,7 +4419,6 @@ namespace gflat
                         throw new TypeCheckException($"Class '{named.Name}' has no method '{memberAccess.Member}'", node.Line);
 
                     method = SelectOverload(mEntry.Method, node);
-                    method = SelectOverload(method, node);
                     if (isReceiverReadOnly && !method.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
                     if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
@@ -4540,7 +4539,7 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
                 }
-                method = ResolveStaticMethod(nsAccess);
+                method = ResolveStaticMethod(nsAccess, node);
                 funcName = nsAccess.Member;
                 if (method == null)
                 {

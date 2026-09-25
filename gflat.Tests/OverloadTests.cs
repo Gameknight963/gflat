@@ -19,6 +19,18 @@ public sealed class OverloadTests
     public void StaticAndNamespacedOverloadsExecute()
         => Assert.Equal(42, CompilerTestHelper.Run("namespace N { public int F(int n) => 20; public int F(long n) => 1; } struct S { public static int F(int n) => 1; public static int F(long n) => 22; } int main() => N::F(1) + S::F(1L);").ExitCode);
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StaticOverloadsCheckTheSelectedMethodsAccessibility(bool reverse)
+    {
+        string first = "public static int F(int n) => 42;", second = "private static int F(long n) => 1;";
+        string source = "struct S { " + (reverse ? second + first : first + second) + " } ";
+        Assert.Equal(42, CompilerTestHelper.Run(source + "int main() => S::F(1);").ExitCode);
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(source + "int main() => S::F(1L);"));
+        Assert.Contains("private", error.Message);
+    }
+
     [Fact]
     public void ConstructorsPreferExactTypes()
         => Assert.Equal(42, CompilerTestHelper.Run("struct S { public int value; public S(long x) { value = 1; } public S(int x) { value = 42; } } int main() { S s = new S(1); return s.value; }").ExitCode);

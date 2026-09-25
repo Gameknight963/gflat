@@ -36,6 +36,12 @@ public partial class LlvmEmitter
                     else write.Receiver.Accept(this);
                     Bind(write.ReceiverTemporary!, Pop());
                 }
+                foreach (var argument in write.Arguments)
+                {
+                    TypeExpression target = _typeChecker.GetType(argument.Temporary);
+                    EmitValueForTarget(argument.Value, target);
+                    Bind(argument.Temporary, EmitImplicitCast(Pop(), _typeChecker.GetType(argument.Value), target));
+                }
                 string? oldValue = null;
                 if (write.Getter != null)
                 {

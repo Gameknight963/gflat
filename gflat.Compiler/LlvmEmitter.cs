@@ -4254,6 +4254,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitIndex(IndexExpression node)
     {
+        if (EmitPropertyRead(node)) return;
         EmitIndexAddress(node);
         string elemPtr = Pop();
         TypeExpression elemType = _typeChecker.GetType(node);

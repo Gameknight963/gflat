@@ -282,7 +282,29 @@ Reads call the getter. Assignments call the setter and evaluate to the assigned 
 
 Classes support `virtual`, `override`, and `abstract` properties through their accessors. Interface property contracts use accessor signatures, for example `interface ICount { int Count { get; set; } }`; implementing accessors must be public. A declaration in a derived class hides the whole inherited property, rather than borrowing missing accessors from it. Explicit static properties use `Type::Property`. Explicit class/struct accessors may declare `get throws` or `set throws` and follow ordinary exception rules.
 
-Current restrictions: static auto-properties await static field storage; indexers, `init`, ref returns, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays or destructor-bearing values by value, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
+Current restrictions: static auto-properties await static field storage; `init`, ref returns, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays or destructor-bearing values by value, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
+
+### Indexers
+
+Instance indexers use property syntax with `this` and one or more typed parameters:
+
+```gflat
+struct IntBuffer {
+    int* data;
+    public IntBuffer(int* storage) { data = storage; }
+    public int this[ulong index] {
+        readonly get => data[index];
+        set { data[index] = value; }
+    }
+}
+```
+
+`buffer[i]` calls the getter; `buffer[i] = value` calls the setter. `this[int row, int column]` is accessed as `grid[row, column]`. Getter-only expression bodies (`public int this[int i] => ...;`), setter-only bodies, and restricted setters follow property rules. The receiver is evaluated first, then indices from left to right. Assignments evaluate the value afterward; compound updates call the getter before evaluating the right operand, then the setter. Receiver and indices are evaluated once, including for `++` and `--`. Accessor calls use normal exception and temporary cleanup rules. Indexers do not add automatic bounds checks; the implementation supplies them.
+
+Indexers work in generic types, classes, structs, and interfaces, including virtual and abstract accessors. Readonly getters follow ordinary readonly receiver and return-type rules. Managed pointers and interface views dispatch the pointee's indexer. Raw `T*` indexing retains its built-in array-of-pointees meaning; use `(*p)[i]` to call an indexer on a raw pointee. Interface pointers have no inline element layout, so `p[i]` on an `I*` dispatches the interface indexer.
+
+Indexer results are values, not storage references. Modifying a field of a returned aggregate or taking its address is rejected; an explicitly returned pointer can expose underlying storage. Current restrictions: one indexer declaration per type, no static or automatic indexers, no indexer initializers or `const` index parameters, and no parameter named `value`. The existing property restrictions on result types, constant evaluation, and throwing interface accessors also apply.
+
 
 ## Control flow, exceptions, and constants
 

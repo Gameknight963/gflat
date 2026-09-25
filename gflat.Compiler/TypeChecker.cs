@@ -5239,6 +5239,9 @@ namespace gflat
         public void Visit(IndexExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (CheckPropertyRead(node)) return;
+            if (node.Indices.Count != 1)
+                throw new TypeCheckException("Built-in array and pointer indexing requires exactly one index", node.Line);
             node.Target.Accept(this);
             node.Index.Accept(this);
 
@@ -5254,6 +5257,8 @@ namespace gflat
             }
             else if (targetType is PointerTypeExpression ptr)
             {
+                if (ResolveAlias(ptr.Inner) is NamedTypeExpression iface && IsInterface(iface))
+                    throw new TypeCheckException($"Interface '{iface.Name}' has no indexer", node.Line);
                 if (ptr.IsNullable)
                     throw new TypeCheckException("Cast a nullable pointer to non-null before indexing", node.Line);
                 RecordType(node, ptr.Inner);

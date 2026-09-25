@@ -571,6 +571,21 @@ namespace gflat
                 return Finish(ParseOperatorDeclaration(type, accessibility, true, line));
             }
 
+            if (Check(TokenKind.Identifier) && Current.Text == "this" && Peek().Kind == TokenKind.OpenBracket)
+            {
+                Consume();
+                Consume();
+                var indices = new List<Parameter>();
+                if (Check(TokenKind.CloseBracket)) throw new TypeCheckException("An indexer requires at least one parameter", line);
+                do { indices.Add(ParseParameter()); } while (Match(TokenKind.Comma));
+                Expect(TokenKind.CloseBracket);
+                if (isStatic || isConst || implementation != FunctionImplementationKind.Ordinary)
+                    throw new TypeCheckException("Indexers must be instance properties and cannot be const, weak, or replace", line);
+                if (indices.Any(p => p.IsConst || p.Name == "value"))
+                    throw new TypeCheckException("Indexer parameters cannot be const or named 'value' (reserved for the setter)", line);
+                return ParseProperty(type, "$index", accessibility, false, isVirtual, isOverride, isAbstract, isReadonly, line, indices);
+            }
+
             name = Expect(TokenKind.Identifier).Text;
             List<GenericParameter> genericParams = ParseGenericParameters();
 
@@ -589,12 +604,12 @@ namespace gflat
         }
 
         private PropertyDeclaration ParseProperty(TypeExpression type, string name, TokenKind accessibility,
-            bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, bool isReadonly, int line)
+            bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, bool isReadonly, int line, List<Parameter>? indices = null)
         {
             MethodDeclaration Accessor(bool getter, TokenKind access, BlockStatement? body, int accessorLine) =>
                 new MethodDeclaration((getter ? "$get$" : "$set$") + name,
                     getter ? type : new NamedTypeExpression("void", null, line),
-                    getter ? new() : new() { new Parameter("value", type, accessorLine) },
+                    (indices ?? new List<Parameter>()).Concat(getter ? Array.Empty<Parameter>() : new[] { new Parameter("value", type, accessorLine) }).ToList(),
                     body, access, isStatic, isVirtual, isOverride, isAbstract, accessorLine, isReadonly)
                 { PropertyName = name };
 
@@ -1431,9 +1446,10 @@ namespace gflat
                 // handle indexing
                 if (op.Kind == TokenKind.OpenBracket)
                 {
-                    AstNode index = ParseExpression();
+                    var indices = new List<AstNode> { ParseExpression() };
+                    while (Match(TokenKind.Comma)) indices.Add(ParseExpression());
                     Expect(TokenKind.CloseBracket);
-                    left = new IndexExpression(left, index, op.Line);
+                    left = new IndexExpression(left, indices, op.Line);
                     continue;
                 }
 

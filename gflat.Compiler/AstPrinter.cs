@@ -269,7 +269,7 @@ namespace gflat
             Indented(() =>
             {
                 node.Target.Accept(this);
-                node.Index.Accept(this);
+                foreach (var index in node.Indices) index.Accept(this);
             });
         }
         public void Visit(BreakStatement node) => Print("Break");

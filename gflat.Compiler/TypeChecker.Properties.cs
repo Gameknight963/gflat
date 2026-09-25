@@ -15,7 +15,8 @@ public partial class TypeChecker
 
     public sealed record PropertyWrite(AstNode? Receiver, IdentifierExpression? ReceiverTemporary,
         bool ReceiverByAddress, IdentifierExpression? OldTemporary, CallExpression? Getter,
-        IdentifierExpression ValueTemporary, AstNode Value, CallExpression Setter, bool Postfix);
+        IdentifierExpression ValueTemporary, AstNode Value, CallExpression Setter, bool Postfix,
+        List<(AstNode Value, IdentifierExpression Temporary)> Arguments);
 
     private void ExpandProperties(CompilationUnit unit)
     {
@@ -49,6 +50,8 @@ public partial class TypeChecker
                         throw new TypeCheckException("Struct properties cannot be virtual, override, or abstract", property.Line);
                     if (accessors.Any(a => a.IsStatic && (a.IsVirtual || a.IsOverride || a.IsAbstract)) || owner is InterfaceDeclaration && accessors.Any(a => a.IsStatic))
                         throw new TypeCheckException("Static properties cannot be virtual, abstract, or interface members", property.Line);
+                    if (property.Name == "$index" && (auto || property.Initializer != null))
+                        throw new TypeCheckException("Indexers require accessor bodies (or abstract/interface signatures) and cannot have initializers", property.Line);
                     if (auto && accessors[0].IsStatic)
                         throw new TypeCheckException("Static auto-properties require static field storage, which is not yet supported; use explicit accessors", property.Line);
                     if (property.Initializer != null && !auto)
@@ -93,7 +96,7 @@ public partial class TypeChecker
     }
 
     private sealed record PropertyAccess(string Name, string Owner, MethodDeclaration? Getter,
-        MethodDeclaration? Setter, AstNode? Receiver, AstNode? StaticOwner);
+        MethodDeclaration? Setter, AstNode? Receiver, AstNode? StaticOwner, List<AstNode> Arguments);
 
     private PropertyAccess? FindProperty(AstNode expression)
     {
@@ -101,8 +104,23 @@ public partial class TypeChecker
         string name;
         string? owner;
         AstNode? receiver = null, staticOwner = null;
+        List<AstNode> arguments = new();
         switch (expression)
         {
+            case IndexExpression index:
+                if (!_types.ContainsKey(index.Target)) index.Target.Accept(this);
+                TypeExpression indexed = ResolveAlias(GetType(index.Target));
+                // Raw pointer indexing retains its existing array-of-pointees meaning.
+                // Interface pointers have no inline element layout and dispatch indexers.
+                if (indexed is PointerTypeExpression raw &&
+                    !(ResolveAlias(raw.Inner) is NamedTypeExpression ifaceType && IsInterface(ifaceType))) return null;
+                indexed = indexed switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, _ => indexed };
+                owner = (ResolveAlias(indexed) as NamedTypeExpression)?.Name;
+                name = "$index";
+                receiver = index.Target;
+                arguments = index.Indices;
+                foreach (var argument in arguments) if (!_types.ContainsKey(argument)) argument.Accept(this);
+                break;
             case IdentifierExpression id:
                 if (_scopes.Any(s => s.ContainsKey(id.Name))) return null;
                 name = id.Name;
@@ -174,13 +192,13 @@ public partial class TypeChecker
             receiver = new IdentifierExpression("this", expression.Line) { Span = expression.Span };
             receiver.Accept(this);
         }
-        return new(name, declaring, getter, setter, receiver, staticOwner);
+        return new(name == "$index" ? "this[]" : name, declaring, getter, setter, receiver, staticOwner, arguments);
     }
 
     private void ValidatePropertyAccessor(MethodDeclaration method)
     {
         if (method.PropertyName == null) return;
-        TypeExpression type = ResolveAlias(method.Name.StartsWith("$get$") ? method.ReturnType : method.Parameters[0].Type);
+        TypeExpression type = ResolveAlias(method.Name.StartsWith("$get$") ? method.ReturnType : method.Parameters[^1].Type);
         if (HasDestructor(type) || type is ArrayTypeExpression || type is NamedTypeExpression { Name: "void" })
             throw new TypeCheckException("Properties cannot currently return void, arrays, or values with destructors; use a pointer for owned storage", method.Line);
     }
@@ -217,7 +235,7 @@ public partial class TypeChecker
         var property = FindProperty(node);
         if (property == null) return false;
         var getter = RequireAccessor(property, true, node);
-        var call = PropertyCall(property, getter, property.Receiver, new(), node);
+        var call = PropertyCall(property, getter, property.Receiver, property.Arguments, node);
         _propertyReads[node] = call;
         RecordType(node, GetType(call));
         return true;
@@ -228,7 +246,7 @@ public partial class TypeChecker
         var property = FindProperty(target);
         if (property == null) return false;
         var setter = RequireAccessor(property, false, node);
-        TypeExpression type = ResolveAlias(setter.Parameters[0].Type);
+        TypeExpression type = ResolveAlias(setter.Parameters[^1].Type);
         RecordType(target, type);
         PushScope();
         try
@@ -251,11 +269,23 @@ public partial class TypeChecker
                     throw new TypeCheckException("Cannot modify a value returned by a property", node.Line);
                 receiver = Temporary(byAddress ? new PointerTypeExpression(receiverType, false, node.Line, IsExpressionReadOnly(property.Receiver)) : receiverType);
             }
+            var arguments = new List<(AstNode Value, IdentifierExpression Temporary)>();
+            if (property.Arguments.Count != setter.Parameters.Count - 1)
+                throw new TypeCheckException($"Indexer expects {setter.Parameters.Count - 1} arguments but got {property.Arguments.Count}", node.Line);
+            for (int i = 0; i < property.Arguments.Count; i++)
+            {
+                var argument = property.Arguments[i];
+                var parameterType = ResolveAlias(setter.Parameters[i].Type);
+                if (!IsAssignable(parameterType, GetType(argument), argument))
+                    throw new TypeCheckException($"Cannot pass '{TypeName(GetType(argument))}' as indexer argument '{TypeName(parameterType)}'", argument.Line);
+                arguments.Add((argument, Temporary(parameterType)));
+            }
+            List<AstNode> indexArguments = arguments.Select(a => (AstNode)a.Temporary).ToList();
             IdentifierExpression? old = null;
             CallExpression? get = null;
             if (binary != null || increment != null)
             {
-                get = PropertyCall(property, RequireAccessor(property, true, node), receiver, new(), node);
+                get = PropertyCall(property, RequireAccessor(property, true, node), receiver, indexArguments, node);
                 old = Temporary(type);
                 value = increment != null
                     ? new UnaryExpression(old, increment.Value, true, node.Line) { Span = node.Span }
@@ -265,8 +295,8 @@ public partial class TypeChecker
             if (!IsAssignable(type, GetType(value), value))
                 throw new TypeCheckException($"Cannot assign '{TypeName(GetType(value))}' to property '{property.Name}' of type '{TypeName(type)}'", node.Line);
             var assigned = Temporary(type);
-            var call = PropertyCall(property, setter, receiver, new() { assigned }, node);
-            _propertyWrites[node] = new(property.Receiver, receiver, byAddress, old, get, assigned, value, call, postfix);
+            var call = PropertyCall(property, setter, receiver, indexArguments.Append(assigned).ToList(), node);
+            _propertyWrites[node] = new(property.Receiver, receiver, byAddress, old, get, assigned, value, call, postfix, arguments);
             RecordType(node, type);
             return true;
         }
@@ -276,6 +306,8 @@ public partial class TypeChecker
     private bool IsPropertyValueStorage(AstNode node)
     {
         if (ResolveAlias(GetType(node)) is PointerTypeExpression or ManagedTypeExpression) return false;
-        return _propertyReads.ContainsKey(node) || node is MemberAccessExpression member && IsPropertyValueStorage(member.Object);
+        return _propertyReads.ContainsKey(node) ||
+            node is MemberAccessExpression member && IsPropertyValueStorage(member.Object) ||
+            node is IndexExpression index && IsPropertyValueStorage(index.Target);
     }
 }

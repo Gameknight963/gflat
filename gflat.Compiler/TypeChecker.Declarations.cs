@@ -27,7 +27,9 @@ public partial class TypeChecker
                 if (name == null) continue;
                 if (declarations.TryGetValue((scope, name), out var previous) &&
                     !(previous is MethodDeclaration && node is MethodDeclaration))
-                    DuplicateDeclaration(previous, node, $"Duplicate declaration of '{name}' in '{scope}' (including any extern declaration)");
+                    DuplicateDeclaration(previous, node, name == "$index"
+                        ? "Only one indexer declaration per type is currently supported"
+                        : $"Duplicate declaration of '{name}' in '{scope}' (including any extern declaration)");
                 declarations[(scope, name)] = node;
                 if (node is ClassDeclaration cls) Walk(cls.Members, scope + "::" + name);
                 if (node is StructDeclaration str) Walk(str.Members, scope + "::" + name);

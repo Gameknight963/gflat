@@ -758,6 +758,7 @@ namespace gflat.semantics
                     return;
                 }
                 CheckExpression(write.Receiver);
+                foreach (var argument in write.Arguments) CheckExpression(argument.Value);
                 if (write.Getter != null) CheckExpression(write.Getter);
                 CheckExpression(write.Value);
                 CheckExpression(write.Setter);
@@ -852,7 +853,7 @@ namespace gflat.semantics
             else if (expr is IndexExpression index)
             {
                 CheckExpression(index.Target);
-                CheckExpression(index.Index);
+                foreach (var argument in index.Indices) CheckExpression(argument);
             }
             else if (expr is ArrayLiteralExpression array)
             {

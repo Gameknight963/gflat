@@ -593,6 +593,8 @@ namespace gflat.comptime
 
         public void Visit(IndexExpression node)
         {
+            if (_context.GetPropertyRead(node) != null)
+                throw new ConstEvalException("Indexer access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
             node.Target.Accept(this);
             ConstValue target = _currentValue!;

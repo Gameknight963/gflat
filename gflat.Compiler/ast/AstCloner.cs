@@ -332,7 +332,7 @@ namespace gflat.ast
             }
             if (node is IndexExpression idx)
             {
-                return new IndexExpression(CloneNode(idx.Target), CloneNode(idx.Index), idx.Line);
+                return new IndexExpression(CloneNode(idx.Target), idx.Indices.Select(CloneNode).ToList(), idx.Line);
             }
             if (node is ArrayLiteralExpression array)
                 return new ArrayLiteralExpression(array.Elements.Select(CloneNode).ToList(), array.Line);

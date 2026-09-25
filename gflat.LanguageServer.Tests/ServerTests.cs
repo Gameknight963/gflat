@@ -72,12 +72,27 @@ public sealed class ServerTests
     {
         await using var session = new Session();
         await session.Initialize();
-        const string source = "struct S { public int* data; } int main() { readonly(S) s = default(S); s.data[0] = 1; return 0; }";
+        const string source = "struct S { public int* data; public S(int* p) { data = p; } } int main() { int n = 0; readonly(S) s = new S(&n); s.data[0] = 1; return 0; }";
         await session.Open("readonly.gf", source);
         var broken = await session.Diagnostics("readonly.gf", 1);
         Assert.Contains("readonly", broken.GetProperty("params").GetProperty("diagnostics").ToString());
         await session.Change("readonly.gf", source.Replace("s.data[0] = 1;", ""), 2);
         Assert.Empty((await session.Diagnostics("readonly.gf", 2)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Stop();
+    }
+
+    [Theory]
+    [InlineData("struct S { int* p; public S(int* q) { } }", "{ }", "{ p = q; }")]
+    [InlineData("int main() { int n = 1; int*? p = &n; return *p; }", "return *p;", "int* q = (int*)p; return *q;")]
+    [InlineData("enum E { A = 1 } int main() => E::A;", "=> E::A;", "=> (int)E::A;")]
+    public async Task ContractDiagnosticsRecoverAfterAnEdit(string source, string before, string after)
+    {
+        await using var session = new Session();
+        await session.Initialize();
+        await session.Open("contracts.gf", source);
+        Assert.NotEmpty((await session.Diagnostics("contracts.gf", 1)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Change("contracts.gf", source.Replace(before, after), 2);
+        Assert.Empty((await session.Diagnostics("contracts.gf", 2)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
         await session.Stop();
     }
 

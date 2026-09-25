@@ -2,7 +2,9 @@
 
 The Visual Studio extension provides live compiler diagnostics, syntax highlighting,
 bracket matching, automatic bracket/quote closing, selection surrounding, block
-indentation, and line/block comment commands. Hover, navigation, completion, and debugging are not implemented yet.
+indentation, and line/block comment commands. Version 0.10.0 adds scope/member completion,
+hover, signature help, go to definition, and semantic highlighting through the built-in LSP UI.
+Debugging is not implemented yet.
 Version 0.4.0 uses [MSBuild projects and CPS](PROJECTS.md) for integration into an existing solution.
 
 ## Project layout
@@ -123,10 +125,18 @@ Analysis waits briefly for typing to pause and runs one compiler analysis at a t
 New edits invalidate older results. Already-running compiler analysis currently
 finishes in the background; cancellation skips queued work and prevents obsolete
 results from being published. Parsing/type checking are reused directly from the
-compiler, and expected source errors are returned by `Compiler.Analyze`.
+compiler. `AnalysisSnapshot` retains the source nodes before lowering together with
+checker results and diagnostics. One editor model is shared by all requests for that
+compilation; it includes unsaved project sources. Symbol references are resolved on the
+analysis worker and reused by hover, definition, and semantic-token requests.
 
 This is whole-compilation analysis, not incremental semantic analysis. Syntax errors
 can prevent semantic checking, and a semantic error may stop checking later members.
+Completion can recover declaration types for incomplete member accesses and unclosed
+blocks. This is not full error-tolerant type checking: ambiguous calls in broken code
+may have no member suggestions, and malformed syntax can prevent a source tree from
+being retained. Generic signatures may show template parameters rather than substituted
+arguments.
 An unexpected compiler exception is reported as `GFLS0002` instead of being presented
 as an ordinary source error; the server can analyze the next edit afterward.
 
@@ -140,7 +150,9 @@ The root `dotnet test` also runs these tests. The VS packaging CI job builds the
 and runs tests against the server, grammar, and configuration extracted from the
 package. TextMateSharp is a test-only dependency used to tokenize the grammar; it
 is not bundled into the extension or server. Manual
-IDE checks are still needed for activation, squiggles, and the Error List UI.
+IDE checks are still needed for activation, the completion/hover/signature UI, theme
+colors, navigation, squiggles, and the Error List UI. Automated tests exercise protocol
+responses and packaged assets; they do not drive Visual Studio.
 
 For CPS changes, also load a `.gfproj` in a solution, add and rename a source file,
 rename its nonempty folder, edit a `Compile Remove` entry externally, and verify
@@ -150,3 +162,26 @@ Run these checks in an experimental VS profile when developing the extension.
 
 Implementation references: [LSP 3.17](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/)
 and [Visual Studio LSP integration](https://learn.microsoft.com/en-us/visualstudio/extensibility/adding-an-lsp-extension?view=vs-2022).
+
+## Editor queries and colors
+
+- Completion includes visible locals, parameters, fields, methods, free functions,
+  types, namespaces, and context keywords. `.` and `:` trigger completion; `::`
+  narrows it to namespace/type members. Visual Studio handles filtering and commit.
+- Hover shows a declaration signature. Go to definition targets its source name,
+  including unsaved files in the same project. Synthetic prelude symbols have no
+  file navigation target.
+- Signature help follows the innermost call and counts arguments without counting
+  commas in nested calls.
+- Full and range semantic tokens supplement the TextMate grammar. The default
+  legend uses standard LSP names. The VS client sets the initialization option
+  `visualStudioClassifications: true` to use the built-in Roslyn classification
+  names (class, struct, method, local, parameter, property, control keyword, etc.).
+  Colors come from the active VS theme and Fonts and Colors settings, not RGB values
+  in this extension. Other clients do not need this option.
+- Diagnostics preserve compiler start/length spans, including multiline expressions
+  and zero-width insertion locations for missing delimiters.
+
+Requests arriving during analysis wait for that generation. `$/cancelRequest` cancels
+queued requests; edits invalidate old requests with LSP ContentModified. Queries do
+not invoke LLVM or repeat compilation.

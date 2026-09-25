@@ -19,7 +19,9 @@ public sealed class GflatLanguageClient : ILanguageClient, IDisposable
     private Process? server;
     public string Name => "gflat";
     public IEnumerable<string> ConfigurationSections => Array.Empty<string>();
-    public object? InitializationOptions => null;
+    // VS's built-in semantic token classifier recognizes the Roslyn classification
+    // names. Other LSP clients receive the standard token legend by default.
+    public object? InitializationOptions => new { visualStudioClassifications = true };
     public IEnumerable<string> FilesToWatch => new[] { "gflat-workspace.json", "**/*.gf", "**/*.gfproj", "**/*.props", "**/*.targets" };
     public bool ShowNotificationOnInitializeFailed => true;
     public event AsyncEventHandler<EventArgs>? StartAsync;

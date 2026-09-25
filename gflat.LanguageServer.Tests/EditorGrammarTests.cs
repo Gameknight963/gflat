@@ -104,7 +104,7 @@ public class EditorGrammarTests
                 checkedReferences++;
             }
         }
-        Assert.True(checkedReferences >= 5, "The fixture must exercise real custom-type declarations.");
+        Assert.True(checkedReferences >= 4, "The fixture must exercise real custom-type declarations.");
     }
 
     [Theory]

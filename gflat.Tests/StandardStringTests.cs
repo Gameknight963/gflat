@@ -5,6 +5,28 @@ public class StandardStringTests
     private static ExecutionResult Run(string source) => CompilerTestHelper.Run(InterpolationTests.Sources(source));
 
     [Fact]
+    public void FromCStringScansTerminatorWhileCountOverloadPreservesBytes()
+    {
+        var result = Run("""
+            using std;
+            int main() {
+                String empty = String::From(c"");
+                String text = String::From(c"hello");
+                String truncated = String::From(c"ab\0cd");
+                String counted = String::From(c"ab\0cd", 5);
+                char[3] source = "ok";
+                String copied = String::From(&source[0]);
+                source[0] = 'X';
+                if (empty.Length != (nuint)0 || text.Length != (nuint)5) return 1;
+                if (truncated.Length != (nuint)2 || counted.Length != (nuint)5) return 2;
+                if (counted.Data[3] != 'c' || copied.Data[0] != 'o') return 3;
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public void OwnsCopiesGrowsAndAppendsItsOwnStorage()
     {
         var result = Run("""

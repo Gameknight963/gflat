@@ -23,7 +23,9 @@ int main()
 returns a byte-sized `char`, not a Unicode code point, and checks bounds.
 
 - `new String()` creates an empty string without allocation.
-- `String::From(data, length)` and `s"..."` copy input into owned storage.
+- `String::From(cString)` copies null-terminated input up to its first null.
+- `String::From(data, length)` copies exactly that many bytes, including embedded
+  nulls; the input need not have a terminator. `s"..."` uses this counted form.
 - `Data` exposes a readonly pointer. It remains valid until growth or destruction;
   mutations can change its contents.
 - `Reserve`, `Append`, and `AppendLiteral` report overflow/allocation failure by

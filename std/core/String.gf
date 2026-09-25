@@ -19,6 +19,14 @@ struct String : IInterpolatedString, IStringConvertible
     public nuint Capacity { readonly get => capacity; }
     public readonly(char)* Data { readonly get => data; }
 
+    // Null-terminated input. Use the count overload for buffers or embedded nulls.
+    public static String From(readonly(char)* text) throws
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return String::From(text, count);
+    }
+
     public static String From(readonly(char)* text, nuint count) throws
     {
         String result = new String();

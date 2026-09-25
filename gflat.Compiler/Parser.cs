@@ -139,7 +139,7 @@ namespace gflat
             while (!Check(TokenKind.EndOfFile))
             {
                 if (Check(TokenKind.Namespace))
-                    namespaces.Add(ParseNamespaceDeclaration());
+                    namespaces.Add(ParseNamespaceDeclaration(members.Count == 0 && namespaces.Count == 0 ? usings : null));
                 else
                     members.Add(ParseTopLevelMember());
             }
@@ -160,28 +160,39 @@ namespace gflat
             return new UsingDirective(name, line);
         }
 
-        private NamespaceDeclaration ParseNamespaceDeclaration() => Located(() => ParseNamespaceDeclarationCoreLocated());
+        private NamespaceDeclaration ParseNamespaceDeclaration(List<UsingDirective>? fileUsings = null)
+            => Located(() => ParseNamespaceDeclarationCoreLocated(fileUsings));
 
-        private NamespaceDeclaration ParseNamespaceDeclarationCoreLocated()
+        private NamespaceDeclaration ParseNamespaceDeclarationCoreLocated(List<UsingDirective>? fileUsings)
         {
             int line = Current.Line;
             Expect(TokenKind.Namespace);
-            string name = Expect(TokenKind.Identifier).Text;
-            Expect(TokenKind.OpenBrace);
+            var names = new List<Token> { Expect(TokenKind.Identifier) };
+            while (Match(TokenKind.DoubleColon)) names.Add(Expect(TokenKind.Identifier));
+            bool fileScoped = Match(TokenKind.Semicolon);
+            if (fileScoped && fileUsings == null)
+                throw new TypeCheckException("A file-scoped namespace must be the first declaration and cannot be nested", names[0].Span);
+            if (fileScoped)
+            {
+                while (Check(TokenKind.Using)) fileUsings!.Add(ParseUsingDirective());
+            }
+            else Expect(TokenKind.OpenBrace);
 
             List<AstNode> members = new();
-            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
+            while (!Check(TokenKind.EndOfFile) && (fileScoped || !Check(TokenKind.CloseBrace)))
             {
-                if (Check(TokenKind.Namespace))
-                {
-                    members.Add(ParseNamespaceDeclaration());
-                    continue;
-                }
-                members.Add(ParseTopLevelMember());
+                if (Check(TokenKind.Namespace)) members.Add(ParseNamespaceDeclaration());
+                else members.Add(ParseTopLevelMember());
             }
-
-            Expect(TokenKind.CloseBrace);
-            return new NamespaceDeclaration(name, members, line);
+            if (!fileScoped) Expect(TokenKind.CloseBrace);
+            // Qualified spelling lowers to the existing nested namespace representation.
+            NamespaceDeclaration result = null!;
+            for (int i = names.Count - 1; i >= 0; i--)
+            {
+                result = new NamespaceDeclaration(names[i].Text, members, line) { Span = names[i].Span };
+                members = new() { result };
+            }
+            return result;
         }
 
         private AstNode ParseTopLevelMember() => ParseDeclaration(() => ParseTopLevelMemberCoreLocated());

@@ -46,6 +46,15 @@ public class EditorGrammarTests
     [InlineData("namespace std::Collections;", "::", "keyword.operator")]
     [InlineData("public int this[int i] { readonly get => data[i]; }", "this", "constant.language")]
     [InlineData("public int this[int i] { readonly get => data[i]; }", "get", "keyword.other.accessor")]
+    [InlineData("public static String operator+() {", "String", "entity.name.type")]
+    [InlineData("public static String operator s\"\"(readonly(char)* data, nuint length) {", "String", "entity.name.type")]
+    [InlineData("String operator s\"\"(", "s\"\"", "entity.name.function.literal")]
+    [InlineData("public static String operator+(", "operator", "keyword.control")]
+    [InlineData("public static readonly(std::String)* operator+(", "String", "entity.name.type")]
+    [InlineData("public static List<Pair<int, String>> operator+(", "String", "entity.name.type")]
+    [InlineData("public static int operator+(", "int", "storage.type")]
+    [InlineData("// String operator+(", "String", "comment.line")]
+    [InlineData("\"String operator+\"", "String", "string.quoted.double")]
     [InlineData("value.Set(1);", "Set", "entity.name.function")]
     public void ColorsLanguageConstructs(string line, string text, string scope)
     {

@@ -7,6 +7,22 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ServerTests
 {
+    [Fact]
+    public async Task VisualStudioUsesItsExistingThemeClassifications()
+    {
+        await using var s = new Session();
+        await s.Send(new { jsonrpc = "2.0", id = 20, method = "initialize", @params = new { capabilities = new { }, initializationOptions = new { visualStudioClassifications = true } } });
+        var response = await s.Receive(x => x.TryGetProperty("id", out var id) && id.GetInt32() == 20);
+        var capabilities = response.GetProperty("result").GetProperty("capabilities");
+        var legend = capabilities.GetProperty("semanticTokensProvider").GetProperty("legend").GetProperty("tokenTypes").EnumerateArray().Select(t => t.GetString()).ToArray();
+        Assert.Equal(EditorModel.TokenTypes.Length, legend.Length);
+        Assert.Equal("local name", legend[Array.IndexOf(EditorModel.TokenTypes, "variable")]);
+        Assert.Equal("keyword - control", legend[Array.IndexOf(EditorModel.TokenTypes, "keyword")]);
+        Assert.True(capabilities.GetProperty("hoverProvider").GetBoolean());
+        Assert.True(capabilities.GetProperty("definitionProvider").GetBoolean());
+        await s.Stop();
+    }
+
     [Theory]
     [InlineData("int main() => missing;", 0, 14, 0, 21)]
     [InlineData("// 😀\r\nint main() { int n = (true\r\n || false); return 0; }", 1, 21, 2, 10)]
@@ -83,6 +99,47 @@ public sealed class ServerTests
             Process.Dispose();
             Directory.Delete(Root, recursive: true);
         }
+    }
+
+    [Fact]
+    public async Task EditorRequestsUseTheLatestUnsavedSnapshot()
+    {
+        await using var s = new Session();
+        await s.Initialize();
+        const string original = "int main() { int before = 1; return before; }";
+        const string changed = "int main() { int after = 1; return after; }";
+        await s.Open("queries.gf", original);
+        await s.Diagnostics("queries.gf", 1);
+        await s.Change("queries.gf", changed, 2);
+        // Deliberately request before the debounced analysis has finished.
+        await s.Send(new { jsonrpc = "2.0", id = 10, method = "textDocument/completion", @params = new { textDocument = new { uri = s.Uri("queries.gf") }, position = new { line = 0, character = changed.IndexOf("return", StringComparison.Ordinal) } } });
+        var response = await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 10);
+        var labels = response.GetProperty("result").GetProperty("items").EnumerateArray().Select(i => i.GetProperty("label").GetString()).ToArray();
+        Assert.Contains("after", labels);
+        Assert.DoesNotContain("before", labels);
+        await s.Send(new { jsonrpc = "2.0", id = 11, method = "textDocument/hover", @params = new { textDocument = new { uri = s.Uri("queries.gf") }, position = new { line = 0, character = changed.LastIndexOf("after", StringComparison.Ordinal) } } });
+        var hover = await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 11);
+        Assert.Contains("int after", hover.GetProperty("result").ToString());
+        await s.Send(new { jsonrpc = "2.0", id = 12, method = "textDocument/semanticTokens/full", @params = new { textDocument = new { uri = s.Uri("queries.gf") } } });
+        var semantic = await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 12);
+        Assert.NotEmpty(semantic.GetProperty("result").GetProperty("data").EnumerateArray());
+        await s.Stop();
+    }
+
+    [Theory]
+    [InlineData(true, -32800)]
+    [InlineData(false, -32801)]
+    public async Task PendingEditorRequestsCanBeCancelledOrInvalidated(bool cancel, int code)
+    {
+        await using var s = new Session();
+        await s.Initialize();
+        await s.Open("cancel.gf", "int main() => 0;");
+        await s.Send(new { jsonrpc = "2.0", id = 14, method = "textDocument/hover", @params = new { textDocument = new { uri = s.Uri("cancel.gf") }, position = new { line = 0, character = 4 } } });
+        if (cancel) await s.Notify("$/cancelRequest", new { id = 14 });
+        else await s.Change("cancel.gf", "int main() => 1;", 2);
+        var response = await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 14);
+        Assert.Equal(code, response.GetProperty("error").GetProperty("code").GetInt32());
+        await s.Stop();
     }
 
     [Fact]
@@ -306,7 +363,7 @@ public sealed class ServerTests
     {
         await using var s = new Session();
         await s.Initialize();
-        await s.Send(new { jsonrpc = "2.0", id = 4, method = "textDocument/hover", @params = new { } });
+        await s.Send(new { jsonrpc = "2.0", id = 4, method = "textDocument/notImplemented", @params = new { } });
         var response = await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 4);
         Assert.Equal(-32601, response.GetProperty("error").GetProperty("code").GetInt32());
         await s.Stop();

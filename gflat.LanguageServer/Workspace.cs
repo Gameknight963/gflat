@@ -11,7 +11,7 @@ public sealed record Location(string Uri, TextRange Range);
 public sealed record RelatedInformation(Location Location, string Message);
 public sealed record EditorDiagnostic(TextRange Range, int Severity, string Code, string Source, string Message,
     RelatedInformation[]? RelatedInformation = null);
-public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null);
+public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null, Dictionary<string, EditorModel>? Models = null);
 
 public static class Workspace
 {
@@ -28,6 +28,7 @@ public static class Workspace
     public static Analysis Analyze(string? root, IReadOnlyDictionary<string, OpenDocument> documents, ProjectWorkspace? projects = null)
     {
         var output = new Dictionary<string, List<EditorDiagnostic>>(Paths);
+        var models = new Dictionary<string, EditorModel>(Paths);
         var configured = new HashSet<string>(Paths);
         var watched = new HashSet<string>(Paths);
         var projectDirectories = new HashSet<string>(Paths);
@@ -93,7 +94,7 @@ public static class Workspace
         }
         foreach (var document in documents.Values)
             if (!configured.Contains(document.Path) && document.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)) Check([document.Path]);
-        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray());
+        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray(), models);
 
         void Check(IEnumerable<string> paths)
         {
@@ -112,7 +113,10 @@ public static class Workspace
             if (unreadable || snapshots.Count == 0) return;
             try
             {
-                foreach (var diagnostic in Compiler.Analyze(snapshots))
+                var analysis = new AnalysisSnapshot(snapshots);
+                var model = new EditorModel(analysis, snapshots);
+                foreach (var source in snapshots) models[source.Path] = model;
+                foreach (var diagnostic in analysis.Diagnostics)
                 {
                     string path = diagnostic.FilePath ?? snapshots[0].Path;
                     // Prelude failures are still visible on a real document, never as invalid file URIs.
@@ -157,7 +161,7 @@ public static class Workspace
         return text;
     }
 
-    private static int Offset(string text, JsonElement position)
+    public static int Offset(string text, JsonElement position)
     {
         int line = position.GetProperty("line").GetInt32(), character = position.GetProperty("character").GetInt32();
         if (line < 0 || character < 0) throw new ArgumentException("Negative edit position");

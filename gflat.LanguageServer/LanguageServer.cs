@@ -24,6 +24,11 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     private long projectRevision, evaluatedProjectRevision = -1;
     private string? root;
     private bool initialized, shutdown;
+    private Analysis? latest;
+    private long analyzedGeneration = -1;
+    private sealed record EditorRequest(JsonElement Id, string Method, JsonElement Parameters, long Generation);
+    private readonly List<EditorRequest> editorRequests = [];
+    private string[] tokenTypes = EditorModel.TokenTypes;
 
     public async Task<int> RunAsync(CancellationToken cancellation = default)
     {
@@ -49,6 +54,8 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         { Schedule(invalidateProjects: true); }
                         break;
                     case Finished result when result.Generation == generation && !shutdown:
+                        latest = result.Result;
+                        analyzedGeneration = result.Generation;
                         watchedPaths.Clear();
                         watchedPaths.UnionWith(result.Result.WatchedPaths);
                         projectDirectories.Clear();
@@ -65,6 +72,8 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         }
                         published.Clear();
                         published.UnionWith(result.Result.Diagnostics.Keys);
+                        foreach (var query in editorRequests.ToArray()) await AnswerEditor(query);
+                        editorRequests.Clear();
                         break;
                 }
             }
@@ -134,7 +143,17 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         else if (parameters.TryGetProperty("workspaceFolders", out var folders) && folders.ValueKind == JsonValueKind.Array && folders.GetArrayLength() > 0)
                             root = Workspace.FilePath(folders[0].GetProperty("uri").GetString()!);
                         initialized = true;
-                        await Reply(id, new { capabilities = new { positionEncoding = "utf-16", textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } } }, serverInfo = new { name = "gflat", version = "0.1.0" } });
+                        if (parameters.TryGetProperty("initializationOptions", out var options) && options.ValueKind == JsonValueKind.Object &&
+                            options.TryGetProperty("visualStudioClassifications", out var vsColors) && vsColors.ValueKind == JsonValueKind.True)
+                            tokenTypes = EditorModel.VisualStudioTokenTypes;
+                        await Reply(id, new { capabilities = new {
+                            positionEncoding = "utf-16",
+                            textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
+                            completionProvider = new { triggerCharacters = new[] { ".", ":" } },
+                            hoverProvider = true, definitionProvider = true,
+                            signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } },
+                            semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
+                        }, serverInfo = new { name = "gflat", version = "0.2.0" } });
                         break;
                     case "initialized": Schedule(); break;
                     case "shutdown":
@@ -179,7 +198,26 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                     case "workspace/didChangeWatchedFiles":
                     case "workspace/didChangeConfiguration": Schedule(invalidateProjects: true); break;
                     case "$/cancelRequest":
+                        if (parameters.TryGetProperty("id", out var canceled))
+                        {
+                            var query = editorRequests.FirstOrDefault(q => q.Id.GetRawText() == canceled.GetRawText());
+                            if (query != null) { editorRequests.Remove(query); await Error(query.Id, -32800, "Request cancelled"); }
+                        }
+                        break;
                     case "$/setTrace": break;
+                    case "textDocument/completion":
+                    case "textDocument/hover":
+                    case "textDocument/definition":
+                    case "textDocument/signatureHelp":
+                    case "textDocument/semanticTokens/full":
+                    case "textDocument/semanticTokens/range":
+                        if (hasId)
+                        {
+                            var query = new EditorRequest(id.Clone(), method, parameters.Clone(), generation);
+                            if (analyzedGeneration == generation) await AnswerEditor(query);
+                            else editorRequests.Add(query);
+                        }
+                        break;
                     default: if (hasId) await Error(id, -32601, "Method not supported: " + method); break;
                 }
             }
@@ -190,6 +228,31 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
             }
         }
         return null;
+    }
+
+    private async Task AnswerEditor(EditorRequest query)
+    {
+        if (query.Generation != generation) { await Error(query.Id, -32801, "Document changed"); return; }
+        try
+        {
+            string path = Workspace.FilePath(query.Parameters.GetProperty("textDocument").GetProperty("uri").GetString()!);
+            if (latest?.Models?.GetValueOrDefault(path) is not EditorModel model || !documents.TryGetValue(path, out var document))
+            { await Reply(query.Id, null); return; }
+            int offset = query.Parameters.TryGetProperty("position", out var position) ? Workspace.Offset(document.Text, position) : 0;
+            TextRange? range = query.Parameters.TryGetProperty("range", out var element)
+                ? JsonSerializer.Deserialize<TextRange>(element, Protocol.JsonOptions) : null;
+            object? result = query.Method switch
+            {
+                "textDocument/completion" => model.Completion(path, offset),
+                "textDocument/hover" => model.Hover(path, offset),
+                "textDocument/definition" => model.Definition(path, offset),
+                "textDocument/signatureHelp" => model.SignatureHelp(path, offset),
+                _ => model.SemanticTokens(path, range)
+            };
+            await Reply(query.Id, result);
+        }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or KeyNotFoundException or JsonException)
+        { await Error(query.Id, -32602, error.Message); }
     }
 
     private void Schedule(bool invalidateProjects = false)

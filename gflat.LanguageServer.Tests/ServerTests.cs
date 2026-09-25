@@ -68,6 +68,32 @@ public sealed class ServerTests
     }
 
     [Fact]
+    public async Task InterpolationDiagnosticsRecoverAfterEditingHoles()
+    {
+        await using var session = new Session();
+        await session.Initialize();
+        const string declarations = """
+            struct Text : IInterpolatedString {
+                public static Text operator t""(readonly(char)* p, nuint n) { return new Text(); }
+                public void AppendLiteral(readonly(char)* p, nuint n) throws { }
+            }
+            struct Value : IStringConvertible {
+                public readonly char* ToString() throws { char* p = (char*)Allocator::Allocate(1); p[0] = '\0'; return p; }
+            }
+            """;
+        string valid = declarations + "\nint main() { t$\"{new Value()}\"; return 0; }";
+        await session.Open("interpolation.gf", declarations + "\nint main() { t$\"{missing}\"; return 0; }");
+        Assert.NotEmpty((await session.Diagnostics("interpolation.gf", 1)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Change("interpolation.gf", valid, 2);
+        Assert.Empty((await session.Diagnostics("interpolation.gf", 2)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Change("interpolation.gf", declarations + "\nint main() { t$\"{", 3);
+        Assert.NotEmpty((await session.Diagnostics("interpolation.gf", 3)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Change("interpolation.gf", valid, 4);
+        Assert.Empty((await session.Diagnostics("interpolation.gf", 4)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        await session.Stop();
+    }
+
+    [Fact]
     public async Task ReadOnlyTypeDiagnosticsRecoverAfterRemovingTheWrite()
     {
         await using var session = new Session();

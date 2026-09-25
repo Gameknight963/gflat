@@ -16,6 +16,9 @@
       "end": "\\*/"
     },
     {
+      "include": "#interpolated-string"
+    },
+    {
       "name": "string.quoted.double.gflat",
       "begin": "(?:(\\b[A-Za-z_][A-Za-z0-9_]*|\\$))?(\")",
       "beginCaptures": {
@@ -108,5 +111,74 @@
       "name": "punctuation.separator.gflat",
       "match": "[;,.]"
     }
-  ]
+  ],
+  "repository": {
+    "interpolated-string": {
+      "name": "string.quoted.double.interpolated.gflat",
+      "begin": "(?:\\b([A-Za-z_][A-Za-z0-9_]*))?(\\$)(\")",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.name.function.literal.gflat"
+        },
+        "2": {
+          "name": "keyword.operator.interpolation.gflat"
+        },
+        "3": {
+          "name": "punctuation.definition.string.begin.gflat"
+        }
+      },
+      "end": "\"|$",
+      "patterns": [
+        {
+          "name": "constant.character.escape.gflat",
+          "match": "\\\\[nrt0\\\\\"\\x27]"
+        },
+        {
+          "name": "invalid.illegal.escape.gflat",
+          "match": "\\\\."
+        },
+        {
+          "name": "constant.character.escape.gflat",
+          "match": "\\{\\{|\\}\\}"
+        },
+        {
+          "name": "meta.interpolation.gflat",
+          "contentName": "source.gflat",
+          "begin": "\\{",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.interpolation.begin.gflat"
+            }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.interpolation.end.gflat"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#interpolation-braces"
+            },
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "interpolation-braces": {
+      "begin": "\\{",
+      "end": "\\}",
+      "name": "punctuation.section.gflat",
+      "patterns": [
+        {
+          "include": "#interpolation-braces"
+        },
+        {
+          "include": "$self"
+        }
+      ]
+    }
+  }
 }

@@ -55,6 +55,12 @@ public class EditorGrammarTests
     [InlineData("public static int operator+(", "int", "storage.type")]
     [InlineData("// String operator+(", "String", "comment.line")]
     [InlineData("\"String operator+\"", "String", "string.quoted.double")]
+    [InlineData("s$\"hello {42}\"", "s", "entity.name.function.literal")]
+    [InlineData("s$\"hello {42}\"", "$", "keyword.operator.interpolation")]
+    [InlineData("s$\"hello {42}\"", "42", "constant.numeric")]
+    [InlineData("s$\"hello {42}\"", "hello", "string.quoted.double")]
+    [InlineData("s$\"{{literal}} {s$\"{true}\"}\"", "true", "constant.language")]
+    [InlineData("s$\"{Read(c\"}\")}\"; return 1;", "return", "keyword.control")]
     [InlineData("value.Set(1);", "Set", "entity.name.function")]
     public void ColorsLanguageConstructs(string line, string text, string scope)
     {

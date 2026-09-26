@@ -115,11 +115,15 @@ public class HoverTests
 
     [Theory]
     [InlineData("class Wi|de { public extralong field; }", "**Object size:** 32 bytes  \n**Alignment:** 16 bytes")]
-    [InlineData("class Wide { public extralong field; } void F(Wide* po|inter) {}", "**Size:** 8 bytes  \n**Alignment:** 8 bytes")]
-    [InlineData("interface I {} void F(I* po|inter) {}", "**Size:** 16 bytes  \n**Alignment:** 8 bytes")]
+    [InlineData("class Wide { public extralong field; } void F(Wide* po|inter) {}", null)]
+    [InlineData("interface I {} void F(I* po|inter) {}", null)]
     [InlineData("int main() { do|uble value = 0; return 0; }", "**Size:** 8 bytes  \n**Alignment:** 8 bytes")]
-    public void LayoutDistinguishesObjectsPointersAndPrimitives(string source, string expected)
-        => Assert.Contains(expected, Hover(source).GetProperty("contents").GetProperty("value").GetString());
+    public void LayoutIsShownForTypesButNotVariables(string source, string? expected)
+    {
+        string text = Hover(source).GetProperty("contents").GetProperty("value").GetString()!;
+        if (expected != null) Assert.Contains(expected, text);
+        else Assert.DoesNotContain("bytes", text);
+    }
 
     [Theory]
     [InlineData("struct Bo|x<T> { public T value; }")]

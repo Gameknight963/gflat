@@ -118,8 +118,8 @@ public sealed partial class EditorModel
     {
         // Do not query incomplete or open layouts: the checker may not have
         // visited later declarations after an error, or specialized a template.
-        if (snapshot.Checker is not { } checker || snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error) ||
-            symbol.Parameters != null || symbol.Syntax.Node is NamespaceDeclaration or PropertyDeclaration ||
+        if ((!IsType(symbol.Syntax.Node) && symbol.Syntax.Node is not AliasDeclaration) ||
+            snapshot.Checker is not { } checker || snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error) ||
             symbol.Syntax.Node is ClassDeclaration { IsGeneric: true } or StructDeclaration { IsGeneric: true }) return [];
         TypeExpression? type = IsType(symbol.Syntax.Node) ? new NamedTypeExpression(symbol.Qualified, null, 0) : symbol.Type;
         if (type == null) return [];

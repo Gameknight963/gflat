@@ -8,6 +8,38 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ServerTests
 {
     [Fact]
+    public async Task RichHoverAndThrowsClassificationReachTheClient()
+    {
+        await using var s = new Session();
+        string? catalogFile = Environment.GetEnvironmentVariable("GFLAT_HOVER_CATALOG");
+        var icons = catalogFile == null
+            ? JsonSerializer.SerializeToElement(new Dictionary<string, object> { ["method.public"] = new { guid = Guid.Parse("ae27a6b0-e345-4288-96df-5eaf394ee369"), id = 1 } })
+            : JsonDocument.Parse(System.IO.File.ReadAllText(catalogFile)).RootElement.Clone();
+        await s.Initialize(new { visualStudioClassifications = true, hoverIcons = icons });
+        const string source = "public int Read(int count) throws => count;";
+        await s.Open("hover.gf", source);
+        await s.Diagnostics("hover.gf", 1);
+        await s.Send(new { jsonrpc = "2.0", id = 71, method = "textDocument/hover", @params = new { textDocument = new { uri = s.Uri("hover.gf") }, position = new { line = 0, character = 12 } } });
+        var hover = (await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 71)).GetProperty("result");
+        Assert.Equal("ContainerElement", hover.GetProperty("_vs_rawContent").GetProperty("_vs_type").GetString());
+        string? capture = Environment.GetEnvironmentVariable("GFLAT_HOVER_CAPTURE");
+        if (capture != null) System.IO.File.WriteAllText(capture, hover.GetRawText());
+        await s.Send(new { jsonrpc = "2.0", id = 72, method = "textDocument/semanticTokens/full", @params = new { textDocument = new { uri = s.Uri("hover.gf") } } });
+        var semantic = (await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 72)).GetProperty("result");
+        var data = semantic.GetProperty("data").EnumerateArray().Select(n => n.GetInt32()).ToArray();
+        int column = 0;
+        bool found = false;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            column += data[i + 1];
+            if (column == source.IndexOf("throws", StringComparison.Ordinal))
+            { Assert.Equal("modifier", EditorModel.TokenTypes[data[i + 3]]); found = true; }
+        }
+        Assert.True(found);
+        await s.Stop();
+    }
+
+    [Fact]
     public async Task VisualStudioUsesItsExistingThemeClassifications()
     {
         await using var s = new Session();
@@ -69,9 +101,9 @@ public sealed class ServerTests
             }
             throw new Exception("Language server ended: " + await stderr);
         }
-        public async Task Initialize()
+        public async Task Initialize(object? initializationOptions = null)
         {
-            await Send(new { jsonrpc = "2.0", id = "initialize", method = "initialize", @params = new { rootUri = Workspace.FileUri(Root), capabilities = new { } } });
+            await Send(new { jsonrpc = "2.0", id = "initialize", method = "initialize", @params = new { rootUri = Workspace.FileUri(Root), capabilities = new { }, initializationOptions } });
             var response = await Receive(x => x.TryGetProperty("id", out var id) && id.GetString() == "initialize");
             Assert.Equal(1, response.GetProperty("result").GetProperty("capabilities").GetProperty("textDocumentSync").GetProperty("change").GetInt32());
             await Notify("initialized", new { });

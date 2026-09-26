@@ -185,3 +185,29 @@ and [Visual Studio LSP integration](https://learn.microsoft.com/en-us/visualstud
 Requests arriving during analysis wait for that generation. `$/cancelRequest` cancels
 queued requests; edits invalidate old requests with LSP ContentModified. Queries do
 not invoke LLVM or repeat compilation.
+
+### Rich hover (VSIX 0.11.0)
+
+Visual Studio receives `VSInternalHover` rich content containing classified text
+and image elements. Signatures include modifiers, generic parameters, argument
+names, `throws`, and property accessor restrictions. Type and variable hovers show
+size/alignment when the checker has a complete layout; class objects are labeled
+separately from pointers. Primitive type keywords also have layout hovers. Layout
+numbers are omitted for invalid compilations and open generic types.
+
+The VS client supplies its `KnownMonikers` catalog through the `hoverIcons`
+initialization option. The server sends the native `_vs_rawContent` wire format
+without referencing Windows assemblies. Other clients continue to receive Markdown.
+The tooltip itself is rendered by Visual Studio's existing LSP Quick Info support.
+
+The packaged `gflat.tmTheme` maps immediate TextMate classifications to the same VS
+method/type/keyword classifications used by semantic highlighting. It defines no
+RGB colors. In particular, a syntactically recognizable method name uses the method
+classification before background analysis finishes, and `throws` uses a declaration
+keyword classification in both paths.
+
+On a machine with the full IDE installed, `test-package.ps1` additionally takes a
+real packaged-server hover response and deserializes it using Visual Studio's own
+rich-content converter, checking its catalog icon and classified runs. This checks
+SDK compatibility, not the appearance or interaction of the live tooltip; manual
+IDE checks remain necessary.

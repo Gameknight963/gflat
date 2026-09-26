@@ -9,6 +9,26 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorGrammarTests
 {
+    [Theory]
+    [InlineData("public void cool(", "cool", "entity.name.function")]
+    [InlineData("public void cool() throws", "throws", "storage.modifier")]
+    [InlineData("int value = alignof(Widget);", "alignof", "keyword.control")]
+    [InlineData("int value = alignof(Widget);", "Widget", "entity.name.type")]
+    public void TypingAndLayoutQueriesHaveImmediateSyntaxClassifications(string line, string text, string scope)
+        => AssertScope(Grammar().TokenizeLine(line), line.IndexOf(text, StringComparison.Ordinal), scope);
+
+    [Fact]
+    public void ThemeUsesTheSameMethodAndKeywordClassificationsAsSemanticTokens()
+    {
+        var theme = System.Xml.Linq.XDocument.Load(Asset("gflat.tmTheme"));
+        string Mapping(string scope) => theme.Descendants("dict").Single(d => d.Elements("key")
+            .Any(k => k.Value == "scope" && ((System.Xml.Linq.XElement)k.NextNode!).Value.Split(',').Select(s => s.Trim()).Contains(scope)))
+            .Descendants("key").Single(k => k.Value == "vsclassificationtype").ElementsAfterSelf("string").First().Value;
+        Assert.Equal("method name", Mapping("entity.name.function.gflat"));
+        Assert.Equal("keyword", Mapping("storage.modifier.gflat"));
+        Assert.DoesNotContain(theme.Descendants("key"), k => k.Value is "foreground" or "background");
+    }
+
     private static string Asset(string name) => Path.Combine(
         Environment.GetEnvironmentVariable("GFLAT_EDITOR_ASSETS") ??
         Path.Combine(AppContext.BaseDirectory, "EditorAssets"), name);

@@ -10,6 +10,7 @@
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageReference Include="TextMateSharp" Version="2.0.4" />
+    <Content Include="../editors/VisualStudio/gflat.tmTheme" Link="EditorAssets/gflat.tmTheme" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../editors/shared/*.json" Link="EditorAssets/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../std/core/String.gf" Link="EditorFixtures/String.gf" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Xunit" />

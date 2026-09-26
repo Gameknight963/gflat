@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+  <dict>
+    <key>name</key><string>gflat</string>
+    <key>settings</key>
+    <array>
+      <dict>
+        <key>scope</key><string>entity.name.function.gflat, entity.name.function.literal.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>method name</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>entity.name.type.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>type</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>storage.type.gflat, storage.modifier.gflat, keyword.other.accessor.gflat, constant.language.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>keyword</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>keyword.control.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>keyword - control</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>string.quoted.double.gflat, string.quoted.single.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>string</string></dict>
+      </dict>
+      <dict>
+        <key>scope</key><string>constant.numeric.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>number</string></dict>
+      </dict>
+    </array>
+  </dict>
+</plist>

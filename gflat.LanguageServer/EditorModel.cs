@@ -5,22 +5,16 @@ using Syntax = gflat.AnalysisSnapshot.Syntax;
 namespace gflat.LanguageServer;
 
 /// <summary>Read-only editor queries over one analyzed set of source snapshots.</summary>
-public sealed class EditorModel
+public sealed partial class EditorModel
 {
-    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword"];
-    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control"];
+    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier"];
+    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword"];
     public static readonly string[] TokenModifiers = ["declaration", "static", "readonly"];
     private sealed record Symbol(string Name, int Kind, string Classification, Syntax Syntax, SourceSpan NameSpan,
         string Namespace, string? Owner, Syntax? Scope, TypeExpression? Type, bool Static, TokenKind Access)
     {
         public string Qualified => Scope != null ? Name : Join(Owner ?? Namespace, Name);
-        public string Detail => Syntax.Node switch
-        {
-            MethodDeclaration m => $"{(m.IsStatic ? "static " : "")}{(m.IsReadOnly ? "readonly " : "")}{TypeChecker.TypeName(m.ReturnType)} {Qualified}({string.Join(", ", m.Parameters.Select(ParameterText))}){(m.Throws ? " throws" : "")}",
-            ExternDeclaration e => $"extern {TypeChecker.TypeName(e.ReturnType)} {Qualified}({string.Join(", ", e.Parameters.Select(ParameterText))}{(e.IsVariadic ? ", ..." : "")})",
-            ConstructorDeclaration c => $"{Qualified}({string.Join(", ", c.Parameters.Select(ParameterText))})",
-            _ => Type != null ? $"{TypeChecker.TypeName(Type)} {Qualified}" : $"{Classification} {Qualified}"
-        };
+        public string Detail => string.Concat(Signature(this).Select(part => part.Text));
         public IReadOnlyList<Parameter>? Parameters => Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null };
     }
     private readonly AnalysisSnapshot snapshot;
@@ -293,7 +287,7 @@ public sealed class EditorModel
         if (!member)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "const", "weak", "replace"];
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "const", "weak", "replace"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
         }
@@ -312,11 +306,29 @@ public sealed class EditorModel
         if (lineComment >= 0 && !trivia[lineComment..].Contains('\n')) return true;
         return trivia.LastIndexOf("/*", StringComparison.Ordinal) > trivia.LastIndexOf("*/", StringComparison.Ordinal);
     }
-    public object? Hover(string path, int offset)
+    public object? Hover(string path, int offset, VisualStudioHover? presentation = null)
     {
         int index = TokenAt(path, offset);
         var symbol = index < 0 ? null : Resolve(path, index);
-        return symbol == null ? null : new { contents = new { kind = "markdown", value = "```gflat\n" + symbol.Detail + "\n```" }, range = Workspace.ToRange(tokens[path][index].Span) };
+        if (symbol == null && index >= 0 && TypeChecker.IsPrimitive(tokens[path][index].Text) && (tokens[path][index].Kind != TokenKind.Identifier || nodes[path].Any(n => n.Node is NamedTypeExpression && Contains(n, offset))))
+        {
+            string name = tokens[path][index].Text;
+            var type = new NamedTypeExpression(name, null, 0);
+            string[] layout = [];
+            if (snapshot.Checker is { } checker)
+            {
+                try { layout = [$"Size: {checker.GetTypeSize(type)} bytes; alignment: {checker.GetTypeAlignment(type)} bytes."]; }
+                catch (CompileExceptions.TypeCheckException) { /* Some reserved type names have no concrete layout. */ }
+            }
+            return new HoverResult(new("markdown", "```gflat\n" + name + "\n```\n\n" + string.Join("\n\n", layout)),
+                Workspace.ToRange(tokens[path][index].Span), presentation?.Render([new("keyword", name)], layout, "struct.public"));
+        }
+        if (symbol == null) return null;
+        var parts = Signature(symbol);
+        string[] details = LayoutDetails(symbol);
+        string markdown = "```gflat\n" + string.Concat(parts.Select(p => p.Text)) + "\n```" + (details.Length == 0 ? "" : "\n\n" + string.Join("\n\n", details));
+        return new HoverResult(new("markdown", markdown), Workspace.ToRange(tokens[path][index].Span),
+            presentation?.Render(parts, details, Glyph(symbol)));
     }
     public object? Definition(string path, int offset)
     {
@@ -351,13 +363,14 @@ public sealed class EditorModel
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            if (ts[i].Kind != TokenKind.Identifier && !control) continue;
-            var symbol = control ? null : Resolve(path, i);
-            if (symbol == null && !control) continue;
+            bool modifier = ts[i].Kind == TokenKind.Throws;
+            if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
+            var symbol = control || modifier ? null : Resolve(path, i);
+            if (symbol == null && !control && !modifier) continue;
             var span = ts[i].Span;
             int line = span.Line - 1, column = span.Column - 1;
             if (range != null && (line < range.Start.Line || line == range.Start.Line && column < range.Start.Character || line > range.End.Line || line == range.End.Line && column >= range.End.Character)) continue;
-            int kind = control ? Array.IndexOf(TokenTypes, "keyword") : Array.IndexOf(TokenTypes, symbol!.Classification);
+            int kind = modifier ? Array.IndexOf(TokenTypes, "modifier") : control ? Array.IndexOf(TokenTypes, "keyword") : Array.IndexOf(TokenTypes, symbol!.Classification);
             if (kind < 0) continue;
             int modifiers = symbol?.NameSpan.Source?.Path == path && symbol.NameSpan.Start == span.Start ? 1 : 0;
             if (symbol?.Static == true) modifiers |= 2;

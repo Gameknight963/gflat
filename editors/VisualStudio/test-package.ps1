@@ -6,11 +6,13 @@ $extracted = Join-Path $PSScriptRoot ('obj/package-test-' + [Guid]::NewGuid().To
 [IO.Compression.ZipFile]::ExtractToDirectory([IO.Path]::GetFullPath($Package), $extracted)
 $oldExecutable = $env:GFLAT_LSP_EXECUTABLE
 $oldEditorAssets = $env:GFLAT_EDITOR_ASSETS
+$oldHoverCatalog = $env:GFLAT_HOVER_CATALOG
+$oldHoverCapture = $env:GFLAT_HOVER_CAPTURE
 try {
     $env:GFLAT_LSP_EXECUTABLE = Join-Path $extracted 'Server/gflat.LanguageServer.exe'
     if (-not (Test-Path -LiteralPath $env:GFLAT_LSP_EXECUTABLE)) { throw 'VSIX is missing the server executable' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'gflat.VisualStudio.dll'))) { throw 'VSIX is missing the language client' }
-    foreach ($asset in @('gflat.pkgdef', 'gflat-language-configuration.json', 'Grammars/gflat.tmLanguage.json')) {
+    foreach ($asset in @('gflat.pkgdef', 'gflat-language-configuration.json', 'Grammars/gflat.tmLanguage.json', 'Grammars/gflat.tmTheme')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted $asset))) { throw "VSIX is missing $asset" }
     }
     # Exercise the grammar and configuration actually shipped in the archive.
@@ -24,8 +26,16 @@ try {
     if (-not ($manifest.PackageManifest.Assets.Asset | Where-Object { $_.Type -eq 'Microsoft.VisualStudio.VsPackage' -and $_.Path -eq 'gflat.pkgdef' })) {
         throw 'VSIX does not register the editor package definition'
     }
+    $catalog = Join-Path $extracted 'hover-icons.json'
+    $capture = Join-Path $extracted 'hover-response.json'
+    $nativeHoverCheck = & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Prepare -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture
+    if ($nativeHoverCheck) {
+        $env:GFLAT_HOVER_CATALOG = $catalog
+        $env:GFLAT_HOVER_CAPTURE = $capture
+    }
     dotnet test (Join-Path $repoRoot 'gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
+    if ($nativeHoverCheck) { & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Validate -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture }
     $compiler = Join-Path $extracted 'Compiler/gflat.exe'
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
@@ -42,6 +52,8 @@ try {
 finally {
     $env:GFLAT_LSP_EXECUTABLE = $oldExecutable
     $env:GFLAT_EDITOR_ASSETS = $oldEditorAssets
+    $env:GFLAT_HOVER_CATALOG = $oldHoverCatalog
+    $env:GFLAT_HOVER_CAPTURE = $oldHoverCapture
     # Only remove the unique extraction directory underneath this project's obj folder.
     $resolved = [IO.Path]::GetFullPath($extracted)
     $allowedRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'obj')) + [IO.Path]::DirectorySeparatorChar

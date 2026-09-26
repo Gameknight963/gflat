@@ -29,6 +29,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     private sealed record EditorRequest(JsonElement Id, string Method, JsonElement Parameters, long Generation);
     private readonly List<EditorRequest> editorRequests = [];
     private string[] tokenTypes = EditorModel.TokenTypes;
+    private VisualStudioHover? hoverPresentation;
 
     public async Task<int> RunAsync(CancellationToken cancellation = default)
     {
@@ -146,6 +147,8 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         if (parameters.TryGetProperty("initializationOptions", out var options) && options.ValueKind == JsonValueKind.Object &&
                             options.TryGetProperty("visualStudioClassifications", out var vsColors) && vsColors.ValueKind == JsonValueKind.True)
                             tokenTypes = EditorModel.VisualStudioTokenTypes;
+                        if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("hoverIcons", out var hoverIcons))
+                            hoverPresentation = new VisualStudioHover(hoverIcons);
                         await Reply(id, new { capabilities = new {
                             positionEncoding = "utf-16",
                             textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
@@ -244,7 +247,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
             object? result = query.Method switch
             {
                 "textDocument/completion" => model.Completion(path, offset),
-                "textDocument/hover" => model.Hover(path, offset),
+                "textDocument/hover" => model.Hover(path, offset, hoverPresentation),
                 "textDocument/definition" => model.Definition(path, offset),
                 "textDocument/signatureHelp" => model.SignatureHelp(path, offset),
                 _ => model.SemanticTokens(path, range)

@@ -10,7 +10,7 @@ Raw pointers, explicit reinterpretation casts, and extern declarations are the l
 
 Taking an address does not initialize storage. Locals must be initialized before their address is passed to an ordinary pointer parameter. There is currently no `out` parameter contract. Initialize a value explicitly before handing it to a foreign output function.
 
-The supported native target is **x86_64-pc-windows-msvc**. Other targets are rejected by the driver. The target triple, pointer width, and LLVM data layout are recorded in `TargetInfo`. Fixed-width types are language rules; portability to other targets remains future work.
+The native target is **x86_64-pc-windows-msvc** on Windows and **x86_64-unknown-linux-gnu** on Linux. Linux execution is covered by the Ubuntu x64 CI jobs at O0 and O2. The driver accepts only its host target; cross-compilation and other architectures are not supported. The target triple, pointer width, and LLVM data layout are recorded in `TargetInfo`. Fixed-width types are language rules.
 
 ## Lexical and grammar rules
 

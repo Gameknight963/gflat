@@ -1,12 +1,14 @@
 name: compiler
 on: [push, pull_request]
 jobs:
-  windows-x64:
-    runs-on: windows-latest
+  compiler-x64:
+    name: compiler (${{ matrix.os }}, O${{ matrix.optimization }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
+        os: [windows-latest, ubuntu-24.04]
         optimization: ['0', '2']
     env:
       GFLAT_OPT_LEVEL: ${{ matrix.optimization }}
@@ -15,27 +17,28 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      # Pin a known LLVM version on Linux; Windows discovers VS's bundled Clang.
+      - name: Select Linux toolchain
+        if: runner.os == 'Linux'
+        run: |
+          clang-18 --version
+          echo "GFLAT_CLANG=clang-18" >> "$GITHUB_ENV"
       - run: dotnet restore gflat.Tests/gflat.Tests.csproj
       - run: dotnet restore gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
       # Allow cold runner/toolchain startup without prematurely killing passing tests.
       - run: dotnet test gflat.Tests/gflat.Tests.csproj --no-restore --blame-hang-timeout 5m --logger trx
       - run: dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj --no-restore --blame-hang-timeout 5m --logger trx
         if: ${{ !cancelled() }}
+      - name: Build and run Linux projects
+        if: runner.os == 'Linux' && !cancelled()
+        run: |
+          dotnet run --project gflat --no-build -- build examples/hello/hello.gfproj --run
+          dotnet run --project gflat --no-build -- build examples/interpolation/interpolation.gfproj --run
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-results-O${{ matrix.optimization }}
+          name: test-results-${{ matrix.os }}-O${{ matrix.optimization }}
           path: '**/TestResults/**'
-  language-server-linux:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-      - run: dotnet test gflat.LanguageServer.Tests --blame-hang-timeout 2m
-      - run: dotnet run --project gflat -- check examples/hello/hello.gfproj
   visual-studio-extension:
     runs-on: windows-latest
     timeout-minutes: 15

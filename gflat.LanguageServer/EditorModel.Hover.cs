@@ -29,14 +29,14 @@ public sealed partial class EditorModel
     private string DisplayType(TypeExpression type) => snapshot.Checker?.DisplayTypeName(type) ?? TypeChecker.TypeName(type).Replace(".", "::");
     private string Detail(Symbol symbol) => string.Concat(Signature(symbol).Select(p => p.Text));
 
-    private DisplayPart[] Signature(Symbol symbol, bool navigable = false)
+    private DisplayPart[] Signature(Symbol symbol, bool navigable = false, string? hoverPath = null, int hoverOffset = 0)
     {
         var parts = new List<DisplayPart>();
         void Add(string text, string kind = "text", Location? target = null) { if (text.Length > 0) parts.Add(new(kind, text, Target: target)); }
         void Keyword(string word) { Add(word, "keyword"); Add(" "); }
         void Type(TypeExpression type)
         {
-            string text = DisplayType(type);
+            string text = ShortType(DisplayType(type), hoverPath, hoverOffset);
             var tokens = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
             int cursor = 0;
             for (int i = 0; i < tokens.Length; i++)
@@ -63,12 +63,24 @@ public sealed partial class EditorModel
         }
         void Name()
         {
-            var names = symbol.Qualified.Split("::");
-            for (int i = 0; i < names.Length; i++)
+            string name = symbol.Qualified;
+            if (hoverPath != null && symbol.Scope == null && symbol.Owner != null && !IsType(symbol.Syntax.Node))
             {
-                if (i > 0) Add("::", "punctuation");
-                var target = navigable ? TypeSymbol(string.Join("::", names.Take(i + 1)), symbol) : null;
-                Add(names[i], i == names.Length - 1 ? symbol.Classification : target?.Classification ?? (symbol.Owner != null && i == names.Length - 2 ? "type" : "namespace"), SymbolLocation(target));
+                string owner = ShortType(symbol.Owner, hoverPath, hoverOffset);
+                // An instance member uses the same separator as an instance access.
+                Add(owner, "type", navigable ? SymbolLocation(TypeSymbol(symbol.Owner, symbol)) : null);
+                Add(symbol.Static ? "::" : ".", "punctuation");
+                Add(symbol.Name, symbol.Classification, navigable ? SymbolLocation(symbol) : null);
+            }
+            else
+            {
+                var names = name.Split("::");
+                for (int i = 0; i < names.Length; i++)
+                {
+                    if (i > 0) Add("::", "punctuation");
+                    var target = navigable ? (i == names.Length - 1 ? symbol : TypeSymbol(string.Join("::", names.Take(i + 1)), symbol)) : null;
+                    Add(names[i], i == names.Length - 1 ? symbol.Classification : target?.Classification ?? "namespace", SymbolLocation(target));
+                }
             }
             var generics = symbol.Syntax.Node switch { MethodDeclaration m => m.GenericParameters, ClassDeclaration c => c.GenericParameters, StructDeclaration s => s.GenericParameters, _ => null };
             if (generics?.Count > 0)
@@ -125,7 +137,7 @@ public sealed partial class EditorModel
                 if (i > 0) Add(", ", "punctuation");
                 var parameter = parameters[i];
                 if (parameter.IsConst) Keyword("const");
-                Type(parameter.Type); Add(" "); Add(parameter.Name, "parameter");
+                Type(parameter.Type); Add(" "); Add(parameter.Name, "parameter", navigable ? SymbolLocation(declarations.GetValueOrDefault(parameter)) : null);
             }
             if (symbol.Syntax.Node is ExternDeclaration { IsVariadic: true }) Add(parameters.Count == 0 ? "..." : ", ...", "punctuation");
             Add(")", "punctuation");
@@ -156,6 +168,12 @@ public sealed partial class EditorModel
         if (type == null) return [];
         var recorded = checker.GetType(symbol.Syntax.Node);
         if (TypeChecker.TypeName(recorded) != "<error>") type = recorded;
+        return TypeLayoutDetails(type);
+    }
+
+    private HoverDetail[] TypeLayoutDetails(TypeExpression type)
+    {
+        if (snapshot.Checker is not { } checker || snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error)) return [];
         try
         {
             // Resolve aliases and validate before querying; unknown alignment has
@@ -176,6 +194,55 @@ public sealed partial class EditorModel
             NamedTypeExpression n => n.TypeArguments.Count == 0 && (TypeChecker.IsPrimitive(n.Name) || checker.GetClass(n.Name) != null || checker.GetStruct(n.Name) != null || checker.GetInterface(n.Name) != null || checker.ResolveEnum(n) != null),
             _ => false
         };
+    }
+
+    // Shorten only if the visible type name uniquely denotes this declaration.
+    // Use the request location: imports at the declaration can differ from the caller's.
+    private string ShortType(string text, string? path, int offset)
+    {
+        if (path == null) return text;
+        var visible = Visible(path, offset).Where(s => IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration).ToArray();
+        var typeParameters = ContextParents(path, offset).SelectMany(n => n.Node switch
+        {
+            MethodDeclaration m => m.GenericParameters.Select(p => p.Name),
+            ClassDeclaration c => c.GenericParameters.Select(p => p.Name),
+            StructDeclaration st => st.GenericParameters.Select(p => p.Name),
+            _ => Enumerable.Empty<string>()
+        }).ToHashSet();
+        return System.Text.RegularExpressions.Regex.Replace(text, @"\b[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)+", match =>
+        {
+            string simple = match.Value.Split("::").Last();
+            var matches = visible.Where(s => s.Name == simple).DistinctBy(s => s.Qualified).ToArray();
+            return !typeParameters.Contains(simple) && matches.Length == 1 && matches[0].Qualified == match.Value ? simple : match.Value;
+        });
+    }
+
+    private object? CompoundTypeHover(string path, int offset, VisualStudioHover? presentation)
+    {
+        var ts = tokens[path];
+        int index = TokenAt(path, offset);
+        if (index < 0 || ts[index].Kind == TokenKind.Identifier || TypeChecker.IsPrimitive(ts[index].Text)) return null;
+        var syntax = nodes[path].Where(n => n.Node is TypeExpression && Contains(n, offset))
+            .OrderByDescending(n => n.Span.Length).FirstOrDefault();
+        if (syntax?.Node is not TypeExpression type || type is NamedTypeExpression && !type.IsReadOnlyValue) return null;
+        string text = ShortType(DisplayType(type), path, offset);
+        var parts = new List<DisplayPart>();
+        var lexed = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
+        int cursor = 0;
+        var context = symbols.FirstOrDefault(s => s.Syntax == syntax.Parent);
+        for (int i = 0; i < lexed.Length; i++)
+        {
+            var token = lexed[i];
+            if (token.Start > cursor) parts.Add(new("text", text[cursor..token.Start]));
+            int first = i;
+            while (first >= 2 && lexed[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
+            var target = token.Kind == TokenKind.Identifier ? TypeSymbol(string.Concat(lexed[first..(i + 1)].Select(t => t.Text)), context) : null;
+            parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind == TokenKind.Readonly ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : "punctuation"), token.Text, Target: SymbolLocation(target)));
+            cursor = token.End + 1;
+        }
+        var layout = TypeLayoutDetails(type);
+        return new HoverResult(new("markdown", "```gflat\n" + text + "\n```" + (layout.Length == 0 ? "" : "\n\n" + string.Join("  \n", layout.Select(d => d.Markdown)))),
+            Workspace.ToRange(syntax.Span), presentation?.Render(parts.ToArray(), layout, "type.public"));
     }
 
     private static string Glyph(Symbol symbol)

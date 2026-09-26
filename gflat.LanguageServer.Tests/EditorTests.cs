@@ -138,7 +138,7 @@ public class EditorTests
     public void PropertyHoverAndDefinitionUseTheSourceProperty()
     {
         var (model, path, offset, source) = Analyze("struct S { public int Count => 2; } int main() { S s = new S(); return s.Co|unt; }");
-        Assert.Contains("int S::Count", Json(model.Hover(path, offset)).ToString());
+        Assert.Contains("int S.Count", Json(model.Hover(path, offset)).ToString());
         var location = Json(model.Definition(path, offset));
         Assert.Equal(source.IndexOf("Count", StringComparison.Ordinal), location.GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
     }
@@ -248,6 +248,25 @@ public class EditorTests
         Assert.Contains(("From", "method"), classified);
         Assert.Contains(("count", "parameter"), classified);
         Assert.Equal(2, classified.Count(x => x == ("result", "variable")));
+    }
+
+    [Fact]
+    public void CapacityInAnEarlyReturnConditionIsAField()
+    {
+        var (model, path, _, source) = Analyze("struct String { nuint capacity; public void Reserve(nuint requested) { if (requested <= capacity) return; } } |");
+        var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
+        int column = 0;
+        var fields = new List<int>();
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            column += data[i + 1];
+            if (source.Substring(column, data[i + 2]) == "capacity")
+            {
+                Assert.Equal("property", EditorModel.TokenTypes[data[i + 3]]);
+                fields.Add(column);
+            }
+        }
+        Assert.Equal(2, fields.Count);
     }
 
     [Fact]

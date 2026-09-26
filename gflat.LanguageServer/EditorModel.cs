@@ -309,6 +309,8 @@ public sealed partial class EditorModel
     }
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null)
     {
+        var compound = CompoundTypeHover(path, offset, presentation);
+        if (compound != null) return compound;
         int index = TokenAt(path, offset);
         var symbol = index < 0 ? null : Resolve(path, index);
         if (symbol == null && index >= 0 && snapshot.Checker is { } literalChecker)
@@ -342,7 +344,7 @@ public sealed partial class EditorModel
                 Workspace.ToRange(tokens[path][index].Span), presentation?.Render([new("keyword", name)], layout, "struct.public"));
         }
         if (symbol == null) return null;
-        var parts = Signature(symbol, navigable: true);
+        var parts = Signature(symbol, navigable: true, hoverPath: path, hoverOffset: offset);
         if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
         HoverDetail[] details = LayoutDetails(symbol);
         if (symbol.Syntax.Node is MethodDeclaration hoveredMethod && snapshot.Checker is { } exceptionChecker &&

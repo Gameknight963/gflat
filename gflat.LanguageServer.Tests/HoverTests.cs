@@ -17,12 +17,57 @@ public class HoverTests
     }
 
     [Fact]
+    public void HoveringTheUnderlyingNameStillShowsTheUnderlyingLayout()
+    {
+        var text = Hover("struct S { int x; } void F(readonly(|S)*? p) {}").GetProperty("contents").GetProperty("value").GetString();
+        Assert.Contains("struct S", text);
+        Assert.Contains("**Size:** 4 bytes", text);
+    }
+
+    [Fact]
+    public void TypeNamesAreNotShortenedToShadowingGenericParameters()
+        => Assert.Contains("N::S", Hover("using N; namespace N { public struct S {} } N::S Ma|ke<S>() => new N::S();").GetProperty("contents").GetProperty("value").GetString());
+
+    [Theory]
+    [InlineData("struct S {} void F(read|only(S)*? p) {}", "readonly(S)*?", 8)]
+    [InlineData("struct S {} void F(readonly(S)|*? p) {}", "readonly(S)*?", 8)]
+    [InlineData("struct S {} void F(readonly(S)*|? p) {}", "readonly(S)*?", 8)]
+    [InlineData("struct S {} void F(S|^? p) {}", "S^?", 8)]
+    public void CompoundAnnotationsHaveTheirOwnHover(string source, string type, int size)
+    {
+        string text = Hover(source).GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("```gflat\n" + type + "\n```", text);
+        Assert.Contains($"**Size:** {size} bytes", text);
+    }
+
+    [Theory]
+    [InlineData("int Ma|ke() => 1;", "Make")]
+    [InlineData("struct S { public int fi|eld; }", "field")]
+    [InlineData("void F() { int lo|cal = 1; }", "local")]
+    [InlineData("void F(int va|lue) {}", "value")]
+    public void SymbolNamesNavigateToTheirDeclarations(string source, string name)
+    {
+        var hover = Hover(source, true);
+        var header = hover.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements");
+        var text = header.EnumerateArray().Single(e => e.GetProperty("_vs_type").GetString() == "ClassifiedTextElement");
+        var run = text.GetProperty("Runs").EnumerateArray().Single(r => r.GetProperty("Text").GetString() == name);
+        Assert.Equal(source.Replace("|", "").IndexOf(name, StringComparison.Ordinal), run.GetProperty("_gflat_target").GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("using N; namespace N { public struct S {} public S Make() => new S(); } void F() { Ma|ke(); }", "S N::Make()")]
+    [InlineData("namespace N { public struct S {} public S Make() => new S(); } void F() { N::Ma|ke(); }", "N::S N::Make()")]
+    [InlineData("using N; using Other; namespace N { public struct S {} public S Make() => new S(); } namespace Other { public struct S {} } void F() { N::Ma|ke(); }", "N::S N::Make()")]
+    public void ReturnTypesUseTheHoverLocationsImports(string source, string expected)
+        => Assert.Contains(expected, Hover(source).GetProperty("contents").GetProperty("value").GetString());
+
+    [Fact]
     public void ActualStandardStringFactoryUsesSourceTypeName()
     {
         string source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "EditorFixtures", "String.gf"));
         var result = Hover(source.Insert(source.IndexOf("From(", StringComparison.Ordinal) + 1, "|"));
         string text = result.GetProperty("contents").GetProperty("value").GetString()!;
-        Assert.Contains("std::String std::String::From(", text);
+        Assert.Contains("String String::From(", text);
         Assert.DoesNotContain("$", text);
     }
 
@@ -31,7 +76,7 @@ public class HoverTests
     {
         const string source = "namespace std { struct String { public static String Fr|om() => new String(); } }";
         var result = Hover(source, true);
-        Assert.Contains("std::String std::String::From()", result.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("String String::From()", result.GetProperty("contents").GetProperty("value").GetString());
         Assert.DoesNotContain("$", result.GetProperty("contents").GetProperty("value").GetString());
         var runs = result.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements")[1].GetProperty("Runs").EnumerateArray();
         var type = runs.First(r => r.GetProperty("Text").GetString() == "String" && r.GetProperty("_gflat_target").ValueKind == JsonValueKind.Object);

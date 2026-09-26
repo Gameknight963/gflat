@@ -399,6 +399,12 @@ namespace gflat
             Indented(() => node.TargetType.Accept(this));
         }
 
+        public void Visit(AlignofExpression node)
+        {
+            Print("AlignofExpression");
+            Indented(() => node.TargetType.Accept(this));
+        }
+
         public void Visit(NameofExpression node)
         {
             Print("NameofExpression");

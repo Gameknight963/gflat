@@ -470,3 +470,28 @@ Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal c
 ## Future work
 
 Additional target ABIs, verified out parameters, full ownership and partial moves, managed finalizers and moving collectors, reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.
+
+## Layout queries
+
+`sizeof(T)` returns the size in bytes and `alignof(T)` returns the required ABI
+alignment in bytes. Both produce an `int` compile-time constant, can appear in
+constant expressions and fixed-array lengths, and work through aliases and generic
+specialization. Like `sizeof`, `alignof` also accepts a simple variable name to query
+its declared type; it does not evaluate a value expression.
+
+For a class type these queries describe the complete object, including its vptr
+and padding. For `T*` and `T^` they describe the reference representation instead.
+An interface reference has two pointer-sized words but pointer alignment. Fixed
+arrays have their element type's alignment. `readonly(T)` preserves T's layout.
+Following the existing `sizeof(void) == 0` convention, `alignof(void)` is 1.
+Values follow the compilation target ABI, currently `x86_64-pc-windows-msvc`.
+
+```gflat
+struct Packet { public char tag; public long payload; }
+const int Alignment = alignof(Packet);
+int main() {
+    int[alignof(double)] scratch;
+    if (Alignment != 8 || sizeof(Packet) != 16) return 1;
+    return 0;
+}
+```

@@ -357,6 +357,9 @@ namespace gflat.ast
             {
                 return new CastExpression(CloneType(cast.TargetType), CloneNode(cast.Operand), cast.Line);
             }
+            if (node is AlignofExpression alignment)
+                return new AlignofExpression(CloneType(alignment.TargetType), alignment.Line);
+
             if (node is SizeofExpression sz)
             {
                 return new SizeofExpression(CloneType(sz.TargetType), sz.Line);

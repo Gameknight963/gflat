@@ -122,6 +122,7 @@ namespace gflat
         Operator,
         Base,
         Sizeof,
+        Alignof,
         Nameof,
         Throw,
         Throws,

@@ -1622,14 +1622,14 @@ namespace gflat
                 return new DefaultExpression(targetType, line);
             }
 
-            // sizeof expression
-            if (Check(TokenKind.Sizeof))
+            // Compile-time layout queries
+            if (Check(TokenKind.Sizeof) || Check(TokenKind.Alignof))
             {
-                Consume();
+                bool alignment = Consume().Kind == TokenKind.Alignof;
                 Expect(TokenKind.OpenParen);
                 TypeExpression targetType = ParseTypeExpression();
                 Expect(TokenKind.CloseParen);
-                return new SizeofExpression(targetType, line);
+                return alignment ? new AlignofExpression(targetType, line) : new SizeofExpression(targetType, line);
             }
 
             // nameof expression
@@ -1730,7 +1730,7 @@ namespace gflat
             TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
-            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or
             TokenKind.InterpolatedStringStart or
             TokenKind.Minus or TokenKind.Bang or TokenKind.Star or TokenKind.Ampersand or
             TokenKind.PlusPlus or TokenKind.MinusMinus;
@@ -1740,7 +1740,7 @@ namespace gflat
             TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
-            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Nameof or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or
             TokenKind.InterpolatedStringStart or
             TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
 

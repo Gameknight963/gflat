@@ -21,6 +21,7 @@ namespace gflat.comptime
         MethodDeclaration? ResolveFunctionForComptime(string name);
         bool TryLookupVariable(string name, out TypeExpression? varType);
         int GetTypeSize(TypeExpression type);
+        int GetTypeAlignment(TypeExpression type);
         string ExtractName(AstNode target);
     }
 }

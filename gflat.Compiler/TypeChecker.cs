@@ -1271,9 +1271,10 @@ namespace gflat
                 {
                     return GetStructAlignment(structInfo);
                 }
-                if (GetClass(named.Name) != null)
+                if (GetClass(named.Name) is ClassInfo classInfo)
                 {
-                    return TargetInfo.Default.PointerBytes;
+                    return classInfo.Fields.Aggregate(TargetInfo.Default.PointerBytes,
+                        (alignment, field) => Math.Max(alignment, GetTypeAlignment(field.Type)));
                 }
                 return named.Name switch
                 {
@@ -5149,10 +5150,13 @@ namespace gflat
             }
         }
 
-        public void Visit(SizeofExpression node)
+        public void Visit(SizeofExpression node) => VisitLayout(node, node.TargetType, false);
+        public void Visit(AlignofExpression node) => VisitLayout(node, node.TargetType, true);
+
+        private void VisitLayout(AstNode node, TypeExpression target, bool alignment)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
-            TypeExpression targetType = ResolveAlias(node.TargetType);
+            TypeExpression targetType = ResolveAlias(target);
             if (targetType is NamedTypeExpression named &&
                 !IsPrimitive(named.Name) &&
                 !_structs.ContainsKey(named.Name) &&
@@ -5165,7 +5169,7 @@ namespace gflat
                 targetType = ResolveAlias(varType);
             }
             ValidateTypeUsage(targetType, node.Line);
-            int size = GetTypeSize(targetType);
+            int size = alignment ? GetTypeAlignment(targetType) : GetTypeSize(targetType);
             RecordType(node, Int);
             ConstValue.Integer constVal = new ConstValue.Integer(size);
             _constValues[node] = constVal;

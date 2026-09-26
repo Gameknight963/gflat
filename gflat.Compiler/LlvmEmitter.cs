@@ -4106,6 +4106,19 @@ public partial class LlvmEmitter : IVisitor
         Push(size.ToString());
     }
 
+    public void Visit(AlignofExpression node)
+    {
+        if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
+        {
+            if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
+            {
+                return;
+            }
+        }
+        int size = _typeChecker.GetTypeAlignment(node.TargetType);
+        Push(size.ToString());
+    }
+
     public void Visit(NameofExpression node)
     {
         if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)

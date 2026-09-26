@@ -136,6 +136,7 @@ namespace gflat
             TokenKind.Abstract => "abstract",
             TokenKind.Base => "base",
             TokenKind.Sizeof => "sizeof",
+            TokenKind.Alignof => "alignof",
             TokenKind.Nameof => "nameof",
             TokenKind.InterpolatedStringStart => "$\"",
             TokenKind.InterpolatedStringEnd => "\"",

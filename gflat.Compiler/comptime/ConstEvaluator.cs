@@ -1260,10 +1260,13 @@ namespace gflat.comptime
         public void Visit(TryStatement node) => throw new ConstEvalException("Try statement is not supported at compile time", node.Line);
         public void Visit(CatchClause node) => throw new ConstEvalException("Catch clause is not supported at compile time", node.Line);
 
-        public void Visit(SizeofExpression node)
+        public void Visit(SizeofExpression node) => VisitLayout(node, node.TargetType, false);
+        public void Visit(AlignofExpression node) => VisitLayout(node, node.TargetType, true);
+
+        private void VisitLayout(AstNode node, TypeExpression target, bool alignment)
         {
             CheckSteps(node.Line);
-            TypeExpression targetType = _context.ResolveAlias(node.TargetType);
+            TypeExpression targetType = _context.ResolveAlias(target);
             if (targetType is NamedTypeExpression named &&
                 !TypeChecker.IsPrimitive(named.Name) &&
                 _context.GetStruct(named.Name) == null &&
@@ -1277,7 +1280,7 @@ namespace gflat.comptime
                     targetType = _context.ResolveAlias(varType);
                 }
             }
-            int size = _context.GetTypeSize(targetType);
+            int size = alignment ? _context.GetTypeAlignment(targetType) : _context.GetTypeSize(targetType);
             _currentValue = new ConstValue.Integer(size);
         }
 

@@ -3102,7 +3102,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void TypeChecker_MissingThrows_ThrowStatement_Throws()
+        public void TypeChecker_MissingThrows_ThrowStatement_AllowsTermination()
         {
             string code = """
                 void Foo()
@@ -3111,12 +3111,11 @@ namespace gflat.Tests
                 }
                 """;
 
-            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("function must be marked 'throws'", ex.Message);
+            CompilerTestHelper.Check(code);
         }
 
         [Fact]
-        public void TypeChecker_MissingThrows_CallingThrowingFunction_Throws()
+        public void TypeChecker_MissingThrows_CallingThrowingFunction_AllowsTermination()
         {
             string code = """
                 void Callee() throws
@@ -3130,8 +3129,7 @@ namespace gflat.Tests
                 }
                 """;
 
-            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("must be marked 'throws'", ex.Message);
+            CompilerTestHelper.Check(code);
         }
 
         [Fact]

@@ -1337,6 +1337,8 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassConstructor(string className, ConstructorDeclaration node)
     {
+        _currentFunctionIsThrowing = false;
+        _isInsideMain = false;
         _locals.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
@@ -1436,6 +1438,8 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassDefaultConstructor(string className)
     {
+        _currentFunctionIsThrowing = false;
+        _isInsideMain = false;
         _locals.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
@@ -1497,6 +1501,7 @@ public partial class LlvmEmitter : IVisitor
         _tempCounter = 0;
         _hasTerminated = false;
         _currentFunctionIsThrowing = false;
+        _isInsideMain = false;
         string? previousExit = _destructorExitLabel;
         _destructorExitLabel = NewLabel("destructor_exit");
 
@@ -1852,6 +1857,8 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructConstructor(string structName, ConstructorDeclaration node)
     {
+        _currentFunctionIsThrowing = false;
+        _isInsideMain = false;
         _locals.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
@@ -1898,6 +1905,8 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructDefaultConstructor(string structName)
     {
+        _currentFunctionIsThrowing = false;
+        _isInsideMain = false;
         _locals.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
@@ -1928,6 +1937,7 @@ public partial class LlvmEmitter : IVisitor
         _tempCounter = 0;
         _hasTerminated = false;
         _currentFunctionIsThrowing = false;
+        _isInsideMain = false;
         string? previousExit = _destructorExitLabel;
         _destructorExitLabel = NewLabel("destructor_exit");
 
@@ -4439,6 +4449,8 @@ public partial class LlvmEmitter : IVisitor
         int savedExpressionDepth = _expressionDepth;
         StringBuilder? savedTemporaryPrologue = _temporaryPrologue;
         bool savedThrowing = _currentFunctionIsThrowing;
+        bool savedInsideMain = _isInsideMain;
+        var savedTryStack = _emitterTryStack.ToArray();
         List<List<IDeferAction>> savedDeferScopes = new(_deferScopes);
 
         // Prepare lambda context
@@ -4452,6 +4464,8 @@ public partial class LlvmEmitter : IVisitor
         _expressionDepth = 0;
         _temporaryPrologue = null;
         _currentFunctionIsThrowing = false;
+        _isInsideMain = false;
+        _emitterTryStack.Clear();
         _deferScopes.Clear();
 
         string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitParamType(p.Type)} %{p.Name}"));
@@ -4517,6 +4531,9 @@ public partial class LlvmEmitter : IVisitor
         _expressionDepth = savedExpressionDepth;
         _temporaryPrologue = savedTemporaryPrologue;
         _currentFunctionIsThrowing = savedThrowing;
+        _isInsideMain = savedInsideMain;
+        _emitterTryStack.Clear();
+        foreach (var handler in savedTryStack.Reverse()) _emitterTryStack.Push(handler);
         _deferScopes.Clear();
         _deferScopes.AddRange(savedDeferScopes);
 
@@ -4562,6 +4579,10 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (!_currentFunctionIsThrowing)
         {
+            // A non-throws ABI cannot propagate an exception. Terminate here;
+            // do not unwind into callers or run language cleanup on this path.
+            if (_externNames.Add("exit")) EmitGlobal("declare void @exit(i32)");
+            Emit("    call void @exit(i32 1)");
             Emit("    unreachable");
             _hasTerminated = true;
         }

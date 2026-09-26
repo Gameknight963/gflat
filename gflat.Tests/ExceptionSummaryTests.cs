@@ -16,6 +16,14 @@ public class ExceptionSummaryTests
     private const string Types = "class First : Exception {} class Second : Exception {} ";
 
     [Fact]
+    public void GenericBodyDoesNotInheritCallersCatchScope()
+        => Assert.Equal(new[] { "First" }, Summary(Types + "void Fail<T>() throws { throw new* First(); } void Caught() { try { Fail<int>(); } catch {} } void Test() throws { Fail<int>(); }"));
+
+    [Fact]
+    public void TerminatingMethodHasNoOutgoingExceptions()
+        => Assert.Empty(Summary("void Test() { throw new* Exception(); }"));
+
+    [Fact]
     public void CollectsDistinctDirectThrows()
         => Assert.Equal(new[] { "First", "Second" }, Summary(Types + "void Test(bool b) throws { if (b) throw new* First(); throw new* Second(); }"));
 
@@ -41,11 +49,11 @@ public class ExceptionSummaryTests
 
     [Fact]
     public void InterfaceDispatchRemainsConservative()
-        => Assert.Equal(new[] { "Exception" }, Summary("interface I { void Run() throws; } void Test(I* value) throws { value.Run(); }"));
+        => Assert.Equal(new[] { TypeChecker.UnknownExceptionType }, Summary("interface I { void Run() throws; } void Test(I* value) throws { value.Run(); }"));
 
     [Fact]
     public void VirtualDispatchRemainsConservative()
-        => Assert.Equal(new[] { "Exception" }, Summary(Types + "class C { public virtual void Run() throws { throw new* First(); } } void Test(C* value) throws { value.Run(); }"));
+        => Assert.Equal(new[] { TypeChecker.UnknownExceptionType }, Summary(Types + "class C { public virtual void Run() throws { throw new* First(); } } void Test(C* value) throws { value.Run(); }"));
 
     [Fact]
     public void PlainInstanceCallsPropagateTheirImplementation()
@@ -57,7 +65,7 @@ public class ExceptionSummaryTests
 
     [Fact]
     public void UncheckedGenericBodyIsNotReportedAsNonThrowing()
-        => Assert.Equal(new[] { "Exception" }, Summary("void Test<T>() throws { throw new* Exception(); }"));
+        => Assert.Equal(new[] { TypeChecker.UnknownExceptionType }, Summary("void Test<T>() throws { throw new* Exception(); }"));
 
     [Fact]
     public void InstantiatedGenericCallPropagatesExceptions()

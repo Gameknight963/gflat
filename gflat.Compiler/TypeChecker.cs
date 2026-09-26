@@ -2436,6 +2436,7 @@ namespace gflat
                         }
                         AstNode? prevFunc = _currentFunction;
                         _currentFunction = method;
+                        using var exceptionScope = IsolateExceptionHandlers();
                         if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
@@ -2617,6 +2618,7 @@ namespace gflat
                         }
                         AstNode? prevFunc = _currentFunction;
                         _currentFunction = method;
+                        using var exceptionScope = IsolateExceptionHandlers();
                         if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
@@ -2796,6 +2798,7 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
+            using var exceptionScope = IsolateExceptionHandlers();
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidatePropertyAccessor(node);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
@@ -2835,6 +2838,7 @@ namespace gflat
 
         public void Visit(ConstructorDeclaration node)
         {
+            using var exceptionScope = IsolateExceptionHandlers();
             using var sourceContext = SourceContext.Enter(node.Span);
             if (_currentStruct == null && _currentClass == null)
             {
@@ -2932,6 +2936,7 @@ namespace gflat
 
         public void Visit(DestructorDeclaration node)
         {
+            using var exceptionScope = IsolateExceptionHandlers();
             using var sourceContext = SourceContext.Enter(node.Span);
             if (_currentClass == null && _currentStruct == null)
             {
@@ -5833,6 +5838,7 @@ namespace gflat
 
         public void Visit(LambdaExpression node)
         {
+            using var exceptionScope = IsolateExceptionHandlers();
             using var sourceContext = SourceContext.Enter(node.Span);
             int prevLoopDepth = _loopDepth;
             AstNode? previousFunction = _currentFunction;
@@ -6051,14 +6057,6 @@ namespace gflat
                         _directExceptions[method] = exceptions = new();
                     exceptions.Add(named.Name);
                     _exceptionSummaries = null;
-                    if (method.Name != "main" && !method.Throws)
-                    {
-                        throw new TypeCheckException("Unhandled exception: function must be marked 'throws' or exception must be caught in a try/catch block", node.Line);
-                    }
-                }
-                else
-                {
-                    throw new TypeCheckException("Unhandled exception: exception must be caught in a try/catch block", node.Line);
                 }
             }
         }
@@ -6156,31 +6154,8 @@ namespace gflat
             _throwingCalls.Add(node);
             RecordExceptionCall(node);
 
-            bool caught = false;
-            foreach (TryStatement tryStmt in _tryStack)
-            {
-                if (TryCatchesType(tryStmt, "Exception"))
-                {
-                    caught = true;
-                    break;
-                }
-            }
-
-            if (!caught)
-            {
-                if (_currentFunction is MethodDeclaration currentMethod)
-                {
-                    if (currentMethod.Name != "main" && !currentMethod.Throws)
-                    {
-                        throw new TypeCheckException($"Call to throwing function '{calleeName}' must be enclosed in a try/catch or the calling function must be marked 'throws'", node.Line);
-                    }
-                }
-                else if (_currentFunction != null)
-                {
-                    throw new TypeCheckException($"Call to throwing function '{calleeName}' must be enclosed in a try/catch block", node.Line);
-                }
-            }
         }
+
 
         private bool TryCatchesType(TryStatement tryStmt, string thrownTypeName)
         {

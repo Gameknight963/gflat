@@ -9,19 +9,26 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.LanguageServer.Client;
 using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
+using StreamJsonRpc;
 
 namespace gflat.VisualStudio;
 
 [Export(typeof(ILanguageClient))]
 [ContentType("gflat")]
-public sealed class GflatLanguageClient : ILanguageClient, IDisposable
+public sealed class GflatLanguageClient : ILanguageClient, ILanguageClientCustomMessage2, IDisposable
 {
     private Process? server;
+    private readonly HoverConnection hover;
+    [ImportingConstructor]
+    public GflatLanguageClient(HoverConnection hover) => this.hover = hover;
+    public object? MiddleLayer => null;
+    public object? CustomMessageTarget => null;
+    public Task AttachForCustomMessageAsync(JsonRpc rpc) { hover.Rpc = rpc; return Task.CompletedTask; }
     public string Name => "gflat";
     public IEnumerable<string> ConfigurationSections => Array.Empty<string>();
     // VS's built-in semantic token classifier recognizes the Roslyn classification
     // names. Other LSP clients receive the standard token legend by default.
-    public object? InitializationOptions => new { visualStudioClassifications = true, hoverIcons = HoverIcons.Catalog };
+    public object? InitializationOptions => new { visualStudioClassifications = true, hoverIcons = HoverIcons.Catalog, visualStudioNativeHover = true };
     public IEnumerable<string> FilesToWatch => new[] { "gflat-workspace.json", "**/*.gf", "**/*.gfproj", "**/*.props", "**/*.targets" };
     public bool ShowNotificationOnInitializeFailed => true;
     public event AsyncEventHandler<EventArgs>? StartAsync;
@@ -55,12 +62,14 @@ public sealed class GflatLanguageClient : ILanguageClient, IDisposable
     {
         if (StartAsync != null) await StartAsync.InvokeAsync(this, EventArgs.Empty);
     }
-    public Task OnServerInitializedAsync() => Task.CompletedTask;
+    public Task OnServerInitializedAsync() { hover.Ready = true; return Task.CompletedTask; }
     public Task<InitializationFailureContext?> OnServerInitializeFailedAsync(ILanguageClientInitializationInfo initializationState)
         => Task.FromResult<InitializationFailureContext?>(new InitializationFailureContext { FailureMessage = "gflat language server initialization failed. Try reinstalling the extension." });
 
     public void Dispose()
     {
+        hover.Ready = false;
+        hover.Rpc = null;
         var process = server;
         server = null;
         if (process == null) return;

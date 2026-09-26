@@ -17,6 +17,41 @@ public class HoverTests
     }
 
     [Fact]
+    public void ActualStandardStringFactoryUsesSourceTypeName()
+    {
+        string source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "EditorFixtures", "String.gf"));
+        var result = Hover(source.Insert(source.IndexOf("From(", StringComparison.Ordinal) + 1, "|"));
+        string text = result.GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("std::String std::String::From(", text);
+        Assert.DoesNotContain("$", text);
+    }
+
+    [Fact]
+    public void NamespacedReturnTypesAreReadableAndNavigable()
+    {
+        const string source = "namespace std { struct String { public static String Fr|om() => new String(); } }";
+        var result = Hover(source, true);
+        Assert.Contains("std::String std::String::From()", result.GetProperty("contents").GetProperty("value").GetString());
+        Assert.DoesNotContain("$", result.GetProperty("contents").GetProperty("value").GetString());
+        var runs = result.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements")[1].GetProperty("Runs").EnumerateArray();
+        var type = runs.First(r => r.GetProperty("Text").GetString() == "String" && r.GetProperty("_gflat_target").ValueKind == JsonValueKind.Object);
+        Assert.Equal(source.IndexOf("String", StringComparison.Ordinal), type.GetProperty("_gflat_target").GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("int F() => 1|23;", "int")]
+    [InlineData("float F() => 1|.5f;", "float")]
+    [InlineData("long F() => 1|23l;", "long")]
+    [InlineData("bool F() => tr|ue;", "bool")]
+    [InlineData("char F() => '|a';", "char")]
+    [InlineData("readonly(char)* F() => c\"he|llo\";", "readonly(char)*")]
+    public void LiteralsShowTheirCompilerTypeWithoutLayout(string source, string expected)
+    {
+        var hover = Hover(source);
+        Assert.Equal("```gflat\n" + expected + "\n```", hover.GetProperty("contents").GetProperty("value").GetString());
+    }
+
+    [Fact]
     public void NestedExceptionAndReturnTypesUseSourceSpelling()
     {
         string text = Hover("class Outer { public class Failure : Exception {} } Outer::Failure* Re|ad() throws { throw new* Outer::Failure(); }").GetProperty("contents").GetProperty("value").GetString()!;
@@ -99,7 +134,7 @@ public class HoverTests
         Assert.Equal(1, header[0].GetProperty("ImageId").GetProperty("Id").GetInt32());
         var runs = header[1].GetProperty("Runs").EnumerateArray().ToArray();
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Create" && r.GetProperty("ClassificationTypeName").GetString() == "method name");
-        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Result" && r.GetProperty("ClassificationTypeName").GetString() == "type");
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Result" && r.GetProperty("ClassificationTypeName").GetString() == "struct name");
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "count" && r.GetProperty("ClassificationTypeName").GetString() == "parameter name");
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "throws" && r.GetProperty("ClassificationTypeName").GetString() == "keyword");
         Assert.Contains("public static Result Factory::Create(int count) throws", result.GetProperty("contents").GetProperty("value").GetString());

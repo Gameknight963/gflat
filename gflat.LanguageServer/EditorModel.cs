@@ -311,6 +311,23 @@ public sealed partial class EditorModel
     {
         int index = TokenAt(path, offset);
         var symbol = index < 0 ? null : Resolve(path, index);
+        if (symbol == null && index >= 0 && snapshot.Checker is { } literalChecker)
+        {
+            var literal = nodes[path].Where(n => Contains(n, offset) && n.Node is LiteralExpression or PrefixedStringLiteralExpression or InterpolatedStringExpression)
+                .MinBy(n => n.Span.Length);
+            if (literal?.Parent?.Node is PrefixedStringLiteralExpression) literal = literal.Parent;
+            if (literal != null)
+            {
+                var literalType = literalChecker.GetType(literal.Node);
+                if (TypeChecker.TypeName(literalType) != "<error>")
+                {
+                    string name = DisplayType(literalType);
+                    var target = TypeSymbol(name);
+                    return new HoverResult(new("markdown", "```gflat\n" + name + "\n```"), Workspace.ToRange(literal.Span),
+                        presentation?.Render([new(TypeChecker.IsPrimitive(name) ? "keyword" : "type", name, Target: SymbolLocation(target))], [], "constant.public"));
+                }
+            }
+        }
         if (symbol == null && index >= 0 && TypeChecker.IsPrimitive(tokens[path][index].Text) && (tokens[path][index].Kind != TokenKind.Identifier || nodes[path].Any(n => n.Node is NamedTypeExpression && Contains(n, offset))))
         {
             string name = tokens[path][index].Text;
@@ -325,7 +342,7 @@ public sealed partial class EditorModel
                 Workspace.ToRange(tokens[path][index].Span), presentation?.Render([new("keyword", name)], layout, "struct.public"));
         }
         if (symbol == null) return null;
-        var parts = Signature(symbol);
+        var parts = Signature(symbol, navigable: true);
         if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
         HoverDetail[] details = LayoutDetails(symbol);
         if (symbol.Syntax.Node is MethodDeclaration hoveredMethod && snapshot.Checker is { } exceptionChecker &&
@@ -339,7 +356,7 @@ public sealed partial class EditorModel
                 {
                     bool unknown = exception == TypeChecker.UnknownExceptionType;
                     string name = unknown ? "Unknown exceptions" : exceptionChecker.DisplayName(exception);
-                    details = [.. details, new("", "  " + name, [new("text", "  "), new(unknown ? "text" : "class", name)])];
+                    details = [.. details, new("", "  " + name, [new("text", "  "), new(unknown ? "text" : "class", name, Target: unknown ? null : SymbolLocation(TypeSymbol(name, symbol)))])];
                 }
             }
         }

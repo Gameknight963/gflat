@@ -153,7 +153,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                             positionEncoding = "utf-16",
                             textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
                             completionProvider = new { triggerCharacters = new[] { ".", ":" } },
-                            hoverProvider = true, definitionProvider = true,
+                            hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true,
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } },
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
                         }, serverInfo = new { name = "gflat", version = "0.2.0" } });

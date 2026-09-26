@@ -8,7 +8,11 @@ Method hovers show the signature and an `Exceptions:` section listing possible o
 exceptions, one type per line. Caught exceptions and terminating non-`throws` boundaries
 do not appear as outgoing exceptions. Unknown dispatch targets are labeled `Unknown exceptions`.
 Type names in hover, completion, signature help, and editor diagnostics use source spelling,
-including nested types and generic specializations.
+including nested types and generic specializations. Literal hovers show the checked literal type.
+In Visual Studio, source-backed types in signatures and exception lists can be clicked to
+open their declarations. A small native Quick Info source attaches navigation callbacks
+to VS classified text runs; LSP still supplies the content and locations. Other clients
+continue to use standard LSP hover. Parameter icons use VS's shared Parameter moniker.
 Debugging is not implemented yet.
 Version 0.4.0 uses [MSBuild projects and CPS](PROJECTS.md) for integration into an existing solution.
 

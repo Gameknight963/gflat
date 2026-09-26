@@ -58,7 +58,20 @@ try {
     $exceptionHeader = @(@($hover.RawContent.Elements)[1].Runs)
     $exceptionRuns = @(@($hover.RawContent.Elements)[2].Runs)
     if (-not ($exceptionHeader | Where-Object { $_.Text -eq 'Exceptions:' -and [int]$_.Style -eq 0 })) { throw 'Exception heading was not plain text' }
-    if (-not ($exceptionRuns | Where-Object { $_.Text -eq 'Exception' -and $_.ClassificationTypeName -eq 'class name' })) { throw 'Exception type was not classified' }
-    Write-Host 'Rich hover decoded successfully by the installed Visual Studio SDK, including catalog icon and classified runs.'
+    if (-not ($exceptionRuns | Where-Object { $_.Text -eq 'Failure' -and $_.ClassificationTypeName -eq 'class name' })) { throw 'Exception type was not classified' }
+    $wire = [Newtonsoft.Json.Linq.JObject]::Parse([IO.File]::ReadAllText($CapturePath))
+    $script:navigationResult = $null
+    $navigate = [Action[string,int,int]] { param($path, $line, $column); $script:navigationResult = @($path, $line, $column) }
+    $render = $client.GetType('gflat.VisualStudio.HoverContent', $true).GetMethod('Create')
+    $native = $render.Invoke($null, @($wire['_vs_rawContent'], $navigate))
+    $link = @(@($native.Elements)[2].Runs) | Where-Object { $_.Text -eq 'Failure' }
+    if (-not $link.NavigationAction) { throw 'Native exception type is not navigable' }
+    $link.NavigationAction.Invoke()
+    $target = @($wire['_vs_rawContent']['Elements'][2]['Runs']) | Where-Object { $_['Text'].Value -eq 'Failure' }
+    $location = $target['_gflat_target']
+    if ($script:navigationResult[0] -ne ([Uri]([string]$location['uri'])).LocalPath -or
+        $script:navigationResult[1] -ne [int]$location['range']['start']['line'] -or
+        $script:navigationResult[2] -ne [int]$location['range']['start']['character']) { throw 'Hover link did not navigate to the source declaration' }
+    Write-Host 'Rich hover decoded successfully by the installed Visual Studio SDK, including catalog icon, classified runs, and native navigation callbacks.'
 }
 finally { [AppDomain]::CurrentDomain.remove_AssemblyResolve($resolver) }

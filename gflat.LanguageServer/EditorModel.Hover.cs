@@ -6,13 +6,33 @@ namespace gflat.LanguageServer;
 
 public sealed partial class EditorModel
 {
+    private Symbol? TypeSymbol(string name, Symbol? context = null)
+    {
+        if (context != null && new[] { context.Syntax }.Concat(Parents(context.Syntax)).Any(n => n.Node switch
+        {
+            MethodDeclaration m => m.GenericParameters.Any(p => p.Name == name),
+            ClassDeclaration c => c.GenericParameters.Any(p => p.Name == name),
+            StructDeclaration s => s.GenericParameters.Any(p => p.Name == name),
+            _ => false
+        })) return null;
+        var types = symbols.Where(s => IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration).ToArray();
+        var exact = types.FirstOrDefault(s => s.Qualified == name);
+        if (exact != null) return exact;
+        if (context?.NameSpan.Source is { } source)
+            return Visible(source.Path, context.NameSpan.Start).FirstOrDefault(s => (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration) && s.Name == name);
+        return null;
+    }
+
+    private static Location? SymbolLocation(Symbol? symbol) => symbol?.NameSpan.Source is not SourceFile source || source.Path.StartsWith('<')
+        ? null : new(Workspace.FileUri(source.Path), Workspace.ToRange(symbol.NameSpan));
+
     private string DisplayType(TypeExpression type) => snapshot.Checker?.DisplayTypeName(type) ?? TypeChecker.TypeName(type).Replace(".", "::");
     private string Detail(Symbol symbol) => string.Concat(Signature(symbol).Select(p => p.Text));
 
-    private DisplayPart[] Signature(Symbol symbol)
+    private DisplayPart[] Signature(Symbol symbol, bool navigable = false)
     {
         var parts = new List<DisplayPart>();
-        void Add(string text, string kind = "text") { if (text.Length > 0) parts.Add(new(kind, text)); }
+        void Add(string text, string kind = "text", Location? target = null) { if (text.Length > 0) parts.Add(new(kind, text, Target: target)); }
         void Keyword(string word) { Add(word, "keyword"); Add(" "); }
         void Type(TypeExpression type)
         {
@@ -26,7 +46,17 @@ public sealed partial class EditorModel
                 string kind = TypeChecker.IsPrimitive(token.Text) ? "keyword" : token.Kind == TokenKind.Identifier
                     ? i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.DoubleColon ? "namespace" : "type"
                     : char.IsLetter(token.Text.FirstOrDefault()) ? "keyword" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation";
-                Add(text[token.Start..(token.End + 1)], kind);
+                Location? target = null;
+                if (navigable && token.Kind == TokenKind.Identifier)
+                {
+                    int first = i;
+                    while (first >= 2 && tokens[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
+                    string name = string.Concat(tokens[first..(i + 1)].Select(t => t.Text));
+                    var declaration = TypeSymbol(name, symbol);
+                    target = SymbolLocation(declaration);
+                    if (declaration != null) kind = declaration.Classification;
+                }
+                Add(text[token.Start..(token.End + 1)], kind, target);
                 cursor = token.End + 1;
             }
             Add(text[cursor..]);
@@ -37,7 +67,8 @@ public sealed partial class EditorModel
             for (int i = 0; i < names.Length; i++)
             {
                 if (i > 0) Add("::", "punctuation");
-                Add(names[i], i == names.Length - 1 ? symbol.Classification : symbol.Owner != null && i == names.Length - 2 ? "type" : "namespace");
+                var target = navigable ? TypeSymbol(string.Join("::", names.Take(i + 1)), symbol) : null;
+                Add(names[i], i == names.Length - 1 ? symbol.Classification : target?.Classification ?? (symbol.Owner != null && i == names.Length - 2 ? "type" : "namespace"), SymbolLocation(target));
             }
             var generics = symbol.Syntax.Node switch { MethodDeclaration m => m.GenericParameters, ClassDeclaration c => c.GenericParameters, StructDeclaration s => s.GenericParameters, _ => null };
             if (generics?.Count > 0)

@@ -84,6 +84,24 @@ public class HoverTests
     }
 
     [Theory]
+    [InlineData("struct", "struct name")]
+    [InlineData("class", "class name")]
+    public void ReturnTypeAndContainingTypeUseTheSameClassification(string kind, string classification)
+    {
+        string source = $"namespace std {{ {kind} String {{ public static String Fr|om() => new String(); }} }}";
+        var result = Hover(source, true);
+        var header = result.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements");
+        var text = header.EnumerateArray().Single(e => e.GetProperty("_vs_type").GetString() == "ClassifiedTextElement");
+        var names = text.GetProperty("Runs").EnumerateArray().Where(r => r.GetProperty("Text").GetString() == "String").ToArray();
+        Assert.Equal(2, names.Length);
+        Assert.All(names, run =>
+        {
+            Assert.Equal(classification, run.GetProperty("ClassificationTypeName").GetString());
+            Assert.Equal(source.IndexOf("String", StringComparison.Ordinal), run.GetProperty("_gflat_target").GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
+        });
+    }
+
+    [Theory]
     [InlineData("int F() => 1|23;", "int")]
     [InlineData("float F() => 1|.5f;", "float")]
     [InlineData("long F() => 1|23l;", "long")]

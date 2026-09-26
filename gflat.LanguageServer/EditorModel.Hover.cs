@@ -68,7 +68,8 @@ public sealed partial class EditorModel
             {
                 string owner = ShortType(symbol.Owner, hoverPath, hoverOffset);
                 // An instance member uses the same separator as an instance access.
-                Add(owner, "type", navigable ? SymbolLocation(TypeSymbol(symbol.Owner, symbol)) : null);
+                var ownerSymbol = TypeSymbol(symbol.Owner, symbol);
+                Add(owner, ownerSymbol?.Classification ?? "type", navigable ? SymbolLocation(ownerSymbol) : null);
                 Add(symbol.Static ? "::" : ".", "punctuation");
                 Add(symbol.Name, symbol.Classification, navigable ? SymbolLocation(symbol) : null);
             }

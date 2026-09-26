@@ -29,7 +29,7 @@ This example uses std; see the runnable
 - Structs, classes, interfaces, generics, properties, and indexers.
 - Pointers, readonly access, custom allocators, and deterministic destruction.
 - Exceptions propagated through return values, with explicit `throws` boundaries.
- > Unhandled exceptions in a nonthrowing method result in an unsuccessful exit, this is intentional
+   > Unhandled exceptions in a nonthrowing method result in an unsuccessful exit, this is intentional
 - Custom string literal prefixes and string interpolation. For example, create a `std::String` with the 's' prefix: `std::s"cool"`
 - Multiple source files and MSBuild `.gfproj` projects.
 - A language server and Visual Studio integration with diagnostics, completion,

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="gflat.LanguageSupport.72c57259-8ade-48ad-9c74-1ec89cb65515" Version="0.14.1" Language="en-US" Publisher="gflat" />
+    <Identity Id="gflat.LanguageSupport.72c57259-8ade-48ad-9c74-1ec89cb65515" Version="0.14.2" Language="en-US" Publisher="gflat" />
     <DisplayName>gflat Language Support</DisplayName>
     <Description xml:space="preserve">Completion, hover, signature help, go to definition, semantic highlighting, compiler diagnostic ranges, and MSBuild gflat projects using Visual Studio's Common Project System.</Description>
   </Metadata>

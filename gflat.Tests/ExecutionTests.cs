@@ -186,12 +186,14 @@ namespace gflat.Tests
                     v.x = 100;
                     v.y = 200;
                     v.Add(50, 50);
-                    return v.Sum();
+                    // Keep the process exit status portable; check the full value here.
+                    if (v.Sum() != 400) return 1;
+                    return 0;
                 }
                 """;
 
             var result = CompilerTestHelper.Run(code);
-            Assert.Equal(400, result.ExitCode);
+            Assert.Equal(0, result.ExitCode);
         }
 
         [Fact]
@@ -415,12 +417,14 @@ namespace gflat.Tests
                         defer result = result * 10 + 2;
                         defer result = result * 10 + 3;
                     }
-                    return result;
+                    // Keep the process exit status portable; check the full value here.
+                    if (result != 321) return 1;
+                    return 0;
                 }
                 """;
 
             var result = CompilerTestHelper.Run(code);
-            Assert.Equal(321, result.ExitCode);
+            Assert.Equal(0, result.ExitCode);
         }
 
         [Fact]
@@ -4111,12 +4115,14 @@ namespace gflat.Tests
                     }
                     // LIFO order: s3 (add 3), then defer (add 2), then s1 (add 1)
                     // 0 -> *10 + 3 = 3 -> *10 + 2 = 32 -> *10 + 1 = 321
-                    return state;
+                    // Keep the process exit status portable; check the full value here.
+                    if (state != 321) return 1;
+                    return 0;
                 }
                 """;
 
             ExecutionResult result = CompilerTestHelper.Run(code);
-            Assert.Equal(321, result.ExitCode);
+            Assert.Equal(0, result.ExitCode);
         }
 
         [Fact]

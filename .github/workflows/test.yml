@@ -1,5 +1,7 @@
 name: compiler
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
 jobs:
   compiler-x64:
     name: compiler (${{ matrix.os }}, O${{ matrix.optimization }})
@@ -47,9 +49,49 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Assign automatic VSIX build number
+        shell: pwsh
+        run: ./build/stamp-vsix.ps1 -RunNumber ${{ github.run_number }} -Attempt ${{ github.run_attempt }}
       - run: ./editors/VisualStudio/build.ps1
       - run: ./editors/VisualStudio/test-package.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: gflat-visual-studio
           path: editors/VisualStudio/bin/Release/net472/*.vsix
+          retention-days: 90
+          if-no-files-found: error
+  nightly-bundles:
+    name: bundle (${{ matrix.runtime }})
+    needs: [compiler-x64, visual-studio-extension]
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            runtime: win-x64
+            artifact-path: artifacts/nightly/win-x64/
+          - os: ubuntu-24.04
+            runtime: linux-x64
+            artifact-path: artifacts/nightly/gflat-linux-x64.tar.gz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Select Linux toolchain
+        if: runner.os == 'Linux'
+        run: |
+          clang-18 --version
+          echo "GFLAT_CLANG=clang-18" >> "$GITHUB_ENV"
+      - name: Package and smoke-test compiler bundle
+        shell: pwsh
+        run: ./build/package-nightly.ps1 -Runtime ${{ matrix.runtime }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gflat-${{ matrix.runtime }}
+          path: ${{ matrix.artifact-path }}
+          retention-days: 90
+          if-no-files-found: error

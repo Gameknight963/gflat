@@ -45,6 +45,11 @@
     <Compile Include="GflatQuickInfo.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="GflatBuildProperties.cs" />
+    <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
+    <Content Include="../../LICENSES/MSBuild.Locator.txt"><Link>Licenses/MSBuild.Locator.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
+    <Content Include="../../THIRD_PARTY_NOTICES.md"><Link>THIRD_PARTY_NOTICES.md</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
+    <Content Include="obj/notices/*"><Link>Licenses/dotnet/%(Filename)%(Extension)</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
+    <Content Include="obj/BUILD-INFO.json"><Link>BUILD-INFO.json</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>

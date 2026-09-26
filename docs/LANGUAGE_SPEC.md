@@ -354,7 +354,7 @@ Literal operators have no implicit instance (`this`), but retain access to their
 
 ## String interpolation
 
-```gflat
+```gflat std
 using std;
 
 int main()
@@ -373,7 +373,7 @@ including qualified syntax such as `std::s$"{42}"`. Unprefixed `$"..."` and `c$"
 not supported. Implementing a literal operator alone does not opt into interpolation.
 Its containing/result type must implement the global prelude interface:
 
-```gflat
+```text
 interface IInterpolatedString
 {
     void AppendLiteral(readonly(char)* data, nuint length) throws;
@@ -409,7 +409,9 @@ before the next hole; temporary receiver objects remain alive through that appen
 also runs if append throws. A partial destination is destroyed when conversion or append
 fails. A conversion that throws before returning remains responsible for its own partial
 allocation. Completed results follow normal owned-value return, scope, and temporary cleanup
-rules. Throwing factory/conversion/append calls require the usual `throws` or `try/catch`.
+rules. Local catches handle matching exceptions. Unhandled factory/conversion/append
+exceptions propagate from `throws` functions and terminate the program at a non-`throws`
+function boundary.
 
 This version does not define alignment, format specifiers (`{value:format}`), raw strings,
 implicit interpolation-to-type conversions, or compile-time interpolation.

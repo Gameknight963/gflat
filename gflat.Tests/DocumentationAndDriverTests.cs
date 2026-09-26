@@ -8,9 +8,14 @@ public class DocumentationAndDriverTests
     public void EveryNormativeExampleCompiles()
     {
         string document = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "LANGUAGE_SPEC.md"));
-        var examples = Regex.Matches(document, @"```gflat\r?\n(.*?)```", RegexOptions.Singleline);
+        var examples = Regex.Matches(document, @"```gflat(?<stdlib> std)?\r?\n(?<code>.*?)```", RegexOptions.Singleline);
         Assert.NotEmpty(examples);
-        foreach (Match example in examples) Compiler.Emit(example.Groups[1].Value);
+        foreach (Match example in examples)
+        {
+            string code = example.Groups["code"].Value;
+            if (example.Groups["stdlib"].Success) Compiler.Emit(InterpolationTests.Sources(code));
+            else Compiler.Emit(code);
+        }
     }
 
     [Fact]

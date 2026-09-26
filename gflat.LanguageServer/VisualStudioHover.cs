@@ -1,9 +1,14 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace gflat.LanguageServer;
 
-public sealed record DisplayPart(string Kind, string Text);
+public sealed record DisplayPart(string Kind, string Text, bool Bold = false);
+public sealed record HoverDetail(string Label, string Value)
+{
+    public string Markdown => Label.Length == 0 ? Value : $"**{Label}:** {Value}";
+    public DisplayPart[] Parts => Label.Length == 0 ? [new("text", Value)] : [new("text", Label + ":", true), new("text", " " + Value)];
+}
 public sealed record Markup(string Kind, string Value);
 public sealed record HoverResult(Markup Contents, TextRange Range,
     [property: JsonPropertyName("_vs_rawContent")] object? RawContent = null);
@@ -22,7 +27,7 @@ public sealed class VisualStudioHover
                 icons[icon.Name] = (parsed, number);
         }
     }
-    public object Render(DisplayPart[] signature, string[] details, string glyph)
+    public object Render(DisplayPart[] signature, HoverDetail[] details, string glyph)
     {
         var header = new List<object>();
         if (icons.TryGetValue(glyph, out var image) || icons.TryGetValue(glyph.Split('.')[0] + ".public", out image))
@@ -31,7 +36,7 @@ public sealed class VisualStudioHover
                 ["ImageId"] = new Dictionary<string, object> { ["_vs_type"] = "ImageId", ["Guid"] = image.Guid, ["Id"] = image.Id }
             });
         header.Add(Text(signature));
-        return Container(1, new[] { Container(0, header) }.Concat(details.Select(d => Text([new("text", d)]))).ToArray());
+        return Container(1, new[] { Container(0, header) }.Concat(details.Select(d => Text(d.Parts))).ToArray());
     }
     private static object Container(int style, IEnumerable<object> children) => new Dictionary<string, object>
     { ["_vs_type"] = "ContainerElement", ["Style"] = style, ["Elements"] = children.ToArray() };
@@ -39,7 +44,7 @@ public sealed class VisualStudioHover
     {
         ["_vs_type"] = "ClassifiedTextElement",
         ["Runs"] = parts.Select(p => new Dictionary<string, object> {
-            ["_vs_type"] = "ClassifiedTextRun", ["ClassificationTypeName"] = Classification(p.Kind), ["Text"] = p.Text, ["Style"] = 0
+            ["_vs_type"] = "ClassifiedTextRun", ["ClassificationTypeName"] = Classification(p.Kind), ["Text"] = p.Text, ["Style"] = p.Bold ? 1 : 0
         }).ToArray()
     };
     private static string Classification(string kind) => kind switch

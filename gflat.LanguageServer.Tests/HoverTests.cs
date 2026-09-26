@@ -17,6 +17,39 @@ public class HoverTests
     }
 
     [Fact]
+    public void LayoutRowsUseBoldLabelsInNativeHover()
+    {
+        var rows = Hover("struct Pa|ir { public int a; }", true).GetProperty("_vs_rawContent").GetProperty("Elements");
+        Assert.Equal(3, rows.GetArrayLength());
+        Assert.Equal("Size:", rows[1].GetProperty("Runs")[0].GetProperty("Text").GetString());
+        Assert.Equal(1, rows[1].GetProperty("Runs")[0].GetProperty("Style").GetInt32());
+        Assert.Equal("Alignment:", rows[2].GetProperty("Runs")[0].GetProperty("Text").GetString());
+        Assert.Equal(1, rows[2].GetProperty("Runs")[0].GetProperty("Style").GetInt32());
+    }
+
+    [Fact]
+    public void HoverShowsOtherOverloadsAndSelectedSignature()
+    {
+        var result = Hover("int Read(int x) => x; int Read(bool x) => 2; int Read(char x) => 3; int main() => Re|ad(true);", true);
+        string text = result.GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("Read(bool x)", text);
+        Assert.Contains("+2 overloads", text);
+        Assert.Equal("+2 overloads", result.GetProperty("_vs_rawContent").GetProperty("Elements")[1].GetProperty("Runs")[0].GetProperty("Text").GetString());
+    }
+
+    [Fact]
+    public void HoverDoesNotCountPrivateOrUnrelatedOverloads()
+    {
+        string text = Hover("class A { public static int F(int x) => x; public static int F(bool x) => 2; private static int F(char x) => 3; } class B { public static int F(int x) => x; } int main() => A::|F(1);").GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("+1 overload", text);
+        Assert.DoesNotContain("+2", text);
+    }
+
+    [Fact]
+    public void SingleMethodHasNoOverloadFooter()
+        => Assert.DoesNotContain("overload", Hover("int Re|ad(int x) => x;").GetProperty("contents").GetProperty("value").GetString());
+
+    [Fact]
     public void RichHoverUsesClassifiedRunsAndCatalogIcons()
     {
         var result = Hover("struct Result {} class Factory { public static Result Cr|eate(int count) throws => new Result(); }", true);
@@ -38,14 +71,14 @@ public class HoverTests
     {
         var result = Hover("struct Pa|ir { public int left; public double right; }");
         Assert.False(result.TryGetProperty("_vs_rawContent", out _));
-        Assert.Contains("Size: 16 bytes; alignment: 8 bytes.", result.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("**Size:** 16 bytes  \n**Alignment:** 8 bytes", result.GetProperty("contents").GetProperty("value").GetString());
     }
 
     [Theory]
-    [InlineData("class Wi|de { public extralong field; }", "Object size: 32 bytes; alignment: 16 bytes.")]
-    [InlineData("class Wide { public extralong field; } void F(Wide* po|inter) {}", "Size: 8 bytes; alignment: 8 bytes.")]
-    [InlineData("interface I {} void F(I* po|inter) {}", "Size: 16 bytes; alignment: 8 bytes.")]
-    [InlineData("int main() { do|uble value = 0; return 0; }", "Size: 8 bytes; alignment: 8 bytes.")]
+    [InlineData("class Wi|de { public extralong field; }", "**Object size:** 32 bytes  \n**Alignment:** 16 bytes")]
+    [InlineData("class Wide { public extralong field; } void F(Wide* po|inter) {}", "**Size:** 8 bytes  \n**Alignment:** 8 bytes")]
+    [InlineData("interface I {} void F(I* po|inter) {}", "**Size:** 16 bytes  \n**Alignment:** 8 bytes")]
+    [InlineData("int main() { do|uble value = 0; return 0; }", "**Size:** 8 bytes  \n**Alignment:** 8 bytes")]
     public void LayoutDistinguishesObjectsPointersAndPrimitives(string source, string expected)
         => Assert.Contains(expected, Hover(source).GetProperty("contents").GetProperty("value").GetString());
 

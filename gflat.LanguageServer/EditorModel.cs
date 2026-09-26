@@ -314,19 +314,25 @@ public sealed partial class EditorModel
         {
             string name = tokens[path][index].Text;
             var type = new NamedTypeExpression(name, null, 0);
-            string[] layout = [];
+            HoverDetail[] layout = [];
             if (snapshot.Checker is { } checker)
             {
-                try { layout = [$"Size: {checker.GetTypeSize(type)} bytes; alignment: {checker.GetTypeAlignment(type)} bytes."]; }
+                try { layout = [new("Size", $"{checker.GetTypeSize(type)} bytes"), new("Alignment", $"{checker.GetTypeAlignment(type)} bytes")]; }
                 catch (CompileExceptions.TypeCheckException) { /* Some reserved type names have no concrete layout. */ }
             }
-            return new HoverResult(new("markdown", "```gflat\n" + name + "\n```\n\n" + string.Join("\n\n", layout)),
+            return new HoverResult(new("markdown", "```gflat\n" + name + "\n```\n\n" + string.Join("  \n", layout.Select(d => d.Markdown))),
                 Workspace.ToRange(tokens[path][index].Span), presentation?.Render([new("keyword", name)], layout, "struct.public"));
         }
         if (symbol == null) return null;
         var parts = Signature(symbol);
-        string[] details = LayoutDetails(symbol);
-        string markdown = "```gflat\n" + string.Concat(parts.Select(p => p.Text)) + "\n```" + (details.Length == 0 ? "" : "\n\n" + string.Join("\n\n", details));
+        HoverDetail[] details = LayoutDetails(symbol);
+        if (symbol.Parameters != null)
+        {
+            int count = Candidates(path, offset, index).Where(s => s.Parameters != null && s.Qualified == symbol.Qualified)
+                .Append(symbol).DistinctBy(s => s.Detail).Count() - 1;
+            if (count > 0) details = [.. details, new("", $"+{count} " + (count == 1 ? "overload" : "overloads"))];
+        }
+        string markdown = "```gflat\n" + string.Concat(parts.Select(p => p.Text)) + "\n```" + (details.Length == 0 ? "" : "\n\n" + string.Join("  \n", details.Select(d => d.Markdown)));
         return new HoverResult(new("markdown", markdown), Workspace.ToRange(tokens[path][index].Span),
             presentation?.Render(parts, details, Glyph(symbol)));
     }

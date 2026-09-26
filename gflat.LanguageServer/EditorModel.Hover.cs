@@ -111,7 +111,7 @@ public sealed partial class EditorModel
         return parts.ToArray();
     }
 
-    private string[] LayoutDetails(Symbol symbol)
+    private HoverDetail[] LayoutDetails(Symbol symbol)
     {
         // Do not query incomplete or open layouts: the checker may not have
         // visited later declarations after an error, or specialized a template.
@@ -130,7 +130,7 @@ public sealed partial class EditorModel
             if (!Known(type)) return [];
             int size = checker.GetTypeSize(type), alignment = checker.GetTypeAlignment(type);
             string label = type is NamedTypeExpression named && checker.GetClass(named.Name) != null ? "Object size" : "Size";
-            return [$"{label}: {size} bytes; alignment: {alignment} bytes."];
+            return [new(label, $"{size} bytes"), new("Alignment", $"{alignment} bytes")];
         }
         catch (TypeCheckException) { return []; }
 

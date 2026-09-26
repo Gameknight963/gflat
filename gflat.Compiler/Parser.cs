@@ -1011,7 +1011,7 @@ namespace gflat
                         isFnPtr = false;
                     }
 
-                    if (isFnPtr)
+                    if (isFnPtr && _diagnostics.Count == diagMark)
                     {
                         type = new FunctionPointerTypeExpression(type, paramTypes, isManaged, nullable, line);
                     }

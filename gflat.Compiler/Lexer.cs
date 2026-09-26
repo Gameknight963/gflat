@@ -258,7 +258,6 @@ public class Lexer
             "sbyte" => TokenKind.SByte,
             "short" => TokenKind.Short,
             "ushort" => TokenKind.UShort,
-            "string" => TokenKind.String,
             "extern" => TokenKind.Extern,
             "defer" => TokenKind.Defer,
             "alias" => TokenKind.Alias,

@@ -112,7 +112,6 @@ namespace gflat
         SByte,
         Short,
         UShort,
-        String,
         InterpolatedStringStart,
         InterpolatedStringEnd,
         InterpolatedStringSegment,

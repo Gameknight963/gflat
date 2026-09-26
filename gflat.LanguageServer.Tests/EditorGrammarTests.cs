@@ -10,6 +10,15 @@ namespace gflat.LanguageServer.Tests;
 public class EditorGrammarTests
 {
     [Fact]
+    public void StringIsNotHighlightedAsABuiltInType()
+    {
+        const string line = "int string = 0;";
+        var token = Assert.Single(Grammar().TokenizeLine(line).Tokens,
+            t => t.StartIndex <= 4 && t.EndIndex > 4);
+        Assert.DoesNotContain(token.Scopes, s => s.StartsWith("storage.type", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ReturnAfterAConditionDoesNotTurnItsOperandIntoAType()
     {
         const string line = "if (requested <= capacity) return;";

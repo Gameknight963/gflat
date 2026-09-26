@@ -903,7 +903,7 @@ namespace gflat
                 if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
                     TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
                     TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or TokenKind.ExtraLong or
-                    TokenKind.String or TokenKind.Void)
+                    TokenKind.Void)
                 {
                     name = Current.Text;
                     Consume();
@@ -1119,7 +1119,7 @@ namespace gflat
             TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
             TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
             TokenKind.Char or TokenKind.ExtraLong or
-            TokenKind.String or TokenKind.Void or TokenKind.Identifier or TokenKind.Readonly;
+            TokenKind.Void or TokenKind.Identifier or TokenKind.Readonly;
 
         private bool IsVariableDeclaration()
         {
@@ -1714,7 +1714,7 @@ namespace gflat
                     return true;
                 return named.Name is "byte" or "sbyte" or "short" or "ushort" or
                     "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or
-                    "float" or "double" or "bool" or "char" or "extralong" or "string" or "void";
+                    "float" or "double" or "bool" or "char" or "extralong" or "void";
             }
             return false;
         }
@@ -1723,7 +1723,7 @@ namespace gflat
             kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
             TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
             TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or
-            TokenKind.ExtraLong or TokenKind.String or TokenKind.Void;
+            TokenKind.ExtraLong or TokenKind.Void;
 
         private static bool IsCastOperandStarter(TokenKind kind) =>
             kind is TokenKind.Identifier or

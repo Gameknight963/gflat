@@ -675,8 +675,6 @@ namespace gflat
         private static NamedTypeExpression Char => new NamedTypeExpression("char", null, 0);
         private static PointerTypeExpression CharPtr => new PointerTypeExpression(Char, false, 0);
 
-        // leaving this commented till std::String is a thing
-        //private static NamedTypeExpression String => new NamedTypeExpression("string", null, 0);
         private static NamedTypeExpression Void => new NamedTypeExpression("void", null, 0);
         private static NamedTypeExpression Null => new NamedTypeExpression("null", null, 0);
         public static NamedTypeExpression Error => new NamedTypeExpression("<error>", null, 0);
@@ -1245,7 +1243,7 @@ namespace gflat
         public static bool IsPrimitive(string name) =>
             name is "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or
                     "long" or "ulong" or "nint" or "nuint" or "float" or "double" or
-                    "bool" or "char" or "extralong" or "string" or "void";
+                    "bool" or "char" or "extralong" or "void";
 
         public int GetTypeAlignment(TypeExpression type)
         {
@@ -4945,7 +4943,7 @@ namespace gflat
             {
                 ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line), node.Line);
                 RequireManagedAllocator(node.Line);
-                if (resolvedType is NamedTypeExpression scalar && IsPrimitive(scalar.Name) && scalar.Name is not ("void" or "string"))
+                if (resolvedType is NamedTypeExpression scalar && IsPrimitive(scalar.Name) && scalar.Name != "void")
                 {
                     if (node.Arguments.Count > 1)
                         throw new TypeCheckException("Managed scalar allocation accepts zero or one initializer", node.Line);

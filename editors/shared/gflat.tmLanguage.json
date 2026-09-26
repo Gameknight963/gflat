@@ -93,7 +93,7 @@
     },
     {
       "name": "storage.type.gflat",
-      "match": "\\b(void|int|float|double|bool|char|long|extralong|uint|ulong|nint|nuint|byte|sbyte|short|ushort|string|class|struct|interface|enum)\\b"
+      "match": "\\b(void|int|float|double|bool|char|long|extralong|uint|ulong|nint|nuint|byte|sbyte|short|ushort|class|struct|interface|enum)\\b"
     },
     {
       "name": "storage.modifier.gflat",
@@ -292,7 +292,7 @@
         },
         {
           "name": "storage.type.gflat",
-          "match": "\\b(void|int|float|double|bool|char|long|extralong|uint|ulong|nint|nuint|byte|sbyte|short|ushort|string|class|struct|interface|enum)\\b"
+          "match": "\\b(void|int|float|double|bool|char|long|extralong|uint|ulong|nint|nuint|byte|sbyte|short|ushort|class|struct|interface|enum)\\b"
         },
         {
           "name": "entity.name.type.gflat",

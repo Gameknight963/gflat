@@ -812,7 +812,6 @@ public partial class LlvmEmitter : IVisitor
                 "bool" => "i1",
                 "char" => "i8",
                 "void" => "void",
-                "string" => "i8*",
                 _ => $"%{named.Name}"
             };
         }

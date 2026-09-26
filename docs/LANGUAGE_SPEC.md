@@ -18,6 +18,11 @@ Identifiers contain ASCII letters, digits, and underscores and cannot begin with
 
 Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Prefixed interpolation uses `s$"text {expression}"`; doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
 
+There is no built-in `string` type or keyword. Plain `"text"` literals have fixed
+`char` array type, `c"text"` gives a `readonly(char)*` to static null-terminated
+storage, and the standard library's `s"text"` creates an owning `std::String`.
+The identifier `string` is available for user declarations.
+
 The following EBNF describes the core expression/type grammar; declaration modifiers, generics, interfaces, and operators are detailed below. Repetition is `{ ... }`, optional syntax is `[ ... ]`.
 
 ```ebnf

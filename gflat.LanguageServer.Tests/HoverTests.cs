@@ -234,6 +234,10 @@ public class HoverTests
         => Assert.Contains("{ get; private set; }", Hover("struct S { public int Co|unt { get; private set; } }").GetProperty("contents").GetProperty("value").GetString());
 
     [Fact]
-    public void ReservedStringKeywordDoesNotInventALayoutOrCrashHover()
-        => Assert.DoesNotContain("bytes", Hover("str|ing value;").GetProperty("contents").GetProperty("value").GetString());
+    public void UndeclaredStringHasNoInventedHover()
+        => Assert.Equal(JsonValueKind.Null, Hover("str|ing value;").ValueKind);
+
+    [Fact]
+    public void UserDefinedStringHasItsActualStructLayout()
+        => Assert.Contains("**Size:** 4 bytes", Hover("struct string { public int value; } str|ing item;").GetProperty("contents").GetProperty("value").GetString());
 }

@@ -126,7 +126,6 @@ namespace gflat
             TokenKind.UShort => "ushort",
             TokenKind.UIntLiteral => "0u",
             TokenKind.ULongLiteral => "0ul",
-            TokenKind.String => "string",
             TokenKind.Global => "global",
             TokenKind.Operator => "operator",
             TokenKind.Virtual => "virtual",

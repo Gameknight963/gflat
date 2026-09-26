@@ -1,10 +1,12 @@
 # gflat
 
-An experimental compiled language with C#-inspired syntax, explicit pointers,
-scope-based destruction, and native code generation through LLVM IR and Clang.
+A compiled language with C#-inspired syntax, pointers,
+scope-based destruction, and native code generation through LLVM
 
 **Work in progress.** The language, standard library, compiler, and project format
-can change without notice. There are no stable releases or compatibility promises.
+can change without notice. Consider currently nightly releases as "demos"
+
+Also this readme might be out of date
 
 ```gflat
 using std;
@@ -22,25 +24,31 @@ int main()
 This example uses std; see the runnable
 [interpolation project](examples/interpolation/interpolation.gfproj).
 
-## What works today
+## What works
 
 - Structs, classes, interfaces, generics, properties, and indexers.
 - Pointers, readonly access, custom allocators, and deterministic destruction.
 - Exceptions propagated through return values, with explicit `throws` boundaries.
-- Custom string literal prefixes and string interpolation.
+ > Unhandled exceptions in a nonthrowing method result in an unsuccessful exit, this is intentional
+- Custom string literal prefixes and string interpolation. For example, create a `std::String` with the 's' prefix: `std::s"cool"`
 - Multiple source files and MSBuild `.gfproj` projects.
 - A language server and Visual Studio integration with diagnostics, completion,
   syntax highlighting, navigation, and rich hovers.
-- Native Windows x64 and Linux x64 builds, tested at O0 and O2.
+- Native Windows x64 and Linux x64 builds
 
-The standard library is small and incomplete. Visual Studio debugging is not
-implemented. Other architectures and cross-compilation are not supported.
 
-## Download the latest development build
+## _Maybe_ in the future
+
+ - Generators?
+ - Reflection? (compile time)
+ - Random important features it's missing
+ - Probably a package manager
+ - More editors support (vs code probably)
+
+## Download
 
 These links select the latest successful `master` workflow using
-[nightly.link](https://github.com/oprypin/nightly.link). Builds happen on pushes,
-not on a release schedule; no tags are required.
+[nightly.link](https://github.com/oprypin/nightly.link). Builds happen on pushes, there's no release schedule, remember I just decided to make this public because why not
 
 | Download | Contents |
 | --- | --- |
@@ -48,25 +56,16 @@ not on a release schedule; no tags are required.
 | [Linux x64](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-linux-x64.zip) | The same bundle, wrapped in a `.tar.gz` to preserve executable permissions |
 | [Visual Studio extension](https://nightly.link/Gameknight963/gflat/workflows/test.yml/master/gflat-visual-studio.zip) | VSIX for Visual Studio 2022 17.14+ / Visual Studio 2026, x64 |
 
-Public links require a public repository and a successful build containing these
-artifacts. While the repository is private, use the artifacts on the
-[Actions page](https://github.com/Gameknight963/gflat/actions/workflows/test.yml)
-with an authorized GitHub account. Artifacts expire after 90 days; if development
-pauses longer than that, rerun the workflow or build from source.
-
 ### Requirements
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), including MSBuild.
 - Clang and the native platform linker/C development libraries.
   - Windows: Visual Studio's **Desktop development with C++** workload and
-    **C++ Clang tools for Windows**, or an equivalent LLVM/MSVC toolchain.
+    **C++ Clang Compiler for Windows**, or an equivalent LLVM/MSVC toolchain.
   - Linux: Ubuntu 24.04 is tested, using Clang 18 and the system C toolchain.
     For example: `sudo apt install clang-18 build-essential`.
-- Set `GFLAT_CLANG` to the Clang executable if it is not on PATH. On Windows the
-  compiler also searches Visual Studio installations.
-
-Compiler bundles use the installed .NET runtime. The VSIX bundles its own compiler,
-language server, and runtime; `.gfproj` builds still need the SDK and native toolchain.
+   > Note: I am developing gflat on Windows, Linux support may be spotty atm
+- Set `GFLAT_CLANG` to the Clang executable if it is not on PATH. On Windows the compiler also searches Visual Studio installations.
 
 After extracting the Windows ZIP, run from its directory:
 
@@ -87,7 +86,7 @@ Keep std and the `build` directory together; example projects use relative impor
 
 For Visual Studio, extract and install the VSIX, restart VS, then open a `.gfproj`
 or add it to an existing solution. The VSIX build number increases automatically
-so newer builds can replace older ones; it is not a language stability version.
+ONLY so newer builds can replace older ones; it is not a language version.
 
 ## Build from source
 
@@ -123,5 +122,5 @@ For a source build, use `git rev-parse HEAD`.
 
 ## License
 
-[MIT](LICENSE). Bundled dependencies retain their own licenses; see
-[third-party notices](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE). Bundled dependencies retain their own licenses. See
+[third-party notices](THIRD_PARTY_NOTICES.md)

@@ -127,13 +127,29 @@ public class InterpolationTests
         => Assert.ThrowsAny<TypeCheckException>(() => Compiler.Check(Sources("using std; int main() { " + expression + "; return 0; }")));
 
     [Fact]
-    public void DestinationMustOptInAndThrowingCallsCannotEscapeUnmarkedFunctions()
+    public void DestinationMustOptIn()
     {
         Assert.Contains("IInterpolatedString", Assert.Throws<TypeCheckException>(() => Compiler.Check("""
             struct Plain { public static Plain operator p""(readonly(char)* p, nuint n) { return new Plain(); } }
             int main() { p$"x"; return 0; }
             """)).Message);
-        Assert.Contains("throws", Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using std; String F() { return s$\"{1}\"; }"))).Message);
+
+    }
+
+    [Fact]
+    public void UnhandledInterpolationConversionTerminatesAtNonThrowingBoundary()
+    {
+        var result = Run("""
+            using std;
+            extern int putchar(int c);
+            struct Broken : IStringConvertible {
+                public readonly char* ToString() throws { throw new* Exception(); }
+            }
+            String F() { Broken b = new Broken(); return s$"{b}"; }
+            int main() { try { F(); } catch { putchar(67); } putchar(88); return 0; }
+            """);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
     }
 
     [Fact]

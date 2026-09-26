@@ -154,8 +154,17 @@ public class StringLiteralOperatorTests
     }
 
     [Fact]
-    public void ThrowingFactoryRequiresThrowsOrCatch()
-        => Assert.Contains("throws", Assert.Throws<TypeCheckException>(() => Compiler.Check("class S { public static S operator s\"\"(readonly(char)* p, nuint n) throws { throw new* Exception(); } } S make() { return s\"abc\"; }")).Message);
+    public void UnhandledThrowingFactoryTerminatesAtNonThrowingBoundary()
+    {
+        var result = CompilerTestHelper.Run("""
+            extern int putchar(int c);
+            class S { public static S operator s""(readonly(char)* p, nuint n) throws { throw new* Exception(); } }
+            S make() { return s"abc"; }
+            int main() { try { make(); } catch { putchar(67); } putchar(88); return 0; }
+            """);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
 
     [Fact]
     public void ShortCircuitOnlyDestroysConstructedTemporaries()

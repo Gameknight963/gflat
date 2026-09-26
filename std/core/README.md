@@ -46,3 +46,52 @@ for fallible construction; the language does not yet support throwing constructo
 `Formatting.gf` supplies allocated decimal conversions for integer types, and
 text conversions for booleans and characters. Floating-point conversions live in
 `../libc/Formatting.gf`.
+
+## Spans
+
+`Span<T>` and `ReadOnlySpan<T>` borrow contiguous storage without allocating or
+freeing it. Include both `Span.gf` and `ReadOnlySpan.gf`, or reference `std.gfproj`.
+Lengths and indices use `nuint`.
+
+```gflat
+using std;
+
+int main()
+{
+    int[3] values = [10, 20, 30];
+    Span<int> items = new Span<int>(values, 3);
+    Span<int> tail = items.Slice(1);
+    tail[(nuint)0] = 42; // Also changes values[1].
+    ReadOnlySpan<int> view = items.AsReadOnly();
+    if (view[(nuint)1] != 42) return 1;
+    return 0;
+}
+```
+
+- Construct from a non-null pointer and element count; the caller must provide
+  that many valid, initialized elements. The count is not inferred or verified.
+- The parameterless constructor creates an empty view with null `Data`.
+- `Length` and `IsEmpty` describe the view. Indexing checks `index < Length`.
+- `Slice(start)` and `Slice(start, count)` borrow part of the same buffer. Invalid
+  ranges throw; empty slices are valid, including a slice at `Length`. Empty
+  slices are normalized to null `Data`.
+- Copying a span copies its pointer and length, not the elements.
+- Indexers return elements by value. Use copyable element types; owning values
+  such as `String` cannot be implicitly copied through an indexer. Use pointers
+  to such objects when appropriate. An indexer is not a reference return.
+- `Span<T>.AsReadOnly()` borrows the same elements through a readonly pointer.
+  `ReadOnlySpan<T>` has no setter and returns elements through `readonly(T)`,
+  preserving deep readonly for pointer-containing types. A `readonly(Span<T>)`
+  permits metadata access and `AsReadOnly`; use that readonly view for indexing
+  and slicing. The mutable span indexer and `Data` require a mutable receiver.
+- `Data` is nullable and bypasses bounds checking. `Span<T>` exposes a mutable
+  pointer; `ReadOnlySpan<T>` exposes a pointer to readonly elements.
+
+The caller must keep the underlying storage alive. Do not return a span into a
+local array or use a span after its owner is destroyed or reallocates its buffer.
+Readonly views observe changes made through other mutable views; they are not
+snapshots. Bounds checks cannot detect a dangling pointer or an incorrect count.
+
+For a string view, use
+`new ReadOnlySpan<char>(text.Data, text.Length)`. Counts include embedded nulls,
+exclude the trailing terminator, and measure UTF-8 bytes, not Unicode characters.

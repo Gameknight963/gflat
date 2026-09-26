@@ -282,9 +282,10 @@ public sealed partial class EditorModel
         int end = index < ts.Length && ts[index].Kind == TokenKind.Identifier && ts[index].Start <= offset ? ts[index].End + 1 : offset;
         var range = Workspace.ToRange(sources[path].Span(start, end - start));
         bool member = index > 0 && ts[index - 1].Kind is TokenKind.Dot or TokenKind.DoubleColon;
-        var items = Candidates(path, offset, index).Where(s => s.Syntax.Node is not ConstructorDeclaration)
+        var completionContext = CompletionContext(path, index);
+        var items = Candidates(path, offset, index).Where(s => s.Syntax.Node is not ConstructorDeclaration && completionContext.Allows(s))
             .DistinctBy(s => s.Name).Select(s => (object)new { label = s.Name, kind = s.Kind, detail = s.Detail, textEdit = new { range, newText = s.Name } }).ToList();
-        if (!member)
+        if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
             string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "const", "weak", "replace"];

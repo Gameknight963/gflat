@@ -1,10 +1,51 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using gflat.LanguageServer;
 
 namespace gflat.LanguageServer.Tests;
 
 public class EditorTests
 {
+    [Theory]
+    [InlineData("class Child : | {}", true)]
+    [InlineData("class Child : |", true)]
+    [InlineData("struct Child : | {}", false)]
+    [InlineData("class Child : Base, | {}", false)]
+    [InlineData("class Child<T> : | {}", true)]
+    public void InheritanceCompletionOnlyOffersValidKinds(string declaration, bool allowsBase)
+    {
+        var (model, path, offset, _) = Analyze("class Base {} interface I {} struct Value {} int Helper() => 1; " + declaration);
+        var labels = Labels(model.Completion(path, offset));
+        Assert.Contains("I", labels);
+        Assert.Equal(allowsBase, labels.Contains("Base"));
+        foreach (string invalid in new[] { "Child", "Value", "Helper", "int", "void", "class", "return", "readonly" })
+            Assert.DoesNotContain(invalid, labels);
+    }
+
+    [Fact]
+    public void QualifiedInheritanceFiltersNamespaceMembers()
+    {
+        var (model, path, offset, _) = Analyze("namespace Lib { public interface I {} public struct Value {} public int Helper() => 1; } struct Child : Lib::| {}");
+        Assert.Equal(new[] { "I" }, Labels(model.Completion(path, offset)));
+    }
+
+    [Fact]
+    public void InheritanceDoesNotSuggestAlreadyListedInterface()
+    {
+        var (model, path, offset, _) = Analyze("interface I {} interface J {} struct Child : I, | {}");
+        var labels = Labels(model.Completion(path, offset));
+        Assert.Contains("J", labels);
+        Assert.DoesNotContain("I", labels);
+    }
+
+    [Fact]
+    public void UsingCompletionOnlyOffersNamespaces()
+    {
+        var (model, path, offset, _) = Analyze("namespace Lib {} struct Value {} using |;");
+        var items = Json(model.Completion(path, offset)).GetProperty("items").EnumerateArray().ToArray();
+        Assert.Contains(items, item => item.GetProperty("label").GetString() == "Lib");
+        Assert.All(items, item => Assert.Equal(9, item.GetProperty("kind").GetInt32()));
+    }
+
     [Fact]
     public void CompletionReplacesTheWholeIdentifierWhenEditingItsMiddle()
     {

@@ -122,7 +122,7 @@ public static class Workspace
                     // Prelude failures are still visible on a real document, never as invalid file URIs.
                     if (path.StartsWith('<')) path = snapshots[0].Path;
                     output.TryAdd(path, new());
-                    output[path].Add(Convert(diagnostic));
+                    output[path].Add(Convert(diagnostic) with { Message = analysis.Checker?.DisplayDiagnostic(diagnostic.Message) ?? diagnostic.Message });
                 }
             }
             catch (Exception error)

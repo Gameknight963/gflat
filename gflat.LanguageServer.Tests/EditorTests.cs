@@ -5,6 +5,27 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorTests
 {
+    [Fact]
+    public void CompletionDetailsUseReadableGenericAndNestedTypes()
+    {
+        var (model, path, offset, _) = Analyze("class Outer { public class Inner {} } struct Box<T> { public T value; } Box<int> Read(Outer::Inner* value) => new Box<int>(); void Use() { Re| }");
+        var item = Json(model.Completion(path, offset)).GetProperty("items").EnumerateArray().Single(i => i.GetProperty("label").GetString() == "Read");
+        string detail = item.GetProperty("detail").GetString()!;
+        Assert.Contains("Box<int>", detail);
+        Assert.Contains("Outer::Inner*", detail);
+        Assert.DoesNotContain("$", detail);
+        Assert.DoesNotContain("Outer.Inner", detail);
+    }
+
+    [Fact]
+    public void SignatureHelpUsesReadableTypesInBothSignatureAndParameters()
+    {
+        var (model, path, offset, _) = Analyze("class Outer { public class Inner {} } struct Box<T> { public T value; } Box<int> Read(Outer::Inner* value) => new Box<int>(); void Use() { Read(|new* Outer::Inner()); }");
+        var signature = Json(model.SignatureHelp(path, offset)).GetProperty("signatures")[0];
+        Assert.Contains("Box<int>", signature.GetProperty("label").GetString());
+        Assert.Equal("Outer::Inner* value", signature.GetProperty("parameters")[0].GetProperty("label").GetString());
+    }
+
     [Theory]
     [InlineData("class Child : | {}", true)]
     [InlineData("class Child : |", true)]

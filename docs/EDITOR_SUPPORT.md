@@ -4,6 +4,11 @@ The Visual Studio extension provides live compiler diagnostics, syntax highlight
 bracket matching, automatic bracket/quote closing, selection surrounding, block
 indentation, and line/block comment commands. Version 0.10.0 adds scope/member completion,
 hover, signature help, go to definition, and semantic highlighting through the built-in LSP UI.
+Method hovers show the signature and an `Exceptions:` section listing possible outgoing
+exceptions, one type per line. Caught exceptions and terminating non-`throws` boundaries
+do not appear as outgoing exceptions. Unknown dispatch targets are labeled `Unknown exceptions`.
+Type names in hover, completion, signature help, and editor diagnostics use source spelling,
+including nested types and generic specializations.
 Debugging is not implemented yet.
 Version 0.4.0 uses [MSBuild projects and CPS](PROJECTS.md) for integration into an existing solution.
 

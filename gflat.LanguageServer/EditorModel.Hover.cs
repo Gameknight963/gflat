@@ -6,14 +6,17 @@ namespace gflat.LanguageServer;
 
 public sealed partial class EditorModel
 {
-    private static DisplayPart[] Signature(Symbol symbol)
+    private string DisplayType(TypeExpression type) => snapshot.Checker?.DisplayTypeName(type) ?? TypeChecker.TypeName(type).Replace(".", "::");
+    private string Detail(Symbol symbol) => string.Concat(Signature(symbol).Select(p => p.Text));
+
+    private DisplayPart[] Signature(Symbol symbol)
     {
         var parts = new List<DisplayPart>();
         void Add(string text, string kind = "text") { if (text.Length > 0) parts.Add(new(kind, text)); }
         void Keyword(string word) { Add(word, "keyword"); Add(" "); }
         void Type(TypeExpression type)
         {
-            string text = TypeChecker.TypeName(type);
+            string text = DisplayType(type);
             var tokens = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
             int cursor = 0;
             for (int i = 0; i < tokens.Length; i++)

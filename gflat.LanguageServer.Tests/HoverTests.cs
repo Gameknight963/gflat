@@ -17,12 +17,34 @@ public class HoverTests
     }
 
     [Fact]
+    public void NestedExceptionAndReturnTypesUseSourceSpelling()
+    {
+        string text = Hover("class Outer { public class Failure : Exception {} } Outer::Failure* Re|ad() throws { throw new* Outer::Failure(); }").GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("Outer::Failure* Read() throws;", text);
+        Assert.Contains("Exceptions:  \n  Outer::Failure", text);
+        Assert.DoesNotContain("Outer.Failure", text);
+        Assert.DoesNotContain("derived types", text);
+    }
+
+    [Fact]
+    public void GenericReturnTypesUseSourceSpelling()
+    {
+        string text = Hover("struct Box<T> { public T value; } Box<int> Re|ad() => new Box<int>();").GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("Box<int> Read()", text);
+        Assert.DoesNotContain("$", text);
+    }
+
+    [Fact]
+    public void TerminatingMethodDoesNotAdvertiseOutgoingExceptions()
+        => Assert.DoesNotContain("Exceptions:", Hover("void Ru|n() { throw new* Exception(); }").GetProperty("contents").GetProperty("value").GetString());
+
+    [Fact]
     public void HoverShowsEscapingExceptionsWithClassifiedTypes()
     {
         var result = Hover("class Failure : Exception {} void Fail() throws { throw new* Failure(); } void Ru|n() throws { Fail(); }", true);
-        Assert.Contains("**May throw:** Failure (or derived types)", result.GetProperty("contents").GetProperty("value").GetString());
-        var runs = result.GetProperty("_vs_rawContent").GetProperty("Elements")[1].GetProperty("Runs").EnumerateArray().ToArray();
-        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "May throw:" && r.GetProperty("Style").GetInt32() == 1);
+        Assert.Contains("Exceptions:  \n  Failure", result.GetProperty("contents").GetProperty("value").GetString());
+        var runs = result.GetProperty("_vs_rawContent").GetProperty("Elements")[2].GetProperty("Runs").EnumerateArray().ToArray();
+        Assert.Equal(0, result.GetProperty("_vs_rawContent").GetProperty("Elements")[1].GetProperty("Runs")[0].GetProperty("Style").GetInt32());
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Failure" && r.GetProperty("ClassificationTypeName").GetString() == "class name");
     }
 
@@ -31,7 +53,7 @@ public class HoverTests
     [InlineData("void Ru|n() { try { throw new* Exception(); } catch {} }")]
     [InlineData("void Ru|n() throws { Missing(); throw new* Exception(); }")]
     public void EmptyCaughtOrIncompleteAnalysisDoesNotInventExceptionDetails(string code)
-        => Assert.DoesNotContain("May throw", Hover(code).GetProperty("contents").GetProperty("value").GetString());
+        => Assert.DoesNotContain("Exceptions:", Hover(code).GetProperty("contents").GetProperty("value").GetString());
 
     [Fact]
     public void LayoutRowsUseBoldLabelsInNativeHover()

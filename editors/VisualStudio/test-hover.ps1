@@ -55,8 +55,9 @@ try {
     $runs = @($elements[1].Runs)
     if (-not ($runs | Where-Object { $_.Text -eq 'Read' -and $_.ClassificationTypeName -eq 'method name' })) { throw 'Method name was not classified' }
     if (-not ($runs | Where-Object { $_.Text -eq 'throws' -and $_.ClassificationTypeName -eq 'keyword' })) { throw 'Throws was not classified' }
-    $exceptionRuns = @(@($hover.RawContent.Elements)[1].Runs)
-    if (-not ($exceptionRuns | Where-Object { $_.Text -eq 'May throw:' -and [int]$_.Style -eq 1 })) { throw 'Exception heading was not bold' }
+    $exceptionHeader = @(@($hover.RawContent.Elements)[1].Runs)
+    $exceptionRuns = @(@($hover.RawContent.Elements)[2].Runs)
+    if (-not ($exceptionHeader | Where-Object { $_.Text -eq 'Exceptions:' -and [int]$_.Style -eq 0 })) { throw 'Exception heading was not plain text' }
     if (-not ($exceptionRuns | Where-Object { $_.Text -eq 'Exception' -and $_.ClassificationTypeName -eq 'class name' })) { throw 'Exception type was not classified' }
     Write-Host 'Rich hover decoded successfully by the installed Visual Studio SDK, including catalog icon and classified runs.'
 }

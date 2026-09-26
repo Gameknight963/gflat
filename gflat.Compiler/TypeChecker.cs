@@ -850,6 +850,7 @@ namespace gflat
             }
 
             string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            _displayNames[mangledName] = DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             if (_structs.ContainsKey(mangledName))
             {
                 return new NamedTypeExpression(mangledName, null, line);
@@ -890,6 +891,7 @@ namespace gflat
             }
 
             string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            _displayNames[mangledName] = DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             if (_classes.ContainsKey(mangledName))
             {
                 return new NamedTypeExpression(mangledName, null, line);
@@ -942,6 +944,7 @@ namespace gflat
 
             string definitionNamespace = GetFunctionNamespace(genericDef);
             string mangledName = (definitionNamespace.Length > 0 ? definitionNamespace + "$" : "") + $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            _displayNames[mangledName] = (definitionNamespace.Length > 0 ? definitionNamespace + "::" : "") + DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             if (_globalScope.Functions.TryGetValue(mangledName, out MethodDeclaration? existing))
             {
                 return existing;

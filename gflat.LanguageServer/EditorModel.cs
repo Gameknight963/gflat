@@ -15,7 +15,6 @@ public sealed partial class EditorModel
         string Namespace, string? Owner, Syntax? Scope, TypeExpression? Type, bool Static, TokenKind Access)
     {
         public string Qualified => Scope != null ? Name : Join(Owner ?? Namespace, Name);
-        public string Detail => string.Concat(Signature(this).Select(part => part.Text));
         public IReadOnlyList<Parameter>? Parameters => Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null };
     }
     private readonly AnalysisSnapshot snapshot;
@@ -87,7 +86,7 @@ public sealed partial class EditorModel
                 if (ts[i].Kind == TokenKind.Identifier) references[ts[i]] = ResolveCore(path, i);
     }
 
-    private static string ParameterText(Parameter p) => $"{(p.IsConst ? "const " : "")}{TypeChecker.TypeName(p.Type)} {p.Name}";
+    private string ParameterText(Parameter p) => $"{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}";
     private static string Join(string left, string right) => left.Length == 0 ? right : left + "::" + right;
     private static IEnumerable<Syntax> Parents(Syntax node) { for (var p = node.Parent; p != null; p = p.Parent) yield return p; }
     private static bool IsType(AstNode node) => node is ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration;
@@ -285,7 +284,7 @@ public sealed partial class EditorModel
         bool member = index > 0 && ts[index - 1].Kind is TokenKind.Dot or TokenKind.DoubleColon;
         var completionContext = CompletionContext(path, index);
         var items = Candidates(path, offset, index).Where(s => s.Syntax.Node is not ConstructorDeclaration && completionContext.Allows(s))
-            .DistinctBy(s => s.Name).Select(s => (object)new { label = s.Name, kind = s.Kind, detail = s.Detail, textEdit = new { range, newText = s.Name } }).ToList();
+            .DistinctBy(s => s.Name).Select(s => (object)new { label = s.Name, kind = s.Kind, detail = Detail(s), textEdit = new { range, newText = s.Name } }).ToList();
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
@@ -327,6 +326,7 @@ public sealed partial class EditorModel
         }
         if (symbol == null) return null;
         var parts = Signature(symbol);
+        if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
         HoverDetail[] details = LayoutDetails(symbol);
         if (symbol.Syntax.Node is MethodDeclaration hoveredMethod && snapshot.Checker is { } exceptionChecker &&
             !snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
@@ -334,17 +334,19 @@ public sealed partial class EditorModel
             var exceptions = exceptionChecker.GetPossibleExceptions(hoveredMethod);
             if (exceptions.Count > 0)
             {
-                var exceptionParts = exceptions.SelectMany((name, i) => i == 0
-                    ? new[] { new DisplayPart("class", name) }
-                    : new[] { new DisplayPart("punctuation", ", "), new DisplayPart("class", name) }).ToArray();
-                details = [.. details, new("May throw", string.Join(", ", exceptions) + " (or derived types)",
-                    [.. exceptionParts, new("text", " (or derived types)")])];
+                details = [.. details, new("", "Exceptions:")];
+                foreach (string exception in exceptions)
+                {
+                    bool unknown = exception == TypeChecker.UnknownExceptionType;
+                    string name = unknown ? "Unknown exceptions" : exceptionChecker.DisplayName(exception);
+                    details = [.. details, new("", "  " + name, [new("text", "  "), new(unknown ? "text" : "class", name)])];
+                }
             }
         }
         if (symbol.Parameters != null)
         {
             int count = Candidates(path, offset, index).Where(s => s.Parameters != null && s.Qualified == symbol.Qualified)
-                .Append(symbol).DistinctBy(s => s.Detail).Count() - 1;
+                .Append(symbol).DistinctBy(Detail).Count() - 1;
             if (count > 0) details = [.. details, new("", $"+{count} " + (count == 1 ? "overload" : "overloads"))];
         }
         string markdown = "```gflat\n" + string.Concat(parts.Select(p => p.Text)) + "\n```" + (details.Length == 0 ? "" : "\n\n" + string.Join("  \n", details.Select(d => d.Markdown)));
@@ -374,7 +376,7 @@ public sealed partial class EditorModel
         if (candidates.Length == 0) return null;
         var selected = Resolve(path, nameIndex);
         int active = Math.Max(0, Array.IndexOf(candidates, selected));
-        return new { signatures = candidates.Select(s => new { label = s.Detail, parameters = s.Parameters!.Select(p => new { label = ParameterText(p) }).ToArray() }).ToArray(), activeSignature = active, activeParameter = call.Commas };
+        return new { signatures = candidates.Select(s => new { label = Detail(s), parameters = s.Parameters!.Select(p => new { label = ParameterText(p) }).ToArray() }).ToArray(), activeSignature = active, activeParameter = call.Commas };
     }
     public object SemanticTokens(string path, TextRange? range = null)
     {

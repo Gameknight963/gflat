@@ -57,7 +57,7 @@
       ]
     },
     {
-      "match": "\\b(class|struct|interface|enum)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "match": "\\b(class|struct|interface|enum)\\s+((?!(?:return|throw|if|else|while|for|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)",
       "captures": {
         "1": {
           "name": "storage.type.gflat"
@@ -116,7 +116,7 @@
       "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=[A-Za-z0-9_ \\t:<>,()*^?\\[\\]]*\\boperator\\b)"
     },
     {
-      "match": "\\b((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+([A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:<[A-Za-z0-9_ \\t:,<>*^?\\[\\]]+>)?\\s*\\()",
+      "match": "\\b((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+((?!(?:return|throw|if|else|while|for|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:<[A-Za-z0-9_ \\t:,<>*^?\\[\\]]+>)?\\s*\\()",
       "captures": {
         "1": {
           "patterns": [
@@ -131,7 +131,7 @@
       }
     },
     {
-      "match": "\\b((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+([A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:[;=,){\\[]|=>|$))",
+      "match": "\\b((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\s+((?!(?:return|throw|if|else|while|for|break|continue|case|default)\\b)[A-Za-z_][A-Za-z0-9_]*)(?=\\s*(?:[;=,){\\[]|=>|$))",
       "captures": {
         "1": {
           "patterns": [
@@ -209,7 +209,7 @@
   ],
   "repository": {
     "interpolated-string": {
-      "name": "string.quoted.double.interpolated.gflat",
+      "name": "meta.interpolated-string.gflat",
       "begin": "(?:\\b([A-Za-z_][A-Za-z0-9_]*))?(\\$)(\")",
       "beginCaptures": {
         "1": {
@@ -259,8 +259,17 @@
               "include": "$self"
             }
           ]
+        },
+        {
+          "name": "string.quoted.double.gflat",
+          "match": "[^\\\\{}\"]+"
         }
-      ]
+      ],
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.string.end.gflat"
+        }
+      }
     },
     "interpolation-braces": {
       "begin": "\\{",

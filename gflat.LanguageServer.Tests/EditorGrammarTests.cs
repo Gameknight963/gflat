@@ -9,6 +9,22 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorGrammarTests
 {
+    [Fact]
+    public void ReturnAfterAConditionDoesNotTurnItsOperandIntoAType()
+    {
+        const string line = "if (requested <= capacity) return;";
+        var token = Assert.Single(Grammar().TokenizeLine(line).Tokens, t => t.StartIndex <= line.IndexOf("capacity", StringComparison.Ordinal) && t.EndIndex > line.IndexOf("capacity", StringComparison.Ordinal));
+        Assert.DoesNotContain(token.Scopes, s => s.StartsWith("entity.name.type", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void InterpolationExpressionsDoNotInheritStringColor()
+    {
+        const string line = "s$\"hello {value + 1}\"";
+        var token = Assert.Single(Grammar().TokenizeLine(line).Tokens, t => t.StartIndex <= line.IndexOf("value", StringComparison.Ordinal) && t.EndIndex > line.IndexOf("value", StringComparison.Ordinal));
+        Assert.DoesNotContain(token.Scopes, s => s.StartsWith("string.", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("public void cool(", "cool", "entity.name.function")]
     [InlineData("public void cool() throws", "throws", "storage.modifier")]
@@ -26,6 +42,8 @@ public class EditorGrammarTests
             .Descendants("key").Single(k => k.Value == "vsclassificationtype").ElementsAfterSelf("string").First().Value;
         Assert.Equal("method name", Mapping("entity.name.function.gflat"));
         Assert.Equal("keyword", Mapping("storage.modifier.gflat"));
+        Assert.Equal("string - escape character", Mapping("constant.character.escape.gflat"));
+        Assert.Equal("operator", Mapping("punctuation.section.interpolation.begin.gflat"));
         Assert.DoesNotContain(theme.Descendants("key"), k => k.Value is "foreground" or "background");
     }
 

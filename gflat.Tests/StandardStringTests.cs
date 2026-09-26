@@ -5,6 +5,57 @@ public class StandardStringTests
     private static ExecutionResult Run(string source) => CompilerTestHelper.Run(InterpolationTests.Sources(source));
 
     [Fact]
+    public void FailedAppendPreservesLengthCapacityContentsAndTerminator()
+    {
+        var result = Run("""
+            using std;
+            namespace Allocator {
+                public replace void*? Allocate(nuint size) {
+                    if (size == (nuint)7) return null;
+                    return malloc(size);
+                }
+                public replace void Free(void* p) { free(p); }
+            }
+            int main() {
+                String text = s"abc";
+                nuint oldCapacity = text.Capacity;
+                try { text.Append(text.Data, text.Length); return 1; } catch { }
+                if (text.Length != (nuint)3 || text.Capacity != oldCapacity) return 2;
+                if (text.Data[0] != 'a' || text.Data[2] != 'c' || text.Data[3] != '\0') return 3;
+                text.Append(c"", 0);
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
+    public void ClonesAndIgnoredFactoryResultsReleaseEachAllocationOnce()
+    {
+        var result = Run("""
+            using std;
+            extern int printf(readonly(char)* text, ...);
+            namespace Allocator {
+                public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
+                public replace void Free(void* p) { printf(c"F"); free(p); }
+            }
+            int main() {
+                { String empty = new String(); empty.Clear(); }
+                String::From(c"ignored");
+                {
+                    String original = s"a\0b";
+                    String clone = original.Clone();
+                    original[(nuint)2] = 'c';
+                    if (clone.Length != (nuint)3 || clone.Data[2] != 'b' || clone.Data[3] != '\0') return 1;
+                }
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("AFAAFF", result.StandardOutput);
+    }
+
+    [Fact]
     public void FromCStringScansTerminatorWhileCountOverloadPreservesBytes()
     {
         var result = Run("""

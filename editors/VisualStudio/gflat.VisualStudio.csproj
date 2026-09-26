@@ -38,6 +38,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.ComponentModel.Composition" />
     <Compile Include="GflatLanguageClient.cs" />
+    <Compile Include="GflatEditorPackage.cs" />
     <Compile Include="HoverIcons.cs" />
     <Compile Include="HoverConnection.cs" />
     <Compile Include="HoverContent.cs" />

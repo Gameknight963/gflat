@@ -1,6 +1,30 @@
 [$RootKey$\TextMate\Repositories]
 "gflat"="$PackageFolder$\Grammars"
 
+[$RootKey$\Packages\{25453519-83CF-4439-B0A4-6D79CD8F267C}]
+@="gflat Editor"
+"InprocServer32"="$WinDir$\SYSTEM32\MSCOREE.DLL"
+"Class"="gflat.VisualStudio.GflatEditorPackage"
+"CodeBase"="$PackageFolder$\gflat.VisualStudio.dll"
+"AllowsBackgroundLoad"=dword:00000001
+
+[$RootKey$\Services\{54830AC1-0C42-42AC-A4D8-2D4E18A319C4}]
+@="{25453519-83CF-4439-B0A4-6D79CD8F267C}"
+"Name"="gflat Language Info"
+
+[$RootKey$\Languages\Language Services\gflat]
+@="{54830AC1-0C42-42AC-A4D8-2D4E18A319C4}"
+"Package"="{25453519-83CF-4439-B0A4-6D79CD8F267C}"
+"LangResID"=dword:00000000
+"ShowBraceCompletion"=dword:00000001
+"ShowSmartIndent"=dword:00000001
+"EnableLineNumbersOption"=dword:00000001
+"RequestStockColors"=dword:00000001
+"ShowCompletion"=dword:00000001
+
+[$RootKey$\Languages\File Extensions\.gf]
+@="{54830AC1-0C42-42AC-A4D8-2D4E18A319C4}"
+
 [$RootKey$\TextMate\LanguageConfiguration\GrammarMapping]
 "source.gflat"="$PackageFolder$\gflat-language-configuration.json"
 

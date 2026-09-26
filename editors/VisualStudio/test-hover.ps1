@@ -39,6 +39,26 @@ $resolver = [ResolveEventHandler] {
 [AppDomain]::CurrentDomain.add_AssemblyResolve($resolver)
 try {
     $client = [Reflection.Assembly]::Load([IO.File]::ReadAllBytes((Join-Path $PackageDirectory 'gflat.VisualStudio.dll')))
+    # LSP content-type inheritance alone leaves shell preferences on Plain Text,
+    # where automatic brace completion is disabled by default.
+    $languageType = $client.GetType('gflat.VisualStudio.GflatLanguageInfo', $true)
+    $packageType = $client.GetType('gflat.VisualStudio.GflatEditorPackage', $true)
+    $registration = [IO.File]::ReadAllText((Join-Path $PackageDirectory 'gflat.pkgdef'))
+    $languageId = $languageType.GUID.ToString('B').ToUpperInvariant()
+    $packageId = $packageType.GUID.ToString('B').ToUpperInvariant()
+    foreach ($entry in @(
+        ('[$RootKey$\Languages\File Extensions\.gf]' + "`n" + '@="' + $languageId + '"'),
+        ('[$RootKey$\Languages\Language Services\gflat]' + "`n" + '@="' + $languageId + '"'),
+        ('[$RootKey$\Services\' + $languageId + ']' + "`n" + '@="' + $packageId + '"'),
+        ('[$RootKey$\Packages\' + $packageId + ']'),
+        '"ShowBraceCompletion"=dword:00000001'
+    )) {
+        if (-not $registration.Replace("`r`n", "`n").Contains($entry)) { throw "Missing gflat language registration: $entry" }
+    }
+    $language = [Activator]::CreateInstance($languageType)
+    $arguments = [object[]]@($null)
+    if ($languageType.GetMethod('GetLanguageName').Invoke($language, $arguments) -ne 0 -or $arguments[0] -ne 'gflat') { throw 'Shell language identity is incorrect' }
+    if ($languageType.GetMethod('GetFileExtensions').Invoke($language, $arguments) -ne 0 -or $arguments[0] -ne '.gf') { throw 'Shell file extension is incorrect' }
     $icons = $client.GetType('gflat.VisualStudio.HoverIcons', $true).GetField('Catalog').GetValue($null)
     [Reflection.Assembly]::LoadFrom($assemblies['Newtonsoft.Json']) | Out-Null
     if ($Mode -eq 'Prepare') {

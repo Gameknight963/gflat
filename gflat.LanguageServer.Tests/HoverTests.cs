@@ -17,6 +17,23 @@ public class HoverTests
     }
 
     [Fact]
+    public void HoverShowsEscapingExceptionsWithClassifiedTypes()
+    {
+        var result = Hover("class Failure : Exception {} void Fail() throws { throw new* Failure(); } void Ru|n() throws { Fail(); }", true);
+        Assert.Contains("**May throw:** Failure (or derived types)", result.GetProperty("contents").GetProperty("value").GetString());
+        var runs = result.GetProperty("_vs_rawContent").GetProperty("Elements")[1].GetProperty("Runs").EnumerateArray().ToArray();
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "May throw:" && r.GetProperty("Style").GetInt32() == 1);
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Failure" && r.GetProperty("ClassificationTypeName").GetString() == "class name");
+    }
+
+    [Theory]
+    [InlineData("void Ru|n() throws {}")]
+    [InlineData("void Ru|n() { try { throw new* Exception(); } catch {} }")]
+    [InlineData("void Ru|n() throws { Missing(); throw new* Exception(); }")]
+    public void EmptyCaughtOrIncompleteAnalysisDoesNotInventExceptionDetails(string code)
+        => Assert.DoesNotContain("May throw", Hover(code).GetProperty("contents").GetProperty("value").GetString());
+
+    [Fact]
     public void LayoutRowsUseBoldLabelsInNativeHover()
     {
         var rows = Hover("struct Pa|ir { public int a; }", true).GetProperty("_vs_rawContent").GetProperty("Elements");

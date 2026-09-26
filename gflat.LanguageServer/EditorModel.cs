@@ -1,4 +1,5 @@
 using gflat.ast;
+using gflat.diagnostics;
 using gflat.CompileExceptions;
 using Syntax = gflat.AnalysisSnapshot.Syntax;
 
@@ -327,6 +328,19 @@ public sealed partial class EditorModel
         if (symbol == null) return null;
         var parts = Signature(symbol);
         HoverDetail[] details = LayoutDetails(symbol);
+        if (symbol.Syntax.Node is MethodDeclaration hoveredMethod && snapshot.Checker is { } exceptionChecker &&
+            !snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
+        {
+            var exceptions = exceptionChecker.GetPossibleExceptions(hoveredMethod);
+            if (exceptions.Count > 0)
+            {
+                var exceptionParts = exceptions.SelectMany((name, i) => i == 0
+                    ? new[] { new DisplayPart("class", name) }
+                    : new[] { new DisplayPart("punctuation", ", "), new DisplayPart("class", name) }).ToArray();
+                details = [.. details, new("May throw", string.Join(", ", exceptions) + " (or derived types)",
+                    [.. exceptionParts, new("text", " (or derived types)")])];
+            }
+        }
         if (symbol.Parameters != null)
         {
             int count = Candidates(path, offset, index).Where(s => s.Parameters != null && s.Qualified == symbol.Qualified)

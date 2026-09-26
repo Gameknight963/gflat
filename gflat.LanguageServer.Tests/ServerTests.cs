@@ -16,7 +16,7 @@ public sealed class ServerTests
             ? JsonSerializer.SerializeToElement(new Dictionary<string, object> { ["method.public"] = new { guid = Guid.Parse("ae27a6b0-e345-4288-96df-5eaf394ee369"), id = 1 } })
             : JsonDocument.Parse(System.IO.File.ReadAllText(catalogFile)).RootElement.Clone();
         await s.Initialize(new { visualStudioClassifications = true, hoverIcons = icons });
-        const string source = "public int Read(int count) throws => count;";
+        const string source = "public int Read(int count) throws { throw new* Exception(); }";
         await s.Open("hover.gf", source);
         await s.Diagnostics("hover.gf", 1);
         await s.Send(new { jsonrpc = "2.0", id = 71, method = "textDocument/hover", @params = new { textDocument = new { uri = s.Uri("hover.gf") }, position = new { line = 0, character = 12 } } });

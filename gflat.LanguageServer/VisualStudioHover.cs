@@ -4,10 +4,10 @@ using System.Text.Json.Serialization;
 namespace gflat.LanguageServer;
 
 public sealed record DisplayPart(string Kind, string Text, bool Bold = false);
-public sealed record HoverDetail(string Label, string Value)
+public sealed record HoverDetail(string Label, string Value, DisplayPart[]? ValueParts = null)
 {
     public string Markdown => Label.Length == 0 ? Value : $"**{Label}:** {Value}";
-    public DisplayPart[] Parts => Label.Length == 0 ? [new("text", Value)] : [new("text", Label + ":", true), new("text", " " + Value)];
+    public DisplayPart[] Parts => [.. Label.Length == 0 ? Array.Empty<DisplayPart>() : [new("text", Label + ":", true), new("text", " ")], .. ValueParts ?? [new("text", Value)]];
 }
 public sealed record Markup(string Kind, string Value);
 public sealed record HoverResult(Markup Contents, TextRange Range,

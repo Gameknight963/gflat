@@ -2436,6 +2436,7 @@ namespace gflat
                         }
                         AstNode? prevFunc = _currentFunction;
                         _currentFunction = method;
+                        if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
                             ValidateTypeUsage(method.ReturnType, method.Line);
@@ -2616,6 +2617,7 @@ namespace gflat
                         }
                         AstNode? prevFunc = _currentFunction;
                         _currentFunction = method;
+                        if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
                             ValidateTypeUsage(method.ReturnType, method.Line);
@@ -2798,6 +2800,7 @@ namespace gflat
             ValidatePropertyAccessor(node);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
             if (node.IsGeneric) return;
+            if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
 
             if (node.Name == "main" && node.Throws)
             {
@@ -6044,6 +6047,10 @@ namespace gflat
             {
                 if (_currentFunction is MethodDeclaration method)
                 {
+                    if (!_directExceptions.TryGetValue(method, out var exceptions))
+                        _directExceptions[method] = exceptions = new();
+                    exceptions.Add(named.Name);
+                    _exceptionSummaries = null;
                     if (method.Name != "main" && !method.Throws)
                     {
                         throw new TypeCheckException("Unhandled exception: function must be marked 'throws' or exception must be caught in a try/catch block", node.Line);
@@ -6147,6 +6154,7 @@ namespace gflat
         private void CheckThrowingCall(CallExpression node, string calleeName)
         {
             _throwingCalls.Add(node);
+            RecordExceptionCall(node);
 
             bool caught = false;
             foreach (TryStatement tryStmt in _tryStack)

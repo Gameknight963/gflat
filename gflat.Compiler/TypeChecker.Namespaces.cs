@@ -17,21 +17,32 @@ public partial class TypeChecker
             {
                 declarationNamespaces[node] = ns;
                 if (node is NamespaceDeclaration child) { Walk(child.Members, ns.Length > 0 ? ns + "::" + child.Name : child.Name, null); continue; }
+                string SourceIdentity(string name) => owner != null ? DisplayName(owner) + "::" + name : ns.Length > 0 ? ns + "::" + name : name;
                 string Identity(string name) => owner != null ? owner + "." + name : ns.Length > 0 ? ns.Replace("::", "$") + "$" + name : name;
                 if (node is ClassDeclaration cls)
                 {
                     cls.Name = Identity(cls.Name);
+                    _displayNames[cls.Name] = SourceIdentity(cls.SourceName);
                     RenameConstructors(cls.Members, cls.SourceName, cls.Name);
                     Walk(cls.Members, ns, cls.Name);
                 }
                 else if (node is StructDeclaration str)
                 {
                     str.Name = Identity(str.Name);
+                    _displayNames[str.Name] = SourceIdentity(str.SourceName);
                     RenameConstructors(str.Members, str.SourceName, str.Name);
                     Walk(str.Members, ns, str.Name);
                 }
-                else if (node is InterfaceDeclaration iface) iface.Name = Identity(iface.Name);
-                else if (node is EnumDeclaration enumeration) enumeration.Name = Identity(enumeration.Name);
+                else if (node is InterfaceDeclaration iface)
+                {
+                    iface.Name = Identity(iface.Name);
+                    _displayNames[iface.Name] = SourceIdentity(iface.SourceName);
+                }
+                else if (node is EnumDeclaration enumeration)
+                {
+                    enumeration.Name = Identity(enumeration.Name);
+                    _displayNames[enumeration.Name] = SourceIdentity(enumeration.SourceName);
+                }
             }
         }
     }

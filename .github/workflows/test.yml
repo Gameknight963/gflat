@@ -15,9 +15,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet restore
+      - run: dotnet restore gflat.Tests/gflat.Tests.csproj
+      - run: dotnet restore gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
       # Allow cold runner/toolchain startup without prematurely killing passing tests.
-      - run: dotnet test --no-restore --blame-hang-timeout 5m --logger trx
+      - run: dotnet test gflat.Tests/gflat.Tests.csproj --no-restore --blame-hang-timeout 5m --logger trx
+      - run: dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj --no-restore --blame-hang-timeout 5m --logger trx
+        if: ${{ !cancelled() }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

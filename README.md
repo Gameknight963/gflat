@@ -1,3 +1,5 @@
+![GitHub Repo Views](https://gitviews.com/repo/gameknight963/gflat.svg?style=flat&label-color=purple)
+
 # gflat
 
 A compiled language with C#-inspired syntax, pointers,

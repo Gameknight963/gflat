@@ -857,6 +857,9 @@ namespace gflat.comptime
             return Normalize(new ConstValue.Integer(0), type, line);
         }
 
+        public void Visit(DestructorCallExpression node)
+            => throw new ConstEvalException("Explicit destructor calls are not supported during constant evaluation", node.Line);
+
         public void Visit(CallExpression node)
         {
             CheckSteps(node.Line);

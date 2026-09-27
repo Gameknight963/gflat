@@ -3232,6 +3232,16 @@ public partial class LlvmEmitter : IVisitor
         throw new Exception($"Unknown identifier '{node.Name}'");
     }
 
+    public void Visit(DestructorCallExpression node)
+        => EmitExpressionWithCleanup(() =>
+        {
+            node.Target.Accept(this);
+            string address = Pop();
+            var pointer = (PointerTypeExpression)_typeChecker.ResolveAlias(_typeChecker.GetType(node.Target));
+            GuardNonNull(address, EmitType(pointer));
+            EmitDestroy(pointer.Inner, address);
+        });
+
     public void Visit(CallExpression node)
         => EmitExpressionWithCleanup(() => EmitCall(node));
 

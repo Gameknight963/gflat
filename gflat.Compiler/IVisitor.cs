@@ -28,6 +28,7 @@ namespace gflat
         void Visit(LiteralExpression node);
         void Visit(IdentifierExpression node);
         void Visit(CallExpression node);
+        void Visit(DestructorCallExpression node);
         void Visit(MemberAccessExpression node);
         void Visit(AssignmentExpression node);
         void Visit(InterpolatedStringExpression node);

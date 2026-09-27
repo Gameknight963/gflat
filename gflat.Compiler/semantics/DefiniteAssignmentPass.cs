@@ -712,7 +712,7 @@ namespace gflat.semantics
             {
                 CheckExpression(delStmt.Target);
             }
-            else if (stmt is AssignmentExpression or CallExpression or UnaryExpression or BinaryExpression)
+            else if (stmt is AssignmentExpression or CallExpression or DestructorCallExpression or UnaryExpression or BinaryExpression)
             {
                 CheckExpression(stmt);
             }
@@ -839,6 +839,10 @@ namespace gflat.semantics
                     CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
                     _state = normal;
                 }
+            }
+            else if (expr is DestructorCallExpression destruction)
+            {
+                CheckExpression(destruction.Target);
             }
             else if (expr is CallExpression call)
             {

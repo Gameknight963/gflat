@@ -1431,6 +1431,18 @@ namespace gflat
                 // handle member access
                 if (op.Kind is TokenKind.Dot or TokenKind.Arrow)
                 {
+                    if (Match(TokenKind.Tilde))
+                    {
+                        if (op.Kind == TokenKind.Arrow)
+                            throw new TypeCheckException("Use '.' for destructor calls, not '->'", op.Line);
+                        TypeExpression targetType = ParseTypeExpression();
+                        Expect(TokenKind.OpenParen);
+                        if (!Check(TokenKind.CloseParen))
+                            throw new TypeCheckException("Destructor calls take no arguments", Current.Span);
+                        Expect(TokenKind.CloseParen);
+                        left = new DestructorCallExpression(left, targetType, op.Line);
+                        continue;
+                    }
                     string member = Expect(TokenKind.Identifier).Text;
                     left = new MemberAccessExpression(left, member, op.Kind == TokenKind.Arrow, op.Line);
                     continue;

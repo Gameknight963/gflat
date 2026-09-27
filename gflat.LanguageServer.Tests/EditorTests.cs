@@ -6,6 +6,23 @@ namespace gflat.LanguageServer.Tests;
 public class EditorTests
 {
     [Fact]
+    public void ExplicitDestructorTypeKeepsTypeNavigationAndColor()
+    {
+        var (model, path, offset, source) = Analyze("struct S {} void F(S* p) { p.~|S(); }");
+        var definition = Json(model.Definition(path, offset));
+        Assert.Equal(source.IndexOf("S", StringComparison.Ordinal), definition.GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
+        var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
+        int column = 0;
+        string? classification = null;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            column += data[i + 1];
+            if (column == source.LastIndexOf("S", StringComparison.Ordinal)) classification = EditorModel.TokenTypes[data[i + 3]];
+        }
+        Assert.Equal("struct", classification);
+    }
+
+    [Fact]
     public void CompletionUnderstandsNullSuppressedReceiver()
     {
         var (model, path, offset, _) = Analyze("struct S { public int Field; } void F(S*? p) { p!.| }");

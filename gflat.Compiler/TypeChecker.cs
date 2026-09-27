@@ -4288,6 +4288,26 @@ namespace gflat
             RecordType(node, targetType);
         }
 
+        public void Visit(DestructorCallExpression node)
+        {
+            using var sourceContext = SourceContext.Enter(node.Span);
+            node.Target.Accept(this);
+            TypeExpression receiver = ResolveAlias(GetType(node.Target));
+            TypeExpression target = ResolveAlias(node.TargetType);
+            ValidateTypeUsage(target, node.Line);
+            if (IsError(receiver)) { RecordType(node, Void); return; }
+            if (receiver is not PointerTypeExpression { IsNullable: false, IsReadOnly: false } pointer)
+                throw new TypeCheckException("Explicit destructor calls require a non-null, mutable raw pointer", node.Line);
+            if (target.IsReadOnlyValue || ResolveAlias(pointer.Inner).IsReadOnlyValue)
+                throw new TypeCheckException("Cannot explicitly destroy a readonly object", node.Line);
+            if (!TypesMatch(ResolveAlias(pointer.Inner), target))
+                throw new TypeCheckException($"Destructor type '{TypeName(target)}' must match the pointed-to type '{TypeName(pointer.Inner)}'", node.Line);
+            if (target is NamedTypeExpression { Name: "void" } ||
+                target is NamedTypeExpression interfaceName && GetInterface(interfaceName.Name) != null)
+                throw new TypeCheckException("Explicit destructor calls require a concrete object type", node.Line);
+            RecordType(node, Void);
+        }
+
         public void Visit(CallExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);

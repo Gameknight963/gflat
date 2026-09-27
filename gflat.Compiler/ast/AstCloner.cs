@@ -328,6 +328,8 @@ namespace gflat.ast
                 List<TypeExpression> typeArgs = call.TypeArguments.Select(CloneType).ToList();
                 return new CallExpression(callee, args, call.Line, typeArgs);
             }
+            if (node is DestructorCallExpression destruction)
+                return new DestructorCallExpression(CloneNode(destruction.Target), CloneType(destruction.TargetType), destruction.Line);
             if (node is MemberAccessExpression mem)
             {
                 return new MemberAccessExpression(CloneNode(mem.Object), mem.Member, mem.IsArrow, mem.Line);

@@ -319,6 +319,39 @@ Functions that permit exception propagation declare `throws`. Calling them does 
 
 `const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
 
+## Explicit destructor calls
+
+`pointer.~T()` ends the lifetime of the pointed-to `T` without freeing its
+storage. The receiver is evaluated once and must be a non-null, mutable raw
+pointer to the named type. `T` may be a generic type parameter or a qualified
+type such as `std::String`.
+
+```gflat
+void Destroy<T>(T* slot) {
+    slot.~T();
+}
+```
+
+This runs complete destruction: the user-written destructor, if any, followed
+by field and base cleanup. Compiler-generated destructors work too. For a type
+with no cleanup, including primitives and pointer values, no destructor code
+is needed. Destroying a pointer value does not destroy its pointee. Class
+destruction uses the same virtual destructor dispatch as `delete`.
+
+Destructor calls take no arguments and return `void`. Null receivers trap,
+including null hidden by `!`. Managed pointers, readonly pointees, `void*`,
+and interface receivers are not accepted. Explicit destruction cannot execute
+during constant evaluation.
+
+The pointer retains its address, but the object is no longer live. Its storage
+can be reused with `new* T(args) at pointer` or released separately through
+`Allocator::Free`. Do not subsequently `delete` the destroyed object unless
+it has been reconstructed: `delete` already performs both destruction and
+deallocation. Explicit destruction does not cancel automatic scope cleanup;
+an automatically cleaned-up local destroyed through its address must be
+reconstructed before scope exit. Lifetime correctness through raw pointers
+remains the caller's responsibility.
+
 ## Placement construction
 
 `new* T(arguments) at destination` initializes a struct or class directly in

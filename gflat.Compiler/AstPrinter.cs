@@ -197,6 +197,12 @@ namespace gflat
 
         public void Visit(IdentifierExpression node) => Print($"Identifier: {node.Name}");
 
+        public void Visit(DestructorCallExpression node)
+        {
+            Print("DestructorCall");
+            Indented(() => { node.Target.Accept(this); node.TargetType.Accept(this); });
+        }
+
         public void Visit(CallExpression node)
         {
             Print("Call");

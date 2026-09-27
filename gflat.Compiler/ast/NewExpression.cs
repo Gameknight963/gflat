@@ -16,12 +16,15 @@ namespace gflat.ast
         public TypeExpression Type { get; set; }
         public List<AstNode> Arguments { get; }
         public AllocationKind Kind { get; }
+        public AstNode? Destination { get; }
+        public SourceSpan PlacementKeywordSpan { get; set; }
 
-        public NewExpression(TypeExpression type, List<AstNode> arguments, AllocationKind kind, int line) : base(line)
+        public NewExpression(TypeExpression type, List<AstNode> arguments, AllocationKind kind, int line, AstNode? destination = null) : base(line)
         {
             Type = type;
             Arguments = arguments;
             Kind = kind;
+            Destination = destination;
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

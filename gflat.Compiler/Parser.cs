@@ -1670,7 +1670,18 @@ namespace gflat
                         Expect(TokenKind.Comma);
                 }
                 Expect(TokenKind.CloseParen);
-                return new NewExpression(type, args, kind, line);
+                AstNode? destination = null;
+                SourceSpan placementSpan = default;
+                if (Check(TokenKind.Identifier) && Current.Text == "at")
+                {
+                    placementSpan = Consume().Span;
+                    if (kind != AllocationKind.Pointer)
+                        throw new TypeCheckException("Placement construction requires 'new*'", placementSpan);
+                    // Pointer arithmetic and postfix operations belong to the destination.
+                    // Comparisons/assignment apply to the completed placement expression.
+                    destination = ParseExpression(17);
+                }
+                return new NewExpression(type, args, kind, line, destination) { PlacementKeywordSpan = placementSpan };
             }
 
             // identifier

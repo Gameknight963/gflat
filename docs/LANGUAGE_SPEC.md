@@ -319,6 +319,46 @@ Functions that permit exception propagation declare `throws`. Calling them does 
 
 `const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
 
+## Placement construction
+
+`new* T(arguments) at destination` initializes a struct or class directly in
+caller-supplied storage and returns its `T*`. It performs normal field and class
+metadata initialization and constructor overload resolution, without allocating.
+Only `new*` supports `at`; value and managed construction do not. `at` is contextual
+and remains available as an identifier elsewhere.
+
+```gflat
+struct Item {
+    public int value;
+    public Item(int n) { value = n; }
+}
+int main() {
+    Item* storage = (Item*)Allocator::Allocate((nuint)sizeof(Item));
+    Item* item = new* Item(42) at storage;
+    int result = item.value;
+    delete item; // This example owns the entire allocation, not an interior slot.
+    return result;
+}
+```
+
+Arguments are evaluated left to right, then the destination is evaluated once,
+then initialization begins. If argument or destination evaluation throws, no
+initialization has occurred. A placement expression does not schedule automatic
+destruction or give a catch handler ownership of a placement-created exception.
+The caller manages the object's lifetime and its surrounding allocation.
+
+The destination must be a non-null raw pointer to the exact mutable constructed
+type. Null and misaligned addresses trap before initialization, including when
+nullability was suppressed with `!`. The caller must provide writable, sufficiently
+large storage not occupied by a live object; these conditions are not checked.
+Use `delete` only when the pointer is also a valid independently allocated block.
+Placement construction cannot execute during constant evaluation.
+
+The destination accepts pointer arithmetic and postfix expressions; comparisons
+and assignments bind outside the placement expression. Parenthesize a more
+complex destination. To access a member of the constructed object, write
+`(new* T() at destination).Member`.
+
 ## Nullability suppression
 
 Postfix `!` removes only the outer nullability of a raw pointer, managed reference,
@@ -336,7 +376,8 @@ int Read(int*? pointer) {
 an explicit escape hatch: using an invalid result can fault or cause undefined
 behavior. Explicit casts to non-null pointer types remain checked and trap on
 null in every build. To examine an unchecked pointer for null, it can be widened
-to its nullable type again.
+to its nullable type again. Suppression does not bypass checks performed by other
+operations, such as placement construction's destination validation.
 
 ## Custom string literals
 

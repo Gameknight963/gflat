@@ -13,6 +13,26 @@ public class EditorTests
     }
 
     [Fact]
+    public void PlacementAtIsContextualAndDestinationRetainsNavigation()
+    {
+        var (model, path, offset, source) = Analyze("struct S {} void F(S* ptr) { int at = 0; new* S() at p|tr; }");
+        var definition = Json(model.Definition(path, offset));
+        Assert.Equal(source.IndexOf("ptr", StringComparison.Ordinal), definition.GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
+        var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
+        var atKinds = new List<string>();
+        int column = 0;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            column += data[i + 1];
+            if (source.Substring(column, data[i + 2]) == "at") atKinds.Add(EditorModel.TokenTypes[data[i + 3]]);
+        }
+        Assert.Equal(new[] { "variable", "modifier" }, atKinds);
+        int keyword = source.IndexOf("at ptr", StringComparison.Ordinal);
+        Assert.Null(model.Definition(path, keyword));
+        Assert.Null(model.Hover(path, keyword));
+    }
+
+    [Fact]
     public void CompletionDetailsUseReadableGenericAndNestedTypes()
     {
         var (model, path, offset, _) = Analyze("class Outer { public class Inner {} } struct Box<T> { public T value; } Box<int> Read(Outer::Inner* value) => new Box<int>(); void Use() { Re| }");

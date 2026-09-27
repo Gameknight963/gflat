@@ -231,6 +231,7 @@ namespace gflat
             Print($"New ({node.Kind})");
             Indented(() =>
             {
+                node.Destination?.Accept(this);
                 node.Type.Accept(this);
                 foreach (AstNode a in node.Arguments) a.Accept(this);
             });

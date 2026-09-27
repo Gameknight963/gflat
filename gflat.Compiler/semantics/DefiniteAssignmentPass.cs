@@ -879,6 +879,7 @@ namespace gflat.semantics
                 {
                     CheckExpression(newExpr.Arguments[i]);
                 }
+                if (newExpr.Destination != null) CheckExpression(newExpr.Destination);
             }
             else if (expr is LambdaExpression lambda)
             {

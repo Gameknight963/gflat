@@ -4072,8 +4072,32 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {sizeInt} = ptrtoint %{typeName}* {sizePtr} to i{TargetInfo.Default.PointerBits}");
 
             string rawMem = NewTemp();
-            Emit($"    {rawMem} = call i8* @{allocator}(i{TargetInfo.Default.PointerBits} {sizeInt})");
+            if (node.Destination == null)
+                Emit($"    {rawMem} = call i8* @{allocator}(i{TargetInfo.Default.PointerBits} {sizeInt})");
+            else
+            {
+                node.Destination.Accept(this);
+                string destination = Pop();
+                Emit($"    {rawMem} = bitcast {EmitType(_typeChecker.GetType(node.Destination))} {destination} to i8*");
+            }
             GuardNonNull(rawMem, "i8*");
+            if (node.Destination != null)
+            {
+                int alignment = _typeChecker.GetTypeAlignment(node.Type);
+                string address = NewTemp();
+                string remainder = NewTemp();
+                string aligned = NewTemp();
+                string ok = NewLabel("placement_aligned");
+                string fail = NewLabel("placement_misaligned");
+                Emit($"    {address} = ptrtoint i8* {rawMem} to i{TargetInfo.Default.PointerBits}");
+                Emit($"    {remainder} = urem i{TargetInfo.Default.PointerBits} {address}, {alignment}");
+                Emit($"    {aligned} = icmp eq i{TargetInfo.Default.PointerBits} {remainder}, 0");
+                Emit($"    br i1 {aligned}, label %{ok}, label %{fail}");
+                Emit($"{fail}:");
+                Emit("    call void @llvm.trap()");
+                Emit("    unreachable");
+                Emit($"{ok}:");
+            }
             string typedPtr = NewTemp();
             Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{typeName}*");
             Emit($"    store %{typeName} {GetDefaultValue(node.Type)}, %{typeName}* {typedPtr}");
@@ -4775,7 +4799,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {owned} = load i1, i1* {catchOwnedSlot}");
             Emit($"    store i1 0, i1* {catchOwnedSlot}");
         }
-        else if (node.Expression is NewExpression { Kind: AllocationKind.Pointer })
+        else if (node.Expression is NewExpression { Kind: AllocationKind.Pointer, Destination: null })
         {
             owned = "1";
         }

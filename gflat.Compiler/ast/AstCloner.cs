@@ -346,7 +346,7 @@ namespace gflat.ast
             {
                 TypeExpression newType = CloneType(newExpr.Type);
                 List<AstNode> args = newExpr.Arguments.Select(CloneNode).ToList();
-                return new NewExpression(newType, args, newExpr.Kind, newExpr.Line);
+                return new NewExpression(newType, args, newExpr.Kind, newExpr.Line, newExpr.Destination == null ? null : CloneNode(newExpr.Destination)) { PlacementKeywordSpan = newExpr.PlacementKeywordSpan };
             }
             if (node is DefaultExpression defExpr)
             {

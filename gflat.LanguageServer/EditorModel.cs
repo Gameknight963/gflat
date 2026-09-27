@@ -261,6 +261,8 @@ public sealed partial class EditorModel
     private Symbol? ResolveCore(string path, int index)
     {
         var token = tokens[path][index];
+        if (token.Text == "at" && nodes[path].Any(n => n.Node is NewExpression placement &&
+            placement.PlacementKeywordSpan.Length > 0 && placement.PlacementKeywordSpan.Start == token.Start)) return null;
         var declaration = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == token.Start && s.NameSpan.Length == token.Span.Length);
         if (declaration != null) return declaration;
         var call = nodes[path].Where(n => n.Node is CallExpression c && c.Callee.Span.Start <= token.Start && c.Callee.Span.Start + c.Callee.Span.Length == token.End + 1).MinBy(n => n.Span.Length);
@@ -404,10 +406,12 @@ public sealed partial class EditorModel
         var data = new List<int>();
         int previousLine = 0, previousColumn = 0;
         var ts = tokens[path];
+        var placementKeywords = nodes[path].Select(n => n.Node).OfType<NewExpression>()
+            .Where(n => n.PlacementKeywordSpan.Length > 0).Select(n => n.PlacementKeywordSpan.Start).ToHashSet();
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            bool modifier = ts[i].Kind == TokenKind.Throws;
+            bool modifier = ts[i].Kind == TokenKind.Throws || placementKeywords.Contains(ts[i].Start);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             var symbol = control || modifier ? null : Resolve(path, i);
             if (symbol == null && !control && !modifier) continue;

@@ -4953,6 +4953,15 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression resolvedType = ResolveAlias(node.Type);
             node.Type = resolvedType;
+            if (node.Destination != null)
+            {
+                node.Destination.Accept(this);
+                TypeExpression destination = ResolveAlias(GetType(node.Destination));
+                if (node.Kind != AllocationKind.Pointer || resolvedType.IsReadOnlyValue ||
+                    destination is not PointerTypeExpression { IsNullable: false, IsReadOnly: false } pointer ||
+                    !TypesMatch(resolvedType, pointer.Inner))
+                    throw new TypeCheckException("Placement destination must be a non-null raw pointer to the exact mutable constructed type", node.Destination.Span);
+            }
             if (node.Kind == AllocationKind.Managed)
             {
                 ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line), node.Line);

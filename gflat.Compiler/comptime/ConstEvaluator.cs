@@ -667,6 +667,8 @@ namespace gflat.comptime
         private void EvaluateNew(NewExpression node)
         {
             CheckSteps(node.Line);
+            if (node.Destination != null)
+                throw new ConstEvalException("Placement construction is not permitted at compile time", node.Line);
             if (node.Kind == AllocationKind.Managed)
             {
                 throw new ConstEvalException("Managed allocation ('new^') is not permitted at compile time", node.Line);

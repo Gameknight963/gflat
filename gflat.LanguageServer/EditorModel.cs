@@ -190,6 +190,8 @@ public sealed partial class EditorModel
         if (node is IdentifierExpression identifier) return Visible(path, offset).FirstOrDefault(s => s.Name == identifier.Name)?.Type;
         if (node is NewExpression creation) return creation.Type;
         if (node is CastExpression cast) return cast.TargetType;
+        if (node is UnaryExpression { Operator: TokenKind.Bang, IsPrefix: false } suppression)
+            return ExpressionType(suppression.Operand, path, offset);
         if (node is UnaryExpression { Operator: TokenKind.Star } dereference)
         {
             var operand = ExpressionType(dereference.Operand, path, offset);

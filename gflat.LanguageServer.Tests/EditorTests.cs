@@ -6,6 +6,13 @@ namespace gflat.LanguageServer.Tests;
 public class EditorTests
 {
     [Fact]
+    public void CompletionUnderstandsNullSuppressedReceiver()
+    {
+        var (model, path, offset, _) = Analyze("struct S { public int Field; } void F(S*? p) { p!.| }");
+        Assert.Contains("Field", Labels(model.Completion(path, offset)));
+    }
+
+    [Fact]
     public void CompletionDetailsUseReadableGenericAndNestedTypes()
     {
         var (model, path, offset, _) = Analyze("class Outer { public class Inner {} } struct Box<T> { public T value; } Box<int> Read(Outer::Inner* value) => new Box<int>(); void Use() { Re| }");

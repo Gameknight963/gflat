@@ -42,7 +42,7 @@ foreach       = "foreach", "(", type, name, "in", expression, ")", body ;
 
 `>>` closes two nested type argument lists in a type context and remains a shift in expression contexts. All array lengths are parsed as expressions and then checked as constants; they must be positive and fit supported layout sizes.
 
-Expression precedence, from weakest to strongest: assignment (right associative); `||`; `&&`; bitwise `|`, `^`, `&`; equality; ordering; shifts; addition/subtraction; multiplication/division/remainder; prefix operators/casts; postfix calls, indexing, access, and increment/decrement. `&&` and `||` short-circuit at both compile time and runtime.
+Expression precedence, from weakest to strongest: assignment (right associative); `||`; `&&`; bitwise `|`, `^`, `&`; equality; ordering; shifts; addition/subtraction; multiplication/division/remainder; prefix operators/casts; postfix calls, indexing, access, nullability suppression (`!`), and increment/decrement. `&&` and `||` short-circuit at both compile time and runtime.
 
 `::` accesses namespaces, nested types, enum values, and static members. `.` accesses instance members, including through pointers. The legacy arrow spelling is rejected semantically. Function pointers are written with their return type, such as `int(int)*`.
 
@@ -144,7 +144,7 @@ Arrays have inline storage. Array-to-pointer decay does not establish bounds or 
 
 Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Unsized array parameters are rejected; spell buffer parameters as pointers. Array value conversions preserve dimensions and element representation; cast individual elements explicitly when changing numeric types. Values requiring destruction cannot be passed by value.
 
-Nullable raw pointers and function pointers require an explicit checked non-null cast before dereference, indexing, member access, calls, or pointer arithmetic. A comparison with `null` does not change the variable's static type. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
+Nullable raw pointers and function pointers require a checked non-null cast or unchecked postfix `!` before dereference, indexing, member access, calls, or pointer arithmetic. A comparison with `null` does not change the variable's static type. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
 
 ```gflat
 struct Point { int x; int y; }
@@ -210,7 +210,7 @@ The hook may instead be defined in gflat. It must be non-generic and non-throwin
 
 The initial runtime contract is a **conservative, nonmoving collector** that scans live stack/register roots and managed allocations, and recognizes interior pointers used during object access. The adapter supplies collector initialization and any thread registration required by its collector. The compiler does not emit root maps, relocation support, pinning, or finalization. References stored only in unscanned raw allocations or retained by foreign code need runtime-specific root registration; they are not automatically kept alive by the language.
 
-Scope exit does not destroy or free a managed pointee. Types with destructors, including inherited destructors and inline fields or array elements requiring destruction, cannot be managed pointees in this version. `delete`, pointer arithmetic, managed/raw casts, integer casts, and taking raw addresses directly into managed storage are rejected. Managed class upcasts and interface views are supported. Nullable references require an explicit checked non-null cast before dereference, field access, or method calls. Managed exceptions and managed function pointers remain unsupported. Managed allocations cannot execute during constant evaluation.
+Scope exit does not destroy or free a managed pointee. Types with destructors, including inherited destructors and inline fields or array elements requiring destruction, cannot be managed pointees in this version. `delete`, pointer arithmetic, managed/raw casts, integer casts, and taking raw addresses directly into managed storage are rejected. Managed class upcasts and interface views are supported. Nullable references require a checked non-null cast or unchecked postfix `!` before dereference, field access, or method calls. Managed exceptions and managed function pointers remain unsupported. Managed allocations cannot execute during constant evaluation.
 
 ### Array literals
 
@@ -319,6 +319,25 @@ Functions that permit exception propagation declare `throws`. Calling them does 
 
 `const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
 
+## Nullability suppression
+
+Postfix `!` removes only the outer nullability of a raw pointer, managed reference,
+or function pointer. It preserves readonly qualification, evaluates the operand
+once, and does not change the original variable's type. It also accepts already
+non-null pointer types. Bare `null!` has no pointer type and is rejected.
+
+```gflat
+int Read(int*? pointer) {
+    return *pointer!;
+}
+```
+
+`pointer!` performs no runtime check and emits no LLVM non-null assumption. It is
+an explicit escape hatch: using an invalid result can fault or cause undefined
+behavior. Explicit casts to non-null pointer types remain checked and trap on
+null in every build. To examine an unchecked pointer for null, it can be widened
+to its nullable type again.
+
 ## Custom string literals
 
 A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly(char)* data, nuint length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and may declare `throws`; callers must follow the normal exception rules.
@@ -396,7 +415,7 @@ or copy the supplied bytes before returning; it must not retain the input pointe
 
 A custom value, pointer, or managed reference must implement `IStringConvertible` to appear
 in a hole; an `IStringConvertible*` or `IStringConvertible^` also supports interface dispatch.
-Nullable receivers must first be explicitly checked/cast to a non-null reference.
+Nullable receivers must first use a checked non-null cast or unchecked postfix `!`.
 Primitives use the exact corresponding overload of `global::std::ToString`, independent of
 local `using` directives or unrelated functions named `ToString`. Supported primitives are
 `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `nint`,

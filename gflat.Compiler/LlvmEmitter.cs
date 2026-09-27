@@ -2909,6 +2909,12 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(UnaryExpression node)
     {
+        if (node.Operator == TokenKind.Bang && !node.IsPrefix)
+        {
+            // Static nullability suppression only: no guard, assume, or nonnull metadata.
+            node.Operand.Accept(this);
+            return;
+        }
         if (EmitPropertyWrite(node)) return;
         if (node.Operator == TokenKind.Ampersand)
         {

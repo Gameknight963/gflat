@@ -404,6 +404,11 @@ namespace gflat.comptime
 
         public void Visit(UnaryExpression node)
         {
+            if (node.Operator == TokenKind.Bang && !node.IsPrefix)
+            {
+                node.Operand.Accept(this);
+                return;
+            }
             if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
                 throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);

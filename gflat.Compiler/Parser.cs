@@ -1422,7 +1422,7 @@ namespace gflat
                 Token op = Consume();
 
                 // handle postfix operators like ++ and --
-                if (op.Kind is TokenKind.PlusPlus or TokenKind.MinusMinus)
+                if (op.Kind is TokenKind.PlusPlus or TokenKind.MinusMinus or TokenKind.Bang)
                 {
                     left = new UnaryExpression(left, op.Kind, false, op.Line);
                     continue;
@@ -1813,7 +1813,7 @@ namespace gflat
             TokenKind.LessLess or TokenKind.GreaterGreater => (16, 17),
             TokenKind.Plus or TokenKind.Minus => (18, 19),
             TokenKind.Star or TokenKind.Slash or TokenKind.Percent => (20, 21),
-            TokenKind.PlusPlus or TokenKind.MinusMinus => (24, 0),
+            TokenKind.PlusPlus or TokenKind.MinusMinus or TokenKind.Bang => (24, 0),
             TokenKind.Dot or TokenKind.Arrow or TokenKind.DoubleColon => (24, 25),
             TokenKind.OpenParen or TokenKind.OpenBracket => (24, 0),
             _ => (0, 0)

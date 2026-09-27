@@ -3724,6 +3724,20 @@ namespace gflat
         public void Visit(UnaryExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.Operator == TokenKind.Bang && !node.IsPrefix)
+            {
+                node.Operand.Accept(this);
+                TypeExpression source = ResolveAlias(GetType(node.Operand));
+                TypeExpression result = source switch
+                {
+                    PointerTypeExpression p => new PointerTypeExpression(p.Inner, false, node.Line, p.IsReadOnly),
+                    ManagedTypeExpression m => new ManagedTypeExpression(m.Inner, false, node.Line, m.IsReadOnly),
+                    FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(f.ReturnType, f.ParameterTypes, f.IsManaged, false, node.Line),
+                    _ => throw new TypeCheckException("Postfix '!' requires a pointer, managed reference, or function pointer", node.Line)
+                };
+                RecordType(node, result.WithReadOnlyValue(source.IsReadOnlyValue));
+                return;
+            }
             if (node.Operator is TokenKind.PlusPlus or TokenKind.MinusMinus &&
                 CheckPropertyWrite(node, node.Operand, node.Operand, null, !node.IsPrefix, node.Operator)) return;
             if (node.Operator == TokenKind.Ampersand && FindProperty(node.Operand) != null)

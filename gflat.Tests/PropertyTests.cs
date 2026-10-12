@@ -268,7 +268,7 @@ public class PropertyTests
     [InlineData("struct S { public int P { get; set; } } int main() { S s = new S(); readonly(S)* p = &s; p.P = 1; return 0; }", "readonly")]
     [InlineData("struct V { public int X; } struct S { public V P => new V(); } int main() { S s = new S(); s.P.X = 1; return 0; }", "value returned by a property")]
     [InlineData("struct S { public void P { get; set; } }", "Properties cannot")]
-    [InlineData("struct V { ~V() {} } struct S { public V P { get; set; } }", "Only a whole owned local")]
+    [InlineData("struct V { ~V() {} } struct S { public V P { get; set; } }", "Returning this field requires a copy constructor")]
     [InlineData("struct V { public int X; } struct S { public V P => new V(); } int main() { S s = new S(); int* p = &s.P.X; return 0; }", "address of a value returned by a property")]
     [InlineData("interface I { int P { get; set; } } struct S : I { public int P { get; private set; } }", "must be public")]
     [InlineData("interface I { int P { get; set; } } class S : I { public int P { get; } }", "must be public")]

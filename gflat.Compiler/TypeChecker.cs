@@ -93,7 +93,7 @@ namespace gflat
         private readonly HashSet<AstNode> _throwingCalls = new();
         private int _foreachCounter = 0;
 
-        public bool CanFunctionThrow(AstNode func) => func is MethodDeclaration m && m.Throws;
+        public bool CanFunctionThrow(AstNode func) => func is MethodDeclaration { Throws: true } or ConstructorDeclaration { Throws: true };
         public bool CanCallThrow(AstNode call) => _throwingCalls.Contains(call);
         public IEnumerable<ClassInfo> GetAllClasses() => _classes.Values;
 
@@ -1701,9 +1701,9 @@ namespace gflat
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
-            if (valueNode != null && HasDestructor(target) && !IsFreshValue(valueNode)) return false;
+            if (valueNode != null && !ValidateCopyUse(valueNode, target)) return false;
             if (ResolveAlias(source) is NamedTypeExpression && ResolveAlias(target) is NamedTypeExpression &&
-                HasDestructor(source) && !TypesMatch(target, source)) return false;
+                (RequiresCopy(source) || RequiresCopy(target)) && !TypesMatch(target, source)) return false;
             if (IsError(target) || IsError(source))
             {
                 return true;
@@ -2681,7 +2681,7 @@ namespace gflat
             }
 
             ValidateTypeUsage(node.ReturnType, node.Line);
-            if (HasDestructor(node.ReturnType) || node.Parameters.Any(p => HasDestructor(p.Type)))
+            if (RequiresCopy(node.ReturnType) || node.Parameters.Any(p => RequiresCopy(p.Type)))
                 throw new TypeCheckException("Owning operator operands and results are not yet supported; use an explicit method", node.Line);
 
             if (node.OperatorKind == TokenKind.Bang)
@@ -2763,6 +2763,8 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.Type, node.Line);
             TypeExpression fieldType = ResolveAlias(node.Type);
+            if (node.IsConst && RequiresCopy(fieldType))
+                throw new TypeCheckException("Constants cannot contain values with nontrivial copying or destruction", node.Line);
             if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(fieldType))
                 throw new TypeCheckException("Constant arrays cannot contain destructor-bearing elements", node.Line);
             if (node.IsConst && fieldType is PointerTypeExpression fPtr && !fPtr.IsReadOnly)
@@ -2853,13 +2855,13 @@ namespace gflat
                 string kindStr = _currentStruct != null ? "struct" : "class";
                 throw new TypeCheckException($"Constructor name '{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
             }
-            if (node.IsMove)
+            if (node.IsCopy)
             {
-                if (node.Parameters.Count != 1 || ResolveAlias(node.Parameters[0].Type) is not PointerTypeExpression { IsNullable: false, IsReadOnly: false } source ||
+                if (node.Parameters.Count != 1 || ResolveAlias(node.Parameters[0].Type) is not PointerTypeExpression { IsNullable: false, IsReadOnly: true } source ||
                     ResolveAlias(source.Inner) is not NamedTypeExpression owner || owner.Name != ownerName || node.IsConst)
-                    throw new TypeCheckException("A move constructor takes exactly one mutable, non-null pointer to its own type", node.Line);
-                if ((_currentStruct?.Constructors ?? _currentClass!.Constructors).Count(c => c.IsMove) != 1)
-                    throw new TypeCheckException("A type has exactly one move constructor", node.Line);
+                    throw new TypeCheckException("A copy constructor takes exactly one readonly, non-null pointer to its own type", node.Line);
+                if ((_currentStruct?.Constructors ?? _currentClass!.Constructors).Count(c => c.IsCopy) != 1)
+                    throw new TypeCheckException("A type has exactly one copy constructor", node.Line);
             }
             _currentConstructor = node;
             AstNode? prevFunc = _currentFunction;
@@ -3077,15 +3079,16 @@ namespace gflat
                         _referenceReturns[node] = address;
                         valType = GetType(address);
                     }
-                    if (HasDestructor(retType) && node.Value is not IdentifierExpression && !IsFreshValue(node.Value))
+                    if (HasDestructor(retType) && node.Value is not IdentifierExpression && !ValidateCopyUse(node.Value, retType))
                         throw new TypeCheckException("Cannot transfer a destructor-bearing value from borrowed storage", node.Line);
                     if (HasDestructor(retType) && node.Value is IdentifierExpression owned)
                     {
-                        if (!_scopes.Any(scope => scope.ContainsKey(owned.Name)) || owned.Name == "this")
-                            throw new TypeCheckException("Only a whole owned local can be transferred by return", node.Line);
-                        _ownedReturns[node] = owned.Name;
+                        if (_scopes.Any(scope => scope.ContainsKey(owned.Name)) && owned.Name != "this")
+                            _ownedReturns[node] = owned.Name;
+                        else if (!ValidateCopyUse(node.Value, retType))
+                            throw new TypeCheckException("Returning this field requires a copy constructor", node.Line);
                     }
-                    if (!IsAssignable(retType, valType, HasDestructor(retType) && node.Value is IdentifierExpression ? null : node.Value))
+                    if (!IsAssignable(retType, valType, _ownedReturns.ContainsKey(node) ? null : node.Value))
                     {
                         throw new TypeCheckException($"Cannot return '{TypeName(valType)}' from function returning '{TypeName(retType)}'", node.Line);
                     }
@@ -3172,10 +3175,8 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             node.ElementType = ResolveAlias(node.ElementType);
             ValidateTypeUsage(node.ElementType, node.Line);
-            if (HasDestructor(node.ElementType))
-            {
-                throw new TypeCheckException($"Foreach iteration variable '{node.VariableName}' cannot have type '{TypeName(node.ElementType)}' because types with destructors cannot be copied by value. Use a pointer instead ('{TypeName(node.ElementType)}*').", node.Line);
-            }
+            if (!CanCopy(node.ElementType))
+                throw new TypeCheckException($"Foreach iteration variable '{node.VariableName}' requires a copyable element type; borrow elements through an indexer instead", node.Line);
 
             node.Collection.Accept(this);
             TypeExpression rawColType = ResolveAlias(GetType(node.Collection));
@@ -3431,6 +3432,8 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression varType = ResolveAlias(node.Type);
+            if (node.IsConst && RequiresCopy(varType))
+                throw new TypeCheckException("Constants cannot contain values with nontrivial copying or destruction", node.Line);
             if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(varType))
                 throw new TypeCheckException("Constant arrays cannot contain destructor-bearing elements", node.Line);
             if (node.IsConst && varType is PointerTypeExpression ptr && !ptr.IsReadOnly)
@@ -3440,22 +3443,20 @@ namespace gflat
             ValidateTypeUsage(varType, node.Line);
             if (varType is ArrayTypeExpression && HasDestructor(varType) && node.Initializer == null)
                 throw new TypeCheckException("An array with destructor-bearing elements requires an initializer; use default(Type) for zero-initialized elements", node.Line);
-            if (HasDestructor(varType) && node.Initializer == null)
-                throw new TypeCheckException("An owning local requires an initializer", node.Line);
             if (node.Initializer != null)
             {
                 node.Initializer.Accept(this);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
 
-                if (HasDestructor(varType) && !IsFreshValue(node.Initializer))
-                {
-                    throw new TypeCheckException($"Cannot copy value of type '{TypeName(varType)}' because it defines a destructor. Pass by pointer, or use an explicit method if available.", node.Line);
-                }
-
                 // Size inference for inferred arrays: char[] a = "string";
                 if (varType is ArrayTypeExpression { Size: null } arr && initType is ArrayTypeExpression { Size: not null } initArr)
                 {
                     varType = new ArrayTypeExpression(arr.ElementType, initArr.Size, node.Line, arr.SizeExpression).WithReadOnlyValue(varType.IsReadOnlyValue);
+                }
+
+                if (!ValidateCopyUse(node.Initializer, varType))
+                {
+                    throw new TypeCheckException($"Cannot copy value of type '{TypeName(varType)}' because it has no accessible copy constructor. Borrow through a pointer or move a local.", node.Line);
                 }
 
                 if (!IsAssignable(varType, initType, node.Initializer))
@@ -4258,11 +4259,10 @@ namespace gflat
             TypeExpression targetType = GetType(node.Target);
             CheckAssignmentTarget(node.Target, node.Line);
 
-            if (HasDestructor(targetType) && (node.Operator != TokenKind.Equals || !IsFreshValue(node.Value)))
-                throw new TypeCheckException("Owning assignment requires a fresh value or 'move value'", node.Line);
-
             node.Value.Accept(this);
             TypeExpression valueType = GetType(node.Value);
+            if (RequiresCopy(targetType) && (node.Operator != TokenKind.Equals || !ValidateCopyUse(node.Value, targetType)))
+                throw new TypeCheckException("Assignment requires a copyable value, a fresh value, or 'move value'", node.Line);
 
             if (node.Operator != TokenKind.Equals)
             {
@@ -5094,6 +5094,9 @@ namespace gflat
                     }
                     matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line);
                     _resolvedConstructors[node] = matchedCtor;
+                    if (matchedCtor.Throws) { _throwingCalls.Add(node); RecordImplicitException(); }
+                    if (matchedCtor.IsCopy && !CanAccessCopy(new NamedTypeExpression(cInfo.Name, null, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
+                        throw new TypeCheckException("Cannot access copy constructor", node.Line);
                     for (int i = 0; i < node.Arguments.Count; i++)
                     {
                         if (node.Arguments[i] is DefaultExpression def && def.TargetType == null)
@@ -5183,6 +5186,9 @@ namespace gflat
                 }
                 matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line);
                 _resolvedConstructors[node] = matchedStructCtor;
+                if (matchedStructCtor.Throws) { _throwingCalls.Add(node); RecordImplicitException(); }
+                if (matchedStructCtor.IsCopy && !CanAccessCopy(new NamedTypeExpression(sInfo.Name, null, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
+                    throw new TypeCheckException("Cannot access copy constructor", node.Line);
                 for (int i = 0; i < node.Arguments.Count; i++)
                 {
                     if (node.Arguments[i] is DefaultExpression def && def.TargetType == null)
@@ -5306,7 +5312,7 @@ namespace gflat
                 elementType ??= type;
                 if (TypeName(elementType) != TypeName(type))
                     throw new TypeCheckException("Array literal elements must have matching types and dimensions", element.Line);
-                if (HasDestructor(type) && !IsFreshValue(element))
+                if (!ValidateCopyUse(element, type))
                     throw new TypeCheckException("Array literals cannot copy destructor-bearing elements; use fresh values", element.Line);
             }
             RecordType(node, new ArrayTypeExpression(elementType!, node.Elements.Count, node.Line));
@@ -5926,7 +5932,7 @@ namespace gflat
                 foreach (Parameter p in node.Parameters)
                 {
                     ValidateParameterType(p.Type, p.Line);
-                    if (HasDestructor(p.Type))
+                    if (RequiresCopy(p.Type))
                         throw new TypeCheckException("Lambda parameters must borrow owning values through pointers", p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
                     paramTypes.Add(pType);
@@ -5961,7 +5967,7 @@ namespace gflat
                     }
                 }
                 ValidateTypeUsage(returnType, node.Line);
-                if (HasDestructor(returnType))
+                if (RequiresCopy(returnType))
                     throw new TypeCheckException("Owning lambda results are not yet supported; use a named function", node.Line);
 
                 PopScope();

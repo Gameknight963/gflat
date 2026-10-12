@@ -49,7 +49,7 @@ public partial class DefiniteAssignmentPass
         foreach (var field in ConstructorFields)
             if (field.Initializer != null)
             {
-                CheckExpression(field.Initializer);
+                CheckValue(field.Initializer);
                 MarkConstructorField(field.Name);
             }
     }

@@ -4336,7 +4336,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void StackClass_UninitializedOwner_IsRejected()
+        public void StackClass_UninitializedOwner_IsNotDestroyed()
         {
             string code = """
                 class Guard
@@ -4360,7 +4360,7 @@ namespace gflat.Tests
                 }
                 """;
 
-            Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Equal(10, CompilerTestHelper.Run(code).ExitCode);
         }
 
         [Fact]

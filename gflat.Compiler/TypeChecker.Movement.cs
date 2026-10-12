@@ -18,8 +18,6 @@ public partial class TypeChecker
     }
 
     private readonly HashSet<AstNode> _transferredPropertyArguments = new();
-    private readonly Dictionary<MoveExpression, NewExpression> _moves = new();
-    public NewExpression? GetMove(MoveExpression node) => _moves.GetValueOrDefault(node);
     public bool IsFreshValue(AstNode expression) => _transferredPropertyArguments.Contains(expression) || (_propertyReads.ContainsKey(expression) && !IsReferenceRead(expression)) || expression is
         NewExpression or CallExpression or DefaultExpression or ArrayLiteralExpression or MoveExpression;
 
@@ -28,8 +26,12 @@ public partial class TypeChecker
         using var context = SourceContext.Enter(node.Span);
         node.Operand.Accept(this);
         TypeExpression type = ResolveAlias(GetType(node.Operand));
-        if (node.Operand is not (IdentifierExpression or MemberAccessExpression or IndexExpression or UnaryExpression { Operator: TokenKind.Star }))
-            throw new TypeCheckException("move requires writable storage; fresh values already transfer directly", node.Span);
+        bool local = node.Operand is IdentifierExpression id && id.Name != "this" &&
+            _scopes.Any(scope => scope.ContainsKey(id.Name));
+        bool rawStorage = node.Operand is UnaryExpression { Operator: TokenKind.Star, IsPrefix: true } dereference &&
+            ResolveAlias(GetType(dereference.Operand)) is PointerTypeExpression;
+        if (!local && !rawStorage)
+            throw new TypeCheckException("move consumes a whole local or parameter; use an explicit raw-pointer dereference for manual storage relocation", node.Span);
         CheckAssignmentTarget(node.Operand, node.Line);
         if (node.Destination != null)
         {
@@ -37,23 +39,6 @@ public partial class TypeChecker
             if (ResolveAlias(GetType(node.Destination)) is not PointerTypeExpression { IsReadOnly: false, IsNullable: false } destination ||
                 !TypesMatch(destination.Inner, type))
                 throw new TypeCheckException("Move destination must be a non-null pointer to the exact mutable source type", node.Span);
-        }
-        var constructors = type is NamedTypeExpression n
-            ? GetStruct(n.Name)?.Constructors ?? GetClass(n.Name)?.Constructors : null;
-        var moves = constructors?.Where(c => c.IsMove).ToArray();
-        if (moves?.Length > 1) throw new TypeCheckException("A type can declare only one move constructor", node.Span);
-        var constructor = moves?.FirstOrDefault();
-        if (constructor == null)
-        {
-            if (HasDestructor(type))
-                throw new TypeCheckException($"Type '{TypeName(type)}' needs a move constructor to transfer its resources", node.Span);
-        }
-        else
-        {
-            var address = new UnaryExpression(node.Operand, TokenKind.Ampersand, true, node.Line) { Span = node.Span };
-            var creation = new NewExpression(type, new() { address }, node.Destination == null ? AllocationKind.Value : AllocationKind.Pointer, node.Line, node.Destination) { Span = node.Span };
-            creation.Accept(this);
-            _moves[node] = creation;
         }
         RecordType(node, node.Destination == null ? type : new PointerTypeExpression(type, false, node.Line));
     }

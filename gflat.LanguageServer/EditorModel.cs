@@ -260,7 +260,7 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
-        if (token.Text is not ("move" or "at" or "ref")) return false;
+        if (token.Text is not ("move" or "copy" or "at" or "ref")) return false;
         foreach (var syntax in nodes[path])
         {
             if (token.Start < syntax.Span.Start || token.End >= syntax.Span.Start + syntax.Span.Length) continue;
@@ -270,7 +270,7 @@ public sealed partial class EditorModel
                 if (token.Text == "at" && move.Destination != null && token.Start >= move.Operand.Span.Start + move.Operand.Span.Length && token.End < move.Destination.Span.Start) return true;
             }
             if (token.Text == "ref" && syntax.Node is PropertyDeclaration { IsRef: true } property && token.End < property.Type.Span.Start) return true;
-            if (token.Text == "move" && syntax.Node is ConstructorDeclaration { IsMove: true } &&
+            if (token.Text == "copy" && syntax.Node is ConstructorDeclaration { IsCopy: true } &&
                 !tokens[path].Any(t => t.Kind == TokenKind.OpenParen && t.Start >= syntax.Span.Start && t.Start < token.Start)) return true;
         }
         return false;
@@ -311,7 +311,7 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "ref", "move", "const", "weak", "replace"];
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "ref", "copy", "const", "weak", "replace"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
         }

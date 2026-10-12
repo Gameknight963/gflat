@@ -15,15 +15,13 @@ struct String : ITextWriter, IFormattable
         capacity = 0;
     }
 
-    // Movement transfers the buffer and leaves a reusable empty string.
-    public move String(String* source)
+    // A value copy owns an independent buffer. Moving needs no user-written code.
+    public copy String(readonly(String)* source) throws
     {
-        data = source.data;
-        length = source.length;
-        capacity = source.capacity;
-        source.data = (char*)c"";
-        source.length = 0;
-        source.capacity = 0;
+        data = (char*)c"";
+        length = 0;
+        capacity = 0;
+        this.AppendLiteral(source.data, source.length);
     }
 
     public nuint Length { readonly get => length; }

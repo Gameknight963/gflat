@@ -4516,7 +4516,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Owning assignment requires a fresh value", ex.Message);
+            Assert.Contains("Assignment requires a copyable value", ex.Message);
         }
 
         [Fact]
@@ -4538,7 +4538,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot copy value of type 'Tracker' because it defines a destructor", ex.Message);
+            Assert.Contains("Cannot copy value of type 'Tracker' because it has no accessible copy constructor", ex.Message);
         }
 
         [Fact]
@@ -4643,7 +4643,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Foreach iteration variable 't' cannot have type 'Tracker' because types with destructors cannot be copied by value", ex.Message);
+            Assert.Contains("Foreach iteration variable 't' requires a copyable element type", ex.Message);
         }
     }
 }

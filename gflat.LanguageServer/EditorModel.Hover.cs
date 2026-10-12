@@ -121,7 +121,7 @@ public sealed partial class EditorModel
         else if (symbol.Syntax.Node is PropertyDeclaration && symbol.Static) Keyword("static");
 
         if (symbol.Syntax.Node is PropertyDeclaration { IsRef: true }) Keyword("ref");
-        if (symbol.Syntax.Node is ConstructorDeclaration { IsMove: true }) Keyword("move");
+        if (symbol.Syntax.Node is ConstructorDeclaration { IsCopy: true }) Keyword("copy");
 
         if (symbol.Syntax.Node is AliasDeclaration alias)
         {
@@ -145,7 +145,7 @@ public sealed partial class EditorModel
             }
             if (symbol.Syntax.Node is ExternDeclaration { IsVariadic: true }) Add(parameters.Count == 0 ? "..." : ", ...", "punctuation");
             Add(")", "punctuation");
-            if (symbol.Syntax.Node is MethodDeclaration { Throws: true }) { Add(" "); Add("throws", "keyword"); }
+            if (symbol.Syntax.Node is MethodDeclaration { Throws: true } or ConstructorDeclaration { Throws: true }) { Add(" "); Add("throws", "keyword"); }
         }
         if (symbol.Syntax.Node is PropertyDeclaration property)
         {

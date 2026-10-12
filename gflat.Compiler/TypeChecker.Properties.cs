@@ -210,7 +210,7 @@ public partial class TypeChecker
     private void ValidatePropertyAccessor(MethodDeclaration method)
     {
         if (method.PropertyName == null) return;
-        if (method.Parameters.Take(method.Name.StartsWith("$get$") ? method.Parameters.Count : method.Parameters.Count - 1).Any(p => HasDestructor(p.Type)))
+        if (method.Parameters.Take(method.Name.StartsWith("$get$") ? method.Parameters.Count : method.Parameters.Count - 1).Any(p => RequiresCopy(p.Type)))
             throw new TypeCheckException("Indexer arguments must be copyable; borrow owning arguments through pointers", method.Line);
         TypeExpression type = ResolveAlias(method.Name.StartsWith("$get$") ? method.ReturnType : method.Parameters[^1].Type);
         if (type is ArrayTypeExpression || type is NamedTypeExpression { Name: "void" })
@@ -310,7 +310,7 @@ public partial class TypeChecker
             if (!IsAssignable(type, GetType(value), value))
                 throw new TypeCheckException($"Cannot assign '{TypeName(GetType(value))}' to property '{property.Name}' of type '{TypeName(type)}'", node.Line);
             var assigned = Temporary(type);
-            if (HasDestructor(type)) _transferredPropertyArguments.Add(assigned);
+            if (RequiresCopy(type)) _transferredPropertyArguments.Add(assigned);
             var call = PropertyCall(property, setter, receiver, indexArguments.Append(assigned).ToList(), node);
             _propertyWrites[node] = new(property.Receiver, receiver, byAddress, old, get, assigned, value, call, postfix, arguments);
             RecordType(node, HasDestructor(type) ? Void : type);

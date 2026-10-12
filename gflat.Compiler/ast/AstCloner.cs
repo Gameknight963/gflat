@@ -209,7 +209,7 @@ namespace gflat.ast
                 List<Parameter> parameters = ctor.Parameters.Select(p => new Parameter(p.Name, CloneType(p.Type), p.Line, p.IsConst)).ToList();
                 BlockStatement body = (BlockStatement)CloneNode(ctor.Body);
                 List<AstNode>? baseArgs = ctor.BaseArguments?.Select(CloneNode).ToList();
-                return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, ctor.Attributes.Select(CloneAttribute).ToList(), ctor.IsConst) { IsMove = ctor.IsMove };
+                return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, ctor.Attributes.Select(CloneAttribute).ToList(), ctor.IsConst) { IsCopy = ctor.IsCopy, Throws = ctor.Throws };
             }
             if (node is DestructorDeclaration dtor)
             {

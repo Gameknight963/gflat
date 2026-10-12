@@ -542,12 +542,12 @@ namespace gflat
                 return Finish(new DestructorDeclaration(dtorName, dtorBody, isVirtual, line));
             }
 
-            if (Check(TokenKind.Identifier) && Current.Text == "move" && Peek().Kind == TokenKind.Identifier)
+            if (Check(TokenKind.Identifier) && Current.Text == "copy" && Peek().Kind == TokenKind.Identifier)
             {
                 Consume();
                 string owner = Consume().Text;
                 var constructor = ParseConstructorDeclaration(owner, accessibility, line, attributes, isConst);
-                constructor.IsMove = true;
+                constructor.IsCopy = true;
                 return Finish(constructor);
             }
 
@@ -772,6 +772,7 @@ namespace gflat
             }
             Expect(TokenKind.CloseParen);
 
+            bool throws = Match(TokenKind.Throws);
             List<AstNode>? baseArguments = null;
             if (Match(TokenKind.Colon))
             {
@@ -800,7 +801,7 @@ namespace gflat
             }
 
             BlockStatement body = ParseBodyOrBlock();
-            return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments, attributes, isConst);
+            return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments, attributes, isConst) { Throws = throws };
         }
 
         private BlockStatement ParseBodyOrBlock() => Located(() => ParseBodyOrBlockCoreLocated());

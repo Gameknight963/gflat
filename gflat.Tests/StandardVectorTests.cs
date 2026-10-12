@@ -7,6 +7,23 @@ public class StandardVectorTests
         .Append(new SourceFile("main.gf", program));
 
     [Fact]
+    public void AddingAStringCopiesItWhenNotExplicitlyMoved()
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            int main() {
+                Vector<String> values = new Vector<String>();
+                String original = s"abc";
+                values.Add(original);
+                original[(nuint)0] = 'z';
+                if (values[(nuint)0].Data[0] != 'a') return 1;
+                return 0;
+            }
+            """));
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public void StringsAreOrdinaryElementsWithExplicitMovement()
     {
         var result = CompilerTestHelper.Run(Sources("""
@@ -16,7 +33,8 @@ public class StandardVectorTests
                 words.Add(s"one");
                 String second = s"two";
                 words.Add(move second);
-                if (second.Length != (nuint)0) return 1;
+                second = s"reinitialized";
+                if (second.Length != (nuint)13) return 1;
                 for (int i = 0; i < 20; i++) words.Add(s"extra");
                 words[(nuint)0].Append(c"!", 1);
                 words[(nuint)1] = s"replacement";
@@ -25,7 +43,8 @@ public class StandardVectorTests
                 String last = words.Pop();
                 if (last.Length != (nuint)5 || words.Count != (nuint)21) return 3;
                 Vector<String> moved = move words;
-                if (words.Count != (nuint)0 || moved.Count != (nuint)21) return 4;
+                if (moved.Count != (nuint)21) return 4;
+                words = new Vector<String>();
                 words.Add(s"reused");
                 return 0;
             }
@@ -86,7 +105,6 @@ public class StandardVectorTests
                 int* released;
                 int id;
                 public R(int* counter, int value) { released = counter; id = value; }
-                public move R(R* source) { released = source.released; id = source.id; source.id = 0; }
                 ~R() { if (id != 0) (*released)++; }
             }
             int main() {

@@ -5,6 +5,31 @@ public class StandardStringTests
     private static ExecutionResult Run(string source) => CompilerTestHelper.Run(InterpolationTests.Sources(source));
 
     [Fact]
+    public void OrdinaryCopiesOwnIndependentBuffersAndMovesDoNotAllocate()
+    {
+        var result = Run("""
+            using std;
+            extern int printf(readonly(char)* text, ...);
+            namespace Allocator {
+                public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
+                public replace void Free(void* p) { printf(c"F"); free(p); }
+            }
+            int main() {
+                String original = s"a\0b";
+                String copy = original;
+                original[(nuint)0] = 'x';
+                if (copy.Data[0] != 'a' || copy.Data[2] != 'b' || copy.Length != (nuint)3) return 1;
+                String moved = move original;
+                original = new String();
+                if (moved.Data[0] != 'x' || original.Length != (nuint)0) return 2;
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("AAFF", result.StandardOutput);
+    }
+
+    [Fact]
     public void FailedAppendPreservesLengthCapacityContentsAndTerminator()
     {
         var result = Run("""

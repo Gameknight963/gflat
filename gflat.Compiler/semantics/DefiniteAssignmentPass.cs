@@ -43,6 +43,61 @@ namespace gflat.semantics
         private readonly Stack<int> _exceptionCleanupDepths = new();
         private int _functionCleanupDepth;
         private bool _checkingCleanup;
+        private readonly Stack<List<Dictionary<string, Stack<VariableAssignment>>>> _exceptionStates = new();
+
+        private void RecordExceptionalState()
+        {
+            var normal = CloneState(_state);
+            CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
+            foreach (var states in _exceptionStates) states.Add(CloneState(_state));
+            _state = normal;
+        }
+
+        private void CheckValue(AstNode expression)
+        {
+            CheckExpression(expression);
+            if (_typeChecker.IsCopyUse(expression)) RecordExceptionalState();
+        }
+
+        private void ConsumeLocal(string name)
+        {
+            if (Lookup(name) is not VariableAssignment value) return;
+            value.IsFullyAssigned = false;
+            value.AssignedFields.Clear();
+        }
+
+        private static bool SameAssignments(Dictionary<string, Stack<VariableAssignment>> a, Dictionary<string, Stack<VariableAssignment>> b)
+            => a.Count == b.Count && a.All(pair => b.TryGetValue(pair.Key, out var right) &&
+                pair.Value.Count == right.Count && pair.Value.Zip(right).All(p => p.First.IsFullyAssigned == p.Second.IsFullyAssigned && p.First.AssignedFields.SetEquals(p.Second.AssignedFields)));
+
+        private void CheckLoop(AstNode? condition, AstNode body, AstNode? increment = null, Action? beforeBody = null)
+        {
+            var entry = CloneState(_state);
+            var header = CloneState(entry);
+            while (true)
+            {
+                _state = CloneState(header);
+                CheckExpression(condition);
+                var conditionExit = CloneState(_state);
+                _loopCleanupDepths.Push(_cleanupScopes.Count);
+                _breakStates.Push(new());
+                _continueStates.Push(new());
+                beforeBody?.Invoke();
+                CheckStatement(body);
+                _loopCleanupDepths.Pop();
+                var backs = _continueStates.Pop();
+                if (!_controlFlow.StatementTerminates(body)) backs.Add(CloneState(_state));
+                var exits = _breakStates.Pop();
+                if (condition != null && condition is not LiteralExpression { Token.Kind: TokenKind.True }) exits.Add(conditionExit);
+                if (backs.Count == 0) { _state = MergeLoopStates(exits, conditionExit); return; }
+                _state = MergeLoopStates(backs, header);
+                CheckExpression(increment);
+                var next = IntersectStates(entry, _state);
+                if (SameAssignments(header, next)) { _state = MergeLoopStates(exits, conditionExit); return; }
+                header = next;
+            }
+        }
+
         private ConstructorDeclaration? _constructorBeingChecked;
 
         private void CheckCleanups(int depth)
@@ -282,6 +337,7 @@ namespace gflat.semantics
             _breakStates.Clear();
             _continueStates.Clear();
             _exceptionCleanupDepths.Clear();
+            _exceptionStates.Clear();
             _functionCleanupDepth = 0;
         }
 
@@ -337,7 +393,7 @@ namespace gflat.semantics
 
             if (structInfo != null)
             {
-                if (structInfo.Fields.Count == 0)
+                if (structInfo.Fields.Count == 0 && !_typeChecker.HasDestructor(type))
                 {
                     fullyAssigned = true;
                 }
@@ -494,7 +550,7 @@ namespace gflat.semantics
                 {
                     // Declare as unassigned first to catch self-referential reads
                     DeclareLocal(varDecl.Name, varDecl.Type, isAssigned: false);
-                    CheckExpression(varDecl.Initializer);
+                    CheckValue(varDecl.Initializer);
                     MarkFullyAssigned(varDecl.Name);
                 }
                 else if (resolved is ArrayTypeExpression)
@@ -571,69 +627,35 @@ namespace gflat.semantics
             }
             else if (stmt is WhileStatement whileStmt)
             {
-                CheckExpression(whileStmt.Condition);
-                Dictionary<string, Stack<VariableAssignment>> stateBefore = CloneState(_state);
-                _loopCleanupDepths.Push(_cleanupScopes.Count);
-                _breakStates.Push(new());
-                _continueStates.Push(new());
-                CheckStatement(whileStmt.Body);
-                _loopCleanupDepths.Pop();
-                var exits = _breakStates.Pop();
-                _continueStates.Pop();
-                if (whileStmt.Condition is not LiteralExpression { Token.Kind: TokenKind.True }) exits.Add(stateBefore);
-                _state = MergeLoopStates(exits, stateBefore);
+                CheckLoop(whileStmt.Condition, whileStmt.Body);
             }
             else if (stmt is ForStatement forStmt)
             {
                 PushScope();
-                if (forStmt.Initializer != null)
-                {
-                    CheckStatement(forStmt.Initializer);
-                }
-                if (forStmt.Condition != null)
-                {
-                    CheckExpression(forStmt.Condition);
-                }
-
-                Dictionary<string, Stack<VariableAssignment>> stateBeforeBody = CloneState(_state);
-                _loopCleanupDepths.Push(_cleanupScopes.Count);
-                _breakStates.Push(new());
-                _continueStates.Push(new());
-                CheckStatement(forStmt.Body);
-                _loopCleanupDepths.Pop();
-                var continues = _continueStates.Pop();
-                if (!_controlFlow.StatementTerminates(forStmt.Body)) continues.Add(CloneState(_state));
-                _state = MergeLoopStates(continues, stateBeforeBody);
-                if (forStmt.Increment != null)
-                {
-                    CheckExpression(forStmt.Increment);
-                }
-                var exits = _breakStates.Pop();
-                if (forStmt.Condition != null && forStmt.Condition is not LiteralExpression { Token.Kind: TokenKind.True }) exits.Add(stateBeforeBody);
-                _state = MergeLoopStates(exits, stateBeforeBody);
+                if (forStmt.Initializer != null) CheckStatement(forStmt.Initializer);
+                CheckLoop(forStmt.Condition, forStmt.Body, forStmt.Increment);
                 PopScope();
             }
             else if (stmt is ForeachStatement foreachStmt)
             {
+                if (foreachStmt.Desugared != null) { CheckStatement(foreachStmt.Desugared); return; }
                 CheckExpression(foreachStmt.Collection);
-                var beforeLoop = CloneState(_state);
                 PushScope();
                 DeclareLocal(foreachStmt.VariableName, foreachStmt.ElementType, isAssigned: true);
-                _loopCleanupDepths.Push(_cleanupScopes.Count);
-                _breakStates.Push(new());
-                _continueStates.Push(new());
-                CheckStatement(foreachStmt.Body);
-                _loopCleanupDepths.Pop();
-                _breakStates.Pop();
-                _continueStates.Pop();
+                // A nullable condition means an infinite loop; use a nonconstant
+                // condition here to retain the possible zero-iteration path.
+                var entry = CloneState(_state);
+                CheckLoop(foreachStmt.Collection, foreachStmt.Body, beforeBody: () => { MarkFullyAssigned(foreachStmt.VariableName); if (_typeChecker.RequiresCopy(foreachStmt.ElementType)) RecordExceptionalState(); });
+                _state = IntersectStates(entry, _state);
                 PopScope();
-                _state = beforeLoop;
             }
             else if (stmt is ReturnStatement retStmt)
             {
                 if (retStmt.Value != null)
                 {
-                    CheckExpression(retStmt.Value);
+                    if (_typeChecker.GetTransferredLocal(retStmt) != null) CheckExpression(retStmt.Value);
+                    else CheckValue(retStmt.Value);
+                    if (_typeChecker.GetTransferredLocal(retStmt) is string name) ConsumeLocal(name);
                 }
                 CheckCleanups(_functionCleanupDepth);
                 RequireConstructorFields("", retStmt.Line);
@@ -641,6 +663,7 @@ namespace gflat.semantics
             else if (stmt is ThrowStatement throwStmt)
             {
                 CheckExpression(throwStmt.Expression);
+                RecordExceptionalState();
                 CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
             }
             else if (stmt is TryStatement tryStmt)
@@ -649,7 +672,10 @@ namespace gflat.semantics
 
                 _state = CloneState(stateBefore);
                 _exceptionCleanupDepths.Push(_cleanupScopes.Count);
+                _exceptionStates.Push(new());
                 CheckStatement(tryStmt.TryBlock);
+                var exceptional = _exceptionStates.Pop();
+                var catchEntry = MergeLoopStates(exceptional, stateBefore);
                 _exceptionCleanupDepths.Pop();
                 Dictionary<string, Stack<VariableAssignment>> stateTry = _state;
                 bool tryTerminates = _controlFlow.StatementTerminates(tryStmt.TryBlock);
@@ -660,7 +686,7 @@ namespace gflat.semantics
                 for (int i = 0; i < tryStmt.CatchClauses.Count; i++)
                 {
                     CatchClause c = tryStmt.CatchClauses[i];
-                    _state = CloneState(stateBefore);
+                    _state = CloneState(catchEntry);
                     PushScope();
                     if (!string.IsNullOrEmpty(c.VariableName) && c.ExceptionType != null)
                     {
@@ -756,14 +782,14 @@ namespace gflat.semantics
                     AutoPropertyStorage(setter) is string storage)
                 {
                     if (write.Getter != null) RequireConstructorFields(storage, expr.Line);
-                    CheckExpression(write.Value);
+                    CheckValue(write.Value);
                     MarkConstructorField(storage);
                     return;
                 }
                 CheckExpression(write.Receiver);
-                foreach (var argument in write.Arguments) CheckExpression(argument.Value);
+                foreach (var argument in write.Arguments) CheckValue(argument.Value);
                 if (write.Getter != null) CheckExpression(write.Getter);
-                CheckExpression(write.Value);
+                CheckValue(write.Value);
                 CheckExpression(write.Setter);
                 return;
             }
@@ -838,9 +864,7 @@ namespace gflat.semantics
                     CheckExpression(part);
                     // Synthetic locals are initialized by lowering, not source declarations.
                     // Append may throw before the next hole has been evaluated.
-                    var normal = CloneState(_state);
-                    CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
-                    _state = normal;
+                    RecordExceptionalState();
                 }
             }
             else if (expr is DestructorCallExpression destruction)
@@ -849,8 +873,9 @@ namespace gflat.semantics
             }
             else if (expr is MoveExpression move)
             {
-                CheckExpression(move.Operand);
                 if (move.Destination != null) CheckExpression(move.Destination);
+                CheckExpression(move.Operand);
+                if (move.Operand is IdentifierExpression consumed) ConsumeLocal(consumed.Name);
             }
             else if (expr is CallExpression call)
             {
@@ -863,13 +888,11 @@ namespace gflat.semantics
                 CheckExpression(call.Callee);
                 for (int i = 0; i < call.Arguments.Count; i++)
                 {
-                    CheckExpression(call.Arguments[i]);
+                    CheckValue(call.Arguments[i]);
                 }
-                if (_typeChecker.GetResolvedCall(call) is MethodDeclaration { Throws: true })
+                if (_typeChecker.CanCallThrow(call))
                 {
-                    var normal = CloneState(_state);
-                    CheckCleanups(_exceptionCleanupDepths.Count > 0 ? _exceptionCleanupDepths.Peek() : _functionCleanupDepth);
-                    _state = normal;
+                    RecordExceptionalState();
                 }
             }
             else if (expr is CastExpression cast)
@@ -883,19 +906,24 @@ namespace gflat.semantics
             }
             else if (expr is ArrayLiteralExpression array)
             {
-                foreach (var element in array.Elements) CheckExpression(element);
+                foreach (var element in array.Elements) CheckValue(element);
             }
             else if (expr is NewExpression newExpr)
             {
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
-                    CheckExpression(newExpr.Arguments[i]);
+                    CheckValue(newExpr.Arguments[i]);
                 }
                 if (newExpr.Destination != null) CheckExpression(newExpr.Destination);
+                if (_typeChecker.CanCallThrow(newExpr)) RecordExceptionalState();
             }
             else if (expr is LambdaExpression lambda)
             {
                 var beforeLambda = CloneState(_state);
+                var outerExceptions = _exceptionStates.ToArray();
+                var outerExceptionDepths = _exceptionCleanupDepths.ToArray();
+                _exceptionStates.Clear();
+                _exceptionCleanupDepths.Clear();
                 bool outerConstructor = _inConstructor;
                 // Capturing a partially initialized receiver is not permitted.
                 if (_inConstructor) RequireConstructorFields("", lambda.Line);
@@ -917,6 +945,8 @@ namespace gflat.semantics
                 }
                 PopScope();
                 _state = beforeLambda;
+                foreach (var state in outerExceptions.Reverse()) _exceptionStates.Push(state);
+                foreach (var depth in outerExceptionDepths.Reverse()) _exceptionCleanupDepths.Push(depth);
                 _functionCleanupDepth = outerCleanupDepth;
                 _inConstructor = outerConstructor;
             }
@@ -947,8 +977,14 @@ namespace gflat.semantics
             if (assign.Operator == TokenKind.Equals)
             {
                 // 1. Evaluate RHS Value FIRST!
-                CheckExpression(assign.Value);
+                CheckValue(assign.Value);
 
+                if (ConstructorFieldPath(assign.Target) is string nestedPath && nestedPath.Contains('.'))
+                {
+                    string root = nestedPath.Split('.')[0];
+                    var field = ConstructorFields.FirstOrDefault(f => f.Name == root);
+                    if (field != null && _typeChecker.HasDestructor(field.Type)) RequireConstructorFields(root, assign.Line);
+                }
                 if (ConstructorFieldPath(assign.Target) is string fieldPath &&
                     _requiredFields.Any(f => f == fieldPath || f.StartsWith(fieldPath + ".")))
                 {
@@ -974,6 +1010,8 @@ namespace gflat.semantics
                             TypeExpression resolvedTarget = _typeChecker.ResolveAlias(va.Type);
                             if (resolvedTarget is not PointerTypeExpression)
                             {
+                                if (!va.IsFullyAssigned && _typeChecker.HasDestructor(va.Type))
+                                    throw new TypeCheckException("An uninitialized owning local must be initialized as a whole value", assign.Span);
                                 // Field-by-field struct initialization write!
                                 va.AssignedFields.Add(member.Member);
                                 if (va.StructInfo != null && va.StructInfo.Fields.Count > 0)
@@ -1001,7 +1039,7 @@ namespace gflat.semantics
             {
                 // Compound assignment (+=, -=, etc.) reads target first!
                 CheckExpression(assign.Target);
-                CheckExpression(assign.Value);
+                CheckValue(assign.Value);
 
                 if (assign.Target is IdentifierExpression id)
                 {

@@ -9,16 +9,6 @@ struct Vector<T>
 
     public Vector() { data = null; count = 0; capacity = 0; }
 
-    public move Vector(Vector<T>* source)
-    {
-        data = source.data;
-        count = source.count;
-        capacity = source.capacity;
-        source.data = null;
-        source.count = 0;
-        source.capacity = 0;
-    }
-
     public nuint Count { readonly get => count; }
     public nuint Capacity { readonly get => capacity; }
 
@@ -43,8 +33,7 @@ struct Vector<T>
         T* replacement = (T*)allocation;
         for (nuint i = 0; i < count; i++)
         {
-            move data![i] at replacement + i;
-            (data! + i).~T();
+            move *(data! + i) at replacement + i;
         }
         if (data != null) Allocator::Free((void*)data);
         data = replacement;
@@ -76,8 +65,7 @@ struct Vector<T>
     {
         if (count == (nuint)0) throw new* Exception(c"Cannot pop an empty vector");
         nuint index = count - (nuint)1;
-        T result = move data![index];
-        (data! + index).~T();
+        T result = move *(data! + index);
         count = index;
         return result;
     }

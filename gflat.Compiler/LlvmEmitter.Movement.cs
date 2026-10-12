@@ -4,21 +4,26 @@ namespace gflat;
 
 public partial class LlvmEmitter
 {
+    private readonly Dictionary<string, string> _ownerLiveFlags = new();
+
+    private IDeferAction RegisterOwner(TypeExpression type, string address, bool live)
+    {
+        string flag = NewTemp();
+        Emit($"    {flag} = alloca i1");
+        Emit($"    store i1 {(live ? "true" : "false")}, i1* {flag}");
+        _ownerLiveFlags[address] = flag;
+        return new ConditionalTemporaryCleanup(type, address, flag);
+    }
+
+    private void SetOwnerLive(string address, bool live)
+    {
+        if (_ownerLiveFlags.TryGetValue(address, out string? flag))
+            Emit($"    store i1 {(live ? "true" : "false")}, i1* {flag}");
+    }
+
     private readonly Stack<List<IDeferAction>> _argumentOwners = new();
     private readonly List<IDeferAction> _parameterOwners = new();
     private readonly Dictionary<AssignmentExpression, string> _constructorLiveFlags = new();
-
-    private void PrepareConstructorWrites(ConstructorDeclaration constructor)
-    {
-        _constructorLiveFlags.Clear();
-        foreach (var group in _typeChecker.ConstructorWrites(constructor).GroupBy(w => w.Value.Path))
-        {
-            string flag = NewTemp();
-            Emit($"    {flag} = alloca i1");
-            Emit($"    store i1 {(group.First().Value.Live ? "true" : "false")}, i1* {flag}");
-            foreach (var write in group) _constructorLiveFlags[write.Key] = flag;
-        }
-    }
 
     private void DestroyAssignmentTarget(AssignmentExpression node, TypeExpression type, string address)
     {
@@ -26,6 +31,11 @@ public partial class LlvmEmitter
         {
             new ConditionalTemporaryCleanup(type, address, flag).Execute(this);
             Emit($"    store i1 true, i1* {flag}");
+        }
+        else if (_ownerLiveFlags.TryGetValue(address, out string? live))
+        {
+            new ConditionalTemporaryCleanup(type, address, live).Execute(this);
+            Emit($"    store i1 true, i1* {live}");
         }
         else if (!_typeChecker.IsInitialization(node)) EmitDestroy(type, address);
     }
@@ -72,21 +82,25 @@ public partial class LlvmEmitter
 
     public void Visit(MoveExpression node)
     {
-        if (_typeChecker.GetMove(node) is NewExpression creation) creation.Accept(this);
-        else
+        TypeExpression type = _typeChecker.GetType(node.Operand);
+        string llvm = EmitType(type);
+        string? destination = null;
+        if (node.Destination != null)
         {
-            TypeExpression type = _typeChecker.GetType(node.Operand);
-            EmitValueForTarget(node.Operand, type);
-            if (node.Destination != null)
-            {
-                string value = Pop();
-                node.Destination.Accept(this);
-                string address = Pop(), llvm = EmitType(type);
-                GuardNonNull(address, llvm + "*");
-                GuardPlacementAlignment(address, llvm + "*", type);
-                Emit($"    store {llvm} {value}, {llvm}* {address}");
-                Push(address);
-            }
+            node.Destination.Accept(this);
+            destination = Pop();
+            GuardNonNull(destination, llvm + "*");
+            GuardPlacementAlignment(destination, llvm + "*", type);
         }
+        EmitAddress(node.Operand);
+        string source = Pop(), value = NewTemp();
+        Emit($"    {value} = load {llvm}, {llvm}* {source}");
+        SetOwnerLive(source, false);
+        if (destination != null)
+        {
+            Emit($"    store {llvm} {value}, {llvm}* {destination}");
+            Push(destination);
+        }
+        else Push(value);
     }
 }

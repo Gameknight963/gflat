@@ -8,7 +8,7 @@ int main()
     names.Add(s"Ada");
     String name = s"Grace";
     names.Add(move name);
-    name.Append(c"reused", 6);
+    name = s"reused"; // Moving consumed the previous value; initialize a new one.
 
     names[(nuint)0].Append(c"!", 1);
     readonly(Vector<String>)* view = &names;

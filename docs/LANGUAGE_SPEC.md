@@ -153,7 +153,7 @@ namespace Allocator {
 
 Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers; allocation alone does not guarantee initialized elements. Initialize elements before reading them.
 
-Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Unsized array parameters are rejected; spell buffer parameters as pointers. Array value conversions preserve dimensions and element representation; cast individual elements explicitly when changing numeric types. Values requiring destruction cannot be passed by value.
+Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Unsized array parameters are rejected; spell buffer parameters as pointers. Array value conversions preserve dimensions and element representation; cast individual elements explicitly when changing numeric types. Owning values transfer from fresh values or explicit moves, or copy using a copy constructor.
 
 Nullable raw pointers and function pointers require a checked non-null cast or unchecked postfix `!` before dereference, indexing, member access, calls, or pointer arithmetic. A comparison with `null` does not change the variable's static type. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
 
@@ -239,7 +239,7 @@ int main()
 
 Literals can be indexed, returned, used in `foreach`, and passed to pointer parameters. Constant arrays support constant elements. A pointer initialized directly from a literal refers to temporary stack storage in the enclosing scope; pointers must not outlive that storage. Pointer arguments to calls remain valid for that call.
 
-Destructor-bearing elements must be fresh values rather than copies of existing objects. If evaluating an element throws, previously initialized elements are destroyed in reverse order. Once initialization succeeds, the array owns all elements and uses normal array cleanup. Constant arrays cannot contain destructor-bearing elements.
+Destructor-bearing elements must be fresh values, explicit moves, or values supporting copying. If evaluating an element throws, previously initialized elements are destroyed in reverse order. Once initialization succeeds, the array owns all elements and uses normal array cleanup. Constant arrays cannot contain destructor-bearing elements.
 
 ### Scope cleanup
 
@@ -258,52 +258,79 @@ int main()
 }
 ```
 
-Owning values (types requiring destruction) cannot be implicitly copied. Fresh values
-can initialize locals, pass to by-value parameters, replace existing values, and
-return from functions. Owned parameters are destroyed by the callee unless returned.
-If evaluating a later argument throws, earlier fresh arguments are cleaned up by
-the caller. Owning locals require initializers. Replacement constructs the new value
-before destroying the previous value; a failed right-hand side leaves it intact.
+Owning values (types requiring destruction) can be initialized, passed by value,
+returned, and replaced. Fresh values transfer directly. Owned parameters are destroyed
+by the callee unless transferred onward. If a later argument fails, earlier arguments
+are cleaned up by the caller. Replacement builds the new value before destroying the
+old one; a failed right-hand side leaves the old value intact.
 
-Use `move value` to transfer from existing mutable storage. A destructor-bearing
-type declares one move constructor:
+An ordinary value copy duplicates the value using its copy constructor when one exists:
 
 ```gflat
-struct Resource {
-    private void*? data;
-    public Resource() { data = null; }
-    public move Resource(Resource* source) {
-        data = source.data;
-        source.data = null;
-    }
-    ~Resource() { if (data != null) Allocator::Free((void*)data); }
+struct Number {
+    public int value;
+    public Number(int n) { value = n; }
+    public copy Number(readonly(Number)* source) { value = source.value; }
+}
+int main() {
+    Number a = new Number(3);
+    Number b = a;
+    b.value = 4;
+    return a.value;
 }
 ```
 
-The source remains a live object and is destroyed normally; its move constructor
-must leave it valid. It is not automatically zeroed or marked unusable. Copyable
-types without a move constructor use their ordinary value copy. Existing owners
-must use `move` or an explicit copying operation such as `Clone`. Returning a whole
-owned local transfers it without a redundant move; returning borrowed fields or
-indexed elements requires `move`. `foreach` still requires copyable elements.
+A copy constructor takes exactly one non-null readonly pointer to its own type.
+It may declare `throws`. A type with a user-written destructor is noncopyable unless
+it supplies a copy constructor. Aggregates without a user-written destructor copy
+their fields and base value; all of those must be copyable. Fixed buffers copy each
+element. If a copy fails, completed subobjects are destroyed. Nontrivial copying is
+not supported during constant evaluation. `foreach` copies elements and requires
+a copyable element type.
 
-`move value at destination` constructs directly in non-null mutable `T*` storage
-and returns that pointer. This is the movement counterpart of placement `new*`.
-It checks null and alignment, but does not validate allocation size, liveness, or
-aliasing. Source and destination must not overlap. Destroy the moved-from source
-normally, then release its old allocation separately if appropriate.
+`move local` transfers a whole mutable local or parameter, including its destruction
+responsibility. The source becomes uninitialized: it cannot be read or moved again
+until assigned a new value, and its previous value is not destroyed there. This rule
+also applies to primitive values. No move constructor runs, and no empty replacement
+is created. Owning locals may be declared without an initializer; initialize them as
+whole values before use. Owning fields must also be initialized as whole values before
+writing nested fields. Returning a whole owning local implicitly transfers it.
+Returning borrowed fields or indexed elements requires copying.
 
-By-value calls and returns do not promise stable object addresses. A type storing
-pointers into itself must account for that constraint; this model is not pinning.
-Raw-pointer ownership remains manual and there is no general borrow checker.
+```gflat std
+using std;
+int main() {
+    String a = s"hello";
+    String b = move a;
+    a = s"new value";
+    return 0;
+}
+```
+
+General field and indexer moves are not supported. Raw storage has an explicit manual
+path: `move *source` transfers the value stored at a raw pointer, and `move *source at destination` constructs it at another address. `move local at destination` consumes
+a local directly into that storage. These return a value or destination `T*`, respectively.
+The destination must be uninitialized, non-null, suitably aligned storage for exactly
+that type. Null and alignment are checked; allocation size, liveness, and overlap are
+not. Source and destination must not overlap. After raw relocation, do not destroy the
+old value; release its old allocation separately if appropriate. The compiler does not
+track initialization through raw pointers.
+
+By-value calls, returns, and relocation do not promise stable object addresses. Types
+storing pointers into themselves need a different representation or stable indirection.
+There are no custom move constructors or pinning guarantees in this version. Raw-pointer
+validity remains the caller's responsibility; there is no borrow checker or alias
+invalidation analysis.
+
 Extern declarations must use explicit pointers for owning types. Owning objects cannot
-be sliced to a base value. Operator overloads currently require copyable operands and
-results. Lambdas still borrow owning parameters through pointers and cannot return owners;
-use a named function for those signatures. Indexer arguments must also be copyable (their element type need not be).
+be sliced to a base value. Operator overloads currently require trivial value operands
+and results. Lambdas borrow nontrivial parameters through pointers and cannot return
+nontrivial values; use a named function for those signatures. Indexer arguments must
+also be trivial values (their element type need not be).
 
 Struct and class destruction runs the destructor body, then inline object fields in reverse declaration order, then the class base destructor. Returning early from a destructor still runs this cleanup. Containers with destructor-bearing fields receive synthesized cleanup. Discarded fresh object values and temporary method or field receivers are destroyed after their use. Temporaries on skipped logical operands are neither constructed nor destroyed; exceptions during evaluation clean up only successfully created temporaries. These rules are not a complete ownership proof.
 
-Fixed-size arrays with destructor-bearing elements clean up from the last element to the first, recursively for nested arrays, on scope exit and exception propagation. This also applies to inline array fields and returned array values. Deleting a pointer to a fixed-size array destroys its elements before freeing the allocation. Such local arrays require an initializer, cannot be implicitly copied, and cannot be initialized from a differently sized array. `default(T[N])` requires default-initializable elements, initializes class metadata, and does not call user constructors. Arrays of raw pointers do not destroy their pointees.
+Fixed-size arrays with destructor-bearing elements clean up from the last element to the first, recursively for nested arrays, on scope exit and exception propagation. This also applies to inline array fields and returned array values. Deleting a pointer to a fixed-size array destroys its elements before freeing the allocation. Such local arrays require an initializer and copy only when their elements support copying; initialization preserves the array size. `default(T[N])` requires default-initializable elements, initializes class metadata, and does not call user constructors. Arrays of raw pointers do not destroy their pointees.
 
 Structs provide inline fields, constructors, methods, properties, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method and property contracts with fat pointer dispatch. These are gflat layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests; use pointers and primitive C interfaces for interoperation.
 
@@ -384,7 +411,7 @@ Ordinary indexer results are values, not storage references. Modifying a field o
 
 Non-void functions must return or throw on every reachable path, or never terminate. Shared control-flow graphs model branches, loops, return, throw, break, and continue. Definite assignment uses these termination facts and tracks assignment states separately.
 
-Functions that permit exception propagation declare `throws`. Calling them does not require a catch or a `throws` declaration. A matching local catch handles the exception; otherwise a `throws` function propagates it, and a function without `throws` terminates the process with exit status 1. A caller cannot catch an exception beyond that termination boundary. Termination does not run language destructors or deferred cleanup at the boundary, and no warning is emitted by default. The existing `main` boundary reports the exception and performs its cleanup before returning status 1. The generated ABI uses a value/status tuple, not native C++ unwinding. `main` cannot declare `throws`. Catch cleanup runs deferred actions before destroying and freeing an owned exception, including exits by return, break, continue, or another throw. Rethrowing the caught pointer transfers its release responsibility. An exception escaping deferred cleanup replaces the pending exception, releasing the previous owned exception; remaining cleanup runs once.
+Functions and constructors that permit exception propagation declare `throws`. A failed constructor destroys completed owning fields and its completed base, without invoking the incomplete object's destructor. Failed `new*` also frees newly allocated storage; placement construction leaves storage ownership with the caller. Raw resources acquired by a constructor still need explicit cleanup on its failure paths. Calling them does not require a catch or a `throws` declaration. A matching local catch handles the exception; otherwise a `throws` function propagates it, and a function without `throws` terminates the process with exit status 1. A caller cannot catch an exception beyond that termination boundary. Termination does not run language destructors or deferred cleanup at the boundary, and no warning is emitted by default. The existing `main` boundary reports the exception and performs its cleanup before returning status 1. The generated ABI uses a value/status tuple, not native C++ unwinding. `main` cannot declare `throws`. Catch cleanup runs deferred actions before destroying and freeing an owned exception, including exits by return, break, continue, or another throw. Rethrowing the caught pointer transfers its release responsibility. An exception escaping deferred cleanup replaces the pending exception, releasing the previous owned exception; remaining cleanup runs once.
 
 `const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
 

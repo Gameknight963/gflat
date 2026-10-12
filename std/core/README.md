@@ -31,7 +31,8 @@ and checks bounds.
 - `Reserve`, `Append`, and `AppendLiteral` throw on overflow or allocation failure.
   Appending from the same string works, including across growth.
 - `Clear` retains capacity. `Clone` makes an independent owned copy.
-- `move text` transfers the buffer and leaves `text` empty and reusable.
+- `String copy = text;` makes an independent owned copy and may throw on allocation failure.
+- `move text` transfers the buffer and leaves `text` uninitialized. Assign a new value before using it again.
 - `Equals(readonly(String)* other)` compares bytes.
 
 Interpolation uses `IFormattable.Format(ITextWriter*)` and
@@ -57,7 +58,8 @@ int main()
     Vector<String> words = new Vector<String>();
     words.Add(s"first");
     String second = s"second";
-    words.Add(move second); // second is now empty, and still usable.
+    words.Add(move second); // second is now uninitialized.
+    second = s"new value";
     words[(nuint)0].Append(c"!", 1);
     words[(nuint)1] = s"replacement";
     String last = words.Pop();
@@ -66,15 +68,16 @@ int main()
 ```
 
 `Add(T)` takes ownership of its argument. Fresh values transfer directly; named
-owners require `move`. `Pop()` transfers the last element out. `Clear()` destroys
+owners copy when their type supports it; use `move` to consume a local instead. `Pop()` transfers the last element out. `Clear()` destroys
 all elements while retaining capacity. `Reserve(nuint)` grows storage, and the
 destructor releases elements and storage. Copy a vector explicitly element by
 element when that is desired; `move vector` transfers its buffer instead.
 
-Types with destructors need an explicit move constructor to be elements. Growth
-constructs each element at its new address, then destroys its moved-from source.
-A move constructor must leave that source valid for destruction. Plain copyable
-types use ordinary value copying. Growth invalidates pointers into the buffer.
+Growth relocates each element and frees the old allocation without destroying the
+transferred values. No move constructor is required. Noncopyable resource types can
+be elements: pass fresh values or `move` a local. `Vector<T>` itself is noncopyable
+in this version; moving it transfers the buffer. Types needing a stable address must
+use indirection. Growth invalidates pointers into the buffer.
 Zero-sized elements are supported, but their addresses are not distinct identities.
 
 ## Spans and readonly views

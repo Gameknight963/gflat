@@ -8,7 +8,7 @@ public class EditorTests
     [Fact]
     public void MoveAndReferenceAccessorsHaveContextualColorsAndNavigation()
     {
-        var (model, path, offset, source) = Analyze("struct S { int n; public S() {} public move S(S* source) { n = source.n; } public ref int Value => n; } void F(S* ptr) { S value = new S(); move value at p|tr; }");
+        var (model, path, offset, source) = Analyze("struct S { int n; public S() {} public copy S(readonly(S)* source) { n = source.n; } public ref int Value => n; } void F(S* ptr) { S value = new S(); move value at p|tr; }");
         Assert.NotNull(model.Definition(path, offset));
         var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
         var keywords = new List<string>();
@@ -18,7 +18,7 @@ public class EditorTests
             column += data[i + 1];
             if (EditorModel.TokenTypes[data[i + 3]] == "modifier") keywords.Add(source.Substring(column, data[i + 2]));
         }
-        Assert.Equal(new[] { "move", "ref", "move", "at" }, keywords);
+        Assert.Equal(new[] { "copy", "ref", "move", "at" }, keywords);
     }
 
     [Fact]

@@ -1300,11 +1300,15 @@ public partial class LlvmEmitter : IVisitor
             {
                 if (isVoid)
                     Emit("    ret { %Exception*, i1 } zeroinitializer");
+                else
+                    Emit("    unreachable");
             }
             else if (returnType == "void")
             {
                 Emit("    ret void");
             }
+            else
+                Emit("    unreachable");
         }
 
         Emit("}");
@@ -1763,8 +1767,10 @@ public partial class LlvmEmitter : IVisitor
 
         node.Body.Accept(this);
 
-        if (returnType == "void" && !_hasTerminated)
-            Emit("    ret void");
+        // Non-void fallthrough has already been rejected by control-flow analysis.
+        // Loops may still leave a structurally present, unreachable exit block.
+        if (!_hasTerminated)
+            Emit(returnType == "void" ? "    ret void" : "    unreachable");
 
         Emit("}");
         Emit("");
@@ -1828,11 +1834,15 @@ public partial class LlvmEmitter : IVisitor
             {
                 if (isVoid)
                     Emit("    ret { %Exception*, i1 } zeroinitializer");
+                else
+                    Emit("    unreachable");
             }
             else if (returnType == "void")
             {
                 Emit("    ret void");
             }
+            else
+                Emit("    unreachable");
         }
 
         Emit("}");
@@ -2161,11 +2171,15 @@ public partial class LlvmEmitter : IVisitor
                 {
                     if (isVoid)
                         Emit("    ret { %Exception*, i1 } zeroinitializer");
+                    else
+                        Emit("    unreachable");
                 }
                 else if (returnType == "void")
                 {
                     Emit("    ret void");
                 }
+                else
+                    Emit("    unreachable");
             }
         }
 

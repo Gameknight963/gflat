@@ -112,6 +112,15 @@ public class ReviewRegressionTests
     [Fact]
     public void InfiniteLoopIgnoresUnreachableBreak() => Compiler.Check("int f() { while (true) { if (false) break; } } int main() { return 0; }");
 
+    [Theory]
+    [InlineData("int f() { while (true) { return 7; } }", "f()")]
+    [InlineData("int f() throws { while (true) { return 7; } }", "f()")]
+    [InlineData("struct S { public int f() { while (true) { return 7; } } }", "new S().f()")]
+    [InlineData("class S { public int f() throws { while (true) { return 7; } } }", "new S().f()")]
+    [InlineData("int f() { for (;;) { return 7; } }", "f()")]
+    public void NonVoidLoopExitHasAnLlvmTerminator(string declaration, string call) =>
+        Assert.Equal(7, CompilerTestHelper.Run(declaration + " int main() { return " + call + "; }").ExitCode);
+
     [Fact]
     public void LogicalConditionCarriesAssignmentIntoTrueBranch() =>
         Compiler.Check("int f(bool b) { int x; if (b && ((x = 3) == 3)) return x; return 0; } int main() { return f(true); }");

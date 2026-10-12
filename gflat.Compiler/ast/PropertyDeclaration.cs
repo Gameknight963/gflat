@@ -8,6 +8,7 @@ public sealed class PropertyDeclaration : AstNode
     public MethodDeclaration? Getter { get; }
     public MethodDeclaration? Setter { get; }
     public AstNode? Initializer { get; }
+    public bool IsRef { get; set; }
     public bool Expanded { get; set; }
 
     public PropertyDeclaration(string name, TypeExpression type, MethodDeclaration? getter,

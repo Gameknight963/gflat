@@ -203,6 +203,12 @@ namespace gflat
             Indented(() => { node.Target.Accept(this); node.TargetType.Accept(this); });
         }
 
+        public void Visit(MoveExpression node)
+        {
+            Print("Move");
+            Indented(() => node.Operand.Accept(this));
+        }
+
         public void Visit(CallExpression node)
         {
             Print("Call");

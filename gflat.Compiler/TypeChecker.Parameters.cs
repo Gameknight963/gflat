@@ -11,7 +11,5 @@ public partial class TypeChecker
         type = ResolveAlias(type);
         if (type is ArrayTypeExpression { Size: null })
             throw new TypeCheckException("Array value parameters require a fixed size; use an explicit pointer for a buffer of unknown length", line);
-        if (HasDestructor(type))
-            throw new TypeCheckException($"Types with destructors cannot be passed by value ('{TypeName(type)}'); use a pointer", line);
     }
 }

@@ -237,7 +237,7 @@ namespace gflat.semantics
             }
 
             // Handle virtual destructor slot
-            bool isVirtualDtor = cls.Destructor?.IsVirtual == true || (cls.Destructor != null && cls.VirtualMethods.Count > 0) || cls.DestructorSlot >= 0;
+            bool isVirtualDtor = true; // Every class view preserves destruction of the dynamic type.
             if (isVirtualDtor)
             {
                 if (cls.DestructorSlot < 0)

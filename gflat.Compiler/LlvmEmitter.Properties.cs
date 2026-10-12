@@ -9,6 +9,12 @@ public partial class LlvmEmitter
         var call = _typeChecker.GetPropertyRead(node);
         if (call == null) return false;
         call.Accept(this);
+        if (_typeChecker.IsReferenceRead(node))
+        {
+            string address = Pop(), type = EmitType(_typeChecker.GetType(node)), value = NewTemp();
+            Emit($"    {value} = load {type}, {type}* {address}");
+            Push(value);
+        }
         return true;
     }
 

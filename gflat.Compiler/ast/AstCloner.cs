@@ -103,7 +103,7 @@ namespace gflat.ast
             List<GenericParameter>? genericParams = m.GenericParameters != null && m.Name != _oldName
                 ? m.GenericParameters.ToList()
                 : null;
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, throws: m.Throws) { StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, IsPropertyInitializer = m.IsPropertyInitializer };
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, throws: m.Throws) { StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
         }
 
         public TypeExpression CloneType(TypeExpression type)
@@ -129,6 +129,11 @@ namespace gflat.ast
                 {
                     return mapped;
                 }
+                if (_oldName != null && _newName != null && named.Namespace == null &&
+                    (named.Name == _oldName || named.Name == _oldName.Split('$').Last()) &&
+                    named.TypeArguments.Count == _typeMap.Count &&
+                    named.TypeArguments.Zip(_typeMap.Keys).All(pair => pair.First is NamedTypeExpression argument && !argument.IsReadOnlyValue && argument.Name == pair.Second))
+                    return new NamedTypeExpression(_newName, null, named.Line);
                 string typeName = named.Name;
                 if (_newName != null && _oldName != null && named.Namespace == null)
                 {
@@ -204,7 +209,7 @@ namespace gflat.ast
                 List<Parameter> parameters = ctor.Parameters.Select(p => new Parameter(p.Name, CloneType(p.Type), p.Line, p.IsConst)).ToList();
                 BlockStatement body = (BlockStatement)CloneNode(ctor.Body);
                 List<AstNode>? baseArgs = ctor.BaseArguments?.Select(CloneNode).ToList();
-                return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, ctor.Attributes.Select(CloneAttribute).ToList(), ctor.IsConst);
+                return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, ctor.Attributes.Select(CloneAttribute).ToList(), ctor.IsConst) { IsMove = ctor.IsMove };
             }
             if (node is DestructorDeclaration dtor)
             {
@@ -234,7 +239,7 @@ namespace gflat.ast
                     property.Getter != null ? CloneMethod(property.Getter) : null,
                     property.Setter != null ? CloneMethod(property.Setter) : null,
                     property.Initializer != null ? CloneNode(property.Initializer) : null, property.Line)
-                { Expanded = property.Expanded, Attributes = property.Attributes.Select(CloneAttribute).ToList() };
+                { IsRef = property.IsRef, Expanded = property.Expanded, Attributes = property.Attributes.Select(CloneAttribute).ToList() };
             if (node is MethodDeclaration m)
             {
                 return CloneMethod(m);
@@ -330,6 +335,7 @@ namespace gflat.ast
             }
             if (node is DestructorCallExpression destruction)
                 return new DestructorCallExpression(CloneNode(destruction.Target), CloneType(destruction.TargetType), destruction.Line);
+            if (node is MoveExpression move) return new MoveExpression(CloneNode(move.Operand), move.Line, move.Destination == null ? null : CloneNode(move.Destination));
             if (node is MemberAccessExpression mem)
             {
                 return new MemberAccessExpression(CloneNode(mem.Object), mem.Member, mem.IsArrow, mem.Line);

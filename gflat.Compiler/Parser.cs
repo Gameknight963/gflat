@@ -542,11 +542,22 @@ namespace gflat
                 return Finish(new DestructorDeclaration(dtorName, dtorBody, isVirtual, line));
             }
 
+            if (Check(TokenKind.Identifier) && Current.Text == "move" && Peek().Kind == TokenKind.Identifier)
+            {
+                Consume();
+                string owner = Consume().Text;
+                var constructor = ParseConstructorDeclaration(owner, accessibility, line, attributes, isConst);
+                constructor.IsMove = true;
+                return Finish(constructor);
+            }
+
             if (Check(TokenKind.Alias))
                 return Finish(ParseAliasDeclaration(accessibility, line));
             if (Check(TokenKind.Enum))
                 return Finish(ParseEnumDeclaration(accessibility, line));
 
+            bool isRef = Check(TokenKind.Identifier) && Current.Text == "ref";
+            if (isRef) Consume();
             TypeExpression type = ParseTypeExpression();
             string name;
 
@@ -586,11 +597,14 @@ namespace gflat
                     throw new TypeCheckException("Indexers must be instance properties and cannot be const, weak, or replace", line);
                 if (indices.Any(p => p.IsConst || p.Name == "value"))
                     throw new TypeCheckException("Indexer parameters cannot be const or named 'value' (reserved for the setter)", line);
-                return ParseProperty(type, "$index", accessibility, false, isVirtual, isOverride, isAbstract, isReadonly, line, indices);
+                return ParseProperty(type, "$index", accessibility, false, isVirtual, isOverride, isAbstract, isReadonly, line, indices, isRef);
             }
 
             name = Expect(TokenKind.Identifier).Text;
             List<GenericParameter> genericParams = ParseGenericParameters();
+
+            if (isRef && !(Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater)))
+                throw new TypeCheckException("ref currently applies to properties and indexers", line);
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
@@ -600,14 +614,14 @@ namespace gflat
             {
                 if (genericParams.Count != 0 || implementation != FunctionImplementationKind.Ordinary || isConst)
                     throw new TypeCheckException("Properties cannot be generic, const, weak, or replace", line);
-                return ParseProperty(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, isReadonly, line);
+                return ParseProperty(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, isReadonly, line, isRef: isRef);
             }
 
             return Finish(ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line));
         }
 
         private PropertyDeclaration ParseProperty(TypeExpression type, string name, TokenKind accessibility,
-            bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, bool isReadonly, int line, List<Parameter>? indices = null)
+            bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, bool isReadonly, int line, List<Parameter>? indices = null, bool isRef = false)
         {
             MethodDeclaration Accessor(bool getter, TokenKind access, BlockStatement? body, int accessorLine) =>
                 new MethodDeclaration((getter ? "$get$" : "$set$") + name,
@@ -617,7 +631,7 @@ namespace gflat
                 { PropertyName = name };
 
             if (Check(TokenKind.EqualsGreater))
-                return new PropertyDeclaration(name, type, Accessor(true, accessibility, ParseBodyOrBlock(), line), null, null, line);
+                return new PropertyDeclaration(name, type, Accessor(true, accessibility, ParseBodyOrBlock(), line), null, null, line) { IsRef = isRef };
 
             Expect(TokenKind.OpenBrace);
             MethodDeclaration? get = null, set = null;
@@ -672,7 +686,7 @@ namespace gflat
                 initializer = ParseExpression();
                 Expect(TokenKind.Semicolon);
             }
-            return new PropertyDeclaration(name, type, get, set, initializer, line);
+            return new PropertyDeclaration(name, type, get, set, initializer, line) { IsRef = isRef };
         }
 
         private Parameter ParseParameter() => Located(() => ParseParameterCoreLocated());
@@ -1123,6 +1137,7 @@ namespace gflat
 
         private bool IsVariableDeclaration()
         {
+            if (Check(TokenKind.Identifier) && Current.Text == "move") return false;
             // look ahead to see if this is "type name" or "type* name" etc
             int saved = _pos;
             var savedTokens = new List<Token>(_tokens);
@@ -1508,6 +1523,18 @@ namespace gflat
 
         private AstNode ParsePrefixCoreLocated()
         {
+            if (Check(TokenKind.Identifier) && Current.Text == "move" && Peek().Kind != TokenKind.OpenParen)
+            {
+                int moveLine = Consume().Line;
+                AstNode operand = ParseExpression(23);
+                AstNode? destination = null;
+                if (Check(TokenKind.Identifier) && Current.Text == "at")
+                {
+                    Consume();
+                    destination = ParseExpression(17);
+                }
+                return new MoveExpression(operand, moveLine, destination);
+            }
             int line = Current.Line;
             if (Match(TokenKind.OpenBracket))
             {

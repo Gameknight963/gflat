@@ -43,6 +43,7 @@ namespace gflat.semantics
         private readonly Stack<int> _exceptionCleanupDepths = new();
         private int _functionCleanupDepth;
         private bool _checkingCleanup;
+        private ConstructorDeclaration? _constructorBeingChecked;
 
         private void CheckCleanups(int depth)
         {
@@ -219,6 +220,7 @@ namespace gflat.semantics
             }
 
             ResetState();
+            _constructorBeingChecked = ctor;
             PushScope();
 
             NamedTypeExpression dummyThisType = new NamedTypeExpression(ctor.Name, null, ctor.Line);
@@ -247,6 +249,7 @@ namespace gflat.semantics
             CheckStatement(ctor.Body);
             if (!_controlFlow.StatementTerminates(ctor.Body)) RequireConstructorFields("", ctor.Line);
             _inConstructor = false;
+            _constructorBeingChecked = null;
             PopScope();
             PopScope();
         }
@@ -844,6 +847,11 @@ namespace gflat.semantics
             {
                 CheckExpression(destruction.Target);
             }
+            else if (expr is MoveExpression move)
+            {
+                CheckExpression(move.Operand);
+                if (move.Destination != null) CheckExpression(move.Destination);
+            }
             else if (expr is CallExpression call)
             {
                 if (_inConstructor && call.Callee is IdentifierExpression &&
@@ -929,6 +937,13 @@ namespace gflat.semantics
 
         private void CheckAssignment(AssignmentExpression assign)
         {
+            if (_constructorBeingChecked != null && ConstructorFieldPath(assign.Target) is string path &&
+                _typeChecker.HasDestructor(_typeChecker.GetType(assign.Target)))
+            {
+                bool live = _typeChecker.CanDefaultInitialize(_typeChecker.GetType(assign.Target)) ||
+                    ConstructorFields.Any(f => (path == f.Name || path.StartsWith(f.Name + ".")) && f.Initializer != null);
+                _typeChecker.TrackConstructorWrite(_constructorBeingChecked, assign, path, live);
+            }
             if (assign.Operator == TokenKind.Equals)
             {
                 // 1. Evaluate RHS Value FIRST!
@@ -937,6 +952,8 @@ namespace gflat.semantics
                 if (ConstructorFieldPath(assign.Target) is string fieldPath &&
                     _requiredFields.Any(f => f == fieldPath || f.StartsWith(fieldPath + ".")))
                 {
+                    if (_requiredFields.Any(f => (f == fieldPath || f.StartsWith(fieldPath + ".")) && Lookup("$init$" + f) is { IsFullyAssigned: false }))
+                        _typeChecker.MarkInitialization(assign);
                     MarkConstructorField(fieldPath);
                     return;
                 }
@@ -944,6 +961,7 @@ namespace gflat.semantics
                 // 2. Perform write to LHS Target
                 if (assign.Target is IdentifierExpression id)
                 {
+                    if (Lookup(id.Name) is { IsFullyAssigned: false }) _typeChecker.MarkInitialization(assign);
                     MarkFullyAssigned(id.Name);
                 }
                 else if (assign.Target is MemberAccessExpression member)
@@ -987,6 +1005,7 @@ namespace gflat.semantics
 
                 if (assign.Target is IdentifierExpression id)
                 {
+                    if (Lookup(id.Name) is { IsFullyAssigned: false }) _typeChecker.MarkInitialization(assign);
                     MarkFullyAssigned(id.Name);
                 }
             }

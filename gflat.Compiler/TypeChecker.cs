@@ -1701,6 +1701,9 @@ namespace gflat
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
+            if (valueNode != null && HasDestructor(target) && !IsFreshValue(valueNode)) return false;
+            if (ResolveAlias(source) is NamedTypeExpression && ResolveAlias(target) is NamedTypeExpression &&
+                HasDestructor(source) && !TypesMatch(target, source)) return false;
             if (IsError(target) || IsError(source))
             {
                 return true;
@@ -2678,6 +2681,8 @@ namespace gflat
             }
 
             ValidateTypeUsage(node.ReturnType, node.Line);
+            if (HasDestructor(node.ReturnType) || node.Parameters.Any(p => HasDestructor(p.Type)))
+                throw new TypeCheckException("Owning operator operands and results are not yet supported; use an explicit method", node.Line);
 
             if (node.OperatorKind == TokenKind.Bang)
             {
@@ -2822,10 +2827,6 @@ namespace gflat
                 {
                     ValidateParameterType(p.Type, p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
-                    if (HasDestructor(pType))
-                    {
-                        throw new TypeCheckException($"Parameter '{p.Name}' cannot have type '{TypeName(pType)}' because types with destructors cannot be passed by value. Use a pointer instead ('{TypeName(pType)}*').", p.Line);
-                    }
                     DeclareVariable(p.Name, pType, p.Line);
                 }
                 node.Body?.Accept(this);
@@ -2852,6 +2853,14 @@ namespace gflat
                 string kindStr = _currentStruct != null ? "struct" : "class";
                 throw new TypeCheckException($"Constructor name '{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
             }
+            if (node.IsMove)
+            {
+                if (node.Parameters.Count != 1 || ResolveAlias(node.Parameters[0].Type) is not PointerTypeExpression { IsNullable: false, IsReadOnly: false } source ||
+                    ResolveAlias(source.Inner) is not NamedTypeExpression owner || owner.Name != ownerName || node.IsConst)
+                    throw new TypeCheckException("A move constructor takes exactly one mutable, non-null pointer to its own type", node.Line);
+                if ((_currentStruct?.Constructors ?? _currentClass!.Constructors).Count(c => c.IsMove) != 1)
+                    throw new TypeCheckException("A type has exactly one move constructor", node.Line);
+            }
             _currentConstructor = node;
             AstNode? prevFunc = _currentFunction;
             _currentFunction = node;
@@ -2866,10 +2875,6 @@ namespace gflat
                 {
                     p.Type = ResolveAlias(p.Type);
                     ValidateParameterType(p.Type, p.Line);
-                    if (HasDestructor(p.Type))
-                    {
-                        throw new TypeCheckException($"Parameter '{p.Name}' cannot have type '{TypeName(p.Type)}' because types with destructors cannot be passed by value. Use a pointer instead ('{TypeName(p.Type)}*').", p.Line);
-                    }
                     DeclareVariable(p.Name, p.Type, p.Line);
                 }
 
@@ -2884,6 +2889,7 @@ namespace gflat
                     foreach (AstNode arg in node.BaseArguments)
                     {
                         arg.Accept(this);
+
                     }
 
                     List<ConstructorDeclaration> matches = new();
@@ -3061,7 +3067,17 @@ namespace gflat
                 {
                     TypeExpression retType = ResolveAlias(method.ReturnType);
                     TypeExpression valType = GetType(node.Value);
-                    if (HasDestructor(retType) && node.Value is not (IdentifierExpression or NewExpression or CallExpression or ArrayLiteralExpression))
+                    if (method.IsRefReturn)
+                    {
+                        if (node.Value is not (IdentifierExpression or MemberAccessExpression or IndexExpression or UnaryExpression { Operator: TokenKind.Star }) ||
+                            node.Value is IdentifierExpression local && _scopes.Any(scope => scope.ContainsKey(local.Name)))
+                            throw new TypeCheckException("A ref getter must return existing storage, not a local or temporary", node.Line);
+                        var address = new UnaryExpression(node.Value, TokenKind.Ampersand, true, node.Line) { Span = node.Span };
+                        address.Accept(this);
+                        _referenceReturns[node] = address;
+                        valType = GetType(address);
+                    }
+                    if (HasDestructor(retType) && node.Value is not IdentifierExpression && !IsFreshValue(node.Value))
                         throw new TypeCheckException("Cannot transfer a destructor-bearing value from borrowed storage", node.Line);
                     if (HasDestructor(retType) && node.Value is IdentifierExpression owned)
                     {
@@ -3069,7 +3085,7 @@ namespace gflat
                             throw new TypeCheckException("Only a whole owned local can be transferred by return", node.Line);
                         _ownedReturns[node] = owned.Name;
                     }
-                    if (!IsAssignable(retType, valType, node.Value))
+                    if (!IsAssignable(retType, valType, HasDestructor(retType) && node.Value is IdentifierExpression ? null : node.Value))
                     {
                         throw new TypeCheckException($"Cannot return '{TypeName(valType)}' from function returning '{TypeName(retType)}'", node.Line);
                     }
@@ -3424,12 +3440,14 @@ namespace gflat
             ValidateTypeUsage(varType, node.Line);
             if (varType is ArrayTypeExpression && HasDestructor(varType) && node.Initializer == null)
                 throw new TypeCheckException("An array with destructor-bearing elements requires an initializer; use default(Type) for zero-initialized elements", node.Line);
+            if (HasDestructor(varType) && node.Initializer == null)
+                throw new TypeCheckException("An owning local requires an initializer", node.Line);
             if (node.Initializer != null)
             {
                 node.Initializer.Accept(this);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
 
-                if (HasDestructor(varType) && node.Initializer is not (NewExpression or DefaultExpression or CallExpression or ArrayLiteralExpression))
+                if (HasDestructor(varType) && !IsFreshValue(node.Initializer))
                 {
                     throw new TypeCheckException($"Cannot copy value of type '{TypeName(varType)}' because it defines a destructor. Pass by pointer, or use an explicit method if available.", node.Line);
                 }
@@ -3740,7 +3758,7 @@ namespace gflat
             }
             if (node.Operator is TokenKind.PlusPlus or TokenKind.MinusMinus &&
                 CheckPropertyWrite(node, node.Operand, node.Operand, null, !node.IsPrefix, node.Operator)) return;
-            if (node.Operator == TokenKind.Ampersand && FindProperty(node.Operand) != null)
+            if (node.Operator == TokenKind.Ampersand && FindProperty(node.Operand) is { Getter.IsRefReturn: false })
                 throw new TypeCheckException("Cannot take the address of a property", node.Line);
             if (node.Operator == TokenKind.Ampersand)
             {
@@ -4240,10 +4258,8 @@ namespace gflat
             TypeExpression targetType = GetType(node.Target);
             CheckAssignmentTarget(node.Target, node.Line);
 
-            if (HasDestructor(targetType))
-            {
-                throw new TypeCheckException($"Cannot assign to '{TypeName(targetType)}': types with destructors cannot be copied or reassigned by value", node.Line);
-            }
+            if (HasDestructor(targetType) && (node.Operator != TokenKind.Equals || !IsFreshValue(node.Value)))
+                throw new TypeCheckException("Owning assignment requires a fresh value or 'move value'", node.Line);
 
             node.Value.Accept(this);
             TypeExpression valueType = GetType(node.Value);
@@ -4294,7 +4310,7 @@ namespace gflat
             node.Target.Accept(this);
             TypeExpression receiver = ResolveAlias(GetType(node.Target));
             TypeExpression target = ResolveAlias(node.TargetType);
-            ValidateTypeUsage(target, node.Line);
+            ValidateTypeUsage(new PointerTypeExpression(target, false, node.Line), node.Line);
             if (IsError(receiver)) { RecordType(node, Void); return; }
             if (receiver is not PointerTypeExpression { IsNullable: false, IsReadOnly: false } pointer)
                 throw new TypeCheckException("Explicit destructor calls require a non-null, mutable raw pointer", node.Line);
@@ -4302,8 +4318,7 @@ namespace gflat
                 throw new TypeCheckException("Cannot explicitly destroy a readonly object", node.Line);
             if (!TypesMatch(ResolveAlias(pointer.Inner), target))
                 throw new TypeCheckException($"Destructor type '{TypeName(target)}' must match the pointed-to type '{TypeName(pointer.Inner)}'", node.Line);
-            if (target is NamedTypeExpression { Name: "void" } ||
-                target is NamedTypeExpression interfaceName && GetInterface(interfaceName.Name) != null)
+            if (target is NamedTypeExpression { Name: "void" })
                 throw new TypeCheckException("Explicit destructor calls require a concrete object type", node.Line);
             RecordType(node, Void);
         }
@@ -4312,7 +4327,10 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             foreach (AstNode arg in node.Arguments)
+            {
                 arg.Accept(this);
+
+            }
 
             // Check if callee is a local variable or struct member holding a function pointer
             if (node.Callee is IdentifierExpression identVar && TryLookupVariable(identVar.Name, out TypeExpression? varType))
@@ -5020,8 +5038,7 @@ namespace gflat
                 if (cInfo.Constructors.Count == 0)
                 {
                     ValidateImplicitConstruction(cInfo.Name, node.Line);
-                    foreach (AstNode arg in node.Arguments)
-                        arg.Accept(this);
+                    foreach (AstNode arg in node.Arguments) { arg.Accept(this); }
 
                     if (node.Arguments.Count != 0)
                     {
@@ -5050,6 +5067,7 @@ namespace gflat
                             {
                                 if (!_types.ContainsKey(arg))
                                     arg.Accept(this);
+
                                 argType = GetType(arg);
                             }
                             if (!IsAssignable(paramType, argType, arg))
@@ -5069,6 +5087,7 @@ namespace gflat
                         {
                             if (!_types.ContainsKey(arg))
                                 arg.Accept(this);
+
                         }
                         string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
                         throw new TypeCheckException($"No matching constructor found for '{cInfo.Name}' with arguments ({argTypes})", node.Line);
@@ -5108,8 +5127,7 @@ namespace gflat
             if (sInfo.Constructors.Count == 0)
             {
                 ValidateImplicitConstruction(sInfo.Name, node.Line);
-                foreach (AstNode arg in node.Arguments)
-                    arg.Accept(this);
+                foreach (AstNode arg in node.Arguments) { arg.Accept(this); }
 
                 if (node.Arguments.Count != 0)
                 {
@@ -5138,6 +5156,7 @@ namespace gflat
                         {
                             if (!_types.ContainsKey(arg))
                                 arg.Accept(this);
+
                             argType = GetType(arg);
                         }
                         if (!IsAssignable(paramType, argType, arg))
@@ -5157,6 +5176,7 @@ namespace gflat
                     {
                         if (!_types.ContainsKey(arg))
                             arg.Accept(this);
+
                     }
                     string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
                     throw new TypeCheckException($"No matching constructor found for '{sInfo.Name}' with arguments ({argTypes})", node.Line);
@@ -5286,7 +5306,7 @@ namespace gflat
                 elementType ??= type;
                 if (TypeName(elementType) != TypeName(type))
                     throw new TypeCheckException("Array literal elements must have matching types and dimensions", element.Line);
-                if (HasDestructor(type) && element is not (NewExpression or CallExpression or DefaultExpression or ArrayLiteralExpression))
+                if (HasDestructor(type) && !IsFreshValue(element))
                     throw new TypeCheckException("Array literals cannot copy destructor-bearing elements; use fresh values", element.Line);
             }
             RecordType(node, new ArrayTypeExpression(elementType!, node.Elements.Count, node.Line));
@@ -5424,7 +5444,14 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.ReturnType, node.Line);
-            foreach (var parameter in node.Parameters) ValidateParameterType(parameter.Type, parameter.Line);
+            foreach (var parameter in node.Parameters)
+            {
+                ValidateParameterType(parameter.Type, parameter.Line);
+                if (HasDestructor(parameter.Type))
+                    throw new TypeCheckException("Extern functions must borrow owning values through pointers", parameter.Line);
+            }
+            if (HasDestructor(node.ReturnType))
+                throw new TypeCheckException("Extern functions cannot return owning values; use an explicit pointer contract", node.Line);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
         }
 
@@ -5899,11 +5926,9 @@ namespace gflat
                 foreach (Parameter p in node.Parameters)
                 {
                     ValidateParameterType(p.Type, p.Line);
+                    if (HasDestructor(p.Type))
+                        throw new TypeCheckException("Lambda parameters must borrow owning values through pointers", p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
-                    if (HasDestructor(pType))
-                    {
-                        throw new TypeCheckException($"Parameter '{p.Name}' cannot have type '{TypeName(pType)}' because types with destructors cannot be passed by value. Use a pointer instead ('{TypeName(pType)}*').", p.Line);
-                    }
                     paramTypes.Add(pType);
                     DeclareVariable(p.Name, pType, p.Line);
                 }
@@ -5936,6 +5961,8 @@ namespace gflat
                     }
                 }
                 ValidateTypeUsage(returnType, node.Line);
+                if (HasDestructor(returnType))
+                    throw new TypeCheckException("Owning lambda results are not yet supported; use a named function", node.Line);
 
                 PopScope();
                 _actualReturnTypes.Pop();

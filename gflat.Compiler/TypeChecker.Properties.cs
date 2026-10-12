@@ -35,6 +35,11 @@ public partial class TypeChecker
                     using var context = SourceContext.Enter(property.Span);
                     _hasProperties = true;
                     if (owner == null) throw new TypeCheckException("Properties must be declared in a class, struct, or interface", property.Line);
+                    if (property.IsRef)
+                    {
+                        ExpandReferenceProperty(members, owner, property);
+                        continue;
+                    }
                     var accessors = new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>().ToArray();
                     bool signature = owner is InterfaceDeclaration || accessors[0].IsAbstract;
                     bool auto = !signature && accessors.All(a => a.Body == null);
@@ -192,15 +197,24 @@ public partial class TypeChecker
             receiver = new IdentifierExpression("this", expression.Line) { Span = expression.Span };
             receiver.Accept(this);
         }
+        if (getter?.IsRefReturn == true && receiver != null && (IsExpressionReadOnly(receiver) || ResolveAlias(GetType(receiver)) is PointerTypeExpression { IsReadOnly: true } or ManagedTypeExpression { IsReadOnly: true }))
+        {
+            string readName = "$get$readonly$" + name;
+            getter = _structs.TryGetValue(owner, out var rs) ? rs.Methods.GetValueOrDefault(readName) :
+                _classes.TryGetValue(owner, out var rc) ? rc.Methods.GetValueOrDefault(readName).Method :
+                _interfaces.TryGetValue(owner, out var ri) ? ri.MethodsByName.GetValueOrDefault(readName) : getter;
+        }
         return new(name == "$index" ? "this[]" : name, declaring, getter, setter, receiver, staticOwner, arguments);
     }
 
     private void ValidatePropertyAccessor(MethodDeclaration method)
     {
         if (method.PropertyName == null) return;
+        if (method.Parameters.Take(method.Name.StartsWith("$get$") ? method.Parameters.Count : method.Parameters.Count - 1).Any(p => HasDestructor(p.Type)))
+            throw new TypeCheckException("Indexer arguments must be copyable; borrow owning arguments through pointers", method.Line);
         TypeExpression type = ResolveAlias(method.Name.StartsWith("$get$") ? method.ReturnType : method.Parameters[^1].Type);
-        if (HasDestructor(type) || type is ArrayTypeExpression || type is NamedTypeExpression { Name: "void" })
-            throw new TypeCheckException("Properties cannot currently return void, arrays, or values with destructors; use a pointer for owned storage", method.Line);
+        if (type is ArrayTypeExpression || type is NamedTypeExpression { Name: "void" })
+            throw new TypeCheckException("Properties cannot currently return void or arrays", method.Line);
     }
 
     private MethodDeclaration RequireAccessor(PropertyAccess property, bool getter, AstNode site)
@@ -237,14 +251,15 @@ public partial class TypeChecker
         var getter = RequireAccessor(property, true, node);
         var call = PropertyCall(property, getter, property.Receiver, property.Arguments, node);
         _propertyReads[node] = call;
-        RecordType(node, GetType(call));
+        if (getter.IsRefReturn) _referenceReads.Add(node);
+        RecordType(node, getter.IsRefReturn ? ResolveAlias(((PointerTypeExpression)ResolveAlias(GetType(call))).Inner) : GetType(call));
         return true;
     }
 
     private bool CheckPropertyWrite(AstNode node, AstNode target, AstNode value, TokenKind? binary, bool postfix, TokenKind? increment = null)
     {
         var property = FindProperty(target);
-        if (property == null) return false;
+        if (property == null || property.Getter?.IsRefReturn == true) return false;
         var setter = RequireAccessor(property, false, node);
         TypeExpression type = ResolveAlias(setter.Parameters[^1].Type);
         RecordType(target, type);
@@ -295,9 +310,10 @@ public partial class TypeChecker
             if (!IsAssignable(type, GetType(value), value))
                 throw new TypeCheckException($"Cannot assign '{TypeName(GetType(value))}' to property '{property.Name}' of type '{TypeName(type)}'", node.Line);
             var assigned = Temporary(type);
+            if (HasDestructor(type)) _transferredPropertyArguments.Add(assigned);
             var call = PropertyCall(property, setter, receiver, indexArguments.Append(assigned).ToList(), node);
             _propertyWrites[node] = new(property.Receiver, receiver, byAddress, old, get, assigned, value, call, postfix, arguments);
-            RecordType(node, type);
+            RecordType(node, HasDestructor(type) ? Void : type);
             return true;
         }
         finally { PopScope(); }
@@ -306,7 +322,7 @@ public partial class TypeChecker
     private bool IsPropertyValueStorage(AstNode node)
     {
         if (ResolveAlias(GetType(node)) is PointerTypeExpression or ManagedTypeExpression) return false;
-        return _propertyReads.ContainsKey(node) ||
+        return (_propertyReads.ContainsKey(node) && !IsReferenceRead(node)) ||
             node is MemberAccessExpression member && IsPropertyValueStorage(member.Object) ||
             node is IndexExpression index && IsPropertyValueStorage(index.Target);
     }

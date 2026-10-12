@@ -4502,21 +4502,21 @@ namespace gflat.Tests
             string code = """
                 struct Tracker
                 {
-                    public int* p;
+                    public int*? p;
                     public ~Tracker() { }
                 }
 
                 int main()
                 {
-                    Tracker a;
-                    Tracker b;
+                    Tracker a = new Tracker();
+                    Tracker b = new Tracker();
                     b = a;
                     return 0;
                 }
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("types with destructors cannot be copied or reassigned by value", ex.Message);
+            Assert.Contains("Owning assignment requires a fresh value", ex.Message);
         }
 
         [Fact]
@@ -4525,13 +4525,13 @@ namespace gflat.Tests
             string code = """
                 struct Tracker
                 {
-                    public int* p;
+                    public int*? p;
                     public ~Tracker() { }
                 }
 
                 int main()
                 {
-                    Tracker a;
+                    Tracker a = new Tracker();
                     Tracker b = a;
                     return 0;
                 }
@@ -4542,12 +4542,12 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void StructWithDestructor_PassByValue_Throws()
+        public void StructWithDestructor_OwningParameter_IsAllowed()
         {
             string code = """
                 struct Tracker
                 {
-                    public int* p;
+                    public int*? p;
                     public ~Tracker() { }
                 }
 
@@ -4561,8 +4561,7 @@ namespace gflat.Tests
                 }
                 """;
 
-            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Types with destructors cannot be passed by value ('Tracker')", ex.Message);
+            CompilerTestHelper.Check(code);
         }
 
         [Fact]
@@ -4571,7 +4570,7 @@ namespace gflat.Tests
             string code = """
                 struct Tracker
                 {
-                    public int* p;
+                    public int*? p;
                     public ~Tracker() { }
                 }
 
@@ -4582,7 +4581,7 @@ namespace gflat.Tests
                 int main()
                 {
                     int value = 0;
-                    Tracker a;
+                    Tracker a = new Tracker();
                     a.p = &value;
                     Tracker* pA = &a;
                     Tracker* pB = pA;

@@ -4029,6 +4029,7 @@ namespace gflat.Tests
                 struct Guard
                 {
                     public int* pVal;
+                    public Guard(int* p) { pVal = p; }
 
                     public ~Guard()
                     {
@@ -4040,8 +4041,7 @@ namespace gflat.Tests
                 {
                     int val = 21;
                     {
-                        Guard g;
-                        g.pVal = &val;
+                        Guard g = new Guard(&val);
                     }
                     return val; // 21 * 2 = 42
                 }
@@ -4058,6 +4058,7 @@ namespace gflat.Tests
                 struct Guard
                 {
                     public int* pVal;
+                    public Guard(int* p) { pVal = p; }
 
                     public ~Guard()
                     {
@@ -4067,8 +4068,7 @@ namespace gflat.Tests
 
                 int test(int* pVal)
                 {
-                    Guard g;
-                    g.pVal = pVal;
+                    Guard g = new Guard(pVal);
                     return 100;
                 }
 
@@ -4092,6 +4092,7 @@ namespace gflat.Tests
                 {
                     public int* pState;
                     public int add;
+                    public Stepper(int* p, int value) { pState = p; add = value; }
 
                     public ~Stepper()
                     {
@@ -4103,15 +4104,11 @@ namespace gflat.Tests
                 {
                     int state = 0;
                     {
-                        Stepper s1;
-                        s1.pState = &state;
-                        s1.add = 1;
+                        Stepper s1 = new Stepper(&state, 1);
 
                         defer state = state * 10 + 2;
 
-                        Stepper s3;
-                        s3.pState = &state;
-                        s3.add = 3;
+                        Stepper s3 = new Stepper(&state, 3);
                     }
                     // LIFO order: s3 (add 3), then defer (add 2), then s1 (add 1)
                     // 0 -> *10 + 3 = 3 -> *10 + 2 = 32 -> *10 + 1 = 321
@@ -4134,6 +4131,7 @@ namespace gflat.Tests
                     public int current;
                     public int limit;
                     public int* pDisposed;
+                    public DisposingEnumerator(int* p) { current = -1; limit = 3; pDisposed = p; }
 
                     public bool MoveNext()
                     {
@@ -4158,10 +4156,7 @@ namespace gflat.Tests
 
                     public DisposingEnumerator GetEnumerator()
                     {
-                        DisposingEnumerator it;
-                        it.current = -1;
-                        it.limit = 3;
-                        it.pDisposed = this.pDisposed;
+                        DisposingEnumerator it = new DisposingEnumerator(this.pDisposed);
                         return it;
                     }
                 }
@@ -4341,7 +4336,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void StackClass_Uninitialized_DoesNotRunDestructor()
+        public void StackClass_UninitializedOwner_IsRejected()
         {
             string code = """
                 class Guard
@@ -4365,8 +4360,7 @@ namespace gflat.Tests
                 }
                 """;
 
-            ExecutionResult result = CompilerTestHelper.Run(code);
-            Assert.Equal(10, result.ExitCode);
+            Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(code));
         }
 
         [Fact]
@@ -4451,6 +4445,7 @@ namespace gflat.Tests
                 {
                     public int* pCounter;
                     public int id;
+                    public Resource(int* p, int value) { pCounter = p; id = value; }
 
                     public ~Resource()
                     {
@@ -4460,9 +4455,7 @@ namespace gflat.Tests
 
                 Resource create(int* pCounter, int id)
                 {
-                    Resource r;
-                    r.pCounter = pCounter;
-                    r.id = id;
+                    Resource r = new Resource(pCounter, id);
                     return r; // Destructor must NOT run here!
                 }
 

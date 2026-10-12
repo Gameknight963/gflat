@@ -493,7 +493,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"{done}:");
             return;
         }
-        if (type is not NamedTypeExpression named || !_typeChecker.HasDestructor(type)) return;
+        if (type is not NamedTypeExpression named || (!_typeChecker.HasDestructor(type) && !_typeChecker.IsClass(named.Name))) return;
         if (_typeChecker.GetStruct(named.Name) is { } structure)
             new StructDestructorDeferAction(structure.Name, address, structure.Namespace).Execute(this);
         else if (_typeChecker.GetClass(named.Name) is { } cls)
@@ -587,7 +587,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitAddress(AstNode node)
     {
-        if (_typeChecker.GetPropertyRead(node) is CallExpression getter) { EmitAddress(getter); return; }
+        if (_typeChecker.GetPropertyRead(node) is CallExpression getter) { if (_typeChecker.IsReferenceRead(node)) getter.Accept(this); else EmitAddress(getter); return; }
         if (node is LiteralExpression { Token.Kind: TokenKind.StringLiteral })
         {
             node.Accept(this);
@@ -672,7 +672,7 @@ public partial class LlvmEmitter : IVisitor
         {
             deref.Operand.Accept(this);
         }
-        else if (node is NewExpression or CallExpression or ArrayLiteralExpression)
+        else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression)
         {
             node.Accept(this);
             string value = Pop();
@@ -934,7 +934,7 @@ public partial class LlvmEmitter : IVisitor
 
                     string vtableGlobal = $"@{srcNamedStruct.Name}${dstNamedIface.Name}$vtable";
                     TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(dstNamedIface.Name);
-                    int methodCount = ifaceInfo != null ? ifaceInfo.Methods.Count : 0;
+                    int methodCount = (ifaceInfo?.Methods.Count ?? 0) + 1;
                     string vtablePtr = NewTemp();
                     if (methodCount > 0)
                     {
@@ -1153,11 +1153,6 @@ public partial class LlvmEmitter : IVisitor
                     continue;
                 }
 
-                if (ifaceInfo.Methods.Count == 0)
-                {
-                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [0 x i8*] zeroinitializer");
-                }
-                else
                 {
                     List<string> entries = new();
                     foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
@@ -1188,7 +1183,8 @@ public partial class LlvmEmitter : IVisitor
                         string fnSig = $"{retType} ({string.Join(", ", paramTypes)})*";
                         entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
                     }
-                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{ifaceInfo.Methods.Count} x i8*] [ {string.Join(", ", entries)} ]");
+                    entries.Add(EmitInterfaceDestructorEntry(node.Name));
+                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{entries.Count} x i8*] [ {string.Join(", ", entries)} ]");
                 }
             }
 
@@ -1222,7 +1218,7 @@ public partial class LlvmEmitter : IVisitor
             }
 
             // If class didn't declare a destructor but its hierarchy has one, emit default chained destructor
-            if (_currentClass.Destructor == null && _typeChecker.HasAnyDestructor(_currentClass))
+            if (_currentClass.Destructor == null)
             {
                 EmitClassDestructor(node.Name, null);
             }
@@ -1244,6 +1240,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitClassMethod(string className, MethodDeclaration node)
     {
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
 
@@ -1285,6 +1282,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {ptr} = alloca {type}");
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
+            if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new TemporaryCleanup(p.Type, ptr));
         }
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
@@ -1339,6 +1337,7 @@ public partial class LlvmEmitter : IVisitor
         _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
 
@@ -1368,6 +1367,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {ptr} = alloca {type}");
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
+            if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new TemporaryCleanup(p.Type, ptr));
         }
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
@@ -1385,6 +1385,8 @@ public partial class LlvmEmitter : IVisitor
             ConstructorDeclaration? resolvedBaseCtor = _typeChecker.GetResolvedBaseConstructor(node);
             if (node.BaseArguments != null && resolvedBaseCtor != null)
             {
+                EmitExpressionWithCleanup(() => WithArgumentOwnership(() =>
+                {
                 List<string> baseArgs = new() { $"%{baseInfo.Name}* {baseThis}" };
                 for (int i = 0; i < node.BaseArguments.Count; i++)
                 {
@@ -1397,7 +1399,9 @@ public partial class LlvmEmitter : IVisitor
                     baseArgs.Add($"{llvmType} {val}");
                 }
                 string baseCtorName = GetConstructorMangledName(baseInfo.Name, resolvedBaseCtor, baseInfo.Namespace);
+                TransferArguments();
                 Emit($"    call void @{baseCtorName}({string.Join(", ", baseArgs)})");
+                }));
             }
             else
             {
@@ -1422,6 +1426,8 @@ public partial class LlvmEmitter : IVisitor
         // 3. Field initializers for this class
         EmitClassFieldInitializers(className, thisPtr);
 
+        PrepareConstructorWrites(node);
+
         // 4. Constructor body
         if (node.Body != null)
             node.Body.Accept(this);
@@ -1440,6 +1446,7 @@ public partial class LlvmEmitter : IVisitor
         _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
 
@@ -1497,6 +1504,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitClassDestructor(string className, DestructorDeclaration? node)
     {
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
         _currentFunctionIsThrowing = false;
@@ -1582,11 +1590,6 @@ public partial class LlvmEmitter : IVisitor
                     continue;
                 }
 
-                if (ifaceInfo.Methods.Count == 0)
-                {
-                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [0 x i8*] zeroinitializer");
-                }
-                else
                 {
                     List<string> entries = new();
                     foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
@@ -1608,8 +1611,9 @@ public partial class LlvmEmitter : IVisitor
                         mangled += _typeChecker.GetOverloadSuffix(structMethod);
                         entries.Add($"i8* bitcast ({fnSig} @{mangled} to i8*)");
                     }
+                    entries.Add(EmitInterfaceDestructorEntry(node.Name));
                     string vtableContent = string.Join(", ", entries);
-                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{ifaceInfo.Methods.Count} x i8*] [ {vtableContent} ]");
+                    EmitGlobal($"@{node.Name}${ifaceName}$vtable = internal constant [{entries.Count} x i8*] [ {vtableContent} ]");
                 }
             }
 
@@ -1716,6 +1720,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitStructOperator(string structName, OperatorDeclaration node)
     {
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
 
@@ -1740,6 +1745,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {ptr} = alloca {type}");
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
+            if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new TemporaryCleanup(p.Type, ptr));
         }
 
         node.Body.Accept(this);
@@ -1754,6 +1760,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitStructMethod(string structName, MethodDeclaration node)
     {
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
 
@@ -1795,6 +1802,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {ptr} = alloca {type}");
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
+            if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new TemporaryCleanup(p.Type, ptr));
         }
 
         if (node.Body != null)
@@ -1859,6 +1867,7 @@ public partial class LlvmEmitter : IVisitor
         _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
 
@@ -1888,9 +1897,11 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {ptr} = alloca {type}");
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
+            if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new TemporaryCleanup(p.Type, ptr));
         }
 
         EmitFieldInitializers(structName, thisPtr);
+        PrepareConstructorWrites(node);
 
         if (node.Body != null)
             node.Body.Accept(this);
@@ -1907,6 +1918,7 @@ public partial class LlvmEmitter : IVisitor
         _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
 
@@ -1933,6 +1945,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitStructDestructor(string structName, DestructorDeclaration? node)
     {
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
         _currentFunctionIsThrowing = false;
@@ -2005,6 +2018,7 @@ public partial class LlvmEmitter : IVisitor
         if (node.IsGeneric) return;
 
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
 
         bool isMain = node.Name == "main" && !_typeChecker.TryGetMethodOwner(node, out _, out _);
@@ -2060,6 +2074,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {ptr} = alloca {type}");
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
+            if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new TemporaryCleanup(p.Type, ptr));
         }
 
         _hasTerminated = false;
@@ -2142,6 +2157,8 @@ public partial class LlvmEmitter : IVisitor
     {
         var outerLocals = new Dictionary<string, string>(_locals);
         _deferScopes.Add(new List<IDeferAction>());
+        _deferScopes[^1].AddRange(_parameterOwners);
+        _parameterOwners.Clear();
         bool terminated = false;
 
         foreach (AstNode statement in node.Statements)
@@ -2166,25 +2183,26 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(ReturnStatement node)
     {
+        AstNode? returned = _typeChecker.GetReferenceReturn(node) ?? node.Value;
         string? val = null;
         string? llvmReturnType = null;
 
-        if (node.Value != null)
+        if (returned != null)
         {
-            if (_typeChecker.ResolveAlias(_typeChecker.GetType(node.Value)) is ArrayTypeExpression &&
-                node.Value is IdentifierExpression or MemberAccessExpression or IndexExpression)
+            if (_typeChecker.ResolveAlias(_typeChecker.GetType(returned)) is ArrayTypeExpression &&
+                returned is IdentifierExpression or MemberAccessExpression or IndexExpression)
             {
-                EmitAddress(node.Value);
+                EmitAddress(returned);
                 string address = Pop();
-                string arrayType = EmitType(_typeChecker.GetType(node.Value));
+                string arrayType = EmitType(_typeChecker.GetType(returned));
                 string value = NewTemp();
                 Emit($"    {value} = load {arrayType}, {arrayType}* {address}");
                 Push(value);
             }
-            else if (_currentFunctionExpectedType != null) EmitValueForTarget(node.Value, _currentFunctionExpectedType);
-            else node.Value.Accept(this);
+            else if (_currentFunctionExpectedType != null) EmitValueForTarget(returned, _currentFunctionExpectedType);
+            else returned.Accept(this);
             // Void calls (e.g. expression-body `void f() => voidCall();`) don't push a value
-            TypeExpression returnType = _typeChecker.GetType(node.Value);
+            TypeExpression returnType = _typeChecker.GetType(returned);
             string valueRetType = EmitType(returnType);
             bool valueIsVoid = valueRetType == "void";
 
@@ -2555,7 +2573,7 @@ public partial class LlvmEmitter : IVisitor
                 else
                 {
                     TypeChecker.ClassInfo? cInfo = _typeChecker.GetClass(namedVarType.Name);
-                    if (cInfo != null)
+                    if (cInfo != null && _typeChecker.HasDestructor(unwrapped))
                     {
                         bool hasVirtualDtor = cInfo.DestructorSlot >= 0;
                         bool hasDtor = hasVirtualDtor || _typeChecker.HasAnyDestructor(cInfo);
@@ -2575,7 +2593,7 @@ public partial class LlvmEmitter : IVisitor
         {
             string result = Pop();
             TypeExpression type = _typeChecker.GetType(node.Expression);
-            if (node.Expression is NewExpression or CallExpression or ArrayLiteralExpression && _typeChecker.HasDestructor(type))
+            if (_typeChecker.IsFreshValue(node.Expression) && _typeChecker.HasDestructor(type))
             {
                 string slot = NewTemp();
                 string llvmType = EmitType(type);
@@ -3239,13 +3257,17 @@ public partial class LlvmEmitter : IVisitor
             string address = Pop();
             var pointer = (PointerTypeExpression)_typeChecker.ResolveAlias(_typeChecker.GetType(node.Target));
             GuardNonNull(address, EmitType(pointer));
-            EmitDestroy(pointer.Inner, address);
+            if (pointer.Inner is NamedTypeExpression n && _typeChecker.IsInterface(n))
+                EmitInterfaceDestruction(address, n.Name);
+            else EmitDestroy(pointer.Inner, address);
         });
 
     public void Visit(CallExpression node)
         => EmitExpressionWithCleanup(() => EmitCall(node));
 
-    private void EmitCall(CallExpression node)
+    private void EmitCall(CallExpression node) => WithArgumentOwnership(() => EmitCallCore(node));
+
+    private void EmitCallCore(CallExpression node)
     {
         if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
         {
@@ -3282,6 +3304,7 @@ public partial class LlvmEmitter : IVisitor
                     Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
                     string dtorFn = NewTemp();
                     Emit($"    {dtorFn} = bitcast i8* {rawFnPtr} to void (%{dtorCall.Class.Name}*)*");
+                    TransferArguments();
                     Emit($"    call void {dtorFn}(%{dtorCall.Class.Name}* {classPtr})");
                 }
                 else
@@ -3296,6 +3319,7 @@ public partial class LlvmEmitter : IVisitor
                     string dtorMangled = dtorNs.Length > 0
                         ? $"gflat${dtorNs}${dtorCall.Class.Name}$dtor"
                         : $"gflat${dtorCall.Class.Name}$dtor";
+                    TransferArguments();
                     Emit($"    call void @{dtorMangled}(%{dtorCall.Class.Name}* {classPtr})");
                 }
             }
@@ -3311,6 +3335,7 @@ public partial class LlvmEmitter : IVisitor
                 string dtorMangled = dtorNs.Length > 0
                     ? $"gflat${dtorNs}${structInfo.Name}$dtor"
                     : $"gflat${structInfo.Name}$dtor";
+                TransferArguments();
                 Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
             }
 
@@ -3327,6 +3352,8 @@ public partial class LlvmEmitter : IVisitor
             {
                 castPtr = ptrVal;
             }
+
+            TransferArguments();
 
             Emit($"    call void @gflat$Allocator$Free(i8* {castPtr})");
             return;
@@ -3381,17 +3408,20 @@ public partial class LlvmEmitter : IVisitor
             if (isThrowingInterface)
             {
                 string result = NewTemp();
+                TransferArguments();
                 Emit($"    {result} = call {returnType} {typedFn}({argsStr})");
                 string value = EmitCheckAndHandleCallException(result, baseReturnType == "void", baseReturnType);
                 if (baseReturnType != "void") Push(value);
             }
             else if (returnType == "void")
             {
+                TransferArguments();
                 Emit($"    call void {typedFn}({argsStr})");
             }
             else
             {
                 string temp = NewTemp();
+                TransferArguments();
                 Emit($"    {temp} = call {returnType} {typedFn}({argsStr})");
                 Push(temp);
             }
@@ -3491,12 +3521,14 @@ public partial class LlvmEmitter : IVisitor
                 if (baseReturnType == "void")
                 {
                     string callRes = NewTemp();
+                    TransferArguments();
                     Emit($"    {callRes} = call {{ %Exception*, i1 }} {typedFn}({argsStr})");
                     EmitCheckAndHandleCallException(callRes, isVoid: true, baseReturnType);
                 }
                 else
                 {
                     string callRes = NewTemp();
+                    TransferArguments();
                     Emit($"    {callRes} = call {{ {baseReturnType}, %Exception*, i1 }} {typedFn}({argsStr})");
                     string valTemp = EmitCheckAndHandleCallException(callRes, isVoid: false, baseReturnType);
                     Push(valTemp);
@@ -3506,11 +3538,13 @@ public partial class LlvmEmitter : IVisitor
             {
                 if (returnType == "void")
                 {
+                    TransferArguments();
                     Emit($"    call void {typedFn}({argsStr})");
                 }
                 else
                 {
                     string temp = NewTemp();
+                    TransferArguments();
                     Emit($"    {temp} = call {returnType} {typedFn}({argsStr})");
                     Push(temp);
                 }
@@ -3552,11 +3586,13 @@ public partial class LlvmEmitter : IVisitor
 
             if (indirectRetType == "void")
             {
+                TransferArguments();
                 Emit($"    call void {fnVal}({indirectArgs})");
             }
             else
             {
                 string temp = NewTemp();
+                TransferArguments();
                 Emit($"    {temp} = call {indirectRetType} {fnVal}({indirectArgs})");
                 Push(temp);
             }
@@ -3784,12 +3820,14 @@ public partial class LlvmEmitter : IVisitor
             if (retType == "void")
             {
                 string callRes = NewTemp();
+                TransferArguments();
                 Emit($"    {callRes} = call {{ %Exception*, i1 }} @{funcName}({args})");
                 EmitCheckAndHandleCallException(callRes, isVoid: true, retType);
             }
             else
             {
                 string callRes = NewTemp();
+                TransferArguments();
                 Emit($"    {callRes} = call {{ {retType}, %Exception*, i1 }} @{funcName}({args})");
                 string valTemp = EmitCheckAndHandleCallException(callRes, isVoid: false, retType);
                 Push(valTemp);
@@ -3799,11 +3837,13 @@ public partial class LlvmEmitter : IVisitor
         {
             if (retType == "void")
             {
+                TransferArguments();
                 Emit($"    call {callSignature} @{funcName}({args})");
             }
             else
             {
                 string temp = NewTemp();
+                TransferArguments();
                 Emit($"    {temp} = call {callSignature} @{funcName}({args})");
                 Push(temp);
             }
@@ -3884,14 +3924,27 @@ public partial class LlvmEmitter : IVisitor
         Push(val);
     }
 
-    public void Visit(AssignmentExpression node)
+    public void Visit(AssignmentExpression node) => EmitExpressionWithCleanup(() => EmitAssignment(node));
+
+    private void EmitAssignment(AssignmentExpression node)
     {
         if (EmitPropertyWrite(node)) return;
         EmitValueForTarget(node.Value, _typeChecker.GetType(node.Target));
         string val = Pop();
 
+        IDeferAction? pending = null;
+        TypeExpression assignedType = _typeChecker.GetType(node.Target);
+        if (_typeChecker.HasDestructor(assignedType))
+        {
+            string temporary = NewTemp(), llvm = EmitType(assignedType);
+            Emit($"    {temporary} = alloca {llvm}");
+            Emit($"    store {llvm} {val}, {llvm}* {temporary}");
+            pending = new TemporaryCleanup(assignedType, temporary);
+            _deferScopes[^1].Add(pending);
+        }
         EmitAddress(node.Target);
         string ptr = Pop();
+        if (pending != null) _deferScopes[^1].Remove(pending);
 
         TypeExpression targetType = _typeChecker.GetType(node.Target);
         string llvmType = EmitType(targetType);
@@ -3983,12 +4036,15 @@ public partial class LlvmEmitter : IVisitor
             finalVal = temp;
         }
 
+        if (_typeChecker.HasDestructor(targetType)) DestroyAssignmentTarget(node, targetType, ptr);
         Emit($"    store {llvmType} {finalVal}, {llvmType}* {ptr}");
         Push(finalVal);
     }
 
     public void Visit(InterpolatedStringExpression node) => EmitExpressionWithCleanup(() => EmitInterpolation(node));
-    public void Visit(NewExpression node)
+    public void Visit(NewExpression node) => EmitExpressionWithCleanup(() => WithArgumentOwnership(() => EmitNew(node)));
+
+    private void EmitNew(NewExpression node)
     {
         if (TypeChecker.IsError(_typeChecker.GetType(node)))
         {
@@ -4063,6 +4119,7 @@ public partial class LlvmEmitter : IVisitor
                         callArgs.Add($"{EmitParamType(ctor.Parameters[i].Type)} {castVal}");
                     }
                 }
+                TransferArguments();
                 Emit($"    call void @{mangledName}({string.Join(", ", callArgs)})");
             }
 
@@ -4093,20 +4150,7 @@ public partial class LlvmEmitter : IVisitor
             GuardNonNull(rawMem, "i8*");
             if (node.Destination != null)
             {
-                int alignment = _typeChecker.GetTypeAlignment(node.Type);
-                string address = NewTemp();
-                string remainder = NewTemp();
-                string aligned = NewTemp();
-                string ok = NewLabel("placement_aligned");
-                string fail = NewLabel("placement_misaligned");
-                Emit($"    {address} = ptrtoint i8* {rawMem} to i{TargetInfo.Default.PointerBits}");
-                Emit($"    {remainder} = urem i{TargetInfo.Default.PointerBits} {address}, {alignment}");
-                Emit($"    {aligned} = icmp eq i{TargetInfo.Default.PointerBits} {remainder}, 0");
-                Emit($"    br i1 {aligned}, label %{ok}, label %{fail}");
-                Emit($"{fail}:");
-                Emit("    call void @llvm.trap()");
-                Emit("    unreachable");
-                Emit($"{ok}:");
+                GuardPlacementAlignment(rawMem, "i8*", node.Type);
             }
             string typedPtr = NewTemp();
             Emit($"    {typedPtr} = bitcast i8* {rawMem} to %{typeName}*");
@@ -4125,6 +4169,7 @@ public partial class LlvmEmitter : IVisitor
                         callArgs.Add($"{EmitParamType(ctor.Parameters[i].Type)} {castVal}");
                     }
                 }
+                TransferArguments();
                 Emit($"    call void @{mangledName}({string.Join(", ", callArgs)})");
             }
 
@@ -4296,6 +4341,12 @@ public partial class LlvmEmitter : IVisitor
             Push(first);
         }
         else argument.Accept(this);
+        if (target != null && _typeChecker.HasDestructor(target))
+        {
+            string value = Pop();
+            ProtectArgument(target, value);
+            Push(value);
+        }
     }
 
     private void EmitValueForTarget(AstNode expression, TypeExpression target)
@@ -4356,6 +4407,14 @@ public partial class LlvmEmitter : IVisitor
             return;
         }
         string llvmPtrType = EmitType(ptrType);
+        if (_typeChecker.ResolveAlias(ptrType) is PointerTypeExpression interfacePointer &&
+            _typeChecker.ResolveAlias(interfacePointer.Inner) is NamedTypeExpression iface && _typeChecker.IsInterface(iface))
+        {
+            GuardNonNull(ptrVal, llvmPtrType);
+            string data = EmitInterfaceDestruction(ptrVal, iface.Name);
+            Emit($"    call void @gflat$Allocator$Free(i8* {data})");
+            return;
+        }
 
         if (_typeChecker.ResolveAlias(ptrType) is PointerTypeExpression pointer &&
             _typeChecker.ResolveAlias(pointer.Inner) is ArrayTypeExpression array)
@@ -4491,10 +4550,12 @@ public partial class LlvmEmitter : IVisitor
         bool savedInsideMain = _isInsideMain;
         var savedTryStack = _emitterTryStack.ToArray();
         List<List<IDeferAction>> savedDeferScopes = new(_deferScopes);
+        var savedParameterOwners = _parameterOwners.ToArray();
 
         // Prepare lambda context
         _output = _lambdaFunctions;
         _locals.Clear();
+        _parameterOwners.Clear();
         _tempCounter = 0;
         _currentFunctionReturnType = llvmReturnType;
         _currentFunctionExpectedType = returnType;
@@ -4575,6 +4636,8 @@ public partial class LlvmEmitter : IVisitor
         foreach (var handler in savedTryStack.Reverse()) _emitterTryStack.Push(handler);
         _deferScopes.Clear();
         _deferScopes.AddRange(savedDeferScopes);
+        _parameterOwners.Clear();
+        _parameterOwners.AddRange(savedParameterOwners);
 
         // Push the function address as a function pointer
         Push($"@{funcName}");

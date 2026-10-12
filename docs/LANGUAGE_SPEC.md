@@ -140,7 +140,7 @@ Constructors must initialize fields that cannot have a default value on every no
 
 `default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates; their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
 
-The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. Prelude provides public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
+The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `std/libc/Memory.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
 
 ```gflat
 namespace Memory {
@@ -565,7 +565,7 @@ Floating-point conversion additionally uses `std/libc/Formatting.gf` and libc's 
 The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,
 including qualified syntax such as `std::s$"{42}"`. Unprefixed `$"..."` and `c$"..."` are
 not supported. Implementing a literal operator alone does not opt into interpolation.
-Its containing/result type must implement the global prelude interface `ITextWriter`:
+Its containing/result type must implement the automatically available global interface `ITextWriter` from `std/core/Text.gf`:
 
 ```text
 interface ITextWriter
@@ -606,7 +606,7 @@ implicit interpolation-to-type conversions, or compile-time interpolation.
 
 ## Attributes
 
-Attributes are classes derived, directly or indirectly, from the abstract `Attribute` class in the prelude. The base class has a public parameterless constructor and no libc dependency. Its name is reserved at global scope.
+Attributes are classes derived, directly or indirectly, from the abstract `Attribute` class in `std/core/Attribute.gf`. The base class has a public parameterless constructor and no libc dependency. Its name is reserved at global scope.
 
 ```gflat
 class Priority : Attribute
@@ -631,7 +631,7 @@ A compilation accepts multiple named source snapshots and produces one LLVM modu
 
 `using` directives apply only to their source file. They affect name lookup, not which files are compiled. Types and generic functions have namespace-qualified identities; same-named types in separate namespaces remain distinct. Ambiguous imports require explicit qualification. Generic bodies retain their definition's namespace and imports when instantiated from another file.
 
-Prelude is supplied once by compilation setup, including `Attribute`, the default `Exception` unless explicitly supplied by the program, and the weak allocator defaults. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
+Compilation setup automatically includes `std/core/Attribute.gf`, `std/core/Exception.gf`, `std/core/Text.gf`, and `std/libc/Memory.gf`. These ordinary source files are shipped in the compiler?s `Std` directory. Their current global names remain available without imports. The default `Exception` is omitted if explicitly supplied by the program. Explicit inputs at these std-relative paths take precedence over bundled files and are not included twice. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
 
 The C# compiler API accepts immutable `SourceFile(path, text)` snapshots through `Compiler.Check(IEnumerable<SourceFile>, diagnostics)` and `Compiler.Emit(IEnumerable<SourceFile>, diagnostics)`. The path identifies the snapshot; the compiler does not read its text from disk. This permits unsaved editor buffers and independent command-line or IDE hosts. Source spans use UTF-16 offsets and one-based lines and columns. Diagnostics expose their source span, code, severity, message, and related declaration locations.
 

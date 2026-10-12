@@ -2123,7 +2123,7 @@ public partial class LlvmEmitter : IVisitor
                 _externNames.Add("puts");
                 EmitGlobal("declare i32 @puts(i8*)");
             }
-            // gflat$Memory$Free is defined in user code (or the prelude), no declare needed
+            // gflat$Memory$Free is defined in user code (or std/libc/Memory.gf), no declare needed
             _externNames.Add("gflat$Memory$Free");
 
             string msgSlot = NewTemp();
@@ -3350,7 +3350,7 @@ public partial class LlvmEmitter : IVisitor
                 Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
             }
 
-            // gflat$Memory$Free is defined in user code (or the prelude), no declare needed
+            // gflat$Memory$Free is defined in user code (or std/libc/Memory.gf), no declare needed
             _externNames.Add("gflat$Memory$Free");
 
             string castPtr;
@@ -4141,7 +4141,7 @@ public partial class LlvmEmitter : IVisitor
         else if (node.Kind is AllocationKind.Pointer or AllocationKind.Managed)
         {
             string allocator = node.Kind == AllocationKind.Managed ? "__gflat_gc_alloc" : "gflat$Memory$Allocate";
-            // gflat$Memory$Allocate is defined in user code (or the prelude), no declare needed
+            // gflat$Memory$Allocate is defined in user code (or std/libc/Memory.gf), no declare needed
             _ = _externNames.Add("gflat$Memory$Allocate");
 
             string sizePtr = NewTemp();
@@ -4482,7 +4482,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
         }
 
-        // gflat$Memory$Free is defined in user code (or the prelude), no declare needed
+        // gflat$Memory$Free is defined in user code (or std/libc/Memory.gf), no declare needed
         _externNames.Add("gflat$Memory$Free");
 
         string castPtr;

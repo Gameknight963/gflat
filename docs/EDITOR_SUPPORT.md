@@ -178,8 +178,9 @@ and [Visual Studio LSP integration](https://learn.microsoft.com/en-us/visualstud
   types, namespaces, and context keywords. `.` and `:` trigger completion; `::`
   narrows it to namespace/type members. Visual Studio handles filtering and commit.
 - Hover shows a declaration signature. Go to definition targets its source name,
-  including unsaved files in the same project. Synthetic prelude symbols have no
-  file navigation target.
+  including unsaved files in the same project. Automatically included standard-library
+  symbols navigate to their shipped `.gf` sources; explicit std project sources and
+  their unsaved edits take precedence over bundled copies.
 - Signature help follows the innermost call and counts arguments without counting
   commas in nested calls.
 - Full and range semantic tokens supplement the TextMate grammar. The default

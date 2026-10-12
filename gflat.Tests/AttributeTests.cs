@@ -141,7 +141,7 @@ public class AttributeTests
     [InlineData("class Tag {}", "[Tag]", "derived from Attribute")]
     [InlineData("struct Tag {}", "[Tag]", "derived from Attribute")]
     [InlineData("", "[Attribute]", "derived from Attribute")]
-    [InlineData("class Attribute {}", "[Attribute]", "reserved prelude")]
+    [InlineData("class Attribute {}", "[Attribute]", "reserved standard-library")]
     [InlineData("abstract class Tag : Attribute {}", "[Tag]", "abstract")]
     [InlineData("class Tag : Attribute { private Tag() {} }", "[Tag]", "inaccessible")]
     [InlineData("class Tag : Attribute { public Tag(int n) {} }", "[Tag(true)]", "No matching constructor")]

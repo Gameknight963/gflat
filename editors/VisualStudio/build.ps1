@@ -47,5 +47,13 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot identify source commit' }
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'source.extension.vsixmanifest')
 @{ commit = $commit; builtUtc = [DateTime]::UtcNow.ToString('o'); version = $manifest.PackageManifest.Metadata.Identity.Version; workflowRun = $env:GITHUB_RUN_ID } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $PSScriptRoot 'obj/BUILD-INFO.json') -Encoding utf8
+# VSSDK can reuse a generated manifest from an older checkout even on Rebuild.
+# Regenerate these two build outputs so the packaged version follows the source.
+$extensionOutputRoot = [IO.Path]::GetFullPath($PSScriptRoot) + [IO.Path]::DirectorySeparatorChar
+foreach ($relative in @("obj/$Configuration/extension.vsixmanifest", "bin/$Configuration/net472/extension.vsixmanifest")) {
+    $generatedManifest = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot $relative))
+    if (-not $generatedManifest.StartsWith($extensionOutputRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Manifest output must remain inside the extension directory' }
+    if (Test-Path -LiteralPath $generatedManifest) { Remove-Item -LiteralPath $generatedManifest }
+}
 & $MSBuild (Join-Path $PSScriptRoot 'gflat.VisualStudio.csproj') /restore /t:Rebuild /m /v:minimal "/p:Configuration=$Configuration"
 if ($LASTEXITCODE -ne 0) { throw 'VSIX build failed' }

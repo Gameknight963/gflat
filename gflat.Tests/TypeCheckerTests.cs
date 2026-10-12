@@ -2919,7 +2919,7 @@ namespace gflat.Tests
 
             List<Token> tokens = Lexer.Tokenize(code);
             CompilationUnit ast = Parser.Parse(tokens);
-            Compilation.AddPrelude(ast, new gflat.diagnostics.DiagnosticBag());
+            Compilation.AddStandardLibrary(ast, new gflat.diagnostics.DiagnosticBag());
             Assert.NotNull(ast);
             Assert.Contains(ast.Members, m => m is ClassDeclaration c && c.Name == "Exception");
 

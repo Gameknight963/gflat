@@ -6,6 +6,36 @@ namespace gflat.LanguageServer.Tests;
 public class EditorTests
 {
     [Fact]
+    public void WorkspaceUsesUnsavedLibrarySnapshotsAndWatchesTheirFiles()
+    {
+        string app = Path.Combine(Path.GetTempPath(), "gflat-stdlib-editor", "main.gf");
+        var library = StandardLibrary.Load("core/Text.gf");
+        var documents = new Dictionary<string, OpenDocument> {
+            [app] = new(app, "int main() => UnsavedLibraryAnswer();", 1),
+            [library.Path] = new(library.Path, library.Text + "int UnsavedLibraryAnswer() => 42;", 2)
+        };
+        var result = Workspace.Analyze(null, documents);
+        Assert.DoesNotContain(result.Diagnostics.Values.SelectMany(d => d), d => d.Severity == 1);
+        Assert.Contains(library.Path, result.WatchedPaths);
+    }
+
+    [Theory]
+    [InlineData("void F(|Exception* e) {}", "core/Exception.gf", "class Exception")]
+    [InlineData("class Tag : |Attribute {}", "core/Attribute.gf", "abstract class Attribute")]
+    [InlineData("void F(|ITextWriter* output) {}", "core/Text.gf", "interface ITextWriter")]
+    [InlineData("void F() { Memory::|Allocate(1); }", "libc/Memory.gf", "Allocate(nuint")]
+    public void LibraryDefinitionsNavigateToShippedSource(string marked, string relative, string declaration)
+    {
+        var (model, path, offset, _) = Analyze(marked);
+        var location = Json(model.Definition(path, offset));
+        string target = new Uri(location.GetProperty("uri").GetString()!).LocalPath;
+        Assert.True(StandardLibrary.IsSource(target, relative));
+        string[] lines = File.ReadAllLines(target);
+        int line = location.GetProperty("range").GetProperty("start").GetProperty("line").GetInt32();
+        Assert.Contains(declaration, lines[line]);
+    }
+
+    [Fact]
     public void MoveAndReferenceAccessorsHaveContextualColorsAndNavigation()
     {
         var (model, path, offset, source) = Analyze("struct S { int n; public S() {} public copy S(readonly(S)* source) { n = source.n; } public ref int Value => n; } void F(S* ptr) { S value = new S(); move value at p|tr; }");

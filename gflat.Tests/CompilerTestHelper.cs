@@ -23,7 +23,7 @@ namespace gflat.Tests
             DiagnosticBag bag = new DiagnosticBag();
             List<Token> tokens = Lexer.Tokenize(code);
             CompilationUnit ast = Parser.Parse(tokens, bag);
-            Compilation.AddPrelude(ast, bag);
+            Compilation.AddStandardLibrary(ast, bag);
             TypeChecker checker = new TypeChecker(bag);
             try
             {

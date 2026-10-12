@@ -18,6 +18,11 @@ try {
     foreach ($asset in @('BUILD-INFO.json', 'Licenses/LICENSE', 'Licenses/MSBuild.Locator.txt', 'Licenses/dotnet/LICENSE.TXT', 'Licenses/dotnet/THIRD-PARTY-NOTICES.TXT')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted $asset))) { throw "VSIX is missing $asset" }
     }
+    foreach ($tool in @('Compiler', 'Server')) {
+        foreach ($source in @('core/Attribute.gf', 'core/Exception.gf', 'core/Text.gf', 'libc/Memory.gf')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Std/$source"))) { throw "VSIX is missing $tool/Std/$source" }
+        }
+    }
     $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $extracted 'BUILD-INFO.json') | ConvertFrom-Json
     if ($buildInfo.commit -notmatch '^[0-9a-f]{40}$') { throw 'VSIX source commit is missing' }
     # Exercise the grammar and configuration actually shipped in the archive.

@@ -111,15 +111,19 @@ public static class Workspace
                 }
             }
             if (unreadable || snapshots.Count == 0) return;
+            foreach (var open in documents.Values.Where(d => StandardLibrary.AutomaticFiles.Any(relative => StandardLibrary.IsSource(d.Path, relative))))
+                if (!snapshots.Any(s => Paths.Equals(s.Path, open.Path))) snapshots.Add(new(open.Path, open.Text));
             try
             {
                 var analysis = new AnalysisSnapshot(snapshots);
+                foreach (var source in analysis.Nodes.Select(n => n.Span.Source).OfType<SourceFile>().DistinctBy(s => s.Id))
+                    if (StandardLibrary.AutomaticFiles.Any(relative => StandardLibrary.IsSource(source.Path, relative))) watched.Add(source.Path);
                 var model = new EditorModel(analysis, snapshots);
                 foreach (var source in snapshots) models[source.Path] = model;
                 foreach (var diagnostic in analysis.Diagnostics)
                 {
                     string path = diagnostic.FilePath ?? snapshots[0].Path;
-                    // Prelude failures are still visible on a real document, never as invalid file URIs.
+                    // Synthetic source failures are visible on a real document, never as invalid file URIs.
                     if (path.StartsWith('<')) path = snapshots[0].Path;
                     output.TryAdd(path, new());
                     output[path].Add(Convert(diagnostic) with { Message = analysis.Checker?.DisplayDiagnostic(diagnostic.Message) ?? diagnostic.Message });

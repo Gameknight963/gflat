@@ -1,6 +1,6 @@
 # Core library
 
-Portable facilities use the replaceable `Memory` API. The prelude's default
+Portable facilities use the replaceable `Memory` API. The default
 allocator delegates to libc; replacing it does not require changing these sources.
 Reference `std/std.gfproj` to include the library.
 
@@ -115,3 +115,15 @@ int main()
 The caller must keep storage alive. Bounds checks cannot detect dangling pointers
 or incorrect counts. Readonly views observe changes through other mutable views.
 A string byte view is `new Span<readonly(char)>(text.Data, text.Length)`.
+
+## Automatically included definitions
+
+`Attribute.gf`, `Exception.gf`, and `Text.gf` contain the compiler-recognized base
+classes and formatting interfaces. They currently retain their global names and
+are included automatically, once per compilation. The default memory implementation
+lives in `std/libc/Memory.gf` and is also included automatically for now.
+
+These files ship as source alongside the compiler and language server in `Std/`.
+Explicit project inputs with the same std-relative paths use those source snapshots
+instead of the bundled copies. Automatic inclusion and libc-free build selection
+remain separate, future build configuration work.

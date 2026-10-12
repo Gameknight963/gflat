@@ -29,8 +29,10 @@ public sealed partial class EditorModel
     public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files)
     {
         this.snapshot = snapshot;
-        sources = files.ToDictionary(s => s.Path, Workspace.Paths);
-        foreach (var file in files)
+        var allFiles = files.Concat(snapshot.Nodes.Select(n => n.Span.Source).OfType<SourceFile>())
+            .DistinctBy(s => s.Path, Workspace.Paths).ToArray();
+        sources = allFiles.ToDictionary(s => s.Path, Workspace.Paths);
+        foreach (var file in allFiles)
         {
             try { tokens[file.Path] = Lexer.Tokenize(file).Where(t => t.Kind != TokenKind.EndOfFile).ToArray(); }
             catch (TypeCheckException) { tokens[file.Path] = []; }

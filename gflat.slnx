@@ -17,4 +17,7 @@
   <Project Path="examples/hello/hello.gfproj">
     <Build Project="true" />
   </Project>
+  <Project Path="examples/values/values.gfproj">
+    <Build Project="false" />
+  </Project>
 </Solution>

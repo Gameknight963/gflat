@@ -4,7 +4,18 @@ Version 0.3, experimental. This document specifies the supported language contra
 
 ## Design charter
 
-gflat is a systems language with explicit heap allocation, inline objects, fixed integer widths, and deterministic scope cleanup. Ordinary expressions do not implicitly allocate heap objects. A class is an inline object with a vtable; use a pointer when reference semantics are needed.
+gflat combines familiar object-oriented APIs with control over storage and layout.
+`T` is a value, not a choice of stack allocation: it can be a local, an inline
+field, or an element inside a heap-allocated vector. `T*` borrows or manually
+addresses storage; `T^` uses the configured managed allocator. Allocation and
+access qualification are separate from the type's methods and interfaces.
+
+Structs retain constructors, methods, properties, interfaces, and destruction while
+providing inline layout. Classes add a vtable and implementation inheritance. Heap
+storage is requested through allocation expressions or library operations; ordinary
+values are not silently boxed. Fixed integer widths and deterministic cleanup of
+owning values remain language guarantees. Readonly views qualify the same types;
+libraries should not need a duplicate container just to expose readonly elements.
 
 Raw pointers, explicit reinterpretation casts, and extern declarations are the low-level boundary. They do not establish ownership, bounds, or a valid lifetime. `readonly` restricts access through that view; raw-pointer casts can remove it, but managed-reference casts cannot. The language does not claim complete memory safety. Foreign declarations are trusted contracts.
 

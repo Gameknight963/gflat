@@ -17,6 +17,10 @@ public class HoverTests
     }
 
     [Fact]
+    public void ReferencePropertyHoverShowsItsBorrowingContract()
+        => Assert.Contains("ref int S.Value", Hover("struct S { int n; public ref int Va|lue => n; }").GetProperty("contents").GetProperty("value").GetString());
+
+    [Fact]
     public void HoveringTheUnderlyingNameStillShowsTheUnderlyingLayout()
     {
         var text = Hover("struct S { int x; } void F(readonly(|S)*? p) {}").GetProperty("contents").GetProperty("value").GetString();

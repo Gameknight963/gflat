@@ -120,6 +120,9 @@ public sealed partial class EditorModel
         else if (symbol.Syntax.Node is VariableDeclaration { IsConst: true } or Parameter { IsConst: true }) Keyword("const");
         else if (symbol.Syntax.Node is PropertyDeclaration && symbol.Static) Keyword("static");
 
+        if (symbol.Syntax.Node is PropertyDeclaration { IsRef: true }) Keyword("ref");
+        if (symbol.Syntax.Node is ConstructorDeclaration { IsMove: true }) Keyword("move");
+
         if (symbol.Syntax.Node is AliasDeclaration alias)
         {
             Keyword("alias"); Name(); Add(" = ", "punctuation"); Type(alias.TargetType);

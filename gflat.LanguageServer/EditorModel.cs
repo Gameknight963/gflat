@@ -258,9 +258,28 @@ public sealed partial class EditorModel
     private Symbol? Resolve(string path, int index)
         => references.GetValueOrDefault(tokens[path][index]);
 
+    private bool IsValueModelKeyword(string path, Token token)
+    {
+        if (token.Text is not ("move" or "at" or "ref")) return false;
+        foreach (var syntax in nodes[path])
+        {
+            if (token.Start < syntax.Span.Start || token.End >= syntax.Span.Start + syntax.Span.Length) continue;
+            if (syntax.Node is MoveExpression move)
+            {
+                if (token.Text == "move" && token.Start == syntax.Span.Start) return true;
+                if (token.Text == "at" && move.Destination != null && token.Start >= move.Operand.Span.Start + move.Operand.Span.Length && token.End < move.Destination.Span.Start) return true;
+            }
+            if (token.Text == "ref" && syntax.Node is PropertyDeclaration { IsRef: true } property && token.End < property.Type.Span.Start) return true;
+            if (token.Text == "move" && syntax.Node is ConstructorDeclaration { IsMove: true } &&
+                !tokens[path].Any(t => t.Kind == TokenKind.OpenParen && t.Start >= syntax.Span.Start && t.Start < token.Start)) return true;
+        }
+        return false;
+    }
+
     private Symbol? ResolveCore(string path, int index)
     {
         var token = tokens[path][index];
+        if (IsValueModelKeyword(path, token)) return null;
         if (token.Text == "at" && nodes[path].Any(n => n.Node is NewExpression placement &&
             placement.PlacementKeywordSpan.Length > 0 && placement.PlacementKeywordSpan.Start == token.Start)) return null;
         var declaration = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == token.Start && s.NameSpan.Length == token.Span.Length);
@@ -292,7 +311,7 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "const", "weak", "replace"];
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "ref", "move", "const", "weak", "replace"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
         }
@@ -411,7 +430,7 @@ public sealed partial class EditorModel
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            bool modifier = ts[i].Kind == TokenKind.Throws || placementKeywords.Contains(ts[i].Start);
+            bool modifier = ts[i].Kind == TokenKind.Throws || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             var symbol = control || modifier ? null : Resolve(path, i);
             if (symbol == null && !control && !modifier) continue;

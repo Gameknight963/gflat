@@ -30,6 +30,15 @@ foreach ($folder in $folders) {
         if (-not $assemblies.ContainsKey($file.BaseName)) { $assemblies[$file.BaseName] = $file.FullName }
     }
 }
+# Some VS releases keep Json.NET in versioned private assembly directories.
+if (-not $assemblies.ContainsKey('Newtonsoft.Json')) {
+    $json = Get-ChildItem -LiteralPath (Join-Path $ide 'PrivateAssemblies') -Directory -Filter 'Newtonsoft.Json.*' |
+        Sort-Object { [version]$_.Name.Substring('Newtonsoft.Json.'.Length) } -Descending |
+        ForEach-Object { Join-Path $_.FullName 'Newtonsoft.Json.dll' } |
+        Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if (-not $json) { throw 'Cannot locate the installed IDE Newtonsoft.Json assembly for the rich-hover test.' }
+    $assemblies['Newtonsoft.Json'] = $json
+}
 $resolver = [ResolveEventHandler] {
     param($sender, $eventArgs)
     $name = ([Reflection.AssemblyName]$eventArgs.Name).Name

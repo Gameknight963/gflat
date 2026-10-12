@@ -5,10 +5,8 @@ namespace gflat;
 
 public partial class TypeChecker
 {
-    public sealed record InterpolationPart(CallExpression Append, CallExpression? Convert,
-        IdentifierExpression? Text, IdentifierExpression? Length);
     public sealed record InterpolationPlan(PrefixedStringLiteralExpression Factory,
-        IdentifierExpression Result, List<InterpolationPart> Parts);
+        IdentifierExpression Result, List<CallExpression> Parts);
     private readonly Dictionary<InterpolatedStringExpression, InterpolationPlan> _interpolations = new();
     private int _interpolationTemporary;
     public InterpolationPlan GetInterpolation(InterpolatedStringExpression node) => _interpolations[node];
@@ -23,8 +21,8 @@ public partial class TypeChecker
         var factory = new PrefixedStringLiteralExpression(node.Scope, node.Prefix, Literal(""), node.Line) { Span = node.Span };
         factory.Accept(this);
         TypeExpression resultType = GetType(factory);
-        if (!TypeImplementsInterface(resultType, "IInterpolatedString"))
-            throw new TypeCheckException($"String prefix '{node.Prefix}' must return a type implementing IInterpolatedString to support interpolation", node.Line);
+        if (!TypeImplementsInterface(resultType, "ITextWriter"))
+            throw new TypeCheckException($"String prefix '{node.Prefix}' must return a type implementing ITextWriter to support interpolation", node.Line);
         PushScope();
         try
         {
@@ -36,48 +34,39 @@ public partial class TypeChecker
                 return id;
             }
             var result = Temporary(resultType);
-            var parts = new List<InterpolationPart>();
+            var parts = new List<CallExpression>();
             foreach (AstNode part in node.Parts)
             {
                 using var context = SourceContext.Enter(part.Span);
-                CallExpression? convert = null;
-                IdentifierExpression? text = null, length = null;
-                List<AstNode> args;
+                CallExpression action;
                 if (part is LiteralExpression { Token.Kind: TokenKind.InterpolatedStringSegment } segment)
                 {
                     string raw = segment.Token.Text;
-                    args = new() { Literal(raw), Size(StringLiteralEncoding.Bytes(raw, part.Line).Length) };
+                    action = new(new MemberAccessExpression(result, "Write", false, part.Line),
+                        new() { Literal(raw), Size(StringLiteralEncoding.Bytes(raw, part.Line).Length) }, part.Line) { Span = part.Span };
                 }
                 else
                 {
                     part.Accept(this);
                     TypeExpression type = ResolveAlias(GetType(part));
                     TypeExpression valueType = type is PointerTypeExpression ptr ? ptr.Inner : type is ManagedTypeExpression managed ? managed.Inner : type;
-                    bool convertible = TypeImplementsInterface(type, "IStringConvertible") ||
-                        valueType is NamedTypeExpression { Name: "IStringConvertible" };
-                    if (convertible)
-                        convert = new(new MemberAccessExpression(part, "ToString", false, part.Line), new(), part.Line) { Span = part.Span };
+                    var destination = new UnaryExpression(result, TokenKind.Ampersand, true, part.Line) { Span = part.Span };
+                    bool formattable = TypeImplementsInterface(type, "IFormattable") || valueType is NamedTypeExpression { Name: "IFormattable" };
+                    if (formattable)
+                        action = new(new MemberAccessExpression(part, "Format", false, part.Line), new() { destination }, part.Line) { Span = part.Span };
                     else if (type is NamedTypeExpression primitive && primitive.Name is
                         "bool" or "char" or "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "float" or "double")
                     {
-                        if (!_globalScope.Children.TryGetValue("std", out var std) || !std.Functions.TryGetValue("ToString", out var first) ||
+                        if (!_globalScope.Children.TryGetValue("std", out var std) || !std.Functions.TryGetValue("Format", out var first) ||
                             !(overloadFamilies.TryGetValue(first, out var family) ? family : new List<MethodDeclaration> { first })
-                                .Any(m => m.Parameters.Count == 1 && ResolveAlias(m.Parameters[0].Type) is NamedTypeExpression parameter && parameter.Name == primitive.Name))
-                            throw new TypeCheckException($"Primitive interpolation requires std::ToString({primitive.Name}); include std/core/Formatting.gf (and std/libc/Formatting.gf for floating-point values)", part.Line);
-                        convert = new(new NamespaceAccessExpression(new NamespaceAccessExpression(new GlobalExpression(part.Line), "std", part.Line), "ToString", part.Line), new() { part }, part.Line) { Span = part.Span };
+                                .Any(m => m.Parameters.Count == 2 && ResolveAlias(m.Parameters[0].Type) is NamedTypeExpression parameter && parameter.Name == primitive.Name))
+                            throw new TypeCheckException($"Primitive interpolation requires std::Format({primitive.Name}, ITextWriter*); include std/core/Formatting.gf (and std/libc/Formatting.gf for floating-point values)", part.Line);
+                        action = new(new NamespaceAccessExpression(new NamespaceAccessExpression(new GlobalExpression(part.Line), "std", part.Line), "Format", part.Line), new() { part, destination }, part.Line) { Span = part.Span };
                     }
-                    else
-                        throw new TypeCheckException($"Interpolation value of type '{TypeName(type)}' must implement IStringConvertible; raw pointers are not implicitly treated as text", part.Line);
-                    convert.Accept(this);
-                    if (ResolveAlias(GetType(convert)) is not PointerTypeExpression { IsReadOnly: false, IsNullable: false, Inner: NamedTypeExpression { Name: "char" } })
-                        throw new TypeCheckException("Interpolation ToString must return an owned, non-null char*", part.Line);
-                    text = Temporary(GetType(convert));
-                    length = Temporary(new NamedTypeExpression("nuint", null, part.Line));
-                    args = new() { text, length };
+                    else throw new TypeCheckException($"Interpolation value of type '{TypeName(type)}' must implement IFormattable; raw pointers are not implicitly treated as text", part.Line);
                 }
-                var append = new CallExpression(new MemberAccessExpression(result, "AppendLiteral", false, part.Line), args, part.Line) { Span = part.Span };
-                append.Accept(this);
-                parts.Add(new(append, convert, text, length));
+                action.Accept(this);
+                parts.Add(action);
             }
             _interpolations[node] = new(factory, result, parts);
             RecordType(node, resultType);

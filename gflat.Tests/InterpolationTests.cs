@@ -71,10 +71,10 @@ public class InterpolationTests
         var result = Run("""
             using std;
             extern int printf(readonly(char)* text, ...);
-            struct Value : IStringConvertible {
+            struct Value : IFormattable {
                 public int n;
                 public Value(int id) { n = id; printf(c"C%d;", n); }
-                public readonly char* ToString() throws { printf(c"F%d;", n); return std::ToString(n); }
+                public readonly void Format(ITextWriter* output) throws { printf(c"F%d;", n); std::Format(n, output); }
                 ~Value() { printf(c"D%d;", n); }
             }
             Value Make(int n) { return new Value(n); }
@@ -90,12 +90,12 @@ public class InterpolationTests
         var result = Run("""
             using std;
             void*? __gflat_gc_alloc(nuint size) { return malloc(size); }
-            struct Value : IStringConvertible {
-                public readonly char* ToString() throws { return std::ToString(3); }
+            struct Value : IFormattable {
+                public readonly void Format(ITextWriter* output) throws { std::Format(3, output); }
             }
             int main() {
                 Value value = new Value();
-                readonly(IStringConvertible)* p = &value;
+                readonly(IFormattable)* p = &value;
                 Value^ managed = new^ Value();
                 String a = s$"{p}{managed}";
                 if (false && s$"{99}".Length == (nuint)2) return 1;
@@ -109,8 +109,8 @@ public class InterpolationTests
     [Theory]
     [InlineData("$\"x\"", "custom string prefix")]
     [InlineData("c$\"x\"", "custom string prefix")]
-    [InlineData("s$\"{c\"text\"}\"", "IStringConvertible")]
-    [InlineData("s$\"{null}\"", "IStringConvertible")]
+    [InlineData("s$\"{c\"text\"}\"", "IFormattable")]
+    [InlineData("s$\"{null}\"", "IFormattable")]
     public void UnsupportedValuesProduceDiagnostics(string expression, string expected)
     {
         var ex = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using std; int main() { " + expression + "; return 0; }")));
@@ -129,7 +129,7 @@ public class InterpolationTests
     [Fact]
     public void DestinationMustOptIn()
     {
-        Assert.Contains("IInterpolatedString", Assert.Throws<TypeCheckException>(() => Compiler.Check("""
+        Assert.Contains("ITextWriter", Assert.Throws<TypeCheckException>(() => Compiler.Check("""
             struct Plain { public static Plain operator p""(readonly(char)* p, nuint n) { return new Plain(); } }
             int main() { p$"x"; return 0; }
             """)).Message);
@@ -142,8 +142,8 @@ public class InterpolationTests
         var result = Run("""
             using std;
             extern int putchar(int c);
-            struct Broken : IStringConvertible {
-                public readonly char* ToString() throws { throw new* Exception(); }
+            struct Broken : IFormattable {
+                public readonly void Format(ITextWriter* output) throws { throw new* Exception(); }
             }
             String F() { Broken b = new Broken(); return s$"{b}"; }
             int main() { try { F(); } catch { putchar(67); } putchar(88); return 0; }
@@ -155,4 +155,49 @@ public class InterpolationTests
     [Fact]
     public void HoleReadsParticipateInDefiniteAssignment()
         => Assert.Contains("unassigned", Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using std; int main() { int value; s$\"{value}\"; return 0; }"))).Message, StringComparison.OrdinalIgnoreCase);
+    [Fact]
+    public void StringHolesPreserveEmbeddedNullBytes()
+    {
+        var result = Run("""
+            using std;
+            int main() {
+                String value = s"a\0b";
+                String text = s$"[{value}]";
+                if (text.Length != (nuint)5) return 1;
+                if (text[(nuint)2] != '\0' || text[(nuint)3] != 'b') return 2;
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
+    public void FormattingExistingValuesDoesNotAllocateTextTemporaries()
+    {
+        var result = Run("""
+            using std;
+            extern void* malloc(nuint size);
+            extern void free(void* p);
+            extern int printf(readonly(char)* text, ...);
+            namespace Allocator {
+                public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
+                public replace void Free(void* pointer) { free((void*)pointer); }
+            }
+            struct Counter : ITextWriter {
+                public nuint count = 0;
+                public void Write(readonly(char)* data, nuint length) throws { count += length; }
+            }
+            int main() {
+                Counter writer = new Counter();
+                std::Format(-42, &writer);
+                std::Format(true, &writer);
+                std::Format('x', &writer);
+                std::Format(1.5d, &writer);
+                if (writer.count != (nuint)11) return 1;
+                return 0;
+            }
+            """, libc: true);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
 }

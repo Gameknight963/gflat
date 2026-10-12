@@ -180,12 +180,12 @@ public sealed class ServerTests
         await using var session = new Session();
         await session.Initialize();
         const string declarations = """
-            struct Text : IInterpolatedString {
+            struct Text : ITextWriter {
                 public static Text operator t""(readonly(char)* p, nuint n) { return new Text(); }
-                public void AppendLiteral(readonly(char)* p, nuint n) throws { }
+                public void Write(readonly(char)* p, nuint n) throws { }
             }
-            struct Value : IStringConvertible {
-                public readonly char* ToString() throws { char* p = (char*)Allocator::Allocate(1); p[0] = '\0'; return p; }
+            struct Value : IFormattable {
+                public readonly void Format(ITextWriter* output) throws { output.Write(c"", 0); }
             }
             """;
         string valid = declarations + "\nint main() { t$\"{new Value()}\"; return 0; }";

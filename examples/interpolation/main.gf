@@ -2,15 +2,16 @@
 
 extern int printf(readonly(char)* text, ...);
 
-struct Player : IStringConvertible
+struct Player : IFormattable
 {
     public int score;
     public Player(int value) { score = value; }
 
-    public readonly char* ToString() throws
+    public readonly void Format(ITextWriter* output) throws
     {
-        String text = s$"Player(score={score})";
-        return text.ToString();
+        output.Write(c"Player(score=", 13);
+        std::Format(score, output);
+        output.Write(c")", 1);
     }
 }
 

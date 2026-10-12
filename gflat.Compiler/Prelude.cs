@@ -3,14 +3,14 @@ namespace gflat
     public static class Prelude
     {
         public const string Source = @"
-interface IInterpolatedString
+interface ITextWriter
 {
-    void AppendLiteral(readonly(char)* data, nuint length) throws;
+    void Write(readonly(char)* data, nuint length) throws;
 }
 
-interface IStringConvertible
+interface IFormattable
 {
-    readonly char* ToString() throws;
+    readonly void Format(ITextWriter* output) throws;
 }
 
 abstract class Attribute

@@ -1,14 +1,9 @@
-﻿using gflat.ast;
+using gflat.ast;
 
 namespace gflat;
 
 public partial class LlvmEmitter
 {
-    private sealed class InterpolationTextCleanup(string pointer) : IDeferAction
-    {
-        public void Execute(LlvmEmitter emitter) => emitter.Emit($"    call void @gflat$Allocator$Free(i8* {pointer})");
-    }
-
     private void EmitInterpolation(InterpolatedStringExpression node)
     {
         var plan = _typeChecker.GetInterpolation(node);
@@ -38,15 +33,7 @@ public partial class LlvmEmitter
                 _deferScopes.Add(new());
                 try
                 {
-                    if (part.Convert != null)
-                    {
-                        part.Convert.Accept(this);
-                        string text = Pop();
-                        _deferScopes[^1].Add(new InterpolationTextCleanup(text));
-                        Bind(part.Text!, text);
-                        Bind(part.Length!, EmitCStringLength(text));
-                    }
-                    part.Append.Accept(this);
+                    part.Accept(this);
                     EmitDefersDownTo(_deferScopes.Count - 1);
                 }
                 finally { _deferScopes.RemoveAt(_deferScopes.Count - 1); }
@@ -62,26 +49,4 @@ public partial class LlvmEmitter
         }
     }
 
-    private string EmitCStringLength(string text)
-    {
-        string sizeType = $"i{TargetInfo.Default.PointerBits}";
-        string slot = NewTemp(), test = NewLabel("text_length"), advance = NewLabel("text_next"), done = NewLabel("text_end");
-        Emit($"    {slot} = alloca {sizeType}");
-        Emit($"    store {sizeType} 0, {sizeType}* {slot}");
-        Emit($"    br label %{test}");
-        Emit($"{test}:");
-        string length = NewTemp(), address = NewTemp(), value = NewTemp(), zero = NewTemp();
-        Emit($"    {length} = load {sizeType}, {sizeType}* {slot}");
-        Emit($"    {address} = getelementptr i8, i8* {text}, {sizeType} {length}");
-        Emit($"    {value} = load i8, i8* {address}");
-        Emit($"    {zero} = icmp eq i8 {value}, 0");
-        Emit($"    br i1 {zero}, label %{done}, label %{advance}");
-        Emit($"{advance}:");
-        string next = NewTemp();
-        Emit($"    {next} = add {sizeType} {length}, 1");
-        Emit($"    store {sizeType} {next}, {sizeType}* {slot}");
-        Emit($"    br label %{test}");
-        Emit($"{done}:");
-        return length;
-    }
 }

@@ -2,70 +2,39 @@ namespace std;
 
 namespace detail
 {
-    char* AllocateText(nuint bytes) throws
+    void IntegerText(ulong magnitude, bool negative, ITextWriter* output) throws
     {
-        void*? allocation = Allocator::Allocate(bytes);
-        if (allocation == null) throw new* Exception(c"Text allocation failed", 2);
-        return (char*)allocation;
-    }
-
-    char* CopyText(readonly(char)* text, nuint count) throws
-    {
-        char* result = AllocateText(count + (nuint)1);
-        for (nuint i = 0; i < count; i++) result[i] = text[i];
-        result[count] = '\0';
-        return result;
-    }
-
-    char* IntegerText(ulong magnitude, bool negative) throws
-    {
-        // Twenty decimal digits, an optional sign, and the terminator.
-        char* result = AllocateText(22);
-        nuint length = 0;
+        char[21] buffer;
+        nuint start = 21;
         while (true)
         {
-            result[length] = (char)((magnitude % 10ul) + 48ul);
-            length++;
+            start--;
+            buffer[start] = (char)((magnitude % 10ul) + 48ul);
             magnitude /= 10ul;
             if (magnitude == 0ul) break;
         }
-        if (negative) { result[length] = '-'; length++; }
-        nuint i = 0;
-        nuint j = length - (nuint)1;
-        while (i < j)
-        {
-            char swap = result[i]; result[i] = result[j]; result[j] = swap;
-            i++; j--;
-        }
-        result[length] = '\0';
-        return result;
+        if (negative) { start--; buffer[start] = '-'; }
+        output.Write((readonly(char)*)buffer + start, (nuint)21 - start);
     }
 }
 
-char* ToString(ulong value) throws { return detail::IntegerText(value, false); }
-char* ToString(long value) throws
+void Format(ulong value, ITextWriter* output) throws { detail::IntegerText(value, false, output); }
+void Format(long value, ITextWriter* output) throws
 {
-    // Unsigned subtraction also handles the minimum signed value.
-    if (value < 0l) return detail::IntegerText(0ul - (ulong)value, true);
-    return detail::IntegerText((ulong)value, false);
+    if (value < 0l) detail::IntegerText(0ul - (ulong)value, true, output);
+    else detail::IntegerText((ulong)value, false, output);
 }
-char* ToString(int value) throws { return std::ToString((long)value); }
-char* ToString(uint value) throws { return std::ToString((ulong)value); }
-char* ToString(short value) throws { return std::ToString((long)value); }
-char* ToString(ushort value) throws { return std::ToString((ulong)value); }
-char* ToString(sbyte value) throws { return std::ToString((long)value); }
-char* ToString(byte value) throws { return std::ToString((ulong)value); }
-char* ToString(nint value) throws { return std::ToString((long)value); }
-char* ToString(nuint value) throws { return std::ToString((ulong)value); }
-char* ToString(bool value) throws
+void Format(int value, ITextWriter* output) throws { std::Format((long)value, output); }
+void Format(uint value, ITextWriter* output) throws { std::Format((ulong)value, output); }
+void Format(short value, ITextWriter* output) throws { std::Format((long)value, output); }
+void Format(ushort value, ITextWriter* output) throws { std::Format((ulong)value, output); }
+void Format(sbyte value, ITextWriter* output) throws { std::Format((long)value, output); }
+void Format(byte value, ITextWriter* output) throws { std::Format((ulong)value, output); }
+void Format(nint value, ITextWriter* output) throws { std::Format((long)value, output); }
+void Format(nuint value, ITextWriter* output) throws { std::Format((ulong)value, output); }
+void Format(bool value, ITextWriter* output) throws
 {
-    if (value) return detail::CopyText(c"true", 4);
-    return detail::CopyText(c"false", 5);
+    if (value) output.Write(c"true", 4);
+    else output.Write(c"false", 5);
 }
-char* ToString(char value) throws
-{
-    char* result = detail::AllocateText(2);
-    result[0] = value;
-    result[1] = '\0';
-    return result;
-}
+void Format(char value, ITextWriter* output) throws { output.Write(&value, 1); }

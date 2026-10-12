@@ -1,4 +1,4 @@
-﻿namespace gflat.Tests;
+namespace gflat.Tests;
 
 public class StandardStringTests
 {
@@ -104,7 +104,7 @@ public class StandardStringTests
     }
 
     [Fact]
-    public void EmptyStringsAndOwnedConversionsAreIndependent()
+    public void TextViewsBorrowExistingStorage()
     {
         var result = Run("""
             using std;
@@ -113,12 +113,10 @@ public class StandardStringTests
                 empty.Clear();
                 if (empty.Length != (nuint)0 || empty.Data[0] != '\0') return 1;
                 String text = s"hello";
-                char* owned = text.ToString();
-                defer Allocator::Free((void*)owned);
+                readonly(char)* borrowed = text.ToString();
                 text[(nuint)0] = 'X';
-                if (owned[0] != 'h') return 2;
-                char* zero = empty.ToString();
-                defer Allocator::Free((void*)zero);
+                if (borrowed[0] != 'X') return 2;
+                readonly(char)* zero = empty.ToString();
                 if (zero[0] != '\0') return 3;
                 return 0;
             }

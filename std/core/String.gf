@@ -1,7 +1,7 @@
 namespace std;
 
 // Owns UTF-8 bytes. Length and Capacity exclude the trailing null byte.
-struct String : IInterpolatedString, IStringConvertible
+struct String : ITextWriter, IFormattable
 {
     private char* data;
     private nuint length;
@@ -13,6 +13,17 @@ struct String : IInterpolatedString, IStringConvertible
         data = (char*)c"";
         length = 0;
         capacity = 0;
+    }
+
+    // Movement transfers the buffer and leaves a reusable empty string.
+    public move String(String* source)
+    {
+        data = source.data;
+        length = source.length;
+        capacity = source.capacity;
+        source.data = (char*)c"";
+        source.length = 0;
+        source.capacity = 0;
     }
 
     public nuint Length { readonly get => length; }
@@ -100,14 +111,11 @@ struct String : IInterpolatedString, IStringConvertible
         if (capacity != (nuint)0) data[0] = '\0';
     }
 
-    public readonly char* ToString() throws
-    {
-        void*? allocation = Allocator::Allocate(length + (nuint)1);
-        if (allocation == null) throw new* Exception(c"String allocation failed", 2);
-        char* result = (char*)allocation;
-        for (nuint i = 0; i <= length; i++) result[i] = data[i];
-        return result;
-    }
+    // Borrowed text: valid until mutation, movement, or destruction of this string.
+    public readonly readonly(char)* ToString() => data;
+
+    public void Write(readonly(char)* text, nuint count) throws { this.AppendLiteral(text, count); }
+    public readonly void Format(ITextWriter* output) throws { output.Write(data, length); }
 
     public readonly String Clone() throws { return String::From(data, length); }
 

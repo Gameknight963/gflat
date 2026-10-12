@@ -9,7 +9,7 @@ public class ExplicitDestructorTests
     {
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
-            namespace Allocator {
+            namespace Memory {
                 public replace void*? Allocate(nuint n) { printf(c"A"); return malloc(n); }
                 public replace void Free(void* p) { printf(c"F"); free(p); }
             }
@@ -21,14 +21,14 @@ public class ExplicitDestructorTests
             void Destroy<T>(T* p) { p.~T(); }
             Item* Once(Item* p) { printf(c"P"); return p; }
             int main() {
-                Item* data = (Item*)Allocator::Allocate((nuint)sizeof(Item) * (nuint)2);
+                Item* data = (Item*)Memory::Allocate((nuint)sizeof(Item) * (nuint)2);
                 new* Item(1) at data;
                 new* Item(2) at data + 1;
                 Once(data + 1).~Item();
                 new* Item(3) at data + 1;
                 Destroy<Item>(data + 1);
                 Destroy<Item>(data);
-                Allocator::Free((void*)data);
+                Memory::Free((void*)data);
                 return 0;
             }
             """);
@@ -49,7 +49,7 @@ public class ExplicitDestructorTests
             int main() {
                 Derived* p = new* Derived();
                 Destroy<Derived>(p);
-                Allocator::Free((void*)p);
+                Memory::Free((void*)p);
                 return 0;
             }
             """);
@@ -69,7 +69,7 @@ public class ExplicitDestructorTests
                 Destroy<int*>(&p);
                 Empty* empty = new* Empty();
                 Destroy<Empty>(empty);
-                Allocator::Free((void*)empty);
+                Memory::Free((void*)empty);
                 return 0;
             }
             """).ExitCode);
@@ -113,7 +113,7 @@ public class ExplicitDestructorTests
             int main() {
                 Base* p = new* Derived();
                 p.~Base();
-                Allocator::Free((void*)p);
+                Memory::Free((void*)p);
                 return 0;
             }
             """);
@@ -132,7 +132,7 @@ public class ExplicitDestructorTests
             struct Storage<T> {
                 public T* data;
                 public Storage(T* p) { data = p; }
-                ~Storage() { data.~T(); Allocator::Free((void*)data); }
+                ~Storage() { data.~T(); Memory::Free((void*)data); }
             }
             int main() {
                 Lib::Box<int>* p = new* Lib::Box<int>();
@@ -168,12 +168,12 @@ public class ExplicitDestructorTests
             }
             void Destroy<T>(T* p) { p.~T(); }
             int main() {
-                S[2]* p = (S[2]*)Allocator::Allocate((nuint)sizeof(S[2]));
+                S[2]* p = (S[2]*)Memory::Allocate((nuint)sizeof(S[2]));
                 S* elements = (S*)p;
                 new* S(1) at elements;
                 new* S(2) at elements + 1;
                 Destroy<S[2]>(p);
-                Allocator::Free((void*)p);
+                Memory::Free((void*)p);
                 return 0;
             }
             """);

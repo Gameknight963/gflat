@@ -16,7 +16,7 @@ public partial class LlvmEmitter
     private sealed class AllocationCleanup(string address) : IDeferAction
     {
         public void Execute(LlvmEmitter emitter)
-            => emitter.Emit($"    call void @gflat$Allocator$Free(i8* {address})");
+            => emitter.Emit($"    call void @gflat$Memory$Free(i8* {address})");
     }
 
     private void BeginConstruction(string name, ConstructorDeclaration constructor)

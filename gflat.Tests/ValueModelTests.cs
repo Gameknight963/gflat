@@ -86,7 +86,7 @@ public class ValueModelTests
 
     [Theory]
     [InlineData("interface I {} struct R : I { ~R() { printf(c\"D\"); } }", "I* p = new* R(); delete p;", "D")]
-    [InlineData("interface I { int Get(); } struct R : I { public int Get() { return 2; } ~R() { printf(c\"D\"); } }", "I* p = new* R(); if (p.Get() != 2) return 1; p.~I(); Allocator::Free((void*)raw);", "D", true)]
+    [InlineData("interface I { int Get(); } struct R : I { public int Get() { return 2; } ~R() { printf(c\"D\"); } }", "I* p = new* R(); if (p.Get() != 2) return 1; p.~I(); Memory::Free((void*)raw);", "D", true)]
     public void InterfaceDestruction(string types, string body, string expected, bool needsRaw = false)
     {
         if (needsRaw) body = body.Replace("I* p = new* R();", "R* raw = new* R(); I* p = raw;");

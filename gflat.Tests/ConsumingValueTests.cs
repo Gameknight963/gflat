@@ -141,7 +141,7 @@ public class ConsumingValueTests
             extern int printf(readonly(char)* text, ...);
             extern void* malloc(nuint size);
             extern void free(void* p);
-            namespace Allocator {
+            namespace Memory {
                 public replace void*? Allocate(nuint size) { return malloc(size); }
                 public replace void Free(void* p) { printf(c"F"); free(p); }
             }
@@ -149,10 +149,10 @@ public class ConsumingValueTests
             int main() {
                 Exception error = new Exception();
                 try { Bad* value = new* Bad(&error); } catch {}
-                Bad* storage = (Bad*)Allocator::Allocate((nuint)sizeof(Bad))!;
+                Bad* storage = (Bad*)Memory::Allocate((nuint)sizeof(Bad))!;
                 try { new* Bad(&error) at storage; } catch {}
                 printf(c"P");
-                Allocator::Free((void*)storage);
+                Memory::Free((void*)storage);
                 return 0;
             }
             """);
@@ -198,9 +198,9 @@ public class ConsumingValueTests
         var result = CompilerTestHelper.Run(Copyable + """
             int main() {
                 R* original = new* R(1);
-                R* next = (R*)Allocator::Allocate((nuint)sizeof(R))!;
+                R* next = (R*)Memory::Allocate((nuint)sizeof(R))!;
                 move *original at next;
-                Allocator::Free((void*)original);
+                Memory::Free((void*)original);
                 delete next;
                 return 0;
             }

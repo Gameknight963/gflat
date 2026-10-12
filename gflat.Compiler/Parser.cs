@@ -126,7 +126,7 @@ namespace gflat
                 if (Current.Kind == TokenKind.Identifier && Current.Text == "no_default_allocator")
                 {
                     Consume();
-                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, "#no_default_allocator is obsolete; use replace on Allocator::Allocate and Allocator::Free");
+                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, line, 0, null, "#no_default_allocator is obsolete; use replace on Memory::Allocate and Memory::Free");
                 }
                 else
                 {

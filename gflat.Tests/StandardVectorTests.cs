@@ -94,7 +94,7 @@ public class StandardVectorTests
             using std;
             extern void* malloc(nuint size);
             extern void free(void* pointer);
-            namespace Allocator {
+            namespace Memory {
                 public replace void*? Allocate(nuint size) {
                     if (size > (nuint)256) return null;
                     return malloc(size);

@@ -140,10 +140,10 @@ Constructors must initialize fields that cannot have a default value on every no
 
 `default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates; their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
 
-The public allocation hooks are `Allocator::Allocate(nuint size) -> void*?` and `Allocator::Free(void* ptr) -> void`. Prelude provides public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
+The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. Prelude provides public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
 
 ```gflat
-namespace Allocator {
+namespace Memory {
     public replace void*? Allocate(nuint size) { return malloc(size); }
     public replace void Free(void* ptr) { free(ptr); }
 }
@@ -217,7 +217,7 @@ int main()
 }
 ```
 
-The hook may instead be defined in gflat. It must be non-generic and non-throwing, accept exactly one `ulong` byte count, and return writable `void*?` or `void*` storage with suitable alignment. An extern declaration requires the implementation to be linked by the native toolchain. No default GC or Boehm adapter is bundled. Merely declaring managed references does not require the allocation hook. The hook is independent of `Allocator::Allocate` and `Allocator::Free`.
+The hook may instead be defined in gflat. It must be non-generic and non-throwing, accept exactly one `ulong` byte count, and return writable `void*?` or `void*` storage with suitable alignment. An extern declaration requires the implementation to be linked by the native toolchain. No default GC or Boehm adapter is bundled. Merely declaring managed references does not require the allocation hook. The hook is independent of `Memory::Allocate` and `Memory::Free`.
 
 The initial runtime contract is a **conservative, nonmoving collector** that scans live stack/register roots and managed allocations, and recognizes interior pointers used during object access. The adapter supplies collector initialization and any thread registration required by its collector. The compiler does not emit root maps, relocation support, pinning, or finalization. References stored only in unscanned raw allocations or retained by foreign code need runtime-specific root registration; they are not automatically kept alive by the language.
 
@@ -441,7 +441,7 @@ during constant evaluation.
 
 The pointer retains its address, but the object is no longer live. Its storage
 can be reused with `new* T(args) at pointer` or released separately through
-`Allocator::Free`. Do not subsequently `delete` the destroyed object unless
+`Memory::Free`. Do not subsequently `delete` the destroyed object unless
 it has been reconstructed: `delete` already performs both destruction and
 deallocation. Explicit destruction does not cancel automatic scope cleanup;
 an automatically cleaned-up local destroyed through its address must be
@@ -462,7 +462,7 @@ struct Item {
     public Item(int n) { value = n; }
 }
 int main() {
-    Item* storage = (Item*)Allocator::Allocate((nuint)sizeof(Item));
+    Item* storage = (Item*)Memory::Allocate((nuint)sizeof(Item));
     Item* item = new* Item(42) at storage;
     int result = item.value;
     delete item; // This example owns the entire allocation, not an interior slot.

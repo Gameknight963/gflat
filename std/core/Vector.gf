@@ -28,14 +28,14 @@ struct Vector<T>
         nuint stride = (nuint)sizeof(T);
         if (stride == (nuint)0) stride = 1;
         if (requested > maximum / stride) throw new* Exception(c"Vector capacity overflow");
-        void*? allocation = Allocator::Allocate(requested * stride);
+        void*? allocation = Memory::Allocate(requested * stride);
         if (allocation == null) throw new* Exception(c"Vector allocation failed");
         T* replacement = (T*)allocation;
         for (nuint i = 0; i < count; i++)
         {
             move *(data! + i) at replacement + i;
         }
-        if (data != null) Allocator::Free((void*)data);
+        if (data != null) Memory::Free((void*)data);
         data = replacement;
         capacity = requested;
     }
@@ -82,6 +82,6 @@ struct Vector<T>
     ~Vector()
     {
         this.Clear();
-        if (data != null) Allocator::Free((void*)data);
+        if (data != null) Memory::Free((void*)data);
     }
 }

@@ -7,16 +7,16 @@ public class NativeSizeContractTests
 {
     [Fact]
     public void AllocatorAndMallocHaveNativeSizedParameters()
-        => Compiler.Check("void*?(nuint)* AllocatorAddress() => &Allocator::Allocate; void*?(nuint)* MallocAddress() => &malloc;");
+        => Compiler.Check("void*?(nuint)* AllocatorAddress() => &Memory::Allocate; void*?(nuint)* MallocAddress() => &malloc;");
 
     [Theory]
-    [InlineData("Allocator::Allocate")]
+    [InlineData("Memory::Allocate")]
     [InlineData("malloc")]
     public void AllocationSignaturesAreDistinctFromUnsignedLong(string name)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check($"void*?(ulong)* Address() => &{name};"));
 
     [Theory]
-    [InlineData("namespace Allocator { public replace void*? Allocate(ulong n) => null; public replace void Free(void* p) {} }")]
+    [InlineData("namespace Memory { public replace void*? Allocate(ulong n) => null; public replace void Free(void* p) {} }")]
     [InlineData("void*? __gflat_gc_alloc(ulong n) => null;")]
     [InlineData("struct S { public static S operator s\"\"(readonly(char)* p, ulong n) => new S(); }")]
     public void PreviousUnsignedLongContractsAreRejected(string source)

@@ -15,7 +15,7 @@ public class InterpolationLifetimeTests
 
     private const string Tracking = """
         extern int printf(readonly(char)* text, ...);
-        namespace Allocator {
+        namespace Memory {
             public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
             public replace void Free(void* p) { printf(c"F"); free(p); }
         }

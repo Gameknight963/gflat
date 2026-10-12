@@ -113,12 +113,12 @@ public class WeakReplacementTests
     [InlineData("public replace void*? Allocate(nuint size) => null;")]
     [InlineData("public replace void Free(void* p) {}")]
     public void AllocatorMustBeReplacedAsPair(string source)
-        => Assert.Contains("together", Assert.Throws<TypeCheckException>(() => Compiler.Check("namespace Allocator { " + source + " } int main() => 0;")).Message);
+        => Assert.Contains("together", Assert.Throws<TypeCheckException>(() => Compiler.Check("namespace Memory { " + source + " } int main() => 0;")).Message);
 
     [Fact]
     public void DirectAllocatorCallsUseSelectedImplementation()
     {
-        string source = "namespace Allocator { public replace void*? Allocate(nuint size) => null; public replace void Free(void* p) {} } int main() { if (Allocator::Allocate(1u) == null) return 42; return 0; }";
+        string source = "namespace Memory { public replace void*? Allocate(nuint size) => null; public replace void Free(void* p) {} } int main() { if (Memory::Allocate(1u) == null) return 42; return 0; }";
         Assert.Equal(42, CompilerTestHelper.Run(source).ExitCode);
         string ir = CompilerTestHelper.EmitIr(source);
         Assert.DoesNotContain("call i8* @malloc", ir);
@@ -127,5 +127,5 @@ public class WeakReplacementTests
 
     [Fact]
     public void LegacyHookGivesMigrationDiagnostic()
-        => Assert.Contains("replace Allocator::Allocate", Assert.Throws<TypeCheckException>(() => Compiler.Check("void*? __gflat_alloc(ulong size) => null; int main() => 0;")).Message);
+        => Assert.Contains("replace Memory::Allocate", Assert.Throws<TypeCheckException>(() => Compiler.Check("void*? __gflat_alloc(ulong size) => null; int main() => 0;")).Message);
 }

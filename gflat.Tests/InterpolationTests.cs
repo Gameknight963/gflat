@@ -179,7 +179,7 @@ public class InterpolationTests
             extern void* malloc(nuint size);
             extern void free(void* p);
             extern int printf(readonly(char)* text, ...);
-            namespace Allocator {
+            namespace Memory {
                 public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
                 public replace void Free(void* pointer) { free((void*)pointer); }
             }

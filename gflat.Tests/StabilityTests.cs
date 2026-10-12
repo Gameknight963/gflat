@@ -137,8 +137,8 @@ public class StabilityTests
         extern int printf(readonly(char)* format, ...);
         extern void* malloc(nuint size);
         extern void free(void* ptr);
-        namespace Allocator { public replace void*? Allocate(nuint size) { return malloc(size); } }
-        namespace Allocator { public replace void Free(void* ptr) { printf("F"); free(ptr); } }
+        namespace Memory { public replace void*? Allocate(nuint size) { return malloc(size); } }
+        namespace Memory { public replace void Free(void* ptr) { printf("F"); free(ptr); } }
         """;
 
     [Theory]

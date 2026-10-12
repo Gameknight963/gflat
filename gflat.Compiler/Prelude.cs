@@ -57,7 +57,7 @@ class Exception
 extern void*? malloc(nuint size);
 extern void free(void* ptr);
 
-namespace Allocator
+namespace Memory
 {
 public weak void*? Allocate(nuint size)
 {

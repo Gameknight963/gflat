@@ -10,7 +10,7 @@ public class StandardStringTests
         var result = Run("""
             using std;
             extern int printf(readonly(char)* text, ...);
-            namespace Allocator {
+            namespace Memory {
                 public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
                 public replace void Free(void* p) { printf(c"F"); free(p); }
             }
@@ -34,7 +34,7 @@ public class StandardStringTests
     {
         var result = Run("""
             using std;
-            namespace Allocator {
+            namespace Memory {
                 public replace void*? Allocate(nuint size) {
                     if (size == (nuint)7) return null;
                     return malloc(size);
@@ -60,7 +60,7 @@ public class StandardStringTests
         var result = Run("""
             using std;
             extern int printf(readonly(char)* text, ...);
-            namespace Allocator {
+            namespace Memory {
                 public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
                 public replace void Free(void* p) { printf(c"F"); free(p); }
             }
@@ -173,7 +173,7 @@ public class StandardStringTests
     {
         var result = Run("""
             using std;
-            namespace Allocator {
+            namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size == (nuint)101) return null; return malloc(size); }
                 public replace void Free(void* p) { free(p); }
             }

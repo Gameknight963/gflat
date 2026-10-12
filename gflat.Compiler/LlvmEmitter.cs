@@ -2123,8 +2123,8 @@ public partial class LlvmEmitter : IVisitor
                 _externNames.Add("puts");
                 EmitGlobal("declare i32 @puts(i8*)");
             }
-            // gflat$Allocator$Free is defined in user code (or the prelude), no declare needed
-            _externNames.Add("gflat$Allocator$Free");
+            // gflat$Memory$Free is defined in user code (or the prelude), no declare needed
+            _externNames.Add("gflat$Memory$Free");
 
             string msgSlot = NewTemp();
             Emit($"    {msgSlot} = getelementptr %Exception, %Exception* {ex}, i32 0, i32 1");
@@ -3350,8 +3350,8 @@ public partial class LlvmEmitter : IVisitor
                 Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
             }
 
-            // gflat$Allocator$Free is defined in user code (or the prelude), no declare needed
-            _externNames.Add("gflat$Allocator$Free");
+            // gflat$Memory$Free is defined in user code (or the prelude), no declare needed
+            _externNames.Add("gflat$Memory$Free");
 
             string castPtr;
             if (llvmPtrType != "i8*")
@@ -3366,7 +3366,7 @@ public partial class LlvmEmitter : IVisitor
 
             TransferArguments();
 
-            Emit($"    call void @gflat$Allocator$Free(i8* {castPtr})");
+            Emit($"    call void @gflat$Memory$Free(i8* {castPtr})");
             return;
         }
 
@@ -4140,9 +4140,9 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (node.Kind is AllocationKind.Pointer or AllocationKind.Managed)
         {
-            string allocator = node.Kind == AllocationKind.Managed ? "__gflat_gc_alloc" : "gflat$Allocator$Allocate";
-            // gflat$Allocator$Allocate is defined in user code (or the prelude), no declare needed
-            _ = _externNames.Add("gflat$Allocator$Allocate");
+            string allocator = node.Kind == AllocationKind.Managed ? "__gflat_gc_alloc" : "gflat$Memory$Allocate";
+            // gflat$Memory$Allocate is defined in user code (or the prelude), no declare needed
+            _ = _externNames.Add("gflat$Memory$Allocate");
 
             string sizePtr = NewTemp();
             Emit($"    {sizePtr} = getelementptr %{typeName}, %{typeName}* null, i32 1");
@@ -4421,7 +4421,7 @@ public partial class LlvmEmitter : IVisitor
         {
             GuardNonNull(ptrVal, llvmPtrType);
             string data = EmitInterfaceDestruction(ptrVal, iface.Name);
-            Emit($"    call void @gflat$Allocator$Free(i8* {data})");
+            Emit($"    call void @gflat$Memory$Free(i8* {data})");
             return;
         }
 
@@ -4482,8 +4482,8 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
         }
 
-        // gflat$Allocator$Free is defined in user code (or the prelude), no declare needed
-        _externNames.Add("gflat$Allocator$Free");
+        // gflat$Memory$Free is defined in user code (or the prelude), no declare needed
+        _externNames.Add("gflat$Memory$Free");
 
         string castPtr;
         if (llvmPtrType != "i8*")
@@ -4496,7 +4496,7 @@ public partial class LlvmEmitter : IVisitor
             castPtr = ptrVal;
         }
 
-        Emit($"    call void @gflat$Allocator$Free(i8* {castPtr})");
+        Emit($"    call void @gflat$Memory$Free(i8* {castPtr})");
     }
     public void Visit(BreakStatement node)
     {
@@ -4789,7 +4789,7 @@ public partial class LlvmEmitter : IVisitor
         Emit("    br label %release");
         Emit("release:");
         Emit("    %raw = bitcast %Exception* %exception to i8*");
-        Emit("    call void @gflat$Allocator$Free(i8* %raw)");
+        Emit("    call void @gflat$Memory$Free(i8* %raw)");
         Emit("    ret void");
         Emit("}");
     }

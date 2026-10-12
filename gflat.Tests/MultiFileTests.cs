@@ -30,7 +30,7 @@ public class MultiFileTests
     public void PreludeAndAllocatorAreInjectedOnce()
     {
         string ir = Compiler.Emit([new("a.gf", "int main() => helper();"), new("b.gf", "int helper() => 42;")]);
-        Assert.Equal(1, ir.Split("define i8* @gflat$Allocator$Allocate(").Length - 1);
+        Assert.Equal(1, ir.Split("define i8* @gflat$Memory$Allocate(").Length - 1);
         Assert.Equal(1, ir.Split("%Attribute = type").Length - 1);
     }
 
@@ -52,7 +52,7 @@ public class MultiFileTests
 
     [Fact]
     public void AllocatorReplacementSpansFiles()
-        => Assert.Equal(42, CompilerTestHelper.Run([new("main.gf", "int main() { if (Allocator::Allocate(1u) == null) return 42; return 0; }"), new("alloc.gf", "namespace Allocator { public replace void*? Allocate(nuint size) => null; public replace void Free(void* p) {} }")]).ExitCode);
+        => Assert.Equal(42, CompilerTestHelper.Run([new("main.gf", "int main() { if (Memory::Allocate(1u) == null) return 42; return 0; }"), new("alloc.gf", "namespace Memory { public replace void*? Allocate(nuint size) => null; public replace void Free(void* p) {} }")]).ExitCode);
 
     [Fact]
     public void GenericBodyUsesDefinitionImports()

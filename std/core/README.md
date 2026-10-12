@@ -1,6 +1,6 @@
 # Core library
 
-Portable facilities use the replaceable `Allocator` API. The prelude's default
+Portable facilities use the replaceable `Memory` API. The prelude's default
 allocator delegates to libc; replacing it does not require changing these sources.
 Reference `std/std.gfproj` to include the library.
 

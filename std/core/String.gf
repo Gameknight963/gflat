@@ -53,12 +53,12 @@ struct String : ITextWriter, IFormattable
         if (requested <= capacity) return;
         nuint maximum = (nuint)0 - (nuint)1;
         if (requested == maximum) throw new* Exception(c"String capacity overflow", 1);
-        void*? allocation = Allocator::Allocate(requested + (nuint)1);
+        void*? allocation = Memory::Allocate(requested + (nuint)1);
         if (allocation == null) throw new* Exception(c"String allocation failed", 2);
         char* replacement = (char*)allocation;
         for (nuint i = 0; i < length; i++) replacement[i] = data[i];
         replacement[length] = '\0';
-        if (capacity != (nuint)0) Allocator::Free((void*)data);
+        if (capacity != (nuint)0) Memory::Free((void*)data);
         data = replacement;
         capacity = requested;
     }
@@ -75,14 +75,14 @@ struct String : ITextWriter, IFormattable
             nuint grown = required;
             if (capacity <= (maximum - (nuint)1) / (nuint)2 && capacity * (nuint)2 > grown)
                 grown = capacity * (nuint)2;
-            void*? allocation = Allocator::Allocate(grown + (nuint)1);
+            void*? allocation = Memory::Allocate(grown + (nuint)1);
             if (allocation == null) throw new* Exception(c"String allocation failed", 2);
             char* replacement = (char*)allocation;
             for (nuint i = 0; i < length; i++) replacement[i] = data[i];
             // Copy before freeing: text may refer to this string's own buffer.
             for (nuint i = 0; i < count; i++) replacement[length + i] = text[i];
             replacement[required] = '\0';
-            if (capacity != (nuint)0) Allocator::Free((void*)data);
+            if (capacity != (nuint)0) Memory::Free((void*)data);
             data = replacement;
             capacity = grown;
         }
@@ -138,5 +138,5 @@ struct String : ITextWriter, IFormattable
         }
     }
 
-    ~String() { if (capacity != (nuint)0) Allocator::Free((void*)data); }
+    ~String() { if (capacity != (nuint)0) Memory::Free((void*)data); }
 }

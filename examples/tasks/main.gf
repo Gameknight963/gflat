@@ -1,0 +1,124 @@
+using std;
+
+// Build: dotnet run --project gflat -- build examples/tasks/tasks.gfproj
+// Run the resulting examples/tasks/bin/Debug/tasks.exe directly for console input.
+// Example session:
+//   add Finish String tests
+//   add Write std
+//   done 2
+//   list
+//   quit
+// Console I/O only; tasks live until this process exits.
+extern int getchar();
+extern int puts(readonly(char)* text);
+
+struct Task
+{
+    // Field cleanup and copying are supplied automatically, including Title.
+    public String Title;
+    public bool Done;
+
+    public Task(String title)
+    {
+        Title = move title;
+        Done = false;
+    }
+}
+
+// False means EOF with no remaining input. A final line need not end in '\n'.
+bool ReadLine(String* line) throws
+{
+    line.Clear();
+    while (true)
+    {
+        int input = getchar();
+        if (input == -1) return line.Length != (nuint)0;
+        if (input == 10) return true;
+        if (input != 13)
+        {
+            char character = (char)input;
+            line.Append(&character, 1);
+        }
+    }
+}
+
+bool StartsWith(readonly(String)* text, readonly(char)* prefix)
+{
+    nuint i = 0;
+    while (prefix[i] != '\0')
+    {
+        if (i == text.Length || text.Data[i] != prefix[i]) return false;
+        i++;
+    }
+    return true;
+}
+
+bool IsCommand(readonly(String)* text, readonly(char)* command)
+{
+    if (!StartsWith(text, command)) return false;
+    nuint length = 0;
+    while (command[length] != '\0') length++;
+    return text.Length == length;
+}
+
+// Bound the number by Count while parsing, including before multiplication.
+bool Complete(Vector<Task>* tasks, readonly(String)* line) throws
+{
+    nuint number = 0;
+    if (line.Length == (nuint)5) return false;
+    for (nuint i = 5; i < line.Length; i++)
+    {
+        char c = line.Data[i];
+        if (c < '0' || c > '9') return false;
+        nuint digit = (nuint)(c - '0');
+        if (digit > tasks.Count || number > (tasks.Count - digit) / (nuint)10)
+            return false;
+        number = number * (nuint)10 + digit;
+    }
+    if (number == (nuint)0) return false;
+    (*tasks)[number - (nuint)1].Done = true;
+    return true;
+}
+
+void List(readonly(Vector<Task>)* tasks) throws
+{
+    if (tasks.Count == (nuint)0) puts(c"No tasks yet.");
+    for (nuint i = 0; i < tasks.Count; i++)
+    {
+        readonly(Task)* task = &(*tasks)[i];
+        char mark = ' ';
+        if (task.Done) mark = 'x';
+        String row = s$"{i + (nuint)1}. [{mark}] {task.Title}";
+        puts(row.ToString());
+    }
+}
+
+int main()
+{
+    Vector<Task> tasks = new Vector<Task>();
+    String line = new String();
+    puts(c"Tasks (in memory). Commands: add <title>, list, done <number>, quit");
+    while (ReadLine(&line))
+    {
+        if (IsCommand(&line, c"quit")) break;
+        if (IsCommand(&line, c"list")) List(&tasks);
+        else if (StartsWith(&line, c"add "))
+        {
+            if (line.Length == (nuint)4) puts(c"A task needs a title.");
+            else
+            {
+                String title = String::From(line.Data + 4, line.Length - (nuint)4);
+                tasks.Add(new Task(move title));
+                puts(c"Added.");
+            }
+        }
+        else if (StartsWith(&line, c"done "))
+        {
+            if (Complete(&tasks, &line)) puts(c"Done.");
+            else puts(c"Use done <number> with an existing task number.");
+        }
+        else if (line.Length != (nuint)0)
+            puts(c"Unknown command. Use add <title>, list, done <number>, or quit.");
+    }
+    return 0;
+}

@@ -1,10 +1,9 @@
-﻿# libc-dependent facilities
+# libc-dependent facilities
 
-`Formatting.gf` supplies `std::ToString(float)` and `std::ToString(double)` through
-`snprintf`, using 9 and 17 significant digits respectively. Formatting follows the
-application's current C locale. Results use the replaceable `Allocator` API and
-must be released through `Allocator::Free` (interpolation does this automatically).
+`Formatting.gf` supplies `std::Format(float, ITextWriter*)` and
+`std::Format(double, ITextWriter*)` through `snprintf`, using 9 and 17 significant
+digits respectively. Formatting follows the application's current C locale.
+The result is written from a stack buffer; there is no intermediate heap string.
 
-It depends on the text allocation helper in `../core/Formatting.gf`. To compile
-only portable facilities, supply just the core sources. `std.gfproj` currently
-includes both directories; separate project selection can be added later.
+Supply only core sources when these facilities are unwanted. `std.gfproj`
+currently includes both directories.

@@ -1,10 +1,10 @@
-﻿# Core library
+# Core library
 
-Portable facilities live here. They use the replaceable `Allocator` API, not libc
-calls directly. The default allocator in the prelude currently delegates to libc;
-a replacement allocator can supply storage without changing these sources.
+Portable facilities use the replaceable `Allocator` API. The prelude's default
+allocator delegates to libc; replacing it does not require changing these sources.
+Reference `std/std.gfproj` to include the library.
 
-## Strings
+## Strings and formatting
 
 ```gflat
 using std;
@@ -19,39 +19,68 @@ int main()
 ```
 
 `String` owns a mutable UTF-8 buffer and frees it at scope exit. `Length` and
-`Capacity` are `nuint` byte counts excluding the trailing null terminator. Indexing
-returns a byte-sized `char`, not a Unicode code point, and checks bounds.
+`Capacity` count bytes, excluding the trailing null. Indexing operates on bytes
+and checks bounds.
 
-- `new String()` creates an empty string without allocation.
-- `String::From(cString)` copies null-terminated input up to its first null.
-- `String::From(data, length)` copies exactly that many bytes, including embedded
-  nulls; the input need not have a terminator. `s"..."` uses this counted form.
-- `Data` exposes a readonly pointer. It remains valid until growth or destruction;
-  mutations can change its contents.
-- `Reserve`, `Append`, and `AppendLiteral` report overflow/allocation failure by
-  throwing. Appending from the same string is supported, including across growth.
-- `Clear` retains capacity. `Clone` makes an independent copy.
+- `new String()` creates an empty string without allocating.
+- `String::From(cString)` copies null-terminated input.
+- `String::From(data, length)` copies exactly that many bytes, including nulls.
+  The `s"..."` literal uses this counted form.
+- `Data` and `ToString()` borrow the existing buffer. Do not free it. Mutation,
+  movement, or destruction can invalidate the view; mutations can change its text.
+- `Reserve`, `Append`, and `AppendLiteral` throw on overflow or allocation failure.
+  Appending from the same string works, including across growth.
+- `Clear` retains capacity. `Clone` makes an independent owned copy.
+- `move text` transfers the buffer and leaves `text` empty and reusable.
 - `Equals(readonly(String)* other)` compares bytes.
-- `ToString()` returns a separate owned C-string; callers must use
-  `Allocator::Free`. Interpolation does this automatically.
 
-Strings can contain embedded null bytes. Passing `Data` to a C-string API, or
-converting a string through interpolation's `ToString` contract, stops at the
-first null. Byte-counted operations preserve all bytes.
+Interpolation uses `IFormattable.Format(ITextWriter*)` and
+`ITextWriter.Write(readonly(char)*, nuint)`. The writer consumes bytes during the
+call; it must not retain the input pointer. Strings write their existing bytes,
+including embedded nulls. Primitive `std::Format(value, writer)` overloads use
+stack buffers or literal text, without allocating intermediate strings.
+Floating-point overloads live in `../libc/Formatting.gf`.
 
-Like other destructor-bearing values, `String` is not implicitly copyable. Borrow
-it through `readonly(String)*` or `String*`, or explicitly `Clone` it. Use factories
-for fallible construction; the language does not yet support throwing constructors.
+Only C-string consumers stop at the first null; counted operations and interpolation
+preserve it. Use factories for fallible construction: constructors cannot yet
+propagate exceptions.
 
-`Formatting.gf` supplies allocated decimal conversions for integer types, and
-text conversions for booleans and characters. Floating-point conversions live in
-`../libc/Formatting.gf`.
+## Vectors
 
-## Spans
+`Vector<T>` owns contiguous elements. It supports primitives and owning values:
 
-`Span<T>` and `ReadOnlySpan<T>` borrow contiguous storage without allocating or
-freeing it. Include both `Span.gf` and `ReadOnlySpan.gf`, or reference `std.gfproj`.
-Lengths and indices use `nuint`.
+```gflat
+using std;
+
+int main()
+{
+    Vector<String> words = new Vector<String>();
+    words.Add(s"first");
+    String second = s"second";
+    words.Add(move second); // second is now empty, and still usable.
+    words[(nuint)0].Append(c"!", 1);
+    words[(nuint)1] = s"replacement";
+    String last = words.Pop();
+    return 0;
+}
+```
+
+`Add(T)` takes ownership of its argument. Fresh values transfer directly; named
+owners require `move`. `Pop()` transfers the last element out. `Clear()` destroys
+all elements while retaining capacity. `Reserve(nuint)` grows storage, and the
+destructor releases elements and storage. Copy a vector explicitly element by
+element when that is desired; `move vector` transfers its buffer instead.
+
+Types with destructors need an explicit move constructor to be elements. Growth
+constructs each element at its new address, then destroys its moved-from source.
+A move constructor must leave that source valid for destruction. Plain copyable
+types use ordinary value copying. Growth invalidates pointers into the buffer.
+Zero-sized elements are supported, but their addresses are not distinct identities.
+
+## Spans and readonly views
+
+`Span<T>` borrows contiguous storage without allocating or freeing it. There is
+one span type; use `Span<readonly(T)>` for a view of readonly elements.
 
 ```gflat
 using std;
@@ -61,37 +90,25 @@ int main()
     int[3] values = [10, 20, 30];
     Span<int> items = new Span<int>(values, 3);
     Span<int> tail = items.Slice(1);
-    tail[(nuint)0] = 42; // Also changes values[1].
-    ReadOnlySpan<int> view = items.AsReadOnly();
+    tail[(nuint)0] = 42;
+    Span<readonly(int)> view = items.AsReadOnly();
     if (view[(nuint)1] != 42) return 1;
     return 0;
 }
 ```
 
-- Construct from a non-null pointer and element count; the caller must provide
-  that many valid, initialized elements. The count is not inferred or verified.
-- The parameterless constructor creates an empty view with null `Data`.
-- `Length` and `IsEmpty` describe the view. Indexing checks `index < Length`.
-- `Slice(start)` and `Slice(start, count)` borrow part of the same buffer. Invalid
-  ranges throw; empty slices are valid, including a slice at `Length`. Empty
-  slices are normalized to null `Data`.
-- Copying a span copies its pointer and length, not the elements.
-- Indexers return elements by value. Use copyable element types; owning values
-  such as `String` cannot be implicitly copied through an indexer. Use pointers
-  to such objects when appropriate. An indexer is not a reference return.
-- `Span<T>.AsReadOnly()` borrows the same elements through a readonly pointer.
-  `ReadOnlySpan<T>` has no setter and returns elements through `readonly(T)`,
-  preserving deep readonly for pointer-containing types. A `readonly(Span<T>)`
-  permits metadata access and `AsReadOnly`; use that readonly view for indexing
-  and slicing. The mutable span indexer and `Data` require a mutable receiver.
-- `Data` is nullable and bypasses bounds checking. `Span<T>` exposes a mutable
-  pointer; `ReadOnlySpan<T>` exposes a pointer to readonly elements.
+- Construction takes a pointer and element count. The caller provides valid,
+  initialized elements. The default constructor creates an empty view.
+- Lengths and indices use `nuint`. Indexing and slicing check bounds.
+- A ref indexer exposes existing elements: it supports owning types, in-place
+  mutation, and taking addresses. It does not copy an owner just to access it.
+- Access through `readonly(Span<T>)` or `readonly(Vector<T>)` projects readonly
+  elements, including deep readonly for pointer-containing elements.
+- `Span<T>.AsReadOnly()` returns `Span<readonly(T)>`. Use this view when slicing
+  through a readonly span; the resulting slice preserves element readonly.
+- `Data` is nullable and bypasses bounds checks. Copying a span copies only its
+  pointer and length.
 
-The caller must keep the underlying storage alive. Do not return a span into a
-local array or use a span after its owner is destroyed or reallocates its buffer.
-Readonly views observe changes made through other mutable views; they are not
-snapshots. Bounds checks cannot detect a dangling pointer or an incorrect count.
-
-For a string view, use
-`new ReadOnlySpan<char>(text.Data, text.Length)`. Counts include embedded nulls,
-exclude the trailing terminator, and measure UTF-8 bytes, not Unicode characters.
+The caller must keep storage alive. Bounds checks cannot detect dangling pointers
+or incorrect counts. Readonly views observe changes through other mutable views.
+A string byte view is `new Span<readonly(char)>(text.Data, text.Length)`.

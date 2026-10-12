@@ -247,11 +247,52 @@ int main()
 }
 ```
 
-Objects with destructors cannot be copied by value through ordinary initialization, assignment, parameters, or foreach. Return of a fresh value or a whole owned local transfers ownership; returning a destructor-bearing field, dereference, or indexed element is rejected. Partial moves and a general borrow checker are not implemented. Raw-pointer ownership remains manual.
+Owning values (types requiring destruction) cannot be implicitly copied. Fresh values
+can initialize locals, pass to by-value parameters, replace existing values, and
+return from functions. Owned parameters are destroyed by the callee unless returned.
+If evaluating a later argument throws, earlier fresh arguments are cleaned up by
+the caller. Owning locals require initializers. Replacement constructs the new value
+before destroying the previous value; a failed right-hand side leaves it intact.
+
+Use `move value` to transfer from existing mutable storage. A destructor-bearing
+type declares one move constructor:
+
+```gflat
+struct Resource {
+    private void*? data;
+    public Resource() { data = null; }
+    public move Resource(Resource* source) {
+        data = source.data;
+        source.data = null;
+    }
+    ~Resource() { if (data != null) Allocator::Free((void*)data); }
+}
+```
+
+The source remains a live object and is destroyed normally; its move constructor
+must leave it valid. It is not automatically zeroed or marked unusable. Copyable
+types without a move constructor use their ordinary value copy. Existing owners
+must use `move` or an explicit copying operation such as `Clone`. Returning a whole
+owned local transfers it without a redundant move; returning borrowed fields or
+indexed elements requires `move`. `foreach` still requires copyable elements.
+
+`move value at destination` constructs directly in non-null mutable `T*` storage
+and returns that pointer. This is the movement counterpart of placement `new*`.
+It checks null and alignment, but does not validate allocation size, liveness, or
+aliasing. Source and destination must not overlap. Destroy the moved-from source
+normally, then release its old allocation separately if appropriate.
+
+By-value calls and returns do not promise stable object addresses. A type storing
+pointers into itself must account for that constraint; this model is not pinning.
+Raw-pointer ownership remains manual and there is no general borrow checker.
+Extern declarations must use explicit pointers for owning types. Owning objects cannot
+be sliced to a base value. Operator overloads currently require copyable operands and
+results. Lambdas still borrow owning parameters through pointers and cannot return owners;
+use a named function for those signatures. Indexer arguments must also be copyable (their element type need not be).
 
 Struct and class destruction runs the destructor body, then inline object fields in reverse declaration order, then the class base destructor. Returning early from a destructor still runs this cleanup. Containers with destructor-bearing fields receive synthesized cleanup. Discarded fresh object values and temporary method or field receivers are destroyed after their use. Temporaries on skipped logical operands are neither constructed nor destroyed; exceptions during evaluation clean up only successfully created temporaries. These rules are not a complete ownership proof.
 
-Fixed-size arrays with destructor-bearing elements clean up from the last element to the first, recursively for nested arrays, on scope exit and exception propagation. This also applies to inline array fields and returned array values. Deleting a pointer to a fixed-size array destroys its elements before freeing the allocation. Such local arrays require an initializer, cannot be copied or reassigned, and cannot be initialized from a differently sized array. `default(T[N])` requires default-initializable elements, initializes class metadata, and does not call user constructors. Arrays of raw pointers do not destroy their pointees.
+Fixed-size arrays with destructor-bearing elements clean up from the last element to the first, recursively for nested arrays, on scope exit and exception propagation. This also applies to inline array fields and returned array values. Deleting a pointer to a fixed-size array destroys its elements before freeing the allocation. Such local arrays require an initializer, cannot be implicitly copied, and cannot be initialized from a differently sized array. `default(T[N])` requires default-initializable elements, initializes class metadata, and does not call user constructors. Arrays of raw pointers do not destroy their pointees.
 
 Structs provide inline fields, constructors, methods, properties, and optional destructors. Classes add a vtable and single implementation inheritance. Interfaces provide method and property contracts with fat pointer dispatch. These are gflat layouts, not a C++ ABI. Foreign aggregate compatibility requires dedicated ABI tests; use pointers and primitive C interfaces for interoperation.
 
@@ -283,11 +324,28 @@ Properties use ordinary member accessibility. On a property with both accessors,
 
 An implicitly readonly auto-getter cannot return a writable pointer stored in its receiver. Declare a pointer to readonly storage, or use an explicit mutable getter when callers need writable access. The same restriction applies to returned aggregates containing writable pointers.
 
-Reads call the getter. Assignments call the setter and evaluate to the assigned value, even if the setter changes its `value` parameter. Compound assignments and `++`/`--` evaluate the receiver once, then read, update, and write. Postfix updates return the old value; prefix updates return the new value. The receiver is evaluated before the right-hand side. Normal operator resolution, definite-assignment checks, and temporary cleanup apply. A property is not addressable storage: taking its address or assigning to a field of an inline property result is rejected. A pointer returned by a property still permits access to its pointee under ordinary pointer rules.
+Reads call the getter. Assignments call the setter and evaluate to the assigned value, even if the setter changes its `value` parameter. Compound assignments and `++`/`--` evaluate the receiver once, then read, update, and write. Postfix updates return the old value; prefix updates return the new value. The receiver is evaluated before the right-hand side. Normal operator resolution, definite-assignment checks, and temporary cleanup apply. An ordinary by-value property is not addressable storage: taking its address or assigning to a field of an inline property result is rejected. A pointer returned by a property still permits access to its pointee under ordinary pointer rules.
 
 Classes support `virtual`, `override`, and `abstract` properties through their accessors. Interface property contracts use accessor signatures, for example `interface ICount { int Count { get; set; } }`; implementing accessors must be public. A declaration in a derived class hides the whole inherited property, rather than borrowing missing accessors from it. Explicit static properties use `Type::Property`. Explicit class/struct accessors may declare `get throws` or `set throws` and follow ordinary exception rules.
 
-Current restrictions: static auto-properties await static field storage; `init`, ref returns, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays or destructor-bearing values by value, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
+Current restrictions: static auto-properties await static field storage; `init`, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
+
+### Reference properties
+
+`public ref T this[nuint index] { get => data![index]; }` exposes existing storage.
+Named properties can use the same `ref` modifier. There is one getter body, no
+setter: assignment writes to the returned storage. The compiler checks a mutable
+and a readonly form of that body, selecting from the receiver's qualification.
+A readonly receiver yields a readonly element, recursively under normal readonly
+rules. The body must therefore work without mutating its receiver.
+
+Reference properties support address-taking and in-place method calls, including
+on owning values. They can implement interface contracts and virtual class properties.
+Obvious local/temporary returns are rejected, but pointers still carry no checked
+lifetime. Keep the returned storage alive. Explicit by-value getters may return
+fresh owning values. An owning setter takes ownership like an ordinary function;
+its assignment expression has type `void` to prevent duplicating that ownership.
+Automatic owning getters remain invalid because they would copy their backing field.
 
 ### Indexers
 
@@ -308,7 +366,7 @@ struct IntBuffer {
 
 Indexers work in generic types, classes, structs, and interfaces, including virtual and abstract accessors. Readonly getters follow ordinary readonly receiver and return-type rules. Managed pointers and interface views dispatch the pointee's indexer. Raw `T*` indexing retains its built-in array-of-pointees meaning; use `(*p)[i]` to call an indexer on a raw pointee. Interface pointers have no inline element layout, so `p[i]` on an `I*` dispatches the interface indexer.
 
-Indexer results are values, not storage references. Modifying a field of a returned aggregate or taking its address is rejected; an explicitly returned pointer can expose underlying storage. Current restrictions: one indexer declaration per type, no static or automatic indexers, no indexer initializers or `const` index parameters, and no parameter named `value`. The existing property restrictions on result types, constant evaluation, and throwing interface accessors also apply.
+Ordinary indexer results are values, not storage references. Modifying a field of a returned aggregate or taking its address is rejected; an explicitly returned pointer can expose underlying storage. Current restrictions: one indexer declaration per type, no static or automatic indexers, no indexer initializers or `const` index parameters, and no parameter named `value`. The existing property restrictions on result types, constant evaluation, and throwing interface accessors also apply.
 
 
 ## Control flow, exceptions, and constants
@@ -336,11 +394,11 @@ This runs complete destruction: the user-written destructor, if any, followed
 by field and base cleanup. Compiler-generated destructors work too. For a type
 with no cleanup, including primitives and pointer values, no destructor code
 is needed. Destroying a pointer value does not destroy its pointee. Class
-destruction uses the same virtual destructor dispatch as `delete`.
+destruction uses the same virtual destructor dispatch as `delete`. All classes have a destructor slot, even when their own cleanup is empty. Interface tables also carry a destruction entry; `delete I*` destroys the concrete object and releases its storage. As with any `delete`, the pointer must own an appropriate allocation, not refer to a local or borrowed object.
 
 Destructor calls take no arguments and return `void`. Null receivers trap,
 including null hidden by `!`. Managed pointers, readonly pointees, `void*`,
-and interface receivers are not accepted. Explicit destruction cannot execute
+are not accepted. Interface receivers dispatch complete destruction of their concrete object. Explicit destruction cannot execute
 during constant evaluation.
 
 The pointer retains its address, but the object is no longer live. Its storage
@@ -469,47 +527,41 @@ Floating-point conversion additionally uses `std/libc/Formatting.gf` and libc's 
 The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,
 including qualified syntax such as `std::s$"{42}"`. Unprefixed `$"..."` and `c$"..."` are
 not supported. Implementing a literal operator alone does not opt into interpolation.
-Its containing/result type must implement the global prelude interface:
+Its containing/result type must implement the global prelude interface `ITextWriter`:
 
 ```text
-interface IInterpolatedString
+interface ITextWriter
 {
-    void AppendLiteral(readonly(char)* data, nuint length) throws;
+    void Write(readonly(char)* data, nuint length) throws;
 }
-interface IStringConvertible
+interface IFormattable
 {
-    readonly char* ToString() throws;
+    readonly void Format(ITextWriter* output) throws;
 }
 ```
 
-The compiler constructs the destination by calling its literal operator with empty text.
-It then processes literal segments and hole expressions in source order. Literal segments
-supply UTF-8 byte lengths (including any embedded null bytes). `AppendLiteral` must consume
-or copy the supplied bytes before returning; it must not retain the input pointer.
+The compiler calls the destination's literal operator with empty text, then processes
+segments and holes in source order. Literal segments call `Write` with UTF-8 bytes
+and their explicit count. A writer must consume or copy these bytes before returning.
+It may not retain either the input pointer or a formatter's borrowed destination.
 
-A custom value, pointer, or managed reference must implement `IStringConvertible` to appear
-in a hole; an `IStringConvertible*` or `IStringConvertible^` also supports interface dispatch.
-Nullable receivers must first use a checked non-null cast or unchecked postfix `!`.
-Primitives use the exact corresponding overload of `global::std::ToString`, independent of
-local `using` directives or unrelated functions named `ToString`. Supported primitives are
-`bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`, `nint`,
-`nuint`, `float`, and `double`. Raw character pointers and arrays are not implicitly text
-conversions. Convert them explicitly to a string first.
+Custom values, pointers, and managed references implement `IFormattable`; holes call
+`Format` with the destination. Interface views support dynamic dispatch. Nullable
+receivers require a checked cast or unchecked postfix `!`. Primitives call the exact
+`global::std::Format(value, writer)` overload independently of local using directives.
+Supported primitives are `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`,
+`uint`, `long`, `ulong`, `nint`, `nuint`, `float`, and `double`. Character pointers and
+arrays are not implicitly converted to text; provide an explicit string value.
 
-`ToString` returns a non-null, newly allocated, null-terminated `char*`, allocated through
-`Allocator::Allocate`. It must not return borrowed or static storage. The compiler scans
-for the terminator, appends the bytes, and calls `Allocator::Free`. Consequently, converted
-text ends at its first null; this differs from a literal segment's explicit length.
-A `readonly` conversion may allocate; readonly only restricts mutation through the receiver.
+Formatting does not imply a heap allocation, a terminator scan, or a caller-owned
+C-string. `std::String` writes its existing counted bytes, preserving embedded nulls.
+Its `ToString()` method is a separate convenience returning borrowed readonly data,
+valid only while the original buffer remains alive and unchanged.
 
-Each hole is evaluated exactly once. Its returned text is freed immediately after append,
-before the next hole; temporary receiver objects remain alive through that append. Cleanup
-also runs if append throws. A partial destination is destroyed when conversion or append
-fails. A conversion that throws before returning remains responsible for its own partial
-allocation. Completed results follow normal owned-value return, scope, and temporary cleanup
-rules. Local catches handle matching exceptions. Unhandled factory/conversion/append
-exceptions propagate from `throws` functions and terminate the program at a non-`throws`
-function boundary.
+Each hole is evaluated once. Temporary receivers remain alive through formatting
+and are then destroyed. If formatting or writing throws, the partial destination
+and successfully constructed temporaries are destroyed. Normal exception propagation
+and termination boundaries apply. Completed results follow ordinary owned-value rules.
 
 This version does not define alignment, format specifiers (`{value:format}`), raw strings,
 implicit interpolation-to-type conversions, or compile-time interpolation.

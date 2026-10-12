@@ -13,17 +13,12 @@ struct Span<T>
     public bool IsEmpty { readonly get => length == (nuint)0; }
     public T*? Data { get => data; }
 
-    public T this[nuint index]
+    public ref T this[nuint index]
     {
         get throws
         {
             if (index >= length) throw new* Exception(c"Span index out of range", 3);
-            return ((T*)data)[index];
-        }
-        set throws
-        {
-            if (index >= length) throw new* Exception(c"Span index out of range", 3);
-            ((T*)data)[index] = value;
+            return data![index];
         }
     }
 
@@ -41,9 +36,9 @@ struct Span<T>
         return this.Slice(start, length - start);
     }
 
-    public readonly ReadOnlySpan<T> AsReadOnly()
+    public readonly Span<readonly(T)> AsReadOnly()
     {
-        if (length == (nuint)0) return new ReadOnlySpan<T>();
-        return new ReadOnlySpan<T>((readonly(T)*)data, length);
+        if (length == (nuint)0) return new Span<readonly(T)>();
+        return new Span<readonly(T)>((readonly(T)*)data, length);
     }
 }

@@ -2171,6 +2171,8 @@ namespace gflat
                     {
                         info.Constructors.Add(ctor);
                     }
+                    else if (m is ExternDeclaration external)
+                        throw new TypeCheckException("Extern functions must be declared at namespace scope", external.Span);
                     else if (m is DestructorDeclaration dtor)
                     {
                         if (info.Destructor != null)
@@ -2258,6 +2260,8 @@ namespace gflat
                     {
                         info.Constructors.Add(ctor);
                     }
+                    else if (m is ExternDeclaration external)
+                        throw new TypeCheckException("Extern functions must be declared at namespace scope", external.Span);
                     else if (m is DestructorDeclaration dtor)
                     {
                         if (info.Destructor != null)
@@ -4697,6 +4701,7 @@ namespace gflat
 
             if (ext != null)
             {
+                ValidateExternAccess(ext, node.Span);
                 _resolvedCalls[node] = ext;
                 AddDefaultArguments(node.Arguments, ext.Parameters, node);
                 if (node.Arguments.Count < ext.Parameters.Count || !ext.IsVariadic && node.Arguments.Count > ext.Parameters.Count)
@@ -4906,6 +4911,7 @@ namespace gflat
             }
             if (scope.Externs.TryGetValue(node.Member, out ExternDeclaration? ext))
             {
+                ValidateExternAccess(ext, node.Span);
                 RecordType(node, ext.ReturnType);
                 return;
             }
@@ -5549,6 +5555,8 @@ namespace gflat
         }
         public void Visit(ExternDeclaration node)
         {
+            if (node.Accessibility == TokenKind.Protected)
+                throw new TypeCheckException("Namespace extern declarations cannot be protected", node.Span);
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.ReturnType, node.Line);
             ValidateParameterDefaults(node, node.Parameters);

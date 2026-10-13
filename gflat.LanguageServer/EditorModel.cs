@@ -102,7 +102,7 @@ public sealed partial class EditorModel
         return string.Join("::", ordered.Where(p => IsType(p.Node) || p.Node is NamespaceDeclaration).Select(p => p.Node is NamespaceDeclaration n ? n.Name : SourceName(p.Node)));
     }
     private static bool IsStatic(AstNode n) => n switch { MethodDeclaration m => m.IsStatic, FieldDeclaration f => f.IsStatic || f.IsConst, PropertyDeclaration p => p.Getter?.IsStatic ?? p.Setter?.IsStatic ?? false, EnumMemberDeclaration => true, _ => false };
-    private static TokenKind Access(AstNode n) => n switch { MethodDeclaration m => m.Accessibility, FieldDeclaration f => f.Accessibility, PropertyDeclaration p => PropertyAccess(p), ClassDeclaration c => c.Accessibility, StructDeclaration s => s.Accessibility, InterfaceDeclaration i => i.Accessibility, EnumDeclaration e => e.Accessibility, ConstructorDeclaration c => c.Accessibility, _ => TokenKind.Public };
+    private static TokenKind Access(AstNode n) => n switch { MethodDeclaration m => m.Accessibility, ExternDeclaration e => e.Accessibility, FieldDeclaration f => f.Accessibility, PropertyDeclaration p => PropertyAccess(p), ClassDeclaration c => c.Accessibility, StructDeclaration s => s.Accessibility, InterfaceDeclaration i => i.Accessibility, EnumDeclaration e => e.Accessibility, ConstructorDeclaration c => c.Accessibility, _ => TokenKind.Public };
     private static TokenKind PropertyAccess(PropertyDeclaration property)
         => new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>()
             .Select(m => m.Accessibility).OrderByDescending(a => a == TokenKind.Public ? 2 : a == TokenKind.Private ? 0 : 1)
@@ -159,6 +159,7 @@ public sealed partial class EditorModel
             ? s.NameSpan.Source?.Path == path && Contains(s.Scope, offset) && (s.Syntax.Node is Parameter || s.NameSpan.Start <= offset)
             : s.Owner != null ? inherited.Contains(s) && (!isStatic || s.Static || IsType(s.Syntax.Node))
             : s.Namespace.Length == 0 || ns == s.Namespace || ns.StartsWith(s.Namespace + "::", StringComparison.Ordinal) || imports.Contains(s.Namespace))
+            .Where(s => s.Syntax.Node is not ExternDeclaration || Accessible(s, path, offset))
             .OrderBy(s => s.Scope == null ? int.MaxValue : s.Scope.Span.Length)
             .ThenBy(s => inherited.Contains(s) ? Array.IndexOf(inheritedOrder, s) : int.MaxValue)
             .ThenByDescending(s => s.NameSpan.Start);
@@ -233,6 +234,8 @@ public sealed partial class EditorModel
     }
     private bool Accessible(Symbol s, string path, int offset)
     {
+        if (s.Syntax.Node is ExternDeclaration && s.Access == TokenKind.Private)
+            return Workspace.Paths.Equals(s.Syntax.Span.Source?.Path, path);
         string? owner = Owner(ContextParents(path, offset));
         return s.Access is TokenKind.Public or TokenKind.Internal || s.Owner == null || s.Owner == owner ||
             s.Access == TokenKind.Protected && owner != null && TypeMembers(owner).Any(m => m.Owner == s.Owner);

@@ -95,7 +95,7 @@ public sealed partial class EditorModel
                 Add(">", "punctuation");
             }
         }
-        if (symbol.Scope == null && symbol.Syntax.Node is not NamespaceDeclaration and not ExternDeclaration and not EnumMemberDeclaration)
+        if (symbol.Scope == null && symbol.Syntax.Node is not NamespaceDeclaration and not EnumMemberDeclaration)
         {
             string? access = symbol.Access switch { TokenKind.Public => "public", TokenKind.Private => "private", TokenKind.Protected => "protected", TokenKind.Internal => "internal", _ => null };
             if (access != null) Keyword(access);

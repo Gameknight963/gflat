@@ -6,6 +6,22 @@ namespace gflat.LanguageServer.Tests;
 public class EditorTests
 {
     [Fact]
+    public void PrivateExternHoverAndCompletionRespectFileAccess()
+    {
+        string path = Path.GetFullPath("private-extern.gf");
+        string other = Path.GetFullPath("caller.gf");
+        string text = "namespace detail { private extern int abs(int value); } int F() => detail::abs(-42);";
+        var files = new SourceFile[] { new(path, text), new(other, "using detail; int F2() { return 0; }") };
+        var model = new EditorModel(new AnalysisSnapshot(files), files);
+        int use = text.LastIndexOf("abs", StringComparison.Ordinal);
+        var hover = Json(model.Hover(path, use));
+        Assert.Contains("private extern int", hover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.NotNull(model.Definition(path, use));
+        int body = files[1].Text.IndexOf("return", StringComparison.Ordinal);
+        Assert.DoesNotContain("abs", Labels(model.Completion(other, body)));
+    }
+
+    [Fact]
     public void InterfaceCallsHaveHoverNavigationAndMethodColor()
     {
         var (model, path, offset, source) = Analyze("void Format(char value, ITextWriter* output) { output.Wr|ite(&value, 1); }");

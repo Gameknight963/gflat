@@ -265,6 +265,13 @@ namespace gflat
                 else break;
             }
 
+            if (Check(TokenKind.Extern))
+            {
+                if (isReadonly || isConst || isAbstract || implementation != FunctionImplementationKind.Ordinary)
+                    throw new TypeCheckException("extern declarations accept only accessibility modifiers", Current.Span);
+                return ParseExternDeclaration(attributes, line, accessibility);
+            }
+
             if (Check(TokenKind.Alias))
                 return Finish(ParseAliasDeclaration(accessibility, line));
             if (Check(TokenKind.Enum))
@@ -527,6 +534,13 @@ namespace gflat
                 else break;
             }
 
+            if (Check(TokenKind.Extern))
+            {
+                if (isReadonly || isConst || isStatic || isVirtual || isOverride || isAbstract || implementation != FunctionImplementationKind.Ordinary)
+                    throw new TypeCheckException("extern declarations accept only accessibility modifiers", Current.Span);
+                return ParseExternDeclaration(attributes, line, accessibility);
+            }
+
             if (Check(TokenKind.Class))
                 return Finish(ParseClassDeclaration(accessibility, isAbstract, line, attributes));
             if (Check(TokenKind.Struct))
@@ -746,11 +760,13 @@ namespace gflat
             return attributes;
         }
 
-        private ExternDeclaration ParseExternDeclaration(List<AttributeNode> attributes, int line) => Located(() => ParseExternDeclarationCoreLocated(attributes, line));
+        private ExternDeclaration ParseExternDeclaration(List<AttributeNode> attributes, int line, TokenKind accessibility = TokenKind.Public) => Located(() => ParseExternDeclarationCoreLocated(attributes, line, accessibility));
 
-        private ExternDeclaration ParseExternDeclarationCoreLocated(List<AttributeNode> attributes, int line)
+        private ExternDeclaration ParseExternDeclarationCoreLocated(List<AttributeNode> attributes, int line, TokenKind accessibility)
         {
             Expect(TokenKind.Extern);
+            if (Check(TokenKind.Public) || Check(TokenKind.Private) || Check(TokenKind.Protected) || Check(TokenKind.Internal))
+                accessibility = Consume().Kind;
             TypeExpression returnType = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
             Expect(TokenKind.OpenParen);
@@ -774,7 +790,7 @@ namespace gflat
 
             Expect(TokenKind.CloseParen);
             Expect(TokenKind.Semicolon);
-            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line);
+            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line, accessibility);
         }
 
         private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, bool isConst = false) => Located(() => ParseConstructorDeclarationCoreLocated(name, accessibility, line, attributes, isConst));

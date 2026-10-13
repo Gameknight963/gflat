@@ -373,6 +373,8 @@ public sealed partial class EditorModel
             string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "ref", "copy", "const", "weak", "replace"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
+            if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)
+                items.Add(new { label = "base", kind = 14, textEdit = new { range, newText = "base" } });
         }
         return new { isIncomplete = false, items };
     }
@@ -477,10 +479,12 @@ public sealed partial class EditorModel
             else if (ts[i].Kind is TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.CloseBrace) { if (stack.Count > 0) stack.Pop(); }
             else if (ts[i].Kind == TokenKind.Comma && stack.Count > 0) { var frame = stack.Pop(); stack.Push((frame.Index, frame.Commas + 1)); }
         }
-        var call = stack.FirstOrDefault(f => ts[f.Index].Kind == TokenKind.OpenParen && f.Index > 0 && ts[f.Index - 1].Kind == TokenKind.Identifier, (Index: -1, Commas: 0));
+        var call = stack.FirstOrDefault(f => ts[f.Index].Kind == TokenKind.OpenParen && f.Index > 0 && ts[f.Index - 1].Kind is TokenKind.Identifier or TokenKind.Base, (Index: -1, Commas: 0));
         if (call.Index < 0) return null;
         int nameIndex = call.Index - 1;
-        var candidates = Candidates(path, offset, nameIndex).Where(s => s.Name == ts[nameIndex].Text && s.Parameters != null).ToArray();
+        var candidates = ts[nameIndex].Kind == TokenKind.Base
+            ? BaseConstructors(path, offset).ToArray()
+            : Candidates(path, offset, nameIndex).Where(s => s.Name == ts[nameIndex].Text && s.Parameters != null).ToArray();
         if (candidates.Length == 0) return null;
         var selected = Resolve(path, nameIndex);
         int active = Math.Max(0, Array.IndexOf(candidates, selected));

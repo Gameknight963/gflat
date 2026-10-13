@@ -4,6 +4,18 @@ namespace gflat.LanguageServer;
 
 public sealed partial class EditorModel
 {
+    private IEnumerable<Symbol> BaseConstructors(string path, int offset)
+    {
+        var declaration = ContextParents(path, offset).FirstOrDefault(p => p.Node is ClassDeclaration);
+        if (declaration?.Node is not ClassDeclaration type) return [];
+        string? baseName = snapshot.Checker?.GetClass(type.Name)?.BaseClass ?? type.BaseClass ??
+            type.Interfaces.FirstOrDefault(name => symbols.Any(s => s.Syntax.Node is ClassDeclaration &&
+                (s.Qualified == name || s.Name == name)));
+        if (baseName == null) return [];
+        string? owner = TypeOwner(new NamedTypeExpression(baseName, null, type.Line), path, offset);
+        return symbols.Where(s => s.Owner == owner && s.Syntax.Node is ConstructorDeclaration && Accessible(s, path, offset));
+    }
+
     private sealed record CompletionFilter(bool Restricted, Func<Symbol, bool> Allows);
 
     private CompletionFilter CompletionContext(string path, int index)

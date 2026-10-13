@@ -189,6 +189,23 @@ public class EditorTests
             Assert.Contains(runs, r => r.GetProperty("Text").GetString() == text && r.GetProperty("ClassificationTypeName").GetString() == kind);
     }
 
+    [Fact]
+    public void BaseConstructorInitializerProvidesSignatureHelpAndParameterCompletion()
+    {
+        var (model, path, offset, _) = Analyze("class Parent { public Parent(int value, int count) {} } class Child : Parent { public Child(int value) : base(value, |) {} }");
+        var help = Json(model.SignatureHelp(path, offset));
+        Assert.Contains("Parent(int value, int count)", help.GetProperty("signatures")[0].GetProperty("label").GetString());
+        Assert.Equal(1, help.GetProperty("activeParameter").GetInt32());
+        Assert.Contains(Json(model.Completion(path, offset)).GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "value");
+    }
+
+    [Fact]
+    public void ConstructorInitializerOffersBaseKeyword()
+    {
+        var (model, path, offset, _) = Analyze("class Parent { public Parent(int value) {} } class Child : Parent { public Child(int value) : |base(value) {} }");
+        Assert.Contains(Json(model.Completion(path, offset)).GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "base");
+    }
+
     [Theory]
     [InlineData("class Child : | {}", true)]
     [InlineData("class Child : |", true)]

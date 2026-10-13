@@ -77,7 +77,7 @@ public sealed partial class EditorModel
             var nameSpan = NameSpan(entry, name, declaredType);
             if (entry.Node is NamespaceDeclaration) owner = null;
             var symbol = new Symbol(name, kind, classification, entry, nameSpan, ns, owner, scope, type,
-                IsStatic(entry.Node), Access(entry.Node));
+                IsStatic(entry.Node), entry.Node is MethodDeclaration && entry.Parent?.Node is InterfaceDeclaration ? TokenKind.Public : Access(entry.Node));
             symbols.Add(symbol);
             declarations.TryAdd(entry.Node, symbol);
         }
@@ -333,9 +333,10 @@ public sealed partial class EditorModel
         if (lineComment >= 0 && !trivia[lineComment..].Contains('\n')) return true;
         return trivia.LastIndexOf("/*", StringComparison.Ordinal) > trivia.LastIndexOf("*/", StringComparison.Ordinal);
     }
-    public object? Hover(string path, int offset, VisualStudioHover? presentation = null)
+    public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
-        var compound = CompoundTypeHover(path, offset, presentation);
+        options ??= new();
+        var compound = CompoundTypeHover(path, offset, presentation, options.ShowTypeLayout);
         if (compound != null) return compound;
         int index = TokenAt(path, offset);
         var symbol = index < 0 ? null : Resolve(path, index);
@@ -349,10 +350,17 @@ public sealed partial class EditorModel
                 var literalType = literalChecker.GetType(literal.Node);
                 if (TypeChecker.TypeName(literalType) != "<error>")
                 {
-                    string name = DisplayType(literalType);
-                    var target = TypeSymbol(name);
-                    return new HoverResult(new("markdown", "```gflat\n" + name + "\n```"), Workspace.ToRange(literal.Span),
-                        presentation?.Render([new(TypeChecker.IsPrimitive(name) ? "keyword" : "type", name, Target: SymbolLocation(target))], [], "constant.public"));
+                    var literalParts = TypeDisplayParts(literalType, path, offset);
+                    string value = sources[path].Text.Substring(literal.Span.Start, Math.Min(literal.Span.Length, 100));
+                    value = value.Replace("\r", "\\r").Replace("\n", "\\n").Replace("\t", "\\t");
+                    if (literal.Span.Length > 100) value += "...";
+                    string kind = value is "true" or "false" or "null" ? "keyword" :
+                        literal.Node is LiteralExpression { Token.Kind: TokenKind.CharLiteral } ? "string" :
+                        literal.Node is LiteralExpression { Token.Kind: not TokenKind.StringLiteral } ? "number" : "string";
+                    literalParts = [new("punctuation", "("), .. literalParts, new("punctuation", ")"), new(kind, value)];
+                    string preview = string.Concat(literalParts.Select(p => p.Text));
+                    return new HoverResult(new("markdown", "```gflat\n" + preview + "\n```"), Workspace.ToRange(literal.Span),
+                        presentation?.Render(literalParts, [], "constant.public"));
                 }
             }
         }
@@ -361,7 +369,7 @@ public sealed partial class EditorModel
             string name = tokens[path][index].Text;
             var type = new NamedTypeExpression(name, null, 0);
             HoverDetail[] layout = [];
-            if (snapshot.Checker is { } checker)
+            if (options.ShowTypeLayout && snapshot.Checker is { } checker)
             {
                 try { layout = [new("Size", $"{checker.GetTypeSize(type)} bytes"), new("Alignment", $"{checker.GetTypeAlignment(type)} bytes")]; }
                 catch (CompileExceptions.TypeCheckException) { /* Some reserved type names have no concrete layout. */ }
@@ -372,19 +380,18 @@ public sealed partial class EditorModel
         if (symbol == null) return null;
         var parts = Signature(symbol, navigable: true, hoverPath: path, hoverOffset: offset);
         if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
-        HoverDetail[] details = LayoutDetails(symbol);
-        if (symbol.Syntax.Node is MethodDeclaration hoveredMethod && snapshot.Checker is { } exceptionChecker &&
+        HoverDetail[] details = options.ShowTypeLayout ? LayoutDetails(symbol) : [];
+        if (options.ShowKnownExceptions && symbol.Syntax.Node is MethodDeclaration hoveredMethod && snapshot.Checker is { } exceptionChecker &&
             !snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         {
-            var exceptions = exceptionChecker.GetPossibleExceptions(hoveredMethod);
-            if (exceptions.Count > 0)
+            var exceptions = exceptionChecker.GetPossibleExceptions(hoveredMethod).Where(e => e != TypeChecker.UnknownExceptionType).ToArray();
+            if (exceptions.Length > 0)
             {
-                details = [.. details, new("", "Exceptions:")];
+                details = [.. details, new("", "Known exceptions:")];
                 foreach (string exception in exceptions)
                 {
-                    bool unknown = exception == TypeChecker.UnknownExceptionType;
-                    string name = unknown ? "Unknown exceptions" : exceptionChecker.DisplayName(exception);
-                    details = [.. details, new("", "  " + name, [new("text", "  "), new(unknown ? "text" : "class", name, Target: unknown ? null : SymbolLocation(TypeSymbol(name, symbol)))])];
+                    string name = exceptionChecker.DisplayName(exception);
+                    details = [.. details, new("", "  " + name, [new("text", "  "), new("class", name, Target: SymbolLocation(TypeSymbol(name, symbol)))])];
                 }
             }
         }
@@ -430,10 +437,16 @@ public sealed partial class EditorModel
         var ts = tokens[path];
         var placementKeywords = nodes[path].Select(n => n.Node).OfType<NewExpression>()
             .Where(n => n.PlacementKeywordSpan.Length > 0).Select(n => n.PlacementKeywordSpan.Start).ToHashSet();
+        var accessors = nodes[path].Select(n => n.Node).OfType<PropertyDeclaration>()
+            .SelectMany(p => new[] { (p.Getter, "get"), (p.Setter, "set") })
+            .Where(a => a.Item1 != null)
+            .Select(a => ts.SkipWhile(t => t.Start < a.Item1!.Span.Start)
+                .SkipWhile(t => t.Kind is TokenKind.Readonly or TokenKind.Public or TokenKind.Private or TokenKind.Protected or TokenKind.Internal)
+                .FirstOrDefault() is { } t && t.Text == a.Item2 ? t.Start : -1).ToHashSet();
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            bool modifier = ts[i].Kind == TokenKind.NoThrow || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
+            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind == TokenKind.NoThrow || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             var symbol = control || modifier ? null : Resolve(path, i);
             if (symbol == null && !control && !modifier) continue;

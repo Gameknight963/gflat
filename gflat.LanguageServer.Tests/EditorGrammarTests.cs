@@ -9,6 +9,14 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorGrammarTests
 {
+    [Theory]
+    [InlineData("readonly get", "get")]
+    [InlineData("get", "get")]
+    [InlineData("set", "set")]
+    [InlineData("private set", "set")]
+    public void AccessorsDoNotRequireABraceOnTheSameLine(string line, string word)
+        => AssertScope(Grammar().TokenizeLine(line), line.IndexOf(word, StringComparison.Ordinal), "keyword.other.accessor");
+
     [Fact]
     public void StringIsNotHighlightedAsABuiltInType()
     {

@@ -6,6 +6,10 @@
   ],
   "patterns": [
     {
+      "name": "keyword.other.accessor.gflat",
+      "match": "\\b(get|set)\\b(?=\\s*(?:\\{|=>|;|nothrow\\b|$))"
+    },
+    {
       "name": "comment.line.double-slash.gflat",
       "begin": "//",
       "end": "$"
@@ -68,7 +72,7 @@
       }
     },
     {
-      "match": "\\b((?:(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\s+)+)((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)(?=\\s*$)",
+      "match": "\\b((?:(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\s+)+)((?!(?:get|set)\\b)(?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)(?=\\s*$)",
       "captures": {
         "1": {
           "patterns": [
@@ -102,10 +106,6 @@
     {
       "name": "keyword.control.gflat",
       "match": "\\b(namespace|using|new|delete|return|if|else|while|for|foreach|in|repeat|break|continue|switch|case|default|defer|alias|global|operator|sizeof|alignof|nameof|throw|try|catch)\\b"
-    },
-    {
-      "name": "keyword.other.accessor.gflat",
-      "match": "\\b(get|set)\\b(?=\\s*(?:\\{|=>|;|nothrow\\b))"
     },
     {
       "name": "constant.numeric.gflat",

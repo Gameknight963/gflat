@@ -6,15 +6,57 @@ namespace gflat.LanguageServer.Tests;
 public class HoverTests
 {
     private static readonly Guid Catalog = Guid.Parse("ae27a6b0-e345-4288-96df-5eaf394ee369");
-    private static JsonElement Hover(string marked, bool rich = false)
+    private static JsonElement Hover(string marked, bool rich = false, HoverOptions? options = null)
     {
         int offset = marked.IndexOf('|');
         string path = Path.GetFullPath("hover.gf");
         var source = new SourceFile(path, marked.Remove(offset, 1));
         var model = new EditorModel(new AnalysisSnapshot([source]), [source]);
         var icons = JsonSerializer.SerializeToElement(new Dictionary<string, object> { ["method.public"] = new { guid = Catalog, id = 1 }, ["struct.public"] = new { guid = Catalog, id = 2 } });
-        return JsonSerializer.SerializeToElement(model.Hover(path, offset, rich ? new VisualStudioHover(icons) : null), Protocol.JsonOptions);
+        return JsonSerializer.SerializeToElement(model.Hover(path, offset, rich ? new VisualStudioHover(icons) : null, options), Protocol.JsonOptions);
     }
+
+    [Fact]
+    public void CustomStringLiteralTypeUsesStructClassification()
+    {
+        var hover = Hover("using N; namespace N { public struct Text { public static Text operator s\"\"(readonly(char)* data, nuint length) => new Text(); } } void F() { Text text = s\"he|llo\"; }", true);
+        var header = hover.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements");
+        var runs = header.EnumerateArray().Single(e => e.GetProperty("_vs_type").GetString() == "ClassifiedTextElement").GetProperty("Runs").EnumerateArray();
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Text" && r.GetProperty("ClassificationTypeName").GetString() == "struct name");
+    }
+
+    [Fact]
+    public void HoverPreferencesHideExceptionsByDefaultAndCanHideAllTypeLayout()
+    {
+        const string method = "void F|ail() { throw new Exception(); }";
+        Assert.DoesNotContain("exceptions:", Hover(method).GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("Known exceptions:", Hover(method, options: new(true)).GetProperty("contents").GetProperty("value").GetString());
+        foreach (string source in new[] { "struct S|ize { int n; }", "void F(in|t n) {}", "void F(int|* n) {}" })
+            Assert.DoesNotContain("Size:", Hover(source, options: new(ShowTypeLayout: false)).GetProperty("contents").GetProperty("value").GetString());
+    }
+
+    [Fact]
+    public void UnknownExceptionsDoNotCreateAnEmptySection()
+    {
+        string text = Hover("void F|ail(void()* callback) { callback(); }", options: new(true)).GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.DoesNotContain("exceptions", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("readonly(char)* F() => c\"he|llo\";", true)]
+    [InlineData("readonly(char)* F() => \"he|llo\";", false)]
+    public void CStringLiteralTypesHaveIndividualKeywordAndPunctuationRuns(string source, bool pointer)
+    {
+        var header = Hover(source, true).GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements");
+        var runs = header.EnumerateArray().Single(e => e.GetProperty("_vs_type").GetString() == "ClassifiedTextElement").GetProperty("Runs").EnumerateArray().ToArray();
+        foreach (string word in pointer ? new[] { "readonly", "char" } : new[] { "char" })
+            Assert.Contains(runs, r => r.GetProperty("Text").GetString() == word && r.GetProperty("ClassificationTypeName").GetString() == "keyword");
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == (pointer ? "*" : "[") && r.GetProperty("ClassificationTypeName").GetString() == "punctuation");
+    }
+
+    [Fact]
+    public void NumericLiteralPreviewIncludesItsValue()
+        => Assert.Contains("(int)123", Hover("int F() => 1|23;").GetProperty("contents").GetProperty("value").GetString());
 
     [Fact]
     public void ReferenceParameterHoverShowsTheBorrowingContract()
@@ -124,15 +166,17 @@ public class HoverTests
     public void LiteralsShowTheirCompilerTypeWithoutLayout(string source, string expected)
     {
         var hover = Hover(source);
-        Assert.Equal("```gflat\n" + expected + "\n```", hover.GetProperty("contents").GetProperty("value").GetString());
+        string text = hover.GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.StartsWith("```gflat\n(" + expected + ")", text);
+        Assert.DoesNotContain("Size:", text);
     }
 
     [Fact]
     public void NestedExceptionAndReturnTypesUseSourceSpelling()
     {
-        string text = Hover("class Outer { public class Failure : Exception {} } Outer::Failure* Re|ad() { throw new Outer::Failure(); }").GetProperty("contents").GetProperty("value").GetString()!;
+        string text = Hover("class Outer { public class Failure : Exception {} } Outer::Failure* Re|ad() { throw new Outer::Failure(); }", options: new(ShowKnownExceptions: true)).GetProperty("contents").GetProperty("value").GetString()!;
         Assert.Contains("Outer::Failure* Read();", text);
-        Assert.Contains("Exceptions:  \n  Outer::Failure", text);
+        Assert.Contains("Known exceptions:  \n  Outer::Failure", text);
         Assert.DoesNotContain("Outer.Failure", text);
         Assert.DoesNotContain("derived types", text);
     }
@@ -152,8 +196,8 @@ public class HoverTests
     [Fact]
     public void HoverShowsEscapingExceptionsWithClassifiedTypes()
     {
-        var result = Hover("class Failure : Exception {} void Fail() { throw new Failure(); } void Ru|n() { Fail(); }", true);
-        Assert.Contains("Exceptions:  \n  Failure", result.GetProperty("contents").GetProperty("value").GetString());
+        var result = Hover("class Failure : Exception {} void Fail() { throw new Failure(); } void Ru|n() { Fail(); }", true, new(ShowKnownExceptions: true));
+        Assert.Contains("Known exceptions:  \n  Failure", result.GetProperty("contents").GetProperty("value").GetString());
         var runs = result.GetProperty("_vs_rawContent").GetProperty("Elements")[2].GetProperty("Runs").EnumerateArray().ToArray();
         Assert.Equal(0, result.GetProperty("_vs_rawContent").GetProperty("Elements")[1].GetProperty("Runs")[0].GetProperty("Style").GetInt32());
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Failure" && r.GetProperty("ClassificationTypeName").GetString() == "class name");

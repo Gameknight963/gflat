@@ -30,6 +30,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     private readonly List<EditorRequest> editorRequests = [];
     private string[] tokenTypes = EditorModel.TokenTypes;
     private VisualStudioHover? hoverPresentation;
+    private HoverOptions hoverOptions = new();
 
     public async Task<int> RunAsync(CancellationToken cancellation = default)
     {
@@ -149,6 +150,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                             tokenTypes = EditorModel.VisualStudioTokenTypes;
                         if (options.ValueKind == JsonValueKind.Object && options.TryGetProperty("hoverIcons", out var hoverIcons))
                             hoverPresentation = new VisualStudioHover(hoverIcons);
+                        hoverOptions = hoverOptions.Update(options);
                         await Reply(id, new { capabilities = new {
                             positionEncoding = "utf-16",
                             textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
@@ -157,6 +159,9 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } },
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
                         }, serverInfo = new { name = "gflat", version = "0.2.0" } });
+                        break;
+                    case "workspace/didChangeConfiguration":
+                        if (parameters.TryGetProperty("settings", out var settings)) hoverOptions = hoverOptions.Update(settings);
                         break;
                     case "initialized": Schedule(); break;
                     case "shutdown":
@@ -199,7 +204,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         Schedule();
                         break;
                     case "workspace/didChangeWatchedFiles":
-                    case "workspace/didChangeConfiguration": Schedule(invalidateProjects: true); break;
+                        Schedule(invalidateProjects: true); break;
                     case "$/cancelRequest":
                         if (parameters.TryGetProperty("id", out var canceled))
                         {
@@ -247,7 +252,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
             object? result = query.Method switch
             {
                 "textDocument/completion" => model.Completion(path, offset),
-                "textDocument/hover" => model.Hover(path, offset, hoverPresentation),
+                "textDocument/hover" => model.Hover(path, offset, hoverPresentation, hoverOptions),
                 "textDocument/definition" => model.Definition(path, offset),
                 "textDocument/signatureHelp" => model.SignatureHelp(path, offset),
                 _ => model.SemanticTokens(path, range)

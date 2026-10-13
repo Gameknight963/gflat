@@ -222,7 +222,7 @@ public sealed partial class EditorModel
         });
     }
 
-    private object? CompoundTypeHover(string path, int offset, VisualStudioHover? presentation)
+    private object? CompoundTypeHover(string path, int offset, VisualStudioHover? presentation, bool showLayout)
     {
         var ts = tokens[path];
         int index = TokenAt(path, offset);
@@ -230,11 +230,20 @@ public sealed partial class EditorModel
         var syntax = nodes[path].Where(n => n.Node is TypeExpression && Contains(n, offset))
             .OrderByDescending(n => n.Span.Length).FirstOrDefault();
         if (syntax?.Node is not TypeExpression type || type is NamedTypeExpression && !type.IsReadOnlyValue) return null;
+        var parts = TypeDisplayParts(type, path, offset);
+        string text = string.Concat(parts.Select(p => p.Text));
+        var layout = showLayout ? TypeLayoutDetails(type) : [];
+        return new HoverResult(new("markdown", "```gflat\n" + text + "\n```" + (layout.Length == 0 ? "" : "\n\n" + string.Join("  \n", layout.Select(d => d.Markdown)))),
+            Workspace.ToRange(syntax.Span), presentation?.Render(parts.ToArray(), layout, "type.public"));
+    }
+
+    private DisplayPart[] TypeDisplayParts(TypeExpression type, string path, int offset)
+    {
         string text = ShortType(DisplayType(type), path, offset);
         var parts = new List<DisplayPart>();
         var lexed = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
         int cursor = 0;
-        var context = symbols.FirstOrDefault(s => s.Syntax == syntax.Parent);
+        var context = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.Scope != null && Contains(s.Scope, offset));
         for (int i = 0; i < lexed.Length; i++)
         {
             var token = lexed[i];
@@ -242,12 +251,12 @@ public sealed partial class EditorModel
             int first = i;
             while (first >= 2 && lexed[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
             var target = token.Kind == TokenKind.Identifier ? TypeSymbol(string.Concat(lexed[first..(i + 1)].Select(t => t.Text)), context) : null;
-            parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind == TokenKind.Readonly ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : "punctuation"), token.Text, Target: SymbolLocation(target)));
+            if (target == null && token.Kind == TokenKind.Identifier)
+                target = Visible(path, offset).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == token.Text);
+            parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind == TokenKind.Readonly ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation"), token.Text, Target: SymbolLocation(target)));
             cursor = token.End + 1;
         }
-        var layout = TypeLayoutDetails(type);
-        return new HoverResult(new("markdown", "```gflat\n" + text + "\n```" + (layout.Length == 0 ? "" : "\n\n" + string.Join("  \n", layout.Select(d => d.Markdown)))),
-            Workspace.ToRange(syntax.Span), presentation?.Render(parts.ToArray(), layout, "type.public"));
+        return parts.ToArray();
     }
 
     private static string Glyph(Symbol symbol)

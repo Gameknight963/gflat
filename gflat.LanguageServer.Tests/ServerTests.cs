@@ -8,6 +8,36 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ServerTests
 {
     [Fact]
+    public async Task HoverSettingsUpdateWithoutDocumentEdits()
+    {
+        await using var s = new Session();
+        await s.Initialize();
+        const string source = "void Fail() { throw new Exception(); } struct Size { int n; }";
+        await s.Open("options.gf", source);
+        await s.Diagnostics("options.gf", 1);
+        int requestId = 80;
+        async Task<string> HoverAt(string word)
+        {
+            int id = requestId++;
+            await s.Send(new { jsonrpc = "2.0", id, method = "textDocument/hover", @params = new {
+                textDocument = new { uri = s.Uri("options.gf") }, position = new { line = 0, character = source.IndexOf(word, StringComparison.Ordinal) } } });
+            var response = await s.Receive(x => x.TryGetProperty("id", out var n) && n.ValueKind == JsonValueKind.Number && n.GetInt32() == id);
+            return response.GetProperty("result").GetProperty("contents").GetProperty("value").GetString()!;
+        }
+        Assert.DoesNotContain("Known exceptions:", await HoverAt("Fail"));
+        Assert.Contains("Size:", await HoverAt("Size"));
+        await s.Send(new { jsonrpc = "2.0", method = "workspace/didChangeConfiguration", @params = new {
+            settings = new { gflat = new { showKnownExceptions = true, showTypeLayout = false } } } });
+        Assert.Contains("Known exceptions:", await HoverAt("Fail"));
+        Assert.DoesNotContain("Size:", await HoverAt("Size"));
+        await s.Send(new { jsonrpc = "2.0", method = "workspace/didChangeConfiguration", @params = new {
+            settings = new { gflat = new { showKnownExceptions = false, showTypeLayout = true } } } });
+        Assert.DoesNotContain("Known exceptions:", await HoverAt("Fail"));
+        Assert.Contains("Size:", await HoverAt("Size"));
+        await s.Stop();
+    }
+
+    [Fact]
     public async Task RichHoverAndNoThrowClassificationReachTheClient()
     {
         await using var s = new Session();
@@ -15,7 +45,7 @@ public sealed class ServerTests
         var icons = catalogFile == null
             ? JsonSerializer.SerializeToElement(new Dictionary<string, object> { ["method.public"] = new { guid = Guid.Parse("ae27a6b0-e345-4288-96df-5eaf394ee369"), id = 1 } })
             : JsonDocument.Parse(System.IO.File.ReadAllText(catalogFile)).RootElement.Clone();
-        await s.Initialize(new { visualStudioClassifications = true, hoverIcons = icons, visualStudioNativeHover = true });
+        await s.Initialize(new { visualStudioClassifications = true, hoverIcons = icons, visualStudioNativeHover = true, gflat = new { showKnownExceptions = true } });
         const string source = "public int Read(int count) { throw new Failure(); } class Failure : Exception {} void Safe() nothrow {}";
         await s.Open("hover.gf", source);
         await s.Diagnostics("hover.gf", 1);

@@ -6,6 +6,41 @@ namespace gflat.LanguageServer.Tests;
 public class EditorTests
 {
     [Fact]
+    public void InterfaceCallsHaveHoverNavigationAndMethodColor()
+    {
+        var (model, path, offset, source) = Analyze("void Format(char value, ITextWriter* output) { output.Wr|ite(&value, 1); }");
+        Assert.NotNull(model.Hover(path, offset));
+        Assert.NotNull(model.Definition(path, offset));
+        var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
+        int column = 0;
+        bool found = false;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            column += data[i + 1];
+            if (column != source.IndexOf(".Write", StringComparison.Ordinal) + 1) continue;
+            Assert.Equal("method", EditorModel.TokenTypes[data[i + 3]]);
+            found = true;
+        }
+        Assert.True(found);
+    }
+
+    [Fact]
+    public void AccessorKeywordsHaveSemanticColors()
+    {
+        var (model, path, _, source) = Analyze("struct S { int n; public int Value { readonly get { return n; } set { n = value; } } } void |F() {}");
+        var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
+        int column = 0, count = 0;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            column += data[i + 1];
+            if (source.Substring(column, data[i + 2]) is not ("get" or "set")) continue;
+            Assert.Equal("modifier", EditorModel.TokenTypes[data[i + 3]]);
+            count++;
+        }
+        Assert.Equal(2, count);
+    }
+
+    [Fact]
     public void ReferenceParametersAndArgumentsHaveKeywordClassification()
     {
         var (model, path, offset, source) = Analyze("void Set(ref int value) { value = 42; } int main() { int n = 0; Set(ref |n); return n; }");

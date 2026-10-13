@@ -5,6 +5,18 @@ namespace gflat.Tests;
 public class DeclarationTests
 {
     [Theory]
+    [InlineData("int Missing();")]
+    [InlineData("int Missing<T>();")]
+    [InlineData("namespace Test { int Missing(); }")]
+    [InlineData("struct Test { public int Missing(); }")]
+    public void OrdinaryDeclarationsRequireBodies(string source)
+        => Assert.Contains("body", Assert.Throws<TypeCheckException>(() => Compiler.Check(source)).Message);
+
+    [Fact]
+    public void InterfaceAbstractAndExternDeclarationsRemainValid()
+        => Compiler.Check("interface I { int Value(); } abstract class Base { public abstract int Value(); } extern int abs(int value);");
+
+    [Theory]
     [InlineData("private extern")]
     [InlineData("extern private")]
     public void PrivateExternCanBeCalledAndAddressedInsideItsFile(string modifiers)

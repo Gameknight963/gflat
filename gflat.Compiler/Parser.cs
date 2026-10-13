@@ -481,9 +481,13 @@ namespace gflat
             string name = Expect(TokenKind.Identifier).Text;
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
-            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
-                members.Add(ParseMember());
-            Expect(TokenKind.CloseBrace);
+            _interfaceDepth++;
+            try
+            {
+                while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile)) members.Add(ParseMember());
+                Expect(TokenKind.CloseBrace);
+            }
+            finally { _interfaceDepth--; }
             return new InterfaceDeclaration(name, members, accessibility, line);
         }
 
@@ -839,6 +843,8 @@ namespace gflat
             return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments, attributes, isConst) { IsNoThrow = isNoThrow };
         }
 
+        private int _interfaceDepth;
+
         private BlockStatement ParseBodyOrBlock() => Located(() => ParseBodyOrBlockCoreLocated());
 
         private BlockStatement ParseBodyOrBlockCoreLocated()
@@ -913,7 +919,12 @@ namespace gflat
             }
             else
             {
-                body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
+                if (Match(TokenKind.Semicolon))
+                {
+                    if (_interfaceDepth == 0)
+                        throw new TypeCheckException($"Function '{name}' must declare a body; use extern for a function implemented elsewhere", _tokens[_pos - 1].Span);
+                }
+                else body = ParseBodyOrBlock();
             }
             return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, isNoThrow: isNoThrow);
         }

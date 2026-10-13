@@ -455,7 +455,10 @@ The parameter is an alias: assignment writes to the caller's value. No object is
 
 Fields, fixed-buffer elements, pointer dereferences, and ref properties/indexers can supply storage. Generic, constructor, interface, virtual, and lambda parameters support the same contract. A function pointer spells the parameter as `void(ref int)*`; it is distinct from `void(int)*`. Reference parameters use native pointer arguments. This does not add general ref locals or ref-returning methods.
 
-Namespace extern declarations support accessibility
+Ordinary function declarations require a body, including generic functions and
+struct methods. A declaration such as `int Missing();` is an error. Use `extern`
+for a function implemented elsewhere; interface and abstract method declarations
+retain their bodyless forms. Namespace extern declarations support accessibility
 modifiers: `private extern int abs(int value);` and `extern private int abs(int value);`
 are equivalent. A private extern is accessible throughout its source file, including
 from other namespaces in that file, but cannot be called or addressed from another

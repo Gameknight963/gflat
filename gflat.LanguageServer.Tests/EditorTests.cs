@@ -22,6 +22,13 @@ public class EditorTests
     }
 
     [Fact]
+    public void BodylessFreeFunctionHasAnEditorDiagnostic()
+    {
+        var snapshot = new AnalysisSnapshot([new SourceFile("missing.gf", "int SomeNonExistantFunction();")]);
+        Assert.Contains(snapshot.Diagnostics, d => d.Severity == gflat.diagnostics.DiagnosticSeverity.Error && d.Message.Contains("body"));
+    }
+
+    [Fact]
     public void InterfaceCallsHaveHoverNavigationAndMethodColor()
     {
         var (model, path, offset, source) = Analyze("void Format(char value, ITextWriter* output) { output.Wr|ite(&value, 1); }");
@@ -302,7 +309,7 @@ public class EditorTests
     [Fact]
     public void SemanticRangeTokensUseAbsoluteUtf16Positions()
     {
-        var (model, path, _, _) = Analyze("// ðŸ˜€\r\nint first() => 1;\r\nint second() => first();|");
+        var (model, path, _, _) = Analyze("// 😀\r\nint first() => 1;\r\nint second() => first();|");
         var data = Json(model.SemanticTokens(path, new(new(2, 0), new(2, 24)))).GetProperty("data").EnumerateArray().Select(n => n.GetInt32()).ToArray();
         Assert.Equal(2, data[0]);
         Assert.Equal(4, data[1]);

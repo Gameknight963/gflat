@@ -2864,6 +2864,8 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidatePropertyAccessor(node);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
+            if (node.Body == null)
+                throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
             if (node.IsGeneric) return;
             ValidateParameterDefaults(node, node.Parameters);
             if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }

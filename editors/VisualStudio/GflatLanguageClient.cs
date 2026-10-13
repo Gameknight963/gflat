@@ -10,6 +10,9 @@ using Microsoft.VisualStudio.LanguageServer.Client;
 using Microsoft.VisualStudio.Threading;
 using Microsoft.VisualStudio.Utilities;
 using StreamJsonRpc;
+using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 
 namespace gflat.VisualStudio;
 
@@ -18,6 +21,7 @@ namespace gflat.VisualStudio;
 public sealed class GflatLanguageClient : ILanguageClient, ILanguageClientCustomMessage2, IDisposable
 {
     private Process? server;
+    private GflatOptions? options;
     private readonly HoverConnection hover;
     [ImportingConstructor]
     public GflatLanguageClient(HoverConnection hover) => this.hover = hover;
@@ -60,9 +64,31 @@ public sealed class GflatLanguageClient : ILanguageClient, ILanguageClientCustom
 
     public async Task OnLoadedAsync()
     {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var shell = (IVsShell)Package.GetGlobalService(typeof(SVsShell));
+        var packageId = typeof(GflatEditorPackage).GUID;
+        ErrorHandler.ThrowOnFailure(shell.LoadPackage(ref packageId, out var package));
+        if (options != null) options.Changed -= OptionsChanged;
+        options = ((GflatEditorPackage)package).Options;
+        options.Changed += OptionsChanged;
         if (StartAsync != null) await StartAsync.InvokeAsync(this, EventArgs.Empty);
     }
-    public Task OnServerInitializedAsync() { hover.Ready = true; return Task.CompletedTask; }
+    public async Task OnServerInitializedAsync()
+    {
+        hover.Ready = true;
+        await SendOptionsAsync();
+    }
+    private async Task SendOptionsAsync()
+    {
+        try
+        {
+            var rpc = hover.Rpc;
+            if (hover.Ready && rpc != null && options != null)
+                await rpc.NotifyWithParameterObjectAsync("workspace/didChangeConfiguration", new { settings = options.Snapshot() });
+        }
+        catch (Exception error) { Debug.WriteLine("gflat settings: " + error); }
+    }
+    private void OptionsChanged() => _ = SendOptionsAsync();
     public Task<InitializationFailureContext?> OnServerInitializeFailedAsync(ILanguageClientInitializationInfo initializationState)
         => Task.FromResult<InitializationFailureContext?>(new InitializationFailureContext { FailureMessage = "gflat language server initialization failed. Try reinstalling the extension." });
 

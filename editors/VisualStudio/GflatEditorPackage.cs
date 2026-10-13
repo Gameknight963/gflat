@@ -8,12 +8,14 @@ using Microsoft.VisualStudio.TextManager.Interop;
 
 namespace gflat.VisualStudio;
 
-// Registration lives in gflat.pkgdef. The shell needs a language identity for
-// editor preferences independently of the MEF content type used by LSP/TextMate.
+// gflat.pkgdef registers the language identity independently of the MEF content
+// type used by LSP/TextMate. The SDK generates the language options registration.
 [Guid("25453519-83CF-4439-B0A4-6D79CD8F267C")]
 [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
+[ProvideLanguageEditorOptionPage(typeof(GflatOptions), "gflat", null, "IntelliSense", "IntelliSense")]
 public sealed class GflatEditorPackage : AsyncPackage
 {
+    internal GflatOptions Options => (GflatOptions)GetDialogPage(typeof(GflatOptions));
     protected override Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
         AddService(typeof(GflatLanguageInfo), (_, __, ___) => Task.FromResult<object?>(new GflatLanguageInfo()), promote: true);

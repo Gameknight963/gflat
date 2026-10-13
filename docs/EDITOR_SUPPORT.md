@@ -221,3 +221,17 @@ real packaged-server hover response and deserializes it using Visual Studio's ow
 rich-content converter, checking its catalog icon and classified runs. This checks
 SDK compatibility, not the appearance or interaction of the live tooltip; manual
 IDE checks remain necessary.
+
+## Quick Info preferences
+
+The Visual Studio language options include a gflat **IntelliSense** page, registered
+through the SDK's language editor options API. **Show known exceptions** defaults
+to off; **Show type size and alignment** defaults to on. Visual Studio persists
+these user preferences. Applying changes updates tooltips without restarting the
+language server. Known exceptions are an analysis summary, not an exhaustive list;
+unknown dispatch does not add a placeholder row.
+
+Other LSP clients can supply `gflat.showKnownExceptions` and `gflat.showTypeLayout`
+as nested initialization options (`{"gflat":{"showKnownExceptions":true}}`) or
+in `workspace/didChangeConfiguration`'s `settings` object. Colors continue to use
+Visual Studio's existing theme classifications.

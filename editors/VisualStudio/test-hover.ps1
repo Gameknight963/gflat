@@ -86,7 +86,7 @@ try {
     if (-not ($runs | Where-Object { $_.Text -eq 'public' -and $_.ClassificationTypeName -eq 'keyword' })) { throw 'Method accessibility was not classified' }
     $exceptionHeader = @(@($hover.RawContent.Elements)[1].Runs)
     $exceptionRuns = @(@($hover.RawContent.Elements)[2].Runs)
-    if (-not ($exceptionHeader | Where-Object { $_.Text -eq 'Exceptions:' -and [int]$_.Style -eq 0 })) { throw 'Exception heading was not plain text' }
+    if (-not ($exceptionHeader | Where-Object { $_.Text -eq 'Known exceptions:' -and [int]$_.Style -eq 0 })) { throw 'Exception heading was not plain text' }
     if (-not ($exceptionRuns | Where-Object { $_.Text -eq 'Failure' -and $_.ClassificationTypeName -eq 'class name' })) { throw 'Exception type was not classified' }
     $wire = [Newtonsoft.Json.Linq.JObject]::Parse([IO.File]::ReadAllText($CapturePath))
     $script:navigationResult = $null

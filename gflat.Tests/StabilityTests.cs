@@ -48,7 +48,7 @@ public class StabilityTests
     [Fact]
     public void UnhandledExceptionInvokesHookWithLiveObject()
     {
-        var result = CompilerTestHelper.Run(TrackedAllocator + "class E : Exception { public ~E() { printf(\"D\"); } } namespace Exceptions { public replace void Unhandled(Exception*? e) { printf(\"H\"); } } int main() { throw new E(); }");
+        var result = CompilerTestHelper.Run(TrackedAllocator + "class E : Exception { public ~E() { printf(\"D\"); } } namespace Exceptions { public replace int Unhandled(Exception*? e) { printf(\"H\"); return 1; } } int main() { throw new E(); }");
         Assert.Equal(1, result.ExitCode);
         Assert.Equal("H", result.StandardOutput);
     }

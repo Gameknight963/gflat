@@ -118,7 +118,7 @@ public class AttributeTests
 
     [Fact]
     public void CustomExceptionDoesNotSuppressAttributePrelude()
-        => Read("class Exception {} class Tag : Attribute {} [Tag] int main() { return 0; }");
+        => Read("class Exception { public int GetCode() => 1; } class Tag : Attribute {} [Tag] int main() { return 0; }");
 
     [Fact]
     public void NamespaceQualifiedAttributesWork()

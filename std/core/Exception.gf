@@ -7,13 +7,13 @@ class Exception
     public Exception()
     {
         message = c"";
-        code = 0;
+        code = 1;
     }
 
     public Exception(readonly(char)* msg)
     {
         message = msg;
-        code = 0;
+        code = 1;
     }
 
     public Exception(readonly(char)* msg, int c)

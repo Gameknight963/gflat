@@ -14,7 +14,7 @@ public partial class LlvmEmitter
         declare i8* @__gflat_eh_object(i8*) nounwind
         declare void @__gflat_eh_release(i8*) nounwind
         declare void @__gflat_eh_rethrow(i8*) noreturn
-        declare void @__gflat_eh_terminate(i8*, void (i8*)*) noreturn nounwind
+        declare void @__gflat_eh_terminate(i8*, i32 (i8*)*) noreturn nounwind
         """ + "\n" + (WindowsEh ? "declare i32 @__CxxFrameHandler3(...)\n" : "declare i32 @__gxx_personality_v0(...)\ndeclare i8* @__cxa_begin_catch(i8*) nounwind\ndeclare void @__cxa_end_catch() nounwind\n");
 
     private void Raw(string text) => _output.AppendLine(text);
@@ -118,7 +118,7 @@ public partial class LlvmEmitter
 
     private void EmitTermination(string handle)
     {
-        Raw($"    call void @__gflat_eh_terminate(i8* {handle}, void (i8*)* bitcast (void (%Exception*)* @gflat$Exceptions$Unhandled to void (i8*)*))");
+        Raw($"    call void @__gflat_eh_terminate(i8* {handle}, i32 (i8*)* bitcast (i32 (%Exception*)* @gflat$Exceptions$Unhandled to i32 (i8*)*))");
         Raw("    unreachable");
     }
 

@@ -54,7 +54,7 @@ public class StandardLibraryTests
     public void ExplicitLibraryInputsPreserveCustomExceptionAndExternContracts()
     {
         var sources = StandardLibrary.AutomaticFiles.Select(StandardLibrary.Load).Append(new SourceFile("main.gf", """
-            class Exception { public int code; public Exception() { code = 7; } }
+            class Exception { public int GetCode() => code; public int code; public Exception() { code = 7; } }
             extern void* malloc(nuint size);
             int main() { Exception e = new Exception(); return e.code; }
             """));

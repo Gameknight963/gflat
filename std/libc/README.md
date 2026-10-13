@@ -1,5 +1,12 @@
 # libc-dependent facilities
 
+`ExceptionHandling.gf` supplies the automatically included weak
+`Exceptions::Unhandled(Exception*? error)` hook. It returns the exception's
+`GetCode()` (1 by default), or 1 for a foreign exception. The native runtime
+passes this status to libc `exit`. The default hook does not print anything.
+Replace it to customize the status or report the error. If it throws, the runtime
+exits with status 1.
+
 `Formatting.gf` supplies `std::Format(float, ITextWriter*)` and
 `std::Format(double, ITextWriter*)` through `snprintf`, using 9 and 17 significant
 digits respectively. Formatting follows the application's current C locale.

@@ -2,16 +2,37 @@ namespace gflat.Tests;
 
 public class ExceptionBoundaryTests
 {
+    [Theory]
+    [InlineData("new Exception()", 1)]
+    [InlineData("new Exception(c\"failure\")", 1)]
+    [InlineData("new Exception(c\"failure\", 42)", 42)]
+    [InlineData("new Exception(c\"failure\", 0)", 0)]
+    [InlineData("new Custom()", 23)]
+    public void DefaultHookUsesExceptionCode(string value, int status)
+    {
+        var result = CompilerTestHelper.Run(
+            "class Custom : Exception { public readonly override int GetCode() => 23; } " +
+            "int main() { throw " + value + "; }");
+        Assert.Equal(status, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+        Assert.Equal("", result.StandardError);
+    }
+
+    [Fact]
+    public void DefaultHookUsesOneForForeignException()
+    {
+        Assert.Equal(1, CompilerTestHelper.Run("int main() => Exceptions::Unhandled(null);").ExitCode);
+    }
+
     [Fact]
     public void ReplacementUnhandledHookControlsOutputAndExitStatus()
     {
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char*) format, ...);
-            extern void exit(int status);
             namespace Exceptions {
-                public replace void Unhandled(Exception*? error) {
+                public replace int Unhandled(Exception*? error) {
                     printf(c"custom failure");
-                    exit(42);
+                    return 42;
                 }
             }
             int main() { throw new Exception(); }
@@ -22,12 +43,12 @@ public class ExceptionBoundaryTests
     }
 
     [Theory]
-    [InlineData("")]
+    [InlineData("return 1;")]
     [InlineData("throw new Exception();")]
     public void ReplacementUnhandledHookCannotResumeOrPropagate(string body)
     {
         var result = CompilerTestHelper.Run(
-            "namespace Exceptions { public replace void Unhandled(Exception*? error) { " + body +
+            "namespace Exceptions { public replace int Unhandled(Exception*? error) { " + body +
             " } } int main() { throw new Exception(); }");
         Assert.Equal(1, result.ExitCode);
         Assert.Equal("", result.StandardOutput);

@@ -3444,7 +3444,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void Execution_UnhandledException_PrintsAndExitsWith1()
+        public void Execution_UnhandledException_ExitsWithItsCodeWithoutPrinting()
         {
             string code = """
                 int main()
@@ -3455,8 +3455,9 @@ namespace gflat.Tests
                 """;
 
             ExecutionResult result = CompilerTestHelper.Run(code);
-            Assert.Equal(1, result.ExitCode);
-            Assert.Contains("Unhandled exception", result.StandardError);
+            Assert.Equal(123, result.ExitCode);
+            Assert.Equal("", result.StandardError);
+            Assert.Equal("", result.StandardOutput);
         }
 
         [Fact]

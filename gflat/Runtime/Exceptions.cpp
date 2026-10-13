@@ -1,7 +1,6 @@
 // Native exception transport. Gflat object layout remains private to its compiler.
 #include <exception>
 #include <cstdlib>
-#include <cstdio>
 #include <new>
 #include <memory>
 
@@ -15,8 +14,6 @@ struct Exception final {
 struct Handle { std::exception_ptr exception; };
 }
 extern "C" {
-// stderr is a C library macro; expose its value without depending on CRT layout.
-void* __gflat_eh_stderr() noexcept { return stderr; }
 [[noreturn]] void __gflat_eh_throw(void* object, void (*destroy)(void*)) {
     throw Exception(object, destroy);
 }
@@ -37,11 +34,10 @@ void __gflat_eh_release(void* value) noexcept { delete static_cast<Handle*>(valu
     delete static_cast<Handle*>(value);
     std::rethrow_exception(exception);
 }
-[[noreturn]] void __gflat_eh_terminate(void* value, void (*hook)(void*)) noexcept {
+[[noreturn]] void __gflat_eh_terminate(void* value, int (*hook)(void*)) noexcept {
     void* object = value ? __gflat_eh_object(value) : nullptr;
-    try { if (hook) hook(object); } catch (...) {}
-    // A replacement hook must not resume execution across this boundary.
-    // Reporting and the normal exit policy belong to the library hook.
-    std::exit(1);
+    int status = 1;
+    try { if (hook) status = hook(object); } catch (...) {}
+    std::exit(status);
 }
 }

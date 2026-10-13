@@ -35,21 +35,30 @@ internal static class NativeRuntime
 
     internal static string GetObject(string driver, int reserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes)
     {
+        if (reserveBytes < 0) throw new ArgumentOutOfRangeException(nameof(reserveBytes));
+        return BuildObject(driver, "Exceptions", ["-DGFLAT_EXCEPTION_RESERVE_BYTES=" + reserveBytes]);
+    }
+
+    internal static string GetStdioObject(string driver) => BuildObject(driver, "Stdio", []);
+
+    private static string BuildObject(string driver, string name, string[] options)
+    {
         lock (BuildLock)
         {
-            if (reserveBytes < 0) throw new ArgumentOutOfRangeException(nameof(reserveBytes));
-            string key = driver + "|" + reserveBytes;
-            if (Objects.TryGetValue(key, out string? cached) && File.Exists(cached)) return cached;
-            string source = Path.Combine(AppContext.BaseDirectory, "Runtime", "Exceptions.cpp");
-            if (!File.Exists(source)) throw new FileNotFoundException("The native exception runtime source is missing. Restore the compiler's Runtime directory.", source);
+            string source = Path.Combine(AppContext.BaseDirectory, "Runtime", name + ".cpp");
+            if (!File.Exists(source)) throw new FileNotFoundException("The native runtime source is missing. Restore the compiler's Runtime directory.", source);
             string fingerprint = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(source)))[..16];
+            string key = driver + "|" + name + "|" + fingerprint + "|" + string.Join("|", options);
+            if (Objects.TryGetValue(key, out string? cached) && File.Exists(cached)) return cached;
+            string buildId = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key)))[..16];
             string directory = Path.Combine(Path.GetTempPath(), "gflat-runtime", Environment.ProcessId.ToString());
             Directory.CreateDirectory(directory);
-            string output = Path.Combine(directory, fingerprint + "-" + reserveBytes + (OperatingSystem.IsWindows() ? ".obj" : ".o"));
-            var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", "-DGFLAT_EXCEPTION_RESERVE_BYTES=" + reserveBytes, "-c", source, "-o", output };
+            string output = Path.Combine(directory, name + "-" + buildId + (OperatingSystem.IsWindows() ? ".obj" : ".o"));
+            var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", "-c", source, "-o", output };
+            args.AddRange(options);
             args.AddRange(HostArguments());
             ProcessResult result = NativeToolchain.Run(driver, args, 60000);
-            if (result.ExitCode != 0) throw new InvalidOperationException("Failed to compile the native exception runtime. Install the host C++ development tools.\n" + result.StandardError);
+            if (result.ExitCode != 0) throw new InvalidOperationException("Failed to compile the native runtime. Install the host C++ development tools.\n" + result.StandardError);
             Objects[key] = output;
             return output;
         }

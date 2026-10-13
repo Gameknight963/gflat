@@ -43,8 +43,7 @@ stack buffers or literal text, without allocating intermediate strings.
 Floating-point overloads live in `../libc/Formatting.gf`.
 
 Only C-string consumers stop at the first null; counted operations and interpolation
-preserve it. Use factories for fallible construction: constructors cannot yet
-propagate exceptions.
+preserve it. Constructors and factory methods follow ordinary exception propagation.
 
 ## Integer parsing
 

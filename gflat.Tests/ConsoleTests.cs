@@ -1,0 +1,199 @@
+using System.Diagnostics;
+using System.Text;
+
+namespace gflat.Tests;
+
+public class ConsoleTests
+{
+    private static SourceFile[] Sources(string program, bool strings = false)
+    {
+        string[] names = strings
+            ? ["core/IOException.gf", "core/BufferTooSmallException.gf", "libc/Console.gf", "core/String.gf", "libc/ConsoleString.gf"]
+            : ["core/IOException.gf", "core/BufferTooSmallException.gf", "libc/Console.gf"];
+        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Append(new SourceFile("main.gf", program)).ToArray();
+    }
+
+    private static ExecutionResult Run(string source, string input = "", bool strings = false)
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "gflat-console-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string ir = Path.Combine(directory, "console.ll"), output = Path.Combine(directory, "console.exe");
+            File.WriteAllText(ir, Compiler.Emit(Sources(source, strings)));
+            var compiled = NativeToolchain.Compile(ir, output);
+            Assert.True(compiled.ExitCode == 0, compiled.StandardError);
+            using var process = new Process { StartInfo = new ProcessStartInfo(output) {
+                UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true,
+                RedirectStandardOutput = true, RedirectStandardError = true,
+                StandardInputEncoding = new UTF8Encoding(false), StandardOutputEncoding = new UTF8Encoding(false)
+            } };
+            process.Start();
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            process.StandardInput.Write(input);
+            process.StandardInput.Close();
+            if (!process.WaitForExit(30000)) { process.Kill(true); throw new TimeoutException("Console test timed out"); }
+            return new(process.ExitCode, stdout.GetAwaiter().GetResult(), stderr.GetAwaiter().GetResult());
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public void CStringAndCountedWritesDoNotAddUnexpectedNewlinesOrAllocate()
+    {
+        var result = Run("""
+            namespace Memory {
+                public replace void*? Allocate(nuint size) => null;
+                public replace void Free(void* value) { }
+            }
+            int main() {
+                Console::Write("A"); Console::Write("B\0ignored");
+                Console::Write("C\0D", 3); Console::WriteLine("E");
+                Console::WriteLine(); Console::WriteLine("F\0G", 3);
+                Console::Flush(); return 42;
+            }
+            """);
+        Assert.Equal(42, result.ExitCode);
+        Assert.Equal("ABC\0DE\n\nF\0G\n", result.StandardOutput.Replace("\r\n", "\n"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\n")]
+    [InlineData("first\n\nlast")]
+    [InlineData("first\r\n\r\nlast\r")]
+    [InlineData("a\0b\n")]
+    [InlineData("é\n")]
+    public void RawBufferReadsPreserveBytesAndDistinguishEmptyLinesFromEof(string input)
+    {
+        var result = Run("""
+            namespace Memory {
+                public replace void*? Allocate(nuint size) => null;
+                public replace void Free(void* value) { }
+            }
+            int main() {
+                char[1024] buffer;
+                nuint length = 0;
+                while (Console::TryReadLine(buffer, 1024, ref length)) {
+                    if (buffer[length] != '\0') return 1;
+                    Console::Write(buffer, length); Console::Write("|");
+                }
+                if (length != (nuint)0 || buffer[0] != '\0') return 2;
+                return 42;
+            }
+            """, input);
+        Assert.Equal(42, result.ExitCode);
+        string normalized = input.Replace("\r\n", "\n");
+        string expected = string.Join("|", normalized.Split('\n'));
+        if (normalized.Length != 0 && !normalized.EndsWith('\n')) expected += "|";
+        Assert.Equal(expected, result.StandardOutput);
+    }
+
+    [Fact]
+    public void OverflowConsumesExactlyOneLineAndLeavesATerminatedPrefix()
+    {
+        var result = Run("""
+            int main() {
+                char[4] buffer; nuint length = 0;
+                try { Console::TryReadLine(buffer, 4, ref length); return 1; }
+                catch (ref std::BufferTooSmallException error) { }
+                if (length != (nuint)3 || buffer[0] != 'a' || buffer[2] != 'c' || buffer[3] != '\0') return 2;
+                if (Console::ReadLine(buffer, 4) != (nuint)2 || buffer[0] != 'o' || buffer[1] != 'k') return 3;
+                try { Console::ReadLine(buffer, 4); return 4; }
+                catch (ref std::EndOfStreamException error) { return 42; }
+            }
+            """, "abcdef\nok\n");
+        Assert.Equal(42, result.ExitCode);
+    }
+
+    [Fact]
+    public void CapacityIncludesTerminatorAndCrLfDoesNotOverflowExactFit()
+    {
+        Assert.Equal(42, Run("""
+            int main() {
+                char[1] empty;
+                if (Console::ReadLine(empty, 1) != (nuint)0 || empty[0] != '\0') return 1;
+                char[4] buffer;
+                if (Console::ReadLine(buffer, 4) != (nuint)3 || buffer[3] != '\0') return 2;
+                try { Console::ReadLine(buffer, 0); return 3; }
+                catch (ref Exception error) { return 42; }
+            }
+            """, "\nabc\r\n").ExitCode);
+    }
+
+    [Fact]
+    public void StringOverloadsBorrowOutputAndReuseReadCapacity()
+    {
+        var result = Run("""
+            using std;
+            int main() {
+                String text = s"A\0B";
+                Console::Write(ref text); Console::WriteLine(ref text);
+                String line = Console::ReadLine();
+                readonly(char)* original = line.Data;
+                nuint capacity = line.Capacity;
+                if (!Console::TryReadLine(ref line)) return 1;
+                if (line.Data != original || line.Capacity != capacity || line.Length != (nuint)2) return 2;
+                Console::WriteLine(ref line);
+                if (Console::TryReadLine(ref line) || line.Length != (nuint)0) return 3;
+                try { Console::ReadLine(); return 4; }
+                catch (ref EndOfStreamException error) { return 42; }
+            }
+            """, "a longer line\nok\n", true);
+        Assert.Equal(42, result.ExitCode);
+        Assert.Equal("A\0BA\0B\nok\n", result.StandardOutput.Replace("\r\n", "\n"));
+    }
+
+    [Fact]
+    public void ReadAndWriteFailuresAreIoExceptions()
+    {
+        string file = Path.GetTempFileName();
+        try
+        {
+            string literal = "\"" + file.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+            var result = Run("""
+                extern void* __gflat_stdio_stdin();
+                extern void* __gflat_stdio_stdout();
+                extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+                int main() {
+                """ + $$"""
+                    if (freopen({{literal}}, "w", __gflat_stdio_stdin()) == null) return 1;
+                    char[8] buffer; nuint length = 0;
+                    try { Console::TryReadLine(buffer, 8, ref length); return 2; }
+                    catch (ref std::IOException error) { }
+                    if (freopen({{literal}}, "r", __gflat_stdio_stdout()) == null) return 3;
+                    try { Console::Write("text"); return 4; }
+                    catch (ref std::IOException error) { }
+                    return 42;
+                }
+                """);
+            Assert.Equal(42, result.ExitCode);
+        }
+        finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public void StringReaderHandlesMultipleChunksAndTrailingCrAtEof()
+    {
+        string input = new string('x', 255) + "\r";
+        var result = Run("""
+            using std;
+            int main() {
+                String line = Console::ReadLine();
+                if (line.Length != (nuint)256 || line[(nuint)255] != '\r') return 1;
+                Console::Write(ref line); return 42;
+            }
+            """, input, true);
+        Assert.Equal(42, result.ExitCode);
+        Assert.Equal(input, result.StandardOutput);
+        string longLine = new('x', 1200);
+        var large = Run("""
+            using std;
+            int main() { String line = Console::ReadLine(); Console::Write(ref line); return 42; }
+            """, longLine + "\n", true);
+        Assert.Equal(42, large.ExitCode);
+        Assert.Equal(longLine, large.StandardOutput);
+    }
+}

@@ -96,11 +96,15 @@ public static class NativeToolchain
             if (LibraryDirectory.Value is string lib) args.AddRange(["-Xlinker", "/libpath:" + lib]);
         }
         string compiler = FindClang(clang);
-        if (File.ReadAllText(irPath).Contains("@__gflat_eh_", StringComparison.Ordinal))
+        string ir = File.ReadAllText(irPath);
+        bool exceptions = ir.Contains("@__gflat_eh_", StringComparison.Ordinal);
+        bool stdio = ir.Contains("@__gflat_stdio_", StringComparison.Ordinal);
+        if (exceptions || stdio)
         {
             // Keep the selected LLVM version, including names such as clang-18.
             args.Add("--driver-mode=g++");
-            args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes));
+            if (exceptions) args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes));
+            if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler));
             args.AddRange(NativeRuntime.HostArguments());
         }
         return Run(compiler, args, 60000);

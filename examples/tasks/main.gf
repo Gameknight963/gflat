@@ -61,22 +61,12 @@ bool IsCommand(readonly(String)* text, readonly(char)* command)
     return text.Length == length;
 }
 
-// Bound the number by Count while parsing, including before multiplication.
 bool Complete(Vector<Task>* tasks, readonly(String)* line) throws
 {
-    nuint number = 0;
-    if (line.Length == (nuint)5) return false;
-    for (nuint i = 5; i < line.Length; i++)
-    {
-        char c = line.Data[i];
-        if (c < '0' || c > '9') return false;
-        nuint digit = (nuint)(c - '0');
-        if (digit > tasks.Count || number > (tasks.Count - digit) / (nuint)10)
-            return false;
-        number = number * (nuint)10 + digit;
-    }
-    if (number == (nuint)0) return false;
-    (*tasks)[number - (nuint)1].Done = true;
+    int number = 0;
+    if (!TryParseInt(line.Data + 5, line.Length - (nuint)5, &number)) return false;
+    if (number <= 0 || (nuint)number > tasks.Count) return false;
+    (*tasks)[(nuint)(number - 1)].Done = true;
     return true;
 }
 

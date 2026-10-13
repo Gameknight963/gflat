@@ -144,6 +144,13 @@ public partial class LlvmEmitter
             EmitValueForTarget(node.Expression, type);
             string value = Pop();
             Emit($"    store {llvm} {value}, {llvm}* {address}");
+            // Throwing a value constructs its static type. In particular, copying
+            // a base catch binding must not retain a derived vtable in storage
+            // sized only for the base. `throw;` preserves the dynamic object.
+            var exceptionClass = _typeChecker.GetClass(((NamedTypeExpression)_typeChecker.ResolveAlias(type)).Name)!;
+            string vtable = NewTemp();
+            Emit($"    {vtable} = getelementptr {llvm}, {llvm}* {address}, i32 0, i32 0");
+            Emit($"    store i8** bitcast ([{exceptionClass.VirtualMethods.Count} x i8*]* @{exceptionClass.Name}$vtable to i8**), i8*** {vtable}");
             _deferScopes.RemoveAt(_deferScopes.Count - 1);
             Emit($"    call void @__gflat_eh_throw(i8* {storage}, void (i8*)* bitcast (void (%Exception*)* @gflat_destroy_exception to void (i8*)*))");
         }

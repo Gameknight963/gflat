@@ -5,6 +5,25 @@ namespace gflat.Tests;
 public class UnwindingTests
 {
     [Fact]
+    public void ThrowingABorrowedBaseValueCopiesItsStaticType()
+    {
+        var result = CompilerTestHelper.Run("""
+            extern int putchar(int c);
+            class E : Exception { public int n = 42; public ~E() { putchar(68); } }
+            int main() {
+                try {
+                    try { throw new E(); }
+                    catch (ref Exception e) { throw e; }
+                } catch (ref E e) { return 1; }
+                  catch (ref Exception e) { putchar(67); }
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("DC", result.StandardOutput);
+    }
+
+    [Fact]
     public void FunctionPointerPropagatesWithoutChangingReturnType()
     {
         const string code = """

@@ -5034,6 +5034,20 @@ namespace gflat
 
         public void Visit(InterpolatedStringExpression node) => CheckInterpolation(node);
 
+        private readonly Dictionary<NewExpression, ThrowStatement> _allocationFailures = new();
+        public ThrowStatement? GetAllocationFailure(NewExpression node) => _allocationFailures.GetValueOrDefault(node);
+
+        private void CheckAllocationFailure(NewExpression node)
+        {
+            if (node.Kind != AllocationKind.Pointer || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
+            if (GetClass("std::BadAllocException") == null)
+                throw new TypeCheckException("new* requires std::BadAllocException; a custom Exception root must provide the standard (message, code) constructor or define its own std::BadAllocException", node.Span);
+            var value = new NewExpression(new NamedTypeExpression("BadAllocException", "std", node.Line), [], AllocationKind.Value, node.Line) { Span = node.Span };
+            var failure = new ThrowStatement(value, node.Line) { Span = node.Span };
+            failure.Accept(this);
+            _allocationFailures[node] = failure;
+        }
+
         public void Visit(NewExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
@@ -5164,6 +5178,7 @@ namespace gflat
                 };
 
                 RecordType(node, resultType);
+                CheckAllocationFailure(node);
                 return;
             }
 
@@ -5257,6 +5272,7 @@ namespace gflat
             };
 
             RecordType(node, structResultType);
+            CheckAllocationFailure(node);
         }
 
         public void Visit(DefaultExpression node)

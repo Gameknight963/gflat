@@ -125,6 +125,23 @@ public partial class LlvmEmitter
         Raw("    unreachable");
     }
 
+    private void GuardAllocation(NewExpression node, string storage)
+    {
+        if (_typeChecker.GetAllocationFailure(node) is not { } failure)
+        {
+            GuardNonNull(storage, "i8*");
+            return;
+        }
+        string failed = NewTemp(), error = NewLabel("allocation_failure"), success = NewLabel("allocation_success");
+        Emit($"    {failed} = icmp eq i8* {storage}, null");
+        Emit($"    br i1 {failed}, label %{error}, label %{success}");
+        Emit(error + ":");
+        bool saved = _hasTerminated;
+        EmitNativeThrow(failure);
+        _hasTerminated = saved;
+        Emit(success + ":");
+    }
+
     private void EmitNativeThrow(ThrowStatement node)
     {
         if (node.Expression == null)

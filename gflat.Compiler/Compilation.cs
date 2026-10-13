@@ -36,11 +36,25 @@ public sealed class Compilation
         if (customException)
             unit.Members.RemoveAll(m => m is ClassDeclaration { Name: "Exception" } &&
                 StandardLibrary.IsSource(m.Span.Source?.Path, "core/Exception.gf"));
+        // Legacy custom roots need not expose the standard (message, code)
+        // constructor. They can supply their own std::BadAllocException instead.
+        var customRoot = unit.Members.OfType<ClassDeclaration>().FirstOrDefault(c => c.Name == "Exception" &&
+            !StandardLibrary.IsSource(c.Span.Source?.Path, "core/Exception.gf"));
+        bool includeBadAlloc = customRoot == null || customRoot.Members.OfType<ConstructorDeclaration>()
+            .Any(c => c.Parameters.Count >= 2 && c.Parameters.Skip(2).All(p => p.DefaultValue != null));
+        if (!includeBadAlloc)
+        {
+            var bundledBadAlloc = StandardLibrary.Load("core/BadAllocException.gf");
+            foreach (var ns in unit.Namespaces)
+                ns.Members.RemoveAll(m => m is ClassDeclaration { Name: "BadAllocException" } &&
+                    m.Span.Source?.Path == bundledBadAlloc.Path && m.Span.Source.Text == bundledBadAlloc.Text);
+        }
         bool hasException = unit.Members.OfType<ClassDeclaration>().Any(c => c.Name == "Exception");
         foreach (string relative in StandardLibrary.AutomaticFiles)
         {
             if (files.Any(f => StandardLibrary.IsSource(f.Path, relative))) continue;
             if (relative == "core/Exception.gf" && hasException) continue;
+            if (relative == "core/BadAllocException.gf" && !includeBadAlloc) continue;
             var source = StandardLibrary.Load(relative);
             var tree = Parser.Parse(Lexer.Tokenize(source), diagnostics);
             unit.FileUsings[source.Id] = tree.Usings.Select(u => u.Name).ToArray();

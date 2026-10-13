@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="../std/core/Attribute.gf;../std/core/Exception.gf;../std/core/Text.gf"
+    <None Include="../std/core/Attribute.gf;../std/core/Exception.gf;../std/core/BadAllocException.gf;../std/core/Text.gf"
           Link="Std/core/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../std/libc/Memory.gf;../std/libc/ExceptionHandling.gf" Link="Std/libc/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

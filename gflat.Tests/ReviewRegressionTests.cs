@@ -80,8 +80,8 @@ public class ReviewRegressionTests
     public void AllocationFailureIsGuarded()
     {
         string ir = Compiler.Emit("struct S { int x; } int main() { S* p = new* S(); delete p; return 0; }");
-        Assert.Contains("null_failure", ir);
-        Assert.Contains("call void @llvm.trap()", ir);
+        Assert.Contains("allocation_failure", ir);
+        Assert.Contains("@__gflat_eh_throw", ir);
     }
 
     [Fact]

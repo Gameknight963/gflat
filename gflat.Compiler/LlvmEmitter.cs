@@ -3983,7 +3983,7 @@ public partial class LlvmEmitter : IVisitor
                 string destination = Pop();
                 Emit($"    {rawMem} = bitcast {EmitType(_typeChecker.GetType(node.Destination))} {destination} to i8*");
             }
-            GuardNonNull(rawMem, "i8*");
+            GuardAllocation(node, rawMem);
             if (node.Destination != null)
             {
                 GuardPlacementAlignment(rawMem, "i8*", node.Type);

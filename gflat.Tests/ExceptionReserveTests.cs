@@ -93,6 +93,71 @@ public class ExceptionReserveTests
         Assert.Equal(0, CompilerTestHelper.Run(source).ExitCode);
     }
 
+    [Fact]
+    public void NewAllocationFailureThrowsBadAllocWithoutRunningConstructor()
+    {
+        var result = CompilerTestHelper.Run("""
+            extern int printf(readonly(char*) format, ...);
+            namespace Memory {
+                public replace void*? Allocate(nuint size) => null;
+                public replace void Free(void* ptr) { }
+            }
+            class Widget { public Widget() { printf(c"constructed"); } }
+            int main() {
+                try { Widget* p = new* Widget(); delete p; }
+                catch (ref std::BadAllocException error) {
+                    if (error.GetCode() != 1) return 1;
+                    return 42;
+                }
+                return 2;
+            }
+            """);
+        Assert.Equal(42, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
+
+    [Fact]
+    public void ConstructorFailureReleasesNormalAllocationWithMatchingAllocator()
+    {
+        var result = CompilerTestHelper.Run("""
+            extern int printf(readonly(char*) format, ...);
+            namespace Memory {
+                public replace void*? Allocate(nuint size) { printf(c"A;"); return malloc(size); }
+                public replace void Free(void* ptr) { printf(c"F;"); free(ptr); }
+            }
+            class Widget { public Widget() { throw new Exception(); } }
+            int main() {
+                try { Widget* p = new* Widget(); delete p; }
+                catch (ref Exception error) { }
+                return 42;
+            }
+            """);
+        Assert.Equal(42, result.ExitCode);
+        Assert.Equal("A;A;F;F;", result.StandardOutput);
+    }
+
+    [Fact]
+    public void CustomRootCanSupplyAnEditedBadAllocDefinition()
+    {
+        var sources = new SourceFile[] {
+            new("main.gf", """
+                class Exception { public int GetCode() => 1; }
+                namespace Memory {
+                    public replace void*? Allocate(nuint size) => null;
+                    public replace void Free(void* ptr) { }
+                }
+                struct Widget { int value; }
+                int main() {
+                    try { Widget* p = new* Widget(); delete p; }
+                    catch (ref std::BadAllocException error) { return 42; }
+                    return 1;
+                }
+                """),
+            new("std/core/BadAllocException.gf", "namespace std; public class BadAllocException : Exception { public BadAllocException() {} }")
+        };
+        Assert.Equal(42, CompilerTestHelper.Run(sources).ExitCode);
+    }
+
     [Theory]
     [InlineData("-1")]
     [InlineData("2147483648")]

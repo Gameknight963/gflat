@@ -76,6 +76,15 @@ public static class NativeToolchain
         return new(process.ExitCode, stdout.GetAwaiter().GetResult(), stderr.GetAwaiter().GetResult());
     }
 
+    public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null)
+    {
+        string compiler = NativeRuntime.CxxDriver(FindClang(null));
+        var args = new List<string> { "-std=c++17", "-O2", "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler) };
+        args.AddRange(NativeRuntime.HostArguments());
+        if (objects != null) args.AddRange(objects);
+        return Run(compiler, args, 60000);
+    }
+
     public static ProcessResult Compile(string irPath, string outputPath, string? clang = null)
     {
         string optimization = Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
@@ -86,6 +95,13 @@ public static class NativeToolchain
         {
             if (LibraryDirectory.Value is string lib) args.AddRange(["-Xlinker", "/libpath:" + lib]);
         }
-        return Run(FindClang(clang), args, 60000);
+        string compiler = FindClang(clang);
+        if (File.ReadAllText(irPath).Contains("@__gflat_eh_", StringComparison.Ordinal))
+        {
+            compiler = NativeRuntime.CxxDriver(compiler);
+            args.Add(NativeRuntime.GetObject(compiler));
+            args.AddRange(NativeRuntime.HostArguments());
+        }
+        return Run(compiler, args, 60000);
     }
 }

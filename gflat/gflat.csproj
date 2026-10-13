@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Update="Runtime/Exceptions.cpp" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="program.gf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

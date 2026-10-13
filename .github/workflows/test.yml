@@ -24,6 +24,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           clang-18 --version
+          clang-18 --driver-mode=g++ --version
           echo "GFLAT_CLANG=clang-18" >> "$GITHUB_ENV"
       - run: dotnet restore gflat.Tests/gflat.Tests.csproj
       - run: dotnet restore gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
@@ -85,6 +86,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           clang-18 --version
+          clang-18 --driver-mode=g++ --version
           echo "GFLAT_CLANG=clang-18" >> "$GITHUB_ENV"
       - name: Package and smoke-test compiler bundle
         shell: pwsh

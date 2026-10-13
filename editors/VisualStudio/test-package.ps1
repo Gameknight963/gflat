@@ -48,6 +48,14 @@ try {
     if ($nativeHoverCheck) { & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Validate -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture }
     $compiler = Join-Path $extracted 'Compiler/gflat.exe'
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
+    $smoke = Join-Path $extracted 'unwinding-ref.gf'
+    @'
+void Set(ref int value) { value = 42; throw new Exception(); }
+int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) { return value == 42 ? 0 : 1; } return 2; }
+'@ | Set-Content -LiteralPath $smoke
+    & $compiler $smoke --run -o (Join-Path $extracted 'unwinding-ref.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged exception/ref smoke test failed' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal

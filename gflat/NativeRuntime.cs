@@ -8,13 +8,6 @@ internal static class NativeRuntime
     private static readonly object BuildLock = new();
     private static readonly Dictionary<string, string> Objects = new();
 
-    internal static string CxxDriver(string clang)
-    {
-        string directory = Path.GetDirectoryName(Path.GetFullPath(clang))!;
-        string sibling = Path.Combine(directory, OperatingSystem.IsWindows() ? "clang++.exe" : "clang++");
-        return File.Exists(sibling) ? sibling : (OperatingSystem.IsWindows() ? "clang++.exe" : "clang++");
-    }
-
     internal static List<string> HostArguments()
     {
         var args = new List<string>();
@@ -51,7 +44,7 @@ internal static class NativeRuntime
             string directory = Path.Combine(Path.GetTempPath(), "gflat-runtime", Environment.ProcessId.ToString());
             Directory.CreateDirectory(directory);
             string output = Path.Combine(directory, fingerprint + (OperatingSystem.IsWindows() ? ".obj" : ".o"));
-            var args = new List<string> { "-std=c++17", "-O2", "-fexceptions", "-c", source, "-o", output };
+            var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", "-c", source, "-o", output };
             args.AddRange(HostArguments());
             ProcessResult result = NativeToolchain.Run(driver, args, 60000);
             if (result.ExitCode != 0) throw new InvalidOperationException("Failed to compile the native exception runtime. Install the host C++ development tools.\n" + result.StandardError);

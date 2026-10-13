@@ -61,10 +61,10 @@ These links select the latest successful `master` workflow using
 ### Requirements
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), including MSBuild.
-- Clang and the native platform linker/C development libraries.
+- Clang and the native platform linker and C/C++ development libraries.
   - Windows: Visual Studio's **Desktop development with C++** workload and
     **C++ Clang Compiler for Windows**, or an equivalent LLVM/MSVC toolchain.
-  - Linux: Ubuntu 24.04 is tested, using Clang 18 and the system C toolchain.
+  - Linux: Ubuntu 24.04 is tested, using Clang 18 and the system C/C++ toolchain.
     For example: `sudo apt install clang-18 build-essential`.
    > Note: I am developing gflat on Windows, Linux support may be spotty atm
 - Set `GFLAT_CLANG` to the Clang executable if it is not on PATH. On Windows the compiler also searches Visual Studio installations.

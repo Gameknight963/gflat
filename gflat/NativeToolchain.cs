@@ -78,8 +78,8 @@ public static class NativeToolchain
 
     public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null)
     {
-        string compiler = NativeRuntime.CxxDriver(FindClang(null));
-        var args = new List<string> { "-std=c++17", "-O2", "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler) };
+        string compiler = FindClang(null);
+        var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler) };
         args.AddRange(NativeRuntime.HostArguments());
         if (objects != null) args.AddRange(objects);
         return Run(compiler, args, 60000);
@@ -98,7 +98,8 @@ public static class NativeToolchain
         string compiler = FindClang(clang);
         if (File.ReadAllText(irPath).Contains("@__gflat_eh_", StringComparison.Ordinal))
         {
-            compiler = NativeRuntime.CxxDriver(compiler);
+            // Keep the selected LLVM version, including names such as clang-18.
+            args.Add("--driver-mode=g++");
             args.Add(NativeRuntime.GetObject(compiler));
             args.AddRange(NativeRuntime.HostArguments());
         }

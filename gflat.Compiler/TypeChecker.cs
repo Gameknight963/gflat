@@ -93,8 +93,8 @@ namespace gflat
         private readonly HashSet<AstNode> _throwingCalls = new();
         private int _foreachCounter = 0;
 
-        public bool CanFunctionThrow(AstNode func) => func is MethodDeclaration { Throws: true } or ConstructorDeclaration { Throws: true };
-        public bool CanCallThrow(AstNode call) => _throwingCalls.Contains(call);
+        public bool CanFunctionThrow(AstNode func) => func is MethodDeclaration { IsNoThrow: false, Name: not "main" } or ConstructorDeclaration { IsNoThrow: false };
+        public bool CanCallThrow(AstNode call) => call is CallExpression or NewExpression || _throwingCalls.Contains(call);
         public IEnumerable<ClassInfo> GetAllClasses() => _classes.Values;
 
         public bool TryGetOperatorTarget(BinaryExpression node, out (string StructName, OperatorDeclaration Operator) target) =>
@@ -2335,10 +2335,10 @@ namespace gflat
                         MethodDeclaration classMethod = InterfaceImplementation(mEntry.Method, ifaceMethod);
                         if (classMethod.PropertyName != null && classMethod.Accessibility != TokenKind.Public)
                             throw new TypeCheckException($"Property accessor '{classMethod.PropertyName}' must be public to implement an interface", classMethod.Line);
-                        if (ifaceMethod.Throws != classMethod.Throws)
+                        if (ifaceMethod.IsNoThrow != classMethod.IsNoThrow)
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{node.Name}' must match throws specification of interface method '{ifaceName}.{ifaceMethod.Name}'",
+                                $"Method '{classMethod.Name}' in class '{node.Name}' must match nothrow specification of interface method '{ifaceName}.{ifaceMethod.Name}'",
                                 classMethod.Line);
                         }
                         if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly)
@@ -2515,10 +2515,10 @@ namespace gflat
                         structMethod = InterfaceImplementation(structMethod, ifaceMethod);
                         if (structMethod.PropertyName != null && structMethod.Accessibility != TokenKind.Public)
                             throw new TypeCheckException($"Property accessor '{structMethod.PropertyName}' must be public to implement an interface", structMethod.Line);
-                        if (ifaceMethod.Throws != structMethod.Throws)
+                        if (ifaceMethod.IsNoThrow != structMethod.IsNoThrow)
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{node.Name}' must match throws specification of interface method '{ifaceName}.{ifaceMethod.Name}'",
+                                $"Method '{structMethod.Name}' in struct '{node.Name}' must match nothrow specification of interface method '{ifaceName}.{ifaceMethod.Name}'",
                                 structMethod.Line);
                         }
 
@@ -2813,10 +2813,6 @@ namespace gflat
             if (node.IsGeneric) return;
             if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
 
-            if (node.Name == "main" && node.Throws)
-            {
-                throw new TypeCheckException("'main' function cannot be declared with 'throws'", node.Line);
-            }
 
 
             AstNode? prevFunc = _currentFunction;
@@ -3791,8 +3787,6 @@ namespace gflat
                     MethodDeclaration? staticMethod = ResolveStaticMethod(nsAccess);
                     if (staticMethod != null)
                     {
-                        if (staticMethod.Throws)
-                            throw new TypeCheckException("Taking the address of a throwing static method is not supported", node.Line);
                         var parameters = staticMethod.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
                         RecordType(node, new FunctionPointerTypeExpression(ResolveAlias(staticMethod.ReturnType), parameters, false, false, node.Line));
                         ValidateFunctionAddress(staticMethod, node.Line);
@@ -4326,6 +4320,7 @@ namespace gflat
         public void Visit(CallExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            RecordExceptionCall(node);
             foreach (AstNode arg in node.Arguments)
             {
                 arg.Accept(this);
@@ -4418,7 +4413,7 @@ namespace gflat
                     if (isReceiverReadOnly && !ifaceMethod.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly method '{ifaceMethod.Name}' on readonly instance", node.Line);
 
-                    if (ifaceMethod.Throws)
+                    if (!ifaceMethod.IsNoThrow)
                     {
                         CheckThrowingCall(node, $"{namedIface.Name}.{memberAccess.Member}");
                     }
@@ -4666,7 +4661,7 @@ namespace gflat
             }
             _resolvedCalls[node] = method;
 
-            if (method.Throws)
+            if (!method.IsNoThrow)
             {
                 CheckThrowingCall(node, funcName ?? method.Name);
             }
@@ -5094,7 +5089,7 @@ namespace gflat
                     }
                     matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line);
                     _resolvedConstructors[node] = matchedCtor;
-                    if (matchedCtor.Throws) { _throwingCalls.Add(node); RecordImplicitException(); }
+                    if (!matchedCtor.IsNoThrow) { _throwingCalls.Add(node); RecordImplicitException(); }
                     if (matchedCtor.IsCopy && !CanAccessCopy(new NamedTypeExpression(cInfo.Name, null, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
                         throw new TypeCheckException("Cannot access copy constructor", node.Line);
                     for (int i = 0; i < node.Arguments.Count; i++)
@@ -5186,7 +5181,7 @@ namespace gflat
                 }
                 matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line);
                 _resolvedConstructors[node] = matchedStructCtor;
-                if (matchedStructCtor.Throws) { _throwingCalls.Add(node); RecordImplicitException(); }
+                if (!matchedStructCtor.IsNoThrow) { _throwingCalls.Add(node); RecordImplicitException(); }
                 if (matchedStructCtor.IsCopy && !CanAccessCopy(new NamedTypeExpression(sInfo.Name, null, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
                     throw new TypeCheckException("Cannot access copy constructor", node.Line);
                 for (int i = 0; i < node.Arguments.Count; i++)
@@ -5277,7 +5272,7 @@ namespace gflat
             IReadOnlyList<Parameter> parameters;
             if (_globalScope.Functions.TryGetValue("__gflat_gc_alloc", out var method))
             {
-                if (method.Throws || method.IsGeneric || method.Body == null)
+                if (method.IsGeneric || method.Body == null)
                     throw new TypeCheckException("__gflat_gc_alloc must be a non-throwing, non-generic global function", line);
                 result = method.ReturnType;
                 parameters = method.Parameters;
@@ -6093,28 +6088,23 @@ namespace gflat
             CheckStringLiteralCall(node);
         }
 
+        private int _catchDepth;
+
         public void Visit(ThrowStatement node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.Expression == null)
+            {
+                if (_catchDepth == 0) throw new TypeCheckException("Rethrow is only valid inside a catch handler", node.Line);
+                RecordImplicitException();
+                return;
+            }
             node.Expression.Accept(this);
             TypeExpression exprType = ResolveAlias(_types[node.Expression]);
-            if (exprType is ManagedTypeExpression)
-                throw new TypeCheckException("Managed exceptions are not supported by the current exception ABI", node.Line);
-
-            TypeExpression? innerType = null;
-            if (exprType is PointerTypeExpression ptr)
-            {
-                innerType = ResolveAlias(ptr.Inner);
-            }
-            else if (exprType is ManagedTypeExpression mgd)
-            {
-                innerType = ResolveAlias(mgd.Inner);
-            }
-
-            if (innerType is not NamedTypeExpression named || !TypeDerivesFromClass(named, "Exception"))
-            {
-                throw new TypeCheckException($"Cannot throw non-exception type '{TypeName(exprType)}'. Thrown expressions must be a pointer to 'Exception' or a subclass of 'Exception'", node.Line);
-            }
+            if (exprType is not NamedTypeExpression named || !TypeDerivesFromClass(named, "Exception"))
+                throw new TypeCheckException("Throw requires an Exception-derived value; pointers cannot be thrown", node.Line);
+            if (!ValidateCopyUse(node.Expression, exprType))
+                throw new TypeCheckException("This exception cannot be copied; use 'throw move value' or construct a fresh exception", node.Line);
 
             bool caught = false;
             foreach (TryStatement tryStmt in _tryStack)
@@ -6204,6 +6194,8 @@ namespace gflat
         public void Visit(CatchClause node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.ExceptionType != null && ResolveAlias(node.ExceptionType) is not PointerTypeExpression)
+                throw new TypeCheckException("Catch variables must be borrowed exception pointers (for example Exception* error)", node.Line);
             if (node.ExceptionType != null && ResolveAlias(node.ExceptionType) is ManagedTypeExpression)
                 throw new TypeCheckException("Managed exception catches are not supported by the current exception ABI", node.Line);
             PushScope();
@@ -6218,7 +6210,9 @@ namespace gflat
                     }
                     DeclareVariable(node.VariableName, varType, node.Line);
                 }
-                node.Body.Accept(this);
+                _catchDepth++;
+                try { node.Body.Accept(this); }
+                finally { _catchDepth--; }
             }
             finally
             {
@@ -6229,7 +6223,6 @@ namespace gflat
         private void CheckThrowingCall(CallExpression node, string calleeName)
         {
             _throwingCalls.Add(node);
-            RecordExceptionCall(node);
 
         }
 

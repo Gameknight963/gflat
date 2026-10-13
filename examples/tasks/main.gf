@@ -26,7 +26,7 @@ struct Task
 }
 
 // False means EOF with no remaining input. A final line need not end in '\n'.
-bool ReadLine(String* line) throws
+bool ReadLine(String* line)
 {
     line.Clear();
     while (true)
@@ -61,7 +61,7 @@ bool IsCommand(readonly(String)* text, readonly(char)* command)
     return text.Length == length;
 }
 
-bool Complete(Vector<Task>* tasks, readonly(String)* line) throws
+bool Complete(Vector<Task>* tasks, readonly(String)* line)
 {
     int number = 0;
     if (!TryParseInt(line.Data + 5, line.Length - (nuint)5, &number)) return false;
@@ -70,7 +70,7 @@ bool Complete(Vector<Task>* tasks, readonly(String)* line) throws
     return true;
 }
 
-void List(readonly(Vector<Task>)* tasks) throws
+void List(readonly(Vector<Task>)* tasks)
 {
     if (tasks.Count == (nuint)0) puts(c"No tasks yet.");
     for (nuint i = 0; i < tasks.Count; i++)

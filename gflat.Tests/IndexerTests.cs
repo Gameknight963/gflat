@@ -80,7 +80,7 @@ public class IndexerTests
             extern int printf(readonly(char)* text, ...);
             struct S { public int this[int i] { get => i; set { printf("S"); } } ~S() { printf("D"); } }
             S Make() { printf("M"); return new S(); }
-            int Index() throws { printf("I"); throw new* Exception(); }
+            int Index() { printf("I"); throw new Exception(); }
             int Value() { printf("V"); return 1; }
             int main() { try { Make()[Index()] = Value(); } catch { printf("C"); } return 0; }
             """);
@@ -94,8 +94,8 @@ public class IndexerTests
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
             struct S { public int this[int i] {
-                get throws { printf("G"); throw new* Exception(); }
-                set throws { printf("S"); throw new* Exception(); }
+                get { printf("G"); throw new Exception(); }
+                set { printf("S"); throw new Exception(); }
             } }
             int main() { S s = new S(); try { int n = s[0]; } catch { printf("C"); }
                 try { s[0] = 1; } catch { printf("C"); } return 0; }

@@ -269,37 +269,24 @@ public partial class LlvmEmitter : IVisitor
     private TypeChecker.ClassInfo? _currentClass = null;
     private string _currentFunctionReturnType = "";
     private TypeExpression? _currentFunctionExpectedType = null;
-    private bool _currentFunctionIsThrowing = false;
-    private bool _currentFunctionIsVoid = false;
-    private string _currentFunctionBaseReturnType = "";
     private bool _isInsideMain = false;
-    private string? _mainErrSlot = null;
-    private string? _mainOwnedSlot = null;
-    private string? _mainUnhandledLabel = null;
 
-    private record TryBlockInfo(TryStatement Statement, string ErrSlot, string OwnedSlot, string DispatchLabel, int DeferDepth);
+    private record TryBlockInfo(TryStatement Statement, string OwnedSlot, string DispatchLabel, int DeferDepth, string UnwindLabel);
     private readonly Stack<TryBlockInfo> _emitterTryStack = new();
-    private readonly Dictionary<string, string> _catchVariableOwnedSlots = new();
 
     private interface IDeferAction
     {
         void Execute(LlvmEmitter emitter);
     }
 
-    private sealed class CatchCleanupAction(string exception, string ownedSlot) : IDeferAction
+    private sealed class CatchCleanupAction(string handleSlot) : IDeferAction
     {
         public void Execute(LlvmEmitter emitter)
         {
-            string owned = emitter.NewTemp();
-            string release = emitter.NewLabel("catch_release");
-            string done = emitter.NewLabel("catch_released");
-            emitter.Emit($"    {owned} = load i1, i1* {ownedSlot}");
-            emitter.Emit($"    br i1 {owned}, label %{release}, label %{done}");
-            emitter.Emit($"{release}:");
-            emitter.Emit($"    store i1 0, i1* {ownedSlot}");
-            emitter.Emit($"    call void @gflat_destroy_exception(%Exception* {exception})");
-            emitter.Emit($"    br label %{done}");
-            emitter.Emit($"{done}:");
+            string handle = emitter.NewTemp();
+            emitter.Emit($"    {handle} = load i8*, i8** {handleSlot}");
+            emitter.Emit($"    store i8* null, i8** {handleSlot}");
+            emitter.Emit($"    call void @__gflat_eh_release(i8* {handle})");
         }
     }
 
@@ -558,7 +545,7 @@ public partial class LlvmEmitter : IVisitor
     private void Push(string value) => _valueStack.Push(value);
     private string Pop() => _valueStack.Pop();
 
-    private void Emit(string line) => _output.AppendLine(line);
+    private void Emit(string line) => EmitNativeLine(line);
     private void EmitGlobal(string line) => _globals.AppendLine(line);
 
     private void GuardNonNull(string value, string type)
@@ -581,7 +568,7 @@ public partial class LlvmEmitter : IVisitor
         Emit($"{ok}:");
     }
 
-    public string GetOutput() => "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + _globals.ToString() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString();
+    public string GetOutput() => "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + NativeDeclarations + _globals.ToString() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString();
 
     private enum EmitMode { RValue, LValue }
 
@@ -1125,11 +1112,8 @@ public partial class LlvmEmitter : IVisitor
                             ? $"gflat${methodNs}${declaringClass}${vm.Name}"
                             : $"gflat${declaringClass}${vm.Name}";
 
-                        bool isThrowing = _typeChecker.CanFunctionThrow(vm);
                         string baseRet = EmitType(vm.ReturnType);
-                        string retType = isThrowing
-                            ? (baseRet == "void" ? "{ %Exception*, i1 }" : $"{{ {baseRet}, %Exception*, i1 }}")
-                            : baseRet;
+                        string retType = baseRet;
 
                         List<string> paramTypes = new() { $"%{declaringClass}*" };
                         foreach (Parameter p in vm.Parameters)
@@ -1167,11 +1151,8 @@ public partial class LlvmEmitter : IVisitor
                             : $"gflat${declaringClass}${classMethod.Name}";
 
                         mangled += _typeChecker.GetOverloadSuffix(classMethod);
-                        bool isThrowing = _typeChecker.CanFunctionThrow(classMethod);
                         string baseRet = EmitType(classMethod.ReturnType);
-                        string retType = isThrowing
-                            ? (baseRet == "void" ? "{ %Exception*, i1 }" : $"{{ {baseRet}, %Exception*, i1 }}")
-                            : baseRet;
+                        string retType = baseRet;
 
                         List<string> paramTypes = new() { $"%{declaringClass}*" };
                         foreach (Parameter p in classMethod.Parameters)
@@ -1245,18 +1226,12 @@ public partial class LlvmEmitter : IVisitor
         _tempCounter = 0;
         _hasTerminated = false;
 
-        bool isThrowing = _typeChecker.CanFunctionThrow(node);
         string baseReturnType = EmitType(node.ReturnType);
         bool isVoid = baseReturnType == "void";
-        string returnType = isThrowing
-            ? (isVoid ? "{ %Exception*, i1 }" : $"{{ {baseReturnType}, %Exception*, i1 }}")
-            : baseReturnType;
+        string returnType = baseReturnType;
 
         _currentFunctionReturnType = returnType;
         _currentFunctionExpectedType = node.ReturnType;
-        _currentFunctionIsThrowing = isThrowing;
-        _currentFunctionIsVoid = isVoid;
-        _currentFunctionBaseReturnType = baseReturnType;
         _isInsideMain = false;
 
         string ns = _currentNamespacePath;
@@ -1269,6 +1244,7 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
         string thisPtr = NewTemp();
@@ -1296,14 +1272,7 @@ public partial class LlvmEmitter : IVisitor
 
         if (!_hasTerminated)
         {
-            if (isThrowing)
-            {
-                if (isVoid)
-                    Emit("    ret { %Exception*, i1 } zeroinitializer");
-                else
-                    Emit("    unreachable");
-            }
-            else if (returnType == "void")
+            if (returnType == "void")
             {
                 Emit("    ret void");
             }
@@ -1340,9 +1309,6 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassConstructor(string className, ConstructorDeclaration node)
     {
-        _currentFunctionIsThrowing = node.Throws;
-        _currentFunctionIsVoid = true;
-        _currentFunctionBaseReturnType = "void";
         _isInsideMain = false;
         _locals.Clear();
         _parameterOwners.Clear();
@@ -1350,7 +1316,7 @@ public partial class LlvmEmitter : IVisitor
         _tempCounter = 0;
         _hasTerminated = false;
 
-        _currentFunctionReturnType = node.Throws ? "{ %Exception*, i1 }" : "void";
+        _currentFunctionReturnType = "void";
         _currentFunctionExpectedType = new NamedTypeExpression("void", null, node.Line);
         string ns = _currentNamespacePath;
         string mangledName = GetConstructorMangledName(className, node, ns);
@@ -1362,6 +1328,7 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}) {{");
+        _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
 
         string thisPtr = NewTemp();
@@ -1449,7 +1416,7 @@ public partial class LlvmEmitter : IVisitor
 
         CompleteConstruction();
         if (!_hasTerminated)
-            Emit(node.Throws ? "    ret { %Exception*, i1 } zeroinitializer" : "    ret void");
+            Emit("    ret void");
 
         Emit("}");
         Emit("");
@@ -1457,7 +1424,6 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassDefaultConstructor(string className)
     {
-        _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         _locals.Clear();
         _parameterOwners.Clear();
@@ -1523,7 +1489,6 @@ public partial class LlvmEmitter : IVisitor
         _ownerLiveFlags.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
-        _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         string? previousExit = _destructorExitLabel;
         _destructorExitLabel = NewLabel("destructor_exit");
@@ -1612,7 +1577,7 @@ public partial class LlvmEmitter : IVisitor
                     {
                         MethodDeclaration structMethod = _typeChecker.InterfaceImplementation(_currentStruct!.Methods[ifaceMethod.Name], ifaceMethod);
                         string baseRet = EmitType(structMethod.ReturnType);
-                        string retType = structMethod.Throws
+                        string retType = false
                             ? (baseRet == "void" ? "{ %Exception*, i1 }" : $"{{ {baseRet}, %Exception*, i1 }}") : baseRet;
                         List<string> paramTypes = new() { $"%{node.Name}*" };
                         foreach (Parameter p in structMethod.Parameters)
@@ -1753,6 +1718,7 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
         foreach (Parameter p in node.Parameters)
@@ -1784,18 +1750,12 @@ public partial class LlvmEmitter : IVisitor
         _tempCounter = 0;
         _hasTerminated = false;
 
-        bool isThrowing = _typeChecker.CanFunctionThrow(node);
         string baseReturnType = EmitType(node.ReturnType);
         bool isVoid = baseReturnType == "void";
-        string returnType = isThrowing
-            ? (isVoid ? "{ %Exception*, i1 }" : $"{{ {baseReturnType}, %Exception*, i1 }}")
-            : baseReturnType;
+        string returnType = baseReturnType;
 
         _currentFunctionReturnType = returnType;
         _currentFunctionExpectedType = node.ReturnType;
-        _currentFunctionIsThrowing = isThrowing;
-        _currentFunctionIsVoid = isVoid;
-        _currentFunctionBaseReturnType = baseReturnType;
         _isInsideMain = false;
 
         string ns = _currentNamespacePath;
@@ -1808,6 +1768,7 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
         string thisPtr = NewTemp();
@@ -1830,14 +1791,7 @@ public partial class LlvmEmitter : IVisitor
 
         if (!_hasTerminated)
         {
-            if (isThrowing)
-            {
-                if (isVoid)
-                    Emit("    ret { %Exception*, i1 } zeroinitializer");
-                else
-                    Emit("    unreachable");
-            }
-            else if (returnType == "void")
+            if (returnType == "void")
             {
                 Emit("    ret void");
             }
@@ -1889,9 +1843,6 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructConstructor(string structName, ConstructorDeclaration node)
     {
-        _currentFunctionIsThrowing = node.Throws;
-        _currentFunctionIsVoid = true;
-        _currentFunctionBaseReturnType = "void";
         _isInsideMain = false;
         _locals.Clear();
         _parameterOwners.Clear();
@@ -1899,7 +1850,7 @@ public partial class LlvmEmitter : IVisitor
         _tempCounter = 0;
         _hasTerminated = false;
 
-        _currentFunctionReturnType = node.Throws ? "{ %Exception*, i1 }" : "void";
+        _currentFunctionReturnType = "void";
         _currentFunctionExpectedType = new NamedTypeExpression("void", null, node.Line);
         string ns = _currentNamespacePath;
         string mangledName = GetConstructorMangledName(structName, node, ns);
@@ -1911,6 +1862,7 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}) {{");
+        _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
 
         string thisPtr = NewTemp();
@@ -1938,7 +1890,7 @@ public partial class LlvmEmitter : IVisitor
 
         CompleteConstruction();
         if (!_hasTerminated)
-            Emit(node.Throws ? "    ret { %Exception*, i1 } zeroinitializer" : "    ret void");
+            Emit("    ret void");
 
         Emit("}");
         Emit("");
@@ -1946,7 +1898,6 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructDefaultConstructor(string structName)
     {
-        _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         _locals.Clear();
         _parameterOwners.Clear();
@@ -1981,7 +1932,6 @@ public partial class LlvmEmitter : IVisitor
         _ownerLiveFlags.Clear();
         _tempCounter = 0;
         _hasTerminated = false;
-        _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         string? previousExit = _destructorExitLabel;
         _destructorExitLabel = NewLabel("destructor_exit");
@@ -2056,18 +2006,12 @@ public partial class LlvmEmitter : IVisitor
         _tempCounter = 0;
 
         bool isMain = node.Name == "main" && !_typeChecker.TryGetMethodOwner(node, out _, out _);
-        bool isThrowing = _typeChecker.CanFunctionThrow(node);
         string baseReturnType = EmitType(node.ReturnType);
         bool isVoid = baseReturnType == "void";
-        string returnType = (isThrowing && !isMain)
-            ? (isVoid ? "{ %Exception*, i1 }" : $"{{ {baseReturnType}, %Exception*, i1 }}")
-            : baseReturnType;
+        string returnType = baseReturnType;
 
         _currentFunctionReturnType = returnType;
         _currentFunctionExpectedType = node.ReturnType;
-        _currentFunctionIsThrowing = isThrowing && !isMain;
-        _currentFunctionIsVoid = isVoid;
-        _currentFunctionBaseReturnType = baseReturnType;
         _isInsideMain = isMain;
 
         string name;
@@ -2088,18 +2032,8 @@ public partial class LlvmEmitter : IVisitor
             $"{EmitParamType(p.Type)} %{p.Name}"));
 
         Emit($"define {returnType} @{name}({parameters}) {{");
+        _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
-
-        if (isMain)
-        {
-            _mainErrSlot = NewTemp();
-            Emit($"    {_mainErrSlot} = alloca %Exception*");
-            Emit($"    store %Exception* null, %Exception** {_mainErrSlot}");
-            _mainOwnedSlot = NewTemp();
-            Emit($"    {_mainOwnedSlot} = alloca i1");
-            Emit($"    store i1 0, i1* {_mainOwnedSlot}");
-            _mainUnhandledLabel = NewLabel("main_unhandled");
-        }
 
         foreach (Parameter p in node.Parameters)
         {
@@ -2115,73 +2049,8 @@ public partial class LlvmEmitter : IVisitor
         if (node.Body != null)
             node.Body.Accept(this);
 
-        if (isMain)
-        {
-            if (!_hasTerminated)
-            {
-                Emit("    ret i32 0");
-            }
-            Emit($"{_mainUnhandledLabel}:");
-            _hasTerminated = false;
-            string ex = NewTemp();
-            Emit($"    {ex} = load %Exception*, %Exception** {_mainErrSlot}");
-            string owned = NewTemp();
-            Emit($"    {owned} = load i1, i1* {_mainOwnedSlot}");
-
-            if (!_externNames.Contains("puts"))
-            {
-                _externNames.Add("puts");
-                EmitGlobal("declare i32 @puts(i8*)");
-            }
-            // gflat$Memory$Free is defined in user code (or std/libc/Memory.gf), no declare needed
-            _externNames.Add("gflat$Memory$Free");
-
-            string msgSlot = NewTemp();
-            Emit($"    {msgSlot} = getelementptr %Exception, %Exception* {ex}, i32 0, i32 1");
-            string msg = NewTemp();
-            Emit($"    {msg} = load i8*, i8** {msgSlot}");
-            string msgNull = NewTemp();
-            Emit($"    {msgNull} = icmp eq i8* {msg}, null");
-
-            string printMsgLbl = NewLabel("main_print_msg");
-            string afterPrintLbl = NewLabel("main_after_print");
-            Emit($"    br i1 {msgNull}, label %{afterPrintLbl}, label %{printMsgLbl}");
-
-            Emit($"{printMsgLbl}:");
-            Emit($"    call i32 @puts(i8* {msg})");
-            Emit($"    br label %{afterPrintLbl}");
-
-            Emit($"{afterPrintLbl}:");
-            string freeLbl = NewLabel("main_free");
-            string exitLbl = NewLabel("main_exit");
-            Emit($"    br i1 {owned}, label %{freeLbl}, label %{exitLbl}");
-
-            Emit($"{freeLbl}:");
-            Emit($"    call void @gflat_destroy_exception(%Exception* {ex})");
-            Emit($"    br label %{exitLbl}");
-
-            Emit($"{exitLbl}:");
-            Emit("    ret i32 1");
-        }
-        else
-        {
-            if (!_hasTerminated)
-            {
-                if (isThrowing)
-                {
-                    if (isVoid)
-                        Emit("    ret { %Exception*, i1 } zeroinitializer");
-                    else
-                        Emit("    unreachable");
-                }
-                else if (returnType == "void")
-                {
-                    Emit("    ret void");
-                }
-                else
-                    Emit("    unreachable");
-            }
-        }
+        if (!_hasTerminated)
+            Emit(isMain ? "    ret i32 0" : isVoid ? "    ret void" : "    unreachable");
 
         Emit("}");
         Emit("");
@@ -2252,7 +2121,7 @@ public partial class LlvmEmitter : IVisitor
                 val = Pop();
                 llvmReturnType = valueRetType;
 
-                string targetRet = _currentFunctionIsThrowing ? _currentFunctionBaseReturnType : _currentFunctionReturnType;
+                string targetRet = _currentFunctionReturnType;
                 if (targetRet.Length > 0 && llvmReturnType != targetRet)
                 {
                     if (_currentFunctionExpectedType != null)
@@ -2281,20 +2150,6 @@ public partial class LlvmEmitter : IVisitor
             return;
         }
 
-        if (_currentFunctionIsThrowing)
-        {
-            if (val == null)
-            {
-                Emit("    ret { %Exception*, i1 } zeroinitializer");
-            }
-            else
-            {
-                string r0 = NewTemp();
-                Emit($"    {r0} = insertvalue {{ {_currentFunctionBaseReturnType}, %Exception*, i1 }} zeroinitializer, {_currentFunctionBaseReturnType} {val}, 0");
-                Emit($"    ret {{ {_currentFunctionBaseReturnType}, %Exception*, i1 }} {r0}");
-            }
-        }
-        else
         {
             if (val == null)
                 Emit("    ret void");
@@ -3403,10 +3258,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
 
             string baseReturnType = EmitType(ifaceCall.Method.ReturnType);
-            bool isThrowingInterface = ifaceCall.Method.Throws;
-            string returnType = isThrowingInterface
-                ? (baseReturnType == "void" ? "{ %Exception*, i1 }" : $"{{ {baseReturnType}, %Exception*, i1 }}")
-                : baseReturnType;
+            string returnType = baseReturnType;
             List<string> fnParamTypes = new() { "i8*" };
             foreach (Parameter p in ifaceCall.Method.Parameters)
             {
@@ -3430,15 +3282,7 @@ public partial class LlvmEmitter : IVisitor
             }
 
             string argsStr = string.Join(", ", callArgs);
-            if (isThrowingInterface)
-            {
-                string result = NewTemp();
-                TransferArguments();
-                Emit($"    {result} = call {returnType} {typedFn}({argsStr})");
-                string value = EmitCheckAndHandleCallException(result, baseReturnType == "void", baseReturnType);
-                if (baseReturnType != "void") Push(value);
-            }
-            else if (returnType == "void")
+            if (returnType == "void")
             {
                 TransferArguments();
                 Emit($"    call void {typedFn}({argsStr})");
@@ -3506,11 +3350,8 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {rawFnPtr} = load i8*, i8** {slotPtr}");
 
             string declaringClass = vcall.Class.Methods[vcall.Method.Name].DeclaringClass;
-            bool isVirtualThrowing = _typeChecker.CanCallThrow(node) || _typeChecker.CanFunctionThrow(vcall.Method);
             string baseReturnType = EmitType(vcall.Method.ReturnType);
-            string returnType = isVirtualThrowing
-                ? (baseReturnType == "void" ? "{ %Exception*, i1 }" : $"{{ {baseReturnType}, %Exception*, i1 }}")
-                : baseReturnType;
+            string returnType = baseReturnType;
             List<string> fnParamTypes = new() { $"%{declaringClass}*" };
             foreach (Parameter p in vcall.Method.Parameters)
             {
@@ -3541,25 +3382,6 @@ public partial class LlvmEmitter : IVisitor
             }
 
             string argsStr = string.Join(", ", callArgs);
-            if (isVirtualThrowing)
-            {
-                if (baseReturnType == "void")
-                {
-                    string callRes = NewTemp();
-                    TransferArguments();
-                    Emit($"    {callRes} = call {{ %Exception*, i1 }} {typedFn}({argsStr})");
-                    EmitCheckAndHandleCallException(callRes, isVoid: true, baseReturnType);
-                }
-                else
-                {
-                    string callRes = NewTemp();
-                    TransferArguments();
-                    Emit($"    {callRes} = call {{ {baseReturnType}, %Exception*, i1 }} {typedFn}({argsStr})");
-                    string valTemp = EmitCheckAndHandleCallException(callRes, isVoid: false, baseReturnType);
-                    Push(valTemp);
-                }
-            }
-            else
             {
                 if (returnType == "void")
                 {
@@ -3832,7 +3654,6 @@ public partial class LlvmEmitter : IVisitor
             }
         }
 
-        bool isThrowing = _typeChecker.CanCallThrow(node) || (target is MethodDeclaration tm && _typeChecker.CanFunctionThrow(tm));
         TypeExpression callType = _typeChecker.GetType(node);
         string retType = EmitType(callType);
         string args = string.Join(", ", argValues.Zip(argTypes, (v, t) => $"{t} {v}"));
@@ -3840,25 +3661,6 @@ public partial class LlvmEmitter : IVisitor
         string callSignature = retType;
         if (target is ExternDeclaration { IsVariadic: true } variadic)
             callSignature += " (" + string.Join(", ", variadic.Parameters.Select(p => EmitParamType(p.Type)).Append("...")) + ")";
-        if (isThrowing)
-        {
-            if (retType == "void")
-            {
-                string callRes = NewTemp();
-                TransferArguments();
-                Emit($"    {callRes} = call {{ %Exception*, i1 }} @{funcName}({args})");
-                EmitCheckAndHandleCallException(callRes, isVoid: true, retType);
-            }
-            else
-            {
-                string callRes = NewTemp();
-                TransferArguments();
-                Emit($"    {callRes} = call {{ {retType}, %Exception*, i1 }} @{funcName}({args})");
-                string valTemp = EmitCheckAndHandleCallException(callRes, isVoid: false, retType);
-                Push(valTemp);
-            }
-        }
-        else
         {
             if (retType == "void")
             {
@@ -4560,6 +4362,10 @@ public partial class LlvmEmitter : IVisitor
         string llvmReturnType = EmitType(returnType);
 
         // Save current emitter state
+        bool savedEhFunction = _ehFunction, savedEhBoundary = _ehBoundary, savedEhCleanup = _ehCleanup;
+        int savedEhCleanupTryDepth = _ehCleanupTryDepth;
+        _ehCleanup = false;
+        _ehCleanupTryDepth = 0;
         StringBuilder savedOutput = _output;
         Dictionary<string, string> savedLocals = new(_locals);
         int savedTempCounter = _tempCounter;
@@ -4569,7 +4375,6 @@ public partial class LlvmEmitter : IVisitor
         string? savedDestructorExit = _destructorExitLabel;
         int savedExpressionDepth = _expressionDepth;
         StringBuilder? savedTemporaryPrologue = _temporaryPrologue;
-        bool savedThrowing = _currentFunctionIsThrowing;
         bool savedInsideMain = _isInsideMain;
         var savedTryStack = _emitterTryStack.ToArray();
         List<List<IDeferAction>> savedDeferScopes = new(_deferScopes);
@@ -4588,7 +4393,6 @@ public partial class LlvmEmitter : IVisitor
         _destructorExitLabel = null;
         _expressionDepth = 0;
         _temporaryPrologue = null;
-        _currentFunctionIsThrowing = false;
         _isInsideMain = false;
         _emitterTryStack.Clear();
         _deferScopes.Clear();
@@ -4643,6 +4447,7 @@ public partial class LlvmEmitter : IVisitor
 
         // Restore enclosing emitter state
         _output = savedOutput;
+        _ehFunction = savedEhFunction; _ehBoundary = savedEhBoundary;
         _locals.Clear();
         foreach (KeyValuePair<string, string> kvp in savedLocals)
         {
@@ -4655,7 +4460,6 @@ public partial class LlvmEmitter : IVisitor
         _destructorExitLabel = savedDestructorExit;
         _expressionDepth = savedExpressionDepth;
         _temporaryPrologue = savedTemporaryPrologue;
-        _currentFunctionIsThrowing = savedThrowing;
         _isInsideMain = savedInsideMain;
         _emitterTryStack.Clear();
         foreach (var handler in savedTryStack.Reverse()) _emitterTryStack.Push(handler);
@@ -4670,111 +4474,8 @@ public partial class LlvmEmitter : IVisitor
         Push($"@{funcName}");
     }
 
-    // A second exception escaping cleanup replaces the pending exception. Only
-    // that nested unwind releases it; successful cleanup still propagates it.
-    private void EmitExceptionDefers(int targetDepth, string err, string owned)
-    {
-        if (targetDepth >= _deferScopes.Count) return;
-        string ownedSlot = NewTemp();
-        Emit($"    {ownedSlot} = alloca i1");
-        Emit($"    store i1 {owned}, i1* {ownedSlot}");
-        var pending = new CatchCleanupAction(err, ownedSlot);
-        var scope = _deferScopes[targetDepth];
-        scope.Insert(0, pending);
-        try { _exceptionCleanup++; EmitDefersDownTo(targetDepth, skipAction: pending); }
-        finally { _exceptionCleanup--; scope.Remove(pending); }
-    }
-
-    private void HandleException(string err, string owned)
-    {
-        if (_emitterTryStack.Count > 0)
-        {
-            TryBlockInfo tryInfo = _emitterTryStack.Peek();
-            EmitExceptionDefers(tryInfo.DeferDepth, err, owned);
-            if (_hasTerminated) return;
-            Emit($"    store %Exception* {err}, %Exception** {tryInfo.ErrSlot}");
-            Emit($"    store i1 {owned}, i1* {tryInfo.OwnedSlot}");
-            Emit($"    br label %{tryInfo.DispatchLabel}");
-            _hasTerminated = true;
-        }
-        else if (_isInsideMain)
-        {
-            EmitExceptionDefers(0, err, owned);
-            if (_hasTerminated) return;
-            Emit($"    store %Exception* {err}, %Exception** {_mainErrSlot!}");
-            Emit($"    store i1 {owned}, i1* {_mainOwnedSlot!}");
-            Emit($"    br label %{_mainUnhandledLabel!}");
-            _hasTerminated = true;
-        }
-        else if (!_currentFunctionIsThrowing)
-        {
-            // A non-throws ABI cannot propagate an exception. Terminate here;
-            // do not unwind into callers or run language cleanup on this path.
-            if (_externNames.Add("exit")) EmitGlobal("declare void @exit(i32)");
-            Emit("    call void @exit(i32 1)");
-            Emit("    unreachable");
-            _hasTerminated = true;
-        }
-        else
-        {
-            // Propagate through current function return
-            EmitExceptionDefers(0, err, owned);
-            if (_hasTerminated) return;
-            if (_currentFunctionIsVoid)
-            {
-                string retVal = NewTemp();
-                string retVal2 = NewTemp();
-                Emit($"    {retVal} = insertvalue {{ %Exception*, i1 }} zeroinitializer, %Exception* {err}, 0");
-                Emit($"    {retVal2} = insertvalue {{ %Exception*, i1 }} {retVal}, i1 {owned}, 1");
-                Emit($"    ret {{ %Exception*, i1 }} {retVal2}");
-            }
-            else
-            {
-                string retVal = NewTemp();
-                string retVal2 = NewTemp();
-                Emit($"    {retVal} = insertvalue {{ {_currentFunctionBaseReturnType}, %Exception*, i1 }} zeroinitializer, %Exception* {err}, 1");
-                Emit($"    {retVal2} = insertvalue {{ {_currentFunctionBaseReturnType}, %Exception*, i1 }} {retVal}, i1 {owned}, 2");
-                Emit($"    ret {{ {_currentFunctionBaseReturnType}, %Exception*, i1 }} {retVal2}");
-            }
-            _hasTerminated = true;
-        }
-    }
-
     private string EmitCheckAndHandleCallException(string callRes, bool isVoid, string retType)
-    {
-        string err;
-        string owned;
-        string val = "";
-        if (isVoid)
-        {
-            err = NewTemp();
-            Emit($"    {err} = extractvalue {{ %Exception*, i1 }} {callRes}, 0");
-            owned = NewTemp();
-            Emit($"    {owned} = extractvalue {{ %Exception*, i1 }} {callRes}, 1");
-        }
-        else
-        {
-            val = NewTemp();
-            Emit($"    {val} = extractvalue {{ {retType}, %Exception*, i1 }} {callRes}, 0");
-            err = NewTemp();
-            Emit($"    {err} = extractvalue {{ {retType}, %Exception*, i1 }} {callRes}, 1");
-            owned = NewTemp();
-            Emit($"    {owned} = extractvalue {{ {retType}, %Exception*, i1 }} {callRes}, 2");
-        }
-
-        string hasErr = NewTemp();
-        Emit($"    {hasErr} = icmp ne %Exception* {err}, null");
-        string callErrLbl = NewLabel("call_err");
-        string callNextLbl = NewLabel("call_next");
-        Emit($"    br i1 {hasErr}, label %{callErrLbl}, label %{callNextLbl}");
-
-        Emit($"{callErrLbl}:");
-        HandleException(err, owned);
-
-        Emit($"{callNextLbl}:");
-        _hasTerminated = false;
-        return val;
-    }
+        => throw new InvalidOperationException("Legacy exception-return lowering is disabled");
 
     private void EmitExceptionDestroyHelper()
     {
@@ -4882,177 +4583,8 @@ public partial class LlvmEmitter : IVisitor
         Emit("");
     }
 
-    public void Visit(ThrowStatement node)
-    {
-        node.Expression.Accept(this);
-        string thrownVal = Pop();
-        TypeExpression thrownType = _typeChecker.GetType(node.Expression);
-        string llvmThrownType = EmitType(thrownType);
-
-        string err = NewTemp();
-        Emit($"    {err} = bitcast {llvmThrownType} {thrownVal} to %Exception*");
-
-        string owned;
-        if (node.Expression is IdentifierExpression ident && _catchVariableOwnedSlots.TryGetValue(ident.Name, out string? catchOwnedSlot))
-        {
-            owned = NewTemp();
-            Emit($"    {owned} = load i1, i1* {catchOwnedSlot}");
-            Emit($"    store i1 0, i1* {catchOwnedSlot}");
-        }
-        else if (node.Expression is NewExpression { Kind: AllocationKind.Pointer, Destination: null })
-        {
-            owned = "1";
-        }
-        else
-        {
-            owned = "0";
-        }
-
-        HandleException(err, owned);
-    }
-
-    public void Visit(TryStatement node)
-    {
-        string errSlot = NewTemp();
-        Emit($"    {errSlot} = alloca %Exception*");
-        Emit($"    store %Exception* null, %Exception** {errSlot}");
-
-        string ownedSlot = NewTemp();
-        Emit($"    {ownedSlot} = alloca i1");
-        Emit($"    store i1 0, i1* {ownedSlot}");
-
-        string dispatchLbl = NewLabel("catch_dispatch");
-        string tryEndLbl = NewLabel("try_end");
-
-        _emitterTryStack.Push(new TryBlockInfo(node, errSlot, ownedSlot, dispatchLbl, _deferScopes.Count));
-
-        node.TryBlock.Accept(this);
-
-        _emitterTryStack.Pop();
-
-        if (!_hasTerminated)
-        {
-            Emit($"    br label %{tryEndLbl}");
-        }
-
-        Emit($"{dispatchLbl}:");
-        _hasTerminated = false;
-
-        string caughtErr = NewTemp();
-        Emit($"    {caughtErr} = load %Exception*, %Exception** {errSlot}");
-        string caughtOwned = NewTemp();
-        Emit($"    {caughtOwned} = load i1, i1* {ownedSlot}");
-
-        string vtSlot = NewTemp();
-        Emit($"    {vtSlot} = getelementptr %Exception, %Exception* {caughtErr}, i32 0, i32 0");
-        string caughtVt = NewTemp();
-        Emit($"    {caughtVt} = load i8**, i8*** {vtSlot}");
-
-        string unmatchedLbl = NewLabel("catch_unmatched");
-        bool hasUnmatchedPath = false;
-
-        for (int i = 0; i < node.CatchClauses.Count; i++)
-        {
-            CatchClause clause = node.CatchClauses[i];
-            string clauseBodyLbl = NewLabel($"catch_body_{i}");
-            string? nextCheckLbl = (i + 1 < node.CatchClauses.Count)
-                ? NewLabel($"catch_check_{i + 1}")
-                : null;
-
-            if (clause.ExceptionType == null)
-            {
-                // Catch-all: always matches
-                Emit($"    br label %{clauseBodyLbl}");
-            }
-            else
-            {
-                TypeExpression resolvedType = _typeChecker.ResolveAlias(clause.ExceptionType);
-                TypeExpression innerType = resolvedType is PointerTypeExpression pt
-                    ? pt.Inner
-                    : (resolvedType is ManagedTypeExpression mt ? mt.Inner : resolvedType);
-                string targetClassName = ((NamedTypeExpression)innerType).Name;
-                TypeChecker.ClassInfo? targetClass = _typeChecker.GetClass(targetClassName);
-                int targetVtSize = targetClass != null ? targetClass.VirtualMethods.Count : 0;
-
-                string targetVtPtr = NewTemp();
-                if (targetVtSize > 0)
-                {
-                    Emit($"    {targetVtPtr} = bitcast [{targetVtSize} x i8*]* @{targetClassName}$vtable to i8**");
-                }
-                else
-                {
-                    Emit($"    {targetVtPtr} = bitcast [0 x i8*]* @{targetClassName}$vtable to i8**");
-                }
-
-                string isMatch = NewTemp();
-                Emit($"    {isMatch} = call i1 @gflat_is_instance(i8** {caughtVt}, i8** {targetVtPtr})");
-
-                string targetFalse = nextCheckLbl ?? unmatchedLbl;
-                if (nextCheckLbl == null)
-                {
-                    hasUnmatchedPath = true;
-                }
-                Emit($"    br i1 {isMatch}, label %{clauseBodyLbl}, label %{targetFalse}");
-            }
-
-            Emit($"{clauseBodyLbl}:");
-            _hasTerminated = false;
-
-            string? prevLocal = null;
-            string? previousOwnedSlot = null;
-            string varOwnedSlot = NewTemp();
-            Emit($"    {varOwnedSlot} = alloca i1");
-            Emit($"    store i1 {caughtOwned}, i1* {varOwnedSlot}");
-            var catchCleanup = new CatchCleanupAction(caughtErr, varOwnedSlot);
-            _deferScopes.Add(new List<IDeferAction> { catchCleanup });
-            if (clause.VariableName != null)
-            {
-                _locals.TryGetValue(clause.VariableName, out prevLocal);
-                _catchVariableOwnedSlots.TryGetValue(clause.VariableName, out previousOwnedSlot);
-                string varType = EmitType(clause.ExceptionType!);
-                string typedEx = NewTemp();
-                Emit($"    {typedEx} = bitcast %Exception* {caughtErr} to {varType}");
-                string exSlot = NewTemp();
-                Emit($"    {exSlot} = alloca {varType}");
-                Emit($"    store {varType} {typedEx}, {varType}* {exSlot}");
-                _locals[clause.VariableName] = exSlot;
-                _catchVariableOwnedSlots[clause.VariableName] = varOwnedSlot;
-            }
-
-            clause.Body.Accept(this);
-            _deferScopes.RemoveAt(_deferScopes.Count - 1);
-
-            if (clause.VariableName != null)
-            {
-                if (previousOwnedSlot != null) _catchVariableOwnedSlots[clause.VariableName] = previousOwnedSlot;
-                else _catchVariableOwnedSlots.Remove(clause.VariableName);
-                if (prevLocal != null) _locals[clause.VariableName] = prevLocal;
-                else _locals.Remove(clause.VariableName);
-            }
-
-            if (!_hasTerminated)
-            {
-                catchCleanup.Execute(this);
-                Emit($"    br label %{tryEndLbl}");
-            }
-
-            if (nextCheckLbl != null)
-            {
-                Emit($"{nextCheckLbl}:");
-                _hasTerminated = false;
-            }
-        }
-
-        if (hasUnmatchedPath)
-        {
-            Emit($"{unmatchedLbl}:");
-            _hasTerminated = false;
-            HandleException(caughtErr, caughtOwned);
-        }
-
-        Emit($"{tryEndLbl}:");
-        _hasTerminated = false;
-    }
+    public void Visit(ThrowStatement node) => EmitNativeThrow(node);
+    public void Visit(TryStatement node) => EmitNativeTry(node);
 
     public void Visit(CatchClause node)
     {

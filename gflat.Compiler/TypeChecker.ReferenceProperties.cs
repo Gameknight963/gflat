@@ -26,7 +26,7 @@ public partial class TypeChecker
                 getter.Parameters, getter.Body == null ? null : (BlockStatement)clones.CloneNode(getter.Body),
                 owner is InterfaceDeclaration ? TokenKind.Public : getter.Accessibility,
                 false, getter.IsVirtual, getter.IsOverride, getter.IsAbstract || owner is InterfaceDeclaration,
-                getter.Line, readOnly, throws: getter.Throws)
+                getter.Line, readOnly, isNoThrow: getter.IsNoThrow)
             { IsRefReturn = true, PropertyName = property.Name, Span = getter.Span };
             members.Insert(members.IndexOf(property) + 1, method);
         }

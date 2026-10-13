@@ -6,7 +6,7 @@ namespace gflat;
 public static class StandardLibrary
 {
     public static IReadOnlyList<string> AutomaticFiles { get; } = Array.AsReadOnly(new[] {
-        "core/Attribute.gf", "core/Exception.gf", "core/Text.gf", "libc/Memory.gf"
+        "core/Attribute.gf", "core/Exception.gf", "core/ExceptionHandling.gf", "core/Text.gf", "libc/Memory.gf"
     });
 
     public static bool IsSource(string? path, string relativePath)

@@ -132,7 +132,7 @@ public partial class TypeChecker
         SignatureType(first.ReturnType, first) == SignatureType(second.ReturnType, second) &&
         first.Accessibility == second.Accessibility && first.IsStatic == second.IsStatic &&
         first.IsVirtual == second.IsVirtual && first.IsOverride == second.IsOverride &&
-        first.IsConst == second.IsConst && first.IsReadOnly == second.IsReadOnly && first.Throws == second.Throws &&
+        first.IsConst == second.IsConst && first.IsReadOnly == second.IsReadOnly && first.IsNoThrow == second.IsNoThrow &&
         first.Parameters.Select(p => p.IsConst).SequenceEqual(second.Parameters.Select(p => p.IsConst)) &&
         first.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, first))
             .SequenceEqual(second.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, second)));

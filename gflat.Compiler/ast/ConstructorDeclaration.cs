@@ -14,7 +14,7 @@ namespace gflat.ast
 
         public bool IsConst { get; }
         public bool IsCopy { get; set; }
-        public bool Throws { get; set; }
+        public bool IsNoThrow { get; set; }
 
         public ConstructorDeclaration(string name, List<Parameter> parameters, BlockStatement body, TokenKind accessibility, int line, List<AstNode>? baseArguments = null, List<AttributeNode>? attributes = null, bool isConst = false) : base(line)
         {

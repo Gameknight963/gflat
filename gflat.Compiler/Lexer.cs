@@ -268,7 +268,7 @@ public class Lexer
             "alignof" => TokenKind.Alignof,
             "nameof" => TokenKind.Nameof,
             "throw" => TokenKind.Throw,
-            "throws" => TokenKind.Throws,
+            "nothrow" => TokenKind.NoThrow,
             "try" => TokenKind.Try,
             "catch" => TokenKind.Catch,
             _ => TokenKind.Identifier

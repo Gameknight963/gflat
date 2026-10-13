@@ -5,7 +5,7 @@ bracket matching, automatic bracket/quote closing, selection surrounding, block
 indentation, and line/block comment commands. Version 0.10.0 adds scope/member completion,
 hover, signature help, go to definition, and semantic highlighting through the built-in LSP UI.
 Method hovers show the signature and an `Exceptions:` section listing possible outgoing
-exceptions, one type per line. Caught exceptions and terminating non-`throws` boundaries
+exceptions, one type per line. Caught exceptions and terminating `nothrow` boundaries
 do not appear as outgoing exceptions. Unknown dispatch targets are labeled `Unknown exceptions`.
 Type names in hover, completion, signature help, and editor diagnostics use source spelling,
 including nested types and generic specializations. Literal hovers show the checked literal type.
@@ -200,7 +200,7 @@ not invoke LLVM or repeat compilation.
 
 Visual Studio receives `VSInternalHover` rich content containing classified text
 and image elements. Signatures include modifiers, generic parameters, argument
-names, `throws`, and property accessor restrictions. Type and variable hovers show
+names, `nothrow`, and property accessor restrictions. Type and variable hovers show
 size/alignment when the checker has a complete layout; class objects are labeled
 separately from pointers. Primitive type keywords also have layout hovers. Layout
 numbers are omitted for invalid compilations and open generic types.
@@ -213,7 +213,7 @@ The tooltip itself is rendered by Visual Studio's existing LSP Quick Info suppor
 The packaged `gflat.tmTheme` maps immediate TextMate classifications to the same VS
 method/type/keyword classifications used by semantic highlighting. It defines no
 RGB colors. In particular, a syntactically recognizable method name uses the method
-classification before background analysis finishes, and `throws` uses a declaration
+classification before background analysis finishes, and `nothrow` uses a declaration
 keyword classification in both paths.
 
 On a machine with the full IDE installed, `test-package.ps1` additionally takes a

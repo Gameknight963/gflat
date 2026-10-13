@@ -121,8 +121,8 @@ public class HoverTests
     [Fact]
     public void NestedExceptionAndReturnTypesUseSourceSpelling()
     {
-        string text = Hover("class Outer { public class Failure : Exception {} } Outer::Failure* Re|ad() throws { throw new* Outer::Failure(); }").GetProperty("contents").GetProperty("value").GetString()!;
-        Assert.Contains("Outer::Failure* Read() throws;", text);
+        string text = Hover("class Outer { public class Failure : Exception {} } Outer::Failure* Re|ad() { throw new Outer::Failure(); }").GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("Outer::Failure* Read();", text);
         Assert.Contains("Exceptions:  \n  Outer::Failure", text);
         Assert.DoesNotContain("Outer.Failure", text);
         Assert.DoesNotContain("derived types", text);
@@ -138,12 +138,12 @@ public class HoverTests
 
     [Fact]
     public void TerminatingMethodDoesNotAdvertiseOutgoingExceptions()
-        => Assert.DoesNotContain("Exceptions:", Hover("void Ru|n() { throw new* Exception(); }").GetProperty("contents").GetProperty("value").GetString());
+        => Assert.DoesNotContain("Exceptions:", Hover("void Ru|n() nothrow { throw new Exception(); }").GetProperty("contents").GetProperty("value").GetString());
 
     [Fact]
     public void HoverShowsEscapingExceptionsWithClassifiedTypes()
     {
-        var result = Hover("class Failure : Exception {} void Fail() throws { throw new* Failure(); } void Ru|n() throws { Fail(); }", true);
+        var result = Hover("class Failure : Exception {} void Fail() { throw new Failure(); } void Ru|n() { Fail(); }", true);
         Assert.Contains("Exceptions:  \n  Failure", result.GetProperty("contents").GetProperty("value").GetString());
         var runs = result.GetProperty("_vs_rawContent").GetProperty("Elements")[2].GetProperty("Runs").EnumerateArray().ToArray();
         Assert.Equal(0, result.GetProperty("_vs_rawContent").GetProperty("Elements")[1].GetProperty("Runs")[0].GetProperty("Style").GetInt32());
@@ -151,9 +151,9 @@ public class HoverTests
     }
 
     [Theory]
-    [InlineData("void Ru|n() throws {}")]
-    [InlineData("void Ru|n() { try { throw new* Exception(); } catch {} }")]
-    [InlineData("void Ru|n() throws { Missing(); throw new* Exception(); }")]
+    [InlineData("void Ru|n() {}")]
+    [InlineData("void Ru|n() { try { throw new Exception(); } catch {} }")]
+    [InlineData("void Ru|n() { Missing(); throw new Exception(); }")]
     public void EmptyCaughtOrIncompleteAnalysisDoesNotInventExceptionDetails(string code)
         => Assert.DoesNotContain("Exceptions:", Hover(code).GetProperty("contents").GetProperty("value").GetString());
 
@@ -193,7 +193,7 @@ public class HoverTests
     [Fact]
     public void RichHoverUsesClassifiedRunsAndCatalogIcons()
     {
-        var result = Hover("struct Result {} class Factory { public static Result Cr|eate(int count) throws => new Result(); }", true);
+        var result = Hover("struct Result {} class Factory { public static Result Cr|eate(int count) nothrow => new Result(); }", true);
         var rows = result.GetProperty("_vs_rawContent").GetProperty("Elements");
         var header = rows[0].GetProperty("Elements");
         Assert.Equal("ImageElement", header[0].GetProperty("_vs_type").GetString());
@@ -203,8 +203,8 @@ public class HoverTests
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Create" && r.GetProperty("ClassificationTypeName").GetString() == "method name");
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Result" && r.GetProperty("ClassificationTypeName").GetString() == "struct name");
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "count" && r.GetProperty("ClassificationTypeName").GetString() == "parameter name");
-        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "throws" && r.GetProperty("ClassificationTypeName").GetString() == "keyword");
-        Assert.Contains("public static Result Factory::Create(int count) throws", result.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "nothrow" && r.GetProperty("ClassificationTypeName").GetString() == "keyword");
+        Assert.Contains("public static Result Factory::Create(int count) nothrow", result.GetProperty("contents").GetProperty("value").GetString());
     }
 
     [Fact]

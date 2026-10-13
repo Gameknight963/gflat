@@ -6,9 +6,9 @@ namespace gflat.ast
 {
     public class ThrowStatement : AstNode
     {
-        public AstNode Expression { get; }
+        public AstNode? Expression { get; }
 
-        public ThrowStatement(AstNode expression, int line) : base(line)
+        public ThrowStatement(AstNode? expression, int line) : base(line)
         {
             Expression = expression;
         }

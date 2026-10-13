@@ -1,4 +1,4 @@
-﻿using std;
+using std;
 
 extern int printf(readonly(char)* text, ...);
 
@@ -7,7 +7,7 @@ struct Player : IFormattable
     public int score;
     public Player(int value) { score = value; }
 
-    public readonly void Format(ITextWriter* output) throws
+    public readonly void Format(ITextWriter* output)
     {
         output.Write(c"Player(score=", 13);
         std::Format(score, output);

@@ -6,19 +6,25 @@ public partial class TypeChecker
 {
     // Checking a lambda or a generic specialization can be nested inside a
     // caller's try block. Its handlers belong only to the caller's function.
-    private IDisposable IsolateExceptionHandlers() => new ExceptionHandlerScope(_tryStack);
+    private IDisposable IsolateExceptionHandlers() => new ExceptionHandlerScope(this);
     private sealed class ExceptionHandlerScope : IDisposable
     {
         private readonly Stack<TryStatement> stack;
+        private readonly TypeChecker owner;
+        private readonly int catchDepth;
         private readonly TryStatement[] saved;
-        public ExceptionHandlerScope(Stack<TryStatement> stack)
+        public ExceptionHandlerScope(TypeChecker owner)
         {
-            this.stack = stack;
+            this.owner = owner;
+            catchDepth = owner._catchDepth;
+            owner._catchDepth = 0;
+            stack = owner._tryStack;
             saved = stack.ToArray();
             stack.Clear();
         }
         public void Dispose()
         {
+            owner._catchDepth = catchDepth;
             stack.Clear();
             foreach (var handler in saved.Reverse()) stack.Push(handler);
         }
@@ -33,7 +39,7 @@ public partial class TypeChecker
     // Unknown dispatch is kept separate from a known throw of Exception.
     public IReadOnlyList<string> GetPossibleExceptions(MethodDeclaration method)
     {
-        if (!method.Throws) return [];
+        if (method.IsNoThrow) return [];
         if (_exceptionSummaries == null)
         {
             var summaries = _exceptionMethods.ToDictionary(m => m,
@@ -44,8 +50,9 @@ public partial class TypeChecker
                 changed = false;
                 foreach (var (caller, call, catches) in _exceptionEdges)
                 {
-                    if (!caller.Throws || !summaries.TryGetValue(caller, out var result)) continue;
+                    if (caller.IsNoThrow || !summaries.TryGetValue(caller, out var result)) continue;
                     var target = GetResolvedCall(call) as MethodDeclaration;
+                    if (target?.IsNoThrow == true) continue;
                     IEnumerable<string> types = target is { IsVirtual: false, IsOverride: false, IsAbstract: false } && summaries.TryGetValue(target, out var known)
                         ? known.ToArray() : new[] { UnknownExceptionType };
                     foreach (string type in types)
@@ -57,7 +64,7 @@ public partial class TypeChecker
         }
         return _exceptionSummaries.TryGetValue(method, out var summary)
             ? summary.OrderBy(n => n, StringComparer.Ordinal).ToArray()
-            : method.Throws ? [UnknownExceptionType] : [];
+            : !method.IsNoThrow ? [UnknownExceptionType] : [];
     }
 
     private void RecordExceptionCall(CallExpression call)

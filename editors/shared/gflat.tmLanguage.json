@@ -68,13 +68,13 @@
       }
     },
     {
-      "match": "\\b((?:(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|throws|ref|move|copy)\\s+)+)((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)(?=\\s*$)",
+      "match": "\\b((?:(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\s+)+)((?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)(?=\\s*$)",
       "captures": {
         "1": {
           "patterns": [
             {
               "name": "storage.modifier.gflat",
-              "match": "\\b(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|throws|ref|move|copy)\\b"
+              "match": "\\b(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
             }
           ]
         },
@@ -97,7 +97,7 @@
     },
     {
       "name": "storage.modifier.gflat",
-      "match": "\\b(public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|throws|ref|move|copy)\\b"
+      "match": "\\b(public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
     },
     {
       "name": "keyword.control.gflat",
@@ -105,7 +105,7 @@
     },
     {
       "name": "keyword.other.accessor.gflat",
-      "match": "\\b(get|set)\\b(?=\\s*(?:\\{|=>|;|throws\\b))"
+      "match": "\\b(get|set)\\b(?=\\s*(?:\\{|=>|;|nothrow\\b))"
     },
     {
       "name": "constant.numeric.gflat",
@@ -288,7 +288,7 @@
       "patterns": [
         {
           "name": "storage.modifier.gflat",
-          "match": "\\b(public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|throws|ref|move|copy)\\b"
+          "match": "\\b(public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
         },
         {
           "name": "storage.type.gflat",

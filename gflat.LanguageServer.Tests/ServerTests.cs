@@ -16,7 +16,7 @@ public sealed class ServerTests
             ? JsonSerializer.SerializeToElement(new Dictionary<string, object> { ["method.public"] = new { guid = Guid.Parse("ae27a6b0-e345-4288-96df-5eaf394ee369"), id = 1 } })
             : JsonDocument.Parse(System.IO.File.ReadAllText(catalogFile)).RootElement.Clone();
         await s.Initialize(new { visualStudioClassifications = true, hoverIcons = icons, visualStudioNativeHover = true });
-        const string source = "public int Read(int count) throws { throw new* Failure(); } class Failure : Exception {}";
+        const string source = "public int Read(int count) { throw new Failure(); } class Failure : Exception {} void Safe() nothrow {}";
         await s.Open("hover.gf", source);
         await s.Diagnostics("hover.gf", 1);
         await s.Send(new { jsonrpc = "2.0", id = 71, method = "textDocument/hover", @params = new { textDocument = new { uri = s.Uri("hover.gf") }, position = new { line = 0, character = 12 } } });
@@ -32,7 +32,7 @@ public sealed class ServerTests
         for (int i = 0; i < data.Length; i += 5)
         {
             column += data[i + 1];
-            if (column == source.IndexOf("throws", StringComparison.Ordinal))
+            if (column == source.IndexOf("nothrow", StringComparison.Ordinal))
             { Assert.Equal("modifier", EditorModel.TokenTypes[data[i + 3]]); found = true; }
         }
         Assert.True(found);
@@ -182,10 +182,10 @@ public sealed class ServerTests
         const string declarations = """
             struct Text : ITextWriter {
                 public static Text operator t""(readonly(char)* p, nuint n) { return new Text(); }
-                public void Write(readonly(char)* p, nuint n) throws { }
+                public void Write(readonly(char)* p, nuint n) { }
             }
             struct Value : IFormattable {
-                public readonly void Format(ITextWriter* output) throws { output.Write(c"", 0); }
+                public readonly void Format(ITextWriter* output) { output.Write(c"", 0); }
             }
             """;
         string valid = declarations + "\nint main() { t$\"{new Value()}\"; return 0; }";

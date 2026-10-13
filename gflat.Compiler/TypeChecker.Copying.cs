@@ -62,7 +62,7 @@ public partial class TypeChecker
     {
         type = ResolveAlias(type);
         if (type is ArrayTypeExpression array) return CopyCanThrow(array.ElementType);
-        if (CopyConstructor(type) is ConstructorDeclaration copy) return copy.Throws;
+        if (CopyConstructor(type) is ConstructorDeclaration copy) return !copy.IsNoThrow;
         if (type is not NamedTypeExpression named) return false;
         var cls = GetClass(named.Name);
         if (cls?.BaseClass is string parent && CopyCanThrow(new NamedTypeExpression(parent, null, type.Line))) return true;
@@ -89,7 +89,7 @@ public partial class TypeChecker
 
     private void RecordImplicitException()
     {
-        if (_currentFunction is not MethodDeclaration caller || !caller.Throws) return;
+        if (_currentFunction is not MethodDeclaration caller || caller.IsNoThrow) return;
         if (_tryStack.SelectMany(t => t.CatchClauses).Any(c => c.ExceptionType == null ||
             ResolveAlias(c.ExceptionType) is PointerTypeExpression { Inner: NamedTypeExpression { Name: "Exception" } })) return;
         if (!_directExceptions.TryGetValue(caller, out var exceptions)) _directExceptions[caller] = exceptions = new();

@@ -34,7 +34,7 @@ public class InterpolationTests
     public void QualifiedPrefixesGenericCloningAndLiteralByteLengths()
     {
         var result = Run("""
-            std::String Format<T>(T value) throws { return std::s$"é\0{value}{{}}"; }
+            std::String Format<T>(T value) { return std::s$"é\0{value}{{}}"; }
             int main() {
                 std::String text = Format<int>(12);
                 if (text.Length != (nuint)7) return 1;
@@ -74,7 +74,7 @@ public class InterpolationTests
             struct Value : IFormattable {
                 public int n;
                 public Value(int id) { n = id; printf(c"C%d;", n); }
-                public readonly void Format(ITextWriter* output) throws { printf(c"F%d;", n); std::Format(n, output); }
+                public readonly void Format(ITextWriter* output) { printf(c"F%d;", n); std::Format(n, output); }
                 ~Value() { printf(c"D%d;", n); }
             }
             Value Make(int n) { return new Value(n); }
@@ -91,7 +91,7 @@ public class InterpolationTests
             using std;
             void*? __gflat_gc_alloc(nuint size) { return malloc(size); }
             struct Value : IFormattable {
-                public readonly void Format(ITextWriter* output) throws { std::Format(3, output); }
+                public readonly void Format(ITextWriter* output) { std::Format(3, output); }
             }
             int main() {
                 Value value = new Value();
@@ -143,9 +143,9 @@ public class InterpolationTests
             using std;
             extern int putchar(int c);
             struct Broken : IFormattable {
-                public readonly void Format(ITextWriter* output) throws { throw new* Exception(); }
+                public readonly void Format(ITextWriter* output) { throw new Exception(); }
             }
-            String F() { Broken b = new Broken(); return s$"{b}"; }
+            String F() nothrow { Broken b = new Broken(); return s$"{b}"; }
             int main() { try { F(); } catch { putchar(67); } putchar(88); return 0; }
             """);
         Assert.Equal(1, result.ExitCode);
@@ -185,7 +185,7 @@ public class InterpolationTests
             }
             struct Counter : ITextWriter {
                 public nuint count = 0;
-                public void Write(readonly(char)* data, nuint length) throws { count += length; }
+                public void Write(readonly(char)* data, nuint length) { count += length; }
             }
             int main() {
                 Counter writer = new Counter();

@@ -28,9 +28,9 @@ namespace gflat.ast
 
         public List<GenericParameter> GenericParameters { get; }
         public bool IsGeneric => GenericParameters.Count > 0;
-        public bool Throws { get; set; }
+        public bool IsNoThrow { get; set; }
 
-        public MethodDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, BlockStatement? body, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool throws = false) : base(line)
+        public MethodDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, BlockStatement? body, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool isNoThrow = false) : base(line)
         {
             Name = name;
             ReturnType = returnType;
@@ -45,7 +45,7 @@ namespace gflat.ast
             IsConst = isConst;
             Attributes = attributes ?? new List<AttributeNode>();
             GenericParameters = genericParameters ?? new List<GenericParameter>();
-            Throws = throws;
+            IsNoThrow = isNoThrow;
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

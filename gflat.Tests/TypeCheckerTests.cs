@@ -2895,7 +2895,7 @@ namespace gflat.Tests
                 {
                     try
                     {
-                        throw new* Exception(c"test", 1);
+                        throw new Exception(c"test", 1);
                     }
                     catch (Exception* ex)
                     {
@@ -2947,9 +2947,9 @@ namespace gflat.Tests
                     }
                 }
 
-                void ThrowCustom() throws
+                void ThrowCustom()
                 {
-                    throw new* CustomException(c"custom error");
+                    throw new CustomException(c"custom error");
                 }
 
                 int main()
@@ -2991,7 +2991,7 @@ namespace gflat.Tests
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot throw non-exception type", ex.Message);
+            Assert.Contains("Throw requires an Exception-derived value", ex.Message);
         }
 
         [Fact]
@@ -3065,12 +3065,12 @@ namespace gflat.Tests
         public void TypeChecker_InterproceduralCanThrow_Propagates()
         {
             string code = """
-                void Level1() throws
+                void Level1()
                 {
-                    throw new* Exception(c"error");
+                    throw new Exception(c"error");
                 }
 
-                void Level2() throws
+                void Level2()
                 {
                     Level1();
                 }
@@ -3098,7 +3098,7 @@ namespace gflat.Tests
 
             Assert.True(checker.CanFunctionThrow(l1));
             Assert.True(checker.CanFunctionThrow(l2));
-            Assert.False(checker.CanFunctionThrow(safe));
+            Assert.Empty(checker.GetPossibleExceptions(safe));
         }
 
         [Fact]
@@ -3107,7 +3107,7 @@ namespace gflat.Tests
             string code = """
                 void Foo()
                 {
-                    throw new* Exception(c"error", 1);
+                    throw new Exception(c"error", 1);
                 }
                 """;
 
@@ -3118,9 +3118,9 @@ namespace gflat.Tests
         public void TypeChecker_MissingThrows_CallingThrowingFunction_AllowsTermination()
         {
             string code = """
-                void Callee() throws
+                void Callee()
                 {
-                    throw new* Exception(c"error", 1);
+                    throw new Exception(c"error", 1);
                 }
 
                 void Caller()
@@ -3133,17 +3133,9 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void TypeChecker_MainFunction_CannotBeMarkedThrows()
+        public void TypeChecker_MainFunctionCanBeExplicitlyNoThrow()
         {
-            string code = """
-                int main() throws
-                {
-                    return 0;
-                }
-                """;
-
-            TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("'main' function cannot be declared with 'throws'", ex.Message);
+            CompilerTestHelper.Check("int main() nothrow { return 0; }");
         }
 
         [Fact]
@@ -3152,17 +3144,17 @@ namespace gflat.Tests
             string code = """
                 class Base
                 {
-                    public virtual void Foo() {}
+                    public virtual void Foo() nothrow {}
                 }
 
                 class Derived : Base
                 {
-                    public override void Foo() throws {}
+                    public override void Foo() {}
                 }
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("must match throws specification", ex.Message);
+            Assert.Contains("must match nothrow specification", ex.Message);
         }
 
         [Fact]

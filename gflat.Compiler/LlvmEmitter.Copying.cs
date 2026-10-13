@@ -6,13 +6,7 @@ public partial class LlvmEmitter
 {
     private void EmitConstructorCall(string name, ConstructorDeclaration? constructor, string arguments)
     {
-        if (constructor?.Throws == true)
-        {
-            string result = NewTemp();
-            Emit($"    {result} = call {{ %Exception*, i1 }} @{name}({arguments})");
-            EmitCheckAndHandleCallException(result, true, "void");
-        }
-        else Emit($"    call void @{name}({arguments})");
+        Emit($"    call void @{name}({arguments})");
     }
 
     private void EmitCopyValue(AstNode expression, TypeExpression type)

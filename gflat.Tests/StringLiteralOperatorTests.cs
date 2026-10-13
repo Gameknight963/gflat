@@ -145,8 +145,8 @@ public class StringLiteralOperatorTests
             extern int putchar(int c);
             class S {
                 ~S() { putchar(68); }
-                public static S operator s""(readonly(char)* p, nuint n) throws {
-                    putchar(78); throw new* Exception();
+                public static S operator s""(readonly(char)* p, nuint n) {
+                    putchar(78); throw new Exception();
                 }
             }
             int main() { try { S value = s"abc"; } catch (Exception* ex) { putchar(67); } return 0; }
@@ -158,8 +158,8 @@ public class StringLiteralOperatorTests
     {
         var result = CompilerTestHelper.Run("""
             extern int putchar(int c);
-            class S { public static S operator s""(readonly(char)* p, nuint n) throws { throw new* Exception(); } }
-            S make() { return s"abc"; }
+            class S { public static S operator s""(readonly(char)* p, nuint n) { throw new Exception(); } }
+            S make() nothrow { return s"abc"; }
             int main() { try { make(); } catch { putchar(67); } putchar(88); return 0; }
             """);
         Assert.Equal(1, result.ExitCode);

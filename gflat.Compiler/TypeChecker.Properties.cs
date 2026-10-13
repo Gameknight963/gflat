@@ -45,8 +45,6 @@ public partial class TypeChecker
                     bool auto = !signature && accessors.All(a => a.Body == null);
                     if (owner is InterfaceDeclaration && accessors.Select(a => a.Accessibility).Distinct().Count() > 1)
                         throw new TypeCheckException("Interface property accessors cannot have restricted accessibility", property.Line);
-                    if (owner is InterfaceDeclaration && accessors.Any(a => a.Throws))
-                        throw new TypeCheckException("Throwing interface property accessors are not yet supported", property.Line);
                     if (signature && accessors.Any(a => a.Body != null))
                         throw new TypeCheckException("Abstract and interface properties cannot have accessor bodies", property.Line);
                     if (!signature && !auto && accessors.Any(a => a.Body == null))
@@ -81,7 +79,7 @@ public partial class TypeChecker
                         additions.Add(new MethodDeclaration(accessor.Name, accessor.ReturnType, accessor.Parameters, body,
                             owner is InterfaceDeclaration ? TokenKind.Public : accessor.Accessibility,
                             accessor.IsStatic, accessor.IsVirtual, accessor.IsOverride, signature, accessor.Line,
-                            accessor.IsReadOnly || auto && getter && !accessor.IsVirtual && !accessor.IsOverride, throws: accessor.Throws)
+                            accessor.IsReadOnly || auto && getter && !accessor.IsVirtual && !accessor.IsOverride, isNoThrow: accessor.IsNoThrow)
                         { PropertyName = property.Name, Span = accessor.Span.Source == null ? property.Span : accessor.Span });
                     }
                     if (auto && property.Setter == null)

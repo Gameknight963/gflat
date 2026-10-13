@@ -3233,9 +3233,9 @@ namespace gflat.Tests
         public void Execution_ThrowAndCatch_Basic_ReturnsExitCode()
         {
             string code = """
-                int Thrower() throws
+                int Thrower()
                 {
-                    throw new* Exception(c"Error occurred", 42);
+                    throw new Exception(c"Error occurred", 42);
                     return 0;
                 }
 
@@ -3274,9 +3274,9 @@ namespace gflat.Tests
                     }
                 }
 
-                int Thrower() throws
+                int Thrower()
                 {
-                    throw new* CustomException(c"Custom error", 10, 32);
+                    throw new CustomException(c"Custom error", 10, 32);
                     return 0;
                 }
 
@@ -3318,11 +3318,11 @@ namespace gflat.Tests
                     {
                         if (kind == 1)
                         {
-                            throw new* SpecificException(10);
+                            throw new SpecificException(10);
                         }
                         else
                         {
-                            throw new* AnotherException(20);
+                            throw new AnotherException(20);
                         }
                     }
                     catch (SpecificException* se)
@@ -3354,9 +3354,9 @@ namespace gflat.Tests
             string code = """
                 const Exception* OutOfMemory = new* Exception(c"Out of memory", 99);
 
-                int ThrowConst() throws
+                int ThrowConst()
                 {
-                    throw OutOfMemory;
+                    throw *OutOfMemory;
                     return 0;
                 }
 
@@ -3382,11 +3382,11 @@ namespace gflat.Tests
         public void Execution_Defer_ExecutesOnThrowUnwinding()
         {
             string code = """
-                void Throwing(int* flag) throws
+                void Throwing(int* flag)
                 {
                     defer *flag += 10;
                     defer *flag += 20;
-                    throw new* Exception(c"Fail", 1);
+                    throw new Exception(c"Fail", 1);
                 }
 
                 int main()
@@ -3412,15 +3412,15 @@ namespace gflat.Tests
         public void Execution_CatchAndRethrow_PropagatesToOuterCatch()
         {
             string code = """
-                int Sub() throws
+                int Sub()
                 {
                     try
                     {
-                        throw new* Exception(c"Original", 55);
+                        throw new Exception(c"Original", 55);
                     }
                     catch (Exception* ex)
                     {
-                        throw ex;
+                        throw;
                     }
                     return 0;
                 }
@@ -3449,14 +3449,14 @@ namespace gflat.Tests
             string code = """
                 int main()
                 {
-                    throw new* Exception(c"Fatal error", 123);
+                    throw new Exception(c"Fatal error", 123);
                     return 0;
                 }
                 """;
 
             ExecutionResult result = CompilerTestHelper.Run(code);
             Assert.Equal(1, result.ExitCode);
-            Assert.Contains("Fatal error", result.StandardOutput);
+            Assert.Contains("Unhandled exception", result.StandardError);
         }
 
         [Fact]
@@ -4268,10 +4268,10 @@ namespace gflat.Tests
                     }
                 }
 
-                void willThrow(int* p) throws
+                void willThrow(int* p)
                 {
                     Guard g = new Guard(p);
-                    throw new* Exception();
+                    throw new Exception();
                 }
 
                 int main()

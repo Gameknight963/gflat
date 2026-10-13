@@ -45,7 +45,7 @@ suffix        = "*", [ "?" ] | "^", [ "?" ]
               | "(", [ type, { ",", type } ], ")", ("*" | "^"), [ "?" ] ;
 variable      = [ "const" ], type, name, [ "=", expression ], ";" ;
 function      = { modifier }, type, name, "(", [ parameters ], ")",
-                [ "throws" ], body ;
+                [ "nothrow" ], body ;
 body          = block | "=>", expression, ";" | statement ;
 block         = "{", { statement }, "}" ;
 foreach       = "foreach", "(", type, name, "in", expression, ")", body ;
@@ -109,7 +109,7 @@ Enums are distinct integral types, optionally with an underlying type such as `u
 
 Ordinary free functions, static methods, and concrete instance methods support overloads by parameter type and count. Exact argument types are preferred over implicit conversions; a candidate must be no worse for every argument and better for at least one. Equally applicable candidates are ambiguous, independent of declaration order. Constructor calls use the same ranking. Return types, readonly qualifications, and declaration modifiers cannot distinguish overloads.
 
-Overloaded generic function families and overloaded virtual/interface declarations are not yet supported and are diagnosed. An ordinary overloaded implementation can satisfy an interface's matching signature. Taking an overloaded function's address requires an unambiguous wrapper. Function addresses cannot discard `throws`, const-parameter requirements, or a variadic calling convention; those forms are rejected until callable types can express them.
+Overloaded generic function families and overloaded virtual/interface declarations are not yet supported and are diagnosed. An ordinary overloaded implementation can satisfy an interface's matching signature. Taking an overloaded function's address requires an unambiguous wrapper. Function addresses cannot discard const-parameter requirements or a variadic calling convention; those forms are rejected until callable types can express them.
 
 `weak` marks a function's default implementation. `replace` explicitly selects a different body for that function in the same namespace or containing type. Declaration order does not matter; reopened namespace blocks share the same scope.
 
@@ -126,7 +126,7 @@ class Buffer {
 
 Selection happens in the compiler before body checking, const evaluation, hierarchy resolution, and code generation. With no replacement, the default is used. With a replacement, the discarded body is parsed but is not type-checked or emitted. All calls and function addresses bind to the selected definition. LLVM receives one ordinary definition, with no weak linkage or linker-level override behavior.
 
-A replacement must match parameter types, return type, generic arity and constraints, accessibility, `static`, `virtual`, `override`, `readonly`, `const`, const parameters, and `throws`. Parameter names and generic parameter names may differ. Duplicate defaults, multiple replacements, unmatched replacements, and ordinary definitions attempting to replace a default are errors. Weak functions cannot be overloaded or combined with an extern declaration.
+A replacement must match parameter types, return type, generic arity and constraints, accessibility, `static`, `virtual`, `override`, `readonly`, `const`, const parameters, and `nothrow`. Parameter names and generic parameter names may differ. Duplicate defaults, multiple replacements, unmatched replacements, and ordinary definitions attempting to replace a default are errors. Weak functions cannot be overloaded or combined with an extern declaration.
 
 Free functions and concrete class/struct methods support these modifiers. Static methods use `Type::Method(...)` and have no implicit `this`; instance methods use `value.Method(...)`. Replacement stays within the same containing type: inherited dispatch still uses `override`. Constructors, destructors, operators, abstract methods, and interface declarations cannot be weak or replaced. Partial classes are not implemented.
 
@@ -281,7 +281,7 @@ int main() {
 ```
 
 A copy constructor takes exactly one non-null readonly pointer to its own type.
-It may declare `throws`. A type with a user-written destructor is noncopyable unless
+It may throw like other constructors. A type with a user-written destructor is noncopyable unless
 it supplies a copy constructor. Aggregates without a user-written destructor copy
 their fields and base value; all of those must be copyable. Fixed buffers copy each
 element. If a copy fails, completed subobjects are destroyed. Nontrivial copying is
@@ -364,7 +364,7 @@ An implicitly readonly auto-getter cannot return a writable pointer stored in it
 
 Reads call the getter. Assignments call the setter and evaluate to the assigned value, even if the setter changes its `value` parameter. Compound assignments and `++`/`--` evaluate the receiver once, then read, update, and write. Postfix updates return the old value; prefix updates return the new value. The receiver is evaluated before the right-hand side. Normal operator resolution, definite-assignment checks, and temporary cleanup apply. An ordinary by-value property is not addressable storage: taking its address or assigning to a field of an inline property result is rejected. A pointer returned by a property still permits access to its pointee under ordinary pointer rules.
 
-Classes support `virtual`, `override`, and `abstract` properties through their accessors. Interface property contracts use accessor signatures, for example `interface ICount { int Count { get; set; } }`; implementing accessors must be public. A declaration in a derived class hides the whole inherited property, rather than borrowing missing accessors from it. Explicit static properties use `Type::Property`. Explicit class/struct accessors may declare `get throws` or `set throws` and follow ordinary exception rules.
+Classes support `virtual`, `override`, and `abstract` properties through their accessors. Interface property contracts use accessor signatures, for example `interface ICount { int Count { get; set; } }`; implementing accessors must be public. A declaration in a derived class hides the whole inherited property, rather than borrowing missing accessors from it. Explicit static properties use `Type::Property`. Accessors follow ordinary exception rules and may declare `get nothrow` or `set nothrow`.
 
 Current restrictions: static auto-properties await static field storage; `init`, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
 
@@ -411,7 +411,17 @@ Ordinary indexer results are values, not storage references. Modifying a field o
 
 Non-void functions must return or throw on every reachable path, or never terminate. Shared control-flow graphs model branches, loops, return, throw, break, and continue. Definite assignment uses these termination facts and tracks assignment states separately.
 
-Functions and constructors that permit exception propagation declare `throws`. A failed constructor destroys completed owning fields and its completed base, without invoking the incomplete object's destructor. Failed `new*` also frees newly allocated storage; placement construction leaves storage ownership with the caller. Raw resources acquired by a constructor still need explicit cleanup on its failure paths. Calling them does not require a catch or a `throws` declaration. A matching local catch handles the exception; otherwise a `throws` function propagates it, and a function without `throws` terminates the process with exit status 1. A caller cannot catch an exception beyond that termination boundary. Termination does not run language destructors or deferred cleanup at the boundary, and no warning is emitted by default. The existing `main` boundary reports the exception and performs its cleanup before returning status 1. The generated ABI uses a value/status tuple, not native C++ unwinding. `main` cannot declare `throws`. Catch cleanup runs deferred actions before destroying and freeing an owned exception, including exits by return, break, continue, or another throw. Rethrowing the caught pointer transfers its release responsibility. An exception escaping deferred cleanup replaces the pending exception, releasing the previous owned exception; remaining cleanup runs once.
+Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. `throws` has been removed. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across gflat frames, but gflat types do not yet have C++ RTTI or typed C++ catch interoperability.
+
+`throw new Error(...)` transfers a fresh exception-derived value to runtime storage. `throw value` copies and requires a copyable type; `throw move value` consumes it. Pointers cannot be thrown. `catch (Error* error)` borrows the runtime-owned object, which remains live until the handler exits. Do not delete or retain that borrowed pointer. `throw;` inside a handler rethrows the original object, preserving its dynamic type. Bare `catch` also handles foreign exceptions; typed gflat catches do not.
+
+Scope destructors and deferred actions run during unwinding. Failed construction destroys completed owning fields and the completed base, without invoking the incomplete object's destructor. Failed `new*` frees its fresh storage; failed placement construction leaves storage ownership with the caller. Raw resources acquired during construction still require explicit cleanup on failure paths.
+
+`void Boundary() nothrow { ... }` permits local handlers but terminates if an exception escapes. Destructors and `main` are also termination boundaries. Cleanup runs up to the boundary; outer callers cannot catch past it. An exception escaping cleanup while another exception is unwinding terminates; cleanup may catch its own failures locally.
+
+Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. Replace this weak function to display or log an error. Returning from it, or throwing from it, terminates with status 1. Process termination is not a promise to destroy every remaining object.
+
+The compiler driver links a small C++ runtime, requiring Clang's C++ driver and the platform C++ development libraries in addition to LLVM.
 
 `const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
 
@@ -510,7 +520,7 @@ operations, such as placement construction's destination validation.
 
 ## Custom string literals
 
-A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly(char)* data, nuint length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and may declare `throws`; callers must follow the normal exception rules.
+A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly(char)* data, nuint length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and follows the normal exception rules.
 
 ```gflat
 using Text;
@@ -570,11 +580,11 @@ Its containing/result type must implement the automatically available global int
 ```text
 interface ITextWriter
 {
-    void Write(readonly(char)* data, nuint length) throws;
+    void Write(readonly(char)* data, nuint length);
 }
 interface IFormattable
 {
-    readonly void Format(ITextWriter* output) throws;
+    readonly void Format(ITextWriter* output);
 }
 ```
 

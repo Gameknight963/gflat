@@ -10,12 +10,12 @@ public class TemporaryLifetimeTests
             public ~Item() { printf("D%d;", id); }
             public int Get() { printf("G%d;", id); return id; }
             public Item Next(int value) { printf("S%d;", id); return new Item(value); }
-            public int Fail() throws { printf("T%d;", id); throw new* Exception(); }
+            public int Fail() { printf("T%d;", id); throw new Exception(); }
             public int With(int value) { printf("W%d;", id); return value; }
             public bool Test() { printf("B%d;", id); return true; }
         }
         Item make(int id) { return new Item(id); }
-        int fail() throws { printf("F;"); throw new* Exception(); }
+        int fail() { printf("F;"); throw new Exception(); }
         int combine(int a, int b) { printf("C;"); return a + b; }
         void consume(bool value) { printf("C;"); }
         void consumeWith(bool value, int other) { printf("U;"); }
@@ -42,7 +42,7 @@ public class TemporaryLifetimeTests
 
     [Fact]
     public void ThrowingFactoryDoesNotCreatePhantomTemporary()
-        => Check("Item bad() throws { Item item = make(1); fail(); return item; } int main() { try { bad().Get(); } catch { printf(\"C;\"); } return 0; }", "N1;F;D1;C;");
+        => Check("Item bad() { Item item = make(1); fail(); return item; } int main() { try { bad().Get(); } catch { printf(\"C;\"); } return 0; }", "N1;F;D1;C;");
 
     [Theory]
     [InlineData("false && make(1).Test()")]

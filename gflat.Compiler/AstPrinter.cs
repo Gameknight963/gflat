@@ -73,7 +73,7 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
-            Print($"Method: {node.Accessibility} {(node.IsConst ? "const " : "")}{(node.IsReadOnly ? "readonly " : "")}{(node.IsStatic ? "static " : "")}{(node.IsVirtual ? "virtual " : "")}{(node.IsOverride ? "override " : "")}{(node.IsAbstract ? "abstract " : "")}{(node.Throws ? "throws " : "")}{node.Name}");
+            Print($"Method: {node.Accessibility} {(node.IsConst ? "const " : "")}{(node.IsReadOnly ? "readonly " : "")}{(node.IsStatic ? "static " : "")}{(node.IsVirtual ? "virtual " : "")}{(node.IsOverride ? "override " : "")}{(node.IsAbstract ? "abstract " : "")}{(node.IsNoThrow ? "nothrow " : "")}{node.Name}");
             Indented(() =>
             {
                 Print("ReturnType:");
@@ -178,7 +178,7 @@ namespace gflat
         public void Visit(ExpressionStatement node)
         {
             Print("ExpressionStatement");
-            Indented(() => node.Expression.Accept(this));
+            Indented(() => node.Expression?.Accept(this));
         }
 
         public void Visit(BinaryExpression node)
@@ -442,7 +442,7 @@ namespace gflat
         public void Visit(ThrowStatement node)
         {
             Print("Throw");
-            Indented(() => node.Expression.Accept(this));
+            Indented(() => node.Expression?.Accept(this));
         }
 
         public void Visit(TryStatement node)

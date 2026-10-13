@@ -18,7 +18,7 @@ public class ConsumingValueTests
     [InlineData("R a = new R(1); for (int i = 0; i < 2; i++) { R b = move a; continue; } return 0;")]
     [InlineData("R a = new R(1); R b = move a; a.n = 2; return 0;")]
     [InlineData("R a = new R(1); defer printf(c\"%d\", a.n); R b = move a; return 0;")]
-    [InlineData("R a = new R(1); try { R b = move a; throw new* Exception(); } catch { return a.n; } return 0;")]
+    [InlineData("R a = new R(1); try { R b = move a; throw new Exception(); } catch { return a.n; } return 0;")]
     [InlineData("Box b = new Box(); R x = move b.item; return 0;")]
     public void MovedSourcesCannotBeRead(string body)
         => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(Resource + "struct Box { public R item = new R(1); } int main() {" + body + "}"));
@@ -28,7 +28,7 @@ public class ConsumingValueTests
     [InlineData("R a = new R(1); for (int i = 0; i < 2; i++) { R b = move a; a = new R(i + 2); } return 0;", "123")]
     [InlineData("R a = new R(1); if (true) { R b = move a; } return 0;", "1")]
     [InlineData("R a = new R(1); if (false) { R b = move a; } a = new R(2); return 0;", "12")]
-    [InlineData("R a = new R(1); try { R b = move a; throw new* Exception(); } catch { a = new R(2); } return 0;", "12")]
+    [InlineData("R a = new R(1); try { R b = move a; throw new Exception(); } catch { a = new R(2); } return 0;", "12")]
     [InlineData("R a; a = new R(1); R b = move a; return 0;", "1")]
     public void CleanupFollowsInitialization(string body, string expected)
     {
@@ -42,8 +42,8 @@ public class ConsumingValueTests
         struct R {
             public int n;
             public R(int value) { n = value; }
-            public copy R(readonly(R)* source) throws {
-                if (source.n == 9) throw new* Exception();
+            public copy R(readonly(R)* source) {
+                if (source.n == 9) throw new Exception();
                 n = source.n;
                 printf(c"C%d", n);
             }
@@ -71,7 +71,7 @@ public class ConsumingValueTests
     {
         var result = CompilerTestHelper.Run(Copyable + """
             void Use(R value) { value.n = 2; }
-            R Read(readonly(R)* value) throws { return *value; }
+            R Read(readonly(R)* value) { return *value; }
             int main() { R a = new R(1); Use(a); R b = Read(&a); return 0; }
             """);
         Assert.Equal(0, result.ExitCode);
@@ -86,7 +86,7 @@ public class ConsumingValueTests
         var result = CompilerTestHelper.Run(Resource + """
             struct Bad {
                 R a; R b;
-                public Bad() throws { a = new R(1); throw new* Exception(); }
+                public Bad() { a = new R(1); throw new Exception(); }
                 ~Bad() { printf(c"BAD"); }
             }
             int main() { try {
@@ -95,12 +95,12 @@ public class ConsumingValueTests
         Assert.Equal("1", result.StandardOutput);
     }
     [Theory]
-    [InlineData("struct Holder { R item; public Holder() throws { item = new R(1); throw new* Exception(); } }", "Holder a = new Holder();", "D1")]
-    [InlineData("struct Holder { R item = new R(1); public Holder() throws { throw new* Exception(); } }", "Holder a = new Holder();", "D1")]
-    [InlineData("class Base { R item; public Base() throws { item = new R(1); } } class Derived : Base { R other; public Derived() throws { other = new R(2); throw new* Exception(); } }", "Derived a = new Derived();", "D2D1")]
-    [InlineData("class Base { R item; public Base() throws { item = new R(1); throw new* Exception(); } } class Derived : Base { public Derived() throws {} }", "Derived a = new Derived();", "D1")]
-    [InlineData("struct Holder { R item; public Holder(R value) throws { throw new* Exception(); } }", "Holder a = new Holder(new R(1));", "D1")]
-    [InlineData("struct Holder { R item; public Holder() { item = new R(1); } public copy Holder(readonly(Holder)* source) throws { item = source.item; throw new* Exception(); } }", "Holder a = new Holder(); Holder b = a;", "C1D1D1")]
+    [InlineData("struct Holder { R item; public Holder() { item = new R(1); throw new Exception(); } }", "Holder a = new Holder();", "D1")]
+    [InlineData("struct Holder { R item = new R(1); public Holder() { throw new Exception(); } }", "Holder a = new Holder();", "D1")]
+    [InlineData("class Base { R item; public Base() { item = new R(1); } } class Derived : Base { R other; public Derived() { other = new R(2); throw new Exception(); } }", "Derived a = new Derived();", "D2D1")]
+    [InlineData("class Base { R item; public Base() { item = new R(1); throw new Exception(); } } class Derived : Base { public Derived() {} }", "Derived a = new Derived();", "D1")]
+    [InlineData("struct Holder { R item; public Holder(R value) { throw new Exception(); } }", "Holder a = new Holder(new R(1));", "D1")]
+    [InlineData("struct Holder { R item; public Holder() { item = new R(1); } public copy Holder(readonly(Holder)* source) { item = source.item; throw new Exception(); } }", "Holder a = new Holder(); Holder b = a;", "C1D1D1")]
     public void ConstructionFailureCleansCompletedOwners(string types, string body, string expected)
     {
         var result = CompilerTestHelper.Run(Copyable + types + "int main() { try {" + body + "} catch {} return 0; }");
@@ -145,7 +145,7 @@ public class ConsumingValueTests
                 public replace void*? Allocate(nuint size) { return malloc(size); }
                 public replace void Free(void* p) { printf(c"F"); free(p); }
             }
-            struct Bad { public Bad(Exception* failure) throws { throw failure; } }
+            struct Bad { public Bad(Exception* failure) { throw *failure; } }
             int main() {
                 Exception error = new Exception();
                 try { Bad* value = new* Bad(&error); } catch {}
@@ -157,13 +157,13 @@ public class ConsumingValueTests
             }
             """);
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal("FPF", result.StandardOutput);
+        Assert.Equal("FFFPF", result.StandardOutput);
     }
 
     [Theory]
-    [InlineData("void Fail() throws { throw new* Exception(); }", "R a = new R(1); try { R b = move a; Fail(); } catch { return a.n; } return 0;")]
+    [InlineData("void Fail() { throw new Exception(); }", "R a = new R(1); try { R b = move a; Fail(); } catch { return a.n; } return 0;")]
     [InlineData("", "R a = new R(1); R bad = new R(9); try { R b = move a; R c = bad; } catch { return a.n; } return 0;")]
-    [InlineData("struct Bad { public Bad() throws { throw new* Exception(); } }", "R a = new R(1); try { R b = move a; Bad c = new Bad(); } catch { return a.n; } return 0;")]
+    [InlineData("struct Bad { public Bad() { throw new Exception(); } }", "R a = new R(1); try { R b = move a; Bad c = new Bad(); } catch { return a.n; } return 0;")]
     public void ExceptionalPathsDoNotResurrectMovedLocals(string declarations, string body)
         => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(Copyable + declarations + "int main() {" + body + "}"));
 

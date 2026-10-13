@@ -23,13 +23,13 @@ public class InterpolationLifetimeTests
             public int calls;
             public Destination() { calls = 0; }
             public static Destination operator t""(readonly(char)* p, nuint n) { return new Destination(); }
-            public void Write(readonly(char)* p, nuint n) throws {
-                if (n != (nuint)0) { printf(c"P"); throw new* Exception(); }
+            public void Write(readonly(char)* p, nuint n) {
+                if (n != (nuint)0) { printf(c"P"); throw new Exception(); }
             }
             ~Destination() { printf(c"D"); }
         }
         struct Value : IFormattable {
-            public readonly void Format(ITextWriter* output) throws {
+            public readonly void Format(ITextWriter* output) {
                 output.Write(c"x", 1);
             }
             ~Value() { printf(c"V"); }
@@ -51,7 +51,7 @@ public class InterpolationLifetimeTests
     [Fact]
     public void FormattingFailureDestroysReceiverAndDestination()
     {
-        var result = CompilerTestHelper.Run(Tracking.Replace("output.Write(c\"x\", 1);", "throw new* Exception();") + """
+        var result = CompilerTestHelper.Run(Tracking.Replace("output.Write(c\"x\", 1);", "throw new Exception();") + """
             int main() { try { t$"{new Value()}"; } catch { printf(c"C"); } return 0; }
             """);
         Assert.Equal("AVDCF", result.StandardOutput);
@@ -62,7 +62,7 @@ public class InterpolationLifetimeTests
     public void CustomClassDestinationWorksWithoutStandardLibrary()
     {
         string source = Tracking.Replace("struct Destination", "class Destination").Replace(
-            "if (n != (nuint)0) { printf(c\"P\"); throw new* Exception(); }",
+            "if (n != (nuint)0) { printf(c\"P\"); throw new Exception(); }",
             "printf(c\"%.*s\", (int)n, p);");
         var result = CompilerTestHelper.Run(source + "int main() { t$\"a{new Value()}b\"; return 0; }");
         Assert.Equal("axVbD", result.StandardOutput);

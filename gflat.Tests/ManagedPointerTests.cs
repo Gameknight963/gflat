@@ -68,7 +68,6 @@ public class ManagedPointerTests
     [Theory]
     [InlineData("int __gflat_gc_alloc(nuint size) { return 0; }")]
     [InlineData("void*? __gflat_gc_alloc(int size) { return null; }")]
-    [InlineData("void*? __gflat_gc_alloc(nuint size) throws { return null; }")]
     [InlineData("extern void*? __gflat_gc_alloc(nuint size, ...);")]
     public void IncorrectRuntimeSignatureIsRejected(string declaration)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(declaration + "int main() { int^ p = new^ int(); return 0; }"));
@@ -97,7 +96,7 @@ public class ManagedPointerTests
     [InlineData("int^ p = new^ int(true);")]
     [InlineData("const int^ p = new^ int();")]
     [InlineData("throw new^ Exception();")]
-    [InlineData("try { throw new* Exception(); } catch (Exception^ e) {}")]
+    [InlineData("try { throw new Exception(); } catch (Exception^ e) {}")]
     public void UnsupportedManagedOperationsAreRejected(string body)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(Runtime + "int main() { " + body + " return 0; }"));
 
@@ -155,7 +154,7 @@ public class ManagedPointerTests
 
     [Fact]
     public void ForeignRuntimeDeclarationIsAccepted()
-        => Assert.Contains("call i8* @__gflat_gc_alloc", Compiler.Emit("extern void*? __gflat_gc_alloc(nuint size); int main() { int^ p = new^ int(1); return *p; }"));
+        => Assert.Contains("invoke i8* @__gflat_gc_alloc", Compiler.Emit("extern void*? __gflat_gc_alloc(nuint size); int main() { int^ p = new^ int(1); return *p; }"));
 
     [Fact]
     public void RawAddressOfManagedFieldIsRejected()

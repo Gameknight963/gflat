@@ -29,7 +29,7 @@ public class ArrayCleanupTests
     [Fact]
     public void ThrowCleansArray()
     {
-        Check("void fail() throws { " + Items + " throw new* Exception(); } int main() { try { fail(); } catch { printf(\"C\"); } return 0; }", "321C");
+        Check("void fail() { " + Items + " throw new Exception(); } int main() { try { fail(); } catch { printf(\"C\"); } return 0; }", "321C");
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class ArrayCleanupTests
     [Fact]
     public void FailedInitializerDoesNotDestroyDestination()
     {
-        Check("Item[3] fail() throws { " + Items + " throw new* Exception(); } int main() { try { Item[3] result = fail(); } catch { printf(\"C\"); } return 0; }", "321C");
+        Check("Item[3] fail() { " + Items + " throw new Exception(); } int main() { try { Item[3] result = fail(); } catch { printf(\"C\"); } return 0; }", "321C");
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class ArrayCleanupTests
     [Fact]
     public void ArrayCleanupComposesWithThrowingDefer()
     {
-        Check("void fail() throws { throw new* Exception(); } int main() { try { " + Items + " defer fail(); } catch { printf(\"C\"); } return 0; }", "321C");
+        Check("void fail() { throw new Exception(); } int main() { try { " + Items + " defer fail(); } catch { printf(\"C\"); } return 0; }", "321C");
     }
 
     [Fact]

@@ -124,7 +124,7 @@ namespace gflat
         Alignof,
         Nameof,
         Throw,
-        Throws,
+        NoThrow,
         Try,
         Catch,
         EndOfFile

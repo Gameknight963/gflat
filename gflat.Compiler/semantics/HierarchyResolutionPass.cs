@@ -188,9 +188,9 @@ namespace gflat.semantics
                         throw new TypeCheckException($"Method '{method.Name}' in class '{cls.Name}' is marked override but does not override any virtual or abstract method in a base class", method.Line);
                     }
                     MethodDeclaration baseMethod = cls.VirtualMethods[slot];
-                    if (baseMethod.Throws != method.Throws)
+                    if (baseMethod.IsNoThrow != method.IsNoThrow)
                     {
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' must match throws specification of base method", method.Line);
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{cls.Name}' must match nothrow specification of base method", method.Line);
                     }
                     if (baseMethod.IsReadOnly && !method.IsReadOnly)
                     {

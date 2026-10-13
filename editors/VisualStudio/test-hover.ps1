@@ -83,7 +83,7 @@ try {
     if ($elements[0].ImageId.Guid -ne $icons['method.public'].guid -or $elements[0].ImageId.Id -ne $icons['method.public'].id) { throw 'Hover did not use the VS method icon' }
     $runs = @($elements[1].Runs)
     if (-not ($runs | Where-Object { $_.Text -eq 'Read' -and $_.ClassificationTypeName -eq 'method name' })) { throw 'Method name was not classified' }
-    if (-not ($runs | Where-Object { $_.Text -eq 'throws' -and $_.ClassificationTypeName -eq 'keyword' })) { throw 'Throws was not classified' }
+    if (-not ($runs | Where-Object { $_.Text -eq 'nothrow' -and $_.ClassificationTypeName -eq 'keyword' })) { throw 'Nothrow was not classified' }
     $exceptionHeader = @(@($hover.RawContent.Elements)[1].Runs)
     $exceptionRuns = @(@($hover.RawContent.Elements)[2].Runs)
     if (-not ($exceptionHeader | Where-Object { $_.Text -eq 'Exceptions:' -and [int]$_.Style -eq 0 })) { throw 'Exception heading was not plain text' }

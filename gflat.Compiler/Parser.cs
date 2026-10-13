@@ -655,7 +655,7 @@ namespace gflat
                     throw new TypeCheckException("Expected get or set accessor", keyword.Line);
                 if (getter ? get != null : set != null)
                     throw new TypeCheckException($"Duplicate {keyword.Text} accessor", keyword.Line);
-                bool throws = Match(TokenKind.Throws);
+                bool isNoThrow = Match(TokenKind.NoThrow);
                 BlockStatement? body = null;
                 if (!Match(TokenKind.Semicolon))
                 {
@@ -673,7 +673,7 @@ namespace gflat
                         method.Accessibility, method.IsStatic, method.IsVirtual, method.IsOverride, method.IsAbstract,
                         method.Line, isReadOnly: true) { PropertyName = name };
                 method.Span = start.Span;
-                method.Throws = throws;
+                method.IsNoThrow = isNoThrow;
                 if (getter) get = method; else set = method;
             }
             Expect(TokenKind.CloseBrace);
@@ -772,7 +772,7 @@ namespace gflat
             }
             Expect(TokenKind.CloseParen);
 
-            bool throws = Match(TokenKind.Throws);
+            bool isNoThrow = Match(TokenKind.NoThrow);
             List<AstNode>? baseArguments = null;
             if (Match(TokenKind.Colon))
             {
@@ -801,7 +801,7 @@ namespace gflat
             }
 
             BlockStatement body = ParseBodyOrBlock();
-            return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments, attributes, isConst) { Throws = throws };
+            return new ConstructorDeclaration(name, parameters, body, accessibility, line, baseArguments, attributes, isConst) { IsNoThrow = isNoThrow };
         }
 
         private BlockStatement ParseBodyOrBlock() => Located(() => ParseBodyOrBlockCoreLocated());
@@ -870,7 +870,7 @@ namespace gflat
                     Expect(TokenKind.Comma);
             }
             Expect(TokenKind.CloseParen);
-            bool throws = Match(TokenKind.Throws);
+            bool isNoThrow = Match(TokenKind.NoThrow);
             BlockStatement? body = null;
             if (isAbstract)
             {
@@ -880,7 +880,7 @@ namespace gflat
             {
                 body = Match(TokenKind.Semicolon) ? null : ParseBodyOrBlock();
             }
-            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, throws: throws);
+            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, isNoThrow: isNoThrow);
         }
 
         private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line) => Located(() => ParseFieldDeclarationCoreLocated(type, name, accessibility, isStatic, isConst, isReadonly, line));
@@ -1238,7 +1238,7 @@ namespace gflat
         {
             int line = Current.Line;
             Expect(TokenKind.Throw);
-            AstNode expr = ParseExpression();
+            AstNode? expr = Check(TokenKind.Semicolon) ? null : ParseExpression();
             Expect(TokenKind.Semicolon);
             return new ThrowStatement(expr, line);
         }

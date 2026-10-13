@@ -82,7 +82,7 @@ public class PlacementConstructionTests
     public void ArgumentFailureLeavesDestinationUntouched()
         => Assert.Equal(0, CompilerTestHelper.Run("""
             struct S { public int value; public S(int n) { value = n; } }
-            int Fail() throws { throw new* Exception(); }
+            int Fail() { throw new Exception(); }
             int main() {
                 void* memory = (void*)Memory::Allocate((nuint)sizeof(S));
                 int* marker = (int*)memory; *marker = 123;
@@ -104,13 +104,13 @@ public class PlacementConstructionTests
             }
             int main() {
                 Exception* storage = (Exception*)Memory::Allocate((nuint)sizeof(Exception));
-                try { throw new* Exception() at storage; } catch { printf(c"C"); }
+                try { new* Exception() at storage; throw *storage; } catch { printf(c"C"); }
                 printf(c"S"); delete storage;
                 return 0;
             }
             """);
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal("ACSF", result.StandardOutput);
+        Assert.Equal("AACFSF", result.StandardOutput);
     }
 
     [Fact]

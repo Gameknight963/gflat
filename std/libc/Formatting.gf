@@ -3,16 +3,16 @@ namespace std;
 namespace detail
 {
     extern int snprintf(char* buffer, nuint size, readonly(char)* format, ...);
-    void FloatingText(double value, readonly(char)* format, ITextWriter* output) throws
+    void FloatingText(double value, readonly(char)* format, ITextWriter* output)
     {
         char[64] buffer;
         int written = snprintf(buffer, 64, format, value);
         if (written < 0 || written >= 64)
-            throw new* Exception(c"Floating-point formatting failed", 4);
+            throw new Exception(c"Floating-point formatting failed", 4);
         output.Write(buffer, (nuint)written);
     }
 }
 
 // Locale follows the application's C locale. Enough digits for round trips.
-void Format(float value, ITextWriter* output) throws { detail::FloatingText((double)value, c"%.9g", output); }
-void Format(double value, ITextWriter* output) throws { detail::FloatingText(value, c"%.17g", output); }
+void Format(float value, ITextWriter* output) { detail::FloatingText((double)value, c"%.9g", output); }
+void Format(double value, ITextWriter* output) { detail::FloatingText(value, c"%.17g", output); }

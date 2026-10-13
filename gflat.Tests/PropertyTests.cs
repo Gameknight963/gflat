@@ -220,7 +220,7 @@ public class PropertyTests
                 public ~S() { printf("D"); }
             }
             S make() { printf("N"); return new S(); }
-            int fail() throws { printf("F"); throw new* Exception(); }
+            int fail() { printf("F"); throw new Exception(); }
             int main() {
                 make().P += 1;
                 try { make().P = fail(); } catch { printf("C"); }
@@ -238,8 +238,8 @@ public class PropertyTests
             extern int printf(readonly(char)* text, ...);
             struct S {
                 public int P {
-                    get throws { printf("G"); throw new* Exception(); }
-                    set throws { printf("S"); throw new* Exception(); }
+                    get { printf("G"); throw new Exception(); }
+                    set { printf("S"); throw new Exception(); }
                 }
             }
             int main() {
@@ -274,7 +274,6 @@ public class PropertyTests
     [InlineData("interface I { int P { get; set; } } class S : I { public int P { get; } }", "must be public")]
     [InlineData("class B { public int P { get; set; } } class D : B { public int P => 2; } int main() { D d = new D(); d.P = 3; return 0; }", "no setter")]
     [InlineData("interface I { public int P { get; private set; } }", "restricted accessibility")]
-    [InlineData("interface I { int P { get throws; } }", "Throwing interface property")]
     [InlineData("class S { public int P { get; } public const S() { P = 7; } } const S s = new S();", "Property access is not yet supported in constant evaluation")]
     public void InvalidPropertiesAreDiagnosed(string source, string message)
     {

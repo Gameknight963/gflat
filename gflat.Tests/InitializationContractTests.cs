@@ -36,7 +36,7 @@ public class InitializationContractTests
 
     [Fact]
     public void CaughtThrowInitializesFieldsOnTheCompletingPath()
-        => Compiler.Check("struct S { int* p; public S(int* q, bool b) { try { if (b) throw new* Exception(); p = q; } catch (Exception* e) { p = q; } } }");
+        => Compiler.Check("struct S { int* p; public S(int* q, bool b) { try { if (b) throw new Exception(); p = q; } catch (Exception* e) { p = q; } } }");
 
     [Fact]
     public void NestedFieldAssignmentsAndAutomaticPropertyAssignmentsCount()

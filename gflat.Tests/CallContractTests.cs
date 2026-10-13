@@ -5,8 +5,6 @@ namespace gflat.Tests;
 public sealed class CallContractTests
 {
     [Theory]
-    [InlineData("int F() throws { return 1; } int main() { int()* p = &F; return p(); }")]
-    [InlineData("namespace N { int F() throws { return 1; } } int main() { int()* p = &N::F; return p(); }")]
     [InlineData("int F(const int x) => x; int main() { int(int)* p = &F; return p(1); }")]
     [InlineData("extern int F(const int x); int main() { int(int)* p = &F; return p(1); }")]
     public void FunctionAddressesCannotDiscardCallRequirements(string source)
@@ -29,9 +27,9 @@ public sealed class CallContractTests
     [Fact]
     public void ThrowingInterfaceDispatchUsesExceptionAbi()
         => Assert.Equal(42, CompilerTestHelper.Run("""
-            interface I { int Get() throws; }
-            class Base : I { public virtual int Get() throws { return 1; } }
-            class Derived : Base { public override int Get() throws { throw new* Exception(); } }
+            interface I { int Get(); }
+            class Base : I { public virtual int Get() { return 1; } }
+            class Derived : Base { public override int Get() { throw new Exception(); } }
             int main() { Derived d = new Derived(); Base* b = &d; I* i = b;
                 try { return i.Get(); } catch (Exception* e) { return 42; }
             }

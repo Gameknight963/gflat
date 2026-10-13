@@ -19,7 +19,7 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted $asset))) { throw "VSIX is missing $asset" }
     }
     foreach ($tool in @('Compiler', 'Server')) {
-        foreach ($source in @('core/Attribute.gf', 'core/Exception.gf', 'core/Text.gf', 'libc/Memory.gf')) {
+        foreach ($source in @('core/Attribute.gf', 'core/Exception.gf', 'core/ExceptionHandling.gf', 'core/Text.gf', 'libc/Memory.gf')) {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Std/$source"))) { throw "VSIX is missing $tool/Std/$source" }
         }
     }

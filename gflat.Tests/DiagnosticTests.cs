@@ -278,7 +278,7 @@ namespace gflat.Tests
             Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("unknownVar1"));
             Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("unknownVar2"));
 
-            // Compatibility: CompilerTestHelper.Check still throws TypeCheckException
+            // Compatibility: CompilerTestHelper.Check still TypeCheckException
             Assert.Throws<CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(code));
         }
 
@@ -351,7 +351,7 @@ namespace gflat.Tests
             Assert.Contains(checker.Diagnostics.Items, d => d.Descriptor.Id == DiagnosticRules.GF0005_ExpectedToken.Id);
             Assert.Contains(checker.Diagnostics.Items, d => d.Message.Contains("Semicolon"));
 
-            // Compatibility: CompilerTestHelper.Check still throws TypeCheckException
+            // Compatibility: CompilerTestHelper.Check still TypeCheckException
             Assert.Throws<CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(code));
         }
 

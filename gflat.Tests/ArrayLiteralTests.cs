@@ -51,7 +51,7 @@ public class ArrayLiteralTests
             public Item(int value) { id = value; printf("N%d", id); }
             public ~Item() { printf("D%d", id); }
         }
-        Item fail() throws { throw new* Exception(); }
+        Item fail() { throw new Exception(); }
         """;
 
     [Theory]

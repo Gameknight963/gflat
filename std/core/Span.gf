@@ -15,24 +15,24 @@ struct Span<T>
 
     public ref T this[nuint index]
     {
-        get throws
+        get
         {
-            if (index >= length) throw new* Exception(c"Span index out of range", 3);
+            if (index >= length) throw new Exception(c"Span index out of range", 3);
             return data![index];
         }
     }
 
-    public Span<T> Slice(nuint start, nuint count) throws
+    public Span<T> Slice(nuint start, nuint count)
     {
         if (start > length || count > length - start)
-            throw new* Exception(c"Span slice out of range", 3);
+            throw new Exception(c"Span slice out of range", 3);
         if (count == (nuint)0) return new Span<T>();
         return new Span<T>((T*)data + start, count);
     }
 
-    public Span<T> Slice(nuint start) throws
+    public Span<T> Slice(nuint start)
     {
-        if (start > length) throw new* Exception(c"Span slice out of range", 3);
+        if (start > length) throw new Exception(c"Span slice out of range", 3);
         return this.Slice(start, length - start);
     }
 

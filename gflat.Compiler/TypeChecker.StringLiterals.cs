@@ -94,7 +94,7 @@ public partial class TypeChecker
                 new LiteralExpression(new Token(TokenKind.ULongLiteral, node.Line, 0, 0, length + "ul"), node.Line), node.Line) { Span = node.Span });
         node.Arguments[1].Accept(this);
         _resolvedCalls[node] = method;
-        if (method.Throws) CheckThrowingCall(node, node.Prefix + "\"\"");
+        if (!method.IsNoThrow) CheckThrowingCall(node, node.Prefix + "\"\"");
         RecordType(node, method.ReturnType);
     }
 }

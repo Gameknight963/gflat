@@ -17,18 +17,18 @@ public class StabilityTests
     }
 
     [Fact]
-    public void ThrowingDeferReleasesReplacedException()
+    public void SecondExceptionEscapingUnwindCleanupTerminates()
     {
         var result = CompilerTestHelper.Run(TrackedAllocator + """
-            void fail() throws { printf("T"); throw new* Exception(); }
+            void fail() { printf("T"); throw new Exception(); }
             int main() {
-                try { defer printf("A"); defer fail(); throw new* Exception(); }
+                try { defer printf("A"); defer fail(); throw new Exception(); }
                 catch { printf("C"); }
                 return 0;
             }
             """);
-        Assert.Equal(0, result.ExitCode);
-        Assert.Equal("TAFCF", result.StandardOutput);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal("T", result.StandardOutput);
     }
 
     [Theory]
@@ -37,7 +37,7 @@ public class StabilityTests
     public void ThrowingDeferRunsRemainingCleanupOnce(string exit)
     {
         var result = CompilerTestHelper.Run(TrackedAllocator + """
-            void fail() throws { printf("T"); throw new* Exception(); }
+            void fail() { printf("T"); throw new Exception(); }
             int main() {
                 try { defer printf("A"); defer fail(); defer printf("B");
             """ + exit + " } catch { printf(\"C\"); } return 0; }");
@@ -46,11 +46,11 @@ public class StabilityTests
     }
 
     [Fact]
-    public void UnhandledExceptionRunsDestructorBeforeFree()
+    public void UnhandledExceptionInvokesHookWithLiveObject()
     {
-        var result = CompilerTestHelper.Run(TrackedAllocator + "class E : Exception { public ~E() { printf(\"D\"); } } int main() { throw new* E(); }");
+        var result = CompilerTestHelper.Run(TrackedAllocator + "class E : Exception { public ~E() { printf(\"D\"); } } namespace Exceptions { public replace void Unhandled(Exception*? e) { printf(\"H\"); } } int main() { throw new E(); }");
         Assert.Equal(1, result.ExitCode);
-        Assert.EndsWith("DF", result.StandardOutput);
+        Assert.Equal("H", result.StandardOutput);
     }
 
     private const string Leaf = """
@@ -126,7 +126,7 @@ public class StabilityTests
     {
         var result = CompilerTestHelper.Run(Leaf + """
             struct Outer { Leaf leaf = new Leaf(1); }
-            void fail() throws { Outer o = new Outer(); throw new* Exception(); }
+            void fail() { Outer o = new Outer(); throw new Exception(); }
             int main() { try { fail(); } catch (Exception* e) { printf("C"); } return 0; }
             """);
         Assert.Equal(0, result.ExitCode);
@@ -148,7 +148,7 @@ public class StabilityTests
     public void CatchExitRunsDeferBeforeFree(string exit, string expected)
     {
         var result = CompilerTestHelper.Run(TrackedAllocator +
-            "int main() { for (int i = 0; i < 1; i++) { try { throw new* Exception(); } catch { defer printf(\"D\"); " + exit + " } } return 0; }");
+            "int main() { for (int i = 0; i < 1; i++) { try { throw new Exception(); } catch { defer printf(\"D\"); " + exit + " } } return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(expected, result.StandardOutput);
     }
@@ -158,7 +158,7 @@ public class StabilityTests
     {
         var result = CompilerTestHelper.Run(TrackedAllocator + """
             int main() {
-                try { try { throw new* Exception(); } catch (Exception* e) { throw new* Exception(); } }
+                try { try { throw new Exception(); } catch (Exception* e) { throw new Exception(); } }
                 catch { printf("C"); }
                 return 0;
             }
@@ -172,7 +172,7 @@ public class StabilityTests
     {
         var result = CompilerTestHelper.Run(TrackedAllocator + """
             int main() {
-                try { try { throw new* Exception(); } catch (Exception* e) { throw e; } }
+                try { try { throw new Exception(); } catch (Exception* e) { throw; } }
                 catch { printf("C"); }
                 return 0;
             }
@@ -202,7 +202,7 @@ public class StabilityTests
     [Fact]
     public void ExceptionDestructorRunsBeforeFree()
     {
-        var result = CompilerTestHelper.Run(TrackedAllocator + "class E : Exception { public ~E() { printf(\"D\"); } } int main() { try { throw new* E(); } catch { printf(\"C\"); } return 0; }");
+        var result = CompilerTestHelper.Run(TrackedAllocator + "class E : Exception { public ~E() { printf(\"D\"); } } int main() { try { throw new E(); } catch { printf(\"C\"); } return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("CDF", result.StandardOutput);
     }

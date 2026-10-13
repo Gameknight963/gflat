@@ -114,9 +114,8 @@ public class ReviewRegressionTests
 
     [Theory]
     [InlineData("int f() { while (true) { return 7; } }", "f()")]
-    [InlineData("int f() throws { while (true) { return 7; } }", "f()")]
     [InlineData("struct S { public int f() { while (true) { return 7; } } }", "new S().f()")]
-    [InlineData("class S { public int f() throws { while (true) { return 7; } } }", "new S().f()")]
+    [InlineData("class S { public int f() { while (true) { return 7; } } }", "new S().f()")]
     [InlineData("int f() { for (;;) { return 7; } }", "f()")]
     public void NonVoidLoopExitHasAnLlvmTerminator(string declaration, string call) =>
         Assert.Equal(7, CompilerTestHelper.Run(declaration + " int main() { return " + call + "; }").ExitCode);

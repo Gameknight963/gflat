@@ -76,6 +76,16 @@ public static class NativeToolchain
         return new(process.ExitCode, stdout.GetAwaiter().GetResult(), stderr.GetAwaiter().GetResult());
     }
 
+    /// <summary>Run user code with inherited input/output so console prompts remain interactive.</summary>
+    public static int RunProgram(string executable, IEnumerable<string> arguments)
+    {
+        using var process = new Process { StartInfo = new ProcessStartInfo(executable) { UseShellExecute = false } };
+        foreach (string argument in arguments) process.StartInfo.ArgumentList.Add(argument);
+        process.Start();
+        process.WaitForExit();
+        return process.ExitCode;
+    }
+
     public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes)
     {
         string compiler = FindClang(null);

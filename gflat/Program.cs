@@ -83,10 +83,7 @@ public static class Program
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
                     irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes);
                 if (result != 0 || !run) return result;
-                var execution = NativeToolchain.Run(outputPath, []);
-                Console.Write(execution.StandardOutput);
-                Console.Error.Write(execution.StandardError);
-                return execution.ExitCode;
+                return NativeToolchain.RunProgram(outputPath, []);
             }
             var sources = sourcePaths.Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
             if (check)
@@ -106,10 +103,7 @@ public static class Program
                 ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes);
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
                 if (!run) return 0;
-                ProcessResult execution = NativeToolchain.Run(outputPath, []);
-                Console.Write(execution.StandardOutput);
-                Console.Error.Write(execution.StandardError);
-                return execution.ExitCode;
+                return NativeToolchain.RunProgram(outputPath, []);
             }
             finally { File.Delete(temporaryIr); }
         }

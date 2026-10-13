@@ -78,3 +78,4 @@ These APIs operate on bytes through libc's standard text streams, including its
 platform newline translation. They do not select the Windows console code page.
 The compiler links the small native standard-stream accessor only when referenced;
 `stdin` and `stdout` are macros rather than portable external variable names.
+`gflat --run` inherits console input/output, so flushed prompts appear immediately.

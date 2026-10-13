@@ -65,7 +65,7 @@ public class ConsoleTests
     [InlineData("first\n\nlast")]
     [InlineData("first\r\n\r\nlast\r")]
     [InlineData("a\0b\n")]
-    [InlineData("Ã©\n")]
+    [InlineData("é\n")]
     public void RawBufferReadsPreserveBytesAndDistinguishEmptyLinesFromEof(string input)
     {
         var result = Run("""
@@ -172,6 +172,52 @@ public class ConsoleTests
             Assert.Equal(42, result.ExitCode);
         }
         finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public async Task CliRunShowsPromptBeforeWaitingForInput()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "gflat-console-cli-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var sources = Sources("""
+                int main() {
+                    Console::WriteLine("prompt"); Console::Flush();
+                    char[8] buffer;
+                    nuint count = Console::ReadLine(buffer, 8);
+                    Console::WriteLine(buffer, count); return 42;
+                }
+                """);
+            var start = new ProcessStartInfo("dotnet") {
+                UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            };
+            start.ArgumentList.Add(typeof(Program).Assembly.Location);
+            foreach (var source in sources)
+            {
+                string file = Path.Combine(root, source.Path);
+                Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+                File.WriteAllText(file, source.Text);
+                start.ArgumentList.Add(file);
+            }
+            start.ArgumentList.Add("--run"); start.ArgumentList.Add("-o"); start.ArgumentList.Add(Path.Combine(root, "main.exe"));
+            using var process = Process.Start(start)!;
+            var errors = process.StandardError.ReadToEndAsync();
+            try
+            {
+                string? prompt = await process.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30));
+                Assert.Equal("prompt", prompt);
+                await process.StandardInput.WriteLineAsync("hello"); process.StandardInput.Close();
+                var rest = process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
+                Assert.Equal(42, process.ExitCode);
+                Assert.Equal("hello", (await rest).TrimEnd('\r', '\n'));
+                Assert.Equal("", await errors);
+            }
+            finally { if (!process.HasExited) { process.Kill(true); process.WaitForExit(); } }
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     [Fact]

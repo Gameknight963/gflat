@@ -57,6 +57,7 @@ try {
     $compiler = Join-Path $extracted 'Compiler/gflat.exe'
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp'))) { throw 'VSIX is missing the native stdio bridge source' }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }
@@ -64,6 +65,11 @@ int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) 
 '@ | Set-Content -LiteralPath $smoke
     & $compiler $smoke --run -o (Join-Path $extracted 'unwinding-ref.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged exception/ref smoke test failed' }
+    $console = Join-Path $extracted 'console.gf'
+    'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
+    $std = Join-Path $repoRoot 'std'
+    $consoleResult = & $compiler $console (Join-Path $std 'core/IOException.gf') (Join-Path $std 'core/BufferTooSmallException.gf') (Join-Path $std 'libc/Console.gf') --run -o (Join-Path $extracted 'console.exe')
+    if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal

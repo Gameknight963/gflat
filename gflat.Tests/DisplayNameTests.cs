@@ -6,6 +6,16 @@ namespace gflat.Tests;
 public class DisplayNameTests
 {
     [Fact]
+    public void ReadonlyFormattingKeepsExplicitGenericArgumentQualifications()
+    {
+        var type = TypeQualifiers.ReadOnly(new NamedTypeExpression("Box", null, 1,
+            [new PointerTypeExpression(TypeQualifiers.ReadOnly(new NamedTypeExpression("char", null, 1)), false, 1)]));
+        Assert.Equal("readonly(Box<readonly(char)*>)", new TypeChecker().DisplayTypeName(type));
+        var pointer = TypeQualifiers.ReadOnly(new PointerTypeExpression(new NamedTypeExpression("char", null, 1), false, 1));
+        Assert.Equal("readonly(char*)", TypeChecker.TypeName(pointer));
+        Assert.True(((PointerTypeExpression)pointer).Inner.IsReadOnlyValue);
+    }
+    [Fact]
     public void NamespacedGenericAndNestedTypesKeepSourceSpelling()
     {
         var source = new SourceFile(Path.GetFullPath("names.gf"), "namespace std { class Outer { public class Inner {} } struct Box<T> { public T value; } Box<Outer::Inner*> Read() => 1; }");

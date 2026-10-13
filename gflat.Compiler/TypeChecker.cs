@@ -5512,18 +5512,19 @@ namespace gflat
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
         }
 
-        public static string TypeName(TypeExpression type) => type.IsReadOnlyValue
-            ? "readonly(" + TypeNameCore(type.WithReadOnlyValue(false)) + ")" : TypeNameCore(type);
-        private static string TypeNameCore(TypeExpression type) => type switch
+        public static string TypeName(TypeExpression type) => TypeName(type, false);
+        private static string TypeName(TypeExpression type, bool inheritedReadOnly) => type.IsReadOnlyValue && !inheritedReadOnly
+            ? "readonly(" + TypeNameCore(type, true) + ")" : TypeNameCore(type, inheritedReadOnly);
+        private static string TypeNameCore(TypeExpression type, bool inheritedReadOnly) => type switch
         {
             NamedTypeExpression n => n.Name,
             NestedTypeExpression nested => nested.TypeArguments.Count > 0
                 ? $"{TypeName(nested.Parent)}::{nested.Member}<{string.Join(", ", nested.TypeArguments.Select(TypeName))}>"
                 : $"{TypeName(nested.Parent)}::{nested.Member}",
             ReferenceTypeExpression r => "ref " + TypeName(r.Inner),
-            PointerTypeExpression p => TypeName(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
-            ManagedTypeExpression m => TypeName(m.Inner) + "^" + (m.IsNullable ? "?" : ""),
-            ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
+            PointerTypeExpression p => TypeName(p.Inner, inheritedReadOnly) + "*" + (p.IsNullable ? "?" : ""),
+            ManagedTypeExpression m => TypeName(m.Inner, inheritedReadOnly) + "^" + (m.IsNullable ? "?" : ""),
+            ArrayTypeExpression a => TypeName(a.ElementType, inheritedReadOnly) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"
         };

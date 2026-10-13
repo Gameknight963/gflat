@@ -67,6 +67,22 @@ public class HoverTests
         Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "ref" && r.GetProperty("ClassificationTypeName").GetString() == "keyword");
     }
 
+    [Theory]
+    [InlineData("readonly(char*)")]
+    [InlineData("readonly(char**)")]
+    [InlineData("readonly(char*?)")]
+    [InlineData("readonly(char[4])")]
+    [InlineData("readonly(char)*")]
+    [InlineData("readonly(char*)*")]
+    [InlineData("readonly(char^)")]
+    public void ReadonlyTypesAvoidRepeatingInheritedQualifications(string type)
+    {
+        var hover = Hover("void Read(" + type + " mes|sage) {}", true);
+        string text = hover.GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains(type + " message", text);
+        Assert.DoesNotContain("readonly(readonly", text);
+    }
+
     [Fact]
     public void ReferencePropertyHoverShowsItsBorrowingContract()
         => Assert.Contains("ref int S.Value", Hover("struct S { int n; public ref int Va|lue => n; }").GetProperty("contents").GetProperty("value").GetString());

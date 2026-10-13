@@ -17,17 +17,20 @@ public partial class TypeChecker
         return name;
     }
 
-    public string DisplayTypeName(TypeExpression type)
+    public string DisplayTypeName(TypeExpression type) => DisplayTypeName(type, false);
+
+    private string DisplayTypeName(TypeExpression type, bool inheritedReadOnly)
     {
-        if (type.IsReadOnlyValue) return "readonly(" + DisplayTypeName(type.WithReadOnlyValue(false)) + ")";
+        if (type.IsReadOnlyValue && !inheritedReadOnly)
+            return "readonly(" + DisplayTypeName(type.WithReadOnlyValue(false), true) + ")";
         return type switch
         {
             NamedTypeExpression n => DisplayName(n.Name) + (n.TypeArguments.Count == 0 ? "" : "<" + string.Join(", ", n.TypeArguments.Select(DisplayTypeName)) + ">"),
             NestedTypeExpression n => DisplayTypeName(n.Parent) + "::" + n.Member + (n.TypeArguments.Count == 0 ? "" : "<" + string.Join(", ", n.TypeArguments.Select(DisplayTypeName)) + ">"),
             ReferenceTypeExpression r => "ref " + DisplayTypeName(r.Inner),
-            PointerTypeExpression p => DisplayTypeName(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
-            ManagedTypeExpression p => DisplayTypeName(p.Inner) + "^" + (p.IsNullable ? "?" : ""),
-            ArrayTypeExpression a => DisplayTypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
+            PointerTypeExpression p => DisplayTypeName(p.Inner, inheritedReadOnly) + "*" + (p.IsNullable ? "?" : ""),
+            ManagedTypeExpression p => DisplayTypeName(p.Inner, inheritedReadOnly) + "^" + (p.IsNullable ? "?" : ""),
+            ArrayTypeExpression a => DisplayTypeName(a.ElementType, inheritedReadOnly) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             FunctionPointerTypeExpression f => $"{DisplayTypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(DisplayTypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => TypeName(type)
         };

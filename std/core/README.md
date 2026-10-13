@@ -46,6 +46,31 @@ Only C-string consumers stop at the first null; counted operations and interpola
 preserve it. Use factories for fallible construction: constructors cannot yet
 propagate exceptions.
 
+## Integer parsing
+
+`TryParseInt(text, &value)` parses a null-terminated decimal integer.
+`TryParseInt(data, count, &value)` parses exactly `count` bytes without requiring
+a terminator. Both return `bool` and write an `int` through the result pointer:
+
+```gflat
+int value = 0;
+if (TryParseInt(c"-42", &value)) {
+    // value is -42.
+}
+```
+
+An optional leading `+` or `-` is accepted. Empty input, whitespace, nondecimal
+characters, and values outside the signed 32-bit range return `false` and set
+the result to zero. Parsing consumes the entire input and does not allocate,
+throw, or call libc. For a `String`, use `TryParseInt(text.Data, text.Length, &value)`.
+
+`ParseInt(text)` and `ParseInt(data, count)` return the parsed `int` directly,
+using the same rules. They throw `Exception` on invalid input or overflow:
+
+```gflat
+int value = ParseInt(c"42");
+```
+
 ## Vectors
 
 `Vector<T>` owns contiguous elements. It supports primitives and owning values:

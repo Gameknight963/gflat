@@ -91,7 +91,7 @@ namespace gflat
         public void Visit(Parameter node)
         {
             Print($"Parameter: {(node.IsConst ? "const " : "")}{node.Name}");
-            Indented(() => node.Type.Accept(this));
+            Indented(() => { node.Type.Accept(this); node.DefaultValue?.Accept(this); });
         }
 
         public void Visit(BlockStatement node)

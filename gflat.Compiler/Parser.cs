@@ -715,7 +715,8 @@ namespace gflat
             bool isConst = Match(TokenKind.Const);
             TypeExpression paramType = ParseParameterType();
             string paramName = Expect(TokenKind.Identifier).Text;
-            return new Parameter(paramName, paramType, line, isConst);
+            AstNode? defaultValue = Match(TokenKind.Equals) ? ParseExpression() : null;
+            return new Parameter(paramName, paramType, line, isConst, defaultValue);
         }
 
         private List<AttributeNode> ParseAttributes()

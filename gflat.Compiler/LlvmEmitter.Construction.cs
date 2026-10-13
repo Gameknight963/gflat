@@ -4,6 +4,27 @@ namespace gflat;
 
 public partial class LlvmEmitter
 {
+    private void EmitImplicitBaseConstruction(string derivedName, TypeChecker.ClassInfo baseInfo, string baseThis)
+    {
+        if (_typeChecker.GetImplicitBaseCall(derivedName) is not { } call)
+        {
+            EmitConstructorCall(GetConstructorMangledName(baseInfo.Name, null, baseInfo.Namespace),
+                baseInfo.Constructors.FirstOrDefault(c => c.Parameters.Count == 0), $"%{baseInfo.Name}* {baseThis}");
+            return;
+        }
+        EmitExpressionWithCleanup(() => WithArgumentOwnership(() =>
+        {
+            var arguments = new List<string> { $"%{baseInfo.Name}* {baseThis}" };
+            for (int i = 0; i < call.Arguments.Count; i++)
+            {
+                EmitArgument(call.Arguments[i], call.Constructor.Parameters[i].Type);
+                arguments.Add($"{EmitParamType(call.Constructor.Parameters[i].Type)} {Pop()}");
+            }
+            TransferArguments();
+            EmitConstructorCall(GetConstructorMangledName(baseInfo.Name, call.Constructor, baseInfo.Namespace), call.Constructor, string.Join(", ", arguments));
+        }));
+    }
+
     private int _exceptionCleanup;
     private readonly Dictionary<string, string> _constructionFields = new();
     private sealed class ExceptionOnlyCleanup(IDeferAction action) : IDeferAction

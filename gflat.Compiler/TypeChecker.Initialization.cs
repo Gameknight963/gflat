@@ -39,8 +39,15 @@ public partial class TypeChecker
             if (cls.BaseClass != null && GetClass(cls.BaseClass) is ClassInfo parent)
             {
                 if (parent.Constructors.Count == 0) ValidateImplicitConstruction(parent.Name, line);
-                else if (!parent.Constructors.Any(c => c.Parameters.Count == 0))
+                else if (!parent.Constructors.Any(c => AcceptsArgumentCount(c.Parameters, 0)))
                     throw new TypeCheckException($"Base class '{parent.Name}' requires an explicit constructor call", line);
+                else
+                {
+                    var arguments = new List<AstNode>();
+                    var constructor = SelectBestOverload(parent.Constructors, c => c.Parameters, arguments, parent.Name, line);
+                    AddDefaultArguments(arguments, constructor.Parameters, new DefaultExpression(null, line));
+                    implicitBaseCalls[name] = (constructor, arguments);
+                }
             }
         }
         else fields = GetStruct(name)!.FieldDeclarations;

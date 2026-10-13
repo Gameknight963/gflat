@@ -47,8 +47,8 @@ namespace gflat
             _symbols.AliasResolver = ResolveAlias;
         }
 
-        public bool TryGetConstValueByName(string name, out ConstValue? value) =>
-            _constVariablesByName.TryGetValue(name, out value);
+        public bool TryGetConstValueByName(string name, out ConstValue? value) => checkingDefaults.Count > 0
+            ? TryGetDefaultConstant(name, out value) : _constVariablesByName.TryGetValue(name, out value);
 
         public bool TryGetConstValue(AstNode node, out ConstValue? value) =>
             _constValues.TryGetValue(node, out value);
@@ -2696,6 +2696,7 @@ namespace gflat
         public void Visit(OperatorDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            ValidateParameterDefaults(node, node.Parameters);
             if (_currentStruct == null)
             {
                 throw new TypeCheckException("Operator overloads must be declared inside a struct", node.Line);
@@ -2767,6 +2768,7 @@ namespace gflat
                         throw new TypeCheckException($"Interface method '{node.Name}.{method.Name}' cannot have a body", method.Line);
                     }
                     ValidateTypeUsage(method.ReturnType, method.Line);
+                    ValidateParameterDefaults(method, method.Parameters);
                     foreach (Parameter p in method.Parameters)
                     {
                         ValidateParameterType(p.Type, p.Line);
@@ -2832,6 +2834,7 @@ namespace gflat
             ValidatePropertyAccessor(node);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
             if (node.IsGeneric) return;
+            ValidateParameterDefaults(node, node.Parameters);
             if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
 
 
@@ -2867,6 +2870,7 @@ namespace gflat
             }
             string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
             string shortOwnerName = ownerName.Split('.').Last().Split('$').Last();
+            ValidateParameterDefaults(node, node.Parameters);
             if (node.Name != ownerName && node.Name != shortOwnerName)
             {
                 string kindStr = _currentStruct != null ? "struct" : "class";
@@ -2914,7 +2918,7 @@ namespace gflat
                     List<ConstructorDeclaration> matches = new();
                     foreach (ConstructorDeclaration baseCtor in baseClass.Constructors)
                     {
-                        if (baseCtor.Parameters.Count != node.BaseArguments.Count)
+                        if (!AcceptsArgumentCount(baseCtor.Parameters, node.BaseArguments.Count))
                             continue;
 
                         bool matchesParams = true;
@@ -2938,15 +2942,25 @@ namespace gflat
                         string argTypes = string.Join(", ", node.BaseArguments.Select(a => TypeName(GetType(a))));
                         throw new TypeCheckException($"No matching base constructor found for '{baseClass.Name}' with arguments ({argTypes})", node.Line);
                     }
-                    _resolvedBaseConstructors[node] = SelectBestOverload(matches, c => c.Parameters, node.BaseArguments, baseClass.Name, node.Line);
+                    var selectedBase = SelectBestOverload(matches, c => c.Parameters, node.BaseArguments, baseClass.Name, node.Line);
+                    _resolvedBaseConstructors[node] = selectedBase;
+                    AddDefaultArguments(node.BaseArguments, selectedBase.Parameters, node);
                 }
                 else if (_currentClass != null && _currentClass.BaseClass != null)
                 {
                     ClassInfo baseClass = _classes[_currentClass.BaseClass];
                     if (baseClass.Constructors.Count == 0) ValidateImplicitConstruction(baseClass.Name, node.Line);
-                    if (baseClass.Constructors.Count > 0 && !baseClass.Constructors.Any(c => c.Parameters.Count == 0))
+                    if (baseClass.Constructors.Count > 0 && !baseClass.Constructors.Any(c => AcceptsArgumentCount(c.Parameters, 0)))
                     {
                         throw new TypeCheckException($"Class '{ownerName}' must explicitly call a base constructor because base class '{baseClass.Name}' does not define a parameterless constructor", node.Line);
+                    }
+                    if (baseClass.Constructors.Count > 0)
+                    {
+                        var arguments = new List<AstNode>();
+                        var selectedBase = SelectBestOverload(baseClass.Constructors, c => c.Parameters, arguments, baseClass.Name, node.Line);
+                        _resolvedBaseConstructors[node] = selectedBase;
+                        AddDefaultArguments(arguments, selectedBase.Parameters, node);
+                        node.BaseArguments = arguments;
                     }
                 }
 
@@ -4447,6 +4461,7 @@ namespace gflat
 
                     int slotIdx = ifaceInfo.MethodIndices[memberAccess.Member];
                     _interfaceMethodCalls[node] = (ifaceInfo, slotIdx, ifaceMethod);
+                    AddDefaultArguments(node.Arguments, ifaceMethod.Parameters, node);
 
                     if (node.Arguments.Count != ifaceMethod.Parameters.Count)
                         throw new TypeCheckException(
@@ -4648,6 +4663,9 @@ namespace gflat
             if (ext != null)
             {
                 _resolvedCalls[node] = ext;
+                AddDefaultArguments(node.Arguments, ext.Parameters, node);
+                if (node.Arguments.Count < ext.Parameters.Count || !ext.IsVariadic && node.Arguments.Count > ext.Parameters.Count)
+                    throw new TypeCheckException($"Function '{funcName}' expects {ext.Parameters.Count} arguments but got {node.Arguments.Count}", node.Line);
                 for (int i = 0; i < Math.Min(node.Arguments.Count, ext.Parameters.Count); i++)
                 {
                     TypeExpression argType = GetType(node.Arguments[i]);
@@ -4687,6 +4705,7 @@ namespace gflat
                 method = MonomorphizeFunction(method, arguments, node.Line);
             }
             _resolvedCalls[node] = method;
+            AddDefaultArguments(node.Arguments, method.Parameters, node);
 
             if (!method.IsNoThrow)
             {
@@ -4853,6 +4872,13 @@ namespace gflat
             if (scope.Externs.TryGetValue(node.Member, out ExternDeclaration? ext))
             {
                 RecordType(node, ext.ReturnType);
+                return;
+            }
+            if (checkingDefaults.Count > 0 && scope.Fields.TryGetValue(node.Member, out var constant) &&
+                EvaluateDefaultConstant(constant, out var constantValue))
+            {
+                RecordType(node, ResolveAlias(constant.Type));
+                _constValues[node] = constantValue!;
                 return;
             }
             throw new TypeCheckException($"'{node.Member}' not found in namespace", node.Line);
@@ -5072,7 +5098,7 @@ namespace gflat
                     List<ConstructorDeclaration> matches = new();
                     foreach (ConstructorDeclaration ctor in cInfo.Constructors)
                     {
-                        if (ctor.Parameters.Count != node.Arguments.Count)
+                        if (!AcceptsArgumentCount(ctor.Parameters, node.Arguments.Count))
                             continue;
 
                         bool matchesParams = true;
@@ -5116,6 +5142,7 @@ namespace gflat
                     }
                     matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line);
                     _resolvedConstructors[node] = matchedCtor;
+                    AddDefaultArguments(node.Arguments, matchedCtor.Parameters, node);
                     if (!matchedCtor.IsNoThrow) { _throwingCalls.Add(node); RecordImplicitException(); }
                     if (matchedCtor.IsCopy && !CanAccessCopy(new NamedTypeExpression(cInfo.Name, null, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
                         throw new TypeCheckException("Cannot access copy constructor", node.Line);
@@ -5164,7 +5191,7 @@ namespace gflat
                 List<ConstructorDeclaration> matches = new();
                 foreach (ConstructorDeclaration ctor in sInfo.Constructors)
                 {
-                    if (ctor.Parameters.Count != node.Arguments.Count)
+                    if (!AcceptsArgumentCount(ctor.Parameters, node.Arguments.Count))
                         continue;
 
                     bool matchesParams = true;
@@ -5208,6 +5235,7 @@ namespace gflat
                 }
                 matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line);
                 _resolvedConstructors[node] = matchedStructCtor;
+                AddDefaultArguments(node.Arguments, matchedStructCtor.Parameters, node);
                 if (!matchedStructCtor.IsNoThrow) { _throwingCalls.Add(node); RecordImplicitException(); }
                 if (matchedStructCtor.IsCopy && !CanAccessCopy(new NamedTypeExpression(sInfo.Name, null, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
                     throw new TypeCheckException("Cannot access copy constructor", node.Line);
@@ -5472,6 +5500,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.ReturnType, node.Line);
+            ValidateParameterDefaults(node, node.Parameters);
             foreach (var parameter in node.Parameters)
             {
                 ValidateParameterType(parameter.Type, parameter.Line);
@@ -5940,6 +5969,8 @@ namespace gflat
         {
             using var exceptionScope = IsolateExceptionHandlers();
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.Parameters.Any(p => p.DefaultValue != null))
+                throw new TypeCheckException("Lambda defaults are not supported; function pointers require every argument", node.Span);
             int prevLoopDepth = _loopDepth;
             AstNode? previousFunction = _currentFunction;
             _currentFunction = node;

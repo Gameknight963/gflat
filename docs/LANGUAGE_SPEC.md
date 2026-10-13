@@ -105,6 +105,27 @@ int main()
 
 Enums are distinct integral types, optionally with an underlying type such as `uint`. Conversions between enums and numbers, or between different enum types, require explicit casts, including assignments, arguments, returns, and comparisons. Bitwise operations on the same enum preserve its type. Aliases use `alias Name = Type;`.
 
+## Optional parameters
+
+Functions, methods, extern declarations, and constructors can declare trailing
+optional parameters: `int Read(int count = 42)`. Required parameters must come
+first. Defaults must be compile-time constants and use the declaring namespace,
+type, and imports; they cannot depend on caller locals or parameter values.
+The compiler supplies omitted arguments after selecting the declaration, without
+changing its ABI. Function pointers require every argument because their types
+do not carry defaults. Default values appear in editor signatures and hovers.
+
+Calls through interfaces and base pointers use the defaults of the statically
+selected declaration, even when another implementation runs. An explicit
+`Child(int value) : base(value)` initializer passes constructor arguments to the
+base. `base()` and implicit base initialization can use optional arguments.
+
+Defaults do not distinguish overloads. Matching supplied argument types take
+priority; when those are tied, an overload needing no defaults wins. Other ties
+are ambiguous. Defaults are not supported on ref parameters, operators,
+indexers, copy constructors, or lambdas. Optional values cannot require
+nontrivial copying or destruction.
+
 ## Weak defaults and explicit replacements
 
 Ordinary free functions, static methods, and concrete instance methods support overloads by parameter type and count. Exact argument types are preferred over implicit conversions; a candidate must be no worse for every argument and better for at least one. Equally applicable candidates are ambiguous, independent of declaration order. Constructor calls use the same ranking. Return types, readonly qualifications, and declaration modifiers cannot distinguish overloads.

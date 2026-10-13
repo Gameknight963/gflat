@@ -98,7 +98,7 @@ namespace gflat.ast
                 }
             }
             TypeExpression retType = CloneType(m.ReturnType);
-            List<Parameter> parameters = m.Parameters.Select(p => new Parameter(p.Name, CloneType(p.Type), p.Line, p.IsConst)).ToList();
+            List<Parameter> parameters = m.Parameters.Select(CloneParameter).ToList();
             BlockStatement? body = m.Body != null ? (BlockStatement)CloneNode(m.Body) : null;
             List<GenericParameter>? genericParams = m.GenericParameters != null && m.Name != _oldName
                 ? m.GenericParameters.ToList()
@@ -114,6 +114,9 @@ namespace gflat.ast
             result.Span = type.Span;
             return result;
         }
+
+        private Parameter CloneParameter(Parameter p) => new(p.Name, CloneType(p.Type), p.Line, p.IsConst,
+            p.DefaultValue == null ? null : CloneNode(p.DefaultValue)) { Span = p.Span };
 
         private TypeExpression CloneTypeLocated(TypeExpression type)
         {
@@ -208,7 +211,7 @@ namespace gflat.ast
                         ctorName = _newName + ctor.Name.Substring(_oldName.Length);
                     }
                 }
-                List<Parameter> parameters = ctor.Parameters.Select(p => new Parameter(p.Name, CloneType(p.Type), p.Line, p.IsConst)).ToList();
+                List<Parameter> parameters = ctor.Parameters.Select(CloneParameter).ToList();
                 BlockStatement body = (BlockStatement)CloneNode(ctor.Body);
                 List<AstNode>? baseArgs = ctor.BaseArguments?.Select(CloneNode).ToList();
                 return new ConstructorDeclaration(ctorName, parameters, body, ctor.Accessibility, ctor.Line, baseArgs, ctor.Attributes.Select(CloneAttribute).ToList(), ctor.IsConst) { IsCopy = ctor.IsCopy, IsNoThrow = ctor.IsNoThrow };
@@ -232,7 +235,7 @@ namespace gflat.ast
             if (node is OperatorDeclaration op)
             {
                 TypeExpression retType = CloneType(op.ReturnType);
-                List<Parameter> parameters = op.Parameters.Select(p => new Parameter(p.Name, CloneType(p.Type), p.Line, p.IsConst)).ToList();
+                List<Parameter> parameters = op.Parameters.Select(CloneParameter).ToList();
                 BlockStatement body = (BlockStatement)CloneNode(op.Body);
                 return new OperatorDeclaration(op.OperatorKind, op.OperatorSymbol, retType, parameters, body, op.Accessibility, op.IsStatic, op.Line);
             }

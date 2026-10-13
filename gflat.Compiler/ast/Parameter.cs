@@ -9,12 +9,14 @@ namespace gflat.ast
         public string Name { get; }
         public TypeExpression Type { get; set; }
         public bool IsConst { get; }
+        public AstNode? DefaultValue { get; }
 
-        public Parameter(string name, TypeExpression type, int line, bool isConst = false) : base(line)
+        public Parameter(string name, TypeExpression type, int line, bool isConst = false, AstNode? defaultValue = null) : base(line)
         {
             Name = name;
             Type = type;
             IsConst = isConst;
+            DefaultValue = defaultValue;
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

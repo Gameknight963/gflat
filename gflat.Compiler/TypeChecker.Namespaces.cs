@@ -171,15 +171,25 @@ public partial class TypeChecker
                     case MethodDeclaration method when !method.IsGeneric:
                         method.ReturnType = ResolveAlias(method.ReturnType);
                         foreach (var p in method.Parameters) p.Type = ResolveAlias(p.Type);
+                        RegisterParameterDefaults(method, method.Parameters);
                         break;
                     case OperatorDeclaration op:
                         op.ReturnType = ResolveAlias(op.ReturnType);
                         foreach (var p in op.Parameters) p.Type = ResolveAlias(p.Type);
+                        RegisterParameterDefaults(op, op.Parameters);
                         break;
                     case ConstructorDeclaration ctor:
                         foreach (var p in ctor.Parameters) p.Type = ResolveAlias(p.Type);
+                        RegisterParameterDefaults(ctor, ctor.Parameters);
                         break;
-                    case FieldDeclaration field: ResolveAlias(field.Type); break;
+                    case ExternDeclaration external:
+                        foreach (var p in external.Parameters) p.Type = ResolveAlias(p.Type);
+                        RegisterParameterDefaults(external, external.Parameters);
+                        break;
+                    case FieldDeclaration field:
+                        ResolveAlias(field.Type);
+                        defaultConstantContexts[field] = new(scope, declarationNamespaces.GetValueOrDefault(field) ?? "", _currentClass, _currentStruct);
+                        break;
                 }
             }
         }

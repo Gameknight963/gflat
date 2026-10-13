@@ -10,7 +10,7 @@ namespace gflat.ast
         public List<Parameter> Parameters { get; }
         public BlockStatement Body { get; }
         public TokenKind Accessibility { get; }
-        public List<AstNode>? BaseArguments { get; }
+        public List<AstNode>? BaseArguments { get; internal set; }
 
         public bool IsConst { get; }
         public bool IsCopy { get; set; }

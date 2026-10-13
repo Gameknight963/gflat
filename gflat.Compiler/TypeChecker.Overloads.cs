@@ -106,8 +106,8 @@ public partial class TypeChecker
         foreach (var arg in arguments) if (!_types.ContainsKey(arg)) arg.Accept(this);
         TypeExpression ArgumentType(AstNode arg) => arg is DefaultExpression { TargetType: null }
             ? new NamedTypeExpression("default", null, arg.Line) : GetType(arg);
-        var viable = candidates.Where(c => parameters(c).Count == arguments.Count &&
-            parameters(c).Select((p, i) => IsAssignable(p.Type, ArgumentType(arguments[i]),
+        var viable = candidates.Where(c => AcceptsArgumentCount(parameters(c), arguments.Count) &&
+            parameters(c).Take(arguments.Count).Select((p, i) => IsAssignable(p.Type, ArgumentType(arguments[i]),
                 arguments[i] is DefaultExpression { TargetType: null } ? null : arguments[i])).All(v => v)).ToList();
         bool Better(T first, T second)
         {
@@ -130,7 +130,9 @@ public partial class TypeChecker
                     strictly = true;
                 }
             }
-            return strictly;
+            // When supplied arguments have identical types, prefer the overload
+            // requiring no defaults. Other ties stay ambiguous.
+            return strictly || parameters(first).Count == arguments.Count && parameters(second).Count > arguments.Count;
         }
         var best = viable.Where(c => !viable.Any(other => !ReferenceEquals(c, other) && Better(other, c))).ToList();
         if (best.Count == 0) throw new TypeCheckException($"No matching overload for '{name}'", line);

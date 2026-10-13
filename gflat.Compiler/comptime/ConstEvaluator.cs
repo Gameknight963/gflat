@@ -1243,6 +1243,7 @@ namespace gflat.comptime
         public void Visit(NamespaceDeclaration node) { }
         public void Visit(NamespaceAccessExpression node)
         {
+            if (_context.TryGetConstValue(node, out var constant)) { _currentValue = constant; return; }
             if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
                 throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
@@ -1264,7 +1265,8 @@ namespace gflat.comptime
         public void Visit(Parameter node) { }
         public void Visit(AttributeNode node) { }
         public void Visit(ExternDeclaration node) { }
-        public void Visit(DefaultExpression node) => _currentValue = DefaultValue(_context.GetType(node), node.Line);
+        public void Visit(DefaultExpression node) => _currentValue = _context.TryGetConstValue(node, out var value)
+            ? value : DefaultValue(_context.GetType(node), node.Line);
         public void Visit(LambdaExpression node) => throw new ConstEvalException("LambdaExpression is not supported at compile time", node.Line);
         public void Visit(DeferStatement node) => throw new ConstEvalException("DeferStatement is not supported at compile time", node.Line);
         public void Visit(DeleteStatement node) => throw new ConstEvalException("Delete statement is not supported in constant evaluation", node.Line);

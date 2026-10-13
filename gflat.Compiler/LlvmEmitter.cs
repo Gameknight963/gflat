@@ -31,11 +31,7 @@ public partial class LlvmEmitter : IVisitor
             case ConstValue.UInteger u:
                 return $"{typeStr} {u.Value}";
             case ConstValue.Float f:
-                {
-                    string str = f.Value.ToString("0.0######", System.Globalization.CultureInfo.InvariantCulture);
-                    if (!str.Contains('.')) str += ".0";
-                    return $"{typeStr} {str}";
-                }
+                return $"{typeStr} {FloatConstant(f.Value, type)}";
             case ConstValue.Boolean b:
                 return $"i1 {(b.Value ? "1" : "0")}";
             case ConstValue.Char c:
@@ -156,6 +152,12 @@ public partial class LlvmEmitter : IVisitor
         }
     }
 
+    private string FloatConstant(double value, TypeExpression type)
+    {
+        if (_typeChecker.ResolveAlias(type) is NamedTypeExpression { Name: "float" }) value = (double)(float)value;
+        return "0x" + BitConverter.DoubleToInt64Bits(value).ToString("X16");
+    }
+
     private bool TryEmitConstValue(ConstValue constVal, TypeExpression type)
     {
         switch (constVal)
@@ -175,7 +177,7 @@ public partial class LlvmEmitter : IVisitor
                 Push(u.Value.ToString());
                 return true;
             case ConstValue.Float f:
-                Push(f.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                Push(FloatConstant(f.Value, type));
                 return true;
             case ConstValue.Boolean b:
                 Push(b.Value ? "1" : "0");
@@ -1458,8 +1460,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
             string baseThis = NewTemp();
             Emit($"    {baseThis} = bitcast %{className}* {loadedThis} to %{baseInfo.Name}*");
-            string baseCtorName = GetConstructorMangledName(baseInfo.Name, null, baseInfo.Namespace);
-            EmitConstructorCall(baseCtorName, baseInfo.Constructors.FirstOrDefault(c => c.Parameters.Count == 0), $"%{baseInfo.Name}* {baseThis}");
+            EmitImplicitBaseConstruction(className, baseInfo, baseThis);
         }
 
         // 2. Setup vtable pointer
@@ -4026,6 +4027,13 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(DefaultExpression node)
     {
         TypeExpression type = _typeChecker.GetType(node);
+        if (_typeChecker.TryGetConstValue(node, out var aggregate) && aggregate is ConstValue.Array or ConstValue.Struct or ConstValue.ClassInstance)
+        {
+            string initializer = EmitConstInitializer(aggregate, type);
+            Push(initializer[(EmitType(type).Length + 1)..]);
+            return;
+        }
+        if (_typeChecker.TryGetConstValue(node, out var value) && value != null && TryEmitConstValue(value, type)) return;
         Push(GetDefaultValue(type));
     }
 

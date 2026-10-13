@@ -8,7 +8,7 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ServerTests
 {
     [Fact]
-    public async Task RichHoverAndThrowsClassificationReachTheClient()
+    public async Task RichHoverAndNoThrowClassificationReachTheClient()
     {
         await using var s = new Session();
         string? catalogFile = Environment.GetEnvironmentVariable("GFLAT_HOVER_CATALOG");

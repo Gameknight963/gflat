@@ -52,7 +52,7 @@ try {
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }
-int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) { return value == 42 ? 0 : 1; } return 2; }
+int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) { if (value == 42) return 0; return 1; } return 2; }
 '@ | Set-Content -LiteralPath $smoke
     & $compiler $smoke --run -o (Join-Path $extracted 'unwinding-ref.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged exception/ref smoke test failed' }

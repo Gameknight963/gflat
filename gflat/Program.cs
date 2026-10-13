@@ -16,13 +16,14 @@ public static class Program
             string configuration = "Debug", platform = "AnyCPU";
             bool run = false, irOnly = false, check = false, clean = false;
             string? projectPath = null;
+            int? exceptionReserveBytes = null;
             for (int i = 0; i < args.Length; i++)
             {
                 string Value() => ++i < args.Length ? args[i] : throw new ArgumentException($"Missing value for {args[i - 1]}");
                 switch (args[i])
                 {
                     case "--help": case "-h":
-                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]");
+                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]");
                         return 0;
                     case "build" when i == 0: break;
                     case "check" when i == 0: check = true; break;
@@ -30,6 +31,7 @@ public static class Program
                     case "--check": check = true; break;
                     case "-o": outputPath = Value(); break;
                     case "--clang": clang = Value(); break;
+                    case "--exception-reserve-bytes": exceptionReserveBytes = ExceptionReserve.Parse(Value()); break;
                     case "--configuration": configuration = Value(); break;
                     case "--platform": platform = Value(); break;
                     case "--source-list": sourcePaths.AddRange(File.ReadAllLines(Value()).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath)); break;
@@ -46,7 +48,7 @@ public static class Program
             {
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
                 projectPath = sourcePaths[0];
-                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Load(path, configuration, platform));
+                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes));
                 sourcePaths = graph.Sources.ToList();
                 outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
                 if (graph.Root.Kind == ProjectKind.SourceLibrary)
@@ -79,7 +81,7 @@ public static class Program
             if (graph != null)
             {
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
-                    irOnly, args.Contains("-o") ? outputPath : null, clang);
+                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes);
                 if (result != 0 || !run) return result;
                 var execution = NativeToolchain.Run(outputPath, []);
                 Console.Write(execution.StandardOutput);
@@ -101,7 +103,7 @@ public static class Program
             try
             {
                 File.WriteAllText(temporaryIr, ir);
-                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang);
+                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes);
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
                 if (!run) return 0;
                 ProcessResult execution = NativeToolchain.Run(outputPath, []);

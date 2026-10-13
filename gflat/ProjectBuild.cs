@@ -5,7 +5,7 @@ namespace gflat;
 internal static class ProjectBuild
 {
     internal static int Run(ProjectModel project, string target, string configuration, string platform,
-        bool emitIr = false, string? output = null, string? clang = null)
+        bool emitIr = false, string? output = null, string? clang = null, int? exceptionReserveBytes = null)
     {
         // Explicit source-list invocations in the targets avoid recursively building the project.
         string assembly = typeof(Program).Assembly.Location;
@@ -17,6 +17,7 @@ internal static class ProjectBuild
         if (emitIr) Property("GflatEmitIR", "true");
         if (output != null) Property(emitIr ? "GflatIROutput" : "TargetPath", output);
         if (clang != null) Property("GflatClang", clang);
+        if (exceptionReserveBytes.HasValue) Property("GflatExceptionReserveBytes", exceptionReserveBytes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var result = NativeToolchain.Run("dotnet", arguments, 120000);
         Console.Write(result.StandardOutput);
         Console.Error.Write(result.StandardError);

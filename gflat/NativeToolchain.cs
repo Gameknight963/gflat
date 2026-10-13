@@ -76,16 +76,16 @@ public static class NativeToolchain
         return new(process.ExitCode, stdout.GetAwaiter().GetResult(), stderr.GetAwaiter().GetResult());
     }
 
-    public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null)
+    public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes)
     {
         string compiler = FindClang(null);
-        var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler) };
+        var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler, exceptionReserveBytes) };
         args.AddRange(NativeRuntime.HostArguments());
         if (objects != null) args.AddRange(objects);
         return Run(compiler, args, 60000);
     }
 
-    public static ProcessResult Compile(string irPath, string outputPath, string? clang = null)
+    public static ProcessResult Compile(string irPath, string outputPath, string? clang = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes)
     {
         string optimization = Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
         if (optimization is not ("0" or "1" or "2" or "3"))
@@ -100,7 +100,7 @@ public static class NativeToolchain
         {
             // Keep the selected LLVM version, including names such as clang-18.
             args.Add("--driver-mode=g++");
-            args.Add(NativeRuntime.GetObject(compiler));
+            args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes));
             args.AddRange(NativeRuntime.HostArguments());
         }
         return Run(compiler, args, 60000);

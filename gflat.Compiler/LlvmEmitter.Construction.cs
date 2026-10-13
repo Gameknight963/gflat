@@ -40,6 +40,12 @@ public partial class LlvmEmitter
             => emitter.Emit($"    call void @gflat$Memory$Free(i8* {address})");
     }
 
+    private sealed class ExceptionAllocationCleanup(string address) : IDeferAction
+    {
+        public void Execute(LlvmEmitter emitter)
+            => emitter.Emit($"    call void @__gflat_eh_free_exception(i8* {address}, void (i8*)* @gflat$Memory$Free)");
+    }
+
     private void BeginConstruction(string name, ConstructorDeclaration constructor)
     {
         _deferScopes.Add(new());

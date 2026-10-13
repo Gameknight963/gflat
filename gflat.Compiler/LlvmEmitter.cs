@@ -4522,7 +4522,7 @@ public partial class LlvmEmitter : IVisitor
         Emit("    br label %release");
         Emit("release:");
         Emit("    %raw = bitcast %Exception* %exception to i8*");
-        Emit("    call void @gflat$Memory$Free(i8* %raw)");
+        Emit("    call void @__gflat_eh_free_exception(i8* %raw, void (i8*)* @gflat$Memory$Free)");
         Emit("    ret void");
         Emit("}");
     }

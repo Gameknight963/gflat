@@ -9,6 +9,8 @@ public partial class LlvmEmitter
     private readonly Stack<string> _caughtHandles = new();
     private bool WindowsEh => TargetInfo.Default.Triple.Contains("windows");
     private string NativeDeclarations => """
+        declare i8* @__gflat_eh_allocate_exception(i64, i8* (i64)*)
+        declare void @__gflat_eh_free_exception(i8*, void (i8*)*)
         declare void @__gflat_eh_throw(i8*, void (i8*)*) noreturn
         declare i8* @__gflat_eh_capture() nounwind
         declare i8* @__gflat_eh_object(i8*) nounwind
@@ -33,7 +35,8 @@ public partial class LlvmEmitter
         int call = line.IndexOf("call ", StringComparison.Ordinal);
         if (!_ehFunction || call < 0 || line.Contains("@llvm.") ||
             line.Contains("@gflat_is_instance(") || line.Contains("@__cxa_") ||
-            line.Contains("@__gflat_eh_") && !line.Contains("@__gflat_eh_throw(") && !line.Contains("@__gflat_eh_rethrow("))
+            line.Contains("@__gflat_eh_") && !line.Contains("@__gflat_eh_throw(") && !line.Contains("@__gflat_eh_rethrow(")
+            && !line.Contains("@__gflat_eh_allocate_exception(") && !line.Contains("@__gflat_eh_free_exception("))
         {
             Raw(call >= 0 ? line : line);
             return;
@@ -137,10 +140,10 @@ public partial class LlvmEmitter
             string llvm = EmitType(type), size = NewTemp(), bytes = NewTemp(), storage = NewTemp(), address = NewTemp();
             Emit($"    {size} = getelementptr {llvm}, {llvm}* null, i32 1");
             Emit($"    {bytes} = ptrtoint {llvm}* {size} to i64");
-            Emit($"    {storage} = call i8* @gflat$Memory$Allocate(i64 {bytes})");
+            Emit($"    {storage} = call i8* @__gflat_eh_allocate_exception(i64 {bytes}, i8* (i64)* @gflat$Memory$Allocate)");
             GuardNonNull(storage, "i8*");
             Emit($"    {address} = bitcast i8* {storage} to {llvm}*");
-            _deferScopes.Add(new() { new ExceptionOnlyCleanup(new AllocationCleanup(storage)) });
+            _deferScopes.Add(new() { new ExceptionOnlyCleanup(new ExceptionAllocationCleanup(storage)) });
             EmitValueForTarget(node.Expression, type);
             string value = Pop();
             Emit($"    store {llvm} {value}, {llvm}* {address}");

@@ -453,6 +453,18 @@ Non-void functions must return or throw on every reachable path, or never termin
 
 Functions, constructors, callbacks, and accessors propagate exceptions automatically using native stack unwinding. `throws` has been removed. Function pointers use the ordinary return convention. Windows uses the MSVC exception runtime; Linux uses the Itanium C++ exception runtime. The native transport preserves foreign exceptions across gflat frames, but gflat types do not yet have C++ RTTI or typed C++ catch interoperability.
 
+Exception payloads first use `Memory::Allocate`; if it returns null, the native
+exception runtime uses a process-wide emergency reserve. Its own ownership records
+and catch handles similarly fall back from system allocation to that reserve.
+Released blocks are reused, including when released by another thread. Reserve
+storage is never passed to `Memory::Free`. Exhaustion terminates rather than
+recursively throwing another allocation failure. The default reserve is 65536
+bytes, including internal block metadata; `--exception-reserve-bytes N` selects a
+nonnegative byte count, and zero disables it. This is a native link setting, not a
+language feature or a requirement for future builds without the exception runtime.
+The host C++ runtime still owns native exception transport storage and its own
+allocation-failure policy; this setting does not configure its emergency pool.
+
 `throw new Error(...)` transfers a fresh exception-derived value to runtime storage. `throw value` copies and requires a copyable type; `throw move value` consumes it. Pointers cannot be thrown. `catch (ref Error error)` borrows the runtime-owned object, which remains live until the handler exits. The binding aliases the exception value, without a copy or ownership transfer. The older `catch (Error* error)` form also remains available; its pointer is borrowed and must not be deleted or retained. `throw;` inside a handler rethrows the original object, preserving its dynamic type. Throwing a borrowed base value with `throw error` instead copies its static base type. Bare `catch` also handles foreign exceptions; typed gflat catches do not.
 
 Scope destructors and deferred actions run during unwinding. Failed construction destroys completed owning fields and the completed base, without invoking the incomplete object's destructor. Failed `new*` frees its fresh storage; failed placement construction leaves storage ownership with the caller. Raw resources acquired during construction still require explicit cleanup on failure paths.

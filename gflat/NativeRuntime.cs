@@ -33,22 +33,24 @@ internal static class NativeRuntime
         return args;
     }
 
-    internal static string GetObject(string driver)
+    internal static string GetObject(string driver, int reserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes)
     {
         lock (BuildLock)
         {
-            if (Objects.TryGetValue(driver, out string? cached) && File.Exists(cached)) return cached;
+            if (reserveBytes < 0) throw new ArgumentOutOfRangeException(nameof(reserveBytes));
+            string key = driver + "|" + reserveBytes;
+            if (Objects.TryGetValue(key, out string? cached) && File.Exists(cached)) return cached;
             string source = Path.Combine(AppContext.BaseDirectory, "Runtime", "Exceptions.cpp");
             if (!File.Exists(source)) throw new FileNotFoundException("The native exception runtime source is missing. Restore the compiler's Runtime directory.", source);
             string fingerprint = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(source)))[..16];
             string directory = Path.Combine(Path.GetTempPath(), "gflat-runtime", Environment.ProcessId.ToString());
             Directory.CreateDirectory(directory);
-            string output = Path.Combine(directory, fingerprint + (OperatingSystem.IsWindows() ? ".obj" : ".o"));
-            var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", "-c", source, "-o", output };
+            string output = Path.Combine(directory, fingerprint + "-" + reserveBytes + (OperatingSystem.IsWindows() ? ".obj" : ".o"));
+            var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", "-DGFLAT_EXCEPTION_RESERVE_BYTES=" + reserveBytes, "-c", source, "-o", output };
             args.AddRange(HostArguments());
             ProcessResult result = NativeToolchain.Run(driver, args, 60000);
             if (result.ExitCode != 0) throw new InvalidOperationException("Failed to compile the native exception runtime. Install the host C++ development tools.\n" + result.StandardError);
-            Objects[driver] = output;
+            Objects[key] = output;
             return output;
         }
     }

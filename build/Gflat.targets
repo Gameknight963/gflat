@@ -53,10 +53,10 @@
       <_GflatOptions Condition="'$(GflatProjectKind)' == 'Executable'">-o &quot;$(TargetPath)&quot;</_GflatOptions>
       <_GflatOptions Condition="'$(GflatEmitIR)' == 'true' and '$(GflatProjectKind)' == 'Executable'">--emit-ir -o &quot;$(GflatIROutput)&quot;</_GflatOptions>
     </PropertyGroup>
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatOptions) $(_GflatClangOption)" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot;  $(_GflatOptions) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
   </Target>
   <Target Name="Check" DependsOnTargets="_GflatPrepare">
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --check" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
   </Target>
   <Target Name="Clean" DependsOnTargets="_GflatValidateOutputs">
     <PropertyGroup><_GflatCleanExtension>$([System.IO.Path]::GetExtension('$(TargetPath)'))</_GflatCleanExtension></PropertyGroup>

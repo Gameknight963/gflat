@@ -22,6 +22,7 @@ public class NativeExceptionRuntimeTests
                 void destroy(void* value) { if (*(int*)value == 42) ++destroyed; }
                 struct Guard { int* count; ~Guard() { ++*count; } };
                 int main() {
+                    __gflat_eh_release(nullptr); // Cleanup after rethrow may own no handle.
                     int value = 42, cleanups = 0;
                     void* handle = nullptr;
                     try { Guard guard{&cleanups}; __gflat_eh_throw(&value, destroy); }

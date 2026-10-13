@@ -5,4 +5,5 @@
   </EnumProperty>
   <StringProperty Name="OutputPath" DisplayName="Output directory" />
   <StringProperty Name="GflatCompilerCommand" DisplayName="Compiler command" />
+  <IntProperty Name="GflatExceptionReserveBytes" DisplayName="Exception reserve (bytes)" MinValue="0" Description="Emergency storage for the native exception runtime. Default: 65536 bytes. Zero disables the reserve. Used when linking an executable." />
 </Rule>

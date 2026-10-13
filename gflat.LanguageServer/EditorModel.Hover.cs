@@ -142,6 +142,11 @@ public sealed partial class EditorModel
                 var parameter = parameters[i];
                 if (parameter.IsConst) Keyword("const");
                 Type(parameter.Type); Add(" "); Add(parameter.Name, "parameter", navigable ? SymbolLocation(declarations.GetValueOrDefault(parameter)) : null);
+                if (parameter.DefaultValue != null)
+                {
+                    Add(" = ", "punctuation");
+                    parts.AddRange(ParameterDefaultParts(parameter, navigable));
+                }
             }
             if (symbol.Syntax.Node is ExternDeclaration { IsVariadic: true }) Add(parameters.Count == 0 ? "..." : ", ...", "punctuation");
             Add(")", "punctuation");
@@ -165,6 +170,36 @@ public sealed partial class EditorModel
             Add("}", "punctuation");
         }
         return parts.ToArray();
+    }
+
+    private static string ParameterDefaultText(Parameter parameter)
+    {
+        var value = parameter.DefaultValue!;
+        return value.Span.Source is { } source && value.Span.Length > 0
+            ? source.Text.Substring(value.Span.Start, value.Span.Length)
+            : value is LiteralExpression literal ? literal.Token.Text : "default";
+    }
+
+    private IEnumerable<DisplayPart> ParameterDefaultParts(Parameter parameter, bool navigable)
+    {
+        string text = ParameterDefaultText(parameter);
+        int cursor = 0;
+        foreach (var token in Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile))
+        {
+            if (token.Start > cursor) yield return new("text", text[cursor..token.Start]);
+            Symbol? symbol = null;
+            if (parameter.DefaultValue!.Span.Source is { } source && tokens.TryGetValue(source.Path, out var original))
+            {
+                int index = Array.FindIndex(original, t => t.Start == parameter.DefaultValue.Span.Start + token.Start);
+                if (index >= 0) symbol = Resolve(source.Path, index);
+            }
+            string kind = symbol?.Classification ?? (token.Kind is TokenKind.StringLiteral or TokenKind.CharLiteral ? "string" :
+                char.IsDigit(token.Text.FirstOrDefault()) ? "number" : token.Kind == TokenKind.Identifier ? "identifier" :
+                char.IsLetter(token.Text.FirstOrDefault()) ? "keyword" : "punctuation");
+            yield return new(kind, text[token.Start..(token.End + 1)], Target: navigable ? SymbolLocation(symbol) : null);
+            cursor = token.End + 1;
+        }
+        if (cursor < text.Length) yield return new("text", text[cursor..]);
     }
 
     private HoverDetail[] LayoutDetails(Symbol symbol)

@@ -206,6 +206,21 @@ public class EditorTests
         Assert.Contains(Json(model.Completion(path, offset)).GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "base");
     }
 
+    [Fact]
+    public void OptionalDefaultsAppearInCompletionAndColoredSignatureHelp()
+    {
+        var (model, path, offset, _) = Analyze("int Read(int count = 6 * 7) => count; void Use() { Read(|); }");
+        var help = Json(model.SignatureHelp(path, offset, visualStudio: true));
+        var signature = help.GetProperty("signatures")[0];
+        Assert.Contains("int count = 6 * 7", signature.GetProperty("label").GetString());
+        Assert.Equal("int count = 6 * 7", signature.GetProperty("parameters")[0].GetProperty("label").GetString());
+        var runs = signature.GetProperty("_vs_colorizedLabel").GetProperty("Runs").EnumerateArray().ToArray();
+        Assert.Equal(signature.GetProperty("label").GetString(), string.Concat(runs.Select(r => r.GetProperty("Text").GetString())));
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "6" && r.GetProperty("ClassificationTypeName").GetString() == "number");
+        var completion = Json(model.Completion(path, offset)).GetProperty("items").EnumerateArray().Single(i => i.GetProperty("label").GetString() == "Read");
+        Assert.Contains("int count = 6 * 7", completion.GetProperty("detail").GetString());
+    }
+
     [Theory]
     [InlineData("class Child : | {}", true)]
     [InlineData("class Child : |", true)]

@@ -88,7 +88,8 @@ public sealed partial class EditorModel
                 if (ts[i].Kind == TokenKind.Identifier) references[ts[i]] = ResolveCore(path, i);
     }
 
-    private string ParameterText(Parameter p) => $"{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}";
+    private string ParameterText(Parameter p) => $"{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}" +
+        (p.DefaultValue == null ? "" : " = " + ParameterDefaultText(p));
     private static string Join(string left, string right) => left.Length == 0 ? right : left + "::" + right;
     private static IEnumerable<Syntax> Parents(Syntax node) { for (var p = node.Parent; p != null; p = p.Parent) yield return p; }
     private static bool IsType(AstNode node) => node is ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration;

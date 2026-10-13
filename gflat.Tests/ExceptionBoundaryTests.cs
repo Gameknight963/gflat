@@ -2,6 +2,38 @@ namespace gflat.Tests;
 
 public class ExceptionBoundaryTests
 {
+    [Fact]
+    public void ReplacementUnhandledHookControlsOutputAndExitStatus()
+    {
+        var result = CompilerTestHelper.Run("""
+            extern int printf(readonly(char*) format, ...);
+            extern void exit(int status);
+            namespace Exceptions {
+                public replace void Unhandled(Exception*? error) {
+                    printf(c"custom failure");
+                    exit(42);
+                }
+            }
+            int main() { throw new Exception(); }
+            """);
+        Assert.Equal(42, result.ExitCode);
+        Assert.Equal("custom failure", result.StandardOutput);
+        Assert.Equal("", result.StandardError);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("throw new Exception();")]
+    public void ReplacementUnhandledHookCannotResumeOrPropagate(string body)
+    {
+        var result = CompilerTestHelper.Run(
+            "namespace Exceptions { public replace void Unhandled(Exception*? error) { " + body +
+            " } } int main() { throw new Exception(); }");
+        Assert.Equal(1, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+        Assert.Equal("", result.StandardError);
+    }
+
     private const string Prelude = """
         extern int printf(readonly(char)* format, ...);
         class First : Exception {}

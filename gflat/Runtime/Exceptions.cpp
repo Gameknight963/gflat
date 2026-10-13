@@ -15,6 +15,8 @@ struct Exception final {
 struct Handle { std::exception_ptr exception; };
 }
 extern "C" {
+// stderr is a C library macro; expose its value without depending on CRT layout.
+void* __gflat_eh_stderr() noexcept { return stderr; }
 [[noreturn]] void __gflat_eh_throw(void* object, void (*destroy)(void*)) {
     throw Exception(object, destroy);
 }
@@ -38,7 +40,8 @@ void __gflat_eh_release(void* value) noexcept { delete static_cast<Handle*>(valu
 [[noreturn]] void __gflat_eh_terminate(void* value, void (*hook)(void*)) noexcept {
     void* object = value ? __gflat_eh_object(value) : nullptr;
     try { if (hook) hook(object); } catch (...) {}
-    std::fputs("Unhandled exception\n", stderr);
+    // A replacement hook must not resume execution across this boundary.
+    // Reporting and the normal exit policy belong to the library hook.
     std::exit(1);
 }
 }

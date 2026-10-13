@@ -438,7 +438,7 @@ Scope destructors and deferred actions run during unwinding. Failed construction
 
 `void Boundary() nothrow { ... }` permits local handlers but terminates if an exception escapes. Destructors and `main` are also termination boundaries. Cleanup runs up to the boundary; outer callers cannot catch past it. An exception escaping cleanup while another exception is unwinding terminates; cleanup may catch its own failures locally.
 
-Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. Replace this weak function to display or log an error. Returning from it, or throwing from it, terminates with status 1. Process termination is not a promise to destroy every remaining object.
+Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. Its default weak implementation writes `Unhandled exception` to standard error and calls `exit(1)`. Replace this function to display or log an error and choose an exit status. Returning from it, or throwing from it, triggers a silent runtime fallback that terminates with status 1. Process termination is not a promise to destroy every remaining object.
 
 The compiler driver links a small C++ runtime, requiring Clang's C++ driver and the platform C++ development libraries in addition to LLVM.
 

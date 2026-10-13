@@ -9,22 +9,22 @@ public class PlacementConstructionTests
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
-                public replace void*? Allocate(nuint n) { printf(c"A"); return malloc(n); }
-                public replace void Free(void* p) { printf(c"F"); free(p); }
+                public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
+                public replace void Free(void* p) { printf("F"); free(p); }
             }
             struct Thing {
                 public int field = 7;
                 public int argument;
-                public Thing(int n) { argument = n; printf(c"C"); }
-                ~Thing() { printf(c"D"); }
+                public Thing(int n) { argument = n; printf("C"); }
+                ~Thing() { printf("D"); }
             }
-            int Argument() { printf(c"a"); return 42; }
-            Thing* Destination(Thing* p) { printf(c"p"); return p; }
+            int Argument() { printf("a"); return 42; }
+            Thing* Destination(Thing* p) { printf("p"); return p; }
             int main() {
                 Thing* storage = (Thing*)Memory::Allocate((nuint)sizeof(Thing));
                 Thing* result = new* Thing(Argument()) at Destination(storage);
                 if (result != storage || result.field != 7 || result.argument != 42) return 1;
-                printf(c"S");
+                printf("S");
                 delete result;
                 return 0;
             }
@@ -58,12 +58,12 @@ public class PlacementConstructionTests
     {
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
-            struct Field { public int n = 8; ~Field() { printf(c"F"); } }
-            class Base { public virtual int Value() { return 1; } ~Base() { printf(c"B"); } }
+            struct Field { public int n = 8; ~Field() { printf("F"); } }
+            class Base { public virtual int Value() { return 1; } ~Base() { printf("B"); } }
             class Derived : Base {
                 public Field field = new Field();
                 public override int Value() { return field.n; }
-                ~Derived() { printf(c"D"); }
+                ~Derived() { printf("D"); }
             }
             int main() {
                 Derived* storage = (Derived*)Memory::Allocate((nuint)sizeof(Derived));
@@ -99,13 +99,13 @@ public class PlacementConstructionTests
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
-                public replace void*? Allocate(nuint n) { printf(c"A"); return malloc(n); }
-                public replace void Free(void* p) { printf(c"F"); free(p); }
+                public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
+                public replace void Free(void* p) { printf("F"); free(p); }
             }
             int main() {
                 Exception* storage = (Exception*)Memory::Allocate((nuint)sizeof(Exception));
-                try { new* Exception() at storage; throw *storage; } catch { printf(c"C"); }
-                printf(c"S"); delete storage;
+                try { new* Exception() at storage; throw *storage; } catch { printf("C"); }
+                printf("S"); delete storage;
                 return 0;
             }
             """);

@@ -11,8 +11,8 @@ public class StandardStringTests
             using std;
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
-                public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
-                public replace void Free(void* p) { printf(c"F"); free(p); }
+                public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
+                public replace void Free(void* p) { printf("F"); free(p); }
             }
             int main() {
                 String original = s"a\0b";
@@ -47,7 +47,7 @@ public class StandardStringTests
                 try { text.Append(text.Data, text.Length); return 1; } catch { }
                 if (text.Length != (nuint)3 || text.Capacity != oldCapacity) return 2;
                 if (text.Data[0] != 'a' || text.Data[2] != 'c' || text.Data[3] != '\0') return 3;
-                text.Append(c"", 0);
+                text.Append("", 0);
                 return 0;
             }
             """);
@@ -61,12 +61,12 @@ public class StandardStringTests
             using std;
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
-                public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
-                public replace void Free(void* p) { printf(c"F"); free(p); }
+                public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
+                public replace void Free(void* p) { printf("F"); free(p); }
             }
             int main() {
                 { String empty = new String(); empty.Clear(); }
-                String::From(c"ignored");
+                String::From("ignored");
                 {
                     String original = s"a\0b";
                     String clone = original.Clone();
@@ -86,10 +86,10 @@ public class StandardStringTests
         var result = Run("""
             using std;
             int main() {
-                String empty = String::From(c"");
-                String text = String::From(c"hello");
-                String truncated = String::From(c"ab\0cd");
-                String counted = String::From(c"ab\0cd", 5);
+                String empty = String::From("");
+                String text = String::From("hello");
+                String truncated = String::From("ab\0cd");
+                String counted = String::From("ab\0cd", 5);
                 char[3] source = "ok";
                 String copied = String::From(&source[0]);
                 source[0] = 'X';
@@ -118,7 +118,7 @@ public class StandardStringTests
                 String clone = text.Clone();
                 text[(nuint)0] = 'X';
                 if (clone.Equals(&text)) return 1;
-                printf(c"%s|%s", text.Data, clone.Data);
+                printf("%s|%s", text.Data, clone.Data);
                 text.Clear();
                 if (text.Length != (nuint)0 || text.Data[0] != '\0' || text.Capacity != (nuint)32) return 2;
                 return 0;
@@ -160,7 +160,7 @@ public class StandardStringTests
                 try { text[(nuint)3]; } catch { caught++; }
                 try { text[(nuint)3] = 'x'; } catch { caught++; }
                 try { text.Reserve((nuint)0 - (nuint)1); } catch { caught++; }
-                try { text.Append(c"x", (nuint)0 - (nuint)1); } catch { caught++; }
+                try { text.Append("x", (nuint)0 - (nuint)1); } catch { caught++; }
                 if (caught != 4 || text.Length != (nuint)3 || text.Data[0] != 'a') return 1;
                 return 0;
             }
@@ -195,7 +195,7 @@ public class StandardStringTests
             extern int printf(readonly(char)* p, ...);
             int main() {
                 String text = s$"{(byte)255} {(sbyte)-128} {(short)-32768} {(ushort)65535} {4294967295u} {(nint)-12} {(nuint)17} {0}";
-                printf(c"%s", text.Data); return 0;
+                printf("%s", text.Data); return 0;
             }
             """);
         Assert.Equal("255 -128 -32768 65535 4294967295 -12 17 0", result.StandardOutput);

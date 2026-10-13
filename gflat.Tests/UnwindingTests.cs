@@ -27,7 +27,7 @@ public class UnwindingTests
     public void FunctionPointerPropagatesWithoutChangingReturnType()
     {
         const string code = """
-            int Fail() { throw new Exception(c"failure", 42); }
+            int Fail() { throw new Exception("failure", 42); }
             int Bridge(int()* callback) { return callback(); }
             int main() { try { return Bridge(&Fail); } catch (Exception* e) { return e.code; } }
             """;

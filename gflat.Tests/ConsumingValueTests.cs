@@ -7,7 +7,7 @@ public class ConsumingValueTests
         struct R {
             public int n;
             public R(int value) { n = value; }
-            ~R() { printf(c"%d", n); }
+            ~R() { printf("%d", n); }
         }
         """;
 
@@ -17,7 +17,7 @@ public class ConsumingValueTests
     [InlineData("R a = new R(1); for (int i = 0; i < 2; i++) { R b = move a; } return 0;")]
     [InlineData("R a = new R(1); for (int i = 0; i < 2; i++) { R b = move a; continue; } return 0;")]
     [InlineData("R a = new R(1); R b = move a; a.n = 2; return 0;")]
-    [InlineData("R a = new R(1); defer printf(c\"%d\", a.n); R b = move a; return 0;")]
+    [InlineData("R a = new R(1); defer printf(\"%d\", a.n); R b = move a; return 0;")]
     [InlineData("R a = new R(1); try { R b = move a; throw new Exception(); } catch { return a.n; } return 0;")]
     [InlineData("Box b = new Box(); R x = move b.item; return 0;")]
     public void MovedSourcesCannotBeRead(string body)
@@ -45,9 +45,9 @@ public class ConsumingValueTests
             public copy R(readonly(R)* source) {
                 if (source.n == 9) throw new Exception();
                 n = source.n;
-                printf(c"C%d", n);
+                printf("C%d", n);
             }
-            ~R() { printf(c"D%d", n); }
+            ~R() { printf("D%d", n); }
         }
         """;
 
@@ -87,7 +87,7 @@ public class ConsumingValueTests
             struct Bad {
                 R a; R b;
                 public Bad() { a = new R(1); throw new Exception(); }
-                ~Bad() { printf(c"BAD"); }
+                ~Bad() { printf("BAD"); }
             }
             int main() { try {
             """ + creation + "} catch {} return 0; }");
@@ -143,7 +143,7 @@ public class ConsumingValueTests
             extern void free(void* p);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { return malloc(size); }
-                public replace void Free(void* p) { printf(c"F"); free(p); }
+                public replace void Free(void* p) { printf("F"); free(p); }
             }
             struct Bad { public Bad(Exception* failure) { throw *failure; } }
             int main() {
@@ -151,7 +151,7 @@ public class ConsumingValueTests
                 try { Bad* value = new* Bad(&error); } catch {}
                 Bad* storage = (Bad*)Memory::Allocate((nuint)sizeof(Bad))!;
                 try { new* Bad(&error) at storage; } catch {}
-                printf(c"P");
+                printf("P");
                 Memory::Free((void*)storage);
                 return 0;
             }

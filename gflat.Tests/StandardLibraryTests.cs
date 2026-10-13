@@ -65,7 +65,7 @@ public class StandardLibraryTests
     public void ExplicitCoreTypesAreEmittedBeforeUserConstants()
     {
         var sources = StandardLibrary.AutomaticFiles.Select(relative => new SourceFile("std/" + relative, StandardLibrary.Load(relative).Text))
-            .Prepend(new SourceFile("a.gf", "const Exception* failure = new* Exception(c\"test\", 42); int main() => failure.GetCode();"));
+            .Prepend(new SourceFile("a.gf", "const Exception* failure = new* Exception(\"test\", 42); int main() => failure.GetCode();"));
         Assert.Equal(42, CompilerTestHelper.Run(sources).ExitCode);
     }
 

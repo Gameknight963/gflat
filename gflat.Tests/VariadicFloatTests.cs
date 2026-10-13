@@ -1,4 +1,4 @@
-﻿namespace gflat.Tests;
+namespace gflat.Tests;
 
 public class VariadicFloatTests
 {
@@ -7,7 +7,7 @@ public class VariadicFloatTests
     {
         const string source = """
             extern int printf(readonly(char)* format, ...);
-            int main() { printf(c"%.2f %.2f %d", 1.5f, 2.25d, (byte)255); return 0; }
+            int main() { printf("%.2f %.2f %d", 1.5f, 2.25d, (byte)255); return 0; }
             """;
         string ir = CompilerTestHelper.EmitIr(source);
         Assert.Contains("invoke i32 (i8*, ...) @printf", ir);

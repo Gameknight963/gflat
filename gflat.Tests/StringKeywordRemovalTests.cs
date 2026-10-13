@@ -27,7 +27,7 @@ public class StringKeywordRemovalTests
         => Assert.Equal(0, CompilerTestHelper.Run("""
             int main() {
                 char[3] array = "hi";
-                readonly(char)* pointer = c"hi";
+                readonly(char)* pointer = "hi";
                 if (array[1] != pointer[1]) return 1; return 0;
             }
             """).ExitCode);

@@ -21,7 +21,7 @@ public class OptionalParameterTests
     [InlineData("int F(nuint x = 42) => (int)x;", "return F();")]
     [InlineData("int F(bool x = true, char y = '*') { if (x) return (int)y; return 0; }", "return F();")]
     [InlineData("int F(int*? p = null) { if (p == null) return 42; return 0; }", "return F();")]
-    [InlineData("int F(readonly(char)* p = c\"*\") => (int)p[0];", "return F();")]
+    [InlineData("int F(readonly(char)* p = \"*\") => (int)p[0];", "return F();")]
     [InlineData("int F(int x = 42) => x;", "int(int)* p = &F; return p(42);")]
     [InlineData("struct S { public int F(int x = 42) => x; }", "S s = new S(); return s.F();")]
     [InlineData("class S { public static int F(int x = 42) => x; }", "return S::F();")]

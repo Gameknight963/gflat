@@ -10,7 +10,7 @@ struct String : ITextWriter, IFormattable
     public String()
     {
         // Empty storage is never written or freed; the first append allocates.
-        data = (char*)c"";
+        data = (char*)"";
         length = 0;
         capacity = 0;
     }
@@ -18,7 +18,7 @@ struct String : ITextWriter, IFormattable
     // A value copy owns an independent buffer. Moving needs no user-written code.
     public copy String(readonly(String)* source)
     {
-        data = (char*)c"";
+        data = (char*)"";
         length = 0;
         capacity = 0;
         this.AppendLiteral(source.data, source.length);
@@ -52,9 +52,9 @@ struct String : ITextWriter, IFormattable
     {
         if (requested <= capacity) return;
         nuint maximum = (nuint)0 - (nuint)1;
-        if (requested == maximum) throw new Exception(c"String capacity overflow", 1);
+        if (requested == maximum) throw new Exception("String capacity overflow", 1);
         void*? allocation = Memory::Allocate(requested + (nuint)1);
-        if (allocation == null) throw new Exception(c"String allocation failed", 2);
+        if (allocation == null) throw new Exception("String allocation failed", 2);
         char* replacement = (char*)allocation;
         for (nuint i = 0; i < length; i++) replacement[i] = data[i];
         replacement[length] = '\0';
@@ -68,7 +68,7 @@ struct String : ITextWriter, IFormattable
         if (count == (nuint)0) return;
         nuint maximum = (nuint)0 - (nuint)1;
         if (count > maximum - (nuint)1 - length)
-            throw new Exception(c"String length overflow", 1);
+            throw new Exception("String length overflow", 1);
         nuint required = length + count;
         if (required > capacity)
         {
@@ -76,7 +76,7 @@ struct String : ITextWriter, IFormattable
             if (capacity <= (maximum - (nuint)1) / (nuint)2 && capacity * (nuint)2 > grown)
                 grown = capacity * (nuint)2;
             void*? allocation = Memory::Allocate(grown + (nuint)1);
-            if (allocation == null) throw new Exception(c"String allocation failed", 2);
+            if (allocation == null) throw new Exception("String allocation failed", 2);
             char* replacement = (char*)allocation;
             for (nuint i = 0; i < length; i++) replacement[i] = data[i];
             // Copy before freeing: text may refer to this string's own buffer.
@@ -128,12 +128,12 @@ struct String : ITextWriter, IFormattable
     {
         readonly get
         {
-            if (index >= length) throw new Exception(c"String index out of range", 3);
+            if (index >= length) throw new Exception("String index out of range", 3);
             return data[index];
         }
         set
         {
-            if (index >= length) throw new Exception(c"String index out of range", 3);
+            if (index >= length) throw new Exception("String index out of range", 3);
             data[index] = value;
         }
     }

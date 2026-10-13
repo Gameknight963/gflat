@@ -219,7 +219,7 @@ public sealed class ServerTests
                 public void Write(readonly(char)* p, nuint n) { }
             }
             struct Value : IFormattable {
-                public readonly void Format(ITextWriter* output) { output.Write(c"", 0); }
+                public readonly void Format(ITextWriter* output) { output.Write("", 0); }
             }
             """;
         string valid = declarations + "\nint main() { t$\"{new Value()}\"; return 0; }";

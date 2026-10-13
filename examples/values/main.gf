@@ -10,7 +10,7 @@ int main()
     names.Add(move name);
     name = s"reused"; // Moving consumed the previous value; initialize a new one.
 
-    names[(nuint)0].Append(c"!", 1);
+    names[(nuint)0].Append("!", 1);
     readonly(Vector<String>)* view = &names;
     String greeting = s$"Hello {(*view)[(nuint)0]} and {(*view)[(nuint)1]}. Count: {names.Count}";
     puts(greeting.ToString());

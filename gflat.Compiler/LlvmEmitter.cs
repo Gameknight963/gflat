@@ -43,8 +43,8 @@ public partial class LlvmEmitter : IVisitor
                     string globalName = NewGlobal();
                     int len = escaped.Length + 1;
                     string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
-                    if (type is ArrayTypeExpression)
-                        return $"{typeStr} c\"{llvmStr}\\00\"";
+                    if (type is ArrayTypeExpression { Size: not null } buffer)
+                        return $"{typeStr} [{string.Join(", ", Enumerable.Range(0, buffer.Size.Value).Select(i => "i8 " + (i < escaped.Length ? escaped[i] : 0)))}]";
                     EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
                     return $"i8* bitcast ([{len} x i8]* {globalName} to i8*)";
                 }
@@ -577,15 +577,6 @@ public partial class LlvmEmitter : IVisitor
     private void EmitAddress(AstNode node)
     {
         if (_typeChecker.GetPropertyRead(node) is CallExpression getter) { if (_typeChecker.IsReferenceRead(node)) getter.Accept(this); else EmitAddress(getter); return; }
-        if (node is LiteralExpression { Token.Kind: TokenKind.StringLiteral })
-        {
-            node.Accept(this);
-            string data = Pop();
-            string address = NewTemp();
-            Emit($"    {address} = bitcast i8* {data} to {EmitType(_typeChecker.GetType(node))}*");
-            Push(address);
-            return;
-        }
         if (node is IdentifierExpression ident)
         {
             if (_locals.TryGetValue(ident.Name, out string? ptr))
@@ -2423,38 +2414,6 @@ public partial class LlvmEmitter : IVisitor
 
         if (node.Initializer != null)
         {
-            if (resolvedVarType is ArrayTypeExpression { Size: not null } targetArr &&
-                node.Initializer is LiteralExpression { Token.Kind: TokenKind.StringLiteral } strLit)
-            {
-                string raw = strLit.Token.Text[1..^1];
-                byte[] escaped = StringLiteralEncoding.Bytes(raw);
-                string globalName = NewGlobal();
-                int litLen = escaped.Length + 1;
-                string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
-                EmitGlobal($"{globalName} = private constant [{litLen} x i8] c\"{llvmStr}\\00\"");
-
-                if (targetArr.Size.Value == litLen)
-                {
-                    string loadedVal = NewTemp();
-                    Emit($"    {loadedVal} = load [{litLen} x i8], [{litLen} x i8]* {globalName}");
-                    Emit($"    store [{litLen} x i8] {loadedVal}, [{litLen} x i8]* {ptr}");
-                }
-                else
-                {
-                    if (!_externNames.Contains("llvm.memcpy"))
-                    {
-                        _externNames.Add("llvm.memcpy");
-                        EmitGlobal("declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)");
-                    }
-                    string destPtr = NewTemp();
-                    Emit($"    {destPtr} = bitcast {type}* {ptr} to i8*");
-                    string srcPtr = NewTemp();
-                    Emit($"    {srcPtr} = bitcast [{litLen} x i8]* {globalName} to i8*");
-                    Emit($"    call void @llvm.memcpy.p0i8.p0i8.i64(i8* {destPtr}, i8* {srcPtr}, i64 {litLen}, i1 false)");
-                }
-                return;
-            }
-
             EmitValueForTarget(node.Initializer, resolvedVarType);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(node.Initializer);
@@ -4076,16 +4035,7 @@ public partial class LlvmEmitter : IVisitor
         TryEmitConstValue(new ConstValue.String(name), _typeChecker.GetType(node));
     }
 
-    public void Visit(PrefixedStringLiteralExpression node)
-    {
-        if (node.Prefix == "c")
-        {
-            node.Literal.Accept(this);
-            return;
-        }
-
-        Visit((CallExpression)node);
-    }
+    public void Visit(PrefixedStringLiteralExpression node) => Visit((CallExpression)node);
 
     private string GetDefaultValue(TypeExpression type)
     {
@@ -4134,9 +4084,9 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(ArrayLiteralExpression node)
         => EmitExpressionWithCleanup(() => EmitArrayLiteral(node));
 
-    private void EmitArrayLiteral(ArrayLiteralExpression node)
+    private void EmitArrayLiteral(ArrayLiteralExpression node, ArrayTypeExpression? destination = null)
     {
-        var type = (ArrayTypeExpression)_typeChecker.GetType(node);
+        var type = destination ?? (ArrayTypeExpression)_typeChecker.GetType(node);
         string arrayType = EmitType(type);
         string elementType = EmitType(type.ElementType);
         string storage = NewTemp();
@@ -4192,6 +4142,9 @@ public partial class LlvmEmitter : IVisitor
     private void EmitValueForTarget(AstNode expression, TypeExpression target)
     {
         if (_typeChecker.CopiesValue(expression, target)) EmitCopyValue(expression, target);
+        else if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression targetArray && expression is ArrayLiteralExpression literalArray &&
+            EmitType(targetArray) != EmitType(_typeChecker.GetType(expression)))
+            EmitExpressionWithCleanup(() => EmitArrayLiteral(literalArray, targetArray));
         else if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression { Size: not null } array &&
             expression is LiteralExpression { Token.Kind: TokenKind.StringLiteral } literal)
         {

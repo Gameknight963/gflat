@@ -19,7 +19,7 @@ extern int printf(readonly(char)* text, ...);
 int main()
 {
     String message = s$"Hello from gflat! The answer is {42}.";
-    printf(c"%s\n", message.Data);
+    printf("%s\n", message.Data);
     return 0;
 }
 ```

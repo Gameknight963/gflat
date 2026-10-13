@@ -43,7 +43,7 @@ int ParseInt(readonly(char)* text, nuint count)
 {
     int result = 0;
     if (!TryParseInt(text, count, &result))
-        throw new Exception(c"Invalid or out-of-range decimal int");
+        throw new Exception("Invalid or out-of-range decimal int");
     return result;
 }
 

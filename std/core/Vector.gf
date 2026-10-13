@@ -16,7 +16,7 @@ struct Vector<T>
     {
         get
         {
-            if (index >= count) throw new Exception(c"Vector index out of range");
+            if (index >= count) throw new Exception("Vector index out of range");
             return data![index];
         }
     }
@@ -27,9 +27,9 @@ struct Vector<T>
         nuint maximum = (nuint)0 - (nuint)1;
         nuint stride = (nuint)sizeof(T);
         if (stride == (nuint)0) stride = 1;
-        if (requested > maximum / stride) throw new Exception(c"Vector capacity overflow");
+        if (requested > maximum / stride) throw new Exception("Vector capacity overflow");
         void*? allocation = Memory::Allocate(requested * stride);
-        if (allocation == null) throw new Exception(c"Vector allocation failed");
+        if (allocation == null) throw new Exception("Vector allocation failed");
         T* replacement = (T*)allocation;
         for (nuint i = 0; i < count; i++)
         {
@@ -47,7 +47,7 @@ struct Vector<T>
             nuint stride = (nuint)sizeof(T);
             if (stride == (nuint)0) stride = 1;
             nuint maximum = ((nuint)0 - (nuint)1) / stride;
-            if (count == maximum) throw new Exception(c"Vector capacity overflow");
+            if (count == maximum) throw new Exception("Vector capacity overflow");
             nuint grown = 4;
             if (capacity != (nuint)0)
             {
@@ -63,7 +63,7 @@ struct Vector<T>
 
     public T Pop()
     {
-        if (count == (nuint)0) throw new Exception(c"Cannot pop an empty vector");
+        if (count == (nuint)0) throw new Exception("Cannot pop an empty vector");
         nuint index = count - (nuint)1;
         T result = move *(data! + index);
         count = index;

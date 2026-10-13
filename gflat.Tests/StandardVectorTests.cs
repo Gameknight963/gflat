@@ -36,7 +36,7 @@ public class StandardVectorTests
                 second = s"reinitialized";
                 if (second.Length != (nuint)13) return 1;
                 for (int i = 0; i < 20; i++) words.Add(s"extra");
-                words[(nuint)0].Append(c"!", 1);
+                words[(nuint)0].Append("!", 1);
                 words[(nuint)1] = s"replacement";
                 readonly(Vector<String>)* read = &words;
                 if ((*read)[(nuint)0].Length != (nuint)4) return 2;

@@ -22,7 +22,7 @@ public class InterpolationTests
             extern int printf(readonly(char)* text, ...);
             int main() {
                 String text = s$"{{{42}}} {true} {false} {'!'} {s$"nested {7}"} {-9223372036854775807l - 1l} {18446744073709551615ul} {1.5f} {2.25d}";
-                printf(c"%s", text.Data);
+                printf("%s", text.Data);
                 return 0;
             }
             """, libc: true);
@@ -54,10 +54,10 @@ public class InterpolationTests
             extern int printf(readonly(char)* text, ...);
             int Read(readonly(char)* p) { return (int)p[0]; }
             int main() {
-                String first = s$"{Read(c"}") /* } */} {'{'} {1 // }
+                String first = s$"{Read("}") /* } */} {'{'} {1 // }
                 + 2}";
                 String second = s$"x";
-                printf(c"%s|%s", first.Data, second.Data);
+                printf("%s|%s", first.Data, second.Data);
                 return 0;
             }
             """);
@@ -73,12 +73,12 @@ public class InterpolationTests
             extern int printf(readonly(char)* text, ...);
             struct Value : IFormattable {
                 public int n;
-                public Value(int id) { n = id; printf(c"C%d;", n); }
-                public readonly void Format(ITextWriter* output) { printf(c"F%d;", n); std::Format(n, output); }
-                ~Value() { printf(c"D%d;", n); }
+                public Value(int id) { n = id; printf("C%d;", n); }
+                public readonly void Format(ITextWriter* output) { printf("F%d;", n); std::Format(n, output); }
+                ~Value() { printf("D%d;", n); }
             }
             Value Make(int n) { return new Value(n); }
-            int main() { String text = s$"{Make(1)}{Make(2)}"; printf(c"%s", text.Data); return 0; }
+            int main() { String text = s$"{Make(1)}{Make(2)}"; printf("%s", text.Data); return 0; }
             """);
         Assert.Equal("C1;F1;D1;C2;F2;D2;12", result.StandardOutput);
         Assert.Equal(0, result.ExitCode);
@@ -108,8 +108,8 @@ public class InterpolationTests
 
     [Theory]
     [InlineData("$\"x\"", "custom string prefix")]
-    [InlineData("c$\"x\"", "custom string prefix")]
-    [InlineData("s$\"{c\"text\"}\"", "IFormattable")]
+    [InlineData("c$\"x\"", "Unknown string prefix")]
+    [InlineData("s$\"{\"text\"}\"", "IFormattable")]
     [InlineData("s$\"{null}\"", "IFormattable")]
     public void UnsupportedValuesProduceDiagnostics(string expression, string expected)
     {
@@ -180,7 +180,7 @@ public class InterpolationTests
             extern void free(void* p);
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
-                public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
+                public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
                 public replace void Free(void* pointer) { free((void*)pointer); }
             }
             struct Counter : ITextWriter {

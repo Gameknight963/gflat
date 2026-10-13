@@ -2601,7 +2601,7 @@ namespace gflat.Tests
             string code = """
                 int main()
                 {
-                    readonly(char)* s = c"hello";
+                    readonly(char)* s = "hello";
                     return 0;
                 }
                 """;
@@ -2895,7 +2895,7 @@ namespace gflat.Tests
                 {
                     try
                     {
-                        throw new Exception(c"test", 1);
+                        throw new Exception("test", 1);
                     }
                     catch (Exception* ex)
                     {
@@ -2949,7 +2949,7 @@ namespace gflat.Tests
 
                 void ThrowCustom()
                 {
-                    throw new CustomException(c"custom error");
+                    throw new CustomException("custom error");
                 }
 
                 int main()
@@ -3067,7 +3067,7 @@ namespace gflat.Tests
             string code = """
                 void Level1()
                 {
-                    throw new Exception(c"error");
+                    throw new Exception("error");
                 }
 
                 void Level2()
@@ -3107,7 +3107,7 @@ namespace gflat.Tests
             string code = """
                 void Foo()
                 {
-                    throw new Exception(c"error", 1);
+                    throw new Exception("error", 1);
                 }
                 """;
 
@@ -3120,7 +3120,7 @@ namespace gflat.Tests
             string code = """
                 void Callee()
                 {
-                    throw new Exception(c"error", 1);
+                    throw new Exception("error", 1);
                 }
 
                 void Caller()

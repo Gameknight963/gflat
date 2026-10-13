@@ -68,7 +68,7 @@ public class StandardSpanTests
         => Run("""
             using std;
             int main() {
-                readonly(Span<readonly(char)>) text = new Span<readonly(char)>(c"a\0b", 3);
+                readonly(Span<readonly(char)>) text = new Span<readonly(char)>("a\0b", 3);
                 if (text.Length != (nuint)3 || text[(nuint)2] != 'b') return 1;
                 Span<readonly(char)> tail = text.AsReadOnly().Slice(1);
                 if (tail.Length != (nuint)2 || tail[(nuint)0] != '\0') return 2;
@@ -122,8 +122,8 @@ public class StandardSpanTests
             using std;
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
-                public replace void*? Allocate(nuint size) { printf(c"A"); return malloc(size); }
-                public replace void Free(void* p) { printf(c"F"); free(p); }
+                public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
+                public replace void Free(void* p) { printf("F"); free(p); }
             }
             int main() {
                 {
@@ -135,7 +135,7 @@ public class StandardSpanTests
                         if (slice.Length != (nuint)2 || slice[(nuint)1] != 'b') return 1;
                     }
                     if (text.Data[2] != 'b') return 2;
-                    printf(c"S");
+                    printf("S");
                 }
                 return 0;
             }

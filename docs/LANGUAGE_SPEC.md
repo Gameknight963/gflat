@@ -29,9 +29,17 @@ Identifiers contain ASCII letters, digits, and underscores and cannot begin with
 
 Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Prefixed interpolation uses `s$"text {expression}"`; doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
 
-There is no built-in `string` type or keyword. Plain `"text"` literals have fixed
-`char` array type, `c"text"` gives a `readonly(char)*` to static null-terminated
-storage, and the standard library's `s"text"` creates an owning `std::String`.
+There is no built-in `string` type or keyword. Plain `"text"` literals have type
+`readonly(char*)`: a non-null pointer to static, null-terminated UTF-8 storage.
+Returning that pointer is valid; writing through it is rejected. Embedded nulls
+remain in the stored bytes, although C-string consumers stop at the first null.
+A fixed buffer declaration such as `char[6] buffer = "hello"` copies the bytes and
+terminator into writable inline storage. Larger buffers are zero-padded; smaller
+buffers are rejected. `char[] buffer = "hello"` infers the size including the
+terminator. Literal-to-buffer copying also works for fixed buffer fields, returns,
+and arguments. It does not implicitly convert arbitrary string pointers to buffers.
+The standard library's `s"text"` creates an owning `std::String`. There is no built-in
+`c` prefix; it is available for custom literal operators.
 The identifier `string` is available for user declarations.
 
 The following EBNF describes the core expression/type grammar; declaration modifiers, generics, interfaces, and operators are detailed below. Repetition is `{ ... }`, optional syntax is `[ ... ]`.
@@ -600,7 +608,7 @@ int main()
 }
 ```
 
-The prefix is an ordinary case-sensitive identifier, including names such as `my_2string`. The empty `""` marker must immediately follow the identifier in the declaration. At the use site, the prefix must immediately precede the literal's opening quote. `c` remains reserved for built-in C strings.
+The prefix is an ordinary case-sensitive identifier, including names such as `my_2string`. The empty `""` marker must immediately follow the identifier in the declaration. At the use site, the prefix must immediately precede the literal's opening quote.
 
 Prefixes are visible in their declaring namespace, its descendants, and namespaces imported by `using`. An explicit qualifier such as `Text::s"hello"` works without an import. Nested namespaces use `::`, including in `using` directives. Duplicate prefixes within one namespace are errors; multiple visible candidates from different namespaces require qualification. Result types do not disambiguate prefixes.
 
@@ -625,7 +633,7 @@ Include `std/core/String.gf` and `std/core/Formatting.gf`, or reference `std/std
 Floating-point conversion additionally uses `std/libc/Formatting.gf` and libc's `snprintf`.
 
 The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,
-including qualified syntax such as `std::s$"{42}"`. Unprefixed `$"..."` and `c$"..."` are
+including qualified syntax such as `std::s$"{42}"`. Unprefixed `$"..."` is
 not supported. Implementing a literal operator alone does not opt into interpolation.
 Its containing/result type must implement the automatically available global interface `ITextWriter` from `std/core/Text.gf`:
 

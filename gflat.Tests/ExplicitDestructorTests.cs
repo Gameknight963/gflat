@@ -10,16 +10,16 @@ public class ExplicitDestructorTests
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
-                public replace void*? Allocate(nuint n) { printf(c"A"); return malloc(n); }
-                public replace void Free(void* p) { printf(c"F"); free(p); }
+                public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
+                public replace void Free(void* p) { printf("F"); free(p); }
             }
             struct Item {
                 public int value;
                 public Item(int n) { value = n; }
-                ~Item() { printf(c"%d", value); }
+                ~Item() { printf("%d", value); }
             }
             void Destroy<T>(T* p) { p.~T(); }
-            Item* Once(Item* p) { printf(c"P"); return p; }
+            Item* Once(Item* p) { printf("P"); return p; }
             int main() {
                 Item* data = (Item*)Memory::Allocate((nuint)sizeof(Item) * (nuint)2);
                 new* Item(1) at data;
@@ -41,9 +41,9 @@ public class ExplicitDestructorTests
     {
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
-            struct Field { ~Field() { printf(c"F"); } }
+            struct Field { ~Field() { printf("F"); } }
             struct Outer { public Field field = new Field(); }
-            class Base { ~Base() { printf(c"B"); } }
+            class Base { ~Base() { printf("B"); } }
             class Derived : Base { public Outer field = new Outer(); }
             void Destroy<T>(T* p) { p.~T(); }
             int main() {
@@ -108,8 +108,8 @@ public class ExplicitDestructorTests
     {
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
-            class Base { public virtual ~Base() { printf(c"B"); } }
-            class Derived : Base { ~Derived() { printf(c"D"); } }
+            class Base { public virtual ~Base() { printf("B"); } }
+            class Derived : Base { ~Derived() { printf("D"); } }
             int main() {
                 Base* p = new* Derived();
                 p.~Base();
@@ -127,7 +127,7 @@ public class ExplicitDestructorTests
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char)* text, ...);
             namespace Lib {
-                public struct Box<T> { public T value; ~Box() { printf(c"D"); } }
+                public struct Box<T> { public T value; ~Box() { printf("D"); } }
             }
             struct Storage<T> {
                 public T* data;
@@ -164,7 +164,7 @@ public class ExplicitDestructorTests
             struct S {
                 public int n;
                 public S(int value) { n = value; }
-                ~S() { printf(c"%d", n); }
+                ~S() { printf("%d", n); }
             }
             void Destroy<T>(T* p) { p.~T(); }
             int main() {

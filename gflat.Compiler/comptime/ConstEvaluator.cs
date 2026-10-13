@@ -1312,12 +1312,6 @@ namespace gflat.comptime
         {
             CheckSteps(node.Line);
 
-            if (node.Prefix == "c")
-            {
-                _currentValue = new ConstValue.String(node.Literal.Token.Text[1..^1]);
-                return;
-            }
-
             throw new ConstEvalException($"Unresolved string prefix '{node.Prefix}'", node.Line);
         }
     }

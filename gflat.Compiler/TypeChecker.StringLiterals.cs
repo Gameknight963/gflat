@@ -39,8 +39,6 @@ public partial class TypeChecker
                 case MethodDeclaration { StringLiteralPrefix: not null } method:
                     if (owner == null || generic)
                         throw new TypeCheckException("String literal operators require a non-generic class or struct", method.Line);
-                    if (method.StringLiteralPrefix == "c")
-                        throw new TypeCheckException("String prefix 'c' is reserved for built-in C strings", method.Line);
                     if (!method.IsStatic || method.Accessibility != TokenKind.Public || method.Body == null)
                         throw new TypeCheckException("String literal operators must be public static methods with a body", method.Line);
                     var previous = _currentNamespace;

@@ -84,7 +84,7 @@ public class ExceptionReserveTests
             }
             int main() {
                 for (int i = 0; i < 100; i++) {
-                    try { throw new Exception(c"test", 42); }
+                    try { throw new Exception("test", 42); }
                     catch (ref Exception error) { if (error.GetCode() != 42) return 1; }
                 }
                 return 0;
@@ -102,7 +102,7 @@ public class ExceptionReserveTests
                 public replace void*? Allocate(nuint size) => null;
                 public replace void Free(void* ptr) { }
             }
-            class Widget { public Widget() { printf(c"constructed"); } }
+            class Widget { public Widget() { printf("constructed"); } }
             int main() {
                 try { Widget* p = new* Widget(); delete p; }
                 catch (ref std::BadAllocException error) {
@@ -122,8 +122,8 @@ public class ExceptionReserveTests
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char*) format, ...);
             namespace Memory {
-                public replace void*? Allocate(nuint size) { printf(c"A;"); return malloc(size); }
-                public replace void Free(void* ptr) { printf(c"F;"); free(ptr); }
+                public replace void*? Allocate(nuint size) { printf("A;"); return malloc(size); }
+                public replace void Free(void* ptr) { printf("F;"); free(ptr); }
             }
             class Widget { public Widget() { throw new Exception(); } }
             int main() {

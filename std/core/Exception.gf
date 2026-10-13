@@ -6,7 +6,7 @@ class Exception
 
     public Exception()
     {
-        message = c"";
+        message = "";
         code = 1;
     }
 

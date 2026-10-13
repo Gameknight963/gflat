@@ -117,7 +117,7 @@ public class EditorGrammarTests
     [InlineData("s$\"hello {42}\"", "42", "constant.numeric")]
     [InlineData("s$\"hello {42}\"", "hello", "string.quoted.double")]
     [InlineData("s$\"{{literal}} {s$\"{true}\"}\"", "true", "constant.language")]
-    [InlineData("s$\"{Read(c\"}\")}\"; return 1;", "return", "keyword.control")]
+    [InlineData("s$\"{Read(\"}\")}\"; return 1;", "return", "keyword.control")]
     [InlineData("public static String From(readonly(char)* text)", "String", "entity.name.type")]
     [InlineData("public static String", "String", "entity.name.type")]
     [InlineData("struct String : ITextWriter, IFormattable", "ITextWriter", "entity.name.type")]
@@ -170,7 +170,7 @@ public class EditorGrammarTests
     [InlineData("if (left < right && other > value) { }", "left")]
     [InlineData("public static String From()", "From")]
     [InlineData("// public static String From()", "String")]
-    [InlineData("c\"public static String From()\"", "String")]
+    [InlineData("\"public static String From()\"", "String")]
     public void TypeRulesDoNotReclassifyExpressionsCommentsOrStrings(string line, string text)
     {
         var result = Grammar().TokenizeLine(line, null, TimeSpan.FromSeconds(2));

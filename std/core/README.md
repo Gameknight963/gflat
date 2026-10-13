@@ -13,7 +13,7 @@ int main()
 {
     String name = s"Ada";
     String message = s$"Hello {name}, score: {42}";
-    message.Append(c"!", 1);
+    message.Append("!", 1);
     return 0;
 }
 ```
@@ -54,7 +54,7 @@ a terminator. Both return `bool` and write an `int` through the result pointer:
 
 ```gflat
 int value = 0;
-if (TryParseInt(c"-42", &value)) {
+if (TryParseInt("-42", &value)) {
     // value is -42.
 }
 ```
@@ -68,7 +68,7 @@ throw, or call libc. For a `String`, use `TryParseInt(text.Data, text.Length, &v
 using the same rules. They throw `Exception` on invalid input or overflow:
 
 ```gflat
-int value = ParseInt(c"42");
+int value = ParseInt("42");
 ```
 
 ## Vectors
@@ -85,7 +85,7 @@ int main()
     String second = s"second";
     words.Add(move second); // second is now uninitialized.
     second = s"new value";
-    words[(nuint)0].Append(c"!", 1);
+    words[(nuint)0].Append("!", 1);
     words[(nuint)1] = s"replacement";
     String last = words.Pop();
     return 0;

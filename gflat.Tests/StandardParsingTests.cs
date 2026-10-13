@@ -33,22 +33,22 @@ public class StandardParsingTests
             using std;
             int main() {
                 int value = 99;
-                bool success = TryParseInt(c"{{text}}", &value);
+                bool success = TryParseInt("{{text}}", &value);
                 if (success != {{(success ? "true" : "false")}}) return 1;
                 if ((long)value != {{expected}}l) return 2;
                 value = 99;
-                success = TryParseInt(c"{{text}}", {{text.Length}}, &value);
+                success = TryParseInt("{{text}}", {{text.Length}}, &value);
                 if (success != {{(success ? "true" : "false")}}) return 3;
                 if ((long)value != {{expected}}l) return 4;
                 bool caught = false;
                 try {
-                    value = ParseInt(c"{{text}}");
+                    value = ParseInt("{{text}}");
                     if ((long)value != {{expected}}l) return 5;
                 } catch { caught = true; }
                 if (caught == {{(success ? "true" : "false")}}) return 6;
                 caught = false;
                 try {
-                    value = ParseInt(c"{{text}}", {{text.Length}});
+                    value = ParseInt("{{text}}", {{text.Length}});
                     if ((long)value != {{expected}}l) return 7;
                 } catch { caught = true; }
                 if (caught == {{(success ? "true" : "false")}}) return 8;
@@ -68,12 +68,12 @@ public class StandardParsingTests
                 int value = 99;
                 if (!TryParseInt(buffer, 2, &value) || value != 12) return 1;
                 if (TryParseInt(buffer, 3, &value) || value != 0) return 2;
-                if (TryParseInt(c"1\0x", 3, &value) || value != 0) return 3;
-                if (!TryParseInt(c"1\0x", &value) || value != 1) return 4;
+                if (TryParseInt("1\0x", 3, &value) || value != 0) return 3;
+                if (!TryParseInt("1\0x", &value) || value != 1) return 4;
                 if (ParseInt(buffer, 2) != 12) return 5;
-                if (ParseInt(c"1\0x") != 1) return 6;
+                if (ParseInt("1\0x") != 1) return 6;
                 bool caught = false;
-                try { ParseInt(c"1\0x", 3); } catch { caught = true; }
+                try { ParseInt("1\0x", 3); } catch { caught = true; }
                 if (!caught) return 7;
                 return 0;
             }

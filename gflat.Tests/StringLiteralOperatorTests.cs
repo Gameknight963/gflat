@@ -61,7 +61,6 @@ public class StringLiteralOperatorTests
     [Theory]
     [InlineData("public S", "s", "readonly(char)* p, nuint n", "static")]
     [InlineData("private static S", "s", "readonly(char)* p, nuint n", "public static")]
-    [InlineData("public static S", "c", "readonly(char)* p, nuint n", "reserved")]
     [InlineData("public static S", "s", "char* p, nuint n", "readonly(char)*")]
     [InlineData("public static S", "s", "readonly(char)* p, int n", "nuint")]
     [InlineData("public static S", "s", "readonly(char)* p", "nuint")]

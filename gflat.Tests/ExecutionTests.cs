@@ -2923,7 +2923,7 @@ namespace gflat.Tests
             string code = """
                 int main()
                 {
-                    readonly(char)* s = c"hello";
+                    readonly(char)* s = "hello";
                     if (s[0] == 'h' && s[4] == 'o' && s[5] == '\0')
                     {
                         return 42;
@@ -3138,7 +3138,7 @@ namespace gflat.Tests
                     }
                 }
 
-                const Exception* OutOfMemory = new* Exception(c"Out of memory", 42);
+                const Exception* OutOfMemory = new* Exception("Out of memory", 42);
 
                 int main()
                 {
@@ -3235,7 +3235,7 @@ namespace gflat.Tests
             string code = """
                 int Thrower()
                 {
-                    throw new Exception(c"Error occurred", 42);
+                    throw new Exception("Error occurred", 42);
                     return 0;
                 }
 
@@ -3276,7 +3276,7 @@ namespace gflat.Tests
 
                 int Thrower()
                 {
-                    throw new CustomException(c"Custom error", 10, 32);
+                    throw new CustomException("Custom error", 10, 32);
                     return 0;
                 }
 
@@ -3304,12 +3304,12 @@ namespace gflat.Tests
             string code = """
                 class SpecificException : Exception
                 {
-                    public SpecificException(int c) : base(c"", c) {}
+                    public SpecificException(int c) : base("", c) {}
                 }
 
                 class AnotherException : Exception
                 {
-                    public AnotherException(int c) : base(c"", c) {}
+                    public AnotherException(int c) : base("", c) {}
                 }
 
                 int Run(int kind)
@@ -3352,7 +3352,7 @@ namespace gflat.Tests
         public void Execution_ConstException_NotFreed_Executes()
         {
             string code = """
-                const Exception* OutOfMemory = new* Exception(c"Out of memory", 99);
+                const Exception* OutOfMemory = new* Exception("Out of memory", 99);
 
                 int ThrowConst()
                 {
@@ -3386,7 +3386,7 @@ namespace gflat.Tests
                 {
                     defer *flag += 10;
                     defer *flag += 20;
-                    throw new Exception(c"Fail", 1);
+                    throw new Exception("Fail", 1);
                 }
 
                 int main()
@@ -3416,7 +3416,7 @@ namespace gflat.Tests
                 {
                     try
                     {
-                        throw new Exception(c"Original", 55);
+                        throw new Exception("Original", 55);
                     }
                     catch (Exception* ex)
                     {
@@ -3449,7 +3449,7 @@ namespace gflat.Tests
             string code = """
                 int main()
                 {
-                    throw new Exception(c"Fatal error", 123);
+                    throw new Exception("Fatal error", 123);
                     return 0;
                 }
                 """;
@@ -3710,7 +3710,8 @@ namespace gflat.Tests
                 int main()
                 {
                     int count = 0;
-                    foreach (char c in "Hello")
+                    char[] text = "Hello";
+                    foreach (char c in text)
                     {
                         if (c != '\0')
                         {

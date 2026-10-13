@@ -8,11 +8,11 @@ namespace detail
         char[64] buffer;
         int written = snprintf(buffer, 64, format, value);
         if (written < 0 || written >= 64)
-            throw new Exception(c"Floating-point formatting failed", 4);
+            throw new Exception("Floating-point formatting failed", 4);
         output.Write(buffer, (nuint)written);
     }
 }
 
 // Locale follows the application's C locale. Enough digits for round trips.
-void Format(float value, ITextWriter* output) { detail::FloatingText((double)value, c"%.9g", output); }
-void Format(double value, ITextWriter* output) { detail::FloatingText(value, c"%.17g", output); }
+void Format(float value, ITextWriter* output) { detail::FloatingText((double)value, "%.9g", output); }
+void Format(double value, ITextWriter* output) { detail::FloatingText(value, "%.17g", output); }

@@ -72,7 +72,7 @@ bool Complete(Vector<Task>* tasks, readonly(String)* line)
 
 void List(readonly(Vector<Task>)* tasks)
 {
-    if (tasks.Count == (nuint)0) puts(c"No tasks yet.");
+    if (tasks.Count == (nuint)0) puts("No tasks yet.");
     for (nuint i = 0; i < tasks.Count; i++)
     {
         readonly(Task)* task = &(*tasks)[i];
@@ -87,28 +87,28 @@ int main()
 {
     Vector<Task> tasks = new Vector<Task>();
     String line = new String();
-    puts(c"Tasks (in memory). Commands: add <title>, list, done <number>, quit");
+    puts("Tasks (in memory). Commands: add <title>, list, done <number>, quit");
     while (ReadLine(&line))
     {
-        if (IsCommand(&line, c"quit")) break;
-        if (IsCommand(&line, c"list")) List(&tasks);
-        else if (StartsWith(&line, c"add "))
+        if (IsCommand(&line, "quit")) break;
+        if (IsCommand(&line, "list")) List(&tasks);
+        else if (StartsWith(&line, "add "))
         {
-            if (line.Length == (nuint)4) puts(c"A task needs a title.");
+            if (line.Length == (nuint)4) puts("A task needs a title.");
             else
             {
                 String title = String::From(line.Data + 4, line.Length - (nuint)4);
                 tasks.Add(new Task(move title));
-                puts(c"Added.");
+                puts("Added.");
             }
         }
-        else if (StartsWith(&line, c"done "))
+        else if (StartsWith(&line, "done "))
         {
-            if (Complete(&tasks, &line)) puts(c"Done.");
-            else puts(c"Use done <number> with an existing task number.");
+            if (Complete(&tasks, &line)) puts("Done.");
+            else puts("Use done <number> with an existing task number.");
         }
         else if (line.Length != (nuint)0)
-            puts(c"Unknown command. Use add <title>, list, done <number>, or quit.");
+            puts("Unknown command. Use add <title>, list, done <number>, or quit.");
     }
     return 0;
 }

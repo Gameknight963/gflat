@@ -1737,8 +1737,18 @@ namespace gflat
                 return false;
             target = target.WithReadOnlyValue(false);
             source = source.WithReadOnlyValue(false);
+            if (target is ArrayTypeExpression literalArray &&
+                valueNode is LiteralExpression { Token.Kind: TokenKind.StringLiteral } literal)
+                return TypesMatch(ResolveAlias(literalArray.ElementType), Char) &&
+                    (literalArray.Size != null && literalArray.Size >= GetStringLiteralLength(literal.Token.Text[1..^1], literal.Line));
             if (TypesMatch(target, source))
                 return true;
+
+            if (target is ArrayTypeExpression destinationArray && valueNode is ArrayLiteralExpression arrayLiteral &&
+                ResolveAlias(destinationArray.ElementType) is ArrayTypeExpression &&
+                arrayLiteral.Elements.Any(element => element is LiteralExpression { Token.Kind: TokenKind.StringLiteral } or ArrayLiteralExpression))
+                return (destinationArray.Size == null || destinationArray.Size == arrayLiteral.Elements.Count) &&
+                    arrayLiteral.Elements.All(element => IsAssignable(destinationArray.ElementType, GetType(element), element));
 
             if (target is ArrayTypeExpression ta && source is ArrayTypeExpression sa)
                 return (ta.Size == null || sa.Size == null || ta.Size == sa.Size ||
@@ -2786,6 +2796,14 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.Type, node.Line);
             TypeExpression fieldType = ResolveAlias(node.Type);
+            if (fieldType is ArrayTypeExpression { Size: null } textArray &&
+                node.Initializer is LiteralExpression { Token.Kind: TokenKind.StringLiteral } text &&
+                TypesMatch(ResolveAlias(textArray.ElementType), Char))
+            {
+                fieldType = new ArrayTypeExpression(textArray.ElementType, GetStringLiteralLength(text.Token.Text[1..^1], text.Line), node.Line)
+                    .WithReadOnlyValue(fieldType.IsReadOnlyValue);
+                node.Type = fieldType;
+            }
             if (node.IsConst && RequiresCopy(fieldType))
                 throw new TypeCheckException("Constants cannot contain values with nontrivial copying or destruction", node.Line);
             if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(fieldType))
@@ -2818,6 +2836,7 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Const variable '{node.Name}' initializer must be a compile-time constant: {err}", node.Line);
                 }
+                constVal = NormalizeStringBufferConstant(constVal!, fieldType);
                 _constVariablesByName[node.Name] = constVal!;
                 _constValues[node] = constVal!;
                 _constValues[node.Initializer] = constVal!;
@@ -2825,6 +2844,14 @@ namespace gflat
             }
 
             RecordType(node, fieldType);
+        }
+
+        private static ConstValue NormalizeStringBufferConstant(ConstValue value, TypeExpression type)
+        {
+            if (value is not ConstValue.String text || type is not ArrayTypeExpression { Size: not null } array) return value;
+            byte[] bytes = StringLiteralEncoding.Bytes(text.Value);
+            return new ConstValue.Array(Enumerable.Range(0, array.Size.Value)
+                .Select(i => (ConstValue)new ConstValue.Char((char)(i < bytes.Length ? bytes[i] : 0))).ToList());
         }
 
         public void Visit(MethodDeclaration node)
@@ -3479,6 +3506,12 @@ namespace gflat
                 node.Initializer.Accept(this);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
 
+                if (varType is ArrayTypeExpression { Size: null } textArray &&
+                    node.Initializer is LiteralExpression { Token.Kind: TokenKind.StringLiteral } text &&
+                    TypesMatch(ResolveAlias(textArray.ElementType), Char))
+                    varType = new ArrayTypeExpression(textArray.ElementType, GetStringLiteralLength(text.Token.Text[1..^1], text.Line), node.Line)
+                        .WithReadOnlyValue(varType.IsReadOnlyValue);
+
                 // Size inference for inferred arrays: char[] a = "string";
                 if (varType is ArrayTypeExpression { Size: null } arr && initType is ArrayTypeExpression { Size: not null } initArr)
                 {
@@ -3510,6 +3543,7 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Const variable '{node.Name}' initializer must be a compile-time constant: {err}", node.Line);
                 }
+                constVal = NormalizeStringBufferConstant(constVal!, varType);
                 _constVariablesByName[node.Name] = constVal!;
                 _constValues[node] = constVal!;
                 _constValues[node.Initializer] = constVal!;
@@ -3949,6 +3983,7 @@ namespace gflat
         public void Visit(LiteralExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (node.Token.Kind == TokenKind.StringLiteral) StringLiteralEncoding.Bytes(node.Token.Text[1..^1], node.Line);
             TypeExpression type = node.Token.Kind switch
             {
                 TokenKind.IntLiteral => Int,
@@ -3960,7 +3995,7 @@ namespace gflat
                 TokenKind.DoubleLiteral => Double,
                 TokenKind.LongLiteral => Long,
                 TokenKind.ULongLiteral => ULong,
-                TokenKind.StringLiteral => new ArrayTypeExpression(Char, GetStringLiteralLength(node.Token.Text[1..^1], node.Line), node.Line),
+                TokenKind.StringLiteral => new PointerTypeExpression(Char, false, node.Line, isReadOnly: true),
                 TokenKind.CharLiteral => Char,
                 TokenKind.True => Bool,
                 TokenKind.False => Bool,
@@ -6150,19 +6185,6 @@ namespace gflat
         public void Visit(PrefixedStringLiteralExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
-            if (node.Prefix == "c")
-            {
-                if (node.Scope != null)
-                {
-                    throw new TypeCheckException($"Built-in C-string prefix 'c' cannot be qualified with a scope", node.Line);
-                }
-                node.Literal.Accept(this);
-                TypeExpression charPtrType = new PointerTypeExpression(Char, false, node.Line, isReadOnly: true);
-                _types[node] = charPtrType;
-                _constValues[node] = new ConstValue.String(node.Literal.Token.Text[1..^1]);
-                return;
-            }
-
             CheckStringLiteralCall(node);
         }
 

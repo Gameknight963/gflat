@@ -13,7 +13,7 @@ public partial class TypeChecker
 
     private void CheckInterpolation(InterpolatedStringExpression node)
     {
-        if (node.Prefix == null || node.Prefix == "c")
+        if (node.Prefix == null)
             throw new TypeCheckException("Interpolation requires a custom string prefix, for example s$\"{value}\"", node.Line);
         LiteralExpression Literal(string raw) => new(new Token(TokenKind.StringLiteral, node.Line, 0, 0, "\"" + raw + "\""), node.Line) { Span = node.Span };
         AstNode Size(int length) => new CastExpression(new NamedTypeExpression("nuint", null, node.Line),

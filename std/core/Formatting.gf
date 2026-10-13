@@ -34,7 +34,7 @@ void Format(nint value, ITextWriter* output) { std::Format((long)value, output);
 void Format(nuint value, ITextWriter* output) { std::Format((ulong)value, output); }
 void Format(bool value, ITextWriter* output)
 {
-    if (value) output.Write(c"true", 4);
-    else output.Write(c"false", 5);
+    if (value) output.Write("true", 4);
+    else output.Write("false", 5);
 }
 void Format(char value, ITextWriter* output) { output.Write(&value, 1); }

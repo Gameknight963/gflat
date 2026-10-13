@@ -4,9 +4,9 @@ public class ExceptionBoundaryTests
 {
     [Theory]
     [InlineData("new Exception()", 1)]
-    [InlineData("new Exception(c\"failure\")", 1)]
-    [InlineData("new Exception(c\"failure\", 42)", 42)]
-    [InlineData("new Exception(c\"failure\", 0)", 0)]
+    [InlineData("new Exception(\"failure\")", 1)]
+    [InlineData("new Exception(\"failure\", 42)", 42)]
+    [InlineData("new Exception(\"failure\", 0)", 0)]
     [InlineData("new Custom()", 23)]
     public void DefaultHookUsesExceptionCode(string value, int status)
     {
@@ -32,7 +32,7 @@ public class ExceptionBoundaryTests
             extern void exit(int status);
             namespace Exceptions {
                 public replace void Unhandled(Exception*? error) {
-                    printf(c"custom failure");
+                    printf("custom failure");
                     exit(42);
                 }
             }
@@ -64,12 +64,12 @@ public class ExceptionBoundaryTests
         """;
 
     [Theory]
-    [InlineData("void Boundary() nothrow { Fail(); printf(c\"continued\"); }")]
+    [InlineData("void Boundary() nothrow { Fail(); printf(\"continued\"); }")]
     [InlineData("void Boundary() nothrow { throw new First(); }")]
-    [InlineData("void Boundary() nothrow { try { Fail(); } catch (Second* e) { printf(c\"wrong catch\"); } }")]
+    [InlineData("void Boundary() nothrow { try { Fail(); } catch (Second* e) { printf(\"wrong catch\"); } }")]
     public void NonThrowingBoundaryTerminatesBeforeOuterCatch(string method)
     {
-        var result = CompilerTestHelper.Run(Prelude + method + "int main() { try { Boundary(); } catch { printf(c\"outer catch\"); } printf(c\"continued\"); return 0; }");
+        var result = CompilerTestHelper.Run(Prelude + method + "int main() { try { Boundary(); } catch { printf(\"outer catch\"); } printf(\"continued\"); return 0; }");
         Assert.Equal(1, result.ExitCode);
         Assert.Equal("", result.StandardOutput);
     }
@@ -77,7 +77,7 @@ public class ExceptionBoundaryTests
     [Fact]
     public void MatchingLocalCatchContinuesNormally()
     {
-        var result = CompilerTestHelper.Run(Prelude + "void Boundary() nothrow { try { Fail(); } catch (First* e) { printf(c\"caught;\"); } } int main() { Boundary(); printf(c\"continued\"); return 0; }");
+        var result = CompilerTestHelper.Run(Prelude + "void Boundary() nothrow { try { Fail(); } catch (First* e) { printf(\"caught;\"); } } int main() { Boundary(); printf(\"continued\"); return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("caught;continued", result.StandardOutput);
     }
@@ -85,7 +85,7 @@ public class ExceptionBoundaryTests
     [Fact]
     public void ThrowingBoundaryStillPropagates()
     {
-        var result = CompilerTestHelper.Run(Prelude + "void Boundary() { Fail(); } int main() { try { Boundary(); } catch (First* e) { printf(c\"caught\"); } return 0; }");
+        var result = CompilerTestHelper.Run(Prelude + "void Boundary() { Fail(); } int main() { try { Boundary(); } catch (First* e) { printf(\"caught\"); } return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("caught", result.StandardOutput);
     }
@@ -93,7 +93,7 @@ public class ExceptionBoundaryTests
     [Fact]
     public void TerminationUnwindsToBoundary()
     {
-        var result = CompilerTestHelper.Run(Prelude + "void Boundary() nothrow { defer { printf(c\"cleanup\"); } Fail(); } int main() { Boundary(); return 0; }");
+        var result = CompilerTestHelper.Run(Prelude + "void Boundary() nothrow { defer { printf(\"cleanup\"); } Fail(); } int main() { Boundary(); return 0; }");
         Assert.Equal(1, result.ExitCode);
         Assert.Equal("cleanup", result.StandardOutput);
     }
@@ -104,7 +104,7 @@ public class ExceptionBoundaryTests
     [InlineData("struct C { public ~C() { Fail(); } }", "{ C value = new C(); }")]
     public void ConstructorsAndDestructorsAreTerminationBoundaries(string type, string expression)
     {
-        var result = CompilerTestHelper.Run(Prelude + type + "int main() { try { " + expression + " } catch { printf(c\"outer catch\"); } return 0; }");
+        var result = CompilerTestHelper.Run(Prelude + type + "int main() { try { " + expression + " } catch { printf(\"outer catch\"); } return 0; }");
         Assert.Equal(1, result.ExitCode);
         Assert.Equal("", result.StandardOutput);
     }
@@ -112,7 +112,7 @@ public class ExceptionBoundaryTests
     [Fact]
     public void LambdaDoesNotInheritEnclosingExceptionHandlers()
     {
-        var result = CompilerTestHelper.Run(Prelude + "int main() { try { void()* action = () => { Fail(); }; action(); } catch { printf(c\"outer catch\"); } return 0; }");
+        var result = CompilerTestHelper.Run(Prelude + "int main() { try { void()* action = () => { Fail(); }; action(); } catch { printf(\"outer catch\"); } return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("outer catch", result.StandardOutput);
     }

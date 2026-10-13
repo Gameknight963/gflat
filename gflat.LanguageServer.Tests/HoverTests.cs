@@ -42,16 +42,14 @@ public class HoverTests
         Assert.DoesNotContain("exceptions", text, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
-    [InlineData("readonly(char)* F() => c\"he|llo\";", true)]
-    [InlineData("readonly(char)* F() => \"he|llo\";", false)]
-    public void CStringLiteralTypesHaveIndividualKeywordAndPunctuationRuns(string source, bool pointer)
+    [Fact]
+    public void CStringLiteralTypesHaveIndividualKeywordAndPunctuationRuns()
     {
-        var header = Hover(source, true).GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements");
+        var header = Hover("readonly(char)* F() => \"he|llo\";", true).GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements");
         var runs = header.EnumerateArray().Single(e => e.GetProperty("_vs_type").GetString() == "ClassifiedTextElement").GetProperty("Runs").EnumerateArray().ToArray();
-        foreach (string word in pointer ? new[] { "readonly", "char" } : new[] { "char" })
+        foreach (string word in new[] { "readonly", "char" })
             Assert.Contains(runs, r => r.GetProperty("Text").GetString() == word && r.GetProperty("ClassificationTypeName").GetString() == "keyword");
-        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == (pointer ? "*" : "[") && r.GetProperty("ClassificationTypeName").GetString() == "punctuation");
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "*" && r.GetProperty("ClassificationTypeName").GetString() == "punctuation");
     }
 
     [Fact]
@@ -178,7 +176,7 @@ public class HoverTests
     [InlineData("long F() => 1|23l;", "long")]
     [InlineData("bool F() => tr|ue;", "bool")]
     [InlineData("char F() => '|a';", "char")]
-    [InlineData("readonly(char)* F() => c\"he|llo\";", "readonly(char)*")]
+    [InlineData("readonly(char)* F() => \"he|llo\";", "readonly(char)*")]
     public void LiteralsShowTheirCompilerTypeWithoutLayout(string source, string expected)
     {
         var hover = Hover(source);

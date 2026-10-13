@@ -286,7 +286,7 @@ public class EditorTests
     [Fact]
     public void SemanticRangeTokensUseAbsoluteUtf16Positions()
     {
-        var (model, path, _, _) = Analyze("// 😀\r\nint first() => 1;\r\nint second() => first();|");
+        var (model, path, _, _) = Analyze("// ðŸ˜€\r\nint first() => 1;\r\nint second() => first();|");
         var data = Json(model.SemanticTokens(path, new(new(2, 0), new(2, 24)))).GetProperty("data").EnumerateArray().Select(n => n.GetInt32()).ToArray();
         Assert.Equal(2, data[0]);
         Assert.Equal(4, data[1]);
@@ -322,7 +322,7 @@ public class EditorTests
     [Theory]
     [InlineData("int main() { // co|mment\n return 0; }")]
     [InlineData("int main() { /* co|mment */ return 0; }")]
-    [InlineData("int main() { c\"he|llo\"; return 0; }")]
+    [InlineData("int main() { \"he|llo\"; return 0; }")]
     public void CompletionDoesNotOfferCodeInsideCommentsOrStrings(string text)
     {
         var (model, path, offset, _) = Analyze(text);

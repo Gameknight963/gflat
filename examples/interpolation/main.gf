@@ -9,9 +9,9 @@ struct Player : IFormattable
 
     public readonly void Format(ITextWriter* output)
     {
-        output.Write(c"Player(score=", 13);
+        output.Write("Player(score=", 13);
         std::Format(score, output);
-        output.Write(c")", 1);
+        output.Write(")", 1);
     }
 }
 
@@ -19,7 +19,7 @@ int main()
 {
     Player player = new Player(42);
     String message = s$"Hello {s"Ada"}: {player}; accuracy: {0.875f}";
-    message.Append(c"!", 1);
-    printf(c"%s\n", message.Data);
+    message.Append("!", 1);
+    printf("%s\n", message.Data);
     return 0;
 }

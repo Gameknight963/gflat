@@ -150,10 +150,16 @@ public sealed partial class EditorModel
         if (symbol.Syntax.Node is PropertyDeclaration property)
         {
             Add(" { ", "punctuation");
-            if (property.Getter != null) { Add("get", "keyword"); Add("; ", "punctuation"); }
+            if (property.Getter != null)
+            {
+                if (property.Getter.Accessibility != symbol.Access) Keyword(property.Getter.Accessibility.ToString().ToLowerInvariant());
+                if (property.Getter.IsReadOnly) Keyword("readonly");
+                Add("get", "keyword"); Add("; ", "punctuation");
+            }
             if (property.Setter != null)
             {
                 if (property.Setter.Accessibility != symbol.Access) Keyword(property.Setter.Accessibility.ToString().ToLowerInvariant());
+                if (property.Setter.IsReadOnly) Keyword("readonly");
                 Add("set", "keyword"); Add("; ", "punctuation");
             }
             Add("}", "punctuation");

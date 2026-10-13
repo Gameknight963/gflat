@@ -46,7 +46,7 @@ public sealed partial class EditorModel
             // Missing closing braces are routine while typing. The parser's
             // consumed-token range excludes trailing trivia, but the scope extends
             // through the caret at EOF until that brace is supplied.
-            foreach (var node in nodes[file.Path].Where(n => n.Node is BlockStatement or MethodDeclaration or ConstructorDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or NamespaceDeclaration))
+            foreach (var node in nodes[file.Path].Where(n => n.Node is BlockStatement or MethodDeclaration or ConstructorDeclaration or ClassDeclaration or StructDeclaration or InterfaceDeclaration or NamespaceDeclaration or PropertyDeclaration or LambdaExpression or OperatorDeclaration))
                 if (braces.Any(start => start >= node.Span.Start && start < node.Span.Start + node.Span.Length))
                     scopeEnds[node] = file.Text.Length + 1;
         }
@@ -101,7 +101,11 @@ public sealed partial class EditorModel
         return string.Join("::", ordered.Where(p => IsType(p.Node) || p.Node is NamespaceDeclaration).Select(p => p.Node is NamespaceDeclaration n ? n.Name : SourceName(p.Node)));
     }
     private static bool IsStatic(AstNode n) => n switch { MethodDeclaration m => m.IsStatic, FieldDeclaration f => f.IsStatic || f.IsConst, PropertyDeclaration p => p.Getter?.IsStatic ?? p.Setter?.IsStatic ?? false, EnumMemberDeclaration => true, _ => false };
-    private static TokenKind Access(AstNode n) => n switch { MethodDeclaration m => m.Accessibility, FieldDeclaration f => f.Accessibility, PropertyDeclaration p => p.Getter?.Accessibility ?? p.Setter?.Accessibility ?? TokenKind.Private, ClassDeclaration c => c.Accessibility, StructDeclaration s => s.Accessibility, InterfaceDeclaration i => i.Accessibility, EnumDeclaration e => e.Accessibility, ConstructorDeclaration c => c.Accessibility, _ => TokenKind.Public };
+    private static TokenKind Access(AstNode n) => n switch { MethodDeclaration m => m.Accessibility, FieldDeclaration f => f.Accessibility, PropertyDeclaration p => PropertyAccess(p), ClassDeclaration c => c.Accessibility, StructDeclaration s => s.Accessibility, InterfaceDeclaration i => i.Accessibility, EnumDeclaration e => e.Accessibility, ConstructorDeclaration c => c.Accessibility, _ => TokenKind.Public };
+    private static TokenKind PropertyAccess(PropertyDeclaration property)
+        => new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>()
+            .Select(m => m.Accessibility).OrderByDescending(a => a == TokenKind.Public ? 2 : a == TokenKind.Private ? 0 : 1)
+            .FirstOrDefault(TokenKind.Private);
     private static (string? Name, int Kind, string Classification, TypeExpression? Type) Describe(AstNode node) => node switch
     {
         ClassDeclaration c => (c.SourceName, 7, "class", null),
@@ -147,11 +151,15 @@ public sealed partial class EditorModel
         string? owner = Owner(parents);
         bool isStatic = parents.Select(p => p.Node).OfType<MethodDeclaration>().FirstOrDefault()?.IsStatic == true;
         var imports = snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? [];
+        var inheritedOrder = owner == null ? Array.Empty<Symbol>() : TypeMembers(owner)
+            .Where(s => Accessible(s, path, offset)).ToArray();
+        var inherited = inheritedOrder.ToHashSet();
         return symbols.Where(s => s.Scope != null
             ? s.NameSpan.Source?.Path == path && Contains(s.Scope, offset) && (s.Syntax.Node is Parameter || s.NameSpan.Start <= offset)
-            : s.Owner != null ? s.Owner == owner && (!isStatic || s.Static || IsType(s.Syntax.Node))
+            : s.Owner != null ? inherited.Contains(s) && (!isStatic || s.Static || IsType(s.Syntax.Node))
             : s.Namespace.Length == 0 || ns == s.Namespace || ns.StartsWith(s.Namespace + "::", StringComparison.Ordinal) || imports.Contains(s.Namespace))
             .OrderBy(s => s.Scope == null ? int.MaxValue : s.Scope.Span.Length)
+            .ThenBy(s => inherited.Contains(s) ? Array.IndexOf(inheritedOrder, s) : int.MaxValue)
             .ThenByDescending(s => s.NameSpan.Start);
     }
 
@@ -222,23 +230,71 @@ public sealed partial class EditorModel
         var context = Context(path, offset);
         return context == null ? [] : new[] { context }.Concat(Parents(context));
     }
-    private bool Accessible(Symbol s, string path, int offset) => s.Access == TokenKind.Public || s.Owner == null || s.Owner == Owner(ContextParents(path, offset));
+    private bool Accessible(Symbol s, string path, int offset)
+    {
+        string? owner = Owner(ContextParents(path, offset));
+        return s.Access is TokenKind.Public or TokenKind.Internal || s.Owner == null || s.Owner == owner ||
+            s.Access == TokenKind.Protected && owner != null && TypeMembers(owner).Any(m => m.Owner == s.Owner);
+    }
+    private static string TemplateName(string name)
+    {
+        var result = new System.Text.StringBuilder();
+        int depth = 0;
+        foreach (char c in name)
+        {
+            if (c == '<') depth++;
+            else if (c == '>') depth--;
+            else if (depth == 0) result.Append(c);
+        }
+        return result.ToString();
+    }
     private string? TypeOwner(TypeExpression? type, string path, int offset)
     {
-        while (type is PointerTypeExpression or ManagedTypeExpression or ReferenceTypeExpression)
-            type = type switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, ReferenceTypeExpression r => r.Inner, _ => type };
-        if (type is not NamedTypeExpression named) return null;
-        string name = named.Namespace == null ? named.Name : Join(named.Namespace, named.Name);
-        name = name.Split('$')[0]; // Source template, rather than a lowered specialization.
-        return symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && s.Qualified == name)?.Qualified
-            ?? Visible(path, offset).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == name)?.Qualified;
+        var aliases = new HashSet<Symbol>();
+        while (true)
+        {
+            while (type is PointerTypeExpression or ManagedTypeExpression or ReferenceTypeExpression)
+                type = type switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, ReferenceTypeExpression r => r.Inner, _ => type };
+            if (type is NestedTypeExpression nested)
+            {
+                string qualified = TemplateName(DisplayType(nested.WithReadOnlyValue(false)));
+                var target = symbols.FirstOrDefault(s => s.Qualified == qualified);
+                if (target?.Syntax.Node is AliasDeclaration)
+                {
+                    if (!aliases.Add(target)) return null;
+                    type = target.Type;
+                    continue;
+                }
+                return target != null && IsType(target.Syntax.Node) ? target.Qualified : null;
+            }
+            if (type is not NamedTypeExpression named) return null;
+            string name = named.Namespace == null ? named.Name : Join(named.Namespace, named.Name);
+            var alias = symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == name)
+                ?? Visible(path, offset).FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Name == name);
+            if (alias != null)
+            {
+                if (!aliases.Add(alias)) return null;
+                type = alias.Type;
+                continue;
+            }
+            // Source declarations retain their internal names after checking. Match
+            // those before decoding a specialization, even when checking is incomplete.
+            var internalMatch = symbols.Where(s => IsType(s.Syntax.Node)).Select(s => (Symbol: s, Name: s.Syntax.Node switch {
+                ClassDeclaration c => c.Name, StructDeclaration st => st.Name, InterfaceDeclaration i => i.Name, EnumDeclaration e => e.Name, _ => "" }))
+                .Where(s => named.Name == s.Name || named.Name.StartsWith(s.Name + "$", StringComparison.Ordinal))
+                .OrderByDescending(s => s.Name.Length).FirstOrDefault();
+            if (internalMatch.Symbol != null && (named.Namespace == null || named.Namespace == internalMatch.Symbol.Namespace)) return internalMatch.Symbol.Qualified;
+            string display = TemplateName(DisplayType(named.WithReadOnlyValue(false)));
+            return symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && (s.Qualified == name || s.Qualified == display))?.Qualified
+                ?? Visible(path, offset).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == name)?.Qualified;
+        }
     }
     private IEnumerable<Symbol> TypeMembers(string owner)
     {
         var visited = new HashSet<string>();
         while (visited.Add(owner))
         {
-            foreach (var symbol in symbols.Where(s => s.Owner == owner && s.Scope == null)) yield return symbol;
+            foreach (var symbol in symbols.Where(s => s.Owner == owner && s.Scope == null && s.Syntax.Node is not ConstructorDeclaration)) yield return symbol;
             var type = symbols.FirstOrDefault(s => s.Qualified == owner && s.Syntax.Node is ClassDeclaration);
             if (type?.Syntax.Node is not ClassDeclaration c) yield break;
             // The parser records the colon list in Interfaces; checking separates

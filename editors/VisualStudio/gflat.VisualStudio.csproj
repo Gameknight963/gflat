@@ -28,6 +28,7 @@
     <PackageReference Include="Microsoft.VisualStudio.LanguageServer.Client" Version="17.14.60" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.CoreUtility" Version="17.14.249" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.Language" Version="17.14.249" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.VisualStudio.Text.UI.Wpf" Version="17.14.249" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.Text.UI" Version="17.14.249" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.Text.Logic" Version="17.14.249" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.Telemetry" Version="17.14.18" ExcludeAssets="runtime" />
@@ -37,6 +38,8 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
     <Compile Include="GflatLanguageClient.cs" />
     <Compile Include="GflatEditorPackage.cs" />
     <Compile Include="GflatOptions.cs" />
@@ -44,10 +47,12 @@
     <Compile Include="HoverConnection.cs" />
     <Compile Include="HoverContent.cs" />
     <Compile Include="GflatQuickInfo.cs" />
+    <Compile Include="GflatThemeColors.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="GflatBuildProperties.cs" />
     <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/MSBuild.Locator.txt"><Link>Licenses/MSBuild.Locator.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
+    <Content Include="../../LICENSES/Roslyn.txt"><Link>Licenses/Roslyn.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../THIRD_PARTY_NOTICES.md"><Link>THIRD_PARTY_NOTICES.md</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="obj/notices/*"><Link>Licenses/dotnet/%(Filename)%(Extension)</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="obj/BUILD-INFO.json"><Link>BUILD-INFO.json</Link><IncludeInVSIX>true</IncludeInVSIX></Content>

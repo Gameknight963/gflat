@@ -46,7 +46,7 @@ public sealed class ServerTests
             ? JsonSerializer.SerializeToElement(new Dictionary<string, object> { ["method.public"] = new { guid = Guid.Parse("ae27a6b0-e345-4288-96df-5eaf394ee369"), id = 1 } })
             : JsonDocument.Parse(System.IO.File.ReadAllText(catalogFile)).RootElement.Clone();
         await s.Initialize(new { visualStudioClassifications = true, hoverIcons = icons, visualStudioNativeHover = true, gflat = new { showKnownExceptions = true } });
-        const string source = "public int Read(int count) { throw new Failure(); } class Failure : Exception {} void Safe() nothrow {}";
+        const string source = "public int Read(int count) { throw new Failure(); } class Failure : Exception {} void Safe() nothrow {} void Use() { Read(1); }";
         await s.Open("hover.gf", source);
         await s.Diagnostics("hover.gf", 1);
         await s.Send(new { jsonrpc = "2.0", id = 71, method = "textDocument/hover", @params = new { textDocument = new { uri = s.Uri("hover.gf") }, position = new { line = 0, character = 12 } } });
@@ -54,6 +54,10 @@ public sealed class ServerTests
         Assert.Equal("ContainerElement", hover.GetProperty("_vs_rawContent").GetProperty("_vs_type").GetString());
         string? capture = Environment.GetEnvironmentVariable("GFLAT_HOVER_CAPTURE");
         if (capture != null) System.IO.File.WriteAllText(capture, hover.GetRawText());
+        await s.Send(new { jsonrpc = "2.0", id = 73, method = "textDocument/signatureHelp", @params = new { textDocument = new { uri = s.Uri("hover.gf") }, position = new { line = 0, character = source.IndexOf("Read(1", StringComparison.Ordinal) + 5 } } });
+        var signature = (await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 73)).GetProperty("result").GetProperty("signatures")[0];
+        Assert.Equal("ClassifiedTextElement", signature.GetProperty("_vs_colorizedLabel").GetProperty("_vs_type").GetString());
+        if (capture != null) System.IO.File.WriteAllText(capture + ".signature", signature.GetRawText());
         await s.Send(new { jsonrpc = "2.0", id = 72, method = "textDocument/semanticTokens/full", @params = new { textDocument = new { uri = s.Uri("hover.gf") } } });
         var semantic = (await s.Receive(x => x.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 72)).GetProperty("result");
         var data = semantic.GetProperty("data").EnumerateArray().Select(n => n.GetInt32()).ToArray();

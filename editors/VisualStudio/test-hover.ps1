@@ -48,6 +48,19 @@ $resolver = [ResolveEventHandler] {
 [AppDomain]::CurrentDomain.add_AssemblyResolve($resolver)
 try {
     $client = [Reflection.Assembly]::Load([IO.File]::ReadAllBytes((Join-Path $PackageDirectory 'gflat.VisualStudio.dll')))
+    if ($client.GetType('gflat.VisualStudio.GflatSignatureHelpStyle')) { throw 'Signature appearance category override must be removed' }
+    $themeType = $client.GetType('gflat.VisualStudio.GflatThemeColors', $true)
+    $styleAttributes = @($themeType.GetCustomAttributes($false))
+    if (-not ($styleAttributes | Where-Object { $_.GetType().Name -eq 'ContentTypeAttribute' -and $_.ContentTypes -contains 'gflat' })) { throw 'Signature style must be scoped to gflat' }
+    if (-not ('gflat.PackageTests.ThemeColorCheck' -as [type])) {
+        Add-Type -Path (Join-Path $PSScriptRoot 'test-theme.cs') -ReferencedAssemblies @(
+            $assemblies['Microsoft.VisualStudio.Text.Logic'], $assemblies['Microsoft.VisualStudio.Text.UI.Wpf'],
+            $assemblies['Microsoft.VisualStudio.Text.UI'], $assemblies['Microsoft.VisualStudio.Text.Data'],
+            $assemblies['Microsoft.VisualStudio.CoreUtility'], 'PresentationCore', 'WindowsBase', 'System'
+        )
+    }
+    [gflat.PackageTests.ThemeColorCheck]::Run($themeType)
+    Write-Host 'Roslyn theme synchronization copies actual foreground brushes and preserves tooltip font, size, background, and bold formatting.'
     # LSP content-type inheritance alone leaves shell preferences on Plain Text,
     # where automatic brace completion is disabled by default.
     $languageType = $client.GetType('gflat.VisualStudio.GflatLanguageInfo', $true)
@@ -77,6 +90,14 @@ try {
     $protocol = [Reflection.Assembly]::LoadFrom($assemblies['Microsoft.VisualStudio.LanguageServer.Protocol.Internal'])
     $hoverType = $protocol.GetType('Microsoft.VisualStudio.LanguageServer.Protocol.VSInternalHover', $true)
     $hover = [Newtonsoft.Json.JsonConvert]::DeserializeObject([IO.File]::ReadAllText($CapturePath), $hoverType)
+    $signatureType = $protocol.GetType('Microsoft.VisualStudio.LanguageServer.Protocol.VSInternalSignatureInformation', $true)
+    $signature = [Newtonsoft.Json.JsonConvert]::DeserializeObject([IO.File]::ReadAllText($CapturePath + '.signature'), $signatureType)
+    $signatureRuns = @($signature.ColorizedLabel.Runs)
+    if (($signatureRuns.Text -join '') -ne $signature.Label) { throw 'Colored signature differs from its parameter label offsets' }
+    foreach ($expected in @(@('Read', 'method name'), @('int', 'keyword'), @('count', 'parameter name'))) {
+        if (-not ($signatureRuns | Where-Object { $_.Text -eq $expected[0] -and $_.ClassificationTypeName -eq $expected[1] })) { throw "Signature classification missing: $expected" }
+    }
+    Write-Host 'Colored signature help decoded successfully by the installed Visual Studio SDK.'
     if ($hover.RawContent.GetType().FullName -ne 'Microsoft.VisualStudio.Text.Adornments.ContainerElement') { throw 'Hover was not decoded as native VS content' }
     $header = @($hover.RawContent.Elements)[0]
     $elements = @($header.Elements)

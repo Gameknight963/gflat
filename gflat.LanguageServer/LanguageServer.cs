@@ -254,7 +254,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                 "textDocument/completion" => model.Completion(path, offset),
                 "textDocument/hover" => model.Hover(path, offset, hoverPresentation, hoverOptions),
                 "textDocument/definition" => model.Definition(path, offset),
-                "textDocument/signatureHelp" => model.SignatureHelp(path, offset),
+                "textDocument/signatureHelp" => model.SignatureHelp(path, offset, tokenTypes == EditorModel.VisualStudioTokenTypes),
                 _ => model.SemanticTokens(path, range)
             };
             await Reply(query.Id, result);

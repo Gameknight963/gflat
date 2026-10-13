@@ -40,7 +40,7 @@ public sealed class VisualStudioHover
     }
     private static object Container(int style, IEnumerable<object> children) => new Dictionary<string, object>
     { ["_vs_type"] = "ContainerElement", ["Style"] = style, ["Elements"] = children.ToArray() };
-    private static object Text(DisplayPart[] parts) => new Dictionary<string, object>
+    internal static object Text(DisplayPart[] parts) => new Dictionary<string, object>
     {
         ["_vs_type"] = "ClassifiedTextElement",
         ["Runs"] = parts.Select(p => new Dictionary<string, object> {

@@ -467,7 +467,7 @@ public sealed partial class EditorModel
         var symbol = index < 0 ? null : Resolve(path, index);
         return symbol?.NameSpan.Source is not SourceFile source || source.Path.StartsWith('<') ? null : new Location(Workspace.FileUri(source.Path), Workspace.ToRange(symbol.NameSpan));
     }
-    public object? SignatureHelp(string path, int offset)
+    public object? SignatureHelp(string path, int offset, bool visualStudio = false)
     {
         var ts = tokens[path];
         var stack = new Stack<(int Index, int Commas)>();
@@ -484,7 +484,11 @@ public sealed partial class EditorModel
         if (candidates.Length == 0) return null;
         var selected = Resolve(path, nameIndex);
         int active = Math.Max(0, Array.IndexOf(candidates, selected));
-        return new { signatures = candidates.Select(s => new { label = Detail(s), parameters = s.Parameters!.Select(p => new { label = ParameterText(p) }).ToArray() }).ToArray(), activeSignature = active, activeParameter = call.Commas };
+        return new { signatures = candidates.Select(s => new {
+            label = Detail(s),
+            parameters = s.Parameters!.Select(p => new { label = ParameterText(p) }).ToArray(),
+            _vs_colorizedLabel = visualStudio ? VisualStudioHover.Text(Signature(s, navigable: true)) : null
+        }).ToArray(), activeSignature = active, activeParameter = call.Commas };
     }
     public object SemanticTokens(string path, TextRange? range = null)
     {

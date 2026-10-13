@@ -166,6 +166,27 @@ public class EditorTests
         var signature = Json(model.SignatureHelp(path, offset)).GetProperty("signatures")[0];
         Assert.Contains("Box<int>", signature.GetProperty("label").GetString());
         Assert.Equal("Outer::Inner* value", signature.GetProperty("parameters")[0].GetProperty("label").GetString());
+        Assert.False(signature.TryGetProperty("_vs_colorizedLabel", out _));
+        var colored = Json(model.SignatureHelp(path, offset, visualStudio: true)).GetProperty("signatures")[0];
+        var runs = colored.GetProperty("_vs_colorizedLabel").GetProperty("Runs").EnumerateArray().ToArray();
+        Assert.Equal(signature.GetProperty("label").GetString(), string.Concat(runs.Select(r => r.GetProperty("Text").GetString())));
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Box" && r.GetProperty("ClassificationTypeName").GetString() == "struct name");
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "Inner" && r.GetProperty("ClassificationTypeName").GetString() == "class name");
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "int" && r.GetProperty("ClassificationTypeName").GetString() == "keyword");
+    }
+
+    [Fact]
+    public void SignatureHelpClassifiesMemoryFreeWhileTyping()
+    {
+        var (model, path, offset, _) = Analyze("namespace Memory { public weak void Free(void* ptr) {} } void Use() { Memory::Free(|");
+        var help = Json(model.SignatureHelp(path, offset, visualStudio: true));
+        var signature = help.GetProperty("signatures")[0];
+        Assert.Equal("public weak void Memory::Free(void* ptr)", signature.GetProperty("label").GetString());
+        Assert.Equal("void* ptr", signature.GetProperty("parameters")[0].GetProperty("label").GetString());
+        Assert.Equal(0, help.GetProperty("activeParameter").GetInt32());
+        var runs = signature.GetProperty("_vs_colorizedLabel").GetProperty("Runs").EnumerateArray().ToArray();
+        foreach (var (text, kind) in new[] { ("weak", "keyword"), ("void", "keyword"), ("Memory", "namespace name"), ("Free", "method name"), ("*", "punctuation"), ("ptr", "parameter name") })
+            Assert.Contains(runs, r => r.GetProperty("Text").GetString() == text && r.GetProperty("ClassificationTypeName").GetString() == kind);
     }
 
     [Theory]

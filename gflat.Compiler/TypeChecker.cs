@@ -717,6 +717,7 @@ namespace gflat
 
         public string GetTypeMangledName(TypeExpression type)
         {
+            if (type is ReferenceTypeExpression reference) return "Ref$" + GetTypeMangledName(reference.Inner);
             type = ResolveAlias(type);
             if (type.IsReadOnlyValue)
                 return "ReadOnly$" + GetTypeMangledName(type.WithReadOnlyValue(false));
@@ -966,6 +967,9 @@ namespace gflat
 
         private bool InferTypeParameter(TypeExpression paramType, TypeExpression argType, ISet<string> genericParamNames, Dictionary<string, TypeExpression> inferred)
         {
+            if (paramType is ReferenceTypeExpression rp && argType is ReferenceTypeExpression ra)
+                return InferTypeParameter(rp.Inner, ra.Inner, genericParamNames, inferred);
+
             if (paramType is NamedTypeExpression namedParam && genericParamNames.Contains(namedParam.Name) && namedParam.TypeArguments.Count == 0)
             {
                 TypeExpression resolvedArg = ResolveAlias(argType);
@@ -1001,6 +1005,7 @@ namespace gflat
 
         private TypeExpression ResolveAliasCore(TypeExpression type)
         {
+            if (type is ReferenceTypeExpression reference) return new ReferenceTypeExpression(ResolveAlias(reference.Inner), reference.Line);
             if (resolvedSourceTypes.TryGetValue(type, out var bound)) return bound;
             if (type is NestedTypeExpression nested)
             {
@@ -1208,6 +1213,13 @@ namespace gflat
                 !_classes.ContainsKey(unknown.Name) && !_structs.ContainsKey(unknown.Name) &&
                 !_interfaces.ContainsKey(unknown.Name) && ResolveEnum(unknown) == null)
                 throw new TypeCheckException($"Unknown type '{unknown.Name}'", line);
+            if (resolved is ReferenceTypeExpression reference)
+            {
+                ValidateTypeUsage(reference.Inner, line);
+                if (ResolveAlias(reference.Inner) is NamedTypeExpression { Name: "void" } or ReferenceTypeExpression)
+                    throw new TypeCheckException("ref requires a concrete value type", line);
+                return;
+            }
             if (resolved is ManagedTypeExpression managed)
             {
                 if (HasDestructor(managed.Inner))
@@ -1671,6 +1683,8 @@ namespace gflat
             if (a.IsReadOnlyValue != b.IsReadOnlyValue) return false;
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
+            if (a is ReferenceTypeExpression ra && b is ReferenceTypeExpression rb)
+                return TypesMatchPublic(ra.Inner, rb.Inner, symbols);
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
                 return pa.IsNullable == pb.IsNullable && pa.IsReadOnly == pb.IsReadOnly && TypesMatchPublic(pa.Inner, pb.Inner, symbols);
             if (a is ManagedTypeExpression ma && b is ManagedTypeExpression mb)
@@ -1701,6 +1715,13 @@ namespace gflat
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
+            if (ResolveAlias(target) is ReferenceTypeExpression targetRef)
+            {
+                if (ResolveAlias(source) is not ReferenceTypeExpression sourceRef) return false;
+                return targetRef.Inner.IsReadOnlyValue ? CanReadOnlyView(targetRef.Inner, sourceRef.Inner)
+                    : TypesMatchPublic(targetRef.Inner, sourceRef.Inner, _symbols);
+            }
+            if (ResolveAlias(source) is ReferenceTypeExpression) return false;
             if (valueNode != null && !ValidateCopyUse(valueNode, target)) return false;
             if (ResolveAlias(source) is NamedTypeExpression && ResolveAlias(target) is NamedTypeExpression &&
                 (RequiresCopy(source) || RequiresCopy(target)) && !TypesMatch(target, source)) return false;
@@ -2455,7 +2476,7 @@ namespace gflat
                                 foreach (Parameter p in method.Parameters)
                                 {
                                     ValidateParameterType(p.Type, p.Line);
-                                    DeclareVariable(p.Name, p.Type, p.Line);
+                                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
                                 }
 
                                 method.Body?.Accept(this);
@@ -2635,7 +2656,7 @@ namespace gflat
                             foreach (Parameter p in method.Parameters)
                             {
                                 ValidateParameterType(p.Type, p.Line);
-                                DeclareVariable(p.Name, p.Type, p.Line);
+                                DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
                             }
 
                             method.Body?.Accept(this);
@@ -2721,7 +2742,7 @@ namespace gflat
                 PushScope();
                 foreach (Parameter p in node.Parameters)
                 {
-                    DeclareVariable(p.Name, ResolveAlias(p.Type), p.Line);
+                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
                 }
                 node.Body.Accept(this);
                 PopScope();
@@ -2825,7 +2846,7 @@ namespace gflat
                 {
                     ValidateParameterType(p.Type, p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
-                    DeclareVariable(p.Name, pType, p.Line);
+                    DeclareVariable(p.Name, ParameterValueType(pType), p.Line);
                 }
                 node.Body?.Accept(this);
                 PopScope();
@@ -2873,7 +2894,7 @@ namespace gflat
                 {
                     p.Type = ResolveAlias(p.Type);
                     ValidateParameterType(p.Type, p.Line);
-                    DeclareVariable(p.Name, p.Type, p.Line);
+                    DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
                 }
 
                 if (node.BaseArguments != null)
@@ -3738,6 +3759,12 @@ namespace gflat
 
         public void Visit(UnaryExpression node)
         {
+            if (node.Operator == TokenKind.Ref)
+            {
+                CheckReferenceArgument(node);
+                return;
+            }
+
             using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Operator == TokenKind.Bang && !node.IsPrefix)
             {
@@ -5464,6 +5491,7 @@ namespace gflat
             NestedTypeExpression nested => nested.TypeArguments.Count > 0
                 ? $"{TypeName(nested.Parent)}::{nested.Member}<{string.Join(", ", nested.TypeArguments.Select(TypeName))}>"
                 : $"{TypeName(nested.Parent)}::{nested.Member}",
+            ReferenceTypeExpression r => "ref " + TypeName(r.Inner),
             PointerTypeExpression p => TypeName(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
             ManagedTypeExpression m => TypeName(m.Inner) + "^" + (m.IsNullable ? "?" : ""),
             ArrayTypeExpression a => TypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
@@ -5931,7 +5959,7 @@ namespace gflat
                         throw new TypeCheckException("Lambda parameters must borrow owning values through pointers", p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
                     paramTypes.Add(pType);
-                    DeclareVariable(p.Name, pType, p.Line);
+                    DeclareVariable(p.Name, ParameterValueType(pType), p.Line);
                 }
 
                 TypeExpression returnType;
@@ -5970,6 +5998,8 @@ namespace gflat
                 _lambdaStaticStack.Pop();
                 _lambdaScopeBoundaries.Pop();
 
+                if (returnType is ReferenceTypeExpression)
+                    throw new TypeCheckException("Reference-returning lambdas are not supported", node.Line);
                 _lambdaReturnTypes[node] = returnType;
                 FunctionPointerTypeExpression fnType = new FunctionPointerTypeExpression(returnType, paramTypes, isManaged: false, isNullable: false, node.Line);
                 RecordType(node, fnType);
@@ -6158,6 +6188,7 @@ namespace gflat
                 else
                 {
                     TypeExpression resolved = ResolveAlias(clause.ExceptionType);
+                    if (resolved is ReferenceTypeExpression reference) resolved = reference.Inner;
                     string? typeName = null;
                     if (resolved is NamedTypeExpression named)
                     {
@@ -6194,8 +6225,8 @@ namespace gflat
         public void Visit(CatchClause node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
-            if (node.ExceptionType != null && ResolveAlias(node.ExceptionType) is not PointerTypeExpression)
-                throw new TypeCheckException("Catch variables must be borrowed exception pointers (for example Exception* error)", node.Line);
+            if (node.ExceptionType != null && ResolveAlias(node.ExceptionType) is not (PointerTypeExpression or ReferenceTypeExpression))
+                throw new TypeCheckException("Catch variables must use ref Error or Error* to borrow the exception", node.Line);
             if (node.ExceptionType != null && ResolveAlias(node.ExceptionType) is ManagedTypeExpression)
                 throw new TypeCheckException("Managed exception catches are not supported by the current exception ABI", node.Line);
             PushScope();
@@ -6203,12 +6234,7 @@ namespace gflat
             {
                 if (node.VariableName != null && node.ExceptionType != null)
                 {
-                    TypeExpression varType = node.ExceptionType;
-                    if (varType is not PointerTypeExpression && varType is not ManagedTypeExpression)
-                    {
-                        varType = new PointerTypeExpression(varType, false, node.Line);
-                    }
-                    DeclareVariable(node.VariableName, varType, node.Line);
+                    DeclareVariable(node.VariableName, ParameterValueType(node.ExceptionType), node.Line);
                 }
                 _catchDepth++;
                 try { node.Body.Accept(this); }
@@ -6237,6 +6263,7 @@ namespace gflat
                 }
 
                 TypeExpression resolved = ResolveAlias(clause.ExceptionType);
+                    if (resolved is ReferenceTypeExpression reference) resolved = reference.Inner;
                 string? catchName = null;
                 if (resolved is NamedTypeExpression named)
                 {

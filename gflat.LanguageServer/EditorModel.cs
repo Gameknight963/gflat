@@ -225,8 +225,8 @@ public sealed partial class EditorModel
     private bool Accessible(Symbol s, string path, int offset) => s.Access == TokenKind.Public || s.Owner == null || s.Owner == Owner(ContextParents(path, offset));
     private string? TypeOwner(TypeExpression? type, string path, int offset)
     {
-        while (type is PointerTypeExpression or ManagedTypeExpression)
-            type = type is PointerTypeExpression p ? p.Inner : ((ManagedTypeExpression)type).Inner;
+        while (type is PointerTypeExpression or ManagedTypeExpression or ReferenceTypeExpression)
+            type = type switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, ReferenceTypeExpression r => r.Inner, _ => type };
         if (type is not NamedTypeExpression named) return null;
         string name = named.Namespace == null ? named.Name : Join(named.Namespace, named.Name);
         name = name.Split('$')[0]; // Source template, rather than a lowered specialization.
@@ -271,6 +271,7 @@ public sealed partial class EditorModel
                 if (token.Text == "move" && token.Start == syntax.Span.Start) return true;
                 if (token.Text == "at" && move.Destination != null && token.Start >= move.Operand.Span.Start + move.Operand.Span.Length && token.End < move.Destination.Span.Start) return true;
             }
+            if (token.Text == "ref" && (syntax.Node is ReferenceTypeExpression || syntax.Node is UnaryExpression { Operator: TokenKind.Ref }) && token.Start == syntax.Span.Start) return true;
             if (token.Text == "ref" && syntax.Node is PropertyDeclaration { IsRef: true } property && token.End < property.Type.Span.Start) return true;
             if (token.Text == "copy" && syntax.Node is ConstructorDeclaration { IsCopy: true } &&
                 !tokens[path].Any(t => t.Kind == TokenKind.OpenParen && t.Start >= syntax.Span.Start && t.Start < token.Start)) return true;

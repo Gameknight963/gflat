@@ -149,6 +149,8 @@ namespace gflat.ast
                 List<TypeExpression> typeArgs = named.TypeArguments.Select(CloneType).ToList();
                 return new NamedTypeExpression(typeName, named.Namespace, named.Line, typeArgs);
             }
+            if (type is ReferenceTypeExpression reference)
+                return new ReferenceTypeExpression(CloneType(reference.Inner), reference.Line);
             if (type is PointerTypeExpression ptr)
             {
                 return new PointerTypeExpression(CloneType(ptr.Inner), ptr.IsNullable, ptr.Line, ptr.IsReadOnly);

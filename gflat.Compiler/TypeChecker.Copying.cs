@@ -91,7 +91,7 @@ public partial class TypeChecker
     {
         if (_currentFunction is not MethodDeclaration caller || caller.IsNoThrow) return;
         if (_tryStack.SelectMany(t => t.CatchClauses).Any(c => c.ExceptionType == null ||
-            ResolveAlias(c.ExceptionType) is PointerTypeExpression { Inner: NamedTypeExpression { Name: "Exception" } })) return;
+            ResolveAlias(c.ExceptionType) is PointerTypeExpression { Inner: NamedTypeExpression { Name: "Exception" } } or ReferenceTypeExpression { Inner: NamedTypeExpression { Name: "Exception" } })) return;
         if (!_directExceptions.TryGetValue(caller, out var exceptions)) _directExceptions[caller] = exceptions = new();
         exceptions.Add(UnknownExceptionType);
         _exceptionSummaries = null;

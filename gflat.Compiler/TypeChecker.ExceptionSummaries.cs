@@ -76,6 +76,7 @@ public partial class TypeChecker
             if (clause.ExceptionType == null) { catches.Add("Exception"); continue; }
             TypeExpression type = ResolveAlias(clause.ExceptionType);
             if (type is PointerTypeExpression pointer) type = ResolveAlias(pointer.Inner);
+            if (type is ReferenceTypeExpression reference) type = ResolveAlias(reference.Inner);
             if (type is NamedTypeExpression named) catches.Add(named.Name);
         }
         _exceptionEdges.Add((caller, call, catches.ToArray()));

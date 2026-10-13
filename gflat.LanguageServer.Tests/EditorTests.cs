@@ -6,6 +6,23 @@ namespace gflat.LanguageServer.Tests;
 public class EditorTests
 {
     [Fact]
+    public void ReferenceParametersAndArgumentsHaveKeywordClassification()
+    {
+        var (model, path, offset, source) = Analyze("void Set(ref int value) { value = 42; } int main() { int n = 0; Set(ref |n); return n; }");
+        Assert.NotNull(model.Definition(path, offset));
+        var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
+        int column = 0, count = 0;
+        for (int i = 0; i < data.Length; i += 5)
+        {
+            column += data[i + 1];
+            if (source.Substring(column, data[i + 2]) != "ref") continue;
+            Assert.Equal("modifier", EditorModel.TokenTypes[data[i + 3]]);
+            count++;
+        }
+        Assert.Equal(2, count);
+    }
+
+    [Fact]
     public void WorkspaceUsesUnsavedLibrarySnapshotsAndWatchesTheirFiles()
     {
         string app = Path.Combine(Path.GetTempPath(), "gflat-stdlib-editor", "main.gf");

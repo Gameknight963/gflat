@@ -171,6 +171,8 @@ namespace gflat.symbols
                     }
                 }
             }
+            else if (type is ReferenceTypeExpression reference)
+                return new ReferenceTypeExpression(ResolveAlias(reference.Inner), reference.Line);
             else if (type is PointerTypeExpression ptr)
             {
                 TypeExpression resolvedInner = ResolveAlias(ptr.Inner);

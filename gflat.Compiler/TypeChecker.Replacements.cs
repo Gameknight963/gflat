@@ -115,6 +115,7 @@ public partial class TypeChecker
         return type switch
         {
             NamedTypeExpression named => ResolveTypeIdentity(named.Name, named.Namespace) ?? (named.Namespace == null ? "" : named.Namespace + "::") + named.Name,
+            ReferenceTypeExpression r => "ref " + SignatureType(r.Inner, method),
             PointerTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}*{(p.IsNullable ? "?" : "")}",
             ManagedTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}^{(p.IsNullable ? "?" : "")}",
             ArrayTypeExpression a => SignatureType(a.ElementType, method) + $"[{((ArrayTypeExpression)ResolveAlias(new ArrayTypeExpression(Int, a.Size, a.Line, a.SizeExpression))).Size}]",

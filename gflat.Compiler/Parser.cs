@@ -689,13 +689,25 @@ namespace gflat
             return new PropertyDeclaration(name, type, get, set, initializer, line) { IsRef = isRef };
         }
 
+        private TypeExpression ParseParameterType() => Located(ParseParameterTypeCore);
+
+        private TypeExpression ParseParameterTypeCore()
+        {
+            if (Check(TokenKind.Identifier) && Current.Text == "ref")
+            {
+                int line = Consume().Line;
+                return new ReferenceTypeExpression(ParseTypeExpression(), line);
+            }
+            return ParseTypeExpression();
+        }
+
         private Parameter ParseParameter() => Located(() => ParseParameterCoreLocated());
 
         private Parameter ParseParameterCoreLocated()
         {
             int line = Current.Line;
             bool isConst = Match(TokenKind.Const);
-            TypeExpression paramType = ParseTypeExpression();
+            TypeExpression paramType = ParseParameterType();
             string paramName = Expect(TokenKind.Identifier).Text;
             return new Parameter(paramName, paramType, line, isConst);
         }
@@ -1001,7 +1013,7 @@ namespace gflat
                         Consume(); // (
                         while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
                         {
-                            paramTypes.Add(ParseTypeExpression());
+                            paramTypes.Add(ParseParameterType());
                             if (!Check(TokenKind.CloseParen))
                                 Expect(TokenKind.Comma);
                         }
@@ -1260,7 +1272,7 @@ namespace gflat
 
                 if (Match(TokenKind.OpenParen))
                 {
-                    exType = ParseTypeExpression();
+                    exType = ParseParameterType();
                     if (Check(TokenKind.Identifier))
                     {
                         varName = Expect(TokenKind.Identifier).Text;
@@ -1524,6 +1536,12 @@ namespace gflat
 
         private AstNode ParsePrefixCoreLocated()
         {
+            if (Check(TokenKind.Identifier) && Current.Text == "ref")
+            {
+                int refLine = Consume().Line;
+                return new UnaryExpression(ParseExpression(23), TokenKind.Ref, true, refLine);
+            }
+
             if (Check(TokenKind.Identifier) && Current.Text == "move" && Peek().Kind != TokenKind.OpenParen)
             {
                 int moveLine = Consume().Line;

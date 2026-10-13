@@ -17,6 +17,15 @@ public class HoverTests
     }
 
     [Fact]
+    public void ReferenceParameterHoverShowsTheBorrowingContract()
+    {
+        var hover = Hover("void Re|ad(ref readonly(int) value) {}", true);
+        Assert.Contains("ref readonly(int) value", hover.GetProperty("contents").GetProperty("value").GetString());
+        var runs = hover.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements")[1].GetProperty("Runs").EnumerateArray();
+        Assert.Contains(runs, r => r.GetProperty("Text").GetString() == "ref" && r.GetProperty("ClassificationTypeName").GetString() == "keyword");
+    }
+
+    [Fact]
     public void ReferencePropertyHoverShowsItsBorrowingContract()
         => Assert.Contains("ref int S.Value", Hover("struct S { int n; public ref int Va|lue => n; }").GetProperty("contents").GetProperty("value").GetString());
 

@@ -1232,6 +1232,8 @@ namespace gflat.comptime
             }
         }
 
+        public void Visit(ReferenceTypeExpression node) => throw new ConstEvalException("ref parameters are not supported during constant evaluation", node.Line);
+
         public void Visit(FunctionPointerTypeExpression node) { }
         public void Visit(NamedTypeExpression node) { }
         public void Visit(NestedTypeExpression node) { }

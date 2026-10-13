@@ -177,8 +177,9 @@ public partial class LlvmEmitter
                 Emit($"    {isNative} = icmp ne %Exception* {error}, null");
                 Emit($"    br i1 {isNative}, label %{check}, label %{next}");
                 Emit(check + ":");
-                var pointer = (PointerTypeExpression)_typeChecker.ResolveAlias(clause.ExceptionType);
-                var named = (NamedTypeExpression)_typeChecker.ResolveAlias(pointer.Inner);
+                var binding = _typeChecker.ResolveAlias(clause.ExceptionType);
+                var inner = binding is ReferenceTypeExpression reference ? reference.Inner : ((PointerTypeExpression)binding).Inner;
+                var named = (NamedTypeExpression)_typeChecker.ResolveAlias(inner);
                 var cls = _typeChecker.GetClass(named.Name)!;
                 string vtSlot = NewTemp(), vt = NewTemp(), matches = NewTemp();
                 Emit($"    {vtSlot} = getelementptr %Exception, %Exception* {error}, i32 0, i32 0");
@@ -195,9 +196,13 @@ public partial class LlvmEmitter
                 _locals.TryGetValue(clause.VariableName, out previous);
                 string typed = NewTemp(), variable = NewTemp(), llvm = EmitType(clause.ExceptionType!);
                 Emit($"    {typed} = bitcast %Exception* {error} to {llvm}");
-                Emit($"    {variable} = alloca {llvm}");
-                Emit($"    store {llvm} {typed}, {llvm}* {variable}");
-                _locals[clause.VariableName] = variable;
+                if (clause.ExceptionType is ReferenceTypeExpression) _locals[clause.VariableName] = typed;
+                else
+                {
+                    Emit($"    {variable} = alloca {llvm}");
+                    Emit($"    store {llvm} {typed}, {llvm}* {variable}");
+                    _locals[clause.VariableName] = variable;
+                }
             }
             var cleanup = new CatchCleanupAction(slot);
             _deferScopes.Add(new() { cleanup });

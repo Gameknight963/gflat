@@ -43,7 +43,7 @@ public sealed partial class EditorModel
             {
                 var token = tokens[i];
                 Add(text[cursor..token.Start]);
-                string kind = TypeChecker.IsPrimitive(token.Text) ? "keyword" : token.Kind == TokenKind.Identifier
+                string kind = (TypeChecker.IsPrimitive(token.Text) || token.Text == "ref") ? "keyword" : token.Kind == TokenKind.Identifier
                     ? i + 1 < tokens.Length && tokens[i + 1].Kind == TokenKind.DoubleColon ? "namespace" : "type"
                     : char.IsLetter(token.Text.FirstOrDefault()) ? "keyword" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation";
                 Location? target = null;
@@ -177,6 +177,7 @@ public sealed partial class EditorModel
 
     private HoverDetail[] TypeLayoutDetails(TypeExpression type)
     {
+        if (type is ReferenceTypeExpression) return [];
         if (snapshot.Checker is not { } checker || snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error)) return [];
         try
         {

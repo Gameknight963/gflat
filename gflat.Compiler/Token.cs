@@ -143,6 +143,7 @@ namespace gflat
             TokenKind.InterpolatedStringExprEnd => "}",
             TokenKind.Throw => "throw",
             TokenKind.NoThrow => "nothrow",
+            TokenKind.Ref => "ref",
             TokenKind.Try => "try",
             TokenKind.Catch => "catch",
             _ => throw new InvalidOperationException($"Cannot infer token text of '{kind}'")

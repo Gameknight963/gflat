@@ -297,6 +297,8 @@ namespace gflat
         public void Visit(ExternDeclaration node) => Print($"ExternDecleration");
         public void Visit(GlobalExpression node) => Print($"GlobalExpression");
 
+        public void Visit(ReferenceTypeExpression node) { Print("Ref"); Indented(() => node.Inner.Accept(this)); }
+
         public void Visit(FunctionPointerTypeExpression node)
         {
             Print($"FunctionPointerType{(node.IsManaged ? "^" : "*")}{(node.IsNullable ? "?" : "")}");

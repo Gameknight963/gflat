@@ -25,6 +25,7 @@ public partial class TypeChecker
         return type switch
         {
             NamedTypeExpression n => n.Name,
+            ReferenceTypeExpression r => "ref " + OverloadTypeKey(r.Inner),
             PointerTypeExpression p => OverloadTypeKey(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
             ManagedTypeExpression p => OverloadTypeKey(p.Inner) + "^" + (p.IsNullable ? "?" : ""),
             ArrayTypeExpression a => OverloadTypeKey(a.ElementType) + $"[{a.Size}]",

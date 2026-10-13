@@ -779,6 +779,7 @@ public partial class LlvmEmitter : IVisitor
 
     private string EmitType(TypeExpression type)
     {
+        if (_typeChecker.ResolveAlias(type) is ReferenceTypeExpression reference) return EmitType(reference.Inner) + "*";
         type = _typeChecker.ResolveAlias(type);
         if (type is NamedTypeExpression named)
         {
@@ -1254,6 +1255,7 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             Emit($"    {ptr} = alloca {type}");
@@ -1338,6 +1340,7 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             Emit($"    {ptr} = alloca {type}");
@@ -1723,6 +1726,7 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             Emit($"    {ptr} = alloca {type}");
@@ -1778,6 +1782,7 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             Emit($"    {ptr} = alloca {type}");
@@ -1872,6 +1877,7 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             Emit($"    {ptr} = alloca {type}");
@@ -2037,6 +2043,7 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             Emit($"    {ptr} = alloca {type}");
@@ -2807,6 +2814,7 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(UnaryExpression node)
     {
+        if (node.Operator == TokenKind.Ref) { EmitAddress(node.Operand); return; }
         if (node.Operator == TokenKind.Bang && !node.IsPrefix)
         {
             // Static nullability suppression only: no guard, assume, or nonnull metadata.
@@ -4337,6 +4345,7 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(AttributeNode node) { }
     public void Visit(GlobalExpression node) { }
     public void Visit(FunctionPointerTypeExpression node) { }
+    public void Visit(ReferenceTypeExpression node) { }
     public void Visit(AliasDeclaration node) { }
     public void Visit(EnumDeclaration node) { }
     public void Visit(EnumMemberDeclaration node) { }
@@ -4403,6 +4412,7 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
             string pType = EmitType(p.Type);
             string allocaPtr = NewTemp();
             Emit($"    {allocaPtr} = alloca {pType}");

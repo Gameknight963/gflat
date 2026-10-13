@@ -24,6 +24,7 @@ public partial class TypeChecker
         {
             NamedTypeExpression n => DisplayName(n.Name) + (n.TypeArguments.Count == 0 ? "" : "<" + string.Join(", ", n.TypeArguments.Select(DisplayTypeName)) + ">"),
             NestedTypeExpression n => DisplayTypeName(n.Parent) + "::" + n.Member + (n.TypeArguments.Count == 0 ? "" : "<" + string.Join(", ", n.TypeArguments.Select(DisplayTypeName)) + ">"),
+            ReferenceTypeExpression r => "ref " + DisplayTypeName(r.Inner),
             PointerTypeExpression p => DisplayTypeName(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
             ManagedTypeExpression p => DisplayTypeName(p.Inner) + "^" + (p.IsNullable ? "?" : ""),
             ArrayTypeExpression a => DisplayTypeName(a.ElementType) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),

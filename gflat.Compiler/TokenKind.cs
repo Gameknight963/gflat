@@ -125,6 +125,7 @@ namespace gflat
         Nameof,
         Throw,
         NoThrow,
+        Ref,
         Try,
         Catch,
         EndOfFile

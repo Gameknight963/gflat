@@ -367,7 +367,7 @@ namespace gflat.semantics
 
         private void DeclareLocal(string name, TypeExpression type, bool isAssigned)
         {
-            TypeExpression resolved = _typeChecker.ResolveAlias(type);
+            TypeExpression resolved = _typeChecker.ParameterValueType(type);
             TypeChecker.StructInfo? structInfo = null;
 
             if (resolved is NamedTypeExpression named)
@@ -875,7 +875,12 @@ namespace gflat.semantics
             {
                 if (move.Destination != null) CheckExpression(move.Destination);
                 CheckExpression(move.Operand);
-                if (move.Operand is IdentifierExpression consumed) ConsumeLocal(consumed.Name);
+                if (move.Operand is IdentifierExpression consumed)
+                {
+                    if (Lookup(consumed.Name)?.Type is ReferenceTypeExpression)
+                        throw new TypeCheckException("Cannot consume a borrowed ref parameter or catch binding", move.Span);
+                    ConsumeLocal(consumed.Name);
+                }
             }
             else if (expr is CallExpression call)
             {

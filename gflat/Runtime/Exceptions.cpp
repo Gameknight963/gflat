@@ -34,10 +34,10 @@ void __gflat_eh_release(void* value) noexcept { delete static_cast<Handle*>(valu
     delete static_cast<Handle*>(value);
     std::rethrow_exception(exception);
 }
-[[noreturn]] void __gflat_eh_terminate(void* value, int (*hook)(void*)) noexcept {
+[[noreturn]] void __gflat_eh_terminate(void* value, void (*hook)(void*)) noexcept {
     void* object = value ? __gflat_eh_object(value) : nullptr;
-    int status = 1;
-    try { if (hook) status = hook(object); } catch (...) {}
-    std::exit(status);
+    try { if (hook) hook(object); } catch (...) {}
+    // Execution cannot resume if a replacement hook returns or throws.
+    std::exit(1);
 }
 }

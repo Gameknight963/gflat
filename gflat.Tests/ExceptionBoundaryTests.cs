@@ -21,7 +21,7 @@ public class ExceptionBoundaryTests
     [Fact]
     public void DefaultHookUsesOneForForeignException()
     {
-        Assert.Equal(1, CompilerTestHelper.Run("int main() => Exceptions::Unhandled(null);").ExitCode);
+        Assert.Equal(1, CompilerTestHelper.Run("int main() { Exceptions::Unhandled(null); return 99; }").ExitCode);
     }
 
     [Fact]
@@ -29,10 +29,11 @@ public class ExceptionBoundaryTests
     {
         var result = CompilerTestHelper.Run("""
             extern int printf(readonly(char*) format, ...);
+            extern void exit(int status);
             namespace Exceptions {
-                public replace int Unhandled(Exception*? error) {
+                public replace void Unhandled(Exception*? error) {
                     printf(c"custom failure");
-                    return 42;
+                    exit(42);
                 }
             }
             int main() { throw new Exception(); }
@@ -43,12 +44,12 @@ public class ExceptionBoundaryTests
     }
 
     [Theory]
-    [InlineData("return 1;")]
+    [InlineData("return;")]
     [InlineData("throw new Exception();")]
     public void ReplacementUnhandledHookCannotResumeOrPropagate(string body)
     {
         var result = CompilerTestHelper.Run(
-            "namespace Exceptions { public replace int Unhandled(Exception*? error) { " + body +
+            "namespace Exceptions { public replace void Unhandled(Exception*? error) { " + body +
             " } } int main() { throw new Exception(); }");
         Assert.Equal(1, result.ExitCode);
         Assert.Equal("", result.StandardOutput);

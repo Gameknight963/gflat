@@ -438,7 +438,7 @@ Scope destructors and deferred actions run during unwinding. Failed construction
 
 `void Boundary() nothrow { ... }` permits local handlers but terminates if an exception escapes. Destructors and `main` are also termination boundaries. Cleanup runs up to the boundary; outer callers cannot catch past it. An exception escaping cleanup while another exception is unwinding terminates; cleanup may catch its own failures locally.
 
-Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. This weak function lives in `std/libc/ExceptionHandling.gf` and returns an `int` exit status: by default, `error.GetCode()`, or 1 for a foreign exception. Exception constructors default the code to 1. The native runtime passes the returned status to libc `exit`; it prints nothing. If the hook throws, the runtime exits with status 1. A custom root `Exception` class must supply `GetCode()`. Process termination does not unwind the remaining stack.
+Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. This weak `void` function lives in `std/libc/ExceptionHandling.gf`. Its default implementation calls libc `exit` with `error.GetCode()`, or 1 for a foreign exception, without printing. Exception constructors default the code to 1. A replacement hook should terminate explicitly; if it returns or throws, the runtime exits with status 1. A custom root `Exception` class must supply `GetCode()`. Process termination does not unwind the remaining stack.
 
 The compiler driver links a small C++ runtime, requiring Clang's C++ driver and the platform C++ development libraries in addition to LLVM.
 

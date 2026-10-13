@@ -631,7 +631,12 @@ namespace gflat
                 { PropertyName = name };
 
             if (Check(TokenKind.EqualsGreater))
-                return new PropertyDeclaration(name, type, Accessor(true, accessibility, ParseBodyOrBlock(), line), null, null, line) { IsRef = isRef };
+            {
+                var body = ParseBodyOrBlock();
+                var getter = Accessor(true, accessibility, body, line);
+                getter.Span = body.Span;
+                return new PropertyDeclaration(name, type, getter, null, null, line) { IsRef = isRef };
+            }
 
             Expect(TokenKind.OpenBrace);
             MethodDeclaration? get = null, set = null;
@@ -672,7 +677,8 @@ namespace gflat
                     method = new MethodDeclaration(method.Name, method.ReturnType, method.Parameters, method.Body,
                         method.Accessibility, method.IsStatic, method.IsVirtual, method.IsOverride, method.IsAbstract,
                         method.Line, isReadOnly: true) { PropertyName = name };
-                method.Span = start.Span;
+                method.Span = start.Source?.Span(start.Start, _tokens[_pos - 1].End + 1 - start.Start) ?? start.Span;
+                if (!getter) method.Parameters[^1].Span = keyword.Span;
                 method.IsNoThrow = isNoThrow;
                 if (getter) get = method; else set = method;
             }

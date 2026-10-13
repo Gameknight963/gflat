@@ -1984,6 +1984,8 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(OperatorDeclaration node) => throw new NotImplementedException();
 
+    private readonly Dictionary<string, string> _nativeExternDeclarations = new();
+
     public void Visit(ExternDeclaration node)
     {
         _externNames.Add(node.Name);
@@ -1991,7 +1993,15 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", node.Parameters.Select(p => EmitParamType(p.Type)));
         if (node.IsVariadic)
             parameters = parameters.Length > 0 ? parameters + ", ..." : "...";
-        EmitGlobal($"declare {returnType} @{node.Name}({parameters})");
+        string declaration = $"declare {returnType} @{node.Name}({parameters})";
+        if (_nativeExternDeclarations.TryGetValue(node.Name, out string? existing))
+        {
+            if (existing != declaration)
+                throw new gflat.CompileExceptions.TypeCheckException($"External symbol '{node.Name}' has incompatible native signatures", node.Span);
+            return;
+        }
+        _nativeExternDeclarations[node.Name] = declaration;
+        EmitGlobal(declaration);
     }
 
     public void Visit(MethodDeclaration node)

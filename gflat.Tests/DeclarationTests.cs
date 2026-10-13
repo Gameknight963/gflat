@@ -4,6 +4,19 @@ namespace gflat.Tests;
 
 public class DeclarationTests
 {
+    [Fact]
+    public void RepeatedForeignSymbolsShareOneNativeDeclaration()
+    {
+        string ir = Compiler.Emit("namespace A { private extern int abs(int value); } namespace B { extern int abs(int value); } int main() => B::abs(-42);");
+        Assert.Equal(1, ir.Split("declare i32 @abs(").Length - 1);
+        Assert.Equal(42, CompilerTestHelper.Run("namespace A { extern int abs(int value); } namespace B { extern int abs(int value); } int main() => B::abs(-42);").ExitCode);
+    }
+
+    [Fact]
+    public void ConflictingForeignSignaturesHaveASourceError()
+        => Assert.Contains("incompatible native signatures", Assert.Throws<TypeCheckException>(() => Compiler.Emit(
+            "namespace A { extern int abs(int value); } namespace B { extern long abs(long value); } int main() => 0;")).Message);
+
     [Theory]
     [InlineData("int Missing();")]
     [InlineData("int Missing<T>();")]

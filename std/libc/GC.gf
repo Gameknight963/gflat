@@ -30,7 +30,7 @@ public weak T^ Adopt<T>(T* storage)
     if (__gflat_gc_should_collect(CollectionThreshold())) Collect();
     void^? result = __gflat_gc_adopt_reference((void*)storage, stride);
     if (result == null) throw new Exception("GC adoption failed");
-    return (T^)result!;
+    return (T^)result;
 }
 
 public weak nuint Collect() => __gflat_gc_collect(&Memory::Free);

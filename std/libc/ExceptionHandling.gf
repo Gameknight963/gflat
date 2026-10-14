@@ -6,7 +6,7 @@ extern void exit(int status);
 namespace Exceptions {
     public weak void Unhandled(Exception*? error) {
         int status = 1;
-        if (error != null) status = error!.GetCode();
+        if (error != null) status = error.GetCode();
         exit(status);
     }
 }

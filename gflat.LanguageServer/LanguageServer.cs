@@ -31,6 +31,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     private string[] tokenTypes = EditorModel.TokenTypes;
     private VisualStudioHover? hoverPresentation;
     private HoverOptions hoverOptions = new();
+    private bool hierarchicalDocumentSymbols;
 
     public async Task<int> RunAsync(CancellationToken cancellation = default)
     {
@@ -145,6 +146,10 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         else if (parameters.TryGetProperty("workspaceFolders", out var folders) && folders.ValueKind == JsonValueKind.Array && folders.GetArrayLength() > 0)
                             root = Workspace.FilePath(folders[0].GetProperty("uri").GetString()!);
                         initialized = true;
+                        hierarchicalDocumentSymbols = parameters.TryGetProperty("capabilities", out var capabilities) &&
+                            capabilities.TryGetProperty("textDocument", out var textDocumentCapabilities) &&
+                            textDocumentCapabilities.TryGetProperty("documentSymbol", out var symbolCapabilities) &&
+                            symbolCapabilities.TryGetProperty("hierarchicalDocumentSymbolSupport", out var hierarchy) && hierarchy.ValueKind == JsonValueKind.True;
                         if (parameters.TryGetProperty("initializationOptions", out var options) && options.ValueKind == JsonValueKind.Object &&
                             options.TryGetProperty("visualStudioClassifications", out var vsColors) && vsColors.ValueKind == JsonValueKind.True)
                             tokenTypes = EditorModel.VisualStudioTokenTypes;
@@ -156,7 +161,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                             textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
                             completionProvider = new { triggerCharacters = new[] { ".", ":" } },
                             hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true, referencesProvider = true,
-                            signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } },
+                            signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } }, documentSymbolProvider = true,
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
                         }, serverInfo = new { name = "gflat", version = "0.2.0" } });
                         break;
@@ -217,6 +222,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                     case "textDocument/hover":
                     case "textDocument/definition":
                     case "textDocument/references":
+                    case "textDocument/documentSymbol":
                     case "textDocument/signatureHelp":
                     case "textDocument/semanticTokens/full":
                     case "textDocument/semanticTokens/range":
@@ -257,6 +263,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                 "textDocument/definition" => model.Definition(path, offset),
                 "textDocument/references" => model.References(path, offset,
                     query.Parameters.GetProperty("context").GetProperty("includeDeclaration").GetBoolean()),
+                "textDocument/documentSymbol" => model.DocumentSymbols(path, hierarchicalDocumentSymbols),
                 "textDocument/signatureHelp" => model.SignatureHelp(path, offset, tokenTypes == EditorModel.VisualStudioTokenTypes),
                 _ => model.SemanticTokens(path, range)
             };

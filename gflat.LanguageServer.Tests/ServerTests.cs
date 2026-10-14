@@ -7,6 +7,26 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ServerTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DocumentSymbolsRespectClientHierarchyCapability(bool hierarchical)
+    {
+        await using var s = new Session();
+        await s.Initialize(clientCapabilities: new { textDocument = new { documentSymbol = new { hierarchicalDocumentSymbolSupport = hierarchical } } });
+        await s.Open("outline.gf", "struct S { public int value; }");
+        await s.Diagnostics("outline.gf", 1);
+        await s.Change("outline.gf", "struct Changed { public int value; }", 2);
+        await s.Send(new { jsonrpc = "2.0", id = 720, method = "textDocument/documentSymbol", @params = new { textDocument = new { uri = s.Uri("outline.gf") } } });
+        var response = await s.Receive(x => x.TryGetProperty("id", out var value) && value.ValueKind == JsonValueKind.Number && value.GetInt32() == 720);
+        var result = response.GetProperty("result");
+        Assert.Equal(hierarchical ? 1 : 2, result.GetArrayLength());
+        Assert.Equal("Changed", result[0].GetProperty("name").GetString());
+        Assert.Equal(hierarchical, result[0].TryGetProperty("children", out _));
+        Assert.Equal(!hierarchical, result[0].TryGetProperty("location", out _));
+        await s.Stop();
+    }
+
     [Fact]
     public async Task ReferencesUseUnsavedProjectSnapshotsAndDeclarationOption()
     {
@@ -198,9 +218,9 @@ public sealed class ServerTests
             }
             throw new Exception("Language server ended: " + await stderr);
         }
-        public async Task Initialize(object? initializationOptions = null)
+        public async Task Initialize(object? initializationOptions = null, object? clientCapabilities = null)
         {
-            await Send(new { jsonrpc = "2.0", id = "initialize", method = "initialize", @params = new { rootUri = Workspace.FileUri(Root), capabilities = new { }, initializationOptions } });
+            await Send(new { jsonrpc = "2.0", id = "initialize", method = "initialize", @params = new { rootUri = Workspace.FileUri(Root), capabilities = clientCapabilities ?? new { }, initializationOptions } });
             var response = await Receive(x => x.TryGetProperty("id", out var id) && id.GetString() == "initialize");
             Assert.Equal(1, response.GetProperty("result").GetProperty("capabilities").GetProperty("textDocumentSync").GetProperty("change").GetInt32());
             await Notify("initialized", new { });

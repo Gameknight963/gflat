@@ -2,19 +2,20 @@
 
 The Visual Studio extension provides live compiler diagnostics, syntax highlighting,
 bracket matching, automatic bracket/quote closing, selection surrounding, block
-indentation, and line/block comment commands. Version 0.10.0 adds scope/member completion,
+indentation, and line/block comment commands. It also provides scope/member completion,
 hover, signature help, go to definition, and semantic highlighting through the built-in LSP UI.
-Method hovers show the signature and an `Exceptions:` section listing possible outgoing
-exceptions, one type per line. Caught exceptions and terminating `nothrow` boundaries
-do not appear as outgoing exceptions. Unknown dispatch targets are labeled `Unknown exceptions`.
+Method hovers show the signature. An optional `Exceptions:` section lists known outgoing
+exceptions, one type per line; it is disabled by default. Caught exceptions and terminating
+`nothrow` boundaries do not appear as outgoing exceptions. Unknown dispatch targets are omitted.
 Type names in hover, completion, signature help, and editor diagnostics use source spelling,
 including nested types and generic specializations. Literal hovers show the checked literal type.
 In Visual Studio, source-backed types in signatures and exception lists can be clicked to
 open their declarations. A small native Quick Info source attaches navigation callbacks
 to VS classified text runs; LSP still supplies the content and locations. Other clients
 continue to use standard LSP hover. Parameter icons use VS's shared Parameter moniker.
-Debugging is not implemented yet.
-Version 0.4.0 uses [MSBuild projects and CPS](PROJECTS.md) for integration into an existing solution.
+Executable projects support **Start Without Debugging** (**Ctrl+F5**). Source
+debugging is not implemented yet. [MSBuild projects and CPS](PROJECTS.md) provide
+integration into an existing solution, including native project templates.
 
 ## Project layout
 
@@ -56,7 +57,7 @@ package bundles a compiler for project builds; Clang must be installed separatel
 package does not install it into your IDE automatically. Project evaluation and builds also require the .NET 10 SDK, including when using the bundled server.
 
 The installed server is the packaged copy; it does not automatically track this
-checkout. For an update, increment the VSIX manifest and client assembly versions,
+checkout. For an update, increment the VSIX manifest version,
 then rebuild and install the VSIX. For a development rebuild with the same version,
 uninstall the old extension first.
 

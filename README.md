@@ -31,6 +31,7 @@ This example uses std; see the runnable
 
 - Structs, classes, interfaces, generics, properties, and indexers.
 - Pointers, readonly access, custom allocators, and deterministic destruction.
+- Nullable pointers with local null-check analysis.
 - Managed pointers (`T^`) with replaceable GC hooks and a single-threaded,
   non-moving conservative collector. See the [managed example](examples/managed/README.md).
 - Native stack-unwinding exceptions, with optional `nothrow` termination boundaries.
@@ -99,7 +100,7 @@ Clang, and native exception runtime linking.
 
 For Visual Studio, extract and install the VSIX, restart VS, then use **File > New >
 Project** and search for **gflat**. Choose a Console Application or Source Library,
-or open an existing `.gfproj` and add it to a solution. The VSIX build number increases automatically
+or open an existing `.gfproj` and add it to a solution. The VSIX build number increases
 ONLY so newer builds can replace older ones; it is not a language version.
 
 ## Build from source

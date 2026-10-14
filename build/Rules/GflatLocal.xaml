@@ -1,0 +1,9 @@
+<Rule Name="GflatLocal" DisplayName="gflat application" PageTemplate="debugger"
+      Description="Run the native executable without debugging (Ctrl+F5)."
+      xmlns="http://schemas.microsoft.com/build/2009/properties">
+  <Rule.DataSource><DataSource Persistence="UserFileWithXamlDefaults" HasConfigurationCondition="true" /></Rule.DataSource>
+  <StringProperty Name="GflatRunArguments" DisplayName="Command arguments"
+                  Description="Arguments passed to the executable. Quote arguments containing spaces." />
+  <StringProperty Name="GflatRunWorkingDirectory" DisplayName="Working directory" Default="$(MSBuildProjectDirectory)"
+                  Subtype="folder" Description="Defaults to the project directory. Relative paths are resolved from that directory." />
+</Rule>

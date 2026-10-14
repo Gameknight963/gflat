@@ -78,7 +78,7 @@ public static class ProjectCreation
         // CreateNew protects against another process creating these files after validation.
         WriteNew(Path.Combine(directory, "main.gf"), source);
         WriteNew(project, xml + Environment.NewLine);
-        WriteNew(Path.Combine(directory, ".gitignore"), "bin/\nobj/\n.vs/\n");
+        WriteNew(Path.Combine(directory, ".gitignore"), "bin/\nobj/\n.vs/\n*.gfproj.user\n");
         return project;
     }
 

@@ -1,0 +1,5 @@
+<Rule Name="DebuggerGeneralProperties" DisplayName="Debugger General Properties"
+      xmlns="http://schemas.microsoft.com/build/2009/properties">
+  <Rule.DataSource><DataSource Persistence="UserFile" /></Rule.DataSource>
+  <StringProperty Name="DebuggerFlavor" Visible="false" />
+</Rule>

@@ -17,9 +17,26 @@ public class RecoveryTests
         "abstract static class Broken { public int Inner() => 1; }\n",
         "class Outer { public static class Broken { public int Inner() => 1; } }\n",
         "class Outer { public static struct Broken { public int Inner() => 1; } }\n",
-        "class Outer { public static enum Broken { A } }\n"
+        "class Outer { public static enum Broken { A } }\n",
+        "class Broken {\n", "struct Broken {\n", "interface Broken {\n"
     ];
     public static IEnumerable<object[]> Prefixes() => BrokenPrefixes.Select(p => new object[] { p });
+
+    [Theory]
+    [InlineData("class")]
+    [InlineData("struct")]
+    [InlineData("interface")]
+    public void NamespaceAfterIncompleteTypeReportsMissingBraceAtItsBoundary(string kind)
+    {
+        var source = new SourceFile(Path.GetFullPath("missing-type-brace.gf"), kind + " Broken {\nnamespace Good { public int Answer() => 42; }");
+        var snapshot = new AnalysisSnapshot([source]);
+        var error = Assert.Single(snapshot.Diagnostics, d => d.Descriptor.Id == "GF0005");
+        Assert.Contains("CloseBrace", error.Message);
+        Assert.Equal(source.Text.IndexOf("namespace", StringComparison.Ordinal), error.Span.Start);
+        Assert.Equal(0, error.Span.Length);
+        var model = new EditorModel(snapshot, [source]);
+        Assert.NotNull(model.Hover(source.Path, source.Text.IndexOf("Answer", StringComparison.Ordinal)));
+    }
     private const string Healthy = """
         namespace Demo {
             public struct Item { public int value; public int Read() => value; }

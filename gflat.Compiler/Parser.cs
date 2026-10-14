@@ -505,7 +505,9 @@ namespace gflat
 
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
-            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
+            // A namespace cannot be a type member. In editor recovery, leave it
+            // for the enclosing declaration parser and insert the missing brace.
+            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
 
@@ -530,7 +532,7 @@ namespace gflat
 
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
-            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
+            while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
             return new StructDeclaration(name, interfaces, members, accessibility, line, attributes, genericParams);
@@ -548,7 +550,7 @@ namespace gflat
             _interfaceDepth++;
             try
             {
-                while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile)) members.Add(ParseMember());
+                while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace))) members.Add(ParseMember());
                 Expect(TokenKind.CloseBrace);
             }
             finally { _interfaceDepth--; }

@@ -15,7 +15,11 @@ public sealed partial class EditorModel
         string Namespace, string? Owner, Syntax? Scope, TypeExpression? Type, bool Static, TokenKind Access)
     {
         public string Qualified => Scope != null ? Name : Join(Owner ?? Namespace, Name);
-        public IReadOnlyList<Parameter>? Parameters => Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null };
+        public IReadOnlyList<Parameter>? BoundParameters { get; init; }
+        public IReadOnlyDictionary<string, TypeExpression>? GenericBindings { get; init; }
+        public MethodDeclaration? BoundMethod { get; init; }
+        public bool BoundExtension { get; init; }
+        public IReadOnlyList<Parameter>? Parameters => BoundParameters ?? (Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null });
     }
     private readonly AnalysisSnapshot snapshot;
     private readonly Dictionary<string, SourceFile> sources;
@@ -88,7 +92,7 @@ public sealed partial class EditorModel
                 if (ts[i].Kind == TokenKind.Identifier) references[ts[i]] = ResolveCore(path, i);
     }
 
-    private string ParameterText(Parameter p) => $"{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}" +
+    private string ParameterText(Parameter p) => $"{(p.IsExtensionReceiver ? "this " : "")}{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}" +
         (p.DefaultValue == null ? "" : " = " + ParameterDefaultText(p));
     private static string Join(string left, string right) => left.Length == 0 ? right : left + "::" + right;
     private static IEnumerable<Syntax> Parents(Syntax node) { for (var p = node.Parent; p != null; p = p.Parent) yield return p; }
@@ -183,14 +187,16 @@ public sealed partial class EditorModel
             return symbols.Where(s => s.Scope == null &&
                 (s.Namespace == qualifier && s.Owner == null || s.Owner == qualifier && (s.Static || IsType(s.Syntax.Node))) && Accessible(s, path, offset));
         }
-        var expression = nodes[path].Where(n => n.Node is IdentifierExpression or CallExpression or MemberAccessExpression or NewExpression or IndexExpression or UnaryExpression or CastExpression or TypeofExpression && n.Span.Start + n.Span.Length == left.End + 1)
+        var expression = nodes[path].Where(n => n.Node is IdentifierExpression or CallExpression or MemberAccessExpression or NewExpression or IndexExpression or UnaryExpression or CastExpression or TypeofExpression or LiteralExpression or PrefixedStringLiteralExpression or InterpolatedStringExpression && n.Span.Start + n.Span.Length == left.End + 1)
             .OrderByDescending(n => n.Span.Length).FirstOrDefault();
         TypeExpression? type = expression == null ? null : ExpressionType(expression.Node, path, offset);
         if (type == null)
             type = Visible(path, offset).FirstOrDefault(s => s.Name == left.Text)?.Type;
         string? owner = TypeOwner(type, path, offset);
         if (left.Text == "this") owner = Owner(ContextParents(path, offset));
-        return owner == null ? [] : TypeMembers(owner).Where(s => !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset));
+        var members = owner == null ? [] : TypeMembers(owner).Where(s => !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset)).ToArray();
+        return members.Concat(ExtensionMembers(path, offset, expression?.Node, type)
+            .Where(extension => !members.Any(member => member.Name == extension.Name && IsCallableMember(member))));
     }
 
     private TypeExpression? ExpressionType(AstNode node, string path, int offset)
@@ -322,9 +328,10 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
-        if (token.Text is not ("move" or "copy" or "at" or "ref")) return false;
+        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this")) return false;
         foreach (var syntax in nodes[path])
         {
+            if (token.Text == "this" && syntax.Node is Parameter { IsExtensionReceiver: true } && token.Start == syntax.Span.Start) return true;
             if (token.Start < syntax.Span.Start || token.End >= syntax.Span.Start + syntax.Span.Length) continue;
             if (syntax.Node is MoveExpression move)
             {
@@ -348,7 +355,8 @@ public sealed partial class EditorModel
         var declaration = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == token.Start && s.NameSpan.Length == token.Span.Length);
         if (declaration != null) return declaration;
         var call = nodes[path].Where(n => n.Node is CallExpression c && c.Callee.Span.Start <= token.Start && c.Callee.Span.Start + c.Callee.Span.Length == token.End + 1).MinBy(n => n.Span.Length);
-        if (call?.Node is CallExpression expression && snapshot.Checker?.GetResolvedCall(expression) is AstNode target && declarations.TryGetValue(target, out var method)) return method;
+        if (call?.Node is CallExpression expression && ExtensionCallSymbol(expression) is { } extension) return extension;
+        if (call?.Node is CallExpression resolvedCall && snapshot.Checker?.GetResolvedCall(resolvedCall) is AstNode target && declarations.TryGetValue(target, out var method)) return method;
         // A qualifier in a named type is a namespace/type, not the final type
         // token. Resolve it before filtering type annotations to type symbols.
         if (index + 1 < tokens[path].Length && tokens[path][index + 1].Kind == TokenKind.DoubleColon)
@@ -382,7 +390,7 @@ public sealed partial class EditorModel
         bool member = index > 0 && ts[index - 1].Kind is TokenKind.Dot or TokenKind.DoubleColon;
         var completionContext = CompletionContext(path, index);
         var items = Candidates(path, offset, index).Where(s => s.Syntax.Node is not ConstructorDeclaration && completionContext.Allows(s))
-            .DistinctBy(s => s.Name).Select(s => (object)new { label = s.Name, kind = s.Kind, detail = Detail(s), textEdit = new { range, newText = s.Name } }).ToList();
+            .DistinctBy(s => (s.Name, member && s.BoundExtension ? "extension" : "symbol")).Select(s => (object)new { label = s.Name, kind = s.Kind, detail = Detail(s), textEdit = new { range, newText = s.Name } }).ToList();
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
@@ -455,7 +463,7 @@ public sealed partial class EditorModel
         var parts = Signature(symbol, navigable: true, hoverPath: path, hoverOffset: offset);
         if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
         HoverDetail[] details = options.ShowTypeLayout ? LayoutDetails(symbol) : [];
-        if (options.ShowKnownExceptions && symbol.Syntax.Node is MethodDeclaration hoveredMethod && snapshot.Checker is { } exceptionChecker &&
+        if (options.ShowKnownExceptions && (symbol.BoundMethod ?? symbol.Syntax.Node as MethodDeclaration) is { } hoveredMethod && snapshot.Checker is { } exceptionChecker &&
             !snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         {
             var exceptions = exceptionChecker.GetPossibleExceptions(hoveredMethod).Where(e => e != TypeChecker.UnknownExceptionType).ToArray();

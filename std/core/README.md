@@ -73,6 +73,40 @@ using the same rules. They throw `Exception` on invalid input or overflow:
 int value = ParseInt("42");
 ```
 
+## Integer sequences
+
+With `using std;`, `Range(start, count)` describes consecutive integers without
+allocating a buffer. `Where` accepts a `bool(int)*` callback; typed noncapturing
+lambdas work directly. `Take` and `Skip` return new sequence values:
+
+```gflat
+using std;
+
+int main()
+{
+    FilteredIntRange values = Range(0, 20).Where((int n) => n % 2 == 0).Skip(1).Take(3);
+    int total = 0;
+    foreach (int n in values) total += n; // 2 + 4 + 6
+    return total;
+}
+```
+
+Queries are lazy and repeatable: creating or slicing one does not run its
+predicate, and each enumeration starts again. Filtering runs as far as requested;
+`Take(0)` never calls the predicate. Operation order matters: slicing before
+filtering limits input integers, while slicing afterward limits matching integers.
+Predicate exceptions propagate normally.
+
+Both sequence types support `Count()`, `Any()`, and `Sum()`. `IntRange` also has
+a cheap `Count` property; its aggregate operations use the known range bounds.
+Filtered aggregates enumerate as needed. Sums return `long` so any valid range
+fits; negative counts and ranges exceeding `int` throw. Enumerator `Current` is
+valid only after a successful `MoveNext()` and before exhaustion.
+
+This is a small integer query API, with no closures or universal collection-query
+interfaces. Callbacks can call other functions but cannot capture local variables.
+The sequence and iterator values own no heap storage and need no manual disposal.
+
 ## Vectors
 
 `Vector<T>` owns contiguous elements. It supports primitives and owning values:

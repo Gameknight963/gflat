@@ -148,6 +148,19 @@ project-file changes invalidate it. Invalid project files produce diagnostics wh
 the previous valid source graph remains available. Editor evaluation currently
 uses `Debug|AnyCPU` independently of the active VS build configuration.
 
+## Checking an installation
+
+Run `gflat doctor` to report the host target, compiler directory, SDK location,
+MSBuild project evaluation, and selected Clang executable. It does not install
+software or change your project. `gflat doctor --native` also compiles and runs
+a small exception unwinding probe, checking the native compiler, linker, and C++
+runtime together. Temporary probe files are removed afterward.
+
+Use `--clang path` to check a specific driver; otherwise selection follows normal
+builds, including `GFLAT_CLANG`. Exit code 0 means the requested checks passed;
+2 means at least one check failed. A successful basic check does not establish
+that native linking works; use `--native` for that.
+
 ## Remaining work
 
 Debugger/startup-project support, incremental native builds, package management,

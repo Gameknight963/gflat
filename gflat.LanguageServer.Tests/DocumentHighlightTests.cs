@@ -4,6 +4,18 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class DocumentHighlightTests
 {
+    [Fact]
+    public void WindowsDocumentPathCasingDoesNotChangeMatches()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var source = new SourceFile(Path.GetFullPath("highlight-case.gf"), "int F() { int value = 1; return value; }");
+        var model = new EditorModel(new AnalysisSnapshot([source]), [source]);
+        int offset = source.Text.IndexOf("value", StringComparison.Ordinal);
+        string query = source.Path.ToUpperInvariant();
+        Assert.Equal(2, model.References(query, offset, true).Length);
+        Assert.Equal(2, model.DocumentHighlights(query, offset).Length);
+    }
+
     [Theory]
     [InlineData("int F() { int |value = 1; value++; return value; } int G() { int value = 2; return value; }", 3)]
     [InlineData("struct S { public int value; } int F() { int |value = 1; S s = new S(); return value + s.value; }", 2)]

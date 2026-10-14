@@ -8,7 +8,8 @@ public sealed partial class EditorModel
 
     public DocumentHighlight[] DocumentHighlights(string path, int offset)
     {
-        string uri = Workspace.FileUri(path);
+        if (!sources.TryGetValue(path, out var source)) return [];
+        string uri = Workspace.FileUri(source.Path);
         return References(path, offset, includeDeclaration: true)
             .Where(location => location.Uri == uri)
             .Select(location => new DocumentHighlight(location.Range)).ToArray();

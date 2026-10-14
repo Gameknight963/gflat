@@ -11,6 +11,19 @@ struct Vector<T>
 
     public nuint Count { readonly get => count; }
     public nuint Capacity { readonly get => capacity; }
+    public SpanEnumerator<T> GetEnumerator() => new SpanEnumerator<T>(data, count);
+
+    public Span<T> AsSpan()
+    {
+        if (count == (nuint)0) return new Span<T>();
+        return new Span<T>(data!, count);
+    }
+
+    public readonly Span<readonly(T)> AsReadOnly()
+    {
+        if (count == (nuint)0) return new Span<readonly(T)>();
+        return new Span<readonly(T)>((readonly(T)*)data, count);
+    }
 
     public ref T this[nuint index]
     {

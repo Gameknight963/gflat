@@ -145,6 +145,23 @@ in this version; moving it transfers the buffer. Types needing a stable address 
 use indirection. Growth invalidates pointers into the buffer.
 Zero-sized elements are supported, but their addresses are not distinct identities.
 
+`foreach` over a mutable `Vector<T>` or `Span<T>` copies each element into the loop
+variable. `String` elements therefore make independent owned copies; noncopyable
+resource elements require indexed access instead. Iterators allocate no storage.
+Their `ref Current` permits explicit element access after `MoveNext()` succeeds and
+throws before the first element or after exhaustion.
+
+`Vector<T>.AsSpan()` borrows a mutable view. `AsReadOnly()` on vectors and spans
+returns `Span<readonly(T)>`; use `foreach` over this view for readonly collections.
+Declare readonly reference or owning element types explicitly when required, such
+as `readonly(Node^)` or `readonly(String)`. Mutable collections retain mutable
+reference elements.
+
+Views and iterators do not extend the owner's lifetime. Keep the owner alive and
+do not grow, clear, remove elements from, or destroy the vector during iteration.
+Direct iteration over a temporary vector keeps it alive until the loop finishes;
+obtaining a view from a temporary vector does not keep that vector alive.
+
 ## Spans and readonly views
 
 `Span<T>` borrows contiguous storage without allocating or freeing it. There is

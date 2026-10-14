@@ -4,7 +4,7 @@ public sealed class GarbageCollectionTests
 {
     private static ExecutionResult Run(string source, bool vector = false)
     {
-        string[] names = vector ? ["libc/GC.gf", "core/Vector.gf"] : ["libc/GC.gf"];
+        string[] names = vector ? ["libc/GC.gf", "core/Vector.gf", "core/Span.gf"] : ["libc/GC.gf"];
         return CompilerTestHelper.Run(names.Select(name => new SourceFile(name,
             System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", source)));

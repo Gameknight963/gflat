@@ -34,7 +34,7 @@ public sealed class EarlyGenericHierarchyTests
     [Fact]
     public void ManagedVectorGrowthFailureUsesBadAllocAndPreservesRoots()
     {
-        var result = CompilerTestHelper.Run(new[] { "libc/GC.gf", "core/Vector.gf" }
+        var result = CompilerTestHelper.Run(new[] { "libc/GC.gf", "core/Vector.gf", "core/Span.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", """
                 using std;

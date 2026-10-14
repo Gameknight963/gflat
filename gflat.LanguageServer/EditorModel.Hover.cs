@@ -130,7 +130,7 @@ public sealed partial class EditorModel
         else
         {
             if (IsType(symbol.Syntax.Node) || symbol.Syntax.Node is NamespaceDeclaration) Keyword(symbol.Classification);
-            else if (symbol.Type != null) { Type(symbol.Type); Add(" "); }
+            else if (symbol.Type != null) { Type(snapshot.DeclaredTypes.GetValueOrDefault(symbol.Syntax.Node) ?? symbol.Type); Add(" "); }
             Name();
         }
         if (symbol.Parameters is { } parameters)
@@ -141,7 +141,7 @@ public sealed partial class EditorModel
                 if (i > 0) Add(", ", "punctuation");
                 var parameter = parameters[i];
                 if (parameter.IsConst) Keyword("const");
-                Type(parameter.Type); Add(" "); Add(parameter.Name, "parameter", navigable ? SymbolLocation(declarations.GetValueOrDefault(parameter)) : null);
+                Type(snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type); Add(" "); Add(parameter.Name, "parameter", navigable ? SymbolLocation(declarations.GetValueOrDefault(parameter)) : null);
                 if (parameter.DefaultValue != null)
                 {
                     Add(" = ", "punctuation");

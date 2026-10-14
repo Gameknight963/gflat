@@ -5,6 +5,25 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorTests
 {
+    [Theory]
+    [InlineData("FileHandle")]
+    [InlineData("Handles::FileHandle")]
+    public void AliasNamesSurviveInHoverAndSignatureHelp(string alias)
+    {
+        string path = Path.GetFullPath("alias-hover.gf");
+        string text = "alias FileHandle = void*; namespace Handles { alias FileHandle = void*; } namespace Console { " + alias + " stdout() => null; void Use(" + alias + " handle) {} } void F() { Console::Use(Console::stdout()); }";
+        var file = new SourceFile(path, text);
+        var model = new EditorModel(new AnalysisSnapshot([file]), [file]);
+        foreach (int offset in new[] { text.IndexOf("stdout", StringComparison.Ordinal), text.LastIndexOf("stdout", StringComparison.Ordinal), text.IndexOf("handle", StringComparison.Ordinal) })
+        {
+            string hover = Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString()!;
+            Assert.Contains(alias, hover);
+            Assert.DoesNotContain("void*", hover);
+        }
+        var signature = Json(model.SignatureHelp(path, text.LastIndexOf("Use(", StringComparison.Ordinal) + 4));
+        Assert.Contains(alias + " handle", signature.GetProperty("signatures")[0].GetProperty("label").GetString());
+    }
+
     [Fact]
     public void PrivateExternHoverAndCompletionRespectFileAccess()
     {

@@ -194,6 +194,7 @@ public partial class TypeChecker
                         RegisterParameterDefaults(ctor, ctor.Parameters);
                         break;
                     case ExternDeclaration external:
+                        external.ReturnType = ResolveAlias(external.ReturnType);
                         foreach (var p in external.Parameters) p.Type = ResolveAlias(p.Type);
                         RegisterParameterDefaults(external, external.Parameters);
                         break;

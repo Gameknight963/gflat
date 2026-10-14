@@ -1,8 +1,18 @@
 namespace gflat.LanguageServer;
 
+public sealed record DocumentHighlight(TextRange Range);
+
 public sealed partial class EditorModel
 {
     private Dictionary<SourceSpan, SourceSpan[]>? referenceIndex;
+
+    public DocumentHighlight[] DocumentHighlights(string path, int offset)
+    {
+        string uri = Workspace.FileUri(path);
+        return References(path, offset, includeDeclaration: true)
+            .Where(location => location.Uri == uri)
+            .Select(location => new DocumentHighlight(location.Range)).ToArray();
+    }
 
     public Location[] References(string path, int offset, bool includeDeclaration)
     {

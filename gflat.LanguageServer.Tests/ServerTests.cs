@@ -7,6 +7,28 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ServerTests
 {
+    [Fact]
+    public async Task DocumentHighlightsUseQueuedUnsavedSnapshot()
+    {
+        await using var s = new Session();
+        await s.Initialize();
+        await s.Open("highlight.gf", "int F() { int value = 1; return value; }");
+        await s.Diagnostics("highlight.gf", 1);
+        const string changed = "int F() { int value = 1; value++; return value; }";
+        await s.Change("highlight.gf", changed, 2);
+        await s.Send(new { jsonrpc = "2.0", id = 730, method = "textDocument/documentHighlight", @params = new {
+            textDocument = new { uri = s.Uri("highlight.gf") }, position = new { line = 0, character = changed.IndexOf("value", StringComparison.Ordinal) } } });
+        var response = await s.Receive(x => x.TryGetProperty("id", out var value) && value.ValueKind == JsonValueKind.Number && value.GetInt32() == 730);
+        var result = response.GetProperty("result");
+        Assert.Equal(3, result.GetArrayLength());
+        Assert.All(result.EnumerateArray(), item => {
+            Assert.True(item.TryGetProperty("range", out _));
+            Assert.False(item.TryGetProperty("uri", out _));
+            Assert.False(item.TryGetProperty("kind", out _));
+        });
+        await s.Stop();
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -8,6 +8,9 @@ Reference searches use resolved symbols across the analyzed project, including u
 documents. Same-named locals, members, and overloads remain separate; bound extension
 calls and ordinary calls refer to the same declaration. Results contain source ranges,
 so the editor provides the results list and navigation through its existing LSP UI.
+Document highlights use the same resolved symbol index and mark declarations and
+references within the current document. The native client owns their presentation;
+read and write occurrences are not distinguished yet.
 Document-symbol requests provide a source outline of namespaces, types, constructors,
 destructors, operators, fields, properties, and methods. Locals and generated accessors
 are omitted. Clients supporting hierarchical outlines receive the declaration tree;

@@ -17,7 +17,7 @@ namespace gflat.semantics
             _symbols = symbols;
         }
 
-        public void Execute()
+        public void ResolveBaseTypes()
         {
             // First partition base class vs interfaces for all classes
             foreach (TypeChecker.ClassInfo cls in _symbols.Classes.Values)
@@ -90,6 +90,25 @@ namespace gflat.semantics
                 cls.Interfaces = remainingInterfaces;
             }
 
+            // Generic bodies can inspect these edges before layout resolution.
+            // Reject cycles now so their inheritance walks cannot loop forever.
+            HashSet<string> completed = new();
+            foreach (var cls in _symbols.Classes.Values)
+            {
+                HashSet<string> path = new();
+                for (TypeChecker.ClassInfo? current = cls; current != null && !completed.Contains(current.Name);
+                    current = current.BaseClass == null ? null : _symbols.Classes.GetValueOrDefault(current.BaseClass))
+                {
+                    if (!path.Add(current.Name))
+                        throw new TypeCheckException($"Circular inheritance detected involving class '{current.Name}'", current.Line);
+                }
+                completed.UnionWith(path);
+            }
+        }
+
+        public void Execute()
+        {
+            ResolveBaseTypes();
             HashSet<string> visited = new();
             HashSet<string> visiting = new();
 

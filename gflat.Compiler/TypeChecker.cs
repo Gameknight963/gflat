@@ -1984,6 +1984,9 @@ namespace gflat
             ValidateAllocatorPair();
 
             ResolveDeclaredBaseTypes(node);
+            // Signature resolution can specialize generic bodies. Their exception
+            // and constraint checks need the class inheritance edges already bound.
+            new HierarchyResolutionPass(_symbols).ResolveBaseTypes();
             ResolveDeclarationSignatures(node);
             PrepareOverloads(node);
             AnalyzeSafely(ValidateCollectorHooks);

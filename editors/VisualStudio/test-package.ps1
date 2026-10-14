@@ -82,6 +82,25 @@ int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new^ 
     if ($LASTEXITCODE -ne 0) { throw 'Packaged managed allocation/root/collector smoke test failed' }
     $consoleResult = & $compiler $console (Join-Path $std 'core/IOException.gf') (Join-Path $std 'core/BufferTooSmallException.gf') (Join-Path $std 'libc/Console.gf') --run -o (Join-Path $extracted 'console.exe')
     if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
+    $collections = Join-Path $extracted 'collections.gf'
+    @'
+using std;
+int main() {
+    Vector<String> words = new Vector<String>();
+    words.Add(s"abc");
+    foreach (String word in words) {
+        if (word.Data == words[(nuint)0].Data) return 1;
+        word[(nuint)0] = 'z';
+    }
+    foreach (readonly(String) word in words.AsReadOnly()) {
+        if (word.Data[0] != 'a') return 2;
+    }
+    return 0;
+}
+'@ | Set-Content -LiteralPath $collections
+    $bundledStd = Join-Path $extracted 'Sdk/std/core'
+    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Vector.gf') (Join-Path $bundledStd 'String.gf') --run -o (Join-Path $extracted 'collections.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal

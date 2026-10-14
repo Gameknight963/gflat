@@ -27,16 +27,18 @@ public sealed class ProjectModel
     public string TargetPath { get; }
     public int ExceptionReserveBytes { get; }
     public int OptimizationLevel { get; }
+    public string? SdkRoot { get; }
     public IReadOnlyList<string> References { get; }
     public IReadOnlyList<string> Imports { get; }
     private readonly string[] sources;
     private readonly Func<string, bool> matchesGlob;
 
     internal ProjectModel(string path, ProjectKind kind, string targetPath, string[] sources,
-        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel)
+        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null)
     {
         ExceptionReserveBytes = exceptionReserveBytes;
         OptimizationLevel = optimizationLevel;
+        SdkRoot = sdkRoot;
         FilePath = path; Kind = kind; TargetPath = targetPath; this.sources = sources;
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
     }

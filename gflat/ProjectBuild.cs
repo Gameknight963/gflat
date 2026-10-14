@@ -13,6 +13,7 @@ internal static class ProjectBuild
         void Property(string name, string value) => arguments.Add("-p:" + name + "=" + Escape(value));
         Property("Configuration", configuration);
         Property("Platform", platform);
+        if (project.SdkRoot != null) Property("GflatDefaultSdkRoot", project.SdkRoot);
         Property("GflatCompilerCommand", "dotnet \"" + assembly + "\"");
         if (emitIr) Property("GflatEmitIR", "true");
         if (output != null) Property(emitIr ? "GflatIROutput" : "TargetPath", output);

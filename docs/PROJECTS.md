@@ -22,11 +22,20 @@ reference. `--library` creates a source library with a small example function.
 The compiler's current built-in prelude/runtime behavior is unchanged by
 `--no-std`; this option only omits the explicit library reference.
 
-The command finds build rules beside the installed distribution or in its checkout
-and writes relative imports/references. Keep the distribution's `build/` and `std/`
-directories when installing it. These paths are visible in the generated project;
-moving the project relative to the toolchain may require updating them. Open the
-generated `.gfproj` directly or add it to your Visual Studio solution.
+The command finds build rules beside the installed distribution, in its checkout,
+or in the Visual Studio extension's bundled `Sdk/` directory. Generated imports
+and std references use `$(GflatSdkRoot)`. CLI/editor evaluation supplies the current
+installation as a fallback; checkout/nightly projects retain a relative fallback
+for direct MSBuild use. Open the generated `.gfproj` directly or add it to your
+Visual Studio solution.
+
+Set `GflatSdkRoot` in the project **before its imports**, as an environment variable,
+or with `dotnet msbuild -p:GflatSdkRoot=/path/to/gflat` to select an explicit SDK.
+It must contain `build/Gflat.props`, `build/Gflat.targets`, and `std/std.gfproj`.
+The explicit value takes precedence over automatic discovery. The CLI forwards
+its discovered default to MSBuild, including referenced projects; it does not write
+installed SDK paths back into the project. Standalone MSBuild has no gflat-specific
+discovery provider, so use a project-relative fallback or set `GflatSdkRoot`.
 
 In a checkout, use `dotnet run --project gflat -- new "My Application"`.
 

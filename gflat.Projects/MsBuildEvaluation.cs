@@ -13,6 +13,9 @@ internal static class MsBuildEvaluation
         {
             var properties = new Dictionary<string, string>
             { ["Configuration"] = configuration, ["Platform"] = platform };
+            // Default only: environment/project GflatSdkRoot remains authoritative.
+            if (ProjectSdk.FindRoot(AppContext.BaseDirectory) is string sdk)
+                properties["GflatDefaultSdkRoot"] = ProjectCollection.Escape(sdk);
             if (exceptionReserveBytes.HasValue) properties["GflatExceptionReserveBytes"] = exceptionReserveBytes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (optimizationLevel.HasValue) properties["GflatOptimizationLevel"] = optimizationLevel.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             using var collection = new ProjectCollection(properties);
@@ -38,9 +41,15 @@ internal static class MsBuildEvaluation
             return new ProjectModel(path, kind, Path.GetFullPath(target, Path.GetDirectoryName(path)!),
                 Files("Compile"), Files("ProjectReference"),
                 project.Imports.Select(i => i.ImportedProject.FullPath).Distinct(ProjectModel.Paths).ToArray(),
-                file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization);
+                file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,
+                project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null);
         }
         catch (InvalidProjectFileException error)
-        { throw new ProjectException(string.IsNullOrEmpty(error.ProjectFile) ? path : error.ProjectFile, error.BaseMessage, error.LineNumber, error.ColumnNumber); }
+        {
+            string message = error.BaseMessage;
+            if (error.ErrorCode == "MSB4019" && (message.Contains("Gflat.props") || message.Contains("Gflat.targets")))
+                message += " Set GflatSdkRoot to a directory containing build/Gflat.props, build/Gflat.targets and std/std.gfproj, or use a gflat installation with bundled SDK assets.";
+            throw new ProjectException(string.IsNullOrEmpty(error.ProjectFile) ? path : error.ProjectFile, message, error.LineNumber, error.ColumnNumber);
+        }
     }
 }

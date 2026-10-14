@@ -6,23 +6,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.ProjectSystem;
 using Microsoft.VisualStudio.ProjectSystem.Build;
+using gflat.Projects;
 
 namespace gflat.VisualStudio;
 
 // CPS owns the hierarchy, commands, persistence and builds. This is our only
-// project-system customization: locate the compiler shipped in this VSIX.
-[ExportBuildGlobalPropertiesProvider(designTimeBuildProperties: false)]
+// project-system customization: locate the compiler and SDK shipped in this VSIX.
+// Default export participates in evaluation, design-time builds and full builds.
+[Export(typeof(IProjectGlobalPropertiesProvider))]
 [AppliesTo("Gflat")]
 internal sealed class GflatBuildProperties : StaticGlobalPropertiesProviderBase
 {
     [ImportingConstructor]
-    // The FullBuild export belongs to the configured-project MEF scope.
-    public GflatBuildProperties(ConfiguredProject project) : base(project.Services) { }
+    public GflatBuildProperties(IProjectCommonServices services) : base(services) { }
 
     public override Task<IImmutableDictionary<string, string>> GetGlobalPropertiesAsync(CancellationToken cancellationToken)
     {
-        string compiler = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "Compiler", "gflat.exe");
+        string extension = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+        string compiler = Path.Combine(extension, "Compiler", "gflat.exe");
+        string sdk = ProjectSdk.FindRoot(extension) ?? throw new FileNotFoundException("The gflat SDK is missing. Reinstall the gflat Visual Studio extension.");
         return Task.FromResult<IImmutableDictionary<string, string>>(
-            Empty.PropertiesMap.SetItem("GflatBundledCompiler", compiler));
+            Empty.PropertiesMap.SetItem("GflatBundledCompiler", ProjectSdk.EscapePropertyValue(compiler))
+                .SetItem("GflatDefaultSdkRoot", ProjectSdk.EscapePropertyValue(sdk)));
     }
 }

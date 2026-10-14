@@ -118,8 +118,10 @@ public sealed class ProjectCreationTests
                 File.Copy(Path.Combine(checkout, "build", file), Path.Combine(toolchain, "build", file));
             string path = ProjectCreation.Create(app, useStd: false, toolchainRoot: toolchain);
             var project = ProjectModel.Load(path);
+            Assert.Equal(Path.GetFullPath(toolchain), project.SdkRoot);
             Assert.Single(project.SourceFiles());
             Assert.Equal(Path.Combine(app, "main.gf"), project.SourceFiles()[0]);
+            Assert.Equal(0, Program.Main(["build", path, "--emit-ir"]));
         }
         finally { Directory.Delete(root, true); }
     }

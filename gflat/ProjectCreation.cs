@@ -1,5 +1,6 @@
 using System.Text;
 using System.Xml.Linq;
+using gflat.Projects;
 
 namespace gflat;
 
@@ -52,6 +53,7 @@ public static class ProjectCreation
         if (File.Exists(directory)) throw new ArgumentException("The project directory is an existing file.");
         if (Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any())
             throw new ArgumentException("Project creation requires a new or empty directory; existing files will not be overwritten.");
+        bool explicitSdk = toolchainRoot != null;
         toolchainRoot = toolchainRoot == null ? FindToolchainRoot() : Path.GetFullPath(toolchainRoot);
         string props = Path.Combine(toolchainRoot, "build", "Gflat.props");
         string targets = Path.Combine(toolchainRoot, "build", "Gflat.targets");
@@ -59,11 +61,15 @@ public static class ProjectCreation
         if (!File.Exists(props) || !File.Exists(targets) || useStd && !File.Exists(std))
             throw new ArgumentException("Cannot locate gflat build rules and standard library. Keep build/ and std/ alongside the distributed compiler.");
         string Relative(string path) => EscapeMsBuild(Path.GetRelativePath(directory, path).Replace('\\', '/'));
-        var xml = new XElement("Project", new XAttribute("DefaultTargets", "Build"),
-            new XElement("Import", new XAttribute("Project", Relative(props))),
+        var roots = new XElement("PropertyGroup");
+        if (!explicitSdk)
+            roots.Add(new XElement("GflatSdkRoot", new XAttribute("Condition", "'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''"), "$(GflatDefaultSdkRoot)"));
+        roots.Add(new XElement("GflatSdkRoot", new XAttribute("Condition", "'$(GflatSdkRoot)' == ''"), Relative(toolchainRoot)));
+        var xml = new XElement("Project", new XAttribute("DefaultTargets", "Build"), roots,
+            new XElement("Import", new XAttribute("Project", "$(GflatSdkRoot)/build/Gflat.props")),
             new XElement("PropertyGroup", new XElement("GflatProjectKind", library ? "SourceLibrary" : "Executable")));
-        if (useStd) xml.Add(new XElement("ItemGroup", new XElement("ProjectReference", new XAttribute("Include", Relative(std)))));
-        xml.Add(new XElement("Import", new XAttribute("Project", Relative(targets))));
+        if (useStd) xml.Add(new XElement("ItemGroup", new XElement("ProjectReference", new XAttribute("Include", "$(GflatSdkRoot)/std/std.gfproj"))));
+        xml.Add(new XElement("Import", new XAttribute("Project", "$(GflatSdkRoot)/build/Gflat.targets")));
         string source = library ? "// Add reusable types and functions here.\nnamespace Library;\n\npublic int Answer() => 42;\n"
             : useStd ? "int main()\n{\n    Console::WriteLine(\"Hello from gflat!\");\n    return 0;\n}\n"
             : "int main() => 0;\n";
@@ -102,9 +108,14 @@ public static class ProjectCreation
 
     public static string FindToolchainRoot()
     {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
-            if (File.Exists(Path.Combine(directory.FullName, "build", "Gflat.props")) &&
-                File.Exists(Path.Combine(directory.FullName, "build", "Gflat.targets"))) return directory.FullName;
+        string? configured = Environment.GetEnvironmentVariable("GflatSdkRoot");
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            configured = Path.GetFullPath(configured);
+            if (!ProjectSdk.IsRoot(configured)) throw new ArgumentException("GflatSdkRoot must point to a directory containing build/Gflat.props, build/Gflat.targets and std/std.gfproj.");
+            return configured;
+        }
+        if (ProjectSdk.FindRoot(AppContext.BaseDirectory) is string root) return root;
         throw new ArgumentException("Cannot locate gflat build rules. Keep build/ alongside the compiler distribution.");
     }
 }

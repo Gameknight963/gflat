@@ -79,3 +79,38 @@ platform newline translation. They do not select the Windows console code page.
 The compiler links the small native standard-stream accessor only when referenced;
 `stdin` and `stdout` are macros rather than portable external variable names.
 `gflat --run` inherits console input/output, so flushed prompts appear immediately.
+
+## Files
+
+`File.gf` provides a move-only owning `std::File` for binary byte IO. It needs
+`core/IOException.gf`; it does not depend on `String` or allocate a gflat buffer.
+The nullable `std::FileHandle` alias represents libc's opaque `FILE*` internally.
+It is not a Windows kernel handle, and callers must not free it through `Memory`.
+
+```gflat
+using std;
+int main()
+{
+    File output = File::OpenWrite("message.txt");
+    output.Write("Hello\n");
+    output.Close();
+    return 0;
+}
+```
+
+- `OpenRead`, `OpenWrite`, and `OpenAppend` use binary libc modes. `OpenWrite`
+  truncates an existing file; append creates a file when needed.
+- `Read(data, capacity)` returns the bytes read. Zero at EOF is normal; IO
+  failures throw `IOException`. Reads do not add a null terminator.
+- `Write(data, count)` preserves embedded zero bytes; `Write(text)` stops at
+  the first zero. Partial IO may already have occurred when an error is thrown.
+- `Flush` and `Close` report failures. `Close` is idempotent and leaves the
+  object closed even if libc reports a close failure.
+- Scope destruction closes without throwing. Call `Close` explicitly when
+  successful final flushing matters. `IsOpen` reports whether it owns a stream.
+- A default `File` is closed. Move transfers ownership without a copy; ordinary
+  copying is rejected. The source follows the language's moved-value rules.
+- Paths use libc's narrow-character encoding. This first version does not provide
+  full Unicode filename support on Windows, seeking, async IO, or directory APIs.
+
+`examples/search` is a small command-line line-search tool using this API.

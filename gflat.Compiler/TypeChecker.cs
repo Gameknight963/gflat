@@ -4702,7 +4702,7 @@ namespace gflat
             }
             else
             {
-                throw new NotImplementedException("Complex callee not supported");
+                throw new TypeCheckException($"Expression of type '{DisplayTypeName(GetType(node.Callee))}' is not callable", node.Callee.Span);
             }
 
             if (method != null) method = SelectOverload(method, node);

@@ -94,6 +94,9 @@ Create a project with `gflat new MyApp`, then run
 `gflat build MyApp/MyApp.gfproj --run`. See [project setup](docs/PROJECTS.md) for
 library projects and optimization settings, or try the [line-search utility](examples/search/README.md).
 
+If setup fails, run `gflat doctor --native` to check SDK discovery, MSBuild,
+Clang, and native exception runtime linking.
+
 For Visual Studio, extract and install the VSIX, restart VS, then open a `.gfproj`
 or add it to an existing solution. The VSIX build number increases automatically
 ONLY so newer builds can replace older ones; it is not a language version.

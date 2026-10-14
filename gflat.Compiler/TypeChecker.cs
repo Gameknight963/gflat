@@ -1007,6 +1007,20 @@ namespace gflat
             {
                 return InferTypeParameter(arrParam.ElementType, arrArg.ElementType, genericParamNames, inferred);
             }
+            if (paramType is FunctionPointerTypeExpression function && argType is FunctionPointerTypeExpression argument)
+            {
+                if (function.IsManaged != argument.IsManaged || function.ParameterTypes.Count != argument.ParameterTypes.Count)
+                    return false;
+                var bindings = new Dictionary<string, TypeExpression>(inferred);
+                bool Child(TypeExpression formal, TypeExpression actual) =>
+                    InferTypeParameter(formal, actual, genericParamNames, bindings) ||
+                    (!HasUnboundExtensionType(formal, genericParamNames) && TypesMatch(formal, actual));
+                if (!Child(function.ReturnType, argument.ReturnType)) return false;
+                foreach (var pair in function.ParameterTypes.Zip(argument.ParameterTypes))
+                    if (!Child(pair.First, pair.Second)) return false;
+                foreach (var binding in bindings) inferred[binding.Key] = binding.Value;
+                return true;
+            }
             return false;
         }
 

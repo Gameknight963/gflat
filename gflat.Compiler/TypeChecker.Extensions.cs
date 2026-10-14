@@ -287,7 +287,7 @@ public partial class TypeChecker
         InferTypeParameter(formal, source, names, bindings);
     }
 
-    private bool HasUnboundExtensionType(TypeExpression type, HashSet<string> names) => type switch {
+    private bool HasUnboundExtensionType(TypeExpression type, ISet<string> names) => type switch {
         NamedTypeExpression n => names.Contains(n.Name) || n.TypeArguments.Any(t => HasUnboundExtensionType(t, names)),
         ReferenceTypeExpression r => HasUnboundExtensionType(r.Inner, names),
         PointerTypeExpression p => HasUnboundExtensionType(p.Inner, names),

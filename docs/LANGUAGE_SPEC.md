@@ -598,6 +598,13 @@ The parameter is an alias: assignment writes to the caller's value. No object is
 
 Fields, fixed-buffer elements, pointer dereferences, and ref properties/indexers can supply storage. Generic, constructor, interface, virtual, and lambda parameters support the same contract. A function pointer spells the parameter as `void(ref int)*`; it is distinct from `void(int)*`. Reference parameters use native pointer arguments. This does not add general ref locals or ref-returning methods.
 
+Generic call inference inspects typed function pointers recursively, using their
+return and parameter types, including nested callbacks. Repeated type parameters
+must agree. This also applies to generic extension arguments. Callback arity, ref
+parameters, nullability, readonly qualifiers, and calling conventions still obey
+normal function-pointer compatibility; inference does not add conversions or
+untyped lambda parameters.
+
 Ordinary function declarations require a body, including generic functions and
 struct methods. A declaration such as `int Missing();` is an error. Use `extern`
 for a function implemented elsewhere; interface and abstract method declarations

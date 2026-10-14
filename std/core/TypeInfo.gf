@@ -35,4 +35,9 @@ public struct TypeInfo
     public readonly(TypeInfo*?) ElementType;
     public readonly(bool) HasFixedLength;
     public readonly(nuint) Length;
+    // Function signature only. Other kinds use null/null/0. ParameterTypes
+    // points to a contiguous immutable descriptor array; zero parameters use null.
+    public readonly(TypeInfo*?) ReturnType;
+    public readonly(TypeInfo*?) ParameterTypes;
+    public readonly(nuint) ParameterCount;
 }

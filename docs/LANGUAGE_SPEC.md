@@ -952,7 +952,8 @@ int main() { return Add(20, 22); }
 queried type. It works through aliases and generic specialization. Its readonly
 fields are `Name`, `Size`, `Alignment`, `IsPointer`, `IsManaged`, `IsNullable`,
 `IsReadOnly`, and `HasDestructor`. It also exposes `Kind`, `HasLayout`,
-`ElementType`, `HasFixedLength`, and `Length`. Sizes, alignments, and lengths use `nuint`; names are
+`ElementType`, `HasFixedLength`, `Length`, `ReturnType`, `ParameterTypes`, and
+`ParameterCount`. Sizes, alignments, lengths, and counts use `nuint`; names are
 borrowed, null-terminated strings with static lifetime. Aliases resolve to their
 underlying type name.
 
@@ -960,8 +961,15 @@ underlying type name.
 managed pointers, arrays, function pointers, and references. `ElementType` points
 to immutable static metadata for a pointer/managed/array/reference element; it is
 null for other kinds. Nested elements remain available during constant evaluation.
-Function-pointer metadata identifies its kind and layout but does not yet expose
-return or parameter metadata. No GC allocation is needed for descriptors.
+Function pointers have a non-null `ReturnType` descriptor, including for void
+returns, and a `ParameterCount`. `ParameterTypes` points to a contiguous immutable
+array of descriptors; it is null when the count is zero. Index only within that
+count. Nested function signatures and reference/readonly/nullable parameter
+layers remain available recursively and during constant evaluation. Non-function
+kinds use null return/parameter pointers and a zero count. No GC allocation is
+needed for descriptors, and their storage survives the function producing them.
+Function-pointer types do not include parameter names, optional defaults, or
+method modifiers, so this metadata does not invent those properties.
 
 `IsReadOnly` qualifies the current layer's value storage. For `readonly(int)*`,
 the pointer's flag is false and its element's flag is true. For `readonly(int*)`,
@@ -987,6 +995,16 @@ const nuint PacketSize = Size<Packet>();
 int main() {
     std::TypeInfo info = typeof(Packet);
     if (info.Size != PacketSize) return 1;
+    return 0;
+}
+```
+
+```gflat
+const nuint ArgumentSize = typeof(void(int**)*).ParameterTypes![0].ElementType!.ElementType!.Size;
+int main() {
+    std::TypeInfo signature = typeof(void(ref readonly(int), int**)*);
+    if (signature.ParameterCount != (nuint)2) return 1;
+    if (signature.ReturnType!.HasLayout || ArgumentSize != (nuint)4) return 2;
     return 0;
 }
 ```

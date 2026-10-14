@@ -166,7 +166,18 @@ reflection and runtime type discovery are not provided yet.
 pointer to immutable static metadata for the pointee/element of a raw pointer,
 managed reference, array, or reference parameter. It can be followed recursively:
 `typeof(int**).ElementType!.ElementType!.Size` is four. Other kinds have a null
-element. Function-pointer return and parameter metadata are not implemented yet.
+element.
+
+Function pointers expose `ReturnType`, `ParameterCount`, and `ParameterTypes`.
+The latter points to a contiguous readonly descriptor array; index below the
+count. Zero parameters use a null array, and non-functions use null/null/zero.
+Void returns have a descriptor with no value layout. Signatures can be followed
+recursively, including through nested callbacks, reference parameters, readonly
+views, arrays, and nullable/managed pointers:
+`typeof(int(int**)*).ParameterTypes![0].ElementType!.ElementType!.Size` is four.
+The array and its children have static lifetime and need no allocation or disposal.
+Parameter names, defaults, and method modifiers are not part of a function-pointer
+type and are not exposed here.
 
 `IsReadOnly` describes the current value layer: `readonly(int)*` has a mutable
 pointer and readonly element; `readonly(int*)` has both readonly. `IsNullable`

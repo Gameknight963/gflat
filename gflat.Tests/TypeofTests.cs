@@ -5,6 +5,93 @@ namespace gflat.Tests;
 public class TypeofTests
 {
     [Fact]
+    public void FunctionSignaturesHaveRecursiveReturnAndParameterDescriptors()
+    {
+        Assert.Equal(0, CompilerTestHelper.Run("""
+            int main() {
+                std::TypeInfo signature = typeof(int(readonly(char*), ref readonly(int), int**)*);
+                if (signature.Kind != std::TypeKind::FunctionPointer || signature.ElementType != null) return 1;
+                if (signature.ReturnType!.Size != (nuint)4 || signature.ParameterCount != (nuint)3) return 2;
+                readonly(std::TypeInfo)* parameters = signature.ParameterTypes!;
+                if (parameters[0].Kind != std::TypeKind::Pointer || !parameters[0].IsReadOnly || !parameters[0].ElementType!.IsReadOnly) return 3;
+                if (parameters[1].Kind != std::TypeKind::Reference || parameters[1].IsReadOnly || !parameters[1].ElementType!.IsReadOnly) return 4;
+                if (parameters[2].ElementType!.ElementType!.Size != (nuint)4) return 5;
+                return 0;
+            }
+            """).ExitCode);
+    }
+
+    [Fact]
+    public void FunctionParameterGraphWorksDuringConstantEvaluation()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run("""
+            const nuint Size = typeof(int(int**)*).ParameterTypes![0].ElementType!.ElementType!.Size;
+            const bool Borrow = typeof(int(ref readonly(int))*).ParameterTypes![0].Kind == std::TypeKind::Reference;
+            const std::TypeInfo Signature = typeof(int(int)*);
+            const bool SameArray = Signature.ParameterTypes == Signature.ParameterTypes;
+            int main() { if (Size != (nuint)4 || !Borrow || !SameArray) return 1; return 42; }
+            """).ExitCode);
+    }
+
+    [Fact]
+    public void EmptyAndNonfunctionDescriptorsUseNullSignatureFields()
+    {
+        Assert.Equal(0, CompilerTestHelper.Run("""
+            int main() {
+                std::TypeInfo empty = typeof(void()*);
+                if (empty.ParameterCount != (nuint)0 || empty.ParameterTypes != null || empty.ReturnType == null) return 1;
+                if (empty.ReturnType!.HasLayout || empty.ReturnType!.Size != (nuint)0) return 2;
+                std::TypeInfo value = typeof(int*);
+                if (value.ReturnType != null || value.ParameterTypes != null || value.ParameterCount != (nuint)0) return 3;
+                return 0;
+            }
+            """).ExitCode);
+    }
+
+    [Fact]
+    public void NestedFunctionsArraysInterfacesAndManagedTypesKeepTheirOwnGraphs()
+    {
+        Assert.Equal(0, CompilerTestHelper.Run("""
+            interface I { int Read(); }
+            alias Inner = long(int)*;
+            alias Outer = Inner(Inner, char[4], I*, int^?)*?;
+            int main() {
+                std::TypeInfo outer = typeof(Outer);
+                if (!outer.IsNullable || outer.ParameterCount != (nuint)4) return 1;
+                if (outer.ReturnType!.Kind != std::TypeKind::FunctionPointer || outer.ReturnType!.ReturnType!.Size != (nuint)8) return 2;
+                if (outer.ParameterTypes![0].ParameterTypes![0].Size != (nuint)4) return 3;
+                if (!outer.ParameterTypes![1].HasFixedLength || outer.ParameterTypes![1].Length != (nuint)4) return 4;
+                if (outer.ParameterTypes![2].ElementType!.Kind != std::TypeKind::Interface || outer.ParameterTypes![2].ElementType!.HasLayout) return 5;
+                if (outer.ParameterTypes![3].Kind != std::TypeKind::ManagedPointer || !outer.ParameterTypes![3].IsNullable) return 6;
+                return 0;
+            }
+            """).ExitCode);
+    }
+
+    [Fact]
+    public void ParameterDescriptorStorageOutlivesTheProducingFunction()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run("""
+            readonly(std::TypeInfo)* Parameters() => typeof(int(int, long)*).ParameterTypes!;
+            int main() { readonly(std::TypeInfo)* types = Parameters(); if (types[0].Size != (nuint)4 || types[1].Size != (nuint)8) return 1; return 42; }
+            """).ExitCode);
+    }
+
+    [Fact]
+    public void ParameterDescriptorsCannotBeOverwritten()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("int main() { std::TypeInfo info = typeof(int(int)*); info.ParameterTypes![0] = typeof(char); return 0; }"));
+        Assert.Contains("readonly", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ConstantParameterIndexReportsOutOfBounds()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("const nuint Size = typeof(int(int)*).ParameterTypes![1].Size; int main() => 0;"));
+        Assert.Contains("out of bounds", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void TypeMetadataIsACompileTimeConstantAndWorksInGenericCode()
     {
         Assert.Equal(42, CompilerTestHelper.Run("""

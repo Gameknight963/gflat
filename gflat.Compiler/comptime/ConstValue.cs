@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using gflat.ast;
 
 namespace gflat.comptime
 {
@@ -55,6 +56,11 @@ namespace gflat.comptime
         {
             public override string ToString() => $"[{string.Join(", ", Elements)}]";
         }
+
+        // Address of the first element of nonempty immutable static storage.
+        // ElementType describes the emitted array, independently of the view
+        // through which its address is used. Empty arrays have no such address.
+        public sealed record ArrayPointer(TypeExpression ElementType, Array Target) : ConstValue;
 
         public static bool TryAdd(ConstValue left, ConstValue right, out ConstValue? result)
         {
@@ -200,6 +206,16 @@ namespace gflat.comptime
 
         public static bool TryEqual(ConstValue left, ConstValue right, out bool result)
         {
+            if (left is ArrayPointer a && right is ArrayPointer b)
+            {
+                result = Equals(a, b);
+                return true;
+            }
+            if (left is ArrayPointer && right is Integer { Value: 0 } || left is Integer { Value: 0 } && right is ArrayPointer)
+            {
+                result = false;
+                return true;
+            }
             if (left is Integer li && right is Integer ri)
             {
                 result = li.Value == ri.Value;

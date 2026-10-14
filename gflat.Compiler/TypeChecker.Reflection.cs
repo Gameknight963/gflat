@@ -60,7 +60,13 @@ public partial class TypeChecker
             ["ElementType"] = element == null ? new ConstValue.Integer(0) :
                 new ConstValue.Pointer("std$TypeInfo", DescribeResolvedType(element, line)),
             ["HasFixedLength"] = new ConstValue.Boolean(type is ArrayTypeExpression { Size: not null }),
-            ["Length"] = new ConstValue.UInteger((ulong)(type is ArrayTypeExpression { Size: int length } ? length : 0))
+            ["Length"] = new ConstValue.UInteger((ulong)(type is ArrayTypeExpression { Size: int length } ? length : 0)),
+            ["ReturnType"] = type is FunctionPointerTypeExpression functionReturn
+                ? new ConstValue.Pointer("std$TypeInfo", DescribeResolvedType(functionReturn.ReturnType, line)) : new ConstValue.Integer(0),
+            ["ParameterTypes"] = type is FunctionPointerTypeExpression { ParameterTypes.Count: > 0 } functionParameters
+                ? new ConstValue.ArrayPointer(new NamedTypeExpression("std$TypeInfo", null, line),
+                    new ConstValue.Array(functionParameters.ParameterTypes.Select(p => DescribeResolvedType(p, line)).ToList())) : new ConstValue.Integer(0),
+            ["ParameterCount"] = new ConstValue.UInteger((ulong)(type is FunctionPointerTypeExpression function ? function.ParameterTypes.Count : 0))
         });
     }
 }

@@ -492,6 +492,12 @@ namespace gflat.comptime
                     throw new ConstEvalException($"Cannot take address of non-struct/class '{operand}' at compile time", node.Line);
 
                 case TokenKind.Star:
+                    if (operand is ConstValue.ArrayPointer arrayPointer)
+                    {
+                        if (arrayPointer.Target.Elements.Count == 0) throw new ConstEvalException("Cannot dereference an empty constant array", node.Line);
+                        _currentValue = arrayPointer.Target.Elements[0];
+                        return;
+                    }
                     if (operand is ConstValue.Pointer ptr)
                     {
                         _currentValue = ptr.Target;
@@ -539,6 +545,11 @@ namespace gflat.comptime
             if (obj is ConstValue.Pointer ptrVal)
             {
                 obj = ptrVal.Target;
+            }
+            if (obj is ConstValue.ArrayPointer arrayPointer)
+            {
+                if (arrayPointer.Target.Elements.Count == 0) throw new ConstEvalException("Cannot dereference an empty constant array", node.Line);
+                obj = arrayPointer.Target.Elements[0];
             }
 
             if (obj is ConstValue.String strVal)
@@ -603,6 +614,7 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             node.Target.Accept(this);
             ConstValue target = _currentValue!;
+            if (target is ConstValue.ArrayPointer arrayPointer) target = arrayPointer.Target;
 
             node.Index.Accept(this);
             ConstValue index = _currentValue!;

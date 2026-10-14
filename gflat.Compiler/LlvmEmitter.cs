@@ -64,6 +64,8 @@ public partial class LlvmEmitter : IVisitor
                         return $"{typeStr} bitcast ({targetLlvmType}* {targetGlobal} to {typeStr})";
                     }
                 }
+            case ConstValue.ArrayPointer arrayPointer:
+                return $"{typeStr} {ConstArrayAddress(arrayPointer, typeStr)}";
             case ConstValue.Struct structVal:
                 {
                     TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(structVal.StructName);
@@ -225,6 +227,9 @@ public partial class LlvmEmitter : IVisitor
                         return true;
                     }
                 }
+            case ConstValue.ArrayPointer arrayPointer:
+                Push(ConstArrayAddress(arrayPointer, EmitType(type)));
+                return true;
             case ConstValue.Struct structVal:
                 {
                     TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(structVal.StructName);

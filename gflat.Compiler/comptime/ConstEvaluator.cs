@@ -99,7 +99,7 @@ namespace gflat.comptime
             throw new ConstEvalException($"Cannot modify non-local variable '{name}' at compile time", 0);
         }
 
-        private bool TryGetVariable(string name, out ConstValue? value)
+        private bool TryGetVariable(string name, out ConstValue? value, AstNode? binding = null)
         {
             foreach (Dictionary<string, ConstValue> scope in _scopes)
             {
@@ -109,6 +109,7 @@ namespace gflat.comptime
                 }
             }
 
+            if (binding != null && _context.TryGetConstValue(binding, out value)) return true;
             if (_context.TryGetConstValueByName(name, out value))
             {
                 return true;
@@ -177,7 +178,7 @@ namespace gflat.comptime
             if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
                 throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
-            if (!TryGetVariable(node.Name, out ConstValue? val) || val == null)
+            if (!TryGetVariable(node.Name, out ConstValue? val, node) || val == null)
             {
                 if (TryGetVariable("this", out ConstValue? thisVal))
                 {

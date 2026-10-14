@@ -86,6 +86,8 @@ public partial class TypeChecker
         if (separator >= 0) { ns = name[..separator]; name = name[(separator + 2)..]; }
         if (ns != null)
             return ResolveNamespaceByName(ns)?.TypeNames.GetValueOrDefault(name);
+        foreach (var local in _localEnums)
+            if (local.TryGetValue(name, out var enumeration)) return enumeration.Name;
         for (var scope = _currentNamespace; scope != null; scope = scope.Parent)
             if (scope.TypeNames.TryGetValue(name, out var identity)) return identity;
         string? found = null;
@@ -150,6 +152,9 @@ public partial class TypeChecker
 
     private void CheckSpecialization(AstNode definition, AstNode specialized)
     {
+        using var nullableScope = IsolateNullableFlow();
+        using var exceptionScope = IsolateExceptionHandlers();
+        using var declarationContext = IsolateDeclarationContext();
         var previousNamespace = _currentNamespace;
         var previousPath = _currentNamespacePath;
         var previousClass = _currentClass;

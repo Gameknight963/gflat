@@ -607,7 +607,7 @@ public partial class LlvmEmitter : IVisitor
                 return;
             }
 
-            if (_typeChecker.TryGetConstValueByName(ident.Name, out ConstValue? constVal) && constVal != null)
+            if (_typeChecker.TryGetConstValue(ident, out ConstValue? constVal) && constVal != null)
             {
                 if (constVal is ConstValue.Array array)
                 {
@@ -3066,7 +3066,7 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(IdentifierExpression node)
     {
         if (EmitPropertyRead(node)) return;
-        if (_typeChecker.TryGetConstValueByName(node.Name, out ConstValue? constVal) && constVal != null)
+        if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
         {
             if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
             {
@@ -3718,7 +3718,7 @@ public partial class LlvmEmitter : IVisitor
         }
 
         if (node.Object is IdentifierExpression objIdent &&
-            _typeChecker.TryGetConstValueByName(objIdent.Name, out ConstValue? constObj) && constObj != null)
+            _typeChecker.TryGetConstValue(objIdent, out ConstValue? constObj) && constObj != null)
         {
             if (constObj is ConstValue.Pointer ptrObj)
             {

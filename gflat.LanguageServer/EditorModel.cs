@@ -75,6 +75,7 @@ public sealed partial class EditorModel
             Syntax? scope = entry.Node switch
             {
                 VariableDeclaration => parents.FirstOrDefault(p => p.Node is BlockStatement or ForStatement),
+                EnumDeclaration => parents.FirstOrDefault(p => p.Node is BlockStatement),
                 Parameter => parents.FirstOrDefault(p => p.Node is MethodDeclaration or ExternDeclaration or ConstructorDeclaration or LambdaExpression or OperatorDeclaration),
                 ForeachStatement or CatchClause => entry,
                 _ => null

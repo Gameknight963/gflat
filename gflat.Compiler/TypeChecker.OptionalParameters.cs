@@ -44,6 +44,7 @@ public partial class TypeChecker
         try
         {
             using var sourceContext = SourceContext.Enter(field.Span);
+            using var declarationContext = IsolateDeclarationContext();
             field.Initializer.Accept(this);
             if (!new ConstEvaluator(this).TryEvaluate(field.Initializer, out value, out _)) return false;
             _constValues[field] = value!;

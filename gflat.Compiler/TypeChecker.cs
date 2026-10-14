@@ -50,13 +50,13 @@ namespace gflat
         }
 
         public bool TryGetConstValueByName(string name, out ConstValue? value) => checkingDefaults.Count > 0
-            ? TryGetDefaultConstant(name, out value) : _constVariablesByName.TryGetValue(name, out value);
+            ? TryGetDefaultConstant(name, out value) : BoundConstant(name, out value);
 
         public bool TryGetConstValue(AstNode node, out ConstValue? value) =>
             _constValues.TryGetValue(node, out value);
 
         public bool IsConstVariable(string name) =>
-            _constVariableNames.Contains(name);
+            BoundConstantIsReadOnly(name);
 
         public MethodDeclaration? ResolveFunctionForComptime(string name) =>
             ResolveFunction(name);
@@ -81,6 +81,7 @@ namespace gflat
         private readonly HashSet<CallExpression> _indirectCalls = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _localAliases = new();
         private readonly Stack<Dictionary<string, EnumInfo>> _localEnums = new();
+        private int _localEnumCounter;
         private readonly Dictionary<AstNode, (EnumInfo Enum, long Value)> _resolvedEnumMembers = new();
         private readonly Stack<int> _lambdaScopeBoundaries = new();
         private readonly Stack<bool> _lambdaStaticStack = new();
@@ -519,6 +520,7 @@ namespace gflat
             _scopes.Push(new Dictionary<string, TypeExpression>());
             _localAliases.Push(new Dictionary<string, TypeExpression>());
             _localEnums.Push(new Dictionary<string, EnumInfo>());
+            localConstants.Push(new Dictionary<string, ConstValue>());
         }
 
         private void PopScope()
@@ -527,6 +529,7 @@ namespace gflat
             _scopes.Pop();
             _localAliases.Pop();
             _localEnums.Pop();
+            localConstants.Pop();
         }
 
         private void DeclareVariable(string name, TypeExpression type, int line)
@@ -3408,6 +3411,7 @@ namespace gflat
 
             RecordType(node, varType);
             DeclareVariable(node.Name, varType, node.Line);
+            if (node.IsConst) localConstants.Peek()[node.Name] = _constValues[node];
             NullableAssignment(new IdentifierExpression(node.Name, node.Line), node.Initializer);
             if (node.Initializer != null && CopiesValue(node.Initializer, varType)) InvalidateNullableEscapes();
         }
@@ -3885,7 +3889,7 @@ namespace gflat
             if (_propertyReads.ContainsKey(node)) return false;
             if (node is IdentifierExpression ident)
             {
-                if (_constVariableNames.Contains(ident.Name))
+                if (IsConstVariable(ident.Name))
                 {
                     return true;
                 }
@@ -4088,12 +4092,6 @@ namespace gflat
             if (target is IdentifierExpression ident)
             {
                 if (IsConstVariable(ident.Name))
-                {
-                    throw new TypeCheckException($"Cannot assign to const variable '{ident.Name}'", line);
-                }
-
-                FieldDeclaration? globalField = ResolveGlobalField(ident.Name);
-                if (globalField != null && globalField.IsConst)
                 {
                     throw new TypeCheckException($"Cannot assign to const variable '{ident.Name}'", line);
                 }
@@ -5736,6 +5734,17 @@ namespace gflat
         public void Visit(EnumDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (_scopes.Count > 0)
+            {
+                if (_localEnums.Peek().ContainsKey(node.SourceName))
+                    throw new TypeCheckException($"Enum '{node.SourceName}' is already declared in this scope", node.Span);
+                node.Name = $"local$enum${_localEnumCounter++}${node.SourceName}";
+                _displayNames[node.Name] = node.SourceName;
+                var local = new NamespaceScope();
+                RegisterEnum(node, local, "");
+                _localEnums.Peek()[node.SourceName] = local.Enums[node.SourceName];
+                return;
+            }
             NamespaceScope scope = _currentNamespace ?? _globalScope;
             if (!scope.Enums.ContainsKey(node.Name))
             {

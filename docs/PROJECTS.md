@@ -87,8 +87,8 @@ dotnet msbuild examples/hello/hello.gfproj -t:Clean
 
 `Rebuild` and a no-op `Restore` target are also provided. `Configuration` defaults
 to `Debug`; use `-p:Configuration=Release` to select another configuration. This
-selects project conditions and output paths; it does not yet set LLVM optimization.
-Native optimization still uses `GFLAT_OPT_LEVEL`.
+selects project conditions, output paths, and the default LLVM optimization level
+(Debug: 0, Release: 2). Set `GflatOptimizationLevel` to override that default.
 
 The compiler CLI delegates project commands to these same targets:
 
@@ -124,8 +124,9 @@ Visual Studio and direct MSBuild builds still compile every time unless the
 caller supplies the complete evaluated import graph in `GflatProjectInputs`.
 The CLI supplies that graph automatically. A custom compiler command remains
 uncached unless it declares its dependencies as `GflatCompilerInputs` items.
-Native caching also requires an existing driver executable; a driver name that
-only resolves through PATH remains uncached. This uses MSBuild timestamp checks,
+Native caching also requires an existing driver executable. Names supplied through
+`--clang` or `GFLAT_CLANG` resolve through PATH. A bare project `GflatClang` value
+that does not identify an existing file remains uncached. This uses MSBuild timestamp checks,
 so changing file contents while preserving their timestamps is not detected.
 
 `GflatExceptionReserveBytes` sets the native exception runtime's emergency reserve

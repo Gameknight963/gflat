@@ -35,18 +35,29 @@ public static class NativeToolchain
     public static string FindClang(string? requested = null)
     {
         requested ??= Environment.GetEnvironmentVariable("GFLAT_CLANG");
-        if (!string.IsNullOrWhiteSpace(requested)) return requested;
+        if (!string.IsNullOrWhiteSpace(requested)) return FindOnPath(requested, includeCurrentDirectory: true) ?? requested;
         return DefaultClang.Value;
+    }
+
+    private static string? FindOnPath(string name, bool includeCurrentDirectory = false)
+    {
+        // Resolve a supplied executable name without changing explicit paths or
+        // falling back to a different compiler when that name cannot be found.
+        if (name != Path.GetFileName(name)) return null;
+        string filename = OperatingSystem.IsWindows() && Path.GetExtension(name).Length == 0 ? name + ".exe" : name;
+        if (includeCurrentDirectory && File.Exists(filename)) return Path.GetFullPath(filename);
+        foreach (string dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+        {
+            string candidate = Path.Combine(dir.Trim('"'), filename);
+            if (File.Exists(candidate)) return Path.GetFullPath(candidate);
+        }
+        return null;
     }
 
     private static string DiscoverClang()
     {
         string name = OperatingSystem.IsWindows() ? "clang.exe" : "clang";
-        foreach (string dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
-        {
-            string candidate = Path.Combine(dir, name);
-            if (File.Exists(candidate)) return candidate;
-        }
+        if (FindOnPath(name) is string found) return found;
         foreach (string installation in VisualStudioInstallations())
         {
             string candidate = Path.Combine(installation, "VC", "Tools", "Llvm", "x64", "bin", "clang.exe");

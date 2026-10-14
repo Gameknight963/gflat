@@ -32,6 +32,7 @@ This example uses std; see the runnable
 - Structs, classes, interfaces, generics, properties, and indexers.
 - Pointers, readonly access, custom allocators, and deterministic destruction.
 - Nullable pointers with local null-check analysis.
+- Namespace extension methods with ordinary value, reference, and readonly receivers.
 - Managed pointers (`T^`) with replaceable GC hooks and a single-threaded,
   non-moving conservative collector. See the [managed example](examples/managed/README.md).
 - Native stack-unwinding exceptions, with optional `nothrow` termination boundaries.

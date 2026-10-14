@@ -4,6 +4,8 @@
     <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
     <GflatProjectKind Condition="'$(GflatProjectKind)' == ''">Executable</GflatProjectKind>
     <GflatExceptionReserveBytes Condition="'$(GflatExceptionReserveBytes)' == ''">65536</GflatExceptionReserveBytes>
+    <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == '' and '$(Configuration)' == 'Release'">2</GflatOptimizationLevel>
+    <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == ''">0</GflatOptimizationLevel>
     <EnableDefaultCompileItems Condition="'$(EnableDefaultCompileItems)' == ''">true</EnableDefaultCompileItems>
     <GflatDefaultExcludes>**/bin/**;**/obj/**;**/.git/**;**/.vs/**;**/.local-notes/**</GflatDefaultExcludes>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>

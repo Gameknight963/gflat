@@ -4,6 +4,34 @@ A `.gfproj` is an MSBuild XML project. Visual Studio opens that same file throug
 Microsoft's Common Project System (CPS). No companion project is generated.
 The CLI and language server evaluate it using MSBuild from the installed .NET SDK.
 
+## Creating a project
+
+```text
+gflat new "My Application"
+gflat build "My Application/My Application.gfproj" --run
+gflat new Utilities --library
+gflat new Minimal --no-std
+```
+
+`new` creates a real `.gfproj`, `main.gf`, and a `.gitignore` for build/editor
+outputs. It accepts a new or empty directory and never overwrites existing files.
+`--name Name` changes the project filename without changing the destination
+directory. By default, executables reference std and print a greeting through
+`Console`; `--no-std` creates an executable returning zero without a std project
+reference. `--library` creates a source library with a small example function.
+The compiler's current built-in prelude/runtime behavior is unchanged by
+`--no-std`; this option only omits the explicit library reference.
+
+The command finds build rules beside the installed distribution or in its checkout
+and writes relative imports/references. Keep the distribution's `build/` and `std/`
+directories when installing it. These paths are visible in the generated project;
+moving the project relative to the toolchain may require updating them. Open the
+generated `.gfproj` directly or add it to your Visual Studio solution.
+
+In a checkout, use `dotnet run --project gflat -- new "My Application"`.
+
+## Project format
+
 ```xml
 <Project DefaultTargets="Build">
   <Import Project="../../build/Gflat.props" />
@@ -122,9 +150,9 @@ uses `Debug|AnyCPU` independently of the active VS build configuration.
 
 ## Remaining work
 
-Debugger/startup-project support, completion, hover, incremental native builds,
-package management, and binary libraries are not included. There is no New Project
-wizard yet; create a `.gfproj` from the example and add it to your solution.
+Debugger/startup-project support, incremental native builds, package management,
+and binary libraries are not included. There is no Visual Studio New Project
+wizard yet; use `gflat new` and add the generated project to your solution.
 
 The previous `<GflatProject>` XML prototype is no longer supported. Convert it to
 `<Project>`, import the build files, and replace `Sources`/`Reference` with MSBuild
@@ -132,3 +160,19 @@ The previous `<GflatProject>` XML prototype is no longer supported. Convert it t
 
 References: [Microsoft's CPS documentation](https://github.com/microsoft/VSProjectSystem)
 and [MSBuild project files](https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-project-file-schema-reference).
+
+## Native optimization
+
+Use `--optimization 0|1|2|3` with standalone compilation or project builds.
+Projects default to 0 in Debug and 2 in Release. Set `GflatOptimizationLevel` in a
+project property group, or use the optimization field in Visual Studio's project
+properties. An explicit CLI option overrides the project setting.
+
+For standalone compilation, `GFLAT_OPT_LEVEL` supplies the default when no CLI
+option is given; otherwise the default is 0. Project builds use their evaluated
+project setting instead of that environment variable. These levels control Clang
+and LLVM optimization; they do not change language semantics.
+
+```powershell
+gflat build app/app.gfproj --configuration Release --optimization 2
+```

@@ -26,27 +26,29 @@ public sealed class ProjectModel
     public ProjectKind Kind { get; }
     public string TargetPath { get; }
     public int ExceptionReserveBytes { get; }
+    public int OptimizationLevel { get; }
     public IReadOnlyList<string> References { get; }
     public IReadOnlyList<string> Imports { get; }
     private readonly string[] sources;
     private readonly Func<string, bool> matchesGlob;
 
     internal ProjectModel(string path, ProjectKind kind, string targetPath, string[] sources,
-        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes)
+        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel)
     {
         ExceptionReserveBytes = exceptionReserveBytes;
+        OptimizationLevel = optimizationLevel;
         FilePath = path; Kind = kind; TargetPath = targetPath; this.sources = sources;
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
     }
     public static ProjectModel Load(string path) => Load(path, "Debug", "AnyCPU");
-    public static ProjectModel Load(string path, string configuration, string platform, int? exceptionReserveBytes = null)
+    public static ProjectModel Load(string path, string configuration, string platform, int? exceptionReserveBytes = null, int? optimizationLevel = null)
     {
         path = Path.GetFullPath(path);
         try { _ = registered.Value; }
         catch (Exception error) { throw new ProjectException(path, "Cannot locate MSBuild. Install the .NET SDK. " + error.Message); }
         // The evaluator lives in a separate method/type: MSBuild must not be loaded
         // by the JIT until Locator has registered its assembly resolver.
-        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes);
+        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel);
     }
     public bool IncludesFile(string path)
     {

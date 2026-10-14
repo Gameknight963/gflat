@@ -5,5 +5,11 @@
   </EnumProperty>
   <StringProperty Name="OutputPath" DisplayName="Output directory" />
   <StringProperty Name="GflatCompilerCommand" DisplayName="Compiler command" />
+  <EnumProperty Name="GflatOptimizationLevel" DisplayName="Optimization level" Description="Debug defaults to 0; Release defaults to 2.">
+    <EnumValue Name="0" DisplayName="0 — No optimization" />
+    <EnumValue Name="1" DisplayName="1 — Basic optimization" />
+    <EnumValue Name="2" DisplayName="2 — Recommended optimization" />
+    <EnumValue Name="3" DisplayName="3 — Aggressive optimization" />
+  </EnumProperty>
   <IntProperty Name="GflatExceptionReserveBytes" DisplayName="Exception reserve (bytes)" MinValue="0" Description="Emergency storage for the native exception runtime. Default: 65536 bytes. Zero disables the reserve. Used when linking an executable." />
 </Rule>

@@ -11,18 +11,21 @@ public static class Program
         var diagnostics = new DiagnosticBag();
         try
         {
+            if (args.Length > 0 && args[0] == "new") return ProjectCreation.Run(args[1..]);
             var sourcePaths = new List<string>();
             string? outputPath = null, clang = null;
             string configuration = "Debug", platform = "AnyCPU";
             bool run = false, irOnly = false, check = false, clean = false;
             string? projectPath = null;
             int? exceptionReserveBytes = null;
+            int? optimizationLevel = null;
             for (int i = 0; i < args.Length; i++)
             {
                 string Value() => ++i < args.Length ? args[i] : throw new ArgumentException($"Missing value for {args[i - 1]}");
                 switch (args[i])
                 {
                     case "--help": case "-h":
+                        Console.WriteLine("gflat new <directory> [--name Name] [--library] [--no-std]\nOptimization: --optimization 0|1|2|3 (project defaults: Debug=0, Release=2)");
                         Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]");
                         return 0;
                     case "build" when i == 0: break;
@@ -32,6 +35,7 @@ public static class Program
                     case "-o": outputPath = Value(); break;
                     case "--clang": clang = Value(); break;
                     case "--exception-reserve-bytes": exceptionReserveBytes = ExceptionReserve.Parse(Value()); break;
+                    case "--optimization": optimizationLevel = OptimizationLevel.Parse(Value()); break;
                     case "--configuration": configuration = Value(); break;
                     case "--platform": platform = Value(); break;
                     case "--source-list": sourcePaths.AddRange(File.ReadAllLines(Value()).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath)); break;
@@ -48,7 +52,7 @@ public static class Program
             {
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
                 projectPath = sourcePaths[0];
-                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes));
+                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel));
                 sourcePaths = graph.Sources.ToList();
                 outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
                 if (graph.Root.Kind == ProjectKind.SourceLibrary)
@@ -81,7 +85,7 @@ public static class Program
             if (graph != null)
             {
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
-                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes);
+                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel);
                 if (result != 0 || !run) return result;
                 return NativeToolchain.RunProgram(outputPath, []);
             }
@@ -100,7 +104,7 @@ public static class Program
             try
             {
                 File.WriteAllText(temporaryIr, ir);
-                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes);
+                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel);
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
                 if (!run) return 0;
                 return NativeToolchain.RunProgram(outputPath, []);

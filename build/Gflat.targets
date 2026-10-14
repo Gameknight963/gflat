@@ -25,6 +25,7 @@
   </ItemGroup>
   <Target Name="GflatGetSources" Returns="@(_GflatSources)">
     <Error Condition="'$(GflatProjectKind)' != 'Executable' and '$(GflatProjectKind)' != 'SourceLibrary'" Text="GflatProjectKind must be Executable or SourceLibrary." />
+    <Error Condition="'$(GflatOptimizationLevel)' != '0' and '$(GflatOptimizationLevel)' != '1' and '$(GflatOptimizationLevel)' != '2' and '$(GflatOptimizationLevel)' != '3'" Text="GflatOptimizationLevel must be 0, 1, 2, or 3." />
     <Error Condition="'$(GflatAsReference)' == 'true' and '$(GflatProjectKind)' != 'SourceLibrary'" Text="Only SourceLibrary projects can be referenced." />
     <MSBuild Projects="@(ProjectReference)" Targets="GflatGetSources" Properties="Configuration=$(Configuration);Platform=$(Platform);GflatAsReference=true">
       <Output TaskParameter="TargetOutputs" ItemName="_GflatReferenceSources" />
@@ -53,7 +54,7 @@
       <_GflatOptions Condition="'$(GflatProjectKind)' == 'Executable'">-o &quot;$(TargetPath)&quot;</_GflatOptions>
       <_GflatOptions Condition="'$(GflatEmitIR)' == 'true' and '$(GflatProjectKind)' == 'Executable'">--emit-ir -o &quot;$(GflatIROutput)&quot;</_GflatOptions>
     </PropertyGroup>
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot;  $(_GflatOptions) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot;  $(_GflatOptions) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
   </Target>
   <Target Name="Check" DependsOnTargets="_GflatPrepare">
     <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />

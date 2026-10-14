@@ -1,3 +1,5 @@
+#requires -PSEdition Desktop
+# The installed Visual Studio SDK checks require Windows PowerShell/.NET Framework.
 param([string]$Package = (Join-Path $PSScriptRoot 'bin/Release/net472/gflat.VisualStudio.vsix'))
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem

@@ -54,7 +54,11 @@ jobs:
         shell: pwsh
         run: ./build/stamp-vsix.ps1 -RunNumber ${{ github.run_number }} -Attempt ${{ github.run_attempt }}
       - run: ./editors/VisualStudio/build.ps1
-      - run: ./editors/VisualStudio/test-package.ps1
+      # The VS SDK harness uses .NET Framework APIs, including RealProxy/WPF.
+      # GitHub's default pwsh runs on modern .NET and cannot load that harness.
+      - name: Test Visual Studio package with the .NET Framework host
+        shell: powershell
+        run: ./editors/VisualStudio/test-package.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: gflat-visual-studio

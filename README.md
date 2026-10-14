@@ -108,7 +108,7 @@ Build the VSIX on Windows using Visual Studio MSBuild:
 
 ```powershell
 ./editors/VisualStudio/build.ps1
-./editors/VisualStudio/test-package.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./editors/VisualStudio/test-package.ps1
 ```
 
 ## Documentation and feedback

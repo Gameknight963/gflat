@@ -216,6 +216,8 @@ RGB colors. In particular, a syntactically recognizable method name uses the met
 classification before background analysis finishes, and `nothrow` uses a declaration
 keyword classification in both paths.
 
+Run `test-package.ps1` in Windows PowerShell (`powershell.exe`, not `pwsh`),
+because the installed VS SDK harness uses .NET Framework APIs.
 On a machine with the full IDE installed, `test-package.ps1` additionally takes a
 real packaged-server hover response and deserializes it using Visual Studio's own
 rich-content converter, checking its catalog icon and classified runs. This checks

@@ -1,3 +1,4 @@
+#requires -PSEdition Desktop
 param(
     [ValidateSet('Prepare', 'Validate')][string]$Mode,
     [Parameter(Mandatory)][string]$PackageDirectory,

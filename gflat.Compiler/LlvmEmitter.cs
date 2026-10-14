@@ -2541,6 +2541,8 @@ public partial class LlvmEmitter : IVisitor
         {
             string cmpLlvm = EmitType(leftType);
             string rightLlvm = EmitType(rightType);
+            if (_typeChecker.ResolveAlias(leftType) is NamedTypeExpression { Name: "null" })
+                cmpLlvm = _typeChecker.ResolveAlias(rightType) is NamedTypeExpression { Name: "null" } ? "i8*" : rightLlvm;
             if (cmpLlvm != rightLlvm && !isFloat)
             {
                 int leftBits = GetIntegerBitWidth(leftType);

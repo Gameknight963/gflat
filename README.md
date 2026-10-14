@@ -97,8 +97,9 @@ library projects and optimization settings, or try the [line-search utility](exa
 If setup fails, run `gflat doctor --native` to check SDK discovery, MSBuild,
 Clang, and native exception runtime linking.
 
-For Visual Studio, extract and install the VSIX, restart VS, then open a `.gfproj`
-or add it to an existing solution. The VSIX build number increases automatically
+For Visual Studio, extract and install the VSIX, restart VS, then use **File > New >
+Project** and search for **gflat**. Choose a Console Application or Source Library,
+or open an existing `.gfproj` and add it to a solution. The VSIX build number increases automatically
 ONLY so newer builds can replace older ones; it is not a language version.
 
 ## Build from source

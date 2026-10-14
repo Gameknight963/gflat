@@ -1,0 +1,22 @@
+<VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>gflat Source Library</Name>
+    <Description>Reusable gflat source code referenced by other gflat projects.</Description>
+    <ProjectType>gflat</ProjectType>
+    <TemplateID>gflat.SourceLibrary</TemplateID>
+    <DefaultName>GflatLibrary</DefaultName>
+    <CreateNewFolder>true</CreateNewFolder>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <SortOrder>20</SortOrder>
+    <LanguageTag>gflat</LanguageTag>
+    <PlatformTag>Windows</PlatformTag>
+    <PlatformTag>Linux</PlatformTag>
+    <ProjectTypeTag>Library</ProjectTypeTag>
+  </TemplateData>
+  <TemplateContent>
+    <Project File="Template.gfproj" TargetFileName="$projectname$.gfproj" ReplaceParameters="true">
+      <ProjectItem ReplaceParameters="true" OpenInEditor="true">main.gf</ProjectItem>
+      <ProjectItem ReplaceParameters="false">.gitignore</ProjectItem>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

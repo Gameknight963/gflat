@@ -50,6 +50,7 @@
     <Compile Include="GflatThemeColors.cs" />
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="GflatBuildProperties.cs" />
+    <Compile Include="../../gflat.Projects/ProjectSdk.cs"><Link>ProjectSdk.cs</Link></Compile>
     <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/MSBuild.Locator.txt"><Link>Licenses/MSBuild.Locator.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/Roslyn.txt"><Link>Licenses/Roslyn.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
@@ -82,8 +83,32 @@
       <Link>Compiler/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="../../build/Gflat.props;../../build/Gflat.targets">
+      <Link>Sdk/build/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="../../build/Rules/**/*">
+      <Link>Sdk/build/Rules/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="../../std/std.gfproj">
+      <Link>Sdk/std/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="../../std/core/**/*.gf">
+      <Link>Sdk/std/core/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="../../std/libc/**/*.gf">
+      <Link>Sdk/std/libc/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="obj/items/*.zip">
       <Link>ItemTemplates/%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="obj/projects/*.zip">
+      <Link>ProjectTemplates/%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="obj/server/**/*">

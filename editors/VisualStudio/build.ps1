@@ -28,6 +28,7 @@ dotnet publish (Join-Path $repoRoot 'gflat.LanguageServer/gflat.LanguageServer.c
 if ($LASTEXITCODE -ne 0) { throw 'Language server publishing failed' }
 dotnet publish (Join-Path $repoRoot 'gflat/gflat.csproj') -c $Configuration -r win-x64 --self-contained true -o (Join-Path $PSScriptRoot 'obj/compiler')
 if ($LASTEXITCODE -ne 0) { throw 'Compiler publishing failed' }
+& (Join-Path $PSScriptRoot 'build-project-templates.ps1') -Compiler (Join-Path $PSScriptRoot 'obj/compiler/gflat.exe')
 # Preserve the notices from the exact runtime pack being redistributed.
 $deps = Get-Content -Raw -LiteralPath (Join-Path $serverOutput 'gflat.LanguageServer.deps.json') | ConvertFrom-Json
 $runtime = $deps.libraries.PSObject.Properties.Name | Where-Object { $_ -like 'runtimepack.Microsoft.NETCore.App.Runtime.win-x64/*' } | Select-Object -First 1

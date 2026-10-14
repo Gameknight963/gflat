@@ -136,6 +136,16 @@ Build and install the VSIX, restart Visual Studio, and open `gflat.slnx`.
 The `std` and `hello` projects appear directly under the solution beside the C# tools.
 Use **Add > Existing Project** for another `.gfproj`.
 
+Use **File > New > Project** and search for **gflat** to create a Console
+Application or Source Library directly in your solution. These are native Visual
+Studio project templates, generated from the same starting files as `gflat new`.
+They import the SDK bundled with the extension through `GflatSdkRoot`; no
+version-specific extension installation path is saved in the project.
+
+The CLI and language server discover their installed SDK too, so these projects
+also work outside VS. For direct `dotnet msbuild` invocation, set `GflatSdkRoot`
+to your compiler bundle root in the environment or pass `-p:GflatSdkRoot=...`.
+
 No special solution folder is required. Visual Studio's optional
 [solution folders](https://learn.microsoft.com/en-us/visualstudio/ide/solutions-and-projects-in-visual-studio#solution-folder)
 only group projects in Solution Explorer; they do not change project loading or builds.
@@ -143,7 +153,7 @@ only group projects in Solution Explorer; they do not change project loading or 
 CPS owns the project tree, standard file commands, project-file editing and reload,
 configurations, property pages, and MSBuild invocation. The old handwritten
 hierarchy and its custom file dialogs have been removed. The extension supplies a
-`.gf` item template and the bundled compiler location.
+`.gf` item template, App/Library project templates, and the bundled compiler and SDK locations.
 
 The gflat projects remain excluded from the checked-in solution's automatic build
 so `dotnet build/test gflat.slnx` can bootstrap the tools. Build a gflat project
@@ -173,8 +183,7 @@ that native linking works; use `--native` for that.
 ## Remaining work
 
 Debugger/startup-project support, incremental native builds, package management,
-and binary libraries are not included. There is no Visual Studio New Project
-wizard yet; use `gflat new` and add the generated project to your solution.
+and binary libraries are not included.
 
 The previous `<GflatProject>` XML prototype is no longer supported. Convert it to
 `<Project>`, import the build files, and replace `Sources`/`Reference` with MSBuild

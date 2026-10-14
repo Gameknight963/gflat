@@ -1,0 +1,22 @@
+<VSTemplate Version="3.0.0" Type="Project" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>gflat Console Application</Name>
+    <Description>A native console application with the gflat standard library.</Description>
+    <ProjectType>gflat</ProjectType>
+    <TemplateID>gflat.ConsoleApplication</TemplateID>
+    <DefaultName>GflatApp</DefaultName>
+    <CreateNewFolder>true</CreateNewFolder>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <SortOrder>10</SortOrder>
+    <LanguageTag>gflat</LanguageTag>
+    <PlatformTag>Windows</PlatformTag>
+    <PlatformTag>Linux</PlatformTag>
+    <ProjectTypeTag>Console</ProjectTypeTag>
+  </TemplateData>
+  <TemplateContent>
+    <Project File="Template.gfproj" TargetFileName="$projectname$.gfproj" ReplaceParameters="true">
+      <ProjectItem ReplaceParameters="true" OpenInEditor="true">main.gf</ProjectItem>
+      <ProjectItem ReplaceParameters="false">.gitignore</ProjectItem>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

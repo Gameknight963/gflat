@@ -26,6 +26,23 @@ and `core/BufferTooSmallException.gf`, but does not require `String.gf`.
 `ConsoleString.gf` adds the optional owning-string conveniences. Referencing
 `std/std.gfproj` includes both.
 
+`ConsoleWriter.gf` adds `Console::Writer`, an `ITextWriter` adapter borrowing
+stdout. Pass its address to formatting functions to stream bytes without an
+intermediate string. It does not own or close stdout; call `Console::Flush()`
+explicitly when required:
+
+```gflat
+using std;
+int main()
+{
+    Console::Writer output = new Console::Writer();
+    int value = 42;
+    value.Format(&output);
+    Console::WriteLine();
+    return 0;
+}
+```
+
 ```gflat
 int main()
 {

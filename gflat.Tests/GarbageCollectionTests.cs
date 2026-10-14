@@ -17,6 +17,33 @@ public sealed class GarbageCollectionTests
     }
 
     [Fact]
+    public void ReusedRootFramesDoNotRetainRetiredObjects() => Succeeds("""
+        void Drop() { int^ value = new^ int(42); }
+        int main() {
+            for (int i = 0; i < 1200; i++) Drop();
+            if (GC::ManagedCount != (nuint)1200) return 1;
+            if (GC::Collect() != (nuint)1200) return 2;
+            return 0;
+        }
+        """);
+
+    [Fact]
+    public void DeepFramesStayRootedBeyondMetadataCacheCapacity() => Succeeds("""
+        void Recurse(int depth) {
+            int^ value = new^ int(depth);
+            if (depth != 0) Recurse(depth - 1);
+            GC::Collect();
+            if (*value != depth) throw new Exception("Lost recursive root");
+        }
+        int main() {
+            Recurse(80);
+            if (GC::ManagedCount != (nuint)1) return 1;
+            if (GC::Collect() != (nuint)1) return 2;
+            return 0;
+        }
+        """);
+
+    [Fact]
     public void PublicAdoptionAndLiveScalarReferencesWork() => Succeeds("""
         struct Widget { public int value; public Widget(int n) { value = n; } }
         int main() {

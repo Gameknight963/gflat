@@ -21,6 +21,12 @@ struct Allocation {
     Allocation* next;
 };
 Frame* frames = nullptr;
+Frame* spare_frames = nullptr;
+Range* spare_ranges = nullptr;
+std::size_t spare_frame_count = 0;
+std::size_t spare_range_count = 0;
+constexpr std::size_t max_spare_frames = 64;
+constexpr std::size_t max_spare_ranges = 256;
 Range* globals = nullptr;
 Allocation* native_allocations = nullptr;
 Allocation* managed_allocations = nullptr;
@@ -31,9 +37,12 @@ thread_local char thread_identity;
 
 void enter() noexcept {
     void* identity = &thread_identity;
+    void* current = owner.load(std::memory_order_acquire);
+    if (current == identity) return;
+    if (current) std::abort();
     void* expected = nullptr;
-    owner.compare_exchange_strong(expected, identity, std::memory_order_acq_rel);
-    if (owner.load(std::memory_order_acquire) != identity) std::abort();
+    if (!owner.compare_exchange_strong(expected, identity, std::memory_order_acq_rel) && expected != identity)
+        std::abort();
 }
 bool valid_range(void* address, std::size_t bytes) noexcept {
     auto start = reinterpret_cast<std::uintptr_t>(address);
@@ -54,7 +63,12 @@ void add_range(Range*& roots, void* address, std::size_t bytes) noexcept {
     if (!valid_range(address, bytes)) std::abort();
     for (auto* range = roots; range; range = range->next)
         if (range->address == address) { range->bytes = bytes; return; }
-    auto* range = static_cast<Range*>(required_allocate(sizeof(Range)));
+    Range* range;
+    if (spare_ranges) {
+        range = spare_ranges;
+        spare_ranges = range->next;
+        --spare_range_count;
+    } else range = static_cast<Range*>(required_allocate(sizeof(Range)));
     *range = {address, bytes, roots};
     roots = range;
 }
@@ -91,7 +105,12 @@ void scan(void* address, std::size_t bytes) noexcept {
 extern "C" {
 void* __gflat_gc_frame_enter() noexcept {
     enter();
-    auto* frame = static_cast<Frame*>(required_allocate(sizeof(Frame)));
+    Frame* frame;
+    if (spare_frames) {
+        frame = spare_frames;
+        spare_frames = frame->next;
+        --spare_frame_count;
+    } else frame = static_cast<Frame*>(required_allocate(sizeof(Frame)));
     *frame = {nullptr, frames};
     frames = frame;
     return frame;
@@ -110,9 +129,18 @@ void __gflat_gc_frame_leave(void* address) noexcept {
     while (frame->roots) {
         Range* root = frame->roots;
         frame->roots = root->next;
-        std::free(root);
+        if (spare_range_count < max_spare_ranges) {
+            // Retired metadata is never scanned and contains no retained root.
+            *root = {nullptr, 0, spare_ranges};
+            spare_ranges = root;
+            ++spare_range_count;
+        } else std::free(root);
     }
-    std::free(frame);
+    if (spare_frame_count < max_spare_frames) {
+        *frame = {nullptr, spare_frames};
+        spare_frames = frame;
+        ++spare_frame_count;
+    } else std::free(frame);
 }
 void __gflat_gc_global_root(void* address, std::size_t bytes) noexcept {
     enter();

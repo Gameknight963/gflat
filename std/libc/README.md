@@ -152,6 +152,9 @@ return. There is no compaction, finalization, pinning, or
 cross-thread collection support. Collector calls from a second thread terminate
 the process. Managed pointees cannot have destructors; native resource-owning
 types such as `File` and `String` continue to use ordinary value lifetimes.
+Programs using managed adoption register roots in their emitted gflat functions,
+so the default collector's single-thread restriction also applies to native
+callbacks into those functions.
 
 `Adopt` and `Collect` are weak, replaceable APIs. A custom collector also replaces
 the private `EnterFrame`, `AddRoot`, `LeaveFrame`, `TrackNative`, and `ForgetNative`
@@ -159,6 +162,8 @@ hooks. These infrastructure hooks must not throw, allocate managed values, or ca
 `Collect`; their implementations are excluded from compiler root instrumentation.
 Their metadata allocation must bypass `Memory::Allocate` and `Memory::Free`,
 which reenter these hooks. The default runtime uses the host allocator directly.
+It caches at most 64 retired frame records and 256 root records for reuse.
+Cached records contain no live roots; their storage is outside `ManagedBytes`.
 The default statistics describe the bundled collector, not a replacement's heap.
 Foreign code retaining managed references requires a registered runtime bridge;
 ordinary retained native pointers do not give it managed-reference tracking.

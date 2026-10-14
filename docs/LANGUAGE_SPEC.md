@@ -644,6 +644,15 @@ The compiler driver links a small C++ runtime, requiring Clang's C++ driver and 
 
 `const` functions can execute supported procedural logic during compilation. The evaluator limits execution to **100,000 steps and 256 calls**. It shares numeric conversion rules with the compiler; unsupported operations produce a constant-evaluation diagnostic. Compile-time execution is not a general macro or reflection facility.
 
+Constants follow lexical scope: a local or parameter can shadow a namespace
+constant without becoming constant itself. Constant evaluation uses the resolved
+declaration, rather than another constant with the same spelling.
+
+Generic bodies resolve names in their declaration context. Specialization does
+not capture the caller's locals, aliases, local enums, or control-flow state.
+Local enums belong to their enclosing block; identically named enums in different
+functions remain distinct types and retain their source names in type metadata.
+
 ## Explicit destructor calls
 
 `pointer.~T()` ends the lifetime of the pointed-to `T` without freeing its

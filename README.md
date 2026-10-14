@@ -31,11 +31,13 @@ This example uses std; see the runnable
 
 - Structs, classes, interfaces, generics, properties, and indexers.
 - Pointers, readonly access, custom allocators, and deterministic destruction.
+- Managed pointers (`T^`) with replaceable GC hooks and a single-threaded,
+  non-moving conservative collector. See the [managed example](examples/managed/README.md).
 - Native stack-unwinding exceptions, with optional `nothrow` termination boundaries.
 - Custom string literal prefixes and string interpolation. For example, create a `std::String` with the 's' prefix as shown in the example above
 - Multiple source files and MSBuild `.gfproj` projects.
 - Project creation with `gflat new`, configurable optimization, and `inline` hints.
-- Compile-time `typeof(T)` metadata for names, layout, and reference traits.
+- Compile-time `typeof(T)` metadata for names, layout, and recursive type structure.
 - A language server and Visual Studio integration with diagnostics, completion,
   syntax highlighting, navigation, and rich hovers.
 - Native Windows x64 and Linux x64 builds

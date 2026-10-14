@@ -34,6 +34,8 @@ This example uses std; see the runnable
 - Native stack-unwinding exceptions, with optional `nothrow` termination boundaries.
 - Custom string literal prefixes and string interpolation. For example, create a `std::String` with the 's' prefix as shown in the example above
 - Multiple source files and MSBuild `.gfproj` projects.
+- Project creation with `gflat new`, configurable optimization, and `inline` hints.
+- Compile-time `typeof(T)` metadata for names, layout, and reference traits.
 - A language server and Visual Studio integration with diagnostics, completion,
   syntax highlighting, navigation, and rich hovers.
 - Native Windows x64 and Linux x64 builds
@@ -42,7 +44,7 @@ This example uses std; see the runnable
 ## _Maybe_ in the future
 
  - Generators?
- - Reflection? (compile time)
+ - Compile-time member reflection?
  - Random important features it's missing
  - Probably a package manager
  - More editors support (vs code probably)
@@ -85,6 +87,10 @@ GFLAT_CLANG=clang-18 ./compiler/gflat build examples/interpolation/interpolation
 You can also compile individual files: `gflat main.gf helper.gf --run`.
 Add the bundle's `compiler` directory to PATH to use `gflat` anywhere.
 Keep std and the `build` directory together; example projects use relative imports.
+
+Create a project with `gflat new MyApp`, then run
+`gflat build MyApp/MyApp.gfproj --run`. See [project setup](docs/PROJECTS.md) for
+library projects and optimization settings, or try the [line-search utility](examples/search/README.md).
 
 For Visual Studio, extract and install the VSIX, restart VS, then open a `.gfproj`
 or add it to an existing solution. The VSIX build number increases automatically

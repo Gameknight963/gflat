@@ -123,7 +123,7 @@ the host target; cross-compilation is not supported.
 
 ## Visual Studio
 
-Build and install VSIX 0.4.0, restart Visual Studio, and open `gflat.slnx`.
+Build and install the VSIX, restart Visual Studio, and open `gflat.slnx`.
 The `std` and `hello` projects appear directly under the solution beside the C# tools.
 Use **Add > Existing Project** for another `.gfproj`.
 

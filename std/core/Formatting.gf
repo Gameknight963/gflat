@@ -18,23 +18,23 @@ namespace detail
     }
 }
 
-void Format(ulong value, ITextWriter* output) { detail::IntegerText(value, false, output); }
-void Format(long value, ITextWriter* output)
+void Format(this ulong value, ITextWriter* output) { detail::IntegerText(value, false, output); }
+void Format(this long value, ITextWriter* output)
 {
     if (value < 0l) detail::IntegerText(0ul - (ulong)value, true, output);
     else detail::IntegerText((ulong)value, false, output);
 }
-void Format(int value, ITextWriter* output) { std::Format((long)value, output); }
-void Format(uint value, ITextWriter* output) { std::Format((ulong)value, output); }
-void Format(short value, ITextWriter* output) { std::Format((long)value, output); }
-void Format(ushort value, ITextWriter* output) { std::Format((ulong)value, output); }
-void Format(sbyte value, ITextWriter* output) { std::Format((long)value, output); }
-void Format(byte value, ITextWriter* output) { std::Format((ulong)value, output); }
-void Format(nint value, ITextWriter* output) { std::Format((long)value, output); }
-void Format(nuint value, ITextWriter* output) { std::Format((ulong)value, output); }
-void Format(bool value, ITextWriter* output)
+void Format(this int value, ITextWriter* output) { std::Format((long)value, output); }
+void Format(this uint value, ITextWriter* output) { std::Format((ulong)value, output); }
+void Format(this short value, ITextWriter* output) { std::Format((long)value, output); }
+void Format(this ushort value, ITextWriter* output) { std::Format((ulong)value, output); }
+void Format(this sbyte value, ITextWriter* output) { std::Format((long)value, output); }
+void Format(this byte value, ITextWriter* output) { std::Format((ulong)value, output); }
+void Format(this nint value, ITextWriter* output) { std::Format((long)value, output); }
+void Format(this nuint value, ITextWriter* output) { std::Format((ulong)value, output); }
+void Format(this bool value, ITextWriter* output)
 {
     if (value) output.Write("true", 4);
     else output.Write("false", 5);
 }
-void Format(char value, ITextWriter* output) { output.Write(&value, 1); }
+void Format(this char value, ITextWriter* output) { output.Write(&value, 1); }

@@ -40,6 +40,7 @@ Interpolation uses `IFormattable.Format(ITextWriter*)` and
 call; it must not retain the input pointer. Strings write their existing bytes,
 including embedded nulls. Primitive `std::Format(value, writer)` overloads use
 stack buffers or literal text, without allocating intermediate strings.
+With `using std;`, primitive values also support `value.Format(writer)`.
 Floating-point overloads live in `../libc/Formatting.gf`.
 
 Only C-string consumers stop at the first null; counted operations and interpolation
@@ -61,7 +62,9 @@ if (TryParseInt("-42", &value)) {
 An optional leading `+` or `-` is accepted. Empty input, whitespace, nondecimal
 characters, and values outside the signed 32-bit range return `false` and set
 the result to zero. Parsing consumes the entire input and does not allocate,
-throw, or call libc. For a `String`, use `TryParseInt(text.Data, text.Length, &value)`.
+throw, or call libc. With `using std;`, C strings support
+`text.TryParseInt(&value)` and `text.ParseInt()`. A `String` supports the same
+calls using its counted bytes, without copying the string.
 
 `ParseInt(text)` and `ParseInt(data, count)` return the parsed `int` directly,
 using the same rules. They throw `Exception` on invalid input or overflow:

@@ -420,6 +420,18 @@ element. If a copy fails, completed subobjects are destroyed. Nontrivial copying
 not supported during constant evaluation. `foreach` copies elements and requires
 a copyable element type.
 
+For a custom collection, `foreach` calls `GetEnumerator()` using ordinary method
+resolution, including visible extension methods. The returned iterator must provide
+a `bool MoveNext()` method and a readable `Current` member. `Current` may be a
+parameterless method, property, reference-returning property, or field; a method
+takes precedence when present. Access restrictions, readonly receivers, and value
+copy rules apply as they do to ordinary calls and member reads. A reference-returning
+`Current` is copied into the loop variable; this does not introduce reference iteration.
+
+The collection expression is evaluated once. A temporary collection is kept alive
+until iteration ends, and the iterator is destroyed before that temporary collection.
+Normal completion, `break`, and exceptions use the usual scope cleanup rules.
+
 `move local` transfers a whole mutable local or parameter, including its destruction
 responsibility. The source becomes uninitialized: it cannot be read or moved again
 until assigned a new value, and its previous value is not destroyed there. This rule

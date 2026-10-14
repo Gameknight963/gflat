@@ -155,7 +155,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                             positionEncoding = "utf-16",
                             textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
                             completionProvider = new { triggerCharacters = new[] { ".", ":" } },
-                            hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true,
+                            hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true, referencesProvider = true,
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } },
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
                         }, serverInfo = new { name = "gflat", version = "0.2.0" } });
@@ -216,6 +216,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                     case "textDocument/completion":
                     case "textDocument/hover":
                     case "textDocument/definition":
+                    case "textDocument/references":
                     case "textDocument/signatureHelp":
                     case "textDocument/semanticTokens/full":
                     case "textDocument/semanticTokens/range":
@@ -254,6 +255,8 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                 "textDocument/completion" => model.Completion(path, offset),
                 "textDocument/hover" => model.Hover(path, offset, hoverPresentation, hoverOptions),
                 "textDocument/definition" => model.Definition(path, offset),
+                "textDocument/references" => model.References(path, offset,
+                    query.Parameters.GetProperty("context").GetProperty("includeDeclaration").GetBoolean()),
                 "textDocument/signatureHelp" => model.SignatureHelp(path, offset, tokenTypes == EditorModel.VisualStudioTokenTypes),
                 _ => model.SemanticTokens(path, range)
             };

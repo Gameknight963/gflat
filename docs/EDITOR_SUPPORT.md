@@ -3,7 +3,11 @@
 The Visual Studio extension provides live compiler diagnostics, syntax highlighting,
 bracket matching, automatic bracket/quote closing, selection surrounding, block
 indentation, and line/block comment commands. It also provides scope/member completion,
-hover, signature help, go to definition, and semantic highlighting through the built-in LSP UI.
+hover, signature help, go to definition, Find All References, and semantic highlighting through the built-in LSP UI.
+Reference searches use resolved symbols across the analyzed project, including unsaved
+documents. Same-named locals, members, and overloads remain separate; bound extension
+calls and ordinary calls refer to the same declaration. Results contain source ranges,
+so the editor provides the results list and navigation through its existing LSP UI.
 Method hovers show the signature. An optional `Exceptions:` section lists known outgoing
 exceptions, one type per line; it is disabled by default. Caught exceptions and terminating
 `nothrow` boundaries do not appear as outgoing exceptions. Unknown dispatch targets are omitted.

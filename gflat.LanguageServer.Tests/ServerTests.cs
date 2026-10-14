@@ -8,6 +8,37 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ServerTests
 {
     [Fact]
+    public async Task ReferencesUseUnsavedProjectSnapshotsAndDeclarationOption()
+    {
+        await using var s = new Session();
+        System.IO.File.WriteAllText(s.File(Workspace.ConfigurationName), "{\"sources\":[\"main.gf\",\"helper.gf\"]}");
+        System.IO.File.WriteAllText(s.File("helper.gf"), "int Answer() => 1;");
+        await s.Initialize();
+        const string main = "int F() => Answer(); int G() => Answer();";
+        await s.Open("main.gf", main);
+        await s.Diagnostics("main.gf", 1);
+        await s.Open("helper.gf", "int Answer() => 42;");
+        await s.Diagnostics("helper.gf", 1);
+        int id = 710;
+        async Task<JsonElement> References(bool includeDeclaration)
+        {
+            int request = id++;
+            await s.Send(new { jsonrpc = "2.0", id = request, method = "textDocument/references", @params = new {
+                textDocument = new { uri = s.Uri("main.gf") }, position = new { line = 0, character = main.IndexOf("Answer", StringComparison.Ordinal) },
+                context = new { includeDeclaration } } });
+            return (await s.Receive(x => x.TryGetProperty("id", out var value) && value.ValueKind == JsonValueKind.Number && value.GetInt32() == request)).GetProperty("result");
+        }
+        Assert.Equal(2, (await References(false)).GetArrayLength());
+        var all = await References(true);
+        Assert.Equal(3, all.GetArrayLength());
+        Assert.Contains(all.EnumerateArray(), location => location.GetProperty("uri").GetString() == s.Uri("helper.gf"));
+        await s.Change("main.gf", "int F() => Answer();", 2);
+        await s.Diagnostics("main.gf", 2);
+        Assert.Single((await References(false)).EnumerateArray());
+        await s.Stop();
+    }
+
+    [Fact]
     public async Task BrokenProjectDependencyPreservesEditorServicesAcrossEdits()
     {
         await using var s = new Session();

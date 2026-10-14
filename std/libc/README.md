@@ -114,3 +114,61 @@ int main()
   full Unicode filename support on Windows, seeking, async IO, or directory APIs.
 
 `examples/search` is a small command-line line-search tool using this API.
+
+## Managed memory
+
+`GC.gf` supplies the default hooks used by `new^`, backed by the native runtime's
+single-threaded, non-moving conservative collector. Include it explicitly or
+reference `std/std.gfproj`. `GC::Collect()` explicitly collects and returns the
+number of allocations reclaimed. `ManagedCount` and `ManagedBytes` report the
+default collector's owned allocations and their complete allocated sizes.
+
+Before transferring ownership, the default `Adopt` automatically collects when
+adopted bytes since the previous collection reach `CollectionThreshold()`.
+Its weak default returns 65536 (64 KiB). Replace `GC::CollectionThreshold` to
+choose another budget; zero disables automatic collection. The pending allocation
+remains a scanned native root during this collection. The budget counts allocations
+since collection, rather than current live heap size.
+
+`GC::Adopt<T>(T* storage)` accepts a constructed, destructor-free object at the
+base of a `Memory::Allocate` allocation and returns `T^`. Ownership transfers only
+on success. Afterwards, existing raw aliases must not destroy or free it. A direct
+failed adoption leaves existing ownership unchanged; a previously adopted object
+remains GC-owned, even if a second adoption is rejected. `new^` performs its
+own failure cleanup and throws on failed allocation or adoption.
+On storage allocation failure, `new^` collects and retries once before throwing
+`BadAllocException`.
+
+The compiler supplies root frames and temporary slots. Native allocations are
+scanned as roots until freed or adopted, so native collections can hold managed
+references. Adopted objects are scanned transitively and reclaimed through the
+selected `Memory::Free`; replacing the Memory hooks preserves this bookkeeping.
+`Vector<T>` clears removed element bytes so retained capacity does not keep stale
+managed references alive after `Pop` or `Clear`.
+
+Scanning is conservative: arbitrary bytes that resemble object addresses can keep
+objects alive, and compiler temporary roots can retain objects until function
+return. There is no compaction, finalization, pinning, or
+cross-thread collection support. Collector calls from a second thread terminate
+the process. Managed pointees cannot have destructors; native resource-owning
+types such as `File` and `String` continue to use ordinary value lifetimes.
+
+`Adopt` and `Collect` are weak, replaceable APIs. A custom collector also replaces
+the private `EnterFrame`, `AddRoot`, `LeaveFrame`, `TrackNative`, and `ForgetNative`
+hooks. These infrastructure hooks must not throw, allocate managed values, or call
+`Collect`; their implementations are excluded from compiler root instrumentation.
+Their metadata allocation must bypass `Memory::Allocate` and `Memory::Free`,
+which reenter these hooks. The default runtime uses the host allocator directly.
+The default statistics describe the bundled collector, not a replacement's heap.
+Foreign code retaining managed references requires a registered runtime bridge;
+ordinary retained native pointers do not give it managed-reference tracking.
+Taking addresses directly through managed views is restricted, but methods can
+expose borrowed interior pointers under the current non-moving lifetime rules.
+The compiler does not establish the lifetime of those raw borrows.
+The default collector terminates if a manual `Memory::Free` targets a known
+collector-owned allocation or its interior. This also prevents deleting a managed
+object through a method's raw `this`; it is not general raw-pointer ownership
+checking. Collector reclamation detaches records before calling the deallocator.
+
+`examples/managed` demonstrates live graph references in a native Vector and
+reclamation of cycles after removing their roots.

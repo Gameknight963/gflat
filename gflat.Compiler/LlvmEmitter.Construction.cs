@@ -43,7 +43,14 @@ public partial class LlvmEmitter
     private sealed class ExceptionAllocationCleanup(string address) : IDeferAction
     {
         public void Execute(LlvmEmitter emitter)
-            => emitter.Emit($"    call void @__gflat_eh_free_exception(i8* {address}, void (i8*)* @gflat$Memory$Free)");
+            => emitter.EmitExceptionFree(address);
+    }
+
+    private void EmitExceptionFree(string address)
+    {
+        string name = _typeChecker.UsesCollector ? "__gflat_eh_free_exception_gc" : "__gflat_eh_free_exception";
+        string forgetting = _typeChecker.UsesCollector ? ", void (i8*)* @gflat$GC$ForgetNative" : "";
+        Emit($"    call void @{name}(i8* {address}, void (i8*)* @gflat$Memory$Free{forgetting})");
     }
 
     private void BeginConstruction(string name, ConstructorDeclaration constructor)

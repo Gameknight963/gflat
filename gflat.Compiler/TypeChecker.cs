@@ -944,6 +944,7 @@ namespace gflat
             }
 
             string definitionNamespace = GetFunctionNamespace(genericDef);
+            if (definitionNamespace == "GC" && genericDef.Name == "Adopt") _usesCollector = true;
             string mangledName = (definitionNamespace.Length > 0 ? definitionNamespace + "$" : "") + $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
             _displayNames[mangledName] = (definitionNamespace.Length > 0 ? definitionNamespace + "::" : "") + DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             if (_globalScope.Functions.TryGetValue(mangledName, out MethodDeclaration? existing))
@@ -2018,6 +2019,7 @@ namespace gflat
             ResolveDeclaredBaseTypes(node);
             ResolveDeclarationSignatures(node);
             PrepareOverloads(node);
+            AnalyzeSafely(ValidateCollectorHooks);
 
             // Pass 2: Hierarchy resolution
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
@@ -4708,6 +4710,7 @@ namespace gflat
             if (ext != null)
             {
                 ValidateExternAccess(ext, node.Span);
+                if (IsManagedAdoptionBridge(ext)) _usesCollector = true;
                 _resolvedCalls[node] = ext;
                 AddDefaultArguments(node.Arguments, ext.Parameters, node);
                 if (node.Arguments.Count < ext.Parameters.Count || !ext.IsVariadic && node.Arguments.Count > ext.Parameters.Count)
@@ -5086,7 +5089,7 @@ namespace gflat
 
         private void CheckAllocationFailure(NewExpression node)
         {
-            if (node.Kind != AllocationKind.Pointer || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
+            if ((node.Kind != AllocationKind.Pointer && !(node.Kind == AllocationKind.Managed && GetManagedAdoption(node) != null)) || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
             if (GetClass("std::BadAllocException") == null)
                 throw new TypeCheckException("new* requires std::BadAllocException; a custom Exception root must provide the standard (message, code) constructor or define its own std::BadAllocException", node.Span);
             var value = new NewExpression(new NamedTypeExpression("BadAllocException", "std", node.Line), [], AllocationKind.Value, node.Line) { Span = node.Span };
@@ -5112,7 +5115,8 @@ namespace gflat
             if (node.Kind == AllocationKind.Managed)
             {
                 ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line), node.Line);
-                RequireManagedAllocator(node.Line);
+                if (HasCollectorRuntime && !HasLegacyManagedAllocator) CheckManagedAdoption(node);
+                else RequireManagedAllocator(node.Line);
                 if (resolvedType is NamedTypeExpression scalar && IsPrimitive(scalar.Name) && scalar.Name != "void")
                 {
                     if (node.Arguments.Count > 1)
@@ -5565,6 +5569,9 @@ namespace gflat
                 throw new TypeCheckException("Namespace extern declarations cannot be protected", node.Span);
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.ReturnType, node.Line);
+            if (!IsManagedAdoptionBridge(node) && (ContainsManagedReference(node.ReturnType) ||
+                node.Parameters.Any(p => ContainsManagedReference(p.Type))))
+                throw new TypeCheckException("Extern signatures cannot contain managed references or storage containing them; use a raw native boundary", node.Span);
             ValidateParameterDefaults(node, node.Parameters);
             foreach (var parameter in node.Parameters)
             {
@@ -5992,6 +5999,12 @@ namespace gflat
             // Managed to managed
             if (src is ManagedTypeExpression sourceManaged && dst is ManagedTypeExpression targetManaged)
             {
+                // An opaque managed address may be recovered as a concrete managed
+                // type. The adoption boundary supplies the storage contract; raw
+                // addresses still cannot be cast directly into managed references.
+                if (ResolveAlias(sourceManaged.Inner) is NamedTypeExpression { Name: "void" } &&
+                    ResolveAlias(targetManaged.Inner) is NamedTypeExpression concrete && !IsInterface(concrete))
+                    return true;
                 return IsAssignable(new ManagedTypeExpression(targetManaged.Inner, false, targetManaged.Line, targetManaged.IsReadOnly),
                     new ManagedTypeExpression(sourceManaged.Inner, false, sourceManaged.Line, sourceManaged.IsReadOnly));
             }

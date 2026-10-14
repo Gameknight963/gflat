@@ -571,7 +571,7 @@ public partial class LlvmEmitter : IVisitor
         Emit($"{ok}:");
     }
 
-    public string GetOutput() => "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + NativeDeclarations + _globals.ToString() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString();
+    public string GetOutput() => LowerCollectorRoots("target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + NativeDeclarations + _globals.ToString() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString());
 
     private enum EmitMode { RValue, LValue }
 
@@ -3874,11 +3874,20 @@ public partial class LlvmEmitter : IVisitor
                 value = EmitImplicitCast(Pop(), _typeChecker.GetType(node.Arguments[0]), resolvedType);
             }
             string memory = NewTemp();
-            Emit($"    {memory} = call i8* @__gflat_gc_alloc(i{TargetInfo.Default.PointerBits} {_typeChecker.GetTypeSize(resolvedType)})");
-            GuardNonNull(memory, "i8*");
+            bool adopting = _typeChecker.GetManagedAdoption(node) != null;
+            if (adopting) memory = EmitManagedAllocation(Math.Max(1, _typeChecker.GetTypeSize(resolvedType)).ToString());
+            else Emit($"    {memory} = call i8* @__gflat_gc_alloc(i{TargetInfo.Default.PointerBits} {Math.Max(1, _typeChecker.GetTypeSize(resolvedType))})");
+            GuardAllocation(node, memory);
             string address = NewTemp();
             Emit($"    {address} = bitcast i8* {memory} to {scalarType}*");
             Emit($"    store {scalarType} {value}, {scalarType}* {address}");
+            if (adopting)
+            {
+                var cleanup = new ExceptionOnlyCleanup(new AllocationCleanup(memory));
+                _deferScopes[^1].Add(cleanup);
+                address = EmitManagedAdoption(node, address);
+                _deferScopes[^1].Remove(cleanup);
+            }
             Push(address);
             return;
         }
@@ -3935,7 +3944,8 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (node.Kind is AllocationKind.Pointer or AllocationKind.Managed)
         {
-            string allocator = node.Kind == AllocationKind.Managed ? "__gflat_gc_alloc" : "gflat$Memory$Allocate";
+            bool adopting = _typeChecker.GetManagedAdoption(node) != null;
+            string allocator = node.Kind == AllocationKind.Managed && !adopting ? "__gflat_gc_alloc" : "gflat$Memory$Allocate";
             // gflat$Memory$Allocate is defined in user code (or std/libc/Memory.gf), no declare needed
             _ = _externNames.Add("gflat$Memory$Allocate");
 
@@ -3943,9 +3953,12 @@ public partial class LlvmEmitter : IVisitor
             Emit($"    {sizePtr} = getelementptr %{typeName}, %{typeName}* null, i32 1");
             string sizeInt = NewTemp();
             Emit($"    {sizeInt} = ptrtoint %{typeName}* {sizePtr} to i{TargetInfo.Default.PointerBits}");
+            if (adopting && _typeChecker.GetTypeSize(node.Type) == 0) sizeInt = "1";
 
             string rawMem = NewTemp();
-            if (node.Destination == null)
+            if (node.Destination == null && adopting)
+                rawMem = EmitManagedAllocation(sizeInt);
+            else if (node.Destination == null)
                 Emit($"    {rawMem} = call i8* @{allocator}(i{TargetInfo.Default.PointerBits} {sizeInt})");
             else
             {
@@ -3976,7 +3989,7 @@ public partial class LlvmEmitter : IVisitor
                     }
                 }
                 IDeferAction? allocationCleanup = null;
-                if (node.Kind == AllocationKind.Pointer && node.Destination == null)
+                if ((node.Kind == AllocationKind.Pointer || adopting) && node.Destination == null)
                 {
                     allocationCleanup = new AllocationCleanup(rawMem);
                     _deferScopes[^1].Add(allocationCleanup);
@@ -3986,6 +3999,13 @@ public partial class LlvmEmitter : IVisitor
                 if (allocationCleanup != null) _deferScopes[^1].Remove(allocationCleanup);
             }
 
+            if (adopting)
+            {
+                var cleanup = new ExceptionOnlyCleanup(new AllocationCleanup(rawMem));
+                _deferScopes[^1].Add(cleanup);
+                typedPtr = EmitManagedAdoption(node, typedPtr);
+                _deferScopes[^1].Remove(cleanup);
+            }
             Push(typedPtr);
         }
         else
@@ -4493,7 +4513,7 @@ public partial class LlvmEmitter : IVisitor
         Emit("    br label %release");
         Emit("release:");
         Emit("    %raw = bitcast %Exception* %exception to i8*");
-        Emit("    call void @__gflat_eh_free_exception(i8* %raw, void (i8*)* @gflat$Memory$Free)");
+        EmitExceptionFree("%raw");
         Emit("    ret void");
         Emit("}");
     }

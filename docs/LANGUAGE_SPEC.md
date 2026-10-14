@@ -788,3 +788,16 @@ int main() {
     return 0;
 }
 ```
+
+## Inline hints
+
+`inline` requests inlining of a concrete function, method, constructor, destructor,
+operator, or property accessor. It is an optimization hint, not a guarantee, and
+changes neither visibility nor linkage. On a property it applies to its accessors.
+Abstract and extern declarations cannot use it. Optimization level 0 generally
+keeps calls; optimized builds let LLVM decide whether inlining is beneficial.
+
+```gflat
+inline int Add(int left, int right) => left + right;
+int main() { return Add(20, 22); }
+```

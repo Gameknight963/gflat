@@ -102,6 +102,7 @@ namespace gflat
             TokenKind.Unsafe => "unsafe",
             TokenKind.Const => "const",
             TokenKind.Static => "static",
+            TokenKind.Inline => "inline",
             TokenKind.Readonly => "readonly",
             TokenKind.Null => "null",
             TokenKind.Extern => "extern",

@@ -34,6 +34,8 @@ public partial class TypeChecker
                 {
                     using var context = SourceContext.Enter(property.Span);
                     _hasProperties = true;
+                    if (owner is InterfaceDeclaration && property.IsInline)
+                        throw new TypeCheckException("inline requires a concrete implementation", property.Line);
                     if (owner == null)
                     {
                         if (property.Initializer != null || new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>().Any(a => a.Body == null))
@@ -87,7 +89,7 @@ public partial class TypeChecker
                             owner is InterfaceDeclaration ? TokenKind.Public : accessor.Accessibility,
                             accessor.IsStatic, accessor.IsVirtual, accessor.IsOverride, signature, accessor.Line,
                             accessor.IsReadOnly || auto && getter && !accessor.IsVirtual && !accessor.IsOverride, isNoThrow: accessor.IsNoThrow)
-                        { PropertyName = property.Name, Span = accessor.Span.Source == null ? property.Span : accessor.Span });
+                        { IsInline = accessor.IsInline, PropertyName = property.Name, Span = accessor.Span.Source == null ? property.Span : accessor.Span });
                     }
                     if (auto && property.Setter == null)
                     {

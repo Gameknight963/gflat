@@ -6,6 +6,7 @@ namespace gflat;
 
 public partial class LlvmEmitter : IVisitor
 {
+    private static string InlineHint(AstNode? node) => node?.IsInline == true ? " inlinehint" : "";
     private readonly TypeChecker _typeChecker;
 
     public LlvmEmitter(TypeChecker typeChecker)
@@ -1237,7 +1238,7 @@ public partial class LlvmEmitter : IVisitor
 
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        Emit($"define {returnType} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
@@ -1322,7 +1323,7 @@ public partial class LlvmEmitter : IVisitor
 
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}) {{");
+        Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
 
@@ -1493,7 +1494,7 @@ public partial class LlvmEmitter : IVisitor
         string ns = _currentNamespacePath;
         string mangledName = ns.Length > 0 ? $"gflat${ns}${className}$dtor" : $"gflat${className}$dtor";
 
-        Emit($"define void @{mangledName}(%{className}* %this) {{");
+        Emit($"define void @{mangledName}(%{className}* %this){InlineHint(node)} {{");
         Emit("entry:");
 
         string thisPtr = NewTemp();
@@ -1712,7 +1713,7 @@ public partial class LlvmEmitter : IVisitor
 
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        Emit($"define {returnType} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
@@ -1763,7 +1764,7 @@ public partial class LlvmEmitter : IVisitor
 
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {returnType} @{mangledName}({parameters}) {{");
+        Emit($"define {returnType} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
@@ -1858,7 +1859,7 @@ public partial class LlvmEmitter : IVisitor
 
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}) {{");
+        Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
 
@@ -1939,7 +1940,7 @@ public partial class LlvmEmitter : IVisitor
         string ns = _currentNamespacePath;
         string mangledName = ns.Length > 0 ? $"gflat${ns}${structName}$dtor" : $"gflat${structName}$dtor";
 
-        Emit($"define void @{mangledName}(%{structName}* %this) {{");
+        Emit($"define void @{mangledName}(%{structName}* %this){InlineHint(node)} {{");
         Emit("entry:");
 
         string thisPtr = NewTemp();
@@ -2039,7 +2040,7 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", node.Parameters.Select(p =>
             $"{EmitParamType(p.Type)} %{p.Name}"));
 
-        Emit($"define {returnType} @{name}({parameters}) {{");
+        Emit($"define {returnType} @{name}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
 
@@ -4378,7 +4379,7 @@ public partial class LlvmEmitter : IVisitor
         _deferScopes.Clear();
 
         string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitParamType(p.Type)} %{p.Name}"));
-        Emit($"define {llvmReturnType} @{funcName}({parameters}) {{");
+        Emit($"define {llvmReturnType} @{funcName}({parameters}){InlineHint(node)} {{");
         Emit("entry:");
 
         foreach (Parameter p in node.Parameters)

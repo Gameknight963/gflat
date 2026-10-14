@@ -252,6 +252,7 @@ public class Lexer
             "unsafe" => TokenKind.Unsafe,
             "const" => TokenKind.Const,
             "static" => TokenKind.Static,
+            "inline" => TokenKind.Inline,
             "readonly" => TokenKind.Readonly,
             "virtual" => TokenKind.Virtual,
             "override" => TokenKind.Override,

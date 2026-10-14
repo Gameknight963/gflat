@@ -85,6 +85,7 @@ namespace gflat
         Unsafe,
         Const,
         Static,
+        Inline,
         Readonly,
         Virtual,
         Override,

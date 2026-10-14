@@ -260,8 +260,9 @@ namespace gflat
             bool isReadonly = false;
             bool isConst = false;
             bool isAbstract = false;
+            bool isInline = false;
             FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
-            AstNode Finish(AstNode node) => ApplyImplementationKind(node, implementation);
+            AstNode Finish(AstNode node) => ApplyInline(ApplyImplementationKind(node, implementation), isInline);
 
             while (true)
             {
@@ -281,6 +282,11 @@ namespace gflat
                     isConst = true;
                     Consume();
                 }
+                else if (Match(TokenKind.Inline))
+                {
+                    if (isInline) throw new TypeCheckException("Duplicate inline modifier", line);
+                    isInline = true;
+                }
                 else if (Check(TokenKind.Abstract))
                 {
                     isAbstract = true;
@@ -297,7 +303,7 @@ namespace gflat
 
             if (Check(TokenKind.Extern))
             {
-                if (isReadonly || isConst || isAbstract || implementation != FunctionImplementationKind.Ordinary)
+                if (isReadonly || isConst || isAbstract || isInline || implementation != FunctionImplementationKind.Ordinary)
                     throw new TypeCheckException("extern declarations accept only accessibility modifiers", Current.Span);
                 return ParseExternDeclaration(attributes, line, accessibility);
             }
@@ -324,7 +330,7 @@ namespace gflat
             {
                 if (isReadonly || isConst || isAbstract || genericParams.Count != 0 || implementation != FunctionImplementationKind.Ordinary)
                     throw new TypeCheckException("Namespace properties do not support receiver modifiers, const, abstract, generics, weak, or replace", line);
-                return ParseProperty(type, name, accessibility, false, false, false, false, false, line);
+                return Finish(ParseProperty(type, name, accessibility, false, false, false, false, false, line));
             }
 
             return Finish(ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, line));
@@ -337,6 +343,25 @@ namespace gflat
                 throw new TypeCheckException("weak and replace apply only to ordinary functions and methods", node.Line);
             method.ImplementationKind = kind;
             return method;
+        }
+
+        private static AstNode ApplyInline(AstNode node, bool inline)
+        {
+            if (!inline) return node;
+            if (node is PropertyDeclaration property)
+            {
+                foreach (var accessor in new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>())
+                {
+                    if (accessor.IsAbstract) throw new TypeCheckException("inline requires a concrete implementation", node.Line);
+                    accessor.IsInline = true;
+                }
+            }
+            else if (node is MethodDeclaration { IsAbstract: true } or MethodDeclaration { Body: null })
+                throw new TypeCheckException("inline requires a concrete implementation", node.Line);
+            else if (node is not (MethodDeclaration or ConstructorDeclaration or DestructorDeclaration or OperatorDeclaration))
+                throw new TypeCheckException("inline applies only to callable declarations and properties", node.Line);
+            node.IsInline = true;
+            return node;
         }
 
         private List<GenericParameter> ParseGenericParameters()
@@ -552,8 +577,9 @@ namespace gflat
             bool isVirtual = false;
             bool isOverride = false;
             bool isAbstract = false;
+            bool isInline = false;
             FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
-            AstNode Finish(AstNode node) => ApplyImplementationKind(node, implementation);
+            AstNode Finish(AstNode node) => ApplyInline(ApplyImplementationKind(node, implementation), isInline);
 
             while (true)
             {
@@ -566,6 +592,7 @@ namespace gflat
                 else if (Check(TokenKind.Virtual)) { isVirtual = true; Consume(); }
                 else if (Check(TokenKind.Override)) { isOverride = true; Consume(); }
                 else if (Check(TokenKind.Abstract)) { isAbstract = true; Consume(); }
+                else if (Match(TokenKind.Inline)) { if (isInline) throw new TypeCheckException("Duplicate inline modifier", line); isInline = true; }
                 else if (Check(TokenKind.Weak) || Check(TokenKind.Replace))
                 {
                     if (implementation != FunctionImplementationKind.Ordinary)
@@ -577,7 +604,7 @@ namespace gflat
 
             if (Check(TokenKind.Extern))
             {
-                if (isReadonly || isConst || isStatic || isVirtual || isOverride || isAbstract || implementation != FunctionImplementationKind.Ordinary)
+                if (isReadonly || isConst || isStatic || isVirtual || isOverride || isAbstract || isInline || implementation != FunctionImplementationKind.Ordinary)
                     throw new TypeCheckException("extern declarations accept only accessibility modifiers", Current.Span);
                 return ParseExternDeclaration(attributes, line, accessibility);
             }
@@ -652,7 +679,7 @@ namespace gflat
                     throw new TypeCheckException("Indexers must be instance properties and cannot be const, weak, or replace", line);
                 if (indices.Any(p => p.IsConst || p.Name == "value"))
                     throw new TypeCheckException("Indexer parameters cannot be const or named 'value' (reserved for the setter)", line);
-                return ParseProperty(type, "$index", accessibility, false, isVirtual, isOverride, isAbstract, isReadonly, line, indices, isRef);
+                return Finish(ParseProperty(type, "$index", accessibility, false, isVirtual, isOverride, isAbstract, isReadonly, line, indices, isRef));
             }
 
             name = Expect(TokenKind.Identifier).Text;
@@ -669,7 +696,7 @@ namespace gflat
             {
                 if (genericParams.Count != 0 || implementation != FunctionImplementationKind.Ordinary || isConst)
                     throw new TypeCheckException("Properties cannot be generic, const, weak, or replace", line);
-                return ParseProperty(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, isReadonly, line, isRef: isRef);
+                return Finish(ParseProperty(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, isReadonly, line, isRef: isRef));
             }
 
             return Finish(ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line));

@@ -27,6 +27,7 @@ internal sealed class GflatBuildProperties : StaticGlobalPropertiesProviderBase
         string sdk = ProjectSdk.FindRoot(extension) ?? throw new FileNotFoundException("The gflat SDK is missing. Reinstall the gflat Visual Studio extension.");
         return Task.FromResult<IImmutableDictionary<string, string>>(
             Empty.PropertiesMap.SetItem("GflatBundledCompiler", ProjectSdk.EscapePropertyValue(compiler))
+                .SetItem("GflatCompilerPath", ProjectSdk.EscapePropertyValue(compiler))
                 .SetItem("GflatDefaultSdkRoot", ProjectSdk.EscapePropertyValue(sdk)));
     }
 }

@@ -15,6 +15,17 @@ internal static class ProjectBuild
         Property("Platform", platform);
         if (project.SdkRoot != null) Property("GflatDefaultSdkRoot", project.SdkRoot);
         Property("GflatCompilerCommand", "dotnet \"" + assembly + "\"");
+        Property("GflatCompilerPath", assembly);
+        var graph = ProjectGraph.Load(project.FilePath,
+            path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel));
+        Property("GflatProjectInputs", string.Join(";", graph.Projects
+            .SelectMany(item => item.Imports.Prepend(item.FilePath)).Distinct(ProjectModel.Paths)
+            .Select(ProjectSdk.EscapePropertyValue)));
+        if (!emitIr && target is "Build" or "Rebuild")
+        {
+            try { Property("GflatDefaultClangInput", NativeToolchain.FindClang(clang)); }
+            catch (FileNotFoundException) { /* The compiler reports the missing driver if needed. */ }
+        }
         if (emitIr) Property("GflatEmitIR", "true");
         if (output != null) Property(emitIr ? "GflatIROutput" : "TargetPath", output);
         if (clang != null) Property("GflatClang", clang);
@@ -27,5 +38,5 @@ internal static class ProjectBuild
     }
 
     private static string Escape(string value) => value.Replace("%", "%25").Replace(";", "%3B")
-        .Replace(",", "%2C").Replace("$", "%24").Replace("@", "%40").Replace("'", "%27");
+        .Replace(",", "%2C").Replace("$", "%24").Replace("@", "%40").Replace("'", "%27").Replace("\"", "%22");
 }

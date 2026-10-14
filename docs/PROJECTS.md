@@ -102,14 +102,31 @@ gflat clean examples/hello/hello.gfproj
 In a checkout, substitute `dotnet run --project gflat --` for `gflat`.
 Executables default to `bin/<Configuration>/<project-name>.exe`; LLVM output uses
 `.ll`. `-o` overrides the CLI output. Clean removes the configured executable,
-its default `.ll`, and the generated source list, preserving other files. Custom
+its default `.ll`, the generated source list, and incremental stamps, preserving other files. Custom
 IR outputs are retained. Clean currently requires an `.exe` target name.
 
 The targets choose `GflatCompilerCommand` if explicitly configured, otherwise the
 VSIX's bundled compiler when building in Visual Studio, the checkout's Debug
 compiler if available, or `gflat` from PATH. Outside this checkout, distribute
 `build/Gflat.props`, `build/Gflat.targets`, and `build/Rules` with your build setup
-and adjust imports. An SDK/package distribution mechanism is not implemented yet.
+and adjust imports, or use the SDK included in nightly downloads and the VSIX.
+
+### Incremental CLI builds
+
+`gflat build` skips executable compilation when its output and success stamp are
+newer than all inputs. The input manifests include sources, referenced projects,
+evaluated imports, compiler and runtime files, and the native driver. Adding or
+removing sources and changing build options also invalidates the build. A failed
+compilation removes the success stamp; `gflat clean` removes it too. Library
+builds and `gflat check` always run analysis.
+
+Visual Studio and direct MSBuild builds still compile every time unless the
+caller supplies the complete evaluated import graph in `GflatProjectInputs`.
+The CLI supplies that graph automatically. A custom compiler command remains
+uncached unless it declares its dependencies as `GflatCompilerInputs` items.
+Native caching also requires an existing driver executable; a driver name that
+only resolves through PATH remains uncached. This uses MSBuild timestamp checks,
+so changing file contents while preserving their timestamps is not detected.
 
 `GflatExceptionReserveBytes` sets the native exception runtime's emergency reserve
 for the executable. The default is 65536 bytes; zero disables the reserve. Set it
@@ -182,7 +199,7 @@ that native linking works; use `--native` for that.
 
 ## Remaining work
 
-Debugger/startup-project support, incremental native builds, package management,
+Debugger/startup-project support, package management,
 and binary libraries are not included.
 
 The previous `<GflatProject>` XML prototype is no longer supported. Convert it to

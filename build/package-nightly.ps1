@@ -34,7 +34,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot identify source commit' }
 $compiler = Join-Path $output 'compiler/gflat.dll'
 dotnet $compiler --help
 if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler failed to start' }
-foreach ($example in @('hello', 'interpolation')) {
+foreach ($example in @('hello', 'interpolation', 'managed')) {
     dotnet $compiler build (Join-Path $output "examples/$example/$example.gfproj") --run
     if ($LASTEXITCODE -ne 0) { throw "Packaged $example project failed" }
     dotnet $compiler clean (Join-Path $output "examples/$example/$example.gfproj")

@@ -60,6 +60,7 @@ try {
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp'))) { throw 'VSIX is missing the native stdio bridge source' }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Collector.cpp'))) { throw 'VSIX is missing the native collector source' }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }
@@ -70,6 +71,13 @@ int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) 
     $console = Join-Path $extracted 'console.gf'
     'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
     $std = Join-Path $repoRoot 'std'
+    $managed = Join-Path $extracted 'managed.gf'
+    @'
+void Drop() { int^ value = new^ int(42); }
+int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new^ int(7); GC::Collect(); return *value - 7; }
+'@ | Set-Content -LiteralPath $managed
+    & $compiler $managed (Join-Path $std 'libc/GC.gf') --optimization 2 --run -o (Join-Path $extracted 'managed.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged managed allocation/root/collector smoke test failed' }
     $consoleResult = & $compiler $console (Join-Path $std 'core/IOException.gf') (Join-Path $std 'core/BufferTooSmallException.gf') (Join-Path $std 'libc/Console.gf') --run -o (Join-Path $extracted 'console.exe')
     if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }

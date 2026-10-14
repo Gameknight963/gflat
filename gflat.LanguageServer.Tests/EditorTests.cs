@@ -5,6 +5,27 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorTests
 {
+    [Fact]
+    public void NamespacePropertiesHaveHoverNavigationAndCompletion()
+    {
+        var (model, path, offset, _) = Analyze("int F() { return Settings::Va|lue; }", "namespace Settings; public int Value { get => 42; set {} }");
+        string hover = Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("int Settings::Value", hover);
+        Assert.DoesNotContain("static", hover);
+        Assert.Contains("library.gf", Json(model.Definition(path, offset)).ToString());
+        var (completion, cp, co, _) = Analyze("int F() { return Settings::|; }", "namespace Settings; public int Value => 42;");
+        Assert.Contains("Value", Labels(completion.Completion(cp, co)));
+        Assert.DoesNotContain(Labels(completion.Completion(cp, co)), label => label.Contains("$get$"));
+    }
+
+    [Fact]
+    public void NamespacePropertyPrivateAccessIsRespectedByCompletion()
+    {
+        var (model, path, offset, _) = Analyze("using Settings; int F() { | }", "namespace Settings; private int Secret => 42; public int Value => 1;");
+        Assert.Contains("Value", Labels(model.Completion(path, offset)));
+        Assert.DoesNotContain("Secret", Labels(model.Completion(path, offset)));
+    }
+
     [Theory]
     [InlineData("FileHandle")]
     [InlineData("Handles::FileHandle")]

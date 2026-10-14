@@ -27,6 +27,8 @@ public partial class LlvmEmitter : IVisitor
         {
             case ConstValue.Array array when type is ArrayTypeExpression arrayType:
                 return $"{typeStr} [{string.Join(", ", array.Elements.Select(e => EmitConstInitializer(e, arrayType.ElementType)))}]";
+            case ConstValue.Integer { Value: 0 } when type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression:
+                return $"{typeStr} null";
             case ConstValue.Integer i:
                 return $"{typeStr} {i.Value}";
             case ConstValue.UInteger u:
@@ -161,6 +163,12 @@ public partial class LlvmEmitter : IVisitor
 
     private bool TryEmitConstValue(ConstValue constVal, TypeExpression type)
     {
+        if (constVal is ConstValue.Integer { Value: 0 } &&
+            _typeChecker.ResolveAlias(type) is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression)
+        {
+            Push("null");
+            return true;
+        }
         switch (constVal)
         {
             case ConstValue.Array array when _typeChecker.ResolveAlias(type) is ArrayTypeExpression arrayType:
@@ -571,7 +579,15 @@ public partial class LlvmEmitter : IVisitor
         Emit($"{ok}:");
     }
 
-    public string GetOutput() => LowerCollectorRoots("target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + NativeDeclarations + _globals.ToString() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString());
+    private string OrderedGlobals()
+    {
+        string[] lines = _globals.ToString().Split('\n');
+        // Named aggregate types must be defined before static aggregate
+        // initializers, including recursively generated type descriptors.
+        return string.Join('\n', lines.Where(l => l.StartsWith('%')).Concat(lines.Where(l => !l.StartsWith('%'))));
+    }
+
+    public string GetOutput() => LowerCollectorRoots("target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + NativeDeclarations + OrderedGlobals() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString());
 
     private enum EmitMode { RValue, LValue }
 

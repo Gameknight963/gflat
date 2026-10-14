@@ -158,3 +158,16 @@ remain separate, future build configuration work.
 name, layout, and reference traits. Its fields are readonly and its name has
 static lifetime. It works in generic code and constant expressions; member
 reflection and runtime type discovery are not provided yet.
+
+`Kind` distinguishes value and reference shapes. `ElementType` is a nullable
+pointer to immutable static metadata for the pointee/element of a raw pointer,
+managed reference, array, or reference parameter. It can be followed recursively:
+`typeof(int**).ElementType!.ElementType!.Size` is four. Other kinds have a null
+element. Function-pointer return and parameter metadata are not implemented yet.
+
+`IsReadOnly` describes the current value layer: `readonly(int)*` has a mutable
+pointer and readonly element; `readonly(int*)` has both readonly. `IsNullable`
+likewise describes only the current layer. `HasLayout` is false for void/interface
+elements, with zero size/alignment; pointers to them have their own layouts.
+`HasFixedLength` and `Length` describe fixed arrays, with zero length otherwise.
+Descriptors do not allocate managed objects or provide dynamic runtime type tests.

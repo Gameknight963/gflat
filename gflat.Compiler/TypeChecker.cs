@@ -1269,7 +1269,7 @@ namespace gflat
             }
             if (type is ArrayTypeExpression arr)
             {
-                return GetTypeAlignment(arr.ElementType);
+                return arr.Size == null ? TargetInfo.Default.PointerBytes : GetTypeAlignment(arr.ElementType);
             }
             if (type is NamedTypeExpression named)
             {

@@ -867,9 +867,28 @@ int main() { return Add(20, 22); }
 `typeof(T)` produces a compile-time constant `std::TypeInfo` describing the static
 queried type. It works through aliases and generic specialization. Its readonly
 fields are `Name`, `Size`, `Alignment`, `IsPointer`, `IsManaged`, `IsNullable`,
-`IsReadOnly`, and `HasDestructor`. Sizes and alignments use `nuint`; names are
+`IsReadOnly`, and `HasDestructor`. It also exposes `Kind`, `HasLayout`,
+`ElementType`, `HasFixedLength`, and `Length`. Sizes, alignments, and lengths use `nuint`; names are
 borrowed, null-terminated strings with static lifetime. Aliases resolve to their
 underlying type name.
+
+`Kind` distinguishes primitives, classes, structs, enums, interfaces, raw pointers,
+managed pointers, arrays, function pointers, and references. `ElementType` points
+to immutable static metadata for a pointer/managed/array/reference element; it is
+null for other kinds. Nested elements remain available during constant evaluation.
+Function-pointer metadata identifies its kind and layout but does not yet expose
+return or parameter metadata. No GC allocation is needed for descriptors.
+
+`IsReadOnly` qualifies the current layer's value storage. For `readonly(int)*`,
+the pointer's flag is false and its element's flag is true. For `readonly(int*)`,
+both flags are true because readonly qualification propagates through the pointer.
+For `int**`, follow `ElementType` twice to inspect the `int` metadata.
+
+`HasLayout` is false for void and interface elements, whose `Size` and `Alignment`
+are zero. Their pointers have their own valid layouts. Direct `typeof(I)` remains
+invalid when `I` is an interface, while `typeof(I*).ElementType` describes it.
+`HasFixedLength` is true only for fixed arrays; `Length` is their element count,
+zero otherwise. Array and pointer element metadata do not flatten qualifiers.
 
 Traits describe the queried type itself: `typeof(Resource*).HasDestructor` is
 false even when `Resource` has a destructor. `IsPointer` describes raw and function

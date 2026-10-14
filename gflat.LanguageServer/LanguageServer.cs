@@ -31,6 +31,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     private string[] tokenTypes = EditorModel.TokenTypes;
     private VisualStudioHover? hoverPresentation;
     private HoverOptions hoverOptions = new();
+    private bool versionedWorkspaceEdits;
     private bool hierarchicalDocumentSymbols;
 
     public async Task<int> RunAsync(CancellationToken cancellation = default)
@@ -150,6 +151,10 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                             capabilities.TryGetProperty("textDocument", out var textDocumentCapabilities) &&
                             textDocumentCapabilities.TryGetProperty("documentSymbol", out var symbolCapabilities) &&
                             symbolCapabilities.TryGetProperty("hierarchicalDocumentSymbolSupport", out var hierarchy) && hierarchy.ValueKind == JsonValueKind.True;
+                        versionedWorkspaceEdits = capabilities.ValueKind == JsonValueKind.Object &&
+                            capabilities.TryGetProperty("workspace", out var workspaceCapabilities) &&
+                            workspaceCapabilities.TryGetProperty("workspaceEdit", out var editCapabilities) &&
+                            editCapabilities.TryGetProperty("documentChanges", out var documentChanges) && documentChanges.ValueKind == JsonValueKind.True;
                         if (parameters.TryGetProperty("initializationOptions", out var options) && options.ValueKind == JsonValueKind.Object &&
                             options.TryGetProperty("visualStudioClassifications", out var vsColors) && vsColors.ValueKind == JsonValueKind.True)
                             tokenTypes = EditorModel.VisualStudioTokenTypes;
@@ -161,6 +166,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                             textDocumentSync = new { openClose = true, change = 1, save = new { includeText = true } },
                             completionProvider = new { triggerCharacters = new[] { ".", ":" } },
                             hoverProvider = !(options.ValueKind == JsonValueKind.Object && options.TryGetProperty("visualStudioNativeHover", out var nativeHover) && nativeHover.ValueKind == JsonValueKind.True), definitionProvider = true, referencesProvider = true, documentHighlightProvider = true,
+                            renameProvider = new { prepareProvider = true }, workspaceSymbolProvider = true,
                             signatureHelpProvider = new { triggerCharacters = new[] { "(", "," }, retriggerCharacters = new[] { ")" } }, documentSymbolProvider = true,
                             semanticTokensProvider = new { legend = new { tokenTypes, tokenModifiers = EditorModel.TokenModifiers }, full = true, range = true }
                         }, serverInfo = new { name = "gflat", version = "0.2.0" } });
@@ -223,6 +229,9 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                     case "textDocument/definition":
                     case "textDocument/references":
                     case "textDocument/documentHighlight":
+                    case "textDocument/prepareRename":
+                    case "textDocument/rename":
+                    case "workspace/symbol":
                     case "textDocument/documentSymbol":
                     case "textDocument/signatureHelp":
                     case "textDocument/semanticTokens/full":
@@ -251,6 +260,16 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
         if (query.Generation != generation) { await Error(query.Id, -32801, "Document changed"); return; }
         try
         {
+            if (query.Method == "workspace/symbol")
+            {
+                string search = query.Parameters.GetProperty("query").GetString() ?? throw new ArgumentException("query must be a string");
+                var symbols = latest?.Models?.Values.Distinct().SelectMany(model => model.WorkspaceSymbols(search))
+                    .DistinctBy(symbol => (symbol.Name, symbol.Location.Uri, symbol.Location.Range))
+                    .OrderBy(symbol => symbol.Name, StringComparer.Ordinal).ThenBy(symbol => symbol.Location.Uri, StringComparer.Ordinal)
+                    .ThenBy(symbol => symbol.Location.Range.Start.Line).ThenBy(symbol => symbol.Location.Range.Start.Character).ToArray() ?? [];
+                await Reply(query.Id, symbols);
+                return;
+            }
             string path = Workspace.FilePath(query.Parameters.GetProperty("textDocument").GetProperty("uri").GetString()!);
             if (latest?.Models?.GetValueOrDefault(path) is not EditorModel model || !documents.TryGetValue(path, out var document))
             { await Reply(query.Id, null); return; }
@@ -263,6 +282,9 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                 "textDocument/hover" => model.Hover(path, offset, hoverPresentation, hoverOptions),
                 "textDocument/definition" => model.Definition(path, offset),
                 "textDocument/documentHighlight" => model.DocumentHighlights(path, offset),
+                "textDocument/prepareRename" => model.PrepareRename(path, offset),
+                "textDocument/rename" => RenameWorkspaceEdit(model, path, offset,
+                    query.Parameters.GetProperty("newName").GetString() ?? throw new ArgumentException("newName must be a string")),
                 "textDocument/references" => model.References(path, offset,
                     query.Parameters.GetProperty("context").GetProperty("includeDeclaration").GetBoolean()),
                 "textDocument/documentSymbol" => model.DocumentSymbols(path, hierarchicalDocumentSymbols),
@@ -273,6 +295,18 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or KeyNotFoundException or JsonException)
         { await Error(query.Id, -32602, error.Message); }
+    }
+
+    private object RenameWorkspaceEdit(EditorModel model, string path, int offset, string name)
+    {
+        var groups = model.Rename(path, offset, name).GroupBy(edit => edit.Path, Workspace.Paths).ToArray();
+        if (!versionedWorkspaceEdits)
+            return new { changes = groups.ToDictionary(group => Workspace.FileUri(group.Key),
+                group => group.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray()) };
+        return new { documentChanges = groups.Select(group => new {
+            textDocument = new { uri = Workspace.FileUri(group.Key), version = documents[group.Key].Version },
+            edits = group.Select(edit => new { range = edit.Range, newText = edit.NewText }).ToArray()
+        }).ToArray() };
     }
 
     private void Schedule(bool invalidateProjects = false)

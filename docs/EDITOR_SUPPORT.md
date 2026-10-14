@@ -11,6 +11,14 @@ so the editor provides the results list and navigation through its existing LSP 
 Document highlights use the same resolved symbol index and mark declarations and
 references within the current document. The native client owns their presentation;
 read and write occurrences are not distinguished yet.
+Rename supports source locals and explicit parameters through the client's native
+rename UI. It updates resolved references, including `nameof`, and requires an
+error-free project. A candidate rename is reanalyzed and rejected if it introduces
+errors or changes another identifier's binding. Member and type rename are not
+implemented. Clients supporting versioned workspace edits receive the current
+unsaved document version; other clients receive standard range edits.
+Workspace symbol search finds source declarations across the analyzed project,
+including unopened files and unsaved changes, through the client's native symbol UI.
 Document-symbol requests provide a source outline of namespaces, types, constructors,
 destructors, operators, fields, properties, and methods. Locals and generated accessors
 are omitted. Clients supporting hierarchical outlines receive the declaration tree;

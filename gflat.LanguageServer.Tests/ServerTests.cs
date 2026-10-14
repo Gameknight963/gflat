@@ -7,6 +7,79 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ServerTests
 {
+    [Theory]
+    [InlineData(null)]
+    [InlineData(1)]
+    public async Task InvalidWorkspaceSymbolQueryDoesNotTerminateServer(object? query)
+    {
+        await using var s = new Session();
+        await s.Initialize();
+        await s.Open("symbol.gf", "int Answer() => 42;");
+        await s.Diagnostics("symbol.gf", 1);
+        await s.Send(new { jsonrpc = "2.0", id = 753, method = "workspace/symbol", @params = new { query = JsonSerializer.SerializeToElement(query) } });
+        var error = await s.Receive(x => x.TryGetProperty("id", out var value) && value.ValueKind == JsonValueKind.Number && value.GetInt32() == 753);
+        Assert.Equal(-32602, error.GetProperty("error").GetProperty("code").GetInt32());
+        await s.Send(new { jsonrpc = "2.0", id = 754, method = "workspace/symbol", @params = new { query = "Answer" } });
+        var result = await s.Receive(x => x.TryGetProperty("id", out var value) && value.ValueKind == JsonValueKind.Number && value.GetInt32() == 754);
+        Assert.Single(result.GetProperty("result").EnumerateArray());
+        await s.Stop();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RenameReturnsNegotiatedEditsForQueuedUnsavedText(bool versioned)
+    {
+        await using var s = new Session();
+        await s.Initialize(clientCapabilities: new { workspace = new { workspaceEdit = new { documentChanges = versioned } } });
+        await s.Open("rename.gf", "int F(int value) => value;");
+        await s.Diagnostics("rename.gf", 1);
+        const string changed = "int F(int value) { value++; nameof(value); return value; } // value";
+        await s.Change("rename.gf", changed, 2);
+        var position = new { line = 0, character = changed.IndexOf("value", StringComparison.Ordinal) };
+        await s.Send(new { jsonrpc = "2.0", id = 750, method = "textDocument/prepareRename", @params = new { textDocument = new { uri = s.Uri("rename.gf") }, position } });
+        var prepared = await s.Receive(x => x.TryGetProperty("id", out var value) && value.ValueKind == JsonValueKind.Number && value.GetInt32() == 750);
+        Assert.Equal("value", prepared.GetProperty("result").GetProperty("placeholder").GetString());
+        await s.Send(new { jsonrpc = "2.0", id = 751, method = "textDocument/rename", @params = new { textDocument = new { uri = s.Uri("rename.gf") }, position, newName = "renamed" } });
+        var response = await s.Receive(x => x.TryGetProperty("id", out var value) && value.ValueKind == JsonValueKind.Number && value.GetInt32() == 751);
+        var result = response.GetProperty("result");
+        JsonElement edits;
+        if (versioned) {
+            var change = Assert.Single(result.GetProperty("documentChanges").EnumerateArray());
+            Assert.Equal(s.Uri("rename.gf"), change.GetProperty("textDocument").GetProperty("uri").GetString());
+            Assert.Equal(2, change.GetProperty("textDocument").GetProperty("version").GetInt32());
+            edits = change.GetProperty("edits");
+        } else edits = result.GetProperty("changes").GetProperty(s.Uri("rename.gf"));
+        Assert.Equal(4, edits.GetArrayLength());
+        Assert.All(edits.EnumerateArray(), edit => {
+            var range = JsonSerializer.Deserialize<TextRange>(edit.GetProperty("range"), Protocol.JsonOptions)!;
+            int start = Workspace.Offset(changed, JsonSerializer.SerializeToElement(range.Start, Protocol.JsonOptions));
+            int end = Workspace.Offset(changed, JsonSerializer.SerializeToElement(range.End, Protocol.JsonOptions));
+            Assert.Equal("value", changed[start..end]);
+            Assert.Equal("renamed", edit.GetProperty("newText").GetString());
+        });
+        await s.Stop();
+    }
+
+    [Fact]
+    public async Task WorkspaceSymbolSearchUsesUnopenedAndQueuedUnsavedFiles()
+    {
+        await using var s = new Session();
+        File.WriteAllText(s.File(Workspace.ConfigurationName), "{\"sources\":[\"main.gf\",\"helper.gf\"]}");
+        File.WriteAllText(s.File("helper.gf"), "int LibraryAnswer() => 42;");
+        await s.Initialize();
+        await s.Open("main.gf", "int Original() => 1;");
+        await s.Diagnostics("main.gf", 1);
+        await s.Change("main.gf", "int ChangedAnswer() => 2;", 2);
+        await s.Send(new { jsonrpc = "2.0", id = 752, method = "workspace/symbol", @params = new { query = "Answer" } });
+        var response = await s.Receive(x => x.TryGetProperty("id", out var value) && value.ValueKind == JsonValueKind.Number && value.GetInt32() == 752);
+        var result = response.GetProperty("result");
+        Assert.Equal(2, result.GetArrayLength());
+        Assert.Equal(new[] { "ChangedAnswer", "LibraryAnswer" }, result.EnumerateArray().Select(item => item.GetProperty("name").GetString()).ToArray());
+        Assert.Contains(result.EnumerateArray(), item => item.GetProperty("location").GetProperty("uri").GetString() == s.Uri("helper.gf"));
+        await s.Stop();
+    }
+
     [Fact]
     public async Task DocumentHighlightsUseQueuedUnsavedSnapshot()
     {

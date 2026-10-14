@@ -14,7 +14,10 @@ public class RecoveryTests
         "int Broken = 1__2;\n", "int Broken() { missing; missingAgain; }\n",
         "class Broken { int member = ; }\n", "int Broken() { return ; }\n",
         "public static class Broken { public int Inner() => 1; }\n",
-        "abstract static class Broken { public int Inner() => 1; }\n"
+        "abstract static class Broken { public int Inner() => 1; }\n",
+        "class Outer { public static class Broken { public int Inner() => 1; } }\n",
+        "class Outer { public static struct Broken { public int Inner() => 1; } }\n",
+        "class Outer { public static enum Broken { A } }\n"
     ];
     public static IEnumerable<object[]> Prefixes() => BrokenPrefixes.Select(p => new object[] { p });
     private const string Healthy = """

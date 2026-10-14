@@ -611,6 +611,8 @@ namespace gflat
                 return ParseExternDeclaration(attributes, line, accessibility);
             }
 
+            if (isStatic && Current.Kind is TokenKind.Class or TokenKind.Struct or TokenKind.Enum)
+                throw new TypeCheckException("Static type declarations are not yet supported", Current.Span);
             if (Check(TokenKind.Class))
                 return Finish(ParseClassDeclaration(accessibility, isAbstract, line, attributes));
             if (Check(TokenKind.Struct))

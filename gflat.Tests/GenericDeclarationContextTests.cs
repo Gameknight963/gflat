@@ -131,4 +131,21 @@ public sealed class GenericDeclarationContextTests
             """);
         Assert.Equal(42, result.ExitCode);
     }
+
+    [Fact]
+    public void ForwardConstantInitializerDoesNotInvalidateCallerNullableGuard()
+    {
+        var result = CompilerTestHelper.Run("""
+            struct Item { public int Get() => 42; }
+            const int Value() => 1;
+            int Read(ref Item*? item) {
+                if (item == null) return 1;
+                int number = Late;
+                return item.Get();
+            }
+            const int Late = Value();
+            int main() { Item value = new Item(); Item*? pointer = &value; return Read(ref pointer); }
+            """);
+        Assert.Equal(42, result.ExitCode);
+    }
 }

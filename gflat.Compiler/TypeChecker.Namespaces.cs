@@ -112,6 +112,17 @@ public partial class TypeChecker
         return found;
     }
 
+    private void AnalyzeSafely(Action action)
+    {
+        int scopes = _scopes.Count;
+        try { action(); }
+        catch (TypeCheckException error) when (_recoverErrors)
+        {
+            _diagnostics.Report(gflat.diagnostics.DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description);
+        }
+        finally { if (_recoverErrors) while (_scopes.Count > scopes) PopScope(); }
+    }
+
     private void CheckSpecialization(AstNode definition, AstNode specialized)
     {
         var previousNamespace = _currentNamespace;
@@ -125,7 +136,7 @@ public partial class TypeChecker
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
         _currentNamespacePath = ns;
         declarationNamespaces[specialized] = ns;
-        try { specialized.Accept(this); }
+        try { AnalyzeSafely(() => specialized.Accept(this)); }
         finally { _currentNamespace = previousNamespace; _currentNamespacePath = previousPath; _currentClass = previousClass; _currentStruct = previousStruct; }
     }
 

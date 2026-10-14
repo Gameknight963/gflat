@@ -8,6 +8,38 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ServerTests
 {
     [Fact]
+    public async Task BrokenProjectDependencyPreservesEditorServicesAcrossEdits()
+    {
+        await using var s = new Session();
+        System.IO.File.WriteAllText(s.File(Workspace.ConfigurationName), "{\"sources\":[\"main.gf\",\"helper.gf\"]}");
+        const string healthy = "int answer() => 42;";
+        System.IO.File.WriteAllText(s.File("helper.gf"), healthy);
+        await s.Initialize();
+        await s.Open("main.gf", "int main() => answer();");
+        await s.Diagnostics("main.gf", 1);
+        await s.Open("helper.gf", healthy);
+        await s.Diagnostics("helper.gf", 1);
+        int id = 500;
+        foreach (string text in new[] { "@\n" + healthy, "int bad = ;\n" + healthy, "int bad() { missing(); }\n" + healthy, healthy })
+        {
+            await s.Change("helper.gf", text, id);
+            await s.Diagnostics("helper.gf", id);
+            foreach (string method in new[] { "hover", "definition", "semanticTokens/full" })
+            {
+                int request = id++;
+                await s.Send(new { jsonrpc = "2.0", id = request, method = "textDocument/" + method,
+                    @params = new { textDocument = new { uri = s.Uri("main.gf") }, position = new { line = 0, character = 14 } } });
+                var response = await s.Receive(x => x.TryGetProperty("id", out var n) && n.ValueKind == JsonValueKind.Number && n.GetInt32() == request);
+                Assert.NotEqual(JsonValueKind.Null, response.GetProperty("result").ValueKind);
+                if (method == "hover") Assert.Contains("answer", response.GetProperty("result").ToString());
+                if (method == "definition") Assert.Contains("helper.gf", response.GetProperty("result").ToString());
+                if (method == "semanticTokens/full") Assert.NotEmpty(response.GetProperty("result").GetProperty("data").EnumerateArray());
+            }
+        }
+        await s.Stop();
+    }
+
+    [Fact]
     public async Task HoverSettingsUpdateWithoutDocumentEdits()
     {
         await using var s = new Session();

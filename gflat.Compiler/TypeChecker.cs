@@ -22,8 +22,10 @@ namespace gflat
         public DiagnosticBag Diagnostics => _diagnostics;
         private int _loopDepth = 0;
 
-        public TypeChecker(DiagnosticBag? diagnostics = null)
+        private readonly bool _recoverErrors;
+        public TypeChecker(DiagnosticBag? diagnostics = null, bool recoverErrors = false)
         {
+            _recoverErrors = recoverErrors;
             _diagnostics = diagnostics ?? new DiagnosticBag();
             _constEvaluator = new ConstEvaluator(this);
             _symbols = new SymbolTable(
@@ -2040,6 +2042,8 @@ namespace gflat
             foreach (NamespaceDeclaration ns in node.Namespaces) CheckDeclarationAttributes(ns);
             for (int i = 0; i < node.Members.Count; i++) CheckDeclarationAttributes(node.Members[i]);
 
+            if (_recoverErrors && _diagnostics.HasErrors) return;
+
             // Pass 4: Control flow & Return path analysis
             ControlFlowPass controlFlowPass = new ControlFlowPass(this, _constEvaluator, _diagnostics);
             controlFlowPass.Execute(node);
@@ -2333,7 +2337,7 @@ namespace gflat
             _currentNamespacePath = _currentNamespacePath.Length > 0 ? $"{_currentNamespacePath}::{node.Name}" : node.Name;
 
             foreach (AstNode member in node.Members)
-                member.Accept(this);
+                CheckSpecialization(member, member);
 
             _currentNamespace = previous;
             _currentNamespacePath = prevPath;
@@ -3048,7 +3052,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             PushScope();
             foreach (AstNode statement in node.Statements)
-                statement.Accept(this);
+                AnalyzeSafely(() => statement.Accept(this));
             PopScope();
         }
 

@@ -4,21 +4,24 @@ namespace gflat;
 
 public class Lexer
 {
-    public static List<Token> Tokenize(SourceFile source)
+    public static List<Token> Tokenize(SourceFile source, gflat.diagnostics.DiagnosticBag? diagnostics = null)
     {
         using var context = SourceContext.Enter(source.Span(0));
-        var tokens = Tokenize(source.Text);
+        var tokens = Tokenize(source.Text, diagnostics);
         foreach (var token in tokens) token.Source = source;
         return tokens;
     }
 
-    public static List<Token> Tokenize(string code)
+    public static List<Token> Tokenize(string code, gflat.diagnostics.DiagnosticBag? diagnostics = null)
     {
         List<Token> tokens = new();
         int line = 1;
         for (int i = 0; i < code.Length;)
         {
             using var context = SourceContext.Enter(SourceContext.Current?.Source is { } source && source.Text == code ? source.Span(i, 1) : default);
+            int tokenStart = i;
+            try
+            {
             char c = code[i];
 
             if (char.IsWhiteSpace(c))
@@ -188,6 +191,21 @@ public class Lexer
                     throw new TypeCheckException($"Unexpected character '{c}' on line {line}", line);
             }
             i++;
+            }
+            catch (TypeCheckException error) when (diagnostics != null)
+            {
+                diagnostics.Report(gflat.diagnostics.DiagnosticRules.GF0004_SyntaxError, error.Span, error.Description);
+                // Keep source offsets and later lines intact. Only editing clients
+                // opt into recovery; compiler lexing continues to reject bad input.
+                i = tokenStart;
+                if (code.AsSpan(i).StartsWith("/*")) i = code.Length;
+                else if (code[i] is '"' or '\'' || code.AsSpan(i).StartsWith("$\""))
+                    while (i < code.Length && code[i] is not ('\r' or '\n')) i++;
+                else if (char.IsAsciiDigit(code[i]))
+                    while (i < code.Length && !char.IsWhiteSpace(code[i]) && code[i] is not (';' or ',' or ')' or '}' or ']')) i++;
+                else i++;
+                if (i <= tokenStart) i = tokenStart + 1;
+            }
         }
         tokens.Add(new Token(TokenKind.EndOfFile, line, code.Length, code.Length));
         var lineStarts = new List<int> { 0 };

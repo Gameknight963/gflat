@@ -11,17 +11,19 @@ public sealed class Compilation
     public IReadOnlyList<CompilationUnit> SyntaxTrees { get; }
     public CompilationUnit Unit { get; }
 
-    public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics)
+    public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics, bool recoverErrors = false)
     {
         Sources = sources.OrderBy(s => s.Path, StringComparer.Ordinal).ToArray();
         if (Sources.Count == 0) throw new ArgumentException("Specify at least one source file.");
         if (Sources.Select(s => s.Id).Distinct().Count() != Sources.Count)
             throw new ArgumentException("A source path may only occur once in a compilation.");
-        SyntaxTrees = Sources.Select(s => Parser.Parse(Lexer.Tokenize(s), diagnostics)).ToArray();
+        SyntaxTrees = Sources.Select(s => Parser.Parse(Lexer.Tokenize(s, recoverErrors ? diagnostics : null), diagnostics, recoverErrors)).ToArray();
         Unit = new CompilationUnit(new(), SyntaxTrees.SelectMany(t => t.Namespaces).ToList(), SyntaxTrees.SelectMany(t => t.Members).ToList(), 0);
         foreach (var tree in SyntaxTrees)
             Unit.FileUsings[tree.Span.SourceId!.Value] = tree.Usings.Select(u => u.Name).ToArray();
-        AddStandardLibrary(Unit, diagnostics, Sources);
+        try { AddStandardLibrary(Unit, diagnostics, Sources); }
+        catch (TypeCheckException error) when (recoverErrors)
+        { diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description); }
     }
 
     public static void AddStandardLibrary(CompilationUnit unit, DiagnosticBag diagnostics, IEnumerable<SourceFile>? inputs = null)

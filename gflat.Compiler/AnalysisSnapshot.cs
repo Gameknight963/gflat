@@ -24,11 +24,11 @@ public sealed class AnalysisSnapshot
         Imports = new Dictionary<SourceId, string[]>();
         try
         {
-            var compilation = new Compilation(sources, diagnostics);
+            var compilation = new Compilation(sources, diagnostics, recoverErrors: true);
             Imports = new Dictionary<SourceId, string[]>(compilation.Unit.FileUsings);
             Capture(compilation.Unit, null);
-            Checker = new TypeChecker(diagnostics);
-            if (!diagnostics.HasErrors) compilation.Unit.Accept(Checker);
+            Checker = new TypeChecker(diagnostics, recoverErrors: true);
+            compilation.Unit.Accept(Checker);
         }
         catch (TypeCheckException error)
         {

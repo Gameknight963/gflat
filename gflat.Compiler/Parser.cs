@@ -8,6 +8,7 @@ namespace gflat
     {
         private List<Token> _tokens = new();
         private int _pos;
+        private bool _recoverErrors;
         private readonly DiagnosticBag _diagnostics;
 
         public DiagnosticBag Diagnostics => _diagnostics;
@@ -33,16 +34,41 @@ namespace gflat
         private Token Current => _tokens[_pos];
         private Token Peek(int offset = 1) => _tokens[Math.Min(_pos + offset, _tokens.Count - 1)];
 
-        private AstNode ParseDeclaration(Func<AstNode> parse)
+        private AstNode ParseDeclaration(Func<AstNode> parse) => RecoverSyntax(() =>
         {
             int start = _pos;
             AstNode declaration = Located(parse);
-            // Expect may synthesize missing identifiers and semicolons. At a stray
-            // delimiter an entire declaration can therefore consume nothing, causing
-            // its enclosing member loop to allocate error nodes forever.
-            if (_pos == start)
-                throw new TypeCheckException($"Unexpected token '{Current.Text}' in declaration", Current.Span);
+            if (_pos == start) throw new TypeCheckException($"Unexpected token '{Current.Text}' in declaration", Current.Span);
             return declaration;
+        }, false);
+
+        private AstNode RecoverSyntax(Func<AstNode> parse, bool statement)
+        {
+            int start = _pos;
+            try { return parse(); }
+            catch (TypeCheckException error) when (_recoverErrors)
+            {
+                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, error.Span, error.Description);
+                if (_pos == start || _tokens[_pos - 1].Kind is not (TokenKind.Semicolon or TokenKind.CloseBrace))
+                {
+                    int depth = 0;
+                    for (int i = start; i < _pos; i++)
+                        depth += _tokens[i].Kind == TokenKind.OpenBrace ? 1 : _tokens[i].Kind == TokenKind.CloseBrace ? -1 : 0;
+                    while (!Check(TokenKind.EndOfFile))
+                    {
+                        if (depth <= 0 && Check(TokenKind.CloseBrace)) { if (!statement) Consume(); break; }
+                        if (_pos > start && depth <= 0 && Current.Line > _tokens[start].Line &&
+                            Current.Kind is TokenKind.Namespace or TokenKind.Class or TokenKind.Struct or TokenKind.Interface or TokenKind.Extern or TokenKind.Public or TokenKind.Private) break;
+                        Token token = Consume();
+                        if (token.Kind == TokenKind.OpenBrace) depth++;
+                        if (token.Kind == TokenKind.CloseBrace && --depth <= 0) break;
+                        if (token.Kind == TokenKind.Semicolon && depth <= 0) break;
+                    }
+                }
+                return new BlockStatement([], _tokens[start].Line) {
+                    Span = _tokens[start].Source?.Span(_tokens[start].Start, Math.Max(1, Current.Start - _tokens[start].Start)) ?? error.Span
+                };
+            }
         }
 
         private Token Consume()
@@ -101,12 +127,13 @@ namespace gflat
             return false;
         }
 
-        public static CompilationUnit Parse(List<Token> tokens, DiagnosticBag? diagnostics = null)
+        public static CompilationUnit Parse(List<Token> tokens, DiagnosticBag? diagnostics = null, bool recoverErrors = false)
         {
             using var sourceContext = SourceContext.Enter(tokens[0].Span);
             Parser parser = new Parser(diagnostics);
             parser._tokens = tokens;
             parser._pos = 0;
+            parser._recoverErrors = recoverErrors;
             return parser.ParseCompilationUnit();
         }
 
@@ -142,7 +169,10 @@ namespace gflat
             while (!Check(TokenKind.EndOfFile))
             {
                 if (Check(TokenKind.Namespace))
-                    namespaces.Add(ParseNamespaceDeclaration(members.Count == 0 && namespaces.Count == 0 ? usings : null));
+                {
+                    var declaration = ParseDeclaration(() => ParseNamespaceDeclaration(members.Count == 0 && namespaces.Count == 0 ? usings : null));
+                    if (declaration is NamespaceDeclaration ns) namespaces.Add(ns); else members.Add(declaration);
+                }
                 else
                     members.Add(ParseTopLevelMember());
             }
@@ -184,7 +214,7 @@ namespace gflat
             List<AstNode> members = new();
             while (!Check(TokenKind.EndOfFile) && (fileScoped || !Check(TokenKind.CloseBrace)))
             {
-                if (Check(TokenKind.Namespace)) members.Add(ParseNamespaceDeclaration());
+                if (Check(TokenKind.Namespace)) members.Add(ParseDeclaration(() => ParseNamespaceDeclaration()));
                 else members.Add(ParseTopLevelMember());
             }
             if (!fileScoped) Expect(TokenKind.CloseBrace);
@@ -1117,7 +1147,7 @@ namespace gflat
             return new BlockStatement(statements, line);
         }
 
-        private AstNode ParseStatement() => Located(() => ParseStatementCoreLocated());
+        private AstNode ParseStatement() => RecoverSyntax(() => Located(ParseStatementCoreLocated), true);
 
         private AstNode ParseStatementCoreLocated()
         {
@@ -1802,6 +1832,8 @@ namespace gflat
                 return result;
             }
 
+            if (_recoverErrors && Current.Kind is TokenKind.Namespace or TokenKind.Class or TokenKind.Struct or TokenKind.Interface or TokenKind.Extern or TokenKind.Public or TokenKind.Private)
+                throw new TypeCheckException($"Expected an expression before '{Current.Text}'", Current.Span);
             _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Span, $"Unexpected token '{Current.Text}' on line {line}");
             Consume();
             return new IdentifierExpression("<error>", line);

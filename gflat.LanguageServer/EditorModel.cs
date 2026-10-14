@@ -34,7 +34,7 @@ public sealed partial class EditorModel
         sources = allFiles.ToDictionary(s => s.Path, Workspace.Paths);
         foreach (var file in allFiles)
         {
-            try { tokens[file.Path] = Lexer.Tokenize(file).Where(t => t.Kind != TokenKind.EndOfFile).ToArray(); }
+            try { tokens[file.Path] = Lexer.Tokenize(file, new DiagnosticBag()).Where(t => t.Kind != TokenKind.EndOfFile).ToArray(); }
             catch (TypeCheckException) { tokens[file.Path] = []; }
             nodes[file.Path] = snapshot.Nodes.Where(n => n.Span.Source?.Id == file.Id).ToArray();
             var braces = new Stack<int>();
@@ -349,6 +349,18 @@ public sealed partial class EditorModel
         if (declaration != null) return declaration;
         var call = nodes[path].Where(n => n.Node is CallExpression c && c.Callee.Span.Start <= token.Start && c.Callee.Span.Start + c.Callee.Span.Length == token.End + 1).MinBy(n => n.Span.Length);
         if (call?.Node is CallExpression expression && snapshot.Checker?.GetResolvedCall(expression) is AstNode target && declarations.TryGetValue(target, out var method)) return method;
+        // A qualifier in a named type is a namespace/type, not the final type
+        // token. Resolve it before filtering type annotations to type symbols.
+        if (index + 1 < tokens[path].Length && tokens[path][index + 1].Kind == TokenKind.DoubleColon)
+        {
+            int first = index;
+            while (first >= 2 && tokens[path][first - 1].Kind == TokenKind.DoubleColon) first -= 2;
+            string qualified = string.Concat(tokens[path][first..(index + 1)].Select(t => t.Text));
+            if (qualified.StartsWith("global::", StringComparison.Ordinal)) qualified = qualified[8..];
+            var qualifier = symbols.FirstOrDefault(s => s.Syntax.Node is NamespaceDeclaration &&
+                (s.Qualified == qualified || s.Name == qualified && s.Namespace.Length == 0));
+            if (qualifier != null) return qualifier;
+        }
         var candidates = Candidates(path, token.Start, index);
         // A local named `String` must not recolor a `String` type annotation.
         if (nodes[path].Any(n => n.Node is NamedTypeExpression && n.Span.Length > 0 && token.Start >= n.Span.Start && token.End < n.Span.Start + n.Span.Length))

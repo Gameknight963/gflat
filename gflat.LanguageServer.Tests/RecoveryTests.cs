@@ -97,6 +97,30 @@ public class RecoveryTests
     }
 
     [Fact]
+    public void FileScopedNamespaceQualifierInAnotherFileHasNamespaceColor()
+    {
+        var source = new SourceFile(Path.GetFullPath("console.gf"), "namespace Console; void Flush() { throw new std::IOException(\"Console flush failed\"); }");
+        var exception = new SourceFile(Path.GetFullPath("io.gf"), "namespace std; public class IOException : Exception { public IOException(readonly(char*) message) : base(message, 1) {} }");
+        var files = new[] { source, exception };
+        var model = new EditorModel(new AnalysisSnapshot(files), files);
+        Assert.Equal("namespace", Colors(model, source)[source.Text.IndexOf("std::", StringComparison.Ordinal)]);
+    }
+
+    [Fact]
+    public void ConsoleSourceExceptionQualifierHasNamespaceColor()
+    {
+        string root = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "std", "libc", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
+        string path = Path.Combine(root, "std", "libc", "Console.gf");
+        var source = new SourceFile(path, File.ReadAllText(path));
+        var files = Directory.EnumerateFiles(Path.Combine(root, "std"), "*.gf", SearchOption.AllDirectories)
+            .Select(p => p == path ? source : new SourceFile(p, File.ReadAllText(p))).ToArray();
+        var model = new EditorModel(new AnalysisSnapshot(files), files);
+        int offset = source.Text.IndexOf("std::IOException(\"Console flush failed", StringComparison.Ordinal);
+        Assert.Equal("namespace", Colors(model, source)[offset]);
+    }
+
+    [Fact]
     public void SemanticErrorDoesNotPreventLaterStatementsFromBeingChecked()
     {
         var source = new SourceFile("statements.gf", "int F() { unknown(); int answer = 42; return answer; }");

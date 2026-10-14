@@ -105,7 +105,11 @@
     },
     {
       "name": "keyword.control.gflat",
-      "match": "\\b(namespace|using|new|delete|return|if|else|while|for|foreach|in|repeat|break|continue|switch|case|default|defer|alias|global|operator|sizeof|alignof|nameof|throw|try|catch)\\b"
+      "match": "\\b(return|if|else|while|for|foreach|in|repeat|break|continue|switch|case|default|defer|throw|try|catch)\\b"
+    },
+    {
+      "name": "keyword.other.gflat",
+      "match": "\\b(namespace|using|new|delete|alias|global|operator|sizeof|alignof|nameof)\\b"
     },
     {
       "name": "constant.numeric.gflat",

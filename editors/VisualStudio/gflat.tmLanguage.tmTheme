@@ -21,7 +21,7 @@
         <key>settings</key><dict><key>vsclassificationtype</key><string>type</string></dict>
       </dict>
       <dict>
-        <key>scope</key><string>storage.type.gflat, storage.modifier.gflat, keyword.other.accessor.gflat, constant.language.gflat</string>
+        <key>scope</key><string>storage.type.gflat, storage.modifier.gflat, keyword.other.gflat, keyword.other.accessor.gflat, constant.language.gflat</string>
         <key>settings</key><dict><key>vsclassificationtype</key><string>keyword</string></dict>
       </dict>
       <dict>

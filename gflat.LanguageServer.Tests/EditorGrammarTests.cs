@@ -9,6 +9,22 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorGrammarTests
 {
+    [Theory]
+    [InlineData("namespace Console;", "namespace", "keyword")]
+    [InlineData("throw new std::IOException();", "new", "keyword")]
+    [InlineData("throw new std::IOException();", "throw", "keyword - control")]
+    [InlineData("if (ready) return;", "if", "keyword - control")]
+    public void KeywordScopesSelectTheCorrectVisualStudioClassification(string line, string word, string expected)
+    {
+        int offset = line.IndexOf(word, StringComparison.Ordinal);
+        var token = Assert.Single(Grammar().TokenizeLine(line).Tokens, t => t.StartIndex <= offset && t.EndIndex > offset);
+        var theme = System.Xml.Linq.XDocument.Load(Path.ChangeExtension(Asset("gflat.tmLanguage.json"), ".tmTheme"));
+        var mappings = theme.Descendants("dict").Where(d => d.Elements("key").Any(k => k.Value == "scope"));
+        var mapping = Assert.Single(mappings, d => d.Elements("key").Where(k => k.Value == "scope")
+            .Any(k => ((System.Xml.Linq.XElement)k.NextNode!).Value.Split(',').Select(s => s.Trim()).Any(token.Scopes.Contains)));
+        Assert.Equal(expected, mapping.Descendants("key").Single(k => k.Value == "vsclassificationtype").ElementsAfterSelf("string").First().Value);
+    }
+
     [Fact]
     public void ConsoleQualifiersRemainNeutralAcrossTheWholeFile()
     {
@@ -81,7 +97,7 @@ public class EditorGrammarTests
     [Theory]
     [InlineData("public void cool(", "cool", "entity.name.function")]
     [InlineData("public void cool() nothrow", "nothrow", "storage.modifier")]
-    [InlineData("int value = alignof(Widget);", "alignof", "keyword.control")]
+    [InlineData("int value = alignof(Widget);", "alignof", "keyword.other")]
     [InlineData("int value = alignof(Widget);", "Widget", "entity.name.type")]
     public void TypingAndLayoutQueriesHaveImmediateSyntaxClassifications(string line, string text, string scope)
         => AssertScope(Grammar().TokenizeLine(line), line.IndexOf(text, StringComparison.Ordinal), scope);
@@ -135,14 +151,14 @@ public class EditorGrammarTests
     [InlineData("'\\n'", "\\n", "constant.character.escape")]
     [InlineData("// return \"text\"", "return", "comment.line")]
     [InlineData("get => value;", "get", "keyword.other.accessor")]
-    [InlineData("namespace std::Collections;", "namespace", "keyword.control")]
+    [InlineData("namespace std::Collections;", "namespace", "keyword.other")]
     [InlineData("namespace std::Collections;", "::", "keyword.operator")]
     [InlineData("public int this[int i] { readonly get => data[i]; }", "this", "constant.language")]
     [InlineData("public int this[int i] { readonly get => data[i]; }", "get", "keyword.other.accessor")]
     [InlineData("public static String operator+() {", "String", "entity.name.type")]
     [InlineData("public static String operator s\"\"(readonly(char)* data, nuint length) {", "String", "entity.name.type")]
     [InlineData("String operator s\"\"(", "s\"\"", "entity.name.function.literal")]
-    [InlineData("public static String operator+(", "operator", "keyword.control")]
+    [InlineData("public static String operator+(", "operator", "keyword.other")]
     [InlineData("public static readonly(std::String)* operator+(", "String", "entity.name.type")]
     [InlineData("public static List<Pair<int, String>> operator+(", "String", "entity.name.type")]
     [InlineData("public static int operator+(", "int", "storage.type")]

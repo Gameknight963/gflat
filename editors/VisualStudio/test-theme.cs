@@ -55,6 +55,7 @@ namespace gflat.PackageTests
                 new[] { "entity.name.qualifier.gflat", "identifier" },
                 new[] { "entity.name.type.gflat", "type" },
                 new[] { "keyword.control.gflat", "keyword - control" },
+                new[] { "keyword.other.gflat", "keyword" },
                 new[] { "comment.line.double-slash.gflat", "comment" },
                 new[] { "comment.block.gflat", "comment" }
             }) {

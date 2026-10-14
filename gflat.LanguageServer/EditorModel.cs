@@ -183,7 +183,7 @@ public sealed partial class EditorModel
             return symbols.Where(s => s.Scope == null &&
                 (s.Namespace == qualifier && s.Owner == null || s.Owner == qualifier && (s.Static || IsType(s.Syntax.Node))) && Accessible(s, path, offset));
         }
-        var expression = nodes[path].Where(n => n.Node is IdentifierExpression or CallExpression or MemberAccessExpression or NewExpression or IndexExpression or UnaryExpression or CastExpression && n.Span.Start + n.Span.Length == left.End + 1)
+        var expression = nodes[path].Where(n => n.Node is IdentifierExpression or CallExpression or MemberAccessExpression or NewExpression or IndexExpression or UnaryExpression or CastExpression or TypeofExpression && n.Span.Start + n.Span.Length == left.End + 1)
             .OrderByDescending(n => n.Span.Length).FirstOrDefault();
         TypeExpression? type = expression == null ? null : ExpressionType(expression.Node, path, offset);
         if (type == null)
@@ -386,7 +386,7 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "extern", "readonly", "ref", "copy", "const", "weak", "replace"];
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "ref", "copy", "const", "weak", "replace"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
             if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)
@@ -526,7 +526,7 @@ public sealed partial class EditorModel
         for (int i = 0; i < ts.Length; i++)
         {
             bool control = ts[i].Kind is TokenKind.If or TokenKind.Else or TokenKind.For or TokenKind.Foreach or TokenKind.While or TokenKind.Return or TokenKind.Break or TokenKind.Continue or TokenKind.Try or TokenKind.Catch or TokenKind.Throw or TokenKind.Defer;
-            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind == TokenKind.NoThrow || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
+            bool modifier = accessors.Contains(ts[i].Start) || ts[i].Kind is TokenKind.NoThrow or TokenKind.Inline || placementKeywords.Contains(ts[i].Start) || IsValueModelKeyword(path, ts[i]);
             if (ts[i].Kind != TokenKind.Identifier && !control && !modifier) continue;
             var symbol = control || modifier ? null : Resolve(path, i);
             if (symbol == null && !control && !modifier) continue;

@@ -97,6 +97,9 @@ public class EditorGrammarTests
     [Theory]
     [InlineData("public void cool(", "cool", "entity.name.function")]
     [InlineData("public void cool() nothrow", "nothrow", "storage.modifier")]
+    [InlineData("public inline int Read()", "inline", "storage.modifier")]
+    [InlineData("int n = (int)typeof(Widget).Size;", "typeof", "keyword.other")]
+    [InlineData("int n = (int)typeof(Widget).Size;", "Widget", "entity.name.type")]
     [InlineData("int value = alignof(Widget);", "alignof", "keyword.other")]
     [InlineData("int value = alignof(Widget);", "Widget", "entity.name.type")]
     public void TypingAndLayoutQueriesHaveImmediateSyntaxClassifications(string line, string text, string scope)

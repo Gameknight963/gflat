@@ -72,13 +72,13 @@
       }
     },
     {
-      "match": "\\b((?:(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\s+)+)((?!(?:get|set)\\b)(?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)(?=\\s*$)",
+      "match": "\\b((?:(?:public|private|protected|internal|unsafe|const|static|inline|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\s+)+)((?!(?:get|set)\\b)(?:readonly\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)(?=\\s*$)",
       "captures": {
         "1": {
           "patterns": [
             {
               "name": "storage.modifier.gflat",
-              "match": "\\b(?:public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
+              "match": "\\b(?:public|private|protected|internal|unsafe|const|static|inline|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
             }
           ]
         },
@@ -101,7 +101,7 @@
     },
     {
       "name": "storage.modifier.gflat",
-      "match": "\\b(public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
+      "match": "\\b(public|private|protected|internal|unsafe|const|static|inline|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
     },
     {
       "name": "keyword.control.gflat",
@@ -109,7 +109,7 @@
     },
     {
       "name": "keyword.other.gflat",
-      "match": "\\b(namespace|using|new|delete|alias|global|operator|sizeof|alignof|nameof)\\b"
+      "match": "\\b(namespace|using|new|delete|alias|global|operator|sizeof|alignof|typeof|nameof)\\b"
     },
     {
       "name": "constant.numeric.gflat",
@@ -171,7 +171,7 @@
       }
     },
     {
-      "match": "(?:(?<=\\bsizeof)|(?<=\\balignof))\\s*\\(((?:sizeof\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\)",
+      "match": "(?:(?<=\\bsizeof)|(?<=\\balignof)|(?<=\\btypeof))\\s*\\(((?:sizeof\\s*\\(\\s*)*[A-Za-z_][A-Za-z0-9_]*(?:\\s*::\\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*<[A-Za-z0-9_ \\t:<>(),*^?\\[\\]]+>)?(?:\\s*\\))*(?:\\s*[*^?]|\\s*\\[[0-9_]*\\])*)\\)",
       "captures": {
         "1": {
           "patterns": [
@@ -292,7 +292,7 @@
       "patterns": [
         {
           "name": "storage.modifier.gflat",
-          "match": "\\b(public|private|protected|internal|unsafe|const|static|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
+          "match": "\\b(public|private|protected|internal|unsafe|const|static|inline|readonly|virtual|override|weak|replace|abstract|extern|nothrow|ref|move|copy)\\b"
         },
         {
           "name": "storage.type.gflat",

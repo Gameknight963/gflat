@@ -100,6 +100,7 @@ public sealed partial class EditorModel
             string? access = symbol.Access switch { TokenKind.Public => "public", TokenKind.Private => "private", TokenKind.Protected => "protected", TokenKind.Internal => "internal", _ => null };
             if (access != null) Keyword(access);
         }
+        if (symbol.Syntax.Node.IsInline) Keyword("inline");
         if (symbol.Syntax.Node is MethodDeclaration method)
         {
             if (method.IsStatic) Keyword("static");

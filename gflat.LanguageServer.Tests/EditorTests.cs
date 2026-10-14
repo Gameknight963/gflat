@@ -6,6 +6,21 @@ namespace gflat.LanguageServer.Tests;
 public class EditorTests
 {
     [Fact]
+    public void InlineDeclarationsAndTypeMetadataHaveEditorServices()
+    {
+        var (model, path, offset, _) = Analyze("inline int Read() => 42; int main() => Re|ad();");
+        Assert.Contains("inline int Read", Json(model.Hover(path, offset)).ToString());
+        var (types, tp, to, _) = Analyze("int main() { return (int)typeof(int).|; }");
+        var labels = Labels(types.Completion(tp, to));
+        Assert.Contains("Size", labels);
+        Assert.Contains("Alignment", labels);
+        Assert.Contains("Name", labels);
+        var (hover, hp, ho, _) = Analyze("int main() { return (int)typeof(int).Si|ze; }");
+        Assert.NotNull(hover.Hover(hp, ho));
+        Assert.NotNull(hover.Definition(hp, ho));
+    }
+
+    [Fact]
     public void NamespacePropertiesHaveHoverNavigationAndCompletion()
     {
         var (model, path, offset, _) = Analyze("int F() { return Settings::Va|lue; }", "namespace Settings; public int Value { get => 42; set {} }");

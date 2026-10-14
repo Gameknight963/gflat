@@ -9,6 +9,29 @@ namespace gflat.LanguageServer.Tests;
 
 public class EditorGrammarTests
 {
+    [Fact]
+    public void ConsoleQualifiersRemainNeutralAcrossTheWholeFile()
+    {
+        string root = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "std", "libc", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
+        var grammar = Grammar();
+        ITokenizeLineResult? previous = null;
+        int qualifiers = 0;
+        foreach (string line in File.ReadLines(Path.Combine(root, "std", "libc", "Console.gf")))
+        {
+            var result = grammar.TokenizeLine(line, previous?.RuleStack, TimeSpan.FromSeconds(2));
+            foreach (Match match in Regex.Matches(line, @"\bstd(?=::)"))
+            {
+                var token = Assert.Single(result.Tokens, t => t.StartIndex <= match.Index && t.EndIndex > match.Index);
+                Assert.Contains("entity.name.qualifier.gflat", token.Scopes);
+                Assert.DoesNotContain("entity.name.type.gflat", token.Scopes);
+                qualifiers++;
+            }
+            previous = result;
+        }
+        Assert.True(qualifiers >= 4);
+    }
+
     [Theory]
     [InlineData("throw new std::IOException(\"Console flush failed\");")]
     [InlineData("std::IOException error;")]
@@ -66,7 +89,7 @@ public class EditorGrammarTests
     [Fact]
     public void ThemeUsesTheSameMethodAndKeywordClassificationsAsSemanticTokens()
     {
-        var theme = System.Xml.Linq.XDocument.Load(Asset("gflat.tmTheme"));
+        var theme = System.Xml.Linq.XDocument.Load(Path.ChangeExtension(Asset("gflat.tmLanguage.json"), ".tmTheme"));
         string Mapping(string scope) => theme.Descendants("dict").Single(d => d.Elements("key")
             .Any(k => k.Value == "scope" && ((System.Xml.Linq.XElement)k.NextNode!).Value.Split(',').Select(s => s.Trim()).Contains(scope)))
             .Descendants("key").Single(k => k.Value == "vsclassificationtype").ElementsAfterSelf("string").First().Value;

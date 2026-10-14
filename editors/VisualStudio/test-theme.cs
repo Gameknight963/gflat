@@ -6,6 +6,7 @@ using System.Runtime.Remoting.Proxies;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Formatting;
+using Microsoft.VisualStudio.Text.Tagging;
 
 namespace gflat.PackageTests
 {
@@ -28,6 +29,43 @@ namespace gflat.PackageTests
 
         private static T Interface<T>(Func<IMethodCallMessage, object> call)
         { return (T)new Proxy(typeof(T), call).GetTransparentProxy(); }
+
+        public static void RunTextMateTheme(Assembly assembly, string grammarPath)
+        {
+            var grammarInterface = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.Parser.IGrammar", true);
+            var repositoriesInterface = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.Hosting.ICustomRepositoryService", true);
+            var grammar = new Proxy(grammarInterface, m => m.MethodName == "get_SourcePath" ? grammarPath : null).GetTransparentProxy();
+            var repositories = new Proxy(repositoriesInterface, m => { throw new Exception("Visual Studio fell back to repository/default themes instead of loading the packaged gflat theme"); }).GetTransparentProxy();
+            var registry = Interface<IClassificationTypeRegistryService>(m => {
+                if (m.MethodName != "GetClassificationType") throw new Exception("Unexpected registry operation: " + m.MethodName);
+                string name = (string)m.Args[m.Args.Length - 1];
+                return new Proxy(((MethodInfo)m.MethodBase).ReturnType, r => r.MethodName == "get_Classification" ? name : null).GetTransparentProxy();
+            });
+            var maps = Interface<IClassificationFormatMapService>(m => { throw new Exception("The theme must use VS classifications rather than generated colors"); });
+            var themeType = assembly.GetType("Microsoft.VisualStudio.TextMate.Core.Theming.TMTheme", true);
+            var load = themeType.GetMethod("LoadTheme", BindingFlags.Public | BindingFlags.Static);
+            var theme = load.Invoke(null, new[] { repositories, grammar, registry, maps });
+            string actual = (string)themeType.GetField("FilePath").GetValue(theme);
+            string expected = System.IO.Path.ChangeExtension(grammarPath, ".tmTheme");
+            if (!String.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Visual Studio loaded " + actual + " instead of " + expected);
+            if (themeType.GetField("_scopeMap", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(theme) == null)
+                throw new Exception("Visual Studio did not load the packaged theme mappings");
+            foreach (var mapping in new[] {
+                new[] { "entity.name.qualifier.gflat", "identifier" },
+                new[] { "entity.name.type.gflat", "type" },
+                new[] { "keyword.control.gflat", "keyword - control" },
+                new[] { "comment.line.double-slash.gflat", "comment" },
+                new[] { "comment.block.gflat", "comment" }
+            }) {
+                var scope = themeType.GetMethod("GetComplexScopeMap", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(theme, new object[] { mapping[0] });
+                if (scope == null) throw new Exception("VS did not load scope " + mapping[0]);
+                var settings = scope.GetType().GetField("_simpleSettings", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(scope);
+                if (settings == null) throw new Exception("VS did not load settings for " + mapping[0]);
+                var tag = (ClassificationTag)settings.GetType().GetField("ClassificationTag").GetValue(settings);
+                if (tag.ClassificationType.Classification != mapping[1]) throw new Exception("Incorrect VS classification for " + mapping[0]);
+            }
+        }
 
         public static void Run(Type listenerType)
         {

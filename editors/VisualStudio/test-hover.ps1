@@ -12,7 +12,7 @@ $ide = Get-ChildItem -LiteralPath (Join-Path $env:ProgramFiles 'Microsoft Visual
         $candidate = Join-Path $_.FullName 'Common7/IDE'
         if (Test-Path -LiteralPath (Join-Path $candidate 'CommonExtensions/Microsoft/LanguageServer/Microsoft.VisualStudio.LanguageServer.Protocol.Internal.dll')) { $candidate }
     }
-} | Sort-Object -Descending | Select-Object -First 1
+} | Sort-Object { [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $_ 'devenv.exe')).FileMajorPart } -Descending | Select-Object -First 1
 if (-not $ide) {
     if ($Mode -eq 'Prepare') { Write-Host 'VS rich-hover SDK check unavailable: full IDE not installed.'; return $false }
     throw 'Visual Studio IDE not found'
@@ -20,11 +20,13 @@ if (-not $ide) {
 $folders = @(
     (Join-Path $ide 'CommonExtensions/Microsoft/LanguageServer'),
     (Join-Path $ide 'CommonExtensions/Microsoft/Editor'),
+    (Join-Path $ide 'CommonExtensions/Microsoft/TextMate'),
     (Join-Path $ide 'PrivateAssemblies'),
     (Join-Path $ide 'PublicAssemblies'),
     $ide
 )
 $assemblies = @{}
+$assemblies['netstandard'] = Join-Path $ide 'Remote Debugger/x64/netstandard.dll'
 foreach ($folder in $folders) {
     foreach ($file in (Get-ChildItem -LiteralPath $folder -Filter '*.dll' -File)) {
         if (-not $assemblies.ContainsKey($file.BaseName)) { $assemblies[$file.BaseName] = $file.FullName }
@@ -56,10 +58,14 @@ try {
         Add-Type -Path (Join-Path $PSScriptRoot 'test-theme.cs') -ReferencedAssemblies @(
             $assemblies['Microsoft.VisualStudio.Text.Logic'], $assemblies['Microsoft.VisualStudio.Text.UI.Wpf'],
             $assemblies['Microsoft.VisualStudio.Text.UI'], $assemblies['Microsoft.VisualStudio.Text.Data'],
-            $assemblies['Microsoft.VisualStudio.CoreUtility'], 'PresentationCore', 'WindowsBase', 'System'
+            $assemblies['Microsoft.VisualStudio.CoreUtility'], 'PresentationCore', 'WindowsBase', 'System',
+            $assemblies['netstandard']
         )
     }
     [gflat.PackageTests.ThemeColorCheck]::Run($themeType)
+    $textMate = [Reflection.Assembly]::LoadFrom($assemblies['Microsoft.VisualStudio.TextMate.Core'])
+    [gflat.PackageTests.ThemeColorCheck]::RunTextMateTheme($textMate, (Join-Path $PackageDirectory 'Grammars/gflat.tmLanguage.json'))
+    Write-Host 'Installed Visual Studio TextMate loader selected the packaged theme and its native classification mappings.'
     Write-Host 'Roslyn theme synchronization copies actual foreground brushes and preserves tooltip font, size, background, and bold formatting.'
     # LSP content-type inheritance alone leaves shell preferences on Plain Text,
     # where automatic brace completion is disabled by default.

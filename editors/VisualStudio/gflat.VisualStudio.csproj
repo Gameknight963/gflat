@@ -69,8 +69,8 @@
       <IncludeInVSIX>true</IncludeInVSIX>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="gflat.tmTheme">
-      <Link>Grammars/gflat.tmTheme</Link>
+    <Content Include="gflat.tmLanguage.tmTheme">
+      <Link>Grammars/gflat.tmLanguage.tmTheme</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

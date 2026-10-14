@@ -2005,7 +2005,6 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
             ExpandProperties(node);
-            ValidateFieldStorage(node);
 
             CheckDeclarationConflicts(node);
             QualifyTypeDeclarations(node);
@@ -2044,6 +2043,9 @@ namespace gflat
             // Attribute constructors run after all declaration bodies have been checked.
             foreach (NamespaceDeclaration ns in node.Namespaces) CheckDeclarationAttributes(ns);
             for (int i = 0; i < node.Members.Count; i++) CheckDeclarationAttributes(node.Members[i]);
+            // Attribute evaluation has its own safety checks. Preserve those
+            // diagnostics before reporting unavailable runtime storage forms.
+            ValidateFieldStorage(node);
 
             if (_recoverErrors && _diagnostics.HasErrors) return;
 

@@ -1475,50 +1475,6 @@ namespace gflat
             throw new TypeCheckException($"Cannot extract name from expression of type '{target.GetType().Name}'", target.Line);
         }
 
-        private void ValidateNameofTarget(AstNode target)
-        {
-            if (target is NamedTypeExpression named)
-            {
-                if (!IsPrimitive(named.Name) &&
-                    !_structs.ContainsKey(named.Name) &&
-                    !_classes.ContainsKey(named.Name) &&
-                    !_interfaces.ContainsKey(named.Name) &&
-                    ResolveEnum(named) == null &&
-                    !TryLookupVariable(named.Name, out _) &&
-                    ResolveFunction(named.Name) == null &&
-                    ResolveGlobalField(named.Name) == null)
-                {
-                    throw new TypeCheckException($"The name '{named.Name}' does not exist in the current context", target.Line);
-                }
-                return;
-            }
-            if (target is IdentifierExpression ident)
-            {
-                if (!IsPrimitive(ident.Name) &&
-                    !_structs.ContainsKey(ident.Name) &&
-                    !_classes.ContainsKey(ident.Name) &&
-                    !_interfaces.ContainsKey(ident.Name) &&
-                    ResolveEnum(new NamedTypeExpression(ident.Name, null, target.Line)) == null &&
-                    !TryLookupVariable(ident.Name, out _) &&
-                    ResolveFunction(ident.Name) == null &&
-                    ResolveGlobalField(ident.Name) == null)
-                {
-                    throw new TypeCheckException($"The name '{ident.Name}' does not exist in the current context", target.Line);
-                }
-                return;
-            }
-            if (target is MemberAccessExpression)
-            {
-                target.Accept(this);
-                return;
-            }
-            if (target is NamespaceAccessExpression)
-            {
-                target.Accept(this);
-                return;
-            }
-        }
-
         public bool IsUnsignedInteger(TypeExpression type)
         {
             type = ResolveAlias(type);
@@ -5264,9 +5220,10 @@ namespace gflat
         public void Visit(NameofExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
-            ValidateNameofTarget(node.Target);
+            ValidateNameofSyntax(node.Target);
+            BindNameof(node.Target, node.TypeBindings);
             string name = ExtractName(node.Target);
-            TypeExpression strType = new ArrayTypeExpression(Char, name.Length + 1, node.Line);
+            TypeExpression strType = new PointerTypeExpression(Char, false, node.Line, isReadOnly: true);
             RecordType(node, strType);
             ConstValue.String constVal = new ConstValue.String(name);
             _constValues[node] = constVal;

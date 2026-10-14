@@ -2536,13 +2536,13 @@ namespace gflat.Tests
                     int y;
                 }
 
-                const char[] N_Point = nameof(Point);
-                const char[] N_Int = nameof(int);
+                const readonly(char*) N_Point = nameof(Point);
+                const readonly(char*) N_Int = nameof(int);
 
                 int main()
                 {
                     int myVariable = 42;
-                    const char[] N_Var = nameof(myVariable);
+                    const readonly(char*) N_Var = nameof(myVariable);
                     return 0;
                 }
                 """;
@@ -2564,14 +2564,14 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
                 }
 
                 int main()
                 {
                     Point pt;
-                    const char[] N_Field = nameof(pt.x);
+                    const readonly(char*) N_Field = nameof(pt.x);
                     return 0;
                 }
                 """;

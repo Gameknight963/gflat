@@ -920,6 +920,17 @@ Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal c
 
 Additional target ABIs, verified out parameters, full ownership and partial moves, managed finalizers and moving collectors, member reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.
 
+## Name queries
+
+`nameof(name)` produces a null-terminated static `readonly(char*)` containing the
+final identifier's source spelling. It accepts local and parameter names, types,
+aliases, namespaces, and qualified member names. Overloaded methods name the
+method group without selecting an overload. Instance members may be named through
+a type, nullable reference, or uninitialized variable; no receiver is read and no
+getter or setter runs. Normal member accessibility still applies. Calls, object
+creation, indexing, and other runtime expressions are not named entities and are
+rejected. Generic parameter names retain their source spelling after specialization.
+
 ## Layout queries
 
 `sizeof(T)` returns the size in bytes and `alignof(T)` returns the required ABI

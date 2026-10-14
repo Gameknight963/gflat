@@ -382,7 +382,10 @@ namespace gflat.ast
             }
             if (node is NameofExpression no)
             {
-                return new NameofExpression(CloneNode(no.Target), no.Line);
+                return new NameofExpression(CloneNode(no.Target), no.Line) {
+                    TypeBindings = no.TypeBindings.Concat(_typeMap).GroupBy(pair => pair.Key)
+                        .ToDictionary(group => group.Key, group => CloneType(group.Last().Value))
+                };
             }
             if (node is NamespaceAccessExpression nsAcc)
             {

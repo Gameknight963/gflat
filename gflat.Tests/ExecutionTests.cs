@@ -2904,7 +2904,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    char* name = nameof(Point);
+                    readonly(char*) name = nameof(Point);
                     if (name[0] == 'P' && name[4] == 't')
                     {
                         return 42;

@@ -320,6 +320,13 @@ namespace gflat
             if (Check(TokenKind.OpenParen))
                 return Finish(ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly, isConst, attributes, genericParams));
 
+            if (Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater))
+            {
+                if (isReadonly || isConst || isAbstract || genericParams.Count != 0 || implementation != FunctionImplementationKind.Ordinary)
+                    throw new TypeCheckException("Namespace properties do not support receiver modifiers, const, abstract, generics, weak, or replace", line);
+                return ParseProperty(type, name, accessibility, false, false, false, false, false, line);
+            }
+
             return Finish(ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, line));
         }
 

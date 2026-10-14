@@ -397,6 +397,29 @@ Classes support `virtual`, `override`, and `abstract` properties through their a
 
 Current restrictions: static auto-properties await static field storage; `init`, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
 
+### Namespace properties
+
+Properties may also be declared at global or namespace scope, with explicit
+accessor bodies or an expression-bodied getter:
+
+```gflat
+namespace Settings;
+public int Limit => 256;
+public int Output { set { Write(value); } }
+```
+
+Read or assign them with `Settings::Limit` and `Settings::Output`. Unqualified
+access follows the enclosing namespace and `using` directives; local variables
+take precedence. Global properties can be qualified with `global::`.
+Getters and setters follow normal call and exception rules, including compound
+assignment and increment. A private property or accessor is accessible only
+within its declaring source file.
+
+Namespace properties have no receiver and do not use `static`, receiver
+`readonly`, `virtual`, `override`, or `abstract`. They require explicit accessors;
+auto-properties, initializers, namespace indexers, and `ref` returns are not
+supported.
+
 ### Reference properties
 
 `public ref T this[nuint index] { get => data![index]; }` exposes existing storage.

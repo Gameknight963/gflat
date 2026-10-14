@@ -34,9 +34,16 @@ public partial class TypeChecker
                 {
                     using var context = SourceContext.Enter(property.Span);
                     _hasProperties = true;
-                    if (owner == null) throw new TypeCheckException("Properties must be declared in a class, struct, or interface", property.Line);
+                    if (owner == null)
+                    {
+                        if (property.Initializer != null || new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>().Any(a => a.Body == null))
+                            throw new TypeCheckException("Namespace properties require explicit accessor bodies and cannot have initializers", property.Line);
+                        if (new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>().Any(a => a.IsReadOnly || a.Accessibility == TokenKind.Protected))
+                            throw new TypeCheckException("Namespace property accessors cannot be readonly or protected", property.Line);
+                    }
                     if (property.IsRef)
                     {
+                        if (owner == null) throw new TypeCheckException("Namespace properties cannot return ref values", property.Line);
                         ExpandReferenceProperty(members, owner, property);
                         continue;
                     }
@@ -99,7 +106,35 @@ public partial class TypeChecker
     }
 
     private sealed record PropertyAccess(string Name, string Owner, MethodDeclaration? Getter,
-        MethodDeclaration? Setter, AstNode? Receiver, AstNode? StaticOwner, List<AstNode> Arguments);
+        MethodDeclaration? Setter, AstNode? Receiver, AstNode? StaticOwner, List<AstNode> Arguments, bool IsNamespace = false);
+
+    private PropertyAccess? FindNamespaceProperty(string name, AstNode? qualifier, int line)
+    {
+        PropertyAccess? InScope(NamespaceScope scope)
+        {
+            var getter = scope.Functions.GetValueOrDefault("$get$" + name);
+            var setter = scope.Functions.GetValueOrDefault("$set$" + name);
+            if (getter == null && setter == null) return null;
+            string ns = GetFunctionNamespace(getter ?? setter!);
+            AstNode target = new GlobalExpression(line);
+            if (ns.Length > 0)
+                foreach (string part in ns.Replace("$", "::").Split("::"))
+                    target = new NamespaceAccessExpression(target, part, line);
+            return new(name, ns, getter, setter, null, target, new(), true);
+        }
+        if (qualifier != null) return ResolveNamespace(qualifier) is { } scope ? InScope(scope) : null;
+        for (var scope = _currentNamespace; scope != null; scope = scope.Parent)
+            if (InScope(scope) is { } property) return property;
+        PropertyAccess? found = null;
+        foreach (string ns in CurrentUsings.Distinct())
+        {
+            if (ResolveNamespaceByName(ns) is not { } scope || InScope(scope) is not { } property) continue;
+            if (found != null && found.Owner != property.Owner)
+                throw new TypeCheckException($"Property '{name}' is ambiguous between namespaces", line);
+            found = property;
+        }
+        return found;
+    }
 
     private PropertyAccess? FindProperty(AstNode expression)
     {
@@ -145,6 +180,8 @@ public partial class TypeChecker
             case NamespaceAccessExpression access:
                 name = access.Member;
                 staticOwner = access.Left;
+                if (access.Left is not IdentifierExpression local || !TryLookupVariable(local.Name, out _))
+                    if (FindNamespaceProperty(name, access.Left, expression.Line) is { } namespaceProperty) return namespaceProperty;
                 if (access.Left is IdentifierExpression typeName)
                 {
                     if (TryLookupVariable(typeName.Name, out _)) return null;
@@ -156,7 +193,7 @@ public partial class TypeChecker
                 break;
             default: return null;
         }
-        if (owner == null) return null;
+        if (owner == null) return expression is IdentifierExpression ? FindNamespaceProperty(name, null, expression.Line) : null;
         MethodDeclaration? getter = null, setter = null;
         string declaring = owner;
         if (_classes.TryGetValue(owner, out var cls))
@@ -184,7 +221,7 @@ public partial class TypeChecker
             getter = iface.MethodsByName.GetValueOrDefault("$get$" + name);
             setter = iface.MethodsByName.GetValueOrDefault("$set$" + name);
         }
-        if (getter == null && setter == null) return null;
+        if (getter == null && setter == null) return expression is IdentifierExpression ? FindNamespaceProperty(name, null, expression.Line) : null;
         var method = getter ?? setter!;
         if (staticOwner != null && !method.IsStatic)
             throw new TypeCheckException($"Instance property '{name}' must be accessed with '.'", expression.Line);
@@ -219,6 +256,13 @@ public partial class TypeChecker
     {
         var method = getter ? property.Getter : property.Setter;
         if (method == null) throw new TypeCheckException($"Property '{property.Name}' has no {(getter ? "getter" : "setter")}", site.Line);
+        if (property.IsNamespace)
+        {
+            if (method.Accessibility == TokenKind.Private && method.Span.SourceId != site.Span.SourceId)
+                throw new TypeCheckException($"Cannot access private {(getter ? "getter" : "setter")} of property '{property.Name}'", site.Line);
+            ValidatePropertyAccessor(method);
+            return method;
+        }
         if (method.IsPropertyInitializer && !(_currentConstructor != null &&
             (_currentClass?.Name ?? _currentStruct?.Name) == property.Owner && property.Receiver is IdentifierExpression { Name: "this" }))
             throw new TypeCheckException($"Get-only auto-property '{property.Name}' can only be assigned in its declaring constructor", site.Line);

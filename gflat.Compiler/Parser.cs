@@ -794,11 +794,13 @@ namespace gflat
         private Parameter ParseParameterCoreLocated()
         {
             int line = Current.Line;
+            bool isReceiver = Check(TokenKind.Identifier) && Current.Text == "this";
+            if (isReceiver) Consume();
             bool isConst = Match(TokenKind.Const);
             TypeExpression paramType = ParseParameterType();
             string paramName = Expect(TokenKind.Identifier).Text;
             AstNode? defaultValue = Match(TokenKind.Equals) ? ParseExpression() : null;
-            return new Parameter(paramName, paramType, line, isConst, defaultValue);
+            return new Parameter(paramName, paramType, line, isConst, defaultValue) { IsExtensionReceiver = isReceiver };
         }
 
         private List<AttributeNode> ParseAttributes()

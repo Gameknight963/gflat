@@ -3146,6 +3146,11 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitCallCore(CallExpression node)
     {
+        if (_typeChecker.GetExtensionCall(node) is { } extensionCall)
+        {
+            EmitCallCore(extensionCall);
+            return;
+        }
         if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
         {
             if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))

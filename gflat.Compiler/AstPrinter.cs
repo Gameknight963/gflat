@@ -90,7 +90,7 @@ namespace gflat
 
         public void Visit(Parameter node)
         {
-            Print($"Parameter: {(node.IsConst ? "const " : "")}{node.Name}");
+            Print($"Parameter: {(node.IsExtensionReceiver ? "this " : "")}{(node.IsConst ? "const " : "")}{node.Name}");
             Indented(() => { node.Type.Accept(this); node.DefaultValue?.Accept(this); });
         }
 

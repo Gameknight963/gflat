@@ -884,6 +884,11 @@ namespace gflat.semantics
             }
             else if (expr is CallExpression call)
             {
+                if (_typeChecker.GetExtensionCall(call) is { } extensionCall)
+                {
+                    CheckExpression(extensionCall);
+                    return;
+                }
                 if (_inConstructor && call.Callee is IdentifierExpression &&
                     _typeChecker.GetResolvedCall(call) is MethodDeclaration { IsStatic: false } method &&
                     IsCurrentInstanceMethod(method))

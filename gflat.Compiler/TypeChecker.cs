@@ -131,6 +131,7 @@ namespace gflat
             _functionNamespaces.TryGetValue(method, out string? ns) ? ns : "";
 
         public AstNode? GetResolvedCall(CallExpression call) =>
+            extensionCalls.TryGetValue(call, out var lowered) ? GetResolvedCall(lowered) :
             _resolvedCalls.TryGetValue(call, out AstNode? target) ? target : null;
 
         public AstNode? GetFunctionAddressTarget(UnaryExpression unary) =>
@@ -504,6 +505,11 @@ namespace gflat
             _types[node] = ResolveAlias(type);
             if (node is MemberAccessExpression or IdentifierExpression && IsExpressionReadOnly(node))
                 _types[node] = TypeQualifiers.ReadOnly(_types[node]);
+            if (extensions.Count != 0 && node is IdentifierExpression receiver && TryLookupVariable(receiver.Name, out var receiverSlotType))
+            {
+                extensionReceiverVariables.Add(receiver);
+                extensionReceiverSlotTypes[receiver] = ParameterValueType(receiverSlotType!);
+            }
         }
 
         private void PushScope()
@@ -852,6 +858,7 @@ namespace gflat
             }
 
             string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            extensionGenericTypeOrigins[mangledName] = new NamedTypeExpression(genericDef.Name, null, line, typeArgs);
             _displayNames[mangledName] = DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             if (_structs.ContainsKey(mangledName))
             {
@@ -893,6 +900,7 @@ namespace gflat
             }
 
             string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            extensionGenericTypeOrigins[mangledName] = new NamedTypeExpression(genericDef.Name, null, line, typeArgs);
             _displayNames[mangledName] = DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             if (_classes.ContainsKey(mangledName))
             {
@@ -938,7 +946,7 @@ namespace gflat
             {
                 GenericParameter param = genericDef.GenericParameters[i];
                 TypeExpression arg = typeArgs[i];
-                if (param.Constraint != null && !TypeSatisfiesConstraint(arg, param.Constraint))
+                if (param.Constraint != null && !FunctionConstraintSatisfied(genericDef, arg, param.Constraint))
                 {
                     throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on function '{genericDef.Name}'", line);
                 }
@@ -2028,6 +2036,7 @@ namespace gflat
 
             // Resolve literal operators before checking uses, including forward references.
             RegisterStringLiteralOperators(node);
+            RegisterExtensions(node);
 
             // Pass 3: Body type checking
             _currentNamespace = _globalScope;
@@ -4443,15 +4452,16 @@ namespace gflat
         {
             using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (TryCheckExtensionCall(node)) return;
             RecordExceptionCall(node);
-            foreach (AstNode arg in node.Arguments)
+            foreach (AstNode arg in checkedExtensionArguments.Contains(node) ? [] : node.Arguments)
             {
                 CheckNullableArgument(arg);
 
             }
 
             // Check if callee is a local variable or struct member holding a function pointer
-            if (node.Callee is IdentifierExpression identVar && TryLookupVariable(identVar.Name, out TypeExpression? varType))
+            if (!extensionTargets.ContainsKey(node) && node.Callee is IdentifierExpression identVar && TryLookupVariable(identVar.Name, out TypeExpression? varType))
             {
                 varType = ResolveAlias(varType!);
                 if (varType is FunctionPointerTypeExpression fnPtr)
@@ -4644,6 +4654,11 @@ namespace gflat
                     throw new TypeCheckException($"'{named.Name}' is not a struct or class", node.Line);
                 }
             }
+            else if (extensionTargets.TryGetValue(node, out var extensionTarget))
+            {
+                method = extensionTarget;
+                funcName = method.Name;
+            }
             else if (node.Callee is IdentifierExpression ident)
             {
                 funcName = ident.Name;
@@ -4737,7 +4752,7 @@ namespace gflat
                 throw new TypeCheckException($"Expression of type '{DisplayTypeName(GetType(node.Callee))}' is not callable", node.Callee.Span);
             }
 
-            if (method != null) method = SelectOverload(method, node);
+            if (method != null && !extensionTargets.ContainsKey(node)) method = SelectOverload(method, node);
 
             if (method?.IsStatic == true && node.Callee is MemberAccessExpression)
                 throw new TypeCheckException($"Static method '{method.Name}' must be accessed through its type with '::'", node.Line);
@@ -6087,6 +6102,8 @@ namespace gflat
 
         public void Visit(LambdaExpression node)
         {
+            if (node.Parameters.Any(p => p.IsExtensionReceiver))
+                throw new TypeCheckException("Extension receivers are allowed only on namespace functions", node.Span);
             using var exceptionScope = IsolateExceptionHandlers();
             using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);

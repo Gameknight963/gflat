@@ -865,6 +865,11 @@ namespace gflat.comptime
 
         public void Visit(CallExpression node)
         {
+            if (_context is TypeChecker extensionChecker && extensionChecker.GetExtensionCall(node) is { } extensionCall)
+            {
+                extensionCall.Accept(this);
+                return;
+            }
             CheckSteps(node.Line);
 
             if (_callDepth >= MaxCallDepth)
@@ -879,7 +884,8 @@ namespace gflat.comptime
             if (node.Callee is IdentifierExpression ident)
             {
                 funcName = ident.Name;
-                method = _context.ResolveFunctionForComptime(funcName);
+                method = _context is TypeChecker resolvedChecker && resolvedChecker.GetResolvedCall(node) is MethodDeclaration resolved
+                    ? resolved : _context.ResolveFunctionForComptime(funcName);
                 if (method == null && TryGetVariable("this", out ConstValue? thisVal) && thisVal is ConstValue.Struct thisStruct)
                 {
                     TypeChecker.StructInfo? sInfo = _context.GetStruct(thisStruct.StructName);

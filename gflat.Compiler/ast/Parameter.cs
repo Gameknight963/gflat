@@ -10,6 +10,7 @@ namespace gflat.ast
         public TypeExpression Type { get; set; }
         public bool IsConst { get; }
         public AstNode? DefaultValue { get; }
+        public bool IsExtensionReceiver { get; set; }
 
         public Parameter(string name, TypeExpression type, int line, bool isConst = false, AstNode? defaultValue = null) : base(line)
         {

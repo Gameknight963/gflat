@@ -135,6 +135,7 @@ public partial class TypeChecker
         first.IsVirtual == second.IsVirtual && first.IsOverride == second.IsOverride &&
         first.IsConst == second.IsConst && first.IsReadOnly == second.IsReadOnly && first.IsNoThrow == second.IsNoThrow &&
         first.Parameters.Select(p => p.IsConst).SequenceEqual(second.Parameters.Select(p => p.IsConst)) &&
+        first.Parameters.Select(p => p.IsExtensionReceiver).SequenceEqual(second.Parameters.Select(p => p.IsExtensionReceiver)) &&
         first.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, first))
             .SequenceEqual(second.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, second)));
 

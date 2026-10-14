@@ -134,6 +134,49 @@ are ambiguous. Defaults are not supported on ref parameters, operators,
 indexers, copy constructors, or lambdas. Optional values cannot require
 nontrivial copying or destruction.
 
+## Extension methods
+
+A namespace function can mark its first parameter with contextual `this`:
+
+```gflat
+namespace Numbers {
+    int Plus(this int value, int extra = 2) => value + extra;
+}
+
+int main() {
+    int value = 40;
+    return Numbers::Plus(value);
+}
+```
+
+With `using Numbers;`, the same function can be called as `value.Plus()`.
+Current and enclosing namespaces and the source file's using directives determine
+which extensions are visible. Extensions remain ordinary functions with ordinary
+signatures: no object metadata or different calling convention is introduced.
+The receiver evaluates once, before the remaining arguments.
+
+`this T` passes a value using the usual copy or transfer rules. `this ref T`
+borrows mutable existing storage, and `this ref readonly(T)` borrows a readonly
+view. Ref receivers cannot be temporaries, value properties, or storage inside
+managed objects. A pointer receiver can instead be declared explicitly as
+`this T*` or `this T^`; nullable receiver parameters are allowed. Ref arguments
+retain the slot's declared nullability, even after a null guard narrows a read.
+
+Callable instance members take priority and retain their normal diagnostics.
+Missing or non-callable members allow extension lookup. Exact receiver candidates
+are considered first; only when none accepts the receiver does a non-null raw
+pointer try one pointee dereference, including borrowing its existing storage.
+This does not chase multiple pointer levels or borrow into managed storage.
+Overloads within the chosen receiver tier use normal argument ranking. Mixing
+value and ref receiver shapes within that tier is ambiguous. Qualify the ordinary
+function call when an explicit choice is needed.
+
+An extension receiver must be first and cannot be const or optional. Only
+namespace functions support the marker. Generic extensions use existing generic
+constraints and inference; overloaded generic families remain unsupported.
+Extensions do not add properties, operators, bound method groups, or static
+type calls such as `int.Parse()`. Replacements must preserve the receiver marker.
+
 ## Weak defaults and explicit replacements
 
 Ordinary free functions, static methods, and concrete instance methods support overloads by parameter type and count. Exact argument types are preferred over implicit conversions; a candidate must be no worse for every argument and better for at least one. Equally applicable candidates are ambiguous, independent of declaration order. Constructor calls use the same ranking. Return types, readonly qualifications, and declaration modifiers cannot distinguish overloads.

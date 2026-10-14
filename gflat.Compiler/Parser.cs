@@ -292,6 +292,10 @@ namespace gflat
                     isAbstract = true;
                     Consume();
                 }
+                else if (Check(TokenKind.Static) && Peek().Kind == TokenKind.Class)
+                {
+                    throw new TypeCheckException("Static classes are not yet supported", Consume().Span);
+                }
                 else if (Check(TokenKind.Weak) || Check(TokenKind.Replace))
                 {
                     if (implementation != FunctionImplementationKind.Ordinary)
@@ -420,7 +424,6 @@ namespace gflat
         {
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Internal;
-            bool isStatic = false;
             bool isAbstract = false;
 
             while (true)
@@ -433,9 +436,8 @@ namespace gflat
                 }
                 else if (Check(TokenKind.Static))
                 {
-                    isStatic = true;
-                    Consume();
-                    if (isStatic) throw new NotImplementedException("Static classes are not yet supported");
+                    Token modifier = Consume();
+                    throw new TypeCheckException("Static classes are not yet supported", modifier.Span);
                 }
                 else if (Check(TokenKind.Abstract))
                 {

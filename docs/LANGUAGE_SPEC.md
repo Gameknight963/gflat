@@ -404,8 +404,9 @@ accessor bodies or an expression-bodied getter:
 
 ```gflat
 namespace Settings;
+private extern int putchar(int character);
 public int Limit => 256;
-public int Output { set { Write(value); } }
+public int Output { set { putchar(value); } }
 ```
 
 Read or assign them with `Settings::Limit` and `Settings::Output`. Unqualified

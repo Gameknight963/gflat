@@ -5,7 +5,8 @@ namespace gflat;
 internal static class ProjectBuild
 {
     internal static int Run(ProjectModel project, string target, string configuration, string platform,
-        bool emitIr = false, string? output = null, string? clang = null, int? exceptionReserveBytes = null, int? optimizationLevel = null)
+        bool emitIr = false, string? output = null, string? clang = null, int? exceptionReserveBytes = null, int? optimizationLevel = null,
+        ProjectGraph? sourceGraph = null)
     {
         // Explicit source-list invocations in the targets avoid recursively building the project.
         string assembly = typeof(Program).Assembly.Location;
@@ -16,9 +17,9 @@ internal static class ProjectBuild
         if (project.SdkRoot != null) Property("GflatDefaultSdkRoot", project.SdkRoot);
         Property("GflatCompilerCommand", "dotnet \"" + assembly + "\"");
         Property("GflatCompilerPath", assembly);
-        var graph = ProjectGraph.Load(project.FilePath,
+        sourceGraph ??= ProjectGraph.Load(project.FilePath,
             path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel));
-        Property("GflatProjectInputs", string.Join(";", graph.Projects
+        Property("GflatProjectInputs", string.Join(";", sourceGraph.Projects
             .SelectMany(item => item.Imports.Prepend(item.FilePath)).Distinct(ProjectModel.Paths)
             .Select(ProjectSdk.EscapePropertyValue)));
         if (!emitIr && target is "Build" or "Rebuild")

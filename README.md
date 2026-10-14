@@ -41,7 +41,7 @@ This example uses std; see the runnable
 - Project creation with `gflat new`, configurable optimization, and `inline` hints.
 - Compile-time `typeof(T)` metadata for names, layout, and recursive type structure.
 - A language server and Visual Studio integration with diagnostics, completion,
-  syntax highlighting, reference searches, document outlines, and rich hovers.
+  syntax highlighting, reference and symbol searches, document outlines, and rich hovers.
 - A small standard library with owning strings, vectors, console/file IO,
   and allocation-free integer queries. See the [sequence tool](examples/seq/README.md).
 - Native Windows x64 and Linux x64 builds

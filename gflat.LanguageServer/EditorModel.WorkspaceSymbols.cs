@@ -14,7 +14,7 @@ public sealed partial class EditorModel
         // Keep source overloads distinct; specializations and generated accessors
         // are absent from this source declaration index.
         workspaceSymbols ??= symbols.Select(symbol => (Symbol: symbol, Kind: OutlineKind(symbol.Syntax.Node)))
-            .Where(entry => entry.Kind != 0 && entry.Symbol.NameSpan.Source is { } source &&
+            .Where(entry => !entry.Symbol.IsTypeParameter && entry.Kind != 0 && entry.Symbol.NameSpan.Source is { } source &&
                 !source.Path.StartsWith('<') && entry.Symbol.NameSpan.Length > 0)
             .Select(entry => new WorkspaceSymbolInformation(entry.Symbol.Name, entry.Kind,
                 new Location(Workspace.FileUri(entry.Symbol.NameSpan.Source!.Path), Workspace.ToRange(entry.Symbol.NameSpan)),

@@ -8,8 +8,8 @@ namespace gflat.LanguageServer;
 /// <summary>Read-only editor queries over one analyzed set of source snapshots.</summary>
 public sealed partial class EditorModel
 {
-    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier"];
-    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword"];
+    public static readonly string[] TokenTypes = ["namespace", "class", "struct", "interface", "enum", "type", "parameter", "variable", "property", "function", "method", "enumMember", "keyword", "modifier", "typeParameter"];
+    public static readonly string[] VisualStudioTokenTypes = ["namespace name", "class name", "struct name", "interface name", "enum name", "type", "parameter name", "local name", "property name", "method name", "method name", "enum member name", "keyword - control", "keyword", "type parameter name"];
     public static readonly string[] TokenModifiers = ["declaration", "static", "readonly"];
     private sealed record Symbol(string Name, int Kind, string Classification, Syntax Syntax, SourceSpan NameSpan,
         string Namespace, string? Owner, Syntax? Scope, TypeExpression? Type, bool Static, TokenKind Access)
@@ -19,7 +19,8 @@ public sealed partial class EditorModel
         public IReadOnlyDictionary<string, TypeExpression>? GenericBindings { get; init; }
         public MethodDeclaration? BoundMethod { get; init; }
         public bool BoundExtension { get; init; }
-        public IReadOnlyList<Parameter>? Parameters => BoundParameters ?? (Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null });
+        public bool IsTypeParameter { get; init; }
+        public IReadOnlyList<Parameter>? Parameters => IsTypeParameter ? null : BoundParameters ?? (Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null });
     }
     private readonly AnalysisSnapshot snapshot;
     private readonly Dictionary<string, SourceFile> sources;
@@ -88,6 +89,7 @@ public sealed partial class EditorModel
             symbols.Add(symbol);
             declarations.TryAdd(entry.Node, symbol);
         }
+        RegisterTypeParameters();
         // Resolve once on the analysis worker. Hover and semantic-token requests
         // must not repeatedly walk the tree on the server's message loop.
         foreach (var (path, ts) in tokens)
@@ -163,7 +165,7 @@ public sealed partial class EditorModel
             .Where(s => Accessible(s, path, offset)).ToArray();
         var inherited = inheritedOrder.ToHashSet();
         return symbols.Where(s => s.Scope != null
-            ? s.NameSpan.Source?.Path == path && Contains(s.Scope, offset) && (s.Syntax.Node is Parameter || s.NameSpan.Start <= offset)
+            ? s.NameSpan.Source?.Path == path && Contains(s.Scope, offset) && (s.IsTypeParameter || s.Syntax.Node is Parameter || s.NameSpan.Start <= offset)
             : s.Owner != null ? inherited.Contains(s) && (!isStatic || s.Static || IsType(s.Syntax.Node))
             : s.Namespace.Length == 0 || ns == s.Namespace || ns.StartsWith(s.Namespace + "::", StringComparison.Ordinal) || imports.Contains(s.Namespace))
             .Where(s => s.Syntax.Node is not (ExternDeclaration or PropertyDeclaration) || Accessible(s, path, offset))
@@ -374,8 +376,11 @@ public sealed partial class EditorModel
         }
         var candidates = Candidates(path, token.Start, index);
         // A local named `String` must not recolor a `String` type annotation.
-        if (nodes[path].Any(n => n.Node is NamedTypeExpression && n.Span.Length > 0 && token.Start >= n.Span.Start && token.End < n.Span.Start + n.Span.Length))
-            candidates = candidates.Where(s => IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration);
+        bool typePosition = nodes[path].Any(n => n.Node is NamedTypeExpression && n.Span.Length > 0 && token.Start >= n.Span.Start && token.End < n.Span.Start + n.Span.Length);
+        if (typePosition)
+            candidates = candidates.Where(s => s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration);
+        else if (candidates.FirstOrDefault(s => !s.IsTypeParameter && s.Name == token.Text) is { } value)
+            return value;
         return candidates.FirstOrDefault(s => s.Name == token.Text);
     }
     private int TokenAt(string path, int offset) => Array.FindIndex(tokens[path], t => t.Start <= offset && t.End >= offset);
@@ -421,9 +426,15 @@ public sealed partial class EditorModel
     public object? Hover(string path, int offset, VisualStudioHover? presentation = null, HoverOptions? options = null)
     {
         options ??= new();
+        var query = QueryHover(path, offset, presentation, options.ShowTypeLayout);
+        if (query != null) return query;
         var compound = CompoundTypeHover(path, offset, presentation, options.ShowTypeLayout);
         if (compound != null) return compound;
         int index = TokenAt(path, offset);
+        // On a qualified-name separator, show the entity to its right instead
+        // of resolving the punctuation as a partial namespace expression.
+        if (index >= 0 && tokens[path][index].Kind == TokenKind.DoubleColon && index + 1 < tokens[path].Length)
+            index++;
         var symbol = index < 0 ? null : Resolve(path, index);
         if (symbol == null && index >= 0 && snapshot.Checker is { } literalChecker)
         {
@@ -465,8 +476,8 @@ public sealed partial class EditorModel
         if (symbol == null) return null;
         var parts = Signature(symbol, navigable: true, hoverPath: path, hoverOffset: offset);
         if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
-        HoverDetail[] details = options.ShowTypeLayout ? LayoutDetails(symbol) : [];
-        if (options.ShowKnownExceptions && (symbol.BoundMethod ?? symbol.Syntax.Node as MethodDeclaration) is { } hoveredMethod && snapshot.Checker is { } exceptionChecker &&
+        HoverDetail[] details = options.ShowTypeLayout && !symbol.IsTypeParameter ? LayoutDetails(symbol) : [];
+        if (!symbol.IsTypeParameter && options.ShowKnownExceptions && (symbol.BoundMethod ?? symbol.Syntax.Node as MethodDeclaration) is { } hoveredMethod && snapshot.Checker is { } exceptionChecker &&
             !snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         {
             var exceptions = exceptionChecker.GetPossibleExceptions(hoveredMethod).Where(e => e != TypeChecker.UnknownExceptionType).ToArray();

@@ -14,8 +14,9 @@ public sealed partial class EditorModel
             ClassDeclaration c => c.GenericParameters.Any(p => p.Name == name),
             StructDeclaration s => s.GenericParameters.Any(p => p.Name == name),
             _ => false
-        })) return null;
-        var types = symbols.Where(s => IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration).ToArray();
+        })) return symbols.FirstOrDefault(s => s.IsTypeParameter && s.Name == name &&
+            s.Scope != null && (s.Scope == context.Syntax || Parents(context.Syntax).Contains(s.Scope)));
+        var types = symbols.Where(s => !s.IsTypeParameter && (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration)).ToArray();
         var exact = types.FirstOrDefault(s => s.Qualified == name);
         if (exact != null) return exact;
         if (context?.NameSpan.Source is { } source)
@@ -34,9 +35,9 @@ public sealed partial class EditorModel
         var parts = new List<DisplayPart>();
         void Add(string text, string kind = "text", Location? target = null) { if (text.Length > 0) parts.Add(new(kind, text, Target: target)); }
         void Keyword(string word) { Add(word, "keyword"); Add(" "); }
-        void Type(TypeExpression type)
+        void Type(TypeExpression type) => TypeText(ShortType(DisplayType(type), hoverPath, hoverOffset));
+        void TypeText(string text)
         {
-            string text = ShortType(DisplayType(type), hoverPath, hoverOffset);
             var tokens = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
             int cursor = 0;
             for (int i = 0; i < tokens.Length; i++)
@@ -66,10 +67,11 @@ public sealed partial class EditorModel
             string name = symbol.Qualified;
             if (hoverPath != null && symbol.Scope == null && symbol.Owner != null && !IsType(symbol.Syntax.Node))
             {
-                string owner = ShortType(symbol.Owner, hoverPath, hoverOffset);
                 // An instance member uses the same separator as an instance access.
                 var ownerSymbol = TypeSymbol(symbol.Owner, symbol);
-                Add(owner, ownerSymbol?.Classification ?? "type", navigable ? SymbolLocation(ownerSymbol) : null);
+                string owner = ownerSymbol?.Namespace is { Length: > 0 } ns && symbol.Owner.StartsWith(ns + "::", StringComparison.Ordinal)
+                    ? symbol.Owner[(ns.Length + 2)..] : symbol.Owner;
+                TypeText(owner);
                 Add(symbol.Static ? "::" : ".", "punctuation");
                 Add(symbol.Name, symbol.Classification, navigable ? SymbolLocation(symbol) : null);
             }
@@ -91,11 +93,13 @@ public sealed partial class EditorModel
                 {
                     if (i > 0) Add(", ", "punctuation");
                     if (symbol.GenericBindings?.TryGetValue(generics[i].Name, out var binding) == true) Type(binding);
-                    else Add(generics[i].Name, "type");
+                    else Add(generics[i].Name, "typeParameter");
                 }
                 Add(">", "punctuation");
             }
         }
+        if (symbol.IsTypeParameter)
+            return [new("text", "type parameter "), new("typeParameter", symbol.Name, Target: navigable ? SymbolLocation(symbol) : null)];
         if (symbol.Scope == null && symbol.Syntax.Node is not NamespaceDeclaration and not EnumMemberDeclaration)
         {
             string? access = symbol.Access switch { TokenKind.Public => "public", TokenKind.Private => "private", TokenKind.Protected => "protected", TokenKind.Internal => "internal", _ => null };
@@ -116,7 +120,9 @@ public sealed partial class EditorModel
         {
             if (field.IsStatic) Keyword("static");
             if (field.IsConst) Keyword("const");
-            if (field.IsReadOnly) Keyword("readonly");
+            // readonly(T) already expresses a readonly field. A method's
+            // readonly receiver remains a separate modifier above.
+            if (field.IsReadOnly && !field.Type.IsReadOnlyValue) Keyword("readonly");
         }
         else if (symbol.Syntax.Node is ExternDeclaration) Keyword("extern");
         else if (symbol.Syntax.Node is VariableDeclaration { IsConst: true } or Parameter { IsConst: true }) Keyword("const");
@@ -270,7 +276,7 @@ public sealed partial class EditorModel
     {
         var ts = tokens[path];
         int index = TokenAt(path, offset);
-        if (index < 0 || ts[index].Kind == TokenKind.Identifier || TypeChecker.IsPrimitive(ts[index].Text)) return null;
+        if (index < 0 || ts[index].Kind is TokenKind.Identifier or TokenKind.DoubleColon || TypeChecker.IsPrimitive(ts[index].Text)) return null;
         var syntax = nodes[path].Where(n => n.Node is TypeExpression && Contains(n, offset))
             .OrderByDescending(n => n.Span.Length).FirstOrDefault();
         if (syntax?.Node is not TypeExpression type || type is NamedTypeExpression && !type.IsReadOnlyValue) return null;
@@ -287,7 +293,8 @@ public sealed partial class EditorModel
         var parts = new List<DisplayPart>();
         var lexed = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
         int cursor = 0;
-        var context = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.Scope != null && Contains(s.Scope, offset));
+        var context = symbols.Where(s => s.NameSpan.Source?.Path == path && s.Scope != null && Contains(s.Scope, offset))
+            .MinBy(s => s.Scope!.Span.Length);
         for (int i = 0; i < lexed.Length; i++)
         {
             var token = lexed[i];
@@ -296,7 +303,7 @@ public sealed partial class EditorModel
             while (first >= 2 && lexed[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
             var target = token.Kind == TokenKind.Identifier ? TypeSymbol(string.Concat(lexed[first..(i + 1)].Select(t => t.Text)), context) : null;
             if (target == null && token.Kind == TokenKind.Identifier)
-                target = Visible(path, offset).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == token.Text);
+                target = Visible(path, offset).FirstOrDefault(s => (s.IsTypeParameter || IsType(s.Syntax.Node)) && s.Name == token.Text);
             parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind == TokenKind.Readonly ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation"), token.Text, Target: SymbolLocation(target)));
             cursor = token.End + 1;
         }
@@ -305,6 +312,7 @@ public sealed partial class EditorModel
 
     private static string Glyph(Symbol symbol)
     {
+        if (symbol.IsTypeParameter) return "type.public";
         string kind = symbol.Syntax.Node switch
         {
             FieldDeclaration { IsConst: true } or VariableDeclaration { IsConst: true } => "constant",

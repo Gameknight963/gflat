@@ -80,6 +80,14 @@ public sealed class WorkspaceSymbolTests
     }
 
     [Fact]
+    public void TypeParametersAreNotProjectDeclarations()
+    {
+        var model = Analyze("UniqueTypeParameter Identity<UniqueTypeParameter>(UniqueTypeParameter value) => value;");
+        Assert.Empty(model.WorkspaceSymbols("UniqueTypeParameter"));
+        Assert.Single(model.WorkspaceSymbols("Identity"));
+    }
+
+    [Fact]
     public void RecoverableErrorsDoNotEraseHealthySearchResults()
     {
         var model = Analyze("void Broken() { unknown(); } int Answer() => 42;");

@@ -50,7 +50,7 @@ public sealed class VisualStudioHover
     private static string Classification(string kind) => kind switch
     {
         "class" => "class name", "struct" => "struct name", "interface" => "interface name", "enum" => "enum name",
-        "namespace" => "namespace name", "method" or "function" => "method name", "parameter" => "parameter name",
+        "namespace" => "namespace name", "typeParameter" => "type parameter name", "method" or "function" => "method name", "parameter" => "parameter name",
         "variable" => "local name", "property" => "property name", "enumMember" => "enum member name", "number" => "number",
         _ => kind
     };

@@ -23,6 +23,7 @@ namespace gflat.comptime
         bool TryLookupVariable(string name, out TypeExpression? varType);
         int GetTypeSize(TypeExpression type);
         int GetTypeAlignment(TypeExpression type);
+        ConstValue DescribeType(TypeExpression type, int line);
         string ExtractName(AstNode target);
     }
 }

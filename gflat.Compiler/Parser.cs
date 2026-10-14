@@ -1779,6 +1779,13 @@ namespace gflat
             }
 
             // Compile-time layout queries
+            if (Match(TokenKind.Typeof))
+            {
+                Expect(TokenKind.OpenParen);
+                TypeExpression type = ParseTypeExpression();
+                Expect(TokenKind.CloseParen);
+                return new TypeofExpression(type, line);
+            }
             if (Check(TokenKind.Sizeof) || Check(TokenKind.Alignof))
             {
                 bool alignment = Consume().Kind == TokenKind.Alignof;

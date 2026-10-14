@@ -373,6 +373,8 @@ namespace gflat.ast
             }
             if (node is AlignofExpression alignment)
                 return new AlignofExpression(CloneType(alignment.TargetType), alignment.Line);
+            if (node is TypeofExpression reflection)
+                return new TypeofExpression(CloneType(reflection.TargetType), reflection.Line);
 
             if (node is SizeofExpression sz)
             {

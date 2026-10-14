@@ -762,7 +762,7 @@ Exit status: 1 for source errors, 2 for usage/toolchain errors, 3 for internal c
 
 ## Future work
 
-Additional target ABIs, verified out parameters, full ownership and partial moves, managed finalizers and moving collectors, reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.
+Additional target ABIs, verified out parameters, full ownership and partial moves, managed finalizers and moving collectors, member reflection, and C++ interoperability are proposals, not current guarantees. Compiler architecture can progressively replace AST-based lowering with a richer checked representation; the shared control-flow graph is the current foundation.
 
 ## Layout queries
 
@@ -800,4 +800,30 @@ keeps calls; optimized builds let LLVM decide whether inlining is beneficial.
 ```gflat
 inline int Add(int left, int right) => left + right;
 int main() { return Add(20, 22); }
+```
+
+## Static type metadata
+
+`typeof(T)` produces a compile-time constant `std::TypeInfo` describing the static
+queried type. It works through aliases and generic specialization. Its readonly
+fields are `Name`, `Size`, `Alignment`, `IsPointer`, `IsManaged`, `IsNullable`,
+`IsReadOnly`, and `HasDestructor`. Sizes and alignments use `nuint`; names are
+borrowed, null-terminated strings with static lifetime. Aliases resolve to their
+underlying type name.
+
+Traits describe the queried type itself: `typeof(Resource*).HasDestructor` is
+false even when `Resource` has a destructor. `IsPointer` describes raw and function
+pointers; managed references use `IsManaged`. This is not a runtime type registry
+and does not yet enumerate fields, methods, or properties. `typeof(expression)`
+is not supported.
+
+```gflat
+struct Packet { public int sequence; }
+const nuint Size<T>() => typeof(T).Size;
+const nuint PacketSize = Size<Packet>();
+int main() {
+    std::TypeInfo info = typeof(Packet);
+    if (info.Size != PacketSize) return 1;
+    return 0;
+}
 ```

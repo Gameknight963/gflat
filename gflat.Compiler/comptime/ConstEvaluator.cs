@@ -1279,6 +1279,7 @@ namespace gflat.comptime
 
         public void Visit(SizeofExpression node) => VisitLayout(node, node.TargetType, false);
         public void Visit(AlignofExpression node) => VisitLayout(node, node.TargetType, true);
+        public void Visit(TypeofExpression node) { CheckSteps(node.Line); _currentValue = _context.DescribeType(node.TargetType, node.Line); }
 
         private void VisitLayout(AstNode node, TypeExpression target, bool alignment)
         {

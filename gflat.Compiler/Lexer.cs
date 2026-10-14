@@ -285,6 +285,7 @@ public class Lexer
             "base" => TokenKind.Base,
             "sizeof" => TokenKind.Sizeof,
             "alignof" => TokenKind.Alignof,
+            "typeof" => TokenKind.Typeof,
             "nameof" => TokenKind.Nameof,
             "throw" => TokenKind.Throw,
             "nothrow" => TokenKind.NoThrow,

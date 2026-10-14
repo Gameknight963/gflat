@@ -653,7 +653,7 @@ public partial class LlvmEmitter : IVisitor
         {
             deref.Operand.Accept(this);
         }
-        else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression)
+        else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression or TypeofExpression)
         {
             node.Accept(this);
             string value = Pop();
@@ -4031,6 +4031,13 @@ public partial class LlvmEmitter : IVisitor
         }
         int size = _typeChecker.GetTypeAlignment(node.TargetType);
         Push(size.ToString());
+    }
+
+    public void Visit(TypeofExpression node)
+    {
+        if (!_typeChecker.TryGetConstValue(node, out ConstValue? value) || value == null ||
+            !TryEmitConstValue(value, _typeChecker.GetType(node)))
+            throw new InvalidOperationException("Missing compile-time type metadata");
     }
 
     public void Visit(NameofExpression node)

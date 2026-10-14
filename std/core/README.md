@@ -151,3 +151,10 @@ These files ship as source alongside the compiler and language server in `Std/`.
 Explicit project inputs with the same std-relative paths use those source snapshots
 instead of the bundled copies. Automatic inclusion and libc-free build selection
 remain separate, future build configuration work.
+
+## Static type metadata
+
+`typeof(T)` returns `std::TypeInfo`: a constant description of a static type's
+name, layout, and reference traits. Its fields are readonly and its name has
+static lifetime. It works in generic code and constant expressions; member
+reflection and runtime type discovery are not provided yet.

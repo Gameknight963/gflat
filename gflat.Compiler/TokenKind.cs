@@ -123,6 +123,7 @@ namespace gflat
         Base,
         Sizeof,
         Alignof,
+        Typeof,
         Nameof,
         Throw,
         NoThrow,

@@ -481,6 +481,10 @@ Namespace properties have no receiver and do not use `static`, receiver
 auto-properties, initializers, namespace indexers, and `ref` returns are not
 supported.
 
+Mutable global/namespace fields and static fields in classes or structs are not
+implemented. These declarations produce source diagnostics. Namespace constants,
+instance fields, and explicit namespace/static property accessors are supported.
+
 ### Reference properties
 
 `public ref T this[nuint index] { get => data![index]; }` exposes existing storage.

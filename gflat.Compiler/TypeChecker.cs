@@ -2005,6 +2005,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
             ExpandProperties(node);
+            ValidateFieldStorage(node);
 
             CheckDeclarationConflicts(node);
             QualifyTypeDeclarations(node);

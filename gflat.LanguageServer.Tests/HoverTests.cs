@@ -310,5 +310,5 @@ public class HoverTests
 
     [Fact]
     public void UserDefinedStringHasItsActualStructLayout()
-        => Assert.Contains("**Size:** 4 bytes", Hover("struct string { public int value; } str|ing item;").GetProperty("contents").GetProperty("value").GetString());
+        => Assert.Contains("**Size:** 4 bytes", Hover("struct string { public int value; } void Main() { str|ing item; }").GetProperty("contents").GetProperty("value").GetString());
 }

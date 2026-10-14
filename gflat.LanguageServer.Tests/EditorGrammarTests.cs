@@ -10,6 +10,19 @@ namespace gflat.LanguageServer.Tests;
 public class EditorGrammarTests
 {
     [Theory]
+    [InlineData("throw new std::IOException(\"Console flush failed\");")]
+    [InlineData("std::IOException error;")]
+    [InlineData("public std::IOException Read();")]
+    public void TypeQualifiersDoNotReceiveFallbackTypeColors(string line)
+    {
+        var token = Assert.Single(Grammar().TokenizeLine(line).Tokens,
+            t => t.StartIndex <= line.IndexOf("std", StringComparison.Ordinal) && t.EndIndex > line.IndexOf("std", StringComparison.Ordinal));
+        Assert.Contains(token.Scopes, s => s.StartsWith("entity.name.qualifier", StringComparison.Ordinal));
+        Assert.DoesNotContain(token.Scopes, s => s.StartsWith("entity.name.type", StringComparison.Ordinal));
+        AssertScope(Grammar().TokenizeLine(line), line.IndexOf("IOException", StringComparison.Ordinal), "entity.name.type");
+    }
+
+    [Theory]
     [InlineData("readonly get", "get")]
     [InlineData("get", "get")]
     [InlineData("set", "set")]

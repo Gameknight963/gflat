@@ -5,6 +5,10 @@
     <key>settings</key>
     <array>
       <dict>
+        <key>scope</key><string>entity.name.qualifier.gflat</string>
+        <key>settings</key><dict><key>vsclassificationtype</key><string>identifier</string></dict>
+      </dict>
+      <dict>
         <key>scope</key><string>entity.name.function.gflat, entity.name.function.literal.gflat</string>
         <key>settings</key><dict><key>vsclassificationtype</key><string>method name</string></dict>
       </dict>

@@ -13,6 +13,16 @@ gflat new Utilities --library
 gflat new Minimal --no-std
 ```
 
+To pass arguments to the application, put them after `--`:
+
+```text
+gflat build examples/search/search.gfproj --run -- "input file.txt" "search text"
+```
+
+Everything after `--` is a program argument, including names such as `-o` or
+`--check`. The separator requires `--run`. The program runs in the caller's
+working directory and its exit code becomes the compiler command's exit code.
+
 `new` creates a real `.gfproj`, `main.gf`, and a `.gitignore` for build/editor
 outputs. It accepts a new or empty directory and never overwrites existing files.
 `--name Name` changes the project filename without changing the destination

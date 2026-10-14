@@ -13,6 +13,9 @@ public static class Program
         {
             if (args.Length > 0 && args[0] == "new") return ProjectCreation.Run(args[1..]);
             if (args.Length > 0 && args[0] == "doctor") return ToolchainDoctor.Run(args[1..]);
+            int argumentSeparator = Array.IndexOf(args, "--");
+            string[] programArguments = argumentSeparator < 0 ? [] : args[(argumentSeparator + 1)..];
+            if (argumentSeparator >= 0) args = args[..argumentSeparator];
             var sourcePaths = new List<string>();
             string? outputPath = null, clang = null;
             string configuration = "Debug", platform = "AnyCPU";
@@ -28,7 +31,7 @@ public static class Program
                     case "--help": case "-h":
                         Console.WriteLine("gflat new <directory> [--name Name] [--library] [--no-std]\nOptimization: --optimization 0|1|2|3 (project defaults: Debug=0, Release=2)");
                         Console.WriteLine("gflat doctor [--native] [--clang path]");
-                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]");
+                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
                     case "build" when i == 0: break;
                     case "check" when i == 0: check = true; break;
@@ -49,6 +52,8 @@ public static class Program
                         sourcePaths.Add(Path.GetFullPath(args[i])); break;
                 }
             }
+            if (argumentSeparator >= 0 && !run)
+                throw new ArgumentException("Program arguments after '--' require --run.");
             ProjectGraph? graph = null;
             if (sourcePaths.Any(p => p.EndsWith(".gfproj", StringComparison.OrdinalIgnoreCase)))
             {
@@ -89,7 +94,7 @@ public static class Program
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
                     irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph);
                 if (result != 0 || !run) return result;
-                return NativeToolchain.RunProgram(outputPath, []);
+                return NativeToolchain.RunProgram(outputPath, programArguments);
             }
             var sources = sourcePaths.Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
             if (check)
@@ -109,7 +114,7 @@ public static class Program
                 ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel);
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
                 if (!run) return 0;
-                return NativeToolchain.RunProgram(outputPath, []);
+                return NativeToolchain.RunProgram(outputPath, programArguments);
             }
             finally { File.Delete(temporaryIr); }
         }

@@ -6,11 +6,11 @@ Strings grow for long
 lines; matching is case-sensitive and does not interpret regular expressions.
 
 ```text
-gflat build examples/search/search.gfproj
-examples/search/bin/Debug/search.exe std/libc/File.gf IOException
+gflat build examples/search/search.gfproj --run -- std/libc/File.gf IOException
 ```
 
-On Linux, invoke the executable with `./examples/search/bin/Debug/search.exe`.
+You can also build without `--run`, then invoke
+`examples/search/bin/Debug/search.exe` directly (prefix it with `./` on Linux).
 The `.exe` suffix is the current project output convention on both platforms.
 Exit codes: zero after a successful search, one on file IO failure, two for usage.
 An empty search string matches every line. Output uses Console's text-stream

@@ -29,7 +29,7 @@ struct Vector<T>
         if (stride == (nuint)0) stride = 1;
         if (requested > maximum / stride) throw new Exception("Vector capacity overflow");
         void*? allocation = Memory::Allocate(requested * stride);
-        if (allocation == null) throw new Exception("Vector allocation failed");
+        if (allocation == null) throw new BadAllocException("Vector allocation failed");
         T* replacement = (T*)allocation;
         for (nuint i = 0; i < count; i++)
         {

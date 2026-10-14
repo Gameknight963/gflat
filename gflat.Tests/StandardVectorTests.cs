@@ -2,6 +2,32 @@ namespace gflat.Tests;
 
 public class StandardVectorTests
 {
+    [Fact]
+    public void FailedReservePreservesElementsAndUsesEmergencyReserve()
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            extern void* malloc(nuint size);
+            extern void free(void* pointer);
+            namespace Memory {
+                public replace void*? Allocate(nuint size) { if (size != (nuint)16) return null; return malloc(size); }
+                public replace void Free(void* pointer) { free(pointer); }
+            }
+            int main() {
+                Vector<int> values = new Vector<int>();
+                values.Add(11); values.Add(22); values.Add(33); values.Add(44);
+                nuint capacity = values.Capacity;
+                int* original = &values[(nuint)0];
+                try { values.Reserve(100); return 1; }
+                catch (ref BadAllocException error) { if (error.GetCode() != 1) return 2; }
+                if (values.Count != (nuint)4 || values.Capacity != capacity || &values[(nuint)0] != original) return 3;
+                if (values[(nuint)0] != 11 || values[(nuint)1] != 22 || values[(nuint)2] != 33 || values[(nuint)3] != 44) return 4;
+                return 0;
+            }
+            """));
+        Assert.Equal(0, result.ExitCode);
+    }
+
     private static IEnumerable<SourceFile> Sources(string program) => new[] { "String.gf", "Vector.gf", "Span.gf" }
         .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
         .Append(new SourceFile("main.gf", program));
@@ -115,7 +141,7 @@ public class StandardVectorTests
                     try {
                         for (int i = 1; i < 100; i++) values.Add(new R(&released, i));
                         return 1;
-                    } catch {}
+                    } catch (ref BadAllocException error) { if (error.GetCode() != 1) return 4; }
                     retained = values.Count;
                     if (released != 1 || retained == (nuint)0) return 2;
                 }

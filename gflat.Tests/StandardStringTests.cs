@@ -179,11 +179,39 @@ public class StandardStringTests
             }
             int main() {
                 String text = s"abc";
-                try { text.Reserve(100); return 1; } catch { }
-                if (text.Length != (nuint)3 || text.Data[0] != 'a') return 2;
+                readonly(char*) original = text.Data;
+                nuint capacity = text.Capacity;
+                try { text.Reserve(100); return 1; } catch (ref BadAllocException error) { if (error.GetCode() != 1) return 3; }
+                if (text.Length != (nuint)3 || text.Capacity != capacity || text.Data != original) return 2;
+                if (text.Data[0] != 'a' || text.Data[1] != 'b' || text.Data[2] != 'c' || text.Data[3] != '\0') return 4;
                 return 0;
             }
             """);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FailedGrowthUsesBadAllocAndEmergencyReserve(bool append)
+    {
+        var result = Run("""
+            using std;
+            namespace Memory {
+                public replace void*? Allocate(nuint size) { if (size != (nuint)4) return null; return malloc(size); }
+                public replace void Free(void* p) { free(p); }
+            }
+            int main() {
+                String text = s"abc";
+                readonly(char*) original = text.Data;
+                nuint capacity = text.Capacity;
+                try { GROW; return 1; }
+                catch (ref BadAllocException error) { if (error.GetCode() != 1) return 2; }
+                if (text.Length != (nuint)3 || text.Capacity != capacity || text.Data != original) return 3;
+                if (text.Data[0] != 'a' || text.Data[1] != 'b' || text.Data[2] != 'c' || text.Data[3] != '\0') return 4;
+                return 0;
+            }
+            """.Replace("GROW", append ? "text.AppendLiteral(text.Data, text.Length)" : "text.Reserve(100)"));
         Assert.Equal(0, result.ExitCode);
     }
 

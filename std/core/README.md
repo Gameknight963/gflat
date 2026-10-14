@@ -29,6 +29,8 @@ and checks bounds.
 - `Data` and `ToString()` borrow the existing buffer. Do not free it. Mutation,
   movement, or destruction can invalidate the view; mutations can change its text.
 - `Reserve`, `Append`, and `AppendLiteral` throw on overflow or allocation failure.
+  Allocation failure throws `BadAllocException` and preserves the existing storage
+  and contents; overflow remains a separate error.
   Appending from the same string works, including across growth.
 - `Clear` retains capacity. `Clone` makes an independent owned copy.
 - `String copy = text;` makes an independent owned copy and may throw on allocation failure.
@@ -133,6 +135,8 @@ owners copy when their type supports it; use `move` to consume a local instead. 
 all elements while retaining capacity. `Reserve(nuint)` grows storage, and the
 destructor releases elements and storage. Copy a vector explicitly element by
 element when that is desired; `move vector` transfers its buffer instead.
+Allocation failure throws `BadAllocException` without changing the existing
+elements, count, capacity, or storage. A failed `Add` still destroys its consumed argument.
 
 Growth relocates each element and frees the old allocation without destroying the
 transferred values. No move constructor is required. Noncopyable resource types can

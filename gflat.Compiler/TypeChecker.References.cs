@@ -13,7 +13,7 @@ public partial class TypeChecker
     private void CheckReferenceArgument(UnaryExpression node)
     {
         using var context = SourceContext.Enter(node.Span);
-        node.Operand.Accept(this);
+        CheckNullableStorage(node.Operand, escape: true);
         if (!IsReferenceStorage(node.Operand) || IsPropertyValueStorage(node.Operand))
             throw new TypeCheckException("ref requires existing storage, not a temporary or value property", node.Span);
         if (IsManagedStorage(node.Operand))

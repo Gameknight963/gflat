@@ -178,13 +178,13 @@ namespace Memory {
 }
 ```
 
-`Allocate` must return suitably aligned storage or null. Compiler-generated allocations trap on null before initialization; direct calls expose the nullable result. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`; hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
+`Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `std::BadAllocException` on null before initialization; direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`; hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
 
 Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers; allocation alone does not guarantee initialized elements. Initialize elements before reading them.
 
 Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Unsized array parameters are rejected; spell buffer parameters as pointers. Array value conversions preserve dimensions and element representation; cast individual elements explicitly when changing numeric types. Owning values transfer from fresh values or explicit moves, or copy using a copy constructor.
 
-Nullable raw pointers and function pointers require a checked non-null cast or unchecked postfix `!` before dereference, indexing, member access, calls, or pointer arithmetic. A comparison with `null` does not change the variable's static type. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
+Nullable raw pointers and function pointers require a proven non-null local read, checked non-null cast, or unchecked postfix `!` before dereference, indexing, member access, calls, or pointer arithmetic. Null guards narrow local and parameter reads while preserving their declared storage types. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
 
 ```gflat
 struct Point { int x; int y; }
@@ -308,8 +308,8 @@ aggregates containing them. Private extern declarations in namespace `GC` may
 return opaque `void^` references for runtime bridges, provided their parameters
 contain no managed references. A bridge retaining references in foreign storage
 must arrange registration; an ordinary retained native pointer is not sufficient.
-Nullable references require a checked non-null cast or unchecked postfix `!`
-before use. Exceptions are thrown by value, not managed reference. Managed
+Nullable references require a proven non-null local read, checked non-null cast,
+or unchecked postfix `!` before use. Exceptions are thrown by value, not managed reference. Managed
 function pointers and compile-time managed allocation remain unsupported.
 
 ### Array literals
@@ -654,6 +654,43 @@ The destination accepts pointer arithmetic and postfix expressions; comparisons
 and assignments bind outside the placement expression. Parenthesize a more
 complex destination. To access a member of the constructed object, write
 `(new* T() at destination).Member`.
+
+## Nullable local flow
+
+Built-in `== null` and `!= null` checks narrow local variables and parameters on
+the appropriate control-flow path. An early return or throw leaves the other
+path's facts available. `!`, `&&`, and `||` respect their actual conditional
+evaluation, including side effects. User-defined equality operators do not
+establish nullability facts. Assigning a known non-null pointer value also
+establishes a fact. Paths that both continue retain only facts common to both.
+
+```gflat
+int Read(int*? pointer) {
+    if (pointer == null) return 0;
+    return *pointer;
+}
+```
+
+Narrowing changes the type of a value read, not the declared variable. A nullable
+slot still accepts null assignments and retains its nullable type when passed
+with `ref` or addressed with `&`. Readonly qualifications remain intact. Facts
+follow bindings across shadowing, rather than matching names alone. Fields and
+properties are not narrowed by this first implementation.
+
+Assignment invalidates or updates the affected local's fact. Passing a slot by
+`ref` or taking its address marks it as exposed; later calls and unknown writes
+invalidate facts for exposed slots. Implicit user calls, copies and destructor
+cleanup count too. A write to an exposed slot also invalidates other exposed
+slots' facts because ref parameters may alias. Ref parameters are exposed from entry. This is conservative
+null checking, not alias, lifetime, or ownership proof; unsafe raw-memory access
+can bypass its assumptions.
+
+Loops initially discard incoming and initializer facts. A loop condition can
+establish fresh facts for its body; facts do not carry out of the loop or through
+its increment. Catch bodies start without assumptions about outer nullable
+locals. Deferred bodies must establish their own facts because they execute
+later; their possible writes invalidate affected facts at registration and scope
+exit. These restrictions can require an additional guard or explicit `!`.
 
 ## Nullability suppression
 

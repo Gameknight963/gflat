@@ -282,7 +282,7 @@ public sealed class ServerTests
 
     [Theory]
     [InlineData("struct S { int* p; public S(int* q) { } }", "{ }", "{ p = q; }")]
-    [InlineData("int main() { int n = 1; int*? p = &n; return *p; }", "return *p;", "int* q = (int*)p; return *q;")]
+    [InlineData("int main() { int*? p = null; return *p; }", "return *p;", "int* q = (int*)p; return *q;")]
     [InlineData("enum E { A = 1 } int main() => E::A;", "=> E::A;", "=> (int)E::A;")]
     [InlineData("struct S { public static S operator s\"\"(readonly(char)* p, ulong n) => new S(); }", "ulong n", "nuint n")]
     [InlineData("void*? __gflat_gc_alloc(ulong n) => null;", "ulong n", "nuint n")]

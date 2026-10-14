@@ -141,6 +141,8 @@ public partial class TypeChecker
         try { action(); }
         catch (TypeCheckException error) when (_recoverErrors)
         {
+            nullableFacts.Clear();
+            nullableConditions.Clear();
             _diagnostics.Report(gflat.diagnostics.DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description);
         }
         finally { if (_recoverErrors) while (_scopes.Count > scopes) PopScope(); }

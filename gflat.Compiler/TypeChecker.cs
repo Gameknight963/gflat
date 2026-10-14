@@ -515,6 +515,7 @@ namespace gflat
 
         private void PopScope()
         {
+            NullableScopeExit(_scopes.Peek());
             _scopes.Pop();
             _localAliases.Pop();
             _localEnums.Pop();
@@ -2485,6 +2486,7 @@ namespace gflat
                         AstNode? prevFunc = _currentFunction;
                         _currentFunction = method;
                         using var exceptionScope = IsolateExceptionHandlers();
+                        using var nullableScope = IsolateNullableFlow();
                         if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
@@ -2500,6 +2502,7 @@ namespace gflat
                                 {
                                     ValidateParameterType(p.Type, p.Line);
                                     DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
+                                    NullableParameter(p);
                                 }
 
                                 method.Body?.Accept(this);
@@ -2667,6 +2670,7 @@ namespace gflat
                         AstNode? prevFunc = _currentFunction;
                         _currentFunction = method;
                         using var exceptionScope = IsolateExceptionHandlers();
+                        using var nullableScope = IsolateNullableFlow();
                         if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
@@ -2680,6 +2684,7 @@ namespace gflat
                             {
                                 ValidateParameterType(p.Type, p.Line);
                                 DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
+                                NullableParameter(p);
                             }
 
                             method.Body?.Accept(this);
@@ -2718,6 +2723,7 @@ namespace gflat
 
         public void Visit(OperatorDeclaration node)
         {
+            using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateParameterDefaults(node, node.Parameters);
             if (_currentStruct == null)
@@ -2767,6 +2773,7 @@ namespace gflat
                 foreach (Parameter p in node.Parameters)
                 {
                     DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
+                    NullableParameter(p);
                 }
                 node.Body.Accept(this);
                 PopScope();
@@ -2870,6 +2877,7 @@ namespace gflat
         public void Visit(MethodDeclaration node)
         {
             using var exceptionScope = IsolateExceptionHandlers();
+            using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidatePropertyAccessor(node);
             if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
@@ -2892,6 +2900,7 @@ namespace gflat
                     ValidateParameterType(p.Type, p.Line);
                     TypeExpression pType = ResolveAlias(p.Type);
                     DeclareVariable(p.Name, ParameterValueType(pType), p.Line);
+                    NullableParameter(p);
                 }
                 node.Body?.Accept(this);
                 PopScope();
@@ -2905,6 +2914,7 @@ namespace gflat
         public void Visit(ConstructorDeclaration node)
         {
             using var exceptionScope = IsolateExceptionHandlers();
+            using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
             if (_currentStruct == null && _currentClass == null)
             {
@@ -2941,6 +2951,7 @@ namespace gflat
                     p.Type = ResolveAlias(p.Type);
                     ValidateParameterType(p.Type, p.Line);
                     DeclareVariable(p.Name, ParameterValueType(p.Type), p.Line);
+                    NullableParameter(p);
                 }
 
                 if (node.BaseArguments != null)
@@ -2953,7 +2964,7 @@ namespace gflat
                     ClassInfo baseClass = _classes[_currentClass.BaseClass];
                     foreach (AstNode arg in node.BaseArguments)
                     {
-                        arg.Accept(this);
+                        CheckNullableArgument(arg);
 
                     }
 
@@ -3019,6 +3030,7 @@ namespace gflat
         public void Visit(DestructorDeclaration node)
         {
             using var exceptionScope = IsolateExceptionHandlers();
+            using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
             if (_currentClass == null && _currentStruct == null)
             {
@@ -3056,6 +3068,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             PushScope();
+            using var nullableBlock = NullableBlock();
             foreach (AstNode statement in node.Statements)
                 AnalyzeSafely(() => statement.Accept(this));
             PopScope();
@@ -3071,7 +3084,7 @@ namespace gflat
             _inDefer = true;
             try
             {
-                node.Statement.Accept(this);
+                CheckNullableDefer(node.Statement);
             }
             finally
             {
@@ -3081,6 +3094,7 @@ namespace gflat
 
         public void Visit(DeleteStatement node)
         {
+            using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
             node.Target.Accept(this);
             TypeExpression targetType = ResolveAlias(GetType(node.Target));
@@ -3196,12 +3210,12 @@ namespace gflat
             TypeExpression condType = GetType(node.Condition);
             if (!TypesMatch(condType, Bool))
                 throw new TypeCheckException("If condition must be bool", node.Line);
-            node.Then.Accept(this);
-            node.Else?.Accept(this);
+            NullableBranch(node);
         }
 
         public void Visit(WhileStatement node)
         {
+            NullableLoopEntry();
             using var sourceContext = SourceContext.Enter(node.Span);
             node.Condition.Accept(this);
             TypeExpression condType = GetType(node.Condition);
@@ -3210,19 +3224,23 @@ namespace gflat
             _loopDepth++;
             try
             {
+                NullableLoopBody(node.Condition);
                 node.Body.Accept(this);
             }
             finally
             {
+                NullableLoopEntry();
                 _loopDepth--;
             }
         }
 
         public void Visit(ForStatement node)
         {
+            NullableLoopEntry();
             using var sourceContext = SourceContext.Enter(node.Span);
             PushScope();
             node.Initializer?.Accept(this);
+            NullableLoopEntry(); // The initializer executes once, not once per iteration.
             if (node.Condition != null)
             {
                 node.Condition.Accept(this);
@@ -3230,14 +3248,17 @@ namespace gflat
                 if (!TypesMatch(condType, Bool))
                     throw new TypeCheckException("For condition must be bool", node.Line);
             }
-            node.Increment?.Accept(this);
             _loopDepth++;
             try
             {
+                NullableLoopBody(node.Condition);
                 node.Body.Accept(this);
+                NullableLoopEntry();
+                node.Increment?.Accept(this);
             }
             finally
             {
+                NullableLoopEntry();
                 _loopDepth--;
             }
             PopScope();
@@ -3245,6 +3266,7 @@ namespace gflat
 
         public void Visit(ForeachStatement node)
         {
+            NullableLoopEntry();
             using var sourceContext = SourceContext.Enter(node.Span);
             node.ElementType = ResolveAlias(node.ElementType);
             ValidateTypeUsage(node.ElementType, node.Line);
@@ -3272,10 +3294,12 @@ namespace gflat
                 _loopDepth++;
                 try
                 {
+                    NullableLoopEntry();
                     node.Body.Accept(this);
                 }
                 finally
                 {
+                    NullableLoopEntry();
                     _loopDepth--;
                 }
                 PopScope();
@@ -3567,19 +3591,22 @@ namespace gflat
 
             RecordType(node, varType);
             DeclareVariable(node.Name, varType, node.Line);
+            NullableAssignment(new IdentifierExpression(node.Name, node.Line), node.Initializer);
+            if (node.Initializer != null && CopiesValue(node.Initializer, varType)) InvalidateNullableEscapes();
         }
 
         public void Visit(ExpressionStatement node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             node.Expression.Accept(this);
+            if (IsFreshValue(node.Expression) && HasDestructor(GetType(node.Expression))) InvalidateNullableEscapes();
         }
 
         public void Visit(BinaryExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
-            node.Left.Accept(this);
-            node.Right.Accept(this);
+            using var nullableResult = NullableBinaryResult(node);
+            NullableBinaryOperands(node);
             TypeExpression left = GetType(node.Left);
             TypeExpression right = GetType(node.Right);
 
@@ -3822,6 +3849,7 @@ namespace gflat
 
         public void Visit(UnaryExpression node)
         {
+            using var nullableResult = NullableUnaryResult(node);
             if (node.Operator == TokenKind.Ref)
             {
                 CheckReferenceArgument(node);
@@ -3907,7 +3935,7 @@ namespace gflat
                     }
                 }
 
-                node.Operand.Accept(this);
+                CheckNullableStorage(node.Operand, escape: true);
                 TypeExpression operandType = GetType(node.Operand);
                 if (IsPropertyValueStorage(node.Operand))
                     throw new TypeCheckException("Cannot take the address of a value returned by a property", node.Line);
@@ -4026,7 +4054,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             if (CheckPropertyRead(node)) return;
             TypeExpression type = LookupVariable(node.Name, node.Line);
-            RecordType(node, type);
+            RecordType(node, NullableReadType(node, type));
             if (TryGetConstValueByName(node.Name, out ConstValue? cv) && cv != null)
             {
                 _constValues[node] = cv;
@@ -4320,6 +4348,7 @@ namespace gflat
 
         public void Visit(AssignmentExpression node)
         {
+            using var nullableWrite = NullableAssignmentResult(node);
             using var sourceContext = SourceContext.Enter(node.Span);
             if (CheckPropertyWrite(node, node.Target, node.Value, GetBinaryOperatorForCompound(node.Operator), false)) return;
             if (node.Target is NamespaceAccessExpression nsTarget)
@@ -4340,7 +4369,7 @@ namespace gflat
             if (node.Target is MemberAccessExpression { IsArrow: true })
                 throw new TypeCheckException("Cannot assign using '->'. Use '.' for member access.", node.Line);
 
-            node.Target.Accept(this);
+            CheckNullableStorage(node.Target);
             TypeExpression targetType = GetType(node.Target);
             CheckAssignmentTarget(node.Target, node.Line);
 
@@ -4368,11 +4397,12 @@ namespace gflat
 
             if (node.Operator is TokenKind.PlusEquals or TokenKind.MinusEquals)
             {
-                if (IsValidPointerForArithmetic(targetType, out string? errPtr) && IsInteger(valueType))
+                var arithmeticType = node.Target is IdentifierExpression identifier ? NullableReadType(identifier, targetType) : targetType;
+                if (IsValidPointerForArithmetic(arithmeticType, out string? errPtr) && IsInteger(valueType))
                 {
                     if (errPtr != null)
                         throw new TypeCheckException(errPtr, node.Line);
-                    RecordType(node, targetType);
+                    RecordType(node, arithmeticType);
                     return;
                 }
                 if (errPtr != null)
@@ -4391,6 +4421,7 @@ namespace gflat
 
         public void Visit(DestructorCallExpression node)
         {
+            using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
             node.Target.Accept(this);
             TypeExpression receiver = ResolveAlias(GetType(node.Target));
@@ -4410,11 +4441,12 @@ namespace gflat
 
         public void Visit(CallExpression node)
         {
+            using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
             RecordExceptionCall(node);
             foreach (AstNode arg in node.Arguments)
             {
-                arg.Accept(this);
+                CheckNullableArgument(arg);
 
             }
 
@@ -4425,7 +4457,7 @@ namespace gflat
                 if (varType is FunctionPointerTypeExpression fnPtr)
                 {
                     identVar.Accept(this);
-                    CheckIndirectCall(node, fnPtr);
+                    CheckIndirectCall(node, (FunctionPointerTypeExpression)ResolveAlias(GetType(identVar)));
                     return;
                 }
             }
@@ -5085,7 +5117,11 @@ namespace gflat
             throw new TypeCheckException($"'{named.Name}' has no field or method '{node.Member}'", node.Line);
         }
 
-        public void Visit(InterpolatedStringExpression node) => CheckInterpolation(node);
+        public void Visit(InterpolatedStringExpression node)
+        {
+            using var nullableCall = NullableCall();
+            CheckInterpolation(node);
+        }
 
         private readonly Dictionary<NewExpression, ThrowStatement> _allocationFailures = new();
         public ThrowStatement? GetAllocationFailure(NewExpression node) => _allocationFailures.GetValueOrDefault(node);
@@ -5103,6 +5139,7 @@ namespace gflat
 
         public void Visit(NewExpression node)
         {
+            using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression resolvedType = ResolveAlias(node.Type);
             node.Type = resolvedType;
@@ -5126,7 +5163,7 @@ namespace gflat
                         throw new TypeCheckException("Managed scalar allocation accepts zero or one initializer", node.Line);
                     if (node.Arguments.Count == 1)
                     {
-                        node.Arguments[0].Accept(this);
+                        CheckNullableArgument(node.Arguments[0]);
                         if (!IsAssignable(resolvedType, GetType(node.Arguments[0]), node.Arguments[0]))
                             throw new TypeCheckException("Invalid managed scalar initializer", node.Line);
                     }
@@ -5154,7 +5191,7 @@ namespace gflat
                 if (cInfo.Constructors.Count == 0)
                 {
                     ValidateImplicitConstruction(cInfo.Name, node.Line);
-                    foreach (AstNode arg in node.Arguments) { arg.Accept(this); }
+                    foreach (AstNode arg in node.Arguments) { CheckNullableArgument(arg); }
 
                     if (node.Arguments.Count != 0)
                     {
@@ -5182,7 +5219,7 @@ namespace gflat
                             else
                             {
                                 if (!_types.ContainsKey(arg))
-                                    arg.Accept(this);
+                                    CheckNullableArgument(arg);
 
                                 argType = GetType(arg);
                             }
@@ -5202,7 +5239,7 @@ namespace gflat
                         foreach (AstNode arg in node.Arguments)
                         {
                             if (!_types.ContainsKey(arg))
-                                arg.Accept(this);
+                                CheckNullableArgument(arg);
 
                         }
                         string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
@@ -5248,7 +5285,7 @@ namespace gflat
             if (sInfo.Constructors.Count == 0)
             {
                 ValidateImplicitConstruction(sInfo.Name, node.Line);
-                foreach (AstNode arg in node.Arguments) { arg.Accept(this); }
+                foreach (AstNode arg in node.Arguments) { CheckNullableArgument(arg); }
 
                 if (node.Arguments.Count != 0)
                 {
@@ -5276,7 +5313,7 @@ namespace gflat
                         else
                         {
                             if (!_types.ContainsKey(arg))
-                                arg.Accept(this);
+                                CheckNullableArgument(arg);
 
                             argType = GetType(arg);
                         }
@@ -5296,7 +5333,7 @@ namespace gflat
                     foreach (AstNode arg in node.Arguments)
                     {
                         if (!_types.ContainsKey(arg))
-                            arg.Accept(this);
+                            CheckNullableArgument(arg);
 
                     }
                     string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
@@ -5425,7 +5462,7 @@ namespace gflat
             TypeExpression? elementType = null;
             foreach (var element in node.Elements)
             {
-                element.Accept(this);
+                CheckNullableArgument(element);
                 TypeExpression type = ResolveAlias(GetType(element));
                 if (type is NamedTypeExpression { Name: "void" })
                     throw new TypeCheckException("Array elements cannot have type void", element.Line);
@@ -5886,6 +5923,7 @@ namespace gflat
 
         public void Visit(CastExpression node)
         {
+            using var nullableCast = NullableCastResult(node);
             using var sourceContext = SourceContext.Enter(node.Span);
             node.Operand.Accept(this);
             TypeExpression sourceType = ResolveAlias(GetType(node.Operand));
@@ -6050,6 +6088,7 @@ namespace gflat
         public void Visit(LambdaExpression node)
         {
             using var exceptionScope = IsolateExceptionHandlers();
+            using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Parameters.Any(p => p.DefaultValue != null))
                 throw new TypeCheckException("Lambda defaults are not supported; function pointers require every argument", node.Span);
@@ -6073,6 +6112,7 @@ namespace gflat
                     TypeExpression pType = ResolveAlias(p.Type);
                     paramTypes.Add(pType);
                     DeclareVariable(p.Name, ParameterValueType(pType), p.Line);
+                    NullableParameter(p);
                 }
 
                 TypeExpression returnType;
@@ -6214,6 +6254,7 @@ namespace gflat
 
         public void Visit(PrefixedStringLiteralExpression node)
         {
+            using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
             CheckStringLiteralCall(node);
         }
@@ -6271,6 +6312,8 @@ namespace gflat
                 _tryStack.Pop();
             }
 
+            var nullablePaths = new List<HashSet<NullableBinding>>();
+            if (NullableFallsThrough(node.TryBlock)) nullablePaths.Add(new(nullableFacts));
             bool hasCatchAll = false;
             List<string> caughtTypeNames = new();
 
@@ -6318,8 +6361,11 @@ namespace gflat
                     caughtTypeNames.Add(typeName);
                 }
 
+                nullableFacts = new();
                 clause.Accept(this);
+                if (NullableFallsThrough(clause.Body)) nullablePaths.Add(new(nullableFacts));
             }
+            nullableFacts = IntersectNullable(nullablePaths);
         }
 
         public void Visit(CatchClause node)

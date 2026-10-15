@@ -30,6 +30,13 @@ For Visual Studio extension changes, also build and check the package:
     ./editors/VisualStudio/build.ps1
     ./editors/VisualStudio/test-package.ps1
 
+Windows CI puts generated test programs under `$RUNNER_TEMP/gflat-tests` and
+excludes only that directory from Defender scanning on the disposable runner.
+Test failures still fail the job. This does not change local Defender settings.
+To route local compiler tests to a dedicated folder, set `TEMP` and `TMP` in the
+shell that runs `dotnet test`. Set `GFLAT_TEST_OUTPUT_ROOT` to the same folder
+when running the VSIX or nightly package smoke tests.
+
 ## Pull requests
 
 - Keep changes focused; submit unrelated changes separately.

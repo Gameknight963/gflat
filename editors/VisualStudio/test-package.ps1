@@ -4,7 +4,9 @@ param([string]$Package = (Join-Path $PSScriptRoot 'bin/Release/net472/gflat.Visu
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
-$extracted = Join-Path $PSScriptRoot ('obj/package-test-' + [Guid]::NewGuid().ToString('N'))
+$testRoot = if ($env:GFLAT_TEST_OUTPUT_ROOT) { $env:GFLAT_TEST_OUTPUT_ROOT } else { Join-Path $PSScriptRoot 'obj' }
+[IO.Directory]::CreateDirectory($testRoot) | Out-Null
+$extracted = Join-Path $testRoot ('package-test-' + [Guid]::NewGuid().ToString('N'))
 [IO.Compression.ZipFile]::ExtractToDirectory([IO.Path]::GetFullPath($Package), $extracted)
 $oldExecutable = $env:GFLAT_LSP_EXECUTABLE
 $oldEditorAssets = $env:GFLAT_EDITOR_ASSETS

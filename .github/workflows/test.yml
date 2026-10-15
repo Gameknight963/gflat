@@ -19,6 +19,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Prepare isolated Windows test directory
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./build/prepare-windows-test-runner.ps1
       # Pin a known LLVM version on Linux; Windows discovers VS's bundled Clang.
       - name: Select Linux toolchain
         if: runner.os == 'Linux'
@@ -50,6 +54,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Prepare isolated Windows test directory
+        shell: pwsh
+        run: ./build/prepare-windows-test-runner.ps1
       - name: Assign automatic VSIX build number
         shell: pwsh
         run: ./build/stamp-vsix.ps1 -RunNumber ${{ github.run_number }} -Attempt ${{ github.run_attempt }}
@@ -86,6 +93,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Prepare isolated Windows test directory
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./build/prepare-windows-test-runner.ps1
       - name: Select Linux toolchain
         if: runner.os == 'Linux'
         run: |

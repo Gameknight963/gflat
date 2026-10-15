@@ -35,7 +35,12 @@ $compiler = Join-Path $output 'compiler/gflat.dll'
 dotnet $compiler --help
 if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler failed to start' }
 foreach ($example in @('hello', 'interpolation', 'managed')) {
-    dotnet $compiler build (Join-Path $output "examples/$example/$example.gfproj") --run
+    $smokeArguments = @()
+    if ($env:GFLAT_TEST_OUTPUT_ROOT) {
+        [IO.Directory]::CreateDirectory($env:GFLAT_TEST_OUTPUT_ROOT) | Out-Null
+        $smokeArguments = @('-o', (Join-Path $env:GFLAT_TEST_OUTPUT_ROOT ("nightly-$example-" + [Guid]::NewGuid().ToString('N') + '.exe')))
+    }
+    dotnet $compiler build (Join-Path $output "examples/$example/$example.gfproj") @smokeArguments --run
     if ($LASTEXITCODE -ne 0) { throw "Packaged $example project failed" }
     dotnet $compiler clean (Join-Path $output "examples/$example/$example.gfproj")
     if ($LASTEXITCODE -ne 0) { throw "Packaged $example cleanup failed" }

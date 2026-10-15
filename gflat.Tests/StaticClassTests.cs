@@ -5,6 +5,28 @@ namespace gflat.Tests;
 public sealed class StaticClassTests
 {
     [Fact]
+    public void GenericStaticMethodsKeepTheirOwnersAcrossSpecializationAndReuse()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run("""
+            namespace Providers {
+                public static class First {
+                    private static int Offset() => 10;
+                    public static int Apply<T>(T value) => Offset();
+                }
+                public static class Second {
+                    private static int Offset() => 11;
+                    public static int Apply<T>(T value) => Offset();
+                }
+            }
+            int Read() => Providers::First::Apply<int>(1) + Providers::Second::Apply<int>(1);
+            namespace Caller {
+                public int Read() => Providers::Second::Apply<int>(1) + Providers::First::Apply<int>(1);
+            }
+            int main() => Read() + Caller::Read();
+            """).ExitCode);
+    }
+
+    [Fact]
     public void ClosedGenericScopeCanBeAliasedOnce()
     {
         var result = CompilerTestHelper.Run("""

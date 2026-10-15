@@ -4,6 +4,79 @@ namespace gflat.Tests;
 
 public sealed class ProviderBindingTests
 {
+    [Theory]
+    [InlineData("alias Another = Selected; int main() => Another::Extra();")]
+    [InlineData("int main() { alias Another = Selected; return Another::Extra(); }")]
+    [InlineData("int Invoke<P>() => P::Extra(); int main() => Invoke<Selected>();")]
+    [InlineData("static class Invoke<P> { public static int Run() => P::Extra(); } alias Invocation = Invoke<Selected>; int main() => Invocation::Run();")]
+    [InlineData("int Invoke<P>() => P::Extra(); int main() { int first = Invoke<Answer>(); return Invoke<Selected>(); }")]
+    [InlineData("int Forward<P>() => Invoke<P>(); int Invoke<P>() => P::Extra(); int main() { int first = Forward<Answer>(); return Forward<Selected>(); }")]
+    public void ContractCannotBeBypassedThroughAnAliasOrGenericParameter(string use)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
+            interface IProvider { static int Read(); }
+            static class Answer : IProvider {
+                public static int Read() => 42;
+                public static int Extra() => 0;
+            }
+            weak alias Selected : IProvider = Answer;
+            """ + use));
+        Assert.Contains("not exposed", error.Message);
+    }
+
+    [Fact]
+    public void GenericConstraintCannotWidenProviderAliasContract()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
+            interface IProvider { static int Read(); }
+            interface IExtra { static int Extra(); }
+            static class Answer : IProvider, IExtra {
+                public static int Read() => 42;
+                public static int Extra() => 0;
+            }
+            weak alias Selected : IProvider = Answer;
+            int Invoke<P : IExtra>() => 1;
+            int main() => Invoke<Selected>();
+            """));
+        Assert.Contains("does not satisfy", error.Message);
+    }
+
+    [Fact]
+    public void ProviderOnlyOverloadCannotBeAccessedThroughContract()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
+            interface IProvider { static int Read(); }
+            static class Answer : IProvider {
+                public static int Read() => 42;
+                public static int Read(int ignored) => 0;
+            }
+            weak alias Selected : IProvider = Answer;
+            int main() => Selected::Read(1);
+            """));
+        Assert.Contains("not exposed", error.Message);
+    }
+
+    [Fact]
+    public void QualifiedReplacementTargetResolvesInItsSourceNamespace()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run([
+            new SourceFile("binding.gf", "namespace Api { public interface IProvider { static int Read(); } public expect alias Selected : IProvider; }"),
+            new SourceFile("replacement.gf", "namespace App { static class Provider : Api::IProvider { public static int Read() => 42; } replace alias Api::Selected = Provider; }"),
+            new SourceFile("main.gf", "int main() => Api::Selected::Read();")
+        ]).ExitCode);
+    }
+
+    [Theory]
+    [InlineData("alias A = B; alias B = A;", "Cyclic")]
+    [InlineData("interface I { static int F(); } static class X {} weak alias A : I = X;", "does not satisfy")]
+    [InlineData("weak alias A = int; replace alias A = bool; replace alias A = char;", "at most one")]
+    [InlineData("static class X { public expect alias A; }", "must be declared in a namespace")]
+    public void InvalidUnusedAliasBindingsAreChecked(string source, string expected)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(source));
+        Assert.Contains(expected, error.Message);
+    }
+
     [Fact]
     public void QualifiedNamespaceDefinitionsAndExpectedFunctionsWorkAcrossFiles()
     {

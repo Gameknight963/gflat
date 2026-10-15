@@ -6,6 +6,89 @@ namespace gflat;
 public partial class TypeChecker
 {
     private readonly Dictionary<string, AliasDeclaration> constrainedAliases = new();
+    private readonly Dictionary<TypeExpression, string> aliasTargetNamespaces = new();
+    private readonly Dictionary<TypeExpression, AliasDeclaration> aliasContracts = new();
+    private readonly HashSet<string> validatingAliasSpecializations = new();
+
+    // A previously emitted specialization may have been reached first through the
+    // concrete provider. Check the contract view on every use before reusing it.
+    private void ValidateAliasSpecialization(AstNode definition, List<GenericParameter> parameters, List<TypeExpression> arguments)
+    {
+        if (!arguments.Any(aliasContracts.ContainsKey) || parameters.Count != arguments.Count) return;
+        string key = definition.Span.SourceId + ":" + definition.Span.Start + ":" +
+            string.Join(";", arguments.Select(a => GetTypeMangledName(a) + (aliasContracts.TryGetValue(a, out var c) ? ":" + c.Name : "")));
+        if (!validatingAliasSpecializations.Add(key)) return;
+        using var source = SourceContext.Enter(definition.Span);
+        using var locals = IsolateDeclarationContext();
+        var previous = _currentNamespace;
+        string ns = declarationNamespaces.GetValueOrDefault(definition) ?? "";
+        _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
+        try
+        {
+            var map = parameters.Zip(arguments).ToDictionary(p => p.First.Name, p => p.Second);
+            var clone = new AstCloner(map).CloneNode(definition);
+            Walk(clone);
+        }
+        finally { _currentNamespace = previous; validatingAliasSpecializations.Remove(key); }
+
+        void Walk(AstNode node)
+        {
+            if (node is NamespaceAccessExpression access) ValidateAliasMember(access);
+            if (node is CallExpression { TypeArguments.Count: > 0, Callee: IdentifierExpression id } call &&
+                ResolveGenericFunction(id.Name) is { IsGeneric: true } target)
+                ValidateAliasSpecialization(target, target.GenericParameters, call.TypeArguments);
+            foreach (var property in node.GetType().GetProperties().Where(p => p.GetIndexParameters().Length == 0))
+            {
+                if (property.GetValue(node) is AstNode child) Walk(child);
+                else if (property.GetValue(node) is IEnumerable<AstNode> children)
+                    foreach (var childNode in children) Walk(childNode);
+            }
+        }
+    }
+
+    private TypeExpression ResolveGlobalAliasBinding(string name)
+    {
+        if (!_globalScope.Aliases.TryGetValue(name, out var target))
+            throw new TypeCheckException($"Type alias '{name}' has no implementation", SourceContext.Current ?? SourceContext.ForLine(1));
+        return ResolveAliasBindingTarget(target);
+    }
+
+    private bool AliasExposesConstraint(TypeExpression argument, TypeExpression constraint)
+    {
+        if (!aliasContracts.TryGetValue(argument, out var declaration)) return true;
+        using var source = SourceContext.Enter(declaration.Span);
+        using var locals = IsolateDeclarationContext();
+        var previous = _currentNamespace;
+        string ns = declarationNamespaces.GetValueOrDefault(declaration) ?? "";
+        _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
+        try
+        {
+            return declaration.Constraints.Any(c => TypesMatch(ResolveAlias(c), constraint));
+        }
+        finally { _currentNamespace = previous; }
+    }
+
+    private TypeExpression ResolveAliasBindingTarget(TypeExpression target)
+    {
+        if (!aliasTargetNamespaces.TryGetValue(target, out var ns)) return ResolveAlias(target);
+        using var source = SourceContext.Enter(target.Span);
+        using var locals = IsolateDeclarationContext();
+        var previous = _currentNamespace;
+        _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
+        try
+        {
+            var result = ResolveAlias(target);
+            if (aliasContracts.TryGetValue(target, out var contract) && result is NamedTypeExpression named)
+            {
+                // Keep the contract on this use, rather than on the shared concrete
+                // declaration. Naming the implementation directly still exposes it.
+                result = new NamedTypeExpression(named.Name, named.Namespace, target.Line, named.TypeArguments) { Span = target.Span };
+                aliasContracts[result] = contract;
+            }
+            return result;
+        }
+        finally { _currentNamespace = previous; }
+    }
 
     private void SelectAliasBindings(CompilationUnit unit)
     {
@@ -33,7 +116,10 @@ public partial class TypeChecker
             else if (original.Alias.ImplementationKind == FunctionImplementationKind.Expect)
                 throw new TypeCheckException($"Expected alias '{group.Key.Name}' has no implementation; provide replace alias", original.Alias.Span);
             if (original.Alias.Constraints.Count != 0)
+            {
                 constrainedAliases[Join(group.Key.Scope, group.Key.Name)] = original.Alias;
+                aliasContracts[original.Alias.TargetType] = original.Alias;
+            }
         }
         void Collect(List<AstNode> members, string scope)
         {
@@ -49,34 +135,78 @@ public partial class TypeChecker
     private void ValidateAliasContracts()
     {
         foreach (var alias in constrainedAliases.Values)
+        {
+            var implementation = ResolveAliasBindingTarget(alias.TargetType);
             foreach (var constraint in alias.Constraints)
-                if (!TypeSatisfiesDeclaredConstraint(alias, alias.TargetType, constraint))
+                if (!TypeSatisfiesDeclaredConstraint(alias, implementation, constraint))
                     throw new TypeCheckException($"Implementation of alias '{alias.Name}' does not satisfy '{TypeName(constraint)}'", alias.Span);
+        }
+        // Diagnose cycles even when an alias is never used by a body.
+        foreach (var target in aliasTargetNamespaces.Keys.ToArray()) ResolveAliasBindingTarget(target);
     }
 
-    private void ValidateAliasMember(NamespaceAccessExpression access)
+    private void ValidateAliasMember(NamespaceAccessExpression access, MethodDeclaration? selectedMethod = null)
     {
-        string? name = Path(access.Left);
-        if (name == null) return;
-        AliasDeclaration? declaration = null;
-        var scope = _currentNamespace;
-        while (scope != null)
-        {
-            string prefix = ScopePath(scope);
-            if (constrainedAliases.TryGetValue(prefix.Length == 0 ? name : prefix + "::" + name, out declaration)) break;
-            scope = scope.Parent;
-        }
-        if (declaration == null)
-            foreach (var imported in CurrentUsings)
-                if (constrainedAliases.TryGetValue(imported + "::" + name, out declaration)) break;
+        var seen = new HashSet<TypeExpression>();
+        AliasDeclaration? declaration = FindContract(access.Left);
         if (declaration == null) return;
         foreach (var constraint in declaration.Constraints)
         {
-            var resolved = ResolveAlias(constraint);
-            if (resolved is NamedTypeExpression type && GetInterface(type.Name) is { } contract &&
-                contract.Methods.Any(m => m.Name == access.Member || m.PropertyName == access.Member)) return;
+            using var context = SourceContext.Enter(declaration.Span);
+            using var locals = IsolateDeclarationContext();
+            var previous = _currentNamespace;
+            string ns = declarationNamespaces.GetValueOrDefault(declaration) ?? "";
+            _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
+            try
+            {
+                var resolved = ResolveAlias(constraint);
+                if (resolved is NamedTypeExpression type && GetInterface(type.Name) is { } contract &&
+                    contract.Methods.Any(m => (m.Name == access.Member || m.PropertyName == access.Member) &&
+                        (selectedMethod == null || m.Name == selectedMethod.Name &&
+                            m.Parameters.Count == selectedMethod.Parameters.Count &&
+                            m.Parameters.Zip(selectedMethod.Parameters).All(p => TypesMatch(p.First.Type, p.Second.Type)) &&
+                            TypesMatch(m.ReturnType, selectedMethod.ReturnType)))) return;
+            }
+            finally { _currentNamespace = previous; }
         }
         throw new TypeCheckException($"Member '{access.Member}' is not exposed by alias '{declaration.Name}'", access.Span);
+
+        AliasDeclaration? FindContract(AstNode node)
+        {
+            if (node is TypeExpression t && aliasContracts.TryGetValue(t, out var recorded)) return recorded;
+            string? name = Path(node);
+            if (name == null) return null;
+            TypeExpression? target = null;
+            if (!name.Contains("::"))
+                foreach (var local in _localAliases)
+                    if (local.TryGetValue(name, out target)) break;
+            if (target == null)
+            {
+                var scope = _currentNamespace;
+                while (scope != null)
+                {
+                    string prefix = ScopePath(scope);
+                    if (constrainedAliases.TryGetValue(prefix.Length == 0 ? name : prefix + "::" + name, out var direct)) return direct;
+                    if (!name.Contains("::") && scope.Aliases.TryGetValue(name, out target)) break;
+                    scope = scope.Parent;
+                }
+            }
+            if (target == null && name.LastIndexOf("::", StringComparison.Ordinal) is var separator && separator >= 0)
+            {
+                var ns = ResolveNamespaceByName(name[..separator]);
+                ns?.Aliases.TryGetValue(name[(separator + 2)..], out target);
+            }
+            if (target == null)
+                foreach (var imported in CurrentUsings)
+                    if (ResolveNamespaceByName(imported)?.Aliases.TryGetValue(name, out target) == true) break;
+            if (target == null || !seen.Add(target)) return null;
+            if (aliasContracts.TryGetValue(target, out var contract)) return contract;
+            var previous = _currentNamespace;
+            if (aliasTargetNamespaces.TryGetValue(target, out var bindingNamespace))
+                _currentNamespace = bindingNamespace.Length == 0 ? _globalScope : ResolveNamespaceByName(bindingNamespace)!;
+            try { return FindContract(target); }
+            finally { _currentNamespace = previous; }
+        }
 
         static string ScopePath(NamespaceScope scope) => scope.Parent == null ? "" :
             (ScopePath(scope.Parent) is { Length: > 0 } prefix ? prefix + "::" : "") + scope.Parent.Children.First(p => ReferenceEquals(p.Value, scope)).Key;
@@ -85,6 +215,7 @@ public partial class TypeChecker
             IdentifierExpression id => id.Name,
             NamespaceAccessExpression n when Path(n.Left) is { } parent => parent + "::" + n.Member,
             NamedTypeExpression t => t.Namespace == null ? t.Name : t.Namespace + "::" + t.Name,
+            NestedTypeExpression t when Path(t.Parent) is { } parent => parent + "::" + t.Member,
             _ => null
         };
     }

@@ -80,6 +80,7 @@ public sealed partial class EditorModel
             Syntax? scope = entry.Node switch
             {
                 VariableDeclaration => parents.FirstOrDefault(p => p.Node is BlockStatement or ForStatement),
+                AliasDeclaration => parents.FirstOrDefault(p => p.Node is BlockStatement),
                 EnumDeclaration => parents.FirstOrDefault(p => p.Node is BlockStatement),
                 Parameter => parents.FirstOrDefault(p => p.Node is MethodDeclaration or ExternDeclaration or ConstructorDeclaration or LambdaExpression or OperatorDeclaration),
                 ForeachStatement or CatchClause => entry,
@@ -191,10 +192,10 @@ public sealed partial class EditorModel
             string qualifier = string.Concat(ts[start..separatorIndex].Select(t => t.Text));
             if (qualifier.StartsWith("global::")) qualifier = qualifier[8..];
             if (qualifier == "global") qualifier = "";
-            var resolved = Visible(path, offset).FirstOrDefault(s => s.Name == qualifier && (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || s.Classification == "namespace"));
-            if (resolved?.Syntax.Node is AliasDeclaration { Constraints.Count: > 0 } constrained)
+            var resolved = Visible(path, offset).FirstOrDefault(s => s.Name == qualifier && (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || s.Classification == "namespace"))
+                ?? symbols.FirstOrDefault(s => s.Qualified == qualifier && s.Syntax.Node is AliasDeclaration);
+            if (resolved != null && ContractOwners(resolved, path, offset) is { } owners)
             {
-                var owners = constrained.Constraints.Select(c => TypeOwner(c, path, offset)).ToHashSet();
                 return symbols.Where(s => owners.Contains(s.Owner) && s.Static && Accessible(s, path, offset));
             }
             qualifier = resolved is { IsTypeParameter: true }
@@ -215,6 +216,28 @@ public sealed partial class EditorModel
         var members = owner == null ? [] : TypeMembers(owner).Where(s => !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset)).ToArray();
         return members.Concat(ExtensionMembers(path, offset, expression?.Node, type)
             .Where(extension => !members.Any(member => member.Name == extension.Name && IsCallableMember(member))));
+    }
+
+    private HashSet<string?>? ContractOwners(Symbol alias, string path, int offset)
+    {
+        var seen = new HashSet<Symbol>();
+        while (alias.Syntax.Node is AliasDeclaration declaration && seen.Add(alias))
+        {
+            string declaringPath = alias.NameSpan.Source?.Path ?? path;
+            int declaringOffset = alias.NameSpan.Start;
+            if (declaration.Constraints.Count > 0)
+                return declaration.Constraints.Select(c => TypeOwner(c, declaringPath, declaringOffset)).ToHashSet();
+            string? targetName = declaration.TargetType switch {
+                NamedTypeExpression n => n.Namespace == null ? n.Name : Join(n.Namespace, n.Name),
+                NestedTypeExpression n => DisplayType(n), _ => null
+            };
+            if (targetName == null) break;
+            var next = Visible(declaringPath, declaringOffset).FirstOrDefault(s => s.Name == targetName && s.Syntax.Node is AliasDeclaration)
+                ?? symbols.FirstOrDefault(s => s.Qualified == targetName && s.Syntax.Node is AliasDeclaration);
+            if (next == null) break;
+            alias = next;
+        }
+        return null;
     }
 
     private TypeExpression? ExpressionType(AstNode node, string path, int offset)

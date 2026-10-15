@@ -770,6 +770,7 @@ namespace gflat
         {
             argType = ResolveAlias(argType);
             constraint = ResolveAlias(constraint);
+            if (!AliasExposesConstraint(argType, constraint)) return false;
 
             if (constraint is NamedTypeExpression namedConstraint)
             {
@@ -853,6 +854,7 @@ namespace gflat
 
         private NamedTypeExpression MonomorphizeStruct(StructDeclaration genericDef, List<TypeExpression> typeArgs, int line)
         {
+            ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
             {
                 throw new TypeCheckException($"Generic struct '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
@@ -895,6 +897,7 @@ namespace gflat
 
         private NamedTypeExpression MonomorphizeClass(ClassDeclaration genericDef, List<TypeExpression> typeArgs, int line)
         {
+            ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
             {
                 throw new TypeCheckException($"Generic class '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
@@ -948,6 +951,7 @@ namespace gflat
 
         private MethodDeclaration MonomorphizeFunction(MethodDeclaration genericDef, List<TypeExpression> typeArgs, int line)
         {
+            ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
             {
                 throw new TypeCheckException($"Generic function '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
@@ -1062,7 +1066,7 @@ namespace gflat
                     {
                         if (ns.Aliases.TryGetValue(nested.Member, out TypeExpression? target))
                         {
-                            return ResolveAlias(target);
+                            return ResolveAliasBindingTarget(target);
                         }
 
                         if (nested.TypeArguments.Count > 0)
@@ -1097,24 +1101,24 @@ namespace gflat
                 {
                     NamespaceScope? ns = ResolveNamespaceByName(named.Namespace);
                     if (ns != null && ns.Aliases.TryGetValue(named.Name, out var target))
-                        return ResolveAlias(target);
+                        return ResolveAliasBindingTarget(target);
                 }
                 else
                 {
                     foreach (var localScope in _localAliases)
                     {
                         if (localScope.TryGetValue(named.Name, out var target))
-                            return ResolveAlias(target);
+                            return ResolveAliasBindingTarget(target);
                     }
                     var cur = _currentNamespace;
                     while (cur != null)
                     {
                         if (cur.Aliases.TryGetValue(named.Name, out var target))
-                            return ResolveAlias(target);
+                            return ResolveAliasBindingTarget(target);
                         cur = cur.Parent;
                     }
                     if (_globalScope.Aliases.TryGetValue(named.Name, out var gTarget))
-                        return ResolveAlias(gTarget);
+                        return ResolveAliasBindingTarget(gTarget);
 
                     TypeExpression? importedAlias = null;
                     NamespaceScope? aliasScope = null;
@@ -1131,7 +1135,7 @@ namespace gflat
                     {
                         var previousScope = _currentNamespace;
                         _currentNamespace = aliasScope!;
-                        try { return resolvedSourceTypes[type] = ResolveAlias(importedAlias); }
+                        try { return resolvedSourceTypes[type] = ResolveAliasBindingTarget(importedAlias); }
                         finally { _currentNamespace = previousScope; }
                     }
 

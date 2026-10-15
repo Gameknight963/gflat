@@ -1052,3 +1052,39 @@ int main() {
     return 0;
 }
 ```
+
+## Inline LLVM
+
+Advanced code can call `__llvm<Result>("body IR", arguments...)`. This reserved
+unqualified builtin emits a private `alwaysinline` helper whose argument types
+come from the gflat expressions and whose result type is explicit. LLVM arguments
+are `%0`, `%1`, and so on; the body must provide its own terminator.
+
+```gflat
+int Add(int a, int b) => __llvm<int>("%sum = add i32 %0, %1\nret i32 %sum", a, b);
+int main() => Add(20, 22);
+```
+
+`__llvm_module<Result>("module IR", "entry", arguments...)` also accepts external
+declarations and helper definitions, for example LLVM intrinsics. Its entry must
+be an unquoted symbol defined in that module, with exactly matching types and the
+default calling convention. Defined symbols receive unique names per call site;
+identical external declarations are shared. Quoted symbol names, target
+directives, attribute groups, metadata, comdats, variadic entries, and entry ABI
+parameter attributes are currently unsupported. Function attributes written
+inline remain available.
+
+Both forms require ordinary string literals. Arguments are evaluated once, in
+source order. Primitive values, enums, function pointers, and raw pointers are
+supported; managed references, language references, interface fat pointers, and
+aggregate values are rejected. Use explicit raw pointers for aggregate storage.
+The raw code must respect pointed-to storage lifetimes, must not unwind through
+the helper, and must not bypass managed-reference bookkeeping. LLVM instructions,
+calling conventions, alignment requirements, and target portability are the
+caller's responsibility. Native compilation verifies the supplied LLVM syntax;
+`--check` does not parse or validate LLVM instructions.
+
+This escape hatch is experimental. It does not configure a GC strategy on gflat
+functions, emit stack maps/statepoints, or supply a collector integration protocol.
+Those remain separate work; using an LLVM GC intrinsic alone does not establish
+that integration.

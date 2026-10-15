@@ -597,7 +597,7 @@ public partial class LlvmEmitter : IVisitor
         return string.Join('\n', lines.Where(l => l.StartsWith('%')).Concat(lines.Where(l => !l.StartsWith('%'))));
     }
 
-    public string GetOutput() => ("target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + NativeDeclarations + OrderedGlobals() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString());
+    public string GetOutput() => ("target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + NativeDeclarations + OrderedGlobals() + "\n" + llvmFunctions.ToString() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString());
 
     private enum EmitMode { RValue, LValue }
 
@@ -3194,6 +3194,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitCallCore(CallExpression node)
     {
+        if (TryEmitLlvmCall(node)) return;
         if (_typeChecker.GetExtensionCall(node) is { } extensionCall)
         {
             EmitCallCore(extensionCall);

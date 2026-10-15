@@ -4259,6 +4259,7 @@ namespace gflat
             if (precheckedForeachCalls.Remove(node)) return;
             using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (TryCheckLlvmCall(node)) return;
             if (TryCheckExtensionCall(node)) return;
             RecordExceptionCall(node);
             foreach (AstNode arg in checkedExtensionArguments.Contains(node) ? [] : node.Arguments)

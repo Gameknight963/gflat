@@ -2077,8 +2077,6 @@ public partial class LlvmEmitter : IVisitor
             name = GetMethodMangledName(owner, node, _typeChecker.GetFunctionNamespace(node), ownerIsClass);
         else if (isMain)
             name = "main";
-        else if (node.Name == "__gflat_gc_alloc")
-            name = node.Name; // Well-known hook functions: emit unmangled
         else if (_currentNamespacePath.Length > 0)
             name = $"gflat${_currentNamespacePath}${node.Name}" + _typeChecker.GetOverloadSuffix(node);
         else
@@ -2220,7 +2218,6 @@ public partial class LlvmEmitter : IVisitor
                 Emit("    ret void");
             else
             {
-                TrackNativeReturn(val);
                 Emit($"    ret {llvmReturnType} {val}");
             }
         }
@@ -3649,10 +3646,6 @@ public partial class LlvmEmitter : IVisitor
                 {
                     funcName = "main";
                 }
-                else if (method.Name == "__gflat_gc_alloc")
-                {
-                    funcName = method.Name; // Well-known hooks: emit unmangled
-                }
                 else
                 {
                     string ns = _typeChecker.GetFunctionNamespace(method);
@@ -3927,9 +3920,7 @@ public partial class LlvmEmitter : IVisitor
                 value = EmitImplicitCast(Pop(), _typeChecker.GetType(node.Arguments[0]), resolvedType);
             }
             string memory = NewTemp();
-            bool adopting = _typeChecker.GetManagedAllocation(node) != null;
-            if (adopting) memory = EmitManagedAllocation(Math.Max(1, _typeChecker.GetTypeSize(resolvedType)).ToString(), resolvedType);
-            else Emit($"    {memory} = call i8* @__gflat_gc_alloc(i{TargetInfo.Default.PointerBits} {Math.Max(1, _typeChecker.GetTypeSize(resolvedType))})");
+            memory = EmitManagedAllocation(node, Math.Max(1, _typeChecker.GetTypeSize(resolvedType)).ToString());
             GuardAllocation(node, memory);
             string address = NewTemp();
             Emit($"    {address} = bitcast i8* {memory} to {scalarType}*");
@@ -3992,7 +3983,7 @@ public partial class LlvmEmitter : IVisitor
         else if (node.Kind is AllocationKind.Pointer or AllocationKind.Managed)
         {
             bool adopting = _typeChecker.GetManagedAllocation(node) != null;
-            string allocator = node.Kind == AllocationKind.Managed && !adopting ? "__gflat_gc_alloc" : "gflat$Memory$Allocate";
+            string allocator = "gflat$Memory$Allocate";
             // gflat$Memory$Allocate is defined in user code (or std/libc/Memory.gf), no declare needed
             _ = _externNames.Add("gflat$Memory$Allocate");
 
@@ -4004,7 +3995,7 @@ public partial class LlvmEmitter : IVisitor
 
             string rawMem = NewTemp();
             if (node.Destination == null && adopting)
-                rawMem = EmitManagedAllocation(sizeInt, node.Type);
+                rawMem = EmitManagedAllocation(node, sizeInt);
             else if (node.Destination == null)
                 Emit($"    {rawMem} = call i8* @{allocator}(i{TargetInfo.Default.PointerBits} {sizeInt})");
             else

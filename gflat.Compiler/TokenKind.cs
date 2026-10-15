@@ -57,6 +57,7 @@ namespace gflat
         DoubleColon,
         Hash,
         CharLiteral,
+        Managed,
         Namespace,
         Using,
         Class,

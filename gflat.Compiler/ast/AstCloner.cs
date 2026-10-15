@@ -160,7 +160,7 @@ namespace gflat.ast
             }
             if (type is ManagedTypeExpression mgd)
             {
-                return new ManagedTypeExpression(CloneType(mgd.Inner), mgd.IsNullable, mgd.Line, mgd.IsReadOnly);
+                return new ManagedTypeExpression(CloneType(mgd.Inner), mgd.IsNullable, mgd.Line, mgd.IsReadOnly, mgd.Collector == null ? null : CloneType(mgd.Collector)) { UsesDefaultCollector = mgd.UsesDefaultCollector };
             }
             if (type is ArrayTypeExpression arr)
             {
@@ -366,7 +366,7 @@ namespace gflat.ast
             {
                 TypeExpression newType = CloneType(newExpr.Type);
                 List<AstNode> args = newExpr.Arguments.Select(CloneNode).ToList();
-                return new NewExpression(newType, args, newExpr.Kind, newExpr.Line, newExpr.Destination == null ? null : CloneNode(newExpr.Destination)) { PlacementKeywordSpan = newExpr.PlacementKeywordSpan };
+                return new NewExpression(newType, args, newExpr.Kind, newExpr.Line, newExpr.Destination == null ? null : CloneNode(newExpr.Destination)) { PlacementKeywordSpan = newExpr.PlacementKeywordSpan, Collector = newExpr.Collector == null ? null : CloneType(newExpr.Collector) };
             }
             if (node is DefaultExpression defExpr)
             {

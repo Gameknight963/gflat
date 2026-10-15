@@ -114,18 +114,6 @@ void __gflat_eh_free_exception(void* value, void (*deallocator)(void*)) {
     if (reserved(value)) reserve_free(value);
     else deallocator(value);
 }
-// Emergency-reserve payloads bypass Memory::Allocate. Register their complete
-// storage too, so managed fields remain live while a caught exception owns it.
-void* __gflat_eh_allocate_exception_gc(std::size_t size, void* (*allocator)(std::size_t),
-                                     bool (*track)(void*, std::size_t)) {
-    void* value = __gflat_eh_allocate_exception(size, allocator);
-    if (!track(value, size)) std::terminate();
-    return value;
-}
-void __gflat_eh_free_exception_gc(void* value, void (*deallocator)(void*), void (*forget)(void*)) {
-    forget(value);
-    __gflat_eh_free_exception(value, deallocator);
-}
 [[noreturn]] void __gflat_eh_throw(void* object, void (*destroy)(void*)) {
     throw Exception(object, destroy);
 }

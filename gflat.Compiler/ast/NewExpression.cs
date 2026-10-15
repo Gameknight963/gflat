@@ -17,6 +17,7 @@ namespace gflat.ast
         public List<AstNode> Arguments { get; }
         public AllocationKind Kind { get; }
         public AstNode? Destination { get; }
+        public TypeExpression? Collector { get; set; }
         public SourceSpan PlacementKeywordSpan { get; set; }
 
         public NewExpression(TypeExpression type, List<AstNode> arguments, AllocationKind kind, int line, AstNode? destination = null) : base(line)

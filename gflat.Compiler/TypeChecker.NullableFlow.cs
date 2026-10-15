@@ -47,7 +47,7 @@ public partial class TypeChecker
         var type = ResolveAlias(declared);
         TypeExpression result = type switch {
             PointerTypeExpression p => new PointerTypeExpression(p.Inner, false, node.Line, p.IsReadOnly),
-            ManagedTypeExpression p => new ManagedTypeExpression(p.Inner, false, node.Line, p.IsReadOnly),
+            ManagedTypeExpression p => new ManagedTypeExpression(p.Inner, false, node.Line, p.IsReadOnly, p.Collector) { UsesDefaultCollector = p.UsesDefaultCollector },
             FunctionPointerTypeExpression p => new FunctionPointerTypeExpression(p.ReturnType, p.ParameterTypes, p.IsManaged, false, node.Line),
             _ => declared
         };

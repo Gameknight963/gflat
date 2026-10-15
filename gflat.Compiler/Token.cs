@@ -74,6 +74,7 @@ namespace gflat
             TokenKind.EqualsGreater => "=>",
             TokenKind.Percent => "%",
             TokenKind.EndOfFile => "",
+            TokenKind.Managed => "managed",
             TokenKind.Namespace => "namespace",
             TokenKind.Using => "using",
             TokenKind.Class => "class",

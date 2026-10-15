@@ -5,8 +5,11 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    private readonly Dictionary<MethodDeclaration, (string Owner, bool IsClass)> specializedMethodOwners = new();
     public bool TryGetMethodOwner(MethodDeclaration method, out string owner, out bool isClass)
     {
+        if (specializedMethodOwners.TryGetValue(method, out var specialized))
+        { owner = specialized.Owner; isClass = specialized.IsClass; return true; }
         foreach (ClassInfo info in _classes.Values)
             if (info.AllMethods.Contains(method)) { owner = info.Name; isClass = true; return true; }
         foreach (StructInfo info in _structs.Values)

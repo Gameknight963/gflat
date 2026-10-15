@@ -5,41 +5,74 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    public sealed record CollectorBinding(string Owner, bool IsClass, MethodDeclaration Allocate,
+        MethodDeclaration ReferenceAdded, MethodDeclaration ReferenceRemoved);
+    private readonly Dictionary<string, CollectorBinding> collectorBindings = new();
     private readonly Dictionary<NewExpression, MethodDeclaration> _managedAllocations = new();
-    private bool _usesCollector;
-    private bool HasCollectorRuntime => ResolveNamespaceByName("GC")?.Functions.ContainsKey("Allocate") == true;
-    public bool UsesCollector => _usesCollector;
-    private bool HasLegacyManagedAllocator => _globalScope.Functions.ContainsKey("__gflat_gc_alloc") || _globalScope.Externs.ContainsKey("__gflat_gc_alloc");
+    public bool UsesCollector => collectorBindings.Count != 0;
     public MethodDeclaration? GetManagedAllocation(NewExpression node) => _managedAllocations.GetValueOrDefault(node);
-    public bool HasCollectorNativeTracking => UsesCollector && ResolveNamespaceByName("GC")?.Functions.ContainsKey("TrackNative") == true;
 
-    private void ValidateCollectorHooks()
+    private TypeExpression ResolveCollectorType(TypeExpression? collector, int line)
     {
-        if (!HasCollectorRuntime) return;
-        var scope = ResolveNamespaceByName("GC")!;
-        MethodDeclaration allocate = scope.Functions["Allocate"];
-        if (allocate.IsGeneric || allocate.Body == null || SignatureType(allocate.ReturnType, allocate) != "void*" ||
-            !allocate.Parameters.Select(p => SignatureType(p.Type, allocate)).SequenceEqual(new[] { "nuint", "nuint" }))
-            throw new TypeCheckException("GC::Allocate must have signature void* Allocate(nuint bytes, nuint alignment)", allocate.Span);
-        var contracts = new Dictionary<string, (string Result, string[] Parameters)> {
-            ["ReferenceAdded"] = ("void", ["void*"]),
-            ["ReferenceRemoved"] = ("void", ["void*"])
-        };
-        foreach (var (name, contract) in contracts)
+        if (collector != null) return ResolveAlias(collector);
+        if (_globalScope.Aliases.TryGetValue("GC", out var selected))
+            return ResolveAliasBindingTarget(selected);
+        // Type-only queries may describe the default without allocating storage.
+        return new NamedTypeExpression("GC", null, line);
+    }
+
+    public CollectorBinding GetCollectorBinding(ManagedTypeExpression reference)
+    {
+        TypeExpression selected = ResolveCollectorType(reference.Collector, reference.Line);
+        if (selected is not NamedTypeExpression named)
+            throw new TypeCheckException("A managed collector must be a concrete provider type", reference.Span);
+        if (collectorBindings.TryGetValue(named.Name, out var cached)) return cached;
+        var cls = GetClass(named.Name);
+        var structure = GetStruct(named.Name);
+        if (cls == null && structure == null)
+            throw new TypeCheckException($"Managed references require a collector provider; bind the global GC alias or use managed<T, Collector> (unknown '{DisplayTypeName(selected)}')", reference.Span);
+        MethodDeclaration Require(string name, string result, string[] parameters, bool noThrow)
         {
-            if (!scope.Functions.TryGetValue(name, out MethodDeclaration? hook))
-                throw new TypeCheckException($"GC::Allocate requires the compiler-facing GC::{name} hook", allocate.Span);
-            if (hook.IsGeneric || !hook.IsNoThrow || hook.Body == null ||
-                SignatureType(hook.ReturnType, hook) != contract.Result ||
-                !hook.Parameters.Select(p => SignatureType(p.Type, hook)).SequenceEqual(contract.Parameters))
-                throw new TypeCheckException($"GC::{name} has an invalid runtime signature or is missing nothrow", hook.Span);
+            MethodDeclaration? method = cls != null ? cls.Methods.GetValueOrDefault(name).Method : structure!.Methods.GetValueOrDefault(name);
+            if (method == null || !method.IsStatic || method.Accessibility != TokenKind.Public || method.IsGeneric ||
+                SignatureType(method.ReturnType, method) != result || (noThrow && !method.IsNoThrow) ||
+                !method.Parameters.Select(p => SignatureType(p.Type, method)).SequenceEqual(parameters))
+                throw new TypeCheckException($"Collector '{DisplayTypeName(selected)}' requires public static {result} {name}({string.Join(", ", parameters)}){(noThrow ? " nothrow" : "")}", reference.Span);
+            return method;
         }
+        var allocation = Require("Allocate", "void*", ["nuint", "nuint"], false);
+        var added = Require("ReferenceAdded", "void", ["void*"], true);
+        var removed = Require("ReferenceRemoved", "void", ["void*"], true);
+        return collectorBindings[named.Name] = new(named.Name, cls != null, allocation, added, removed);
     }
 
     private void CheckManagedAllocation(NewExpression node)
     {
-        _usesCollector = true;
-        _managedAllocations[node] = ResolveNamespaceByName("GC")!.Functions["Allocate"];
+        var reference = new ManagedTypeExpression(node.Type, false, node.Line, collector: node.Collector);
+        _managedAllocations[node] = GetCollectorBinding(reference).Allocate;
+    }
+
+    private void ValidateManagedGraph(ManagedTypeExpression reference)
+    {
+        var visited = new HashSet<string>();
+        TypeExpression collector = ResolveCollectorType(reference.Collector, reference.Line);
+        Walk(reference.Inner);
+        void Walk(TypeExpression type)
+        {
+            type = ResolveAlias(type);
+            if (type is ManagedTypeExpression edge)
+            {
+                if (!TypesMatch(collector, ResolveCollectorType(edge.Collector, edge.Line)))
+                    throw new TypeCheckException("Managed object graphs cannot contain references owned by a different collector", reference.Span);
+                Walk(edge.Inner);
+            }
+            else if (type is ArrayTypeExpression array) Walk(array.ElementType);
+            else if (type is NamedTypeExpression named && visited.Add(named.Name))
+            {
+                var fields = GetStruct(named.Name)?.Fields.Select(f => f.Type) ?? GetClass(named.Name)?.Fields.Select(f => f.Type);
+                if (fields != null) foreach (var field in fields) Walk(field);
+            }
+        }
     }
 
     private bool ContainsManagedReference(TypeExpression type, HashSet<string>? visited = null)
@@ -62,8 +95,4 @@ public partial class TypeChecker
         return false;
     }
 
-    private bool IsManagedAdoptionBridge(ExternDeclaration node)
-        => HasCollectorRuntime && node.Accessibility == TokenKind.Private && declarationNamespaces.GetValueOrDefault(node) == "GC" &&
-            ResolveAlias(node.ReturnType) is ManagedTypeExpression { Inner: NamedTypeExpression { Name: "void" } } &&
-            !node.Parameters.Any(p => ContainsManagedReference(p.Type));
 }

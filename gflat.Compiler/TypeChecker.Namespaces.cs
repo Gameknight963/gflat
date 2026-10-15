@@ -162,6 +162,10 @@ public partial class TypeChecker
         var previousStruct = _currentStruct;
         _currentClass = null;
         _currentStruct = null;
+        if (definition is MethodDeclaration method && TryGetMethodOwner(method, out string owner, out bool isClass))
+        {
+            if (isClass) _currentClass = GetClass(owner); else _currentStruct = GetStruct(owner);
+        }
         string ns = declarationNamespaces.GetValueOrDefault(definition) ??
             (definition is MethodDeclaration m ? GetFunctionNamespace(m).Replace("$", "::") : "");
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;

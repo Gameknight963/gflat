@@ -48,9 +48,7 @@ public partial class LlvmEmitter
 
     private void EmitExceptionFree(string address)
     {
-        string name = _typeChecker.HasCollectorNativeTracking ? "__gflat_eh_free_exception_gc" : "__gflat_eh_free_exception";
-        string forgetting = _typeChecker.HasCollectorNativeTracking ? ", void (i8*)* @gflat$GC$ForgetNative" : "";
-        Emit($"    call void @{name}(i8* {address}, void (i8*)* @gflat$Memory$Free{forgetting})");
+        Emit($"    call void @__gflat_eh_free_exception(i8* {address}, void (i8*)* @gflat$Memory$Free)");
     }
 
     private void BeginConstruction(string name, ConstructorDeclaration constructor)

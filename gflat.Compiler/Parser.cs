@@ -1049,7 +1049,7 @@ namespace gflat
                 if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
                     TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
                     TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or TokenKind.ExtraLong or
-                    TokenKind.Void)
+                    TokenKind.Void or TokenKind.Managed)
                 {
                     name = Current.Text;
                     Consume();
@@ -1072,7 +1072,12 @@ namespace gflat
                     Expect(TokenKind.Greater);
                 }
 
-                type = new NamedTypeExpression(name, null, line, typeArgs);
+                if (name == "managed")
+                {
+                    if (typeArgs.Count != 2) throw new TypeCheckException("managed<T, Collector> requires an element type and a collector type", line);
+                    type = new ManagedTypeExpression(typeArgs[0], Match(TokenKind.QuestionMark), line, collector: typeArgs[1]);
+                }
+                else type = new NamedTypeExpression(name, null, line, typeArgs);
 
                 if (Check(TokenKind.Dot))
                 {
@@ -1267,7 +1272,7 @@ namespace gflat
             TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
             TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
             TokenKind.Char or TokenKind.ExtraLong or
-            TokenKind.Void or TokenKind.Identifier or TokenKind.Readonly;
+            TokenKind.Void or TokenKind.Managed or TokenKind.Identifier or TokenKind.Readonly;
 
         private bool IsVariableDeclaration()
         {
@@ -1879,7 +1884,14 @@ namespace gflat
                     // Comparisons/assignment apply to the completed placement expression.
                     destination = ParseExpression(17);
                 }
-                return new NewExpression(type, args, kind, line, destination) { PlacementKeywordSpan = placementSpan };
+                TypeExpression? collector = null;
+                if (Check(TokenKind.Identifier) && Current.Text == "with")
+                {
+                    Token keyword = Consume();
+                    if (kind != AllocationKind.Managed) throw new TypeCheckException("A collector can only be selected for new^", keyword.Span);
+                    collector = ParseTypeExpression(allowSignature: false);
+                }
+                return new NewExpression(type, args, kind, line, destination) { PlacementKeywordSpan = placementSpan, Collector = collector };
             }
 
             // identifier
@@ -1934,7 +1946,7 @@ namespace gflat
             kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
             TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
             TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or
-            TokenKind.ExtraLong or TokenKind.Void;
+            TokenKind.ExtraLong or TokenKind.Void or TokenKind.Managed;
 
         private static bool IsCastOperandStarter(TokenKind kind) =>
             kind is TokenKind.Identifier or

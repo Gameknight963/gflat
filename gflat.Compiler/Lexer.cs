@@ -224,6 +224,7 @@ public class Lexer
     {
         return text switch
         {
+            "managed" => TokenKind.Managed,
             "namespace" => TokenKind.Namespace,
             "using" => TokenKind.Using,
             "class" => TokenKind.Class,

@@ -27,7 +27,7 @@ public partial class TypeChecker
             NamedTypeExpression n => n.Name,
             ReferenceTypeExpression r => "ref " + OverloadTypeKey(r.Inner),
             PointerTypeExpression p => OverloadTypeKey(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
-            ManagedTypeExpression p => OverloadTypeKey(p.Inner) + "^" + (p.IsNullable ? "?" : ""),
+            ManagedTypeExpression p => OverloadTypeKey(p.Inner) + "^" + TypeName(ResolveCollectorType(p.Collector, p.Line)) + (p.IsNullable ? "?" : ""),
             ArrayTypeExpression a => OverloadTypeKey(a.ElementType) + $"[{a.Size}]",
             FunctionPointerTypeExpression f => OverloadTypeKey(f.ReturnType) + "(" + string.Join(",", f.ParameterTypes.Select(OverloadTypeKey)) + ")*" + (f.IsNullable ? "?" : ""),
             _ => TypeName(type)

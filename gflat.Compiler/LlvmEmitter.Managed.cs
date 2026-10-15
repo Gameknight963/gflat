@@ -10,23 +10,13 @@ public partial class LlvmEmitter
         public StringBuilder Output { get; } = output;
         public StringBuilder Prologue { get; } = new();
         public int EntryPosition;
-        public bool NativeAllocate, NativeFree;
-        public string FirstParameter = "";
     }
     private readonly Stack<CollectorFunction> _collectorFunctions = new();
 
     private void BeginCollectorFunction(string declaration)
     {
         if (!_typeChecker.UsesCollector) return;
-        var f = new CollectorFunction(_output) {
-            NativeAllocate = _typeChecker.HasCollectorNativeTracking && declaration.Contains("@gflat$Memory$Allocate("),
-            NativeFree = _typeChecker.HasCollectorNativeTracking && declaration.Contains("@gflat$Memory$Free(")
-        };
-        if (f.NativeAllocate || f.NativeFree)
-        {
-            string p = declaration[(declaration.IndexOf('(') + 1)..].Split(',')[0];
-            f.FirstParameter = p[p.IndexOf('%')..].Split(')')[0].Trim();
-        }
+        var f = new CollectorFunction(_output);
         _collectorFunctions.Push(f);
     }
     private void BeginCollectorEntry()
@@ -34,7 +24,6 @@ public partial class LlvmEmitter
         if (_collectorFunctions.Count == 0) return;
         var f = _collectorFunctions.Peek();
         f.EntryPosition = _output.Length;
-        if (f.NativeFree) Raw($"    call void @gflat$GC$ForgetNative(i8* {f.FirstParameter})");
     }
     private void EndCollectorFunction()
     {
@@ -68,12 +57,14 @@ public partial class LlvmEmitter
         if (!_typeChecker.UsesCollector || !HasManagedReferences(type)) return;
         type = _typeChecker.ResolveAlias(type);
         string llvm = EmitType(type);
-        if (type is ManagedTypeExpression)
+        if (type is ManagedTypeExpression reference)
         {
+            var collector = _typeChecker.GetCollectorBinding(reference);
+            string hook = CollectorMethodName(collector, added ? collector.ReferenceAdded : collector.ReferenceRemoved);
             if (initialize) Raw($"    store {llvm} zeroinitializer, {llvm}* {address}");
             string raw = NewTemp();
             Raw($"    {raw} = bitcast {llvm}* {address} to i8*");
-            Raw($"    call void @gflat$GC$Reference{(added ? "Added" : "Removed")}(i8* {raw})");
+            Raw($"    call void @{hook}(i8* {raw})");
             if (!added) Raw($"    store {llvm} zeroinitializer, {llvm}* {address}");
         }
         else if (type is ArrayTypeExpression { Size: not null } array)
@@ -172,18 +163,19 @@ public partial class LlvmEmitter
         EmitManagedReferences(p.Type, address, true);
         if (!_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new ManagedReferenceCleanup(p.Type, address));
     }
-    private string EmitManagedAllocation(string bytes, TypeExpression type)
+    private string CollectorMethodName(TypeChecker.CollectorBinding collector, MethodDeclaration method)
     {
-        string result = NewTemp();
-        Emit($"    {result} = call i8* @gflat$GC$Allocate(i64 {bytes}, i64 {_typeChecker.GetTypeAlignment(type)})");
-        return result;
+        string owner = collector.IsClass
+            ? _typeChecker.GetClass(collector.Owner)!.Methods[method.Name].DeclaringClass : collector.Owner;
+        return GetMethodMangledName(owner, method, _typeChecker.GetFunctionNamespace(method), collector.IsClass);
     }
-    private void TrackNativeReturn(string value)
+
+    private string EmitManagedAllocation(NewExpression node, string bytes)
     {
-        if (_collectorFunctions.Count == 0 || !_collectorFunctions.Peek().NativeAllocate) return;
-        string tracked = NewTemp(), ok = NewLabel("native_tracked"), fail = NewLabel("native_untracked");
-        Raw($"    {tracked} = call i1 @gflat$GC$TrackNative(i8* {value}, i64 {_collectorFunctions.Peek().FirstParameter})");
-        Emit($"    br i1 {tracked}, label %{ok}, label %{fail}"); Emit(fail + ":");
-        Emit($"    call void @gflat$Memory$Free(i8* {value})"); Emit("    ret i8* null"); Emit(ok + ":");
+        var reference = (ManagedTypeExpression)_typeChecker.ResolveAlias(_typeChecker.GetType(node));
+        var collector = _typeChecker.GetCollectorBinding(reference);
+        string result = NewTemp();
+        Emit($"    {result} = call i8* @{CollectorMethodName(collector, collector.Allocate)}(i{TargetInfo.Default.PointerBits} {bytes}, i{TargetInfo.Default.PointerBits} {_typeChecker.GetTypeAlignment(node.Type)})");
+        return result;
     }
 }

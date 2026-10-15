@@ -11,8 +11,6 @@ public partial class LlvmEmitter
     private string NativeDeclarations => """
         declare i8* @__gflat_eh_allocate_exception(i64, i8* (i64)*)
         declare void @__gflat_eh_free_exception(i8*, void (i8*)*)
-        declare i8* @__gflat_eh_allocate_exception_gc(i64, i8* (i64)*, i1 (i8*, i64)*)
-        declare void @__gflat_eh_free_exception_gc(i8*, void (i8*)*, void (i8*)*)
         declare void @__gflat_eh_throw(i8*, void (i8*)*) noreturn
         declare i8* @__gflat_eh_capture() nounwind
         declare i8* @__gflat_eh_object(i8*) nounwind
@@ -39,7 +37,7 @@ public partial class LlvmEmitter
         int call = line.IndexOf("call ", StringComparison.Ordinal);
         if (!_ehFunction || call < 0 || line.Contains("@llvm.") ||
             line.Contains("@gflat_is_instance(") || line.Contains("@gflat_get_parent_vtable(") ||
-            line.Contains("@__gflat_gc_") && !line.Contains("@__gflat_gc_alloc(") || line.Contains("@__cxa_") ||
+            line.Contains("@__cxa_") ||
             line.Contains("@__gflat_eh_") && !line.Contains("@__gflat_eh_throw(") && !line.Contains("@__gflat_eh_rethrow(")
             && !line.Contains("@__gflat_eh_allocate_exception") && !line.Contains("@__gflat_eh_free_exception"))
         {
@@ -162,9 +160,7 @@ public partial class LlvmEmitter
             string llvm = EmitType(type), size = NewTemp(), bytes = NewTemp(), storage = NewTemp(), address = NewTemp();
             Emit($"    {size} = getelementptr {llvm}, {llvm}* null, i32 1");
             Emit($"    {bytes} = ptrtoint {llvm}* {size} to i64");
-            string allocate = _typeChecker.HasCollectorNativeTracking ? "__gflat_eh_allocate_exception_gc" : "__gflat_eh_allocate_exception";
-            string tracking = _typeChecker.HasCollectorNativeTracking ? ", i1 (i8*, i64)* @gflat$GC$TrackNative" : "";
-            Emit($"    {storage} = call i8* @{allocate}(i64 {bytes}, i8* (i64)* @gflat$Memory$Allocate{tracking})");
+            Emit($"    {storage} = call i8* @__gflat_eh_allocate_exception(i64 {bytes}, i8* (i64)* @gflat$Memory$Allocate)");
             GuardNonNull(storage, "i8*");
             Emit($"    {address} = bitcast i8* {storage} to {llvm}*");
             _deferScopes.Add(new() { new ExceptionOnlyCleanup(new ExceptionAllocationCleanup(storage)) });

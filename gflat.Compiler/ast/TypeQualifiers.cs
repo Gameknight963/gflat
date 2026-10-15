@@ -8,7 +8,7 @@ public static class TypeQualifiers
         TypeExpression qualified = type switch
         {
             PointerTypeExpression p => new PointerTypeExpression(p.Inner, p.IsNullable, p.Line, true),
-            ManagedTypeExpression m => new ManagedTypeExpression(m.Inner, m.IsNullable, m.Line, true),
+            ManagedTypeExpression m => new ManagedTypeExpression(m.Inner, m.IsNullable, m.Line, true, m.Collector) { UsesDefaultCollector = m.UsesDefaultCollector },
             ArrayTypeExpression a => new ArrayTypeExpression(ReadOnly(a.ElementType), a.Size, a.Line, a.SizeExpression),
             _ => type
         };

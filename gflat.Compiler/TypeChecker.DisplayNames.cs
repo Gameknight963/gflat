@@ -29,7 +29,7 @@ public partial class TypeChecker
             NestedTypeExpression n => DisplayTypeName(n.Parent) + "::" + n.Member + (n.TypeArguments.Count == 0 ? "" : "<" + string.Join(", ", n.TypeArguments.Select(DisplayTypeName)) + ">"),
             ReferenceTypeExpression r => "ref " + DisplayTypeName(r.Inner),
             PointerTypeExpression p => DisplayTypeName(p.Inner, inheritedReadOnly) + "*" + (p.IsNullable ? "?" : ""),
-            ManagedTypeExpression p => DisplayTypeName(p.Inner, inheritedReadOnly) + "^" + (p.IsNullable ? "?" : ""),
+            ManagedTypeExpression p => (p.UsesDefaultCollector || p.Collector == null ? DisplayTypeName(p.Inner, inheritedReadOnly) + "^" : "managed<" + DisplayTypeName(p.Inner, inheritedReadOnly) + ", " + DisplayTypeName(p.Collector) + ">") + (p.IsNullable ? "?" : ""),
             ArrayTypeExpression a => DisplayTypeName(a.ElementType, inheritedReadOnly) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             FunctionPointerTypeExpression f => $"{DisplayTypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(DisplayTypeName))}){(f.IsSignature ? "" : f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => TypeName(type)

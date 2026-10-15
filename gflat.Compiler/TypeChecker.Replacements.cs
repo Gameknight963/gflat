@@ -123,7 +123,7 @@ public partial class TypeChecker
             NamedTypeExpression named => ResolveTypeIdentity(named.Name, named.Namespace) ?? (named.Namespace == null ? "" : named.Namespace + "::") + named.Name,
             ReferenceTypeExpression r => "ref " + SignatureType(r.Inner, method),
             PointerTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}*{(p.IsNullable ? "?" : "")}",
-            ManagedTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}^{(p.IsNullable ? "?" : "")}",
+            ManagedTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}^{SignatureType(ResolveCollectorType(p.Collector, p.Line), method)}{(p.IsNullable ? "?" : "")}",
             ArrayTypeExpression a => SignatureType(a.ElementType, method) + $"[{((ArrayTypeExpression)ResolveAlias(new ArrayTypeExpression(Int, a.Size, a.Line, a.SizeExpression))).Size}]",
             FunctionPointerTypeExpression f => SignatureType(f.ReturnType, method) + "(" + string.Join(",", f.ParameterTypes.Select(t => SignatureType(t, method))) + $"){(f.IsSignature ? "" : f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => TypeName(type)

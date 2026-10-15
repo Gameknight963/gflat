@@ -753,7 +753,7 @@ namespace gflat
             }
             if (type is ManagedTypeExpression mgd)
             {
-                return $"{GetTypeMangledName(mgd.Inner)}Ref";
+                return $"{GetTypeMangledName(mgd.Inner)}Managed${GetTypeMangledName(ResolveCollectorType(mgd.Collector, mgd.Line))}${(mgd.IsNullable ? "Nullable" : "NonNull")}";
             }
             if (type is ArrayTypeExpression arr)
             {
@@ -968,8 +968,9 @@ namespace gflat
             }
 
             string definitionNamespace = GetFunctionNamespace(genericDef);
-            if (definitionNamespace == "GC" && genericDef.Name == "Adopt") _usesCollector = true;
-            string mangledName = (definitionNamespace.Length > 0 ? definitionNamespace + "$" : "") + $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            bool ownedMethod = TryGetMethodOwner(genericDef, out string methodOwner, out bool ownerIsClass);
+            string ownerPrefix = ownedMethod ? methodOwner + "$" : "";
+            string mangledName = (definitionNamespace.Length > 0 ? definitionNamespace + "$" : "") + ownerPrefix + $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
             _displayNames[mangledName] = (definitionNamespace.Length > 0 ? definitionNamespace + "::" : "") + DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             if (_globalScope.Functions.TryGetValue(mangledName, out MethodDeclaration? existing))
             {
@@ -987,6 +988,7 @@ namespace gflat
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
+            if (ownedMethod) specializedMethodOwners[specialized] = (methodOwner, ownerIsClass);
             CheckSpecialization(genericDef, specialized);
 
             return specialized;
@@ -1014,7 +1016,9 @@ namespace gflat
             }
             if (paramType is ManagedTypeExpression mgdParam && argType is ManagedTypeExpression mgdArg)
             {
-                return InferTypeParameter(mgdParam.Inner, mgdArg.Inner, genericParamNames, inferred);
+                bool inner = InferTypeParameter(mgdParam.Inner, mgdArg.Inner, genericParamNames, inferred);
+                bool collector = InferTypeParameter(ResolveCollectorType(mgdParam.Collector, mgdParam.Line), ResolveCollectorType(mgdArg.Collector, mgdArg.Line), genericParamNames, inferred);
+                return inner && collector;
             }
             if (paramType is ArrayTypeExpression arrParam && argType is ArrayTypeExpression arrArg)
             {
@@ -1157,8 +1161,8 @@ namespace gflat
             else if (type is ManagedTypeExpression mgd)
             {
                 TypeExpression resolvedInner = ResolveAlias(mgd.Inner);
-                if (resolvedInner != mgd.Inner)
-                    return new ManagedTypeExpression(resolvedInner, mgd.IsNullable, mgd.Line, isReadOnly: mgd.IsReadOnly);
+                TypeExpression collector = ResolveCollectorType(mgd.Collector, mgd.Line);
+                return new ManagedTypeExpression(resolvedInner, mgd.IsNullable, mgd.Line, mgd.IsReadOnly, collector) { UsesDefaultCollector = mgd.UsesDefaultCollector };
             }
             else if (type is ArrayTypeExpression arr)
             {
@@ -1275,6 +1279,9 @@ namespace gflat
             if (resolved is ManagedTypeExpression managed)
             {
                 ValidateInterfaceReference(managed.Inner, line);
+                if (_globalScope.Aliases.ContainsKey("GC") || managed.Collector is not NamedTypeExpression { Name: "GC" })
+                    GetCollectorBinding(managed);
+                ValidateManagedGraph(managed);
                 if (HasDestructor(managed.Inner))
                     throw new TypeCheckException("Managed pointers cannot reference types with destructors (including base classes and inline fields)", line);
                 if (ResolveAlias(managed.Inner) is not NamedTypeExpression namedInner || !IsInterface(namedInner))
@@ -1699,7 +1706,8 @@ namespace gflat
             if (a is PointerTypeExpression pa && b is PointerTypeExpression pb)
                 return pa.IsNullable == pb.IsNullable && pa.IsReadOnly == pb.IsReadOnly && TypesMatchPublic(pa.Inner, pb.Inner, symbols);
             if (a is ManagedTypeExpression ma && b is ManagedTypeExpression mb)
-                return ma.IsNullable == mb.IsNullable && ma.IsReadOnly == mb.IsReadOnly && TypesMatchPublic(ma.Inner, mb.Inner, symbols);
+                return ma.IsNullable == mb.IsNullable && ma.IsReadOnly == mb.IsReadOnly &&
+                    (ma.Collector == null && mb.Collector == null || ma.Collector != null && mb.Collector != null && TypesMatchPublic(ma.Collector, mb.Collector, symbols)) && TypesMatchPublic(ma.Inner, mb.Inner, symbols);
             if (a is ArrayTypeExpression aa && b is ArrayTypeExpression ab)
                 return TypesMatchPublic(aa.ElementType, ab.ElementType, symbols) && (aa.Size == ab.Size || aa.Size == null || ab.Size == null);
             if (a is FunctionPointerTypeExpression fa && b is FunctionPointerTypeExpression fb)
@@ -1749,6 +1757,8 @@ namespace gflat
                 source = GetType(valueNode);
             }
             source = ResolveAlias(source);
+            if (target is ManagedTypeExpression targetCollector && source is ManagedTypeExpression sourceCollector &&
+                !TypesMatch(ResolveCollectorType(targetCollector.Collector, targetCollector.Line), ResolveCollectorType(sourceCollector.Collector, sourceCollector.Line))) return false;
 
             if (source.IsReadOnlyValue && !target.IsReadOnlyValue && !CanCopyReadOnlyValue(source))
                 return false;
@@ -2038,7 +2048,6 @@ namespace gflat
             new HierarchyResolutionPass(_symbols).ResolveBaseTypes();
             ResolveDeclarationSignatures(node);
             PrepareOverloads(node);
-            AnalyzeSafely(ValidateCollectorHooks);
 
             // Pass 2: Hierarchy resolution
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
@@ -2912,7 +2921,6 @@ namespace gflat
             using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidatePropertyAccessor(node);
-            if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
             if (node.Body == null)
                 throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
             if (node.IsGeneric) return;
@@ -3730,7 +3738,7 @@ namespace gflat
                 TypeExpression result = source switch
                 {
                     PointerTypeExpression p => new PointerTypeExpression(p.Inner, false, node.Line, p.IsReadOnly),
-                    ManagedTypeExpression m => new ManagedTypeExpression(m.Inner, false, node.Line, m.IsReadOnly),
+                    ManagedTypeExpression m => new ManagedTypeExpression(m.Inner, false, node.Line, m.IsReadOnly, m.Collector) { UsesDefaultCollector = m.UsesDefaultCollector },
                     FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(f.ReturnType, f.ParameterTypes, f.IsManaged, false, node.Line),
                     _ => throw new TypeCheckException("Postfix '!' requires a pointer, managed reference, or function pointer", node.Line)
                 };
@@ -4614,7 +4622,6 @@ namespace gflat
             if (ext != null)
             {
                 ValidateExternAccess(ext, node.Span);
-                if (IsManagedAdoptionBridge(ext)) _usesCollector = true;
                 _resolvedCalls[node] = ext;
                 AddDefaultArguments(node.Arguments, ext.Parameters, node);
                 if (node.Arguments.Count < ext.Parameters.Count || !ext.IsVariadic && node.Arguments.Count > ext.Parameters.Count)
@@ -4658,8 +4665,6 @@ namespace gflat
                 method = MonomorphizeFunction(method, arguments, node.Line);
             }
             _resolvedCalls[node] = method;
-            if (method.Name == "Allocate" && declarationNamespaces.GetValueOrDefault(method) == "GC")
-                _usesCollector = true;
             AddDefaultArguments(node.Arguments, method.Parameters, node);
 
             if (!method.IsNoThrow)
@@ -5026,9 +5031,8 @@ namespace gflat
             }
             if (node.Kind == AllocationKind.Managed)
             {
-                ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line), node.Line);
-                if (HasCollectorRuntime && !HasLegacyManagedAllocator) CheckManagedAllocation(node);
-                else RequireManagedAllocator(node.Line);
+                ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line, collector: node.Collector), node.Line);
+                CheckManagedAllocation(node);
                 if (resolvedType is NamedTypeExpression scalar && IsPrimitive(scalar.Name) && scalar.Name != "void")
                 {
                     if (node.Arguments.Count > 1)
@@ -5039,7 +5043,7 @@ namespace gflat
                         if (!IsAssignable(resolvedType, GetType(node.Arguments[0]), node.Arguments[0]))
                             throw new TypeCheckException("Invalid managed scalar initializer", node.Line);
                     }
-                    RecordType(node, new ManagedTypeExpression(resolvedType, false, node.Line));
+                    RecordType(node, new ManagedTypeExpression(resolvedType, false, node.Line, collector: node.Collector));
                     return;
                 }
             }
@@ -5138,7 +5142,7 @@ namespace gflat
                 {
                     AllocationKind.Value => new NamedTypeExpression(cInfo.Name, null, node.Line),
                     AllocationKind.Pointer => new PointerTypeExpression(new NamedTypeExpression(cInfo.Name, null, node.Line), false, node.Line),
-                    AllocationKind.Managed => new ManagedTypeExpression(new NamedTypeExpression(cInfo.Name, null, node.Line), false, node.Line),
+                    AllocationKind.Managed => new ManagedTypeExpression(new NamedTypeExpression(cInfo.Name, null, node.Line), false, node.Line, collector: node.Collector),
                     _ => throw new Exception($"Unknown allocation kind {node.Kind}")
                 };
 
@@ -5232,7 +5236,7 @@ namespace gflat
             {
                 AllocationKind.Value => new NamedTypeExpression(sInfo.Name, null, node.Line),
                 AllocationKind.Pointer => new PointerTypeExpression(new NamedTypeExpression(sInfo.Name, null, node.Line), false, node.Line),
-                AllocationKind.Managed => new ManagedTypeExpression(new NamedTypeExpression(sInfo.Name, null, node.Line), false, node.Line),
+                AllocationKind.Managed => new ManagedTypeExpression(new NamedTypeExpression(sInfo.Name, null, node.Line), false, node.Line, collector: node.Collector),
                 _ => throw new Exception($"Unknown allocation kind {node.Kind}")
             };
 
@@ -5303,30 +5307,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span); }
         public void Visit(ManagedTypeExpression node) => ValidateTypeUsage(node, node.Line);
 
-        private void RequireManagedAllocator(int line)
-        {
-            TypeExpression result;
-            IReadOnlyList<Parameter> parameters;
-            if (_globalScope.Functions.TryGetValue("__gflat_gc_alloc", out var method))
-            {
-                if (method.IsGeneric || method.Body == null)
-                    throw new TypeCheckException("__gflat_gc_alloc must be a non-throwing, non-generic global function", line);
-                result = method.ReturnType;
-                parameters = method.Parameters;
-            }
-            else if (_globalScope.Externs.TryGetValue("__gflat_gc_alloc", out var external))
-            {
-                if (external.IsVariadic)
-                    throw new TypeCheckException("__gflat_gc_alloc cannot be variadic", line);
-                result = external.ReturnType;
-                parameters = external.Parameters;
-            }
-            else throw new TypeCheckException("Managed allocation requires a user-provided global __gflat_gc_alloc(nuint size) hook; no default GC runtime is supplied", line);
 
-            if (ResolveAlias(result) is not PointerTypeExpression { Inner: NamedTypeExpression { Name: "void" }, IsReadOnly: false } ||
-                parameters.Count != 1 || ResolveAlias(parameters[0].Type) is not NamedTypeExpression { Name: "nuint" })
-                throw new TypeCheckException("__gflat_gc_alloc must have signature void*? __gflat_gc_alloc(nuint size) (void* is also accepted)", line);
-        }
         public void Visit(ArrayTypeExpression node) {
             using var sourceContext = SourceContext.Enter(node.Span); }
         public void Visit(ArrayLiteralExpression node)
@@ -5484,8 +5465,8 @@ namespace gflat
                 throw new TypeCheckException("Namespace extern declarations cannot be protected", node.Span);
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateTypeUsage(node.ReturnType, node.Line);
-            if (!IsManagedAdoptionBridge(node) && (ContainsManagedReference(node.ReturnType) ||
-                node.Parameters.Any(p => ContainsManagedReference(p.Type))))
+            if (ContainsManagedReference(node.ReturnType) ||
+                node.Parameters.Any(p => ContainsManagedReference(p.Type)))
                 throw new TypeCheckException("Extern signatures cannot contain managed references or storage containing them; use a raw native boundary", node.Span);
             ValidateParameterDefaults(node, node.Parameters);
             foreach (var parameter in node.Parameters)
@@ -5496,7 +5477,6 @@ namespace gflat
             }
             if (HasDestructor(node.ReturnType))
                 throw new TypeCheckException("Extern functions cannot return owning values; use an explicit pointer contract", node.Line);
-            if (node.Name == "__gflat_gc_alloc") RequireManagedAllocator(node.Line);
         }
 
         public static string TypeName(TypeExpression type) => TypeName(type, false);
@@ -5510,7 +5490,7 @@ namespace gflat
                 : $"{TypeName(nested.Parent)}::{nested.Member}",
             ReferenceTypeExpression r => "ref " + TypeName(r.Inner),
             PointerTypeExpression p => TypeName(p.Inner, inheritedReadOnly) + "*" + (p.IsNullable ? "?" : ""),
-            ManagedTypeExpression m => TypeName(m.Inner, inheritedReadOnly) + "^" + (m.IsNullable ? "?" : ""),
+            ManagedTypeExpression m => (m.Collector == null ? TypeName(m.Inner, inheritedReadOnly) + "^" : "managed<" + TypeName(m.Inner, inheritedReadOnly) + ", " + TypeName(m.Collector) + ">") + (m.IsNullable ? "?" : ""),
             ArrayTypeExpression a => TypeName(a.ElementType, inheritedReadOnly) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
             FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsSignature ? "" : f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"
@@ -5835,6 +5815,12 @@ namespace gflat
         {
             src = ResolveAlias(src);
             dst = ResolveAlias(dst);
+            if (src is ManagedTypeExpression sourceCollector && dst is ManagedTypeExpression targetCollector &&
+                !TypesMatch(ResolveCollectorType(sourceCollector.Collector, sourceCollector.Line), ResolveCollectorType(targetCollector.Collector, targetCollector.Line))) return false;
+            if (src is PointerTypeExpression && dst is ManagedTypeExpression rawTarget &&
+                (ResolveAlias(rawTarget.Inner) is not NamedTypeExpression rawInner || !IsInterface(rawInner))) return true;
+            if (src is ManagedTypeExpression rawSource && dst is PointerTypeExpression &&
+                (ResolveAlias(rawSource.Inner) is not NamedTypeExpression rawSourceInner || !IsInterface(rawSourceInner))) return true;
             if (src.IsReadOnlyValue && !dst.IsReadOnlyValue && !CanCopyReadOnlyValue(src))
                 return false;
             if (src is ManagedTypeExpression { IsReadOnly: true } && dst is ManagedTypeExpression { IsReadOnly: false })
@@ -5932,8 +5918,8 @@ namespace gflat
                 if (ResolveAlias(sourceManaged.Inner) is NamedTypeExpression { Name: "void" } &&
                     ResolveAlias(targetManaged.Inner) is NamedTypeExpression concrete && !IsInterface(concrete))
                     return true;
-                return IsAssignable(new ManagedTypeExpression(targetManaged.Inner, false, targetManaged.Line, targetManaged.IsReadOnly),
-                    new ManagedTypeExpression(sourceManaged.Inner, false, sourceManaged.Line, sourceManaged.IsReadOnly));
+                return IsAssignable(new ManagedTypeExpression(targetManaged.Inner, false, targetManaged.Line, targetManaged.IsReadOnly, targetManaged.Collector),
+                    new ManagedTypeExpression(sourceManaged.Inner, false, sourceManaged.Line, sourceManaged.IsReadOnly, sourceManaged.Collector));
             }
 
             // Function pointer to function pointer or void*

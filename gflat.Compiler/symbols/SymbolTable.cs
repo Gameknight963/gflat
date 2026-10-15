@@ -186,7 +186,7 @@ namespace gflat.symbols
                 TypeExpression resolvedInner = ResolveAlias(mgd.Inner);
                 if (resolvedInner != mgd.Inner)
                 {
-                    return new ManagedTypeExpression(resolvedInner, mgd.IsNullable, mgd.Line, isReadOnly: mgd.IsReadOnly);
+                    return new ManagedTypeExpression(resolvedInner, mgd.IsNullable, mgd.Line, mgd.IsReadOnly, mgd.Collector) { UsesDefaultCollector = mgd.UsesDefaultCollector };
                 }
             }
             else if (type is ArrayTypeExpression arr)

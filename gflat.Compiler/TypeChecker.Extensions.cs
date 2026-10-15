@@ -185,7 +185,7 @@ public partial class TypeChecker
             TypeExpression result = t switch {
                 ReferenceTypeExpression r => new ReferenceTypeExpression(Qualify(r.Inner), r.Line),
                 PointerTypeExpression p => new PointerTypeExpression(Qualify(p.Inner), p.IsNullable, p.Line, p.IsReadOnly),
-                ManagedTypeExpression m => new ManagedTypeExpression(Qualify(m.Inner), m.IsNullable, m.Line, m.IsReadOnly),
+                ManagedTypeExpression m => new ManagedTypeExpression(Qualify(m.Inner), m.IsNullable, m.Line, m.IsReadOnly, m.Collector == null ? null : Qualify(m.Collector)) { UsesDefaultCollector = m.UsesDefaultCollector },
                 ArrayTypeExpression a => new ArrayTypeExpression(Qualify(a.ElementType), a.Size, a.Line),
                 FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(Qualify(f.ReturnType),
                     f.ParameterTypes.Select(Qualify).ToList(), f.IsManaged, f.IsNullable, f.Line),
@@ -252,7 +252,7 @@ public partial class TypeChecker
         if (type is PointerTypeExpression p)
             return KnownExtensionType(p.Inner) is { } inner ? new PointerTypeExpression(inner, p.IsNullable, p.Line, p.IsReadOnly).WithReadOnlyValue(p.IsReadOnlyValue) : null;
         if (type is ManagedTypeExpression m)
-            return KnownExtensionType(m.Inner) is { } inner ? new ManagedTypeExpression(inner, m.IsNullable, m.Line, m.IsReadOnly).WithReadOnlyValue(m.IsReadOnlyValue) : null;
+            return KnownExtensionType(m.Inner) is { } inner ? new ManagedTypeExpression(inner, m.IsNullable, m.Line, m.IsReadOnly, m.Collector) { UsesDefaultCollector = m.UsesDefaultCollector }.WithReadOnlyValue(m.IsReadOnlyValue) : null;
         if (type is ArrayTypeExpression a)
             return KnownExtensionType(a.ElementType) is { } inner ? new ArrayTypeExpression(inner, a.Size, a.Line).WithReadOnlyValue(a.IsReadOnlyValue) : null;
         if (type is FunctionPointerTypeExpression function)
@@ -276,7 +276,9 @@ public partial class TypeChecker
         {
             case (ReferenceTypeExpression f, ReferenceTypeExpression s): InferExtensionBindings(f.Inner, s.Inner, names, bindings); return;
             case (PointerTypeExpression f, PointerTypeExpression s): InferExtensionBindings(f.Inner, s.Inner, names, bindings); return;
-            case (ManagedTypeExpression f, ManagedTypeExpression s): InferExtensionBindings(f.Inner, s.Inner, names, bindings); return;
+            case (ManagedTypeExpression f, ManagedTypeExpression s):
+                InferExtensionBindings(f.Inner, s.Inner, names, bindings);
+                InferExtensionBindings(ResolveCollectorType(f.Collector, f.Line), ResolveCollectorType(s.Collector, s.Line), names, bindings); return;
             case (ArrayTypeExpression f, ArrayTypeExpression s): InferExtensionBindings(f.ElementType, s.ElementType, names, bindings); return;
             case (NamedTypeExpression f, NamedTypeExpression s) when f.TypeArguments.Count > 0:
                 var origin = extensionGenericTypeOrigins.GetValueOrDefault(s.Name) ?? s;
@@ -291,7 +293,7 @@ public partial class TypeChecker
         NamedTypeExpression n => names.Contains(n.Name) || n.TypeArguments.Any(t => HasUnboundExtensionType(t, names)),
         ReferenceTypeExpression r => HasUnboundExtensionType(r.Inner, names),
         PointerTypeExpression p => HasUnboundExtensionType(p.Inner, names),
-        ManagedTypeExpression p => HasUnboundExtensionType(p.Inner, names),
+        ManagedTypeExpression p => HasUnboundExtensionType(p.Inner, names) || p.Collector != null && HasUnboundExtensionType(p.Collector, names),
         ArrayTypeExpression a => HasUnboundExtensionType(a.ElementType, names),
         FunctionPointerTypeExpression f => HasUnboundExtensionType(f.ReturnType, names) || f.ParameterTypes.Any(p => HasUnboundExtensionType(p, names)),
         NestedTypeExpression n => HasUnboundExtensionType(n.Parent, names) || n.TypeArguments.Any(t => HasUnboundExtensionType(t, names)),

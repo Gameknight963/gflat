@@ -121,7 +121,8 @@ namespace std
             State* state = GetState();
             if (bytes == (nuint)0) bytes = 1;
             if (alignment == (nuint)0) throw new BadAllocException();
-            if (state.bytesSinceCollection >= CollectionThreshold()) Collect();
+            nuint threshold = CollectionThreshold();
+            if (threshold != (nuint)0 && state.bytesSinceCollection >= threshold) Collect();
             void*? storage = Memory::Allocate(bytes);
             if (storage == null) { Collect(); storage = Memory::Allocate(bytes); }
             if (storage == null) throw new BadAllocException();
@@ -285,7 +286,7 @@ namespace std
         }
 
         // Policy and diagnostics beyond the common collector contract.
-        public static nuint CollectionThreshold() => 65536;
+        public static weak nuint CollectionThreshold() => 65536;
         public static nuint ManagedCount
         {
             get

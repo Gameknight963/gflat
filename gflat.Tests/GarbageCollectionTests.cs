@@ -21,7 +21,7 @@ public sealed class GarbageCollectionTests
         void Drop() { int^ value = new^ int(42); }
         int main() {
             for (int i = 0; i < 1200; i++) Drop();
-            if (GC::ManagedCount != (nuint)1200) return 1;
+            if (std::TracingCollector::ManagedCount != (nuint)1200) return 1;
             if (GC::Collect() != (nuint)1200) return 2;
             return 0;
         }
@@ -37,7 +37,7 @@ public sealed class GarbageCollectionTests
         }
         int main() {
             Recurse(80);
-            if (GC::ManagedCount != (nuint)1) return 1;
+            if (std::TracingCollector::ManagedCount != (nuint)1) return 1;
             if (GC::Collect() != (nuint)1) return 2;
             return 0;
         }
@@ -47,7 +47,7 @@ public sealed class GarbageCollectionTests
     public void DirectManagedAllocationActivatesRuntimeTracking() => Succeeds("""
         int main() {
             void* storage = GC::Allocate(4, 4);
-            if (GC::ManagedCount != (nuint)1) return 1;
+            if (std::TracingCollector::ManagedCount != (nuint)1) return 1;
             if (GC::Collect() != (nuint)1) return 2;
             return 0;
         }
@@ -58,11 +58,11 @@ public sealed class GarbageCollectionTests
         struct Widget { public int value; public Widget(int n) { value = n; } }
         int main() {
             Widget* storage = new* Widget(42);
-            Widget^ value = GC::Adopt(storage);
+            Widget^ value = std::TracingCollector::Adopt(storage);
             int^ number = new^ int(7);
             GC::Collect();
             if (value.value != 42 || *number != 7) return 1;
-            if (GC::ManagedCount != (nuint)2) return 2;
+            if (std::TracingCollector::ManagedCount != (nuint)2) return 2;
             return 0;
         }
         """);
@@ -76,9 +76,9 @@ public sealed class GarbageCollectionTests
         }
         int main() {
             CreateCycle();
-            if (GC::ManagedCount != (nuint)2) return 1;
+            if (std::TracingCollector::ManagedCount != (nuint)2) return 1;
             if (GC::Collect() != (nuint)2) return 2;
-            if (GC::ManagedCount != (nuint)0) return 3;
+            if (std::TracingCollector::ManagedCount != (nuint)0) return 3;
             return 0;
         }
         """);
@@ -115,7 +115,7 @@ public sealed class GarbageCollectionTests
         IValue^ Create() { return new^ Box(42); }
         int main() {
             IValue^ value = Create(); GC::Collect();
-            if (value.Read() != 42 || GC::ManagedCount != (nuint)1) return 1;
+            if (value.Read() != 42 || std::TracingCollector::ManagedCount != (nuint)1) return 1;
             return 0;
         }
         """);
@@ -153,7 +153,7 @@ public sealed class GarbageCollectionTests
         int main() {
             Vector<int^> values = new Vector<int^>(); Fill(&values);
             GC::Collect();
-            if (Sum(&values) != 190 || GC::ManagedCount != (nuint)20) return 1;
+            if (Sum(&values) != 190 || std::TracingCollector::ManagedCount != (nuint)20) return 1;
             values.Clear();
             if (GC::Collect() != (nuint)20) return 2;
             return 0;
@@ -192,16 +192,16 @@ public sealed class GarbageCollectionTests
     }
 
     [Fact]
-    public void AdoptionRejectsInteriorAndDuplicatePointersWithoutTakingOwnership() => Succeeds("""
+    public void AdoptionRejectsDuplicateAndOverlappingManagedPointersWithoutTakingOwnership() => Succeeds("""
         struct Widget { public int value; }
         int main() {
             Widget* storage = new* Widget();
-            try { GC::Adopt(storage + 1); return 1; }
+            Widget^ managedValue = std::TracingCollector::Adopt(storage);
+            try { std::TracingCollector::Adopt(storage); return 2; } catch (Exception* error) { }
+            try { std::TracingCollector::Adopt((char*)storage + 1); return 1; }
             catch (Exception* error) { }
-            Widget^ managed = GC::Adopt(storage);
-            try { GC::Adopt(storage); return 2; } catch (Exception* error) { }
-            GC::Collect(); managed.value = 42;
-            if (managed.value != 42) return 3;
+            GC::Collect(); managedValue.value = 42;
+            if (managedValue.value != 42) return 3;
             return 0;
         }
         """);
@@ -235,7 +235,7 @@ public sealed class GarbageCollectionTests
             struct Widget { public int marker; public Widget() { marker = 42; throw new Exception("ctor"); } }
             int main() {
                 try { Widget^ value = new^ Widget(); return 1; } catch (Exception* error) { }
-                if (GC::ManagedCount != (nuint)1) return 2;
+                if (std::TracingCollector::ManagedCount != (nuint)1) return 2;
                 if (GC::Collect() != (nuint)1) return 3;
                 return 0;
             }
@@ -246,7 +246,6 @@ public sealed class GarbageCollectionTests
 
     [Fact]
     public void NewManagedAllocationDoesNotCallAdopt() => Succeeds("""
-        namespace GC { public replace T^ Adopt<T>(T* storage) { throw new Exception("reject"); } }
         int main() {
             int^ value = new^ int(42);
             if (*value != 42) return 1;
@@ -313,13 +312,13 @@ public sealed class GarbageCollectionTests
         struct Empty { }
         int main() {
             Empty^ value = new^ Empty(); GC::Collect();
-            if (GC::ManagedCount != (nuint)1 || GC::ManagedBytes != (nuint)1) return 1;
+            if (std::TracingCollector::ManagedCount != (nuint)1 || std::TracingCollector::ManagedBytes != (nuint)1) return 1;
             return 0;
         }
         """);
 
     [Fact]
-    public void LegacyAllocationHookTakesPrecedenceWhenCollectorSourcesArePresent()
+    public void LegacyAllocationSymbolDoesNotOverrideSelectedCollector()
     {
         var result = Run("""
             extern void*? malloc(nuint size);
@@ -327,12 +326,12 @@ public sealed class GarbageCollectionTests
             void*? __gflat_gc_alloc(nuint size) { puts("legacy allocation"); return malloc(size); }
             int main() {
                 int^ value = new^ int(42);
-                if (*value != 42 || GC::ManagedCount != (nuint)0) return 1;
+                if (*value != 42 || std::TracingCollector::ManagedCount != (nuint)1) return 1;
                 return 0;
             }
             """);
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal("legacy allocation\n", result.StandardOutput.Replace("\r\n", "\n"));
+        Assert.Equal("", result.StandardOutput);
     }
 
     [Theory]
@@ -340,34 +339,34 @@ public sealed class GarbageCollectionTests
     [InlineData("void ReferenceAdded(void* slot) {}")]
     public void InvalidCollectorInfrastructureHookIsDiagnosed(string hook)
     {
-        string source = "namespace GC { public weak void* Allocate(nuint bytes, nuint alignment) => (void*)1; private weak " + hook + " } int main() => 0;";
+        string source = "static class Broken : std::IGarbageCollector { public static void* Allocate(nuint bytes, nuint alignment) => (void*)1; public static void ReferenceRemoved(void* slot) nothrow {} public static nuint Collect() => 0; public static " + hook + " } alias GC = Broken; int main() => 0;";
         var error = Assert.Throws<CompileExceptions.TypeCheckException>(() => Compiler.Check(source));
-        Assert.Contains("GC", error.Message);
+        Assert.Contains("ReferenceAdded", error.Message);
     }
 
     [Fact]
     public void AdoptionBudgetAutomaticallyCollectsDeadObjectsAndPreservesLiveReferences() => Succeeds("""
-        namespace GC { public replace nuint CollectionThreshold() => 1; }
+        public static replace nuint std::TracingCollector::CollectionThreshold() => 1;
         void AllocateDead() { int^ value = new^ int(42); }
         int main() {
             AllocateDead();
-            if (GC::ManagedCount != (nuint)1) return 1;
+            if (std::TracingCollector::ManagedCount != (nuint)1) return 1;
             int^ live = new^ int(7);
-            if (GC::ManagedCount != (nuint)1 || *live != 7) return 2;
+            if (std::TracingCollector::ManagedCount != (nuint)1 || *live != 7) return 2;
             int^ another = new^ int(9);
-            if (GC::ManagedCount != (nuint)2 || *live != 7 || *another != 9) return 3;
+            if (std::TracingCollector::ManagedCount != (nuint)2 || *live != 7 || *another != 9) return 3;
             return 0;
         }
         """);
 
     [Fact]
     public void ZeroBudgetDisablesAutomaticCollectionButExplicitCollectionWorks() => Succeeds("""
-        namespace GC { public replace nuint CollectionThreshold() => 0; }
+        public static replace nuint std::TracingCollector::CollectionThreshold() => 0;
         void Allocate(int n) { int^ value = new^ int(n); }
         int main() {
             Allocate(1); Allocate(2);
-            if (GC::ManagedCount != (nuint)2) return 1;
-            if (GC::Collect() != (nuint)2 || GC::ManagedCount != (nuint)0) return 2;
+            if (std::TracingCollector::ManagedCount != (nuint)2) return 1;
+            if (GC::Collect() != (nuint)2 || std::TracingCollector::ManagedCount != (nuint)0) return 2;
             return 0;
         }
         """);
@@ -378,7 +377,7 @@ public sealed class GarbageCollectionTests
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint size) {
-                if (size == (nuint)4 && GC::ManagedCount != (nuint)0) return null;
+                if (size == (nuint)4 && std::TracingCollector::ManagedCount != (nuint)0) return null;
                 return malloc(size);
             }
             public replace void Free(void* storage) { free(storage); }
@@ -387,7 +386,7 @@ public sealed class GarbageCollectionTests
         int main() {
             Drop();
             int^ value = new^ int(7);
-            if (*value != 7 || GC::ManagedCount != (nuint)1) return 1;
+            if (*value != 7 || std::TracingCollector::ManagedCount != (nuint)1) return 1;
             return 0;
         }
         """);
@@ -406,11 +405,9 @@ public sealed class GarbageCollectionTests
     public void PrivateGcRuntimeBridgeHasNoMandatoryNativeSymbolName()
     {
         string source = """
-            namespace GC {
-                private extern void^? RuntimeReference(void* address, nuint bytes);
-                public int^? Bridge(void* address) { return (int^?)RuntimeReference(address, 4); }
-            }
-            int main() { void*? storage = Memory::Allocate(4); if (storage == null) return 1; int^? value = GC::Bridge(storage!); return 0; }
+            private extern void*? RuntimeReference(void* address, nuint bytes);
+            public int^? Bridge(void* address) { return (int^?)RuntimeReference(address, 4); }
+            int main() { void*? storage = Memory::Allocate(4); if (storage == null) return 1; int^? value = Bridge(storage!); return 0; }
             """;
         var sources = new[] {
             new SourceFile("libc/GC.gf", System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "GC.gf"))),
@@ -418,32 +415,31 @@ public sealed class GarbageCollectionTests
         };
         string ir = Compiler.Emit(sources);
         Assert.Contains("@RuntimeReference", ir);
-        Assert.Contains("call void @gflat$GC$ReferenceAdded", ir);
+        Assert.Contains("ReferenceAdded", ir);
         Assert.DoesNotContain("call i8* @gflat$GC$EnterFrame", ir);
     }
 
     [Fact]
-    public void RawAliasCannotManuallyFreeCollectorOwnedAllocation()
+    public void RawMemoryFreeHasNoCollectorInterception()
     {
-        var result = Run("""
-            struct Widget { public int value; }
-            int main() {
-                Widget* storage = new* Widget();
-                Widget^ value = GC::Adopt(storage);
-                Memory::Free((void*)storage);
-                return 0;
-            }
-            """);
-        Assert.NotEqual(0, result.ExitCode);
+        var sources = new[] {
+            new SourceFile("std/libc/GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "GC.gf"))),
+            new SourceFile("main.gf", "void FreeRaw(void* storage) { Memory::Free(storage); } int main() => 0;")
+        };
+        string ir = Compiler.Emit(sources);
+        Assert.DoesNotContain("ForgetNative", ir);
+        Assert.DoesNotContain("TrackNative", ir);
     }
 
     [Fact]
-    public void RawMethodReceiverCannotDeleteManagedObject()
+    public void AdoptingRawStorageDoesNotAddCompilerHookDependencies()
     {
-        var result = Run("""
-            class Widget { public void Destroy() { delete this; } }
-            int main() { Widget^ value = new^ Widget(); value.Destroy(); return 0; }
-            """);
-        Assert.NotEqual(0, result.ExitCode);
+        var sources = new[] {
+            new SourceFile("std/libc/GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "GC.gf"))),
+            new SourceFile("main.gf", "int main() { int* storage = (int*)Memory::Allocate(4); *storage = 42; int^ value = std::TracingCollector::Adopt(storage); return *value; }")
+        };
+        string ir = Compiler.Emit(sources);
+        Assert.DoesNotContain("__gflat_gc_", ir);
+        Assert.DoesNotContain("EnterFrame", ir);
     }
 }

@@ -62,7 +62,7 @@ try {
     & (Join-Path $PSScriptRoot 'test-launch.ps1') -PackageDirectory $extracted
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp'))) { throw 'VSIX is missing the native stdio bridge source' }
-    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Collector.cpp'))) { throw 'VSIX is missing the native collector source' }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Std/core/GarbageCollector.gf'))) { throw 'VSIX is missing the managed collector contract' }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }

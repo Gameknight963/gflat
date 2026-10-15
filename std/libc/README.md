@@ -134,76 +134,77 @@ int main()
 
 ## Managed memory
 
-`GC.gf` supplies the default hooks used by `new^`, backed by the native runtime's
-single-threaded, non-moving tracing collector. Include it explicitly or
-reference `std/std.gfproj`. `GC::Collect()` explicitly collects and returns the
-number of allocations reclaimed. `ManagedCount` and `ManagedBytes` report the
-default collector's owned allocations and their complete allocated sizes.
+`GC.gf` defines `std::TracingCollector`, a single-threaded, non-moving collector
+written in gflat. Include that source or reference `std/std.gfproj`. The global
+binding is a constrained, replaceable alias:
 
-The default `Allocate` and `Adopt` collect when allocated/adopted bytes since the
-previous collection reach `CollectionThreshold()`.
-Its weak default returns 65536 (64 KiB). Replace `GC::CollectionThreshold` to
-choose another budget; zero disables automatic collection. The pending allocation
-remains native-owned during adoption's collection; its initialized managed fields
-are registered roots. The budget counts allocations since collection, rather than
-current live heap size. There is no compiler polling or collection at unrelated
-calls or loop iterations.
+```gflat
+public weak alias GC : std::IGarbageCollector = std::TracingCollector;
+```
 
-`GC::Allocate(nuint bytes, nuint alignment)` provides storage for `new^`. It returns
-a non-null pointer, registered as managed and zeroed before construction begins.
-On allocation failure it collects and retries once before throwing
-`std::BadAllocException`. Zero bytes request one byte. `Memory::Allocate` has a
-malloc-like alignment contract; a returned address that cannot satisfy the
-requested alignment is freed and treated as allocation failure. Alignment zero
-is invalid. Registration failure also frees the pending native allocation.
+Applications can select another provider with `replace alias GC = MyCollector;`.
+The interface lives in core and requires static `Allocate`, `ReferenceAdded`,
+`ReferenceRemoved`, and `Collect` operations. The compiler calls the first three
+for managed allocation and reference lifetimes; collection policy is library code.
+`T^` is shorthand for `managed<T, GC>`. Explicit references such as
+`managed<Node, OtherCollector>` retain their collector identity across calls.
+`new^ Node() with OtherCollector` selects that collector directly.
 
-`GC::Adopt<T>(T* storage)` accepts a constructed, destructor-free object at the
-base of a `Memory::Allocate` allocation and returns `T^`. Ownership transfers only
-on success. Afterwards, existing raw aliases must not destroy or free it. A direct
-failed adoption leaves existing ownership unchanged; a previously adopted object
-remains GC-owned, even if a second adoption is rejected. Adoption and managed
-allocation are separate operations: adoption accepts an already constructed
-native object; `new^` obtains managed storage before running its constructor.
+`GC::Collect()` returns the number of allocations reclaimed. The concrete
+provider also exposes `std::TracingCollector::ManagedCount` and `ManagedBytes`;
+these are intentionally outside the common contract and unavailable through the
+constrained alias. `CollectionThreshold()` is an ordinary weak static method,
+defaulting to 65536 bytes allocated since the last collection. A qualified
+replacement selects another threshold; zero disables automatic collection.
+Only allocation consults this budget. Adoption does not collect, and there are
+no compiler-inserted polls or collection requests at unrelated calls.
 
-The compiler reports actual initialized managed-reference slots through
-`GC::ReferenceAdded(void* slot)` after stores and `ReferenceRemoved(void* slot)`
-before overwrite or lifetime end. The address identifies the reference's storage,
-not its target. Native/local slots are roots; slots inside managed objects are
-edges followed only while their owner is reachable. Ownership is determined at
-collection time, so adopting an object turns its fields from native roots into
-managed edges. Native containers can hold managed references without making their
-unused bytes roots. Freed native buffers and reclaimed managed objects retire
-their contained slot records. Reclamation uses the selected `Memory::Free`.
+`Allocate(nuint bytes, nuint alignment)` obtains native storage through the chosen
+`Memory::Allocate`, registers it, and zeroes its bytes before construction. Zero
+bytes request one byte. On allocation failure it collects and retries once before
+throwing `std::BadAllocException`. Unsatisfied alignment is rejected and freed;
+registration failure also frees the pending native allocation. Constructor
+failure leaves the allocation collectible after its temporary root is retired.
 
-Ordinary native/managed payload bytes are not conservatively scanned. There is no
-compaction, finalization, pinning, or
-cross-thread collection support. Collector calls from a second thread terminate
-the process. Managed pointees cannot have destructors; native resource-owning
-types such as `File` and `String` continue to use ordinary value lifetimes.
-Programs using managed values report reference storage in their emitted functions,
-so the default collector's single-thread restriction also applies to native
-callbacks into those functions.
+`std::TracingCollector::Adopt<T>(T* storage)` accepts an already constructed,
+destructor-free object and returns `managed<T, std::TracingCollector>`. Ownership
+transfers on success. This is an unsafe operation: callers must supply an owned,
+complete `Memory::Allocate` allocation. The library rejects duplicate and
+already-managed overlapping addresses, but cannot validate arbitrary pointers,
+stack storage, interior pointers into unknown native allocations, or foreign
+allocator origins. Failure leaves ownership unchanged. Raw aliases must not
+destroy or free successfully adopted storage. The compiler has no special
+recognition of this method.
 
-`Allocate`, `Adopt`, and `Collect` are weak, replaceable APIs. A custom collector
-also replaces the private `ReferenceAdded` and `ReferenceRemoved` hooks. The
-default library uses `TrackNative`/`ForgetNative` for allocation ownership and
-adoption validation. Infrastructure
-hooks must not throw, allocate managed values, or call `Collect`; their
-implementations are excluded from compiler reference instrumentation.
-Their metadata allocation must bypass `Memory::Allocate` and `Memory::Free`,
-which reenter these hooks. The default runtime uses the host allocator directly.
-Metadata storage is outside `ManagedBytes`. Deallocator callbacks must not collect
-or mutate managed graphs while sweeping.
-The default statistics describe the bundled collector, not a replacement's heap.
-Foreign code retaining managed references requires a registered runtime bridge;
-ordinary retained native pointers do not give it managed-reference tracking.
-Taking addresses directly through managed views is restricted, but methods can
-expose borrowed interior pointers under the current non-moving lifetime rules.
-The compiler does not establish the lifetime of those raw borrows.
-The default collector terminates if a manual `Memory::Free` targets a known
-collector-owned allocation or its interior. This also prevents deleting a managed
-object through a method's raw `this`; it is not general raw-pointer ownership
-checking. Collector reclamation detaches records before calling the deallocator.
+`ReferenceAdded(void* slot) nothrow` reports initialized reference storage;
+`ReferenceRemoved(void* slot) nothrow` retires it before overwrite or lifetime
+end. Callbacks must neither collect, construct managed values, nor throw. The
+default provider scans the latest pointer in each live registered slot; ordinary
+bytes are never conservatively scanned. Native/local slots are roots. Slots
+inside managed allocations are edges followed only when their owner is reachable.
+Adopting an object automatically changes that classification at collection time.
+Cycles without external roots are reclaimed.
 
-`examples/managed` demonstrates live graph references in a native Vector and
-reclamation of cycles after removing their roots.
+Native containers such as `Vector<T^>` must end their managed element lifetimes
+before freeing storage. The compiler emits those slot callbacks for normal
+construction, assignment, movement, and destruction. The collector retires slots
+inside reclaimed managed objects itself. `Memory::Allocate` and `Memory::Free`
+perform no hidden collector tracking. Manually freeing an owned managed object
+through a raw alias is invalid; there is no runtime interception protecting it.
+
+All lists, ownership checks, marking, and sweeping live in `GC.gf`. Private inline
+LLVM supplies a mutable global state slot until the language has static storage,
+a thread-local identity with an atomic owner check, and an unaligned pointer
+load. Metadata uses the host allocator directly so it cannot recursively invoke
+managed allocation. Payload reclamation calls the selected `Memory::Free`;
+a deallocator failure terminates through the normal nothrow boundary. Metadata
+bytes are excluded from `ManagedBytes`.
+
+The default provider has no compaction, finalization, pinning, or cross-thread
+collection. Access from a second thread terminates. Pointees cannot contain
+resources requiring destructors. Other providers need not share this collector's
+allocation algorithm or collection threshold. Moving references and thread
+rendezvous are not yet implemented by the compiler.
+
+`examples/managed` demonstrates a managed cyclic graph retained by a native Vector
+and reclaimed after its elements are cleared.

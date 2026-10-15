@@ -282,97 +282,104 @@ This replaces the old prefix type syntax: write `readonly(char)*` instead of `re
 
 ### Managed pointers
 
-`T^` is a copyable reference to managed storage; `T^?` additionally permits null. `new^ T(...)` supports structs, classes, and primitive scalars. Scalar allocation accepts zero arguments (zero initialization) or one initial value, for example `new^ int(42)`. Allocation returns a non-null reference, zero-initializes object storage, and runs the selected constructor. The standard allocation path throws `std::BadAllocException` on allocation failure.
+`managed<T, C>` is a copyable managed reference whose type identity includes the
+pointee `T` and collector provider `C`. `T^` abbreviates `managed<T, GC>`, where
+`GC` is a global type alias selected once for the whole compilation. File order
+and `using` directives do not select a different collector. A missing `GC` binding
+is diagnosed when the shorthand is used. `T^?` additionally permits null.
 
-Projects referencing std use `std/libc/GC.gf`. The standard path allocates through
-the replaceable `GC::Allocate(nuint bytes, nuint alignment)`. This returns non-null
-managed storage before construction starts. The default library implementation
-allocates through `Memory::Allocate`, registers the allocation as managed, and
-zeroes its storage. It collects and retries once after an allocation failure,
-then throws `std::BadAllocException`. A returned native address that cannot satisfy
-the requested alignment is freed and rejected. Construction runs with a live
-temporary managed reference; failure retires that reference through normal
-exception cleanup. Allocation and collection policy live in the library.
+The provider implements `std::IGarbageCollector`, a static interface declared in
+`std/core/GarbageCollector.gf`. Its operations are `Allocate(nuint bytes, nuint
+alignment)` returning non-null `void*`, `ReferenceAdded(void* slot) nothrow`,
+`ReferenceRemoved(void* slot) nothrow`, and `Collect()` returning `nuint`.
+The first three operations are the compiler integration contract. `Collect` is
+an ordinary library operation: the compiler never inserts collection requests.
+Provider calls are direct; references do not carry a collector tag or dispatch
+pointer. Existing interface references retain their object-and-interface-table
+representation.
 
-`GC::Adopt` is also user-callable for already constructed, destructor-free objects.
-The default implementation accepts only base pointers of registered `Memory`
-allocations large enough for the complete type. It rejects duplicate adoption,
-interior pointers, and untracked storage. Failed adoption does not change existing
-ownership: caller-owned allocations remain caller-owned, and already adopted
-allocations remain GC-owned. After success, raw aliases must not destroy or free
-the object.
+`new^ T(...)` creates storage using the global provider; `new^ T(...) with C`
+selects an explicit provider and returns `managed<T, C>`. Structs, classes, and
+primitive scalars are supported. Scalar creation accepts zero arguments (zero
+initialization) or one initial value. Construction runs with a live temporary
+managed reference; failure retires that reference through normal exception
+cleanup. References from different collectors cannot be implicitly converted or
+stored in each other's managed object graphs.
 
-A user-provided **global** legacy allocation hook remains supported for custom
-adapters. This standalone example declares that optional ABI:
+`std/libc/GC.gf`, included by projects referencing std, declares the default
+`public weak alias GC : std::IGarbageCollector = std::TracingCollector;`.
+Applications select another provider with `replace alias GC = MyCollector;`.
+The constraint validates the selected implementation and limits member access
+through `GC` to the common contract. Provider-specific operations, such as
+`std::TracingCollector::ManagedCount`, use the concrete provider's name.
 
-```gflat
-extern void*? __gflat_gc_alloc(nuint size);
+The default provider allocates through `Memory::Allocate`, records ownership,
+and zeroes storage before construction. It collects and retries once after an
+allocation failure, then throws `std::BadAllocException`. A returned native
+address that cannot satisfy the requested alignment is freed and rejected.
+Zero-sized managed objects receive one byte of storage. Allocation and collection
+policy belong to the library. There are no legacy `__gflat_gc_*` allocation hooks.
 
-class Box
-{
-    public int value;
-    public Box(int initial) { value = initial; }
-}
+`std::TracingCollector::Adopt<T>(T* storage)` is an ordinary generic library
+method returning `managed<T, std::TracingCollector>`. It transfers an already
+constructed, destructor-free allocation to that collector. This is an unsafe
+operation: the caller must own a complete allocation from the matching `Memory`
+allocator, not stack storage, an interior address, or foreign-allocator storage.
+There is no compiler-maintained registry of native allocations. The library
+rejects duplicates and overlap with allocations it already owns; it cannot prove
+that an arbitrary raw pointer satisfies the precondition. Failed adoption retains
+existing ownership. After successful adoption, raw aliases must not destroy or
+free the object. Adoption does not collect before establishing the returned root.
 
-int main()
-{
-    Box^ box = new^ Box(42);
-    Box^ copy = box;
-    copy.value = 7;
-    return box.value;
-}
-```
+The bundled provider is single-threaded and non-moving. `GC::Collect()` explicitly
+collects unreachable allocations and returns the number reclaimed. The default
+allocation method also collects when bytes allocated/adopted since the previous
+collection reach `std::TracingCollector::CollectionThreshold()`. This ordinary
+weak static method defaults to 65536 bytes; a qualified replacement can return
+another budget, or zero to disable automatic collection. Merely assigning or
+copying a reference does not request collection. There is no compiler polling,
+collection at unrelated calls or loop iterations, or finalization.
 
-The legacy hook may instead be defined in gflat. It must be non-generic, accept
-exactly one `nuint` byte count, and return writable `void*?` or `void*` storage with
-suitable alignment. An extern declaration requires a linked implementation. When
-present, it replaces the standard managed allocation/adoption path; its adapter
-owns collection and root requirements. Merely declaring a managed reference does
-not require allocation. A malloc-only legacy hook is not a garbage collector.
+The compiler reports initialized managed-reference slots through the selected
+provider's `ReferenceAdded` after stores and `ReferenceRemoved` before overwrite
+or lifetime end. The address identifies reference storage, not its target object.
+These callbacks must not throw, create managed values, or initiate collection.
+Normal and exceptional cleanup retire temporary/local slots. Managed-bearing
+results transfer into caller-owned result storage before callee slots retire.
 
-The bundled runtime is **single-threaded and non-moving**.
-`GC::Collect()` explicitly collects unreachable managed allocations and returns
-the number reclaimed. The default `GC::Allocate` and `GC::Adopt` also collect when
-the number of bytes allocated/adopted since the previous collection reaches
-`GC::CollectionThreshold()`. Its weak default returns 65536 (64 KiB); replace it
-to choose another budget, or return zero to disable automatic collection.
-There is no compiler polling or automatic collection at unrelated calls or loop
-iterations, and no finalization. The compiler reports initialized reference slots
-using private replaceable `GC::ReferenceAdded(void* slot)` after stores and
-`GC::ReferenceRemoved(void* slot)` before overwrite or lifetime end. These hooks
-identify the reference's storage, not the target object; they must not throw,
-create managed objects, or initiate collection. Normal and exceptional cleanup
-retire temporary/local slots. Managed-bearing results transfer into caller-owned
-result storage before callee references are retired.
+The tracing provider treats native/local slots as roots, including elements in
+native `Vector<T^>` buffers. Slots inside managed allocations are edges followed
+only when their owner is reachable. Ownership is looked up during collection;
+adopting an object changes its fields from roots into edges. Ordinary payload
+bytes are not roots. Native containers must end element lifetimes before freeing
+their storage; `Memory::Allocate` and `Memory::Free` have no hidden GC callbacks.
+Raw manual freeing of collector-owned storage is invalid and is not guarded by
+compiler interception. Collection removes registrations for reclaimed objects'
+fields before freeing their storage.
 
-The default runtime treats native/local slots as roots, including managed
-elements stored in native `Vector<T^>` buffers. Slots inside managed allocations
-are edges followed only when their owner is reachable. Adoption changes native
-fields into owned edges without requiring the compiler to identify the owner.
-Ordinary payload bytes are not roots. Native allocation tracking through
-`TrackNative`/`ForgetNative` supports adoption validation and retiring freed native
-buffer slots. Moving GC, pinning, and thread rendezvous are not implemented;
-replacing the allocator alone cannot enable them. A custom collector replaces
-the slot hooks together with allocation/adoption and collection policy.
+All default tracing bookkeeping and collection algorithms are written in gflat.
+Private inline LLVM provides a global state slot, thread ownership validation,
+and an unaligned pointer load. There is no native collector runtime linked by
+symbol-name inspection. Other providers are ordinary implementations of the same
+static contract; moving collectors, pinning, and thread rendezvous still require
+additional compiler support.
 
 Scope exit does not destroy or free a managed pointee. Types with destructors,
 including inherited destructors and inline fields requiring destruction, cannot
-be managed pointees. `delete`, arithmetic on `T^`, managed/raw and integer casts,
-and taking raw addresses directly through managed views are rejected. Ordinary
-method receivers can expose borrowed interior pointers under the current
-non-moving lifetime rules; the compiler does not make these borrows lifetime-safe.
-Managed class upcasts and
-interface views are supported. An explicit `void^` to concrete `T^` cast supports
-typed runtime adapters; it does not permit arbitrary managed downcasts or
-interface casts. `T^*` denotes native storage containing managed references in
-this non-moving implementation; its raw-pointer lifetime remains the caller's
-responsibility. Foreign declarations cannot take or return managed references or
-aggregates containing them. Private extern declarations in namespace `GC` may
-return opaque `void^` references for runtime bridges, provided their parameters
-contain no managed references. A bridge retaining references in foreign storage
-must arrange registration; an ordinary retained native pointer is not sufficient.
-Nullable references require a proven non-null local read, checked non-null cast,
-or unchecked postfix `!` before use. Exceptions are thrown by value, not managed reference. Managed
+be managed pointees. Managed-reference arithmetic and `delete` on managed views
+are rejected. Explicit raw-pointer/managed-reference casts are unsafe adapter
+operations; they do not register ownership or validate the allocation. Casting
+away managed readonly is rejected. Method receivers can expose borrowed interior
+pointers under current non-moving rules; these borrows are not lifetime checked.
+Managed class upcasts and interface views preserve the collector identity.
+`T^*` denotes native storage containing managed references; its storage lifetime
+remains the caller's responsibility.
+
+Foreign declarations cannot take or return managed references or aggregates
+containing them. A foreign bridge can return a raw pointer which an explicitly
+unsafe library adapter converts to its collector's managed reference type.
+Nullable references require a proven non-null read, a checked non-null cast, or
+unchecked postfix `!` before use. Exceptions are thrown by value. Managed
 function pointers and compile-time managed allocation remain unsupported.
 
 ### Array literals

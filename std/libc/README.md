@@ -135,52 +135,65 @@ int main()
 ## Managed memory
 
 `GC.gf` supplies the default hooks used by `new^`, backed by the native runtime's
-single-threaded, non-moving conservative collector. Include it explicitly or
+single-threaded, non-moving tracing collector. Include it explicitly or
 reference `std/std.gfproj`. `GC::Collect()` explicitly collects and returns the
 number of allocations reclaimed. `ManagedCount` and `ManagedBytes` report the
 default collector's owned allocations and their complete allocated sizes.
 
-Before transferring ownership, the default `Adopt` automatically collects when
-adopted bytes since the previous collection reach `CollectionThreshold()`.
+The default `Allocate` and `Adopt` collect when allocated/adopted bytes since the
+previous collection reach `CollectionThreshold()`.
 Its weak default returns 65536 (64 KiB). Replace `GC::CollectionThreshold` to
 choose another budget; zero disables automatic collection. The pending allocation
-remains a scanned native root during this collection. The budget counts allocations
-since collection, rather than current live heap size.
+remains native-owned during adoption's collection; its initialized managed fields
+are registered roots. The budget counts allocations since collection, rather than
+current live heap size. There is no compiler polling or collection at unrelated
+calls or loop iterations.
+
+`GC::Allocate(nuint bytes, nuint alignment)` provides storage for `new^`. It returns
+a non-null pointer, registered as managed and zeroed before construction begins.
+On allocation failure it collects and retries once before throwing
+`std::BadAllocException`. Zero bytes request one byte. `Memory::Allocate` has a
+malloc-like alignment contract; a returned address that cannot satisfy the
+requested alignment is freed and treated as allocation failure. Alignment zero
+is invalid. Registration failure also frees the pending native allocation.
 
 `GC::Adopt<T>(T* storage)` accepts a constructed, destructor-free object at the
 base of a `Memory::Allocate` allocation and returns `T^`. Ownership transfers only
 on success. Afterwards, existing raw aliases must not destroy or free it. A direct
 failed adoption leaves existing ownership unchanged; a previously adopted object
-remains GC-owned, even if a second adoption is rejected. `new^` performs its
-own failure cleanup and throws on failed allocation or adoption.
-On storage allocation failure, `new^` collects and retries once before throwing
-`BadAllocException`.
+remains GC-owned, even if a second adoption is rejected. Adoption and managed
+allocation are separate operations: adoption accepts an already constructed
+native object; `new^` obtains managed storage before running its constructor.
 
-The compiler supplies root frames and temporary slots. Native allocations are
-scanned as roots until freed or adopted, so native collections can hold managed
-references. Adopted objects are scanned transitively and reclaimed through the
-selected `Memory::Free`; replacing the Memory hooks preserves this bookkeeping.
-`Vector<T>` clears removed element bytes so retained capacity does not keep stale
-managed references alive after `Pop` or `Clear`.
+The compiler reports actual initialized managed-reference slots through
+`GC::ReferenceAdded(void* slot)` after stores and `ReferenceRemoved(void* slot)`
+before overwrite or lifetime end. The address identifies the reference's storage,
+not its target. Native/local slots are roots; slots inside managed objects are
+edges followed only while their owner is reachable. Ownership is determined at
+collection time, so adopting an object turns its fields from native roots into
+managed edges. Native containers can hold managed references without making their
+unused bytes roots. Freed native buffers and reclaimed managed objects retire
+their contained slot records. Reclamation uses the selected `Memory::Free`.
 
-Scanning is conservative: arbitrary bytes that resemble object addresses can keep
-objects alive, and compiler temporary roots can retain objects until function
-return. There is no compaction, finalization, pinning, or
+Ordinary native/managed payload bytes are not conservatively scanned. There is no
+compaction, finalization, pinning, or
 cross-thread collection support. Collector calls from a second thread terminate
 the process. Managed pointees cannot have destructors; native resource-owning
 types such as `File` and `String` continue to use ordinary value lifetimes.
-Programs using managed adoption register roots in their emitted gflat functions,
+Programs using managed values report reference storage in their emitted functions,
 so the default collector's single-thread restriction also applies to native
 callbacks into those functions.
 
-`Adopt` and `Collect` are weak, replaceable APIs. A custom collector also replaces
-the private `EnterFrame`, `AddRoot`, `LeaveFrame`, `TrackNative`, and `ForgetNative`
-hooks. These infrastructure hooks must not throw, allocate managed values, or call
-`Collect`; their implementations are excluded from compiler root instrumentation.
+`Allocate`, `Adopt`, and `Collect` are weak, replaceable APIs. A custom collector
+also replaces the private `ReferenceAdded` and `ReferenceRemoved` hooks. The
+default library uses `TrackNative`/`ForgetNative` for allocation ownership and
+adoption validation. Infrastructure
+hooks must not throw, allocate managed values, or call `Collect`; their
+implementations are excluded from compiler reference instrumentation.
 Their metadata allocation must bypass `Memory::Allocate` and `Memory::Free`,
 which reenter these hooks. The default runtime uses the host allocator directly.
-It caches at most 64 retired frame records and 256 root records for reuse.
-Cached records contain no live roots; their storage is outside `ManagedBytes`.
+Metadata storage is outside `ManagedBytes`. Deallocator callbacks must not collect
+or mutate managed graphs while sweeping.
 The default statistics describe the bundled collector, not a replacement's heap.
 Foreign code retaining managed references requires a registered runtime bridge;
 ordinary retained native pointers do not give it managed-reference tracking.

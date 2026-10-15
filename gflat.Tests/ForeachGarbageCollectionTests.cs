@@ -27,9 +27,9 @@ public sealed class ForeachGarbageCollectionTests
         }
         void Iterate() {
             try { foreach (int item in new Source()) {} }
-            catch { GC::Collect(); }
+            catch { if (GC::Collect() != (nuint)1) throw new Exception("Retained failed iterator"); }
         }
-        int main() { Iterate(); if (GC::Collect() != (nuint)1) return 1; return 0; }
+        int main() { Iterate(); if (GC::Collect() != (nuint)0) return 1; return 0; }
         """);
 
     [Theory]
@@ -88,9 +88,10 @@ public sealed class ForeachGarbageCollectionTests
         }
         int main() {
             if (Iterate() != 0) return 1;
-            if (GC::Collect() != (nuint)1) return 2;
+            if (GC::Collect() != (nuint)EXPECTED) return 2;
             return 0;
         }
         """.Replace("GETTER", getterThrows ? "throw new Exception();" : "return *value;")
-            .Replace("CAUGHT", getterThrows ? "GC::Collect();" : "return 3;"));
+            .Replace("CAUGHT", getterThrows ? "if (GC::Collect() != (nuint)1) return 4;" : "return 3;")
+            .Replace("EXPECTED", getterThrows ? "0" : "1"));
 }

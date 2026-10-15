@@ -13,7 +13,7 @@ public partial class LlvmEmitter
         {
             string address = Pop(), type = EmitType(_typeChecker.GetType(node)), value = NewTemp();
             Emit($"    {value} = load {type}, {type}* {address}");
-            Push(value);
+            PushManaged(node, value);
         }
         return true;
     }
@@ -29,8 +29,16 @@ public partial class LlvmEmitter
             {
                 string type = EmitType(_typeChecker.GetType(temporary));
                 string slot = NewTemp();
-                Emit($"    {slot} = alloca {type}");
-                Emit($"    store {type} {value}, {type}* {slot}");
+                if (_typeChecker.UsesCollector && HasManagedReferences(_typeChecker.GetType(temporary)))
+                {
+                    slot = CreateManagedTemporary(_typeChecker.GetType(temporary));
+                    EmitManagedStore(_typeChecker.GetType(temporary), value, slot);
+                }
+                else
+                {
+                    EmitAlloca(type, slot);
+                    Emit($"    store {type} {value}, {type}* {slot}");
+                }
                 _locals[temporary.Name] = slot;
                 temporaries.Add(temporary.Name);
             }

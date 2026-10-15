@@ -7,17 +7,41 @@ private extern nuint __gflat_gc_collect(void(void*)* release);
 private extern nuint __gflat_gc_managed_count();
 private extern nuint __gflat_gc_managed_bytes();
 private extern bool __gflat_gc_should_collect(nuint threshold);
-private extern void* __gflat_gc_frame_enter();
-private extern void __gflat_gc_frame_add(void* frame, void* address, nuint bytes);
-private extern void __gflat_gc_frame_leave(void* frame);
 private extern bool __gflat_gc_track_native(void* address, nuint bytes);
 private extern void __gflat_gc_forget_native(void* address);
+private extern bool __gflat_gc_prepare_allocation(void* address, nuint bytes);
+private extern void __gflat_gc_reference_added(void* slot);
+private extern void __gflat_gc_reference_removed(void* slot);
 
-// Compiler-facing hooks are replaceable as a set with Adopt and Collect.
-// They must not throw. Root frame storage remains valid until LeaveFrame.
-private weak void* EnterFrame() nothrow => __gflat_gc_frame_enter();
-private weak void AddRoot(void* frame, void* address, nuint bytes) nothrow => __gflat_gc_frame_add(frame, address, bytes);
-private weak void LeaveFrame(void* frame) nothrow => __gflat_gc_frame_leave(frame);
+// Storage is registered and zeroed before construction. Memory's allocator is
+// malloc-like: an unsatisfied alignment request is an allocation failure.
+public weak void* Allocate(nuint bytes, nuint alignment)
+{
+    if (bytes == (nuint)0) bytes = 1;
+    if (alignment == (nuint)0) throw new std::BadAllocException();
+    if (__gflat_gc_should_collect(CollectionThreshold())) Collect();
+    void*? storage = Memory::Allocate(bytes);
+    if (storage == null) { Collect(); storage = Memory::Allocate(bytes); }
+    if (storage == null) throw new std::BadAllocException();
+    if ((nuint)storage % alignment != (nuint)0)
+    {
+        Memory::Free(storage);
+        throw new std::BadAllocException();
+    }
+    if (!__gflat_gc_prepare_allocation(storage, bytes))
+    {
+        Memory::Free(storage);
+        throw new std::BadAllocException();
+    }
+    return storage;
+}
+
+// These identify initialized managed-reference slots, not the target objects.
+// They must neither collect nor allocate managed storage, and must not throw.
+private weak void ReferenceAdded(void* slot) nothrow => __gflat_gc_reference_added(slot);
+private weak void ReferenceRemoved(void* slot) nothrow => __gflat_gc_reference_removed(slot);
+
+// Native allocation bookkeeping supports adoption and retiring freed buffer slots.
 private weak bool TrackNative(void* address, nuint bytes) nothrow => __gflat_gc_track_native(address, bytes);
 private weak void ForgetNative(void* address) nothrow => __gflat_gc_forget_native(address);
 

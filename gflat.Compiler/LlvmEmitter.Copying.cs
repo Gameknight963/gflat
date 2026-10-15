@@ -13,7 +13,9 @@ public partial class LlvmEmitter
     {
         EmitAddress(expression);
         string source = Pop(), destination = NewTemp(), llvm = EmitType(type);
-        Emit($"    {destination} = alloca {llvm}");
+        EmitAlloca(llvm, destination);
+        EmitManagedReferences(type, destination, true, initialize: true);
+        CleanupManagedStorage(type, destination);
         EmitCopyInto(type, source, destination);
         string value = NewTemp();
         Emit($"    {value} = load {llvm}, {llvm}* {destination}");
@@ -29,14 +31,14 @@ public partial class LlvmEmitter
         {
             string value = NewTemp();
             Emit($"    {value} = load {llvm}, {llvm}* {source}");
-            Emit($"    store {llvm} {value}, {llvm}* {destination}");
+            EmitManagedStore(type, value, destination);
             return;
         }
         if (_typeChecker.CopyConstructor(type) is ConstructorDeclaration constructor)
         {
             string name = ((NamedTypeExpression)type).Name;
             string ns = _typeChecker.GetStruct(name)?.Namespace ?? _typeChecker.GetClass(name)!.Namespace;
-            Emit($"    store {llvm} {GetDefaultValue(type)}, {llvm}* {destination}");
+            EmitManagedStore(type, GetDefaultValue(type), destination);
             EmitConstructorCall(GetConstructorMangledName(name, constructor, ns), constructor,
                 $"{llvm}* {destination}, {llvm}* {source}");
             return;
@@ -68,7 +70,7 @@ public partial class LlvmEmitter
             string name = ((NamedTypeExpression)type).Name;
             var cls = _typeChecker.GetClass(name);
             var str = _typeChecker.GetStruct(name);
-            Emit($"    store {llvm} {GetDefaultValue(type)}, {llvm}* {destination}");
+            EmitManagedStore(type, GetDefaultValue(type), destination);
             if (cls?.BaseClass is string parent)
             {
                 string src = NewTemp(), dst = NewTemp();

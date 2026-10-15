@@ -5,57 +5,41 @@ namespace gflat;
 
 public partial class TypeChecker
 {
-    private readonly Dictionary<NewExpression, MethodDeclaration> _managedAdoptions = new();
+    private readonly Dictionary<NewExpression, MethodDeclaration> _managedAllocations = new();
     private bool _usesCollector;
-    private bool HasCollectorRuntime => ResolveNamespaceByName("GC")?.GenericFunctions.ContainsKey("Adopt") == true;
+    private bool HasCollectorRuntime => ResolveNamespaceByName("GC")?.Functions.ContainsKey("Allocate") == true;
     public bool UsesCollector => _usesCollector;
     private bool HasLegacyManagedAllocator => _globalScope.Functions.ContainsKey("__gflat_gc_alloc") || _globalScope.Externs.ContainsKey("__gflat_gc_alloc");
-    public MethodDeclaration? GetManagedAdoption(NewExpression node) => _managedAdoptions.GetValueOrDefault(node);
+    public MethodDeclaration? GetManagedAllocation(NewExpression node) => _managedAllocations.GetValueOrDefault(node);
+    public bool HasCollectorNativeTracking => UsesCollector && ResolveNamespaceByName("GC")?.Functions.ContainsKey("TrackNative") == true;
 
     private void ValidateCollectorHooks()
     {
         if (!HasCollectorRuntime) return;
         var scope = ResolveNamespaceByName("GC")!;
-        MethodDeclaration adopt = scope.GenericFunctions["Adopt"];
-        if (adopt.GenericParameters.Count != 1 || adopt.Parameters.Count != 1 || adopt.Body == null ||
-            SignatureType(adopt.ReturnType, adopt) != "$type0^" || SignatureType(adopt.Parameters[0].Type, adopt) != "$type0*")
-            throw new TypeCheckException("GC::Adopt must have signature T^ Adopt<T>(T* storage)", adopt.Span);
+        MethodDeclaration allocate = scope.Functions["Allocate"];
+        if (allocate.IsGeneric || allocate.Body == null || SignatureType(allocate.ReturnType, allocate) != "void*" ||
+            !allocate.Parameters.Select(p => SignatureType(p.Type, allocate)).SequenceEqual(new[] { "nuint", "nuint" }))
+            throw new TypeCheckException("GC::Allocate must have signature void* Allocate(nuint bytes, nuint alignment)", allocate.Span);
         var contracts = new Dictionary<string, (string Result, string[] Parameters)> {
-            ["EnterFrame"] = ("void*", []),
-            ["AddRoot"] = ("void", ["void*", "void*", "nuint"]),
-            ["LeaveFrame"] = ("void", ["void*"]),
-            ["TrackNative"] = ("bool", ["void*", "nuint"]),
-            ["ForgetNative"] = ("void", ["void*"])
+            ["ReferenceAdded"] = ("void", ["void*"]),
+            ["ReferenceRemoved"] = ("void", ["void*"])
         };
         foreach (var (name, contract) in contracts)
         {
             if (!scope.Functions.TryGetValue(name, out MethodDeclaration? hook))
-                throw new TypeCheckException($"GC::Adopt requires the compiler-facing GC::{name} hook", adopt.Span);
+                throw new TypeCheckException($"GC::Allocate requires the compiler-facing GC::{name} hook", allocate.Span);
             if (hook.IsGeneric || !hook.IsNoThrow || hook.Body == null ||
                 SignatureType(hook.ReturnType, hook) != contract.Result ||
                 !hook.Parameters.Select(p => SignatureType(p.Type, hook)).SequenceEqual(contract.Parameters))
                 throw new TypeCheckException($"GC::{name} has an invalid runtime signature or is missing nothrow", hook.Span);
         }
-        if (!scope.Functions.TryGetValue("Collect", out MethodDeclaration? collect) || collect.IsGeneric ||
-            collect.Body == null || collect.Parameters.Count != 0 || SignatureType(collect.ReturnType, collect) != "nuint")
-            throw new TypeCheckException("GC::Adopt requires a concrete nuint GC::Collect() hook", adopt.Span);
     }
 
-    private void CheckManagedAdoption(NewExpression node)
+    private void CheckManagedAllocation(NewExpression node)
     {
-        // Resolve the ordinary generic hook using a typed placeholder. The emitter
-        // supplies the actual allocation; this expression is never executed.
-        var raw = new PointerTypeExpression(node.Type, true, node.Line);
-        var placeholder = new UnaryExpression(new DefaultExpression(raw, node.Line), TokenKind.Bang, false, node.Line);
-        var call = new CallExpression(new NamespaceAccessExpression(new IdentifierExpression("GC", node.Line), "Adopt", node.Line),
-            [placeholder], node.Line, [node.Type]);
-        call.Accept(this);
-        if (GetResolvedCall(call) is not MethodDeclaration method ||
-            ResolveAlias(method.ReturnType) is not ManagedTypeExpression { IsNullable: false } result ||
-            !TypesMatch(result.Inner, node.Type))
-            throw new TypeCheckException("GC::Adopt<T> must return a non-null T^", node.Line);
-        _managedAdoptions[node] = method;
-        CheckAllocationFailure(node);
+        _usesCollector = true;
+        _managedAllocations[node] = ResolveNamespaceByName("GC")!.Functions["Allocate"];
     }
 
     private bool ContainsManagedReference(TypeExpression type, HashSet<string>? visited = null)

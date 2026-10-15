@@ -270,12 +270,14 @@ This replaces the old prefix type syntax: write `readonly(char)*` instead of `re
 `T^` is a copyable reference to managed storage; `T^?` additionally permits null. `new^ T(...)` supports structs, classes, and primitive scalars. Scalar allocation accepts zero arguments (zero initialization) or one initial value, for example `new^ int(42)`. Allocation returns a non-null reference, zero-initializes object storage, and runs the selected constructor. The standard allocation path throws `std::BadAllocException` on allocation failure.
 
 Projects referencing std use `std/libc/GC.gf`. The standard path allocates through
-`Memory::Allocate`, constructs the value, then calls the replaceable generic
-`GC::Adopt<T>(T* storage)` to transfer allocation ownership and return `T^`.
-The collector tracks native allocations throughout construction, before adoption.
-If construction or adoption fails, `new^` frees its allocation.
-If managed storage allocation initially fails, the standard path collects and
-retries once before throwing `std::BadAllocException`.
+the replaceable `GC::Allocate(nuint bytes, nuint alignment)`. This returns non-null
+managed storage before construction starts. The default library implementation
+allocates through `Memory::Allocate`, registers the allocation as managed, and
+zeroes its storage. It collects and retries once after an allocation failure,
+then throws `std::BadAllocException`. A returned native address that cannot satisfy
+the requested alignment is freed and rejected. Construction runs with a live
+temporary managed reference; failure retires that reference through normal
+exception cleanup. Allocation and collection policy live in the library.
 
 `GC::Adopt` is also user-callable for already constructed, destructor-free objects.
 The default implementation accepts only base pointers of registered `Memory`
@@ -313,27 +315,30 @@ present, it replaces the standard managed allocation/adoption path; its adapter
 owns collection and root requirements. Merely declaring a managed reference does
 not require allocation. A malloc-only legacy hook is not a garbage collector.
 
-The bundled runtime is **single-threaded, conservative, and non-moving**.
-`GC::Collect()` explicitly collects unreachable adopted allocations and returns
-the number reclaimed. Before adoption, the default `GC::Adopt` also collects when
-the number of bytes adopted since the previous collection reaches
+The bundled runtime is **single-threaded and non-moving**.
+`GC::Collect()` explicitly collects unreachable managed allocations and returns
+the number reclaimed. The default `GC::Allocate` and `GC::Adopt` also collect when
+the number of bytes allocated/adopted since the previous collection reaches
 `GC::CollectionThreshold()`. Its weak default returns 65536 (64 KiB); replace it
 to choose another budget, or return zero to disable automatic collection.
-The allocation being constructed/adopted remains a scanned native root during
-collection. There is no finalization.
-The compiler registers function-local storage and spills pointer/aggregate
-temporaries into root slots; exception unwinding removes those frames. Native
-allocations from `Memory::Allocate` are conservatively scanned roots until
-`Memory::Free` or adoption. This includes native `Vector<T^>` buffers.
+There is no compiler polling or automatic collection at unrelated calls or loop
+iterations, and no finalization. The compiler reports initialized reference slots
+using private replaceable `GC::ReferenceAdded(void* slot)` after stores and
+`GC::ReferenceRemoved(void* slot)` before overwrite or lifetime end. These hooks
+identify the reference's storage, not the target object; they must not throw,
+create managed objects, or initiate collection. Normal and exceptional cleanup
+retire temporary/local slots. Managed-bearing results transfer into caller-owned
+result storage before callee references are retired.
 
-Conservative scanning can retain objects when arbitrary bytes resemble their
-addresses. Temporary roots can retain values until the containing function
-returns. Moving GC, pinning, and thread rendezvous are not implemented; replacing
-the allocator alone cannot enable those capabilities. Private replaceable
-`GC::EnterFrame`, `AddRoot`, `LeaveFrame`, `TrackNative`, and `ForgetNative` hooks
-provide the compiler/runtime boundary. They must not throw, create managed objects,
-or initiate collection. A custom collector replaces these hooks together with
-`Adopt` and `Collect`.
+The default runtime treats native/local slots as roots, including managed
+elements stored in native `Vector<T^>` buffers. Slots inside managed allocations
+are edges followed only when their owner is reachable. Adoption changes native
+fields into owned edges without requiring the compiler to identify the owner.
+Ordinary payload bytes are not roots. Native allocation tracking through
+`TrackNative`/`ForgetNative` supports adoption validation and retiring freed native
+buffer slots. Moving GC, pinning, and thread rendezvous are not implemented;
+replacing the allocator alone cannot enable them. A custom collector replaces
+the slot hooks together with allocation/adoption and collection policy.
 
 Scope exit does not destroy or free a managed pointee. Types with destructors,
 including inherited destructors and inline fields requiring destruction, cannot

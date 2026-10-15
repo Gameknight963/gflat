@@ -17,7 +17,7 @@ public sealed class GarbageCollectionTests
     }
 
     [Fact]
-    public void ReusedRootFramesDoNotRetainRetiredObjects() => Succeeds("""
+    public void ReusedReferenceSlotsDoNotRetainRetiredObjects() => Succeeds("""
         void Drop() { int^ value = new^ int(42); }
         int main() {
             for (int i = 0; i < 1200; i++) Drop();
@@ -28,7 +28,7 @@ public sealed class GarbageCollectionTests
         """);
 
     [Fact]
-    public void DeepFramesStayRootedBeyondMetadataCacheCapacity() => Succeeds("""
+    public void RecursiveCallsKeepTheirLiveReferencesRooted() => Succeeds("""
         void Recurse(int depth) {
             int^ value = new^ int(depth);
             if (depth != 0) Recurse(depth - 1);
@@ -37,6 +37,16 @@ public sealed class GarbageCollectionTests
         }
         int main() {
             Recurse(80);
+            if (GC::ManagedCount != (nuint)1) return 1;
+            if (GC::Collect() != (nuint)1) return 2;
+            return 0;
+        }
+        """);
+
+    [Fact]
+    public void DirectManagedAllocationActivatesRuntimeTracking() => Succeeds("""
+        int main() {
+            void* storage = GC::Allocate(4, 4);
             if (GC::ManagedCount != (nuint)1) return 1;
             if (GC::Collect() != (nuint)1) return 2;
             return 0;
@@ -208,15 +218,9 @@ public sealed class GarbageCollectionTests
         Assert.Contains("managed", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void ConstructorOrReplacementAdoptionFailureFreesNewAllocation(bool adoptionFails)
+    [Fact]
+    public void FailedManagedConstructionIsReclaimedByCollector()
     {
-        string declaration = adoptionFails
-            ? "namespace GC { public replace T^ Adopt<T>(T* storage) { throw new Exception(\"reject\"); } }"
-            : "struct Widget { public int marker; public Widget() { marker = 42; throw new Exception(\"ctor\"); } }";
-        string allocation = adoptionFails ? "int^ value = new^ int(42);" : "Widget^ value = new^ Widget();";
         var result = Run("""
             extern void*? malloc(nuint size);
             extern void free(void* storage);
@@ -228,10 +232,27 @@ public sealed class GarbageCollectionTests
                     free(storage);
                 }
             }
-            """ + declaration + "int main() { try { " + allocation + " return 1; } catch (Exception* error) { } return 0; }");
+            struct Widget { public int marker; public Widget() { marker = 42; throw new Exception("ctor"); } }
+            int main() {
+                try { Widget^ value = new^ Widget(); return 1; } catch (Exception* error) { }
+                if (GC::ManagedCount != (nuint)1) return 2;
+                if (GC::Collect() != (nuint)1) return 3;
+                return 0;
+            }
+            """);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("released object\n", result.StandardOutput.Replace("\r\n", "\n"));
     }
+
+    [Fact]
+    public void NewManagedAllocationDoesNotCallAdopt() => Succeeds("""
+        namespace GC { public replace T^ Adopt<T>(T* storage) { throw new Exception("reject"); } }
+        int main() {
+            int^ value = new^ int(42);
+            if (*value != 42) return 1;
+            return 0;
+        }
+        """);
 
     [Fact]
     public void StandardLibraryManagedGraphExampleExecutes()
@@ -315,11 +336,11 @@ public sealed class GarbageCollectionTests
     }
 
     [Theory]
-    [InlineData("int EnterFrame() nothrow => 0;")]
-    [InlineData("void* EnterFrame() => null;")]
+    [InlineData("int ReferenceAdded(void* slot) nothrow => 0;")]
+    [InlineData("void ReferenceAdded(void* slot) {}")]
     public void InvalidCollectorInfrastructureHookIsDiagnosed(string hook)
     {
-        string source = "namespace GC { public weak T^ Adopt<T>(T* value) { throw new Exception(\"unused\"); } private weak " + hook + " } int main() => 0;";
+        string source = "namespace GC { public weak void* Allocate(nuint bytes, nuint alignment) => (void*)1; private weak " + hook + " } int main() => 0;";
         var error = Assert.Throws<CompileExceptions.TypeCheckException>(() => Compiler.Check(source));
         Assert.Contains("GC", error.Message);
     }
@@ -397,7 +418,8 @@ public sealed class GarbageCollectionTests
         };
         string ir = Compiler.Emit(sources);
         Assert.Contains("@RuntimeReference", ir);
-        Assert.Contains("call i8* @gflat$GC$EnterFrame", ir);
+        Assert.Contains("call void @gflat$GC$ReferenceAdded", ir);
+        Assert.DoesNotContain("call i8* @gflat$GC$EnterFrame", ir);
     }
 
     [Fact]

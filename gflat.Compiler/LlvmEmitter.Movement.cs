@@ -95,10 +95,12 @@ public partial class LlvmEmitter
         EmitAddress(node.Operand);
         string source = Pop(), value = NewTemp();
         Emit($"    {value} = load {llvm}, {llvm}* {source}");
+        ProtectManagedValue(type, value);
+        EmitManagedReferences(type, source, false);
         SetOwnerLive(source, false);
         if (destination != null)
         {
-            Emit($"    store {llvm} {value}, {llvm}* {destination}");
+            EmitManagedStore(type, value, destination, initialize: true);
             Push(destination);
         }
         else Push(value);

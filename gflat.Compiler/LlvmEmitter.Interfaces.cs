@@ -13,7 +13,7 @@ public partial class LlvmEmitter
         {
             EmitGlobal($"define internal void @{thunk}(i8* %data) {{");
             EmitGlobal("entry:");
-            if (_typeChecker.IsClass(owner) || _typeChecker.HasDestructor(new NamedTypeExpression(owner, null, 0)))
+            if (_typeChecker.IsClass(owner) || NeedsCleanup(new NamedTypeExpression(owner, null, 0)))
             {
                 var cls = _typeChecker.GetClass(owner);
                 string ns = cls?.Namespace ?? _typeChecker.GetStruct(owner)!.Namespace;

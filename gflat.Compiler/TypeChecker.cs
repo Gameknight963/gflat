@@ -4611,6 +4611,8 @@ namespace gflat
                 method = MonomorphizeFunction(method, arguments, node.Line);
             }
             _resolvedCalls[node] = method;
+            if (method.Name == "Allocate" && declarationNamespaces.GetValueOrDefault(method) == "GC")
+                _usesCollector = true;
             AddDefaultArguments(node.Arguments, method.Parameters, node);
 
             if (!method.IsNoThrow)
@@ -4950,7 +4952,7 @@ namespace gflat
 
         private void CheckAllocationFailure(NewExpression node)
         {
-            if ((node.Kind != AllocationKind.Pointer && !(node.Kind == AllocationKind.Managed && GetManagedAdoption(node) != null)) || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
+            if (node.Kind != AllocationKind.Pointer || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
             if (GetClass("std::BadAllocException") == null)
                 throw new TypeCheckException("new* requires std::BadAllocException; a custom Exception root must provide the standard (message, code) constructor or define its own std::BadAllocException", node.Span);
             var value = new NewExpression(new NamedTypeExpression("BadAllocException", "std", node.Line), [], AllocationKind.Value, node.Line) { Span = node.Span };
@@ -4977,7 +4979,7 @@ namespace gflat
             if (node.Kind == AllocationKind.Managed)
             {
                 ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line), node.Line);
-                if (HasCollectorRuntime && !HasLegacyManagedAllocator) CheckManagedAdoption(node);
+                if (HasCollectorRuntime && !HasLegacyManagedAllocator) CheckManagedAllocation(node);
                 else RequireManagedAllocator(node.Line);
                 if (resolvedType is NamedTypeExpression scalar && IsPrimitive(scalar.Name) && scalar.Name != "void")
                 {

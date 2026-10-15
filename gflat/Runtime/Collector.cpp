@@ -1,9 +1,10 @@
-// First collector: single-threaded, non-moving, conservative mark/sweep.
-// Managed references remain addresses. The compiler registers live storage ranges;
-// native Memory allocations are roots until freed or transferred by Adopt.
-// Adoption can request collection at its caller's configured budget. This ABI
-// deliberately separates roots from allocation
-// ownership so precise descriptors/relocation can replace scanning later.
+// Single-threaded, non-moving mark/sweep. New code reports initialized managed
+// reference slots. Slots outside managed allocations are roots; slots inside a
+// managed allocation are edges only while that owner is reachable. Ownership is
+// looked up at collection time so adopting a native object changes its fields
+// from roots to edges without requiring the compiler to know that transition.
+// Infrastructure hooks never collect. Allocation/adoption library code chooses
+// collection points; release callbacks must not collect or mutate managed graphs.
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -11,8 +12,7 @@
 #include <cstring>
 
 namespace {
-struct Range { void* address; std::size_t bytes; Range* next; };
-struct Frame { Range* roots; Frame* next; };
+struct ReferenceSlot { void* address; ReferenceSlot* next; };
 struct Allocation {
     void* address;
     std::size_t bytes;
@@ -20,14 +20,7 @@ struct Allocation {
     bool scanned;
     Allocation* next;
 };
-Frame* frames = nullptr;
-Frame* spare_frames = nullptr;
-Range* spare_ranges = nullptr;
-std::size_t spare_frame_count = 0;
-std::size_t spare_range_count = 0;
-constexpr std::size_t max_spare_frames = 64;
-constexpr std::size_t max_spare_ranges = 256;
-Range* globals = nullptr;
+ReferenceSlot* reference_slots = nullptr;
 Allocation* native_allocations = nullptr;
 Allocation* managed_allocations = nullptr;
 bool collecting = false;
@@ -53,29 +46,32 @@ void* required_allocate(std::size_t bytes) noexcept {
     if (!value) std::abort();
     return value;
 }
-Frame* checked_frame(void* address) noexcept {
-    for (auto* frame = frames; frame; frame = frame->next)
-        if (frame == address) return frame;
-    std::abort();
-}
-void add_range(Range*& roots, void* address, std::size_t bytes) noexcept {
-    if (!bytes) return;
-    if (!valid_range(address, bytes)) std::abort();
-    for (auto* range = roots; range; range = range->next)
-        if (range->address == address) { range->bytes = bytes; return; }
-    Range* range;
-    if (spare_ranges) {
-        range = spare_ranges;
-        spare_ranges = range->next;
-        --spare_range_count;
-    } else range = static_cast<Range*>(required_allocate(sizeof(Range)));
-    *range = {address, bytes, roots};
-    roots = range;
-}
 Allocation** find_exact(Allocation*& head, void* address) noexcept {
     auto** slot = &head;
     while (*slot && (*slot)->address != address) slot = &(*slot)->next;
     return slot;
+}
+bool contains(const Allocation* allocation, const void* address) noexcept {
+    const auto value = reinterpret_cast<std::uintptr_t>(address);
+    const auto base = reinterpret_cast<std::uintptr_t>(allocation->address);
+    return value >= base && value - base < allocation->bytes;
+}
+Allocation* managed_owner(void* address) noexcept {
+    for (auto* allocation = managed_allocations; allocation; allocation = allocation->next)
+        if (contains(allocation, address)) return allocation;
+    return nullptr;
+}
+void remove_slots(void* address, std::size_t bytes) noexcept {
+    const auto base = reinterpret_cast<std::uintptr_t>(address);
+    auto** slot = &reference_slots;
+    while (*slot) {
+        auto value = reinterpret_cast<std::uintptr_t>((*slot)->address);
+        if (value >= base && value - base < bytes) {
+            auto* removed = *slot;
+            *slot = removed->next;
+            std::free(removed);
+        } else slot = &(*slot)->next;
+    }
 }
 void mark_candidate(std::uintptr_t candidate) noexcept {
     for (auto* allocation = managed_allocations; allocation; allocation = allocation->next) {
@@ -86,66 +82,32 @@ void mark_candidate(std::uintptr_t candidate) noexcept {
         }
     }
 }
-void scan(void* address, std::size_t bytes) noexcept {
-    constexpr auto width = sizeof(std::uintptr_t);
-    const auto base = reinterpret_cast<std::uintptr_t>(address);
-    // All language pointer fields have natural pointer alignment. Registered
-    // ranges may begin at a smaller-alignment field; skip to the next full word.
-    const auto offset = (width - base % width) % width;
-    if (offset > bytes || bytes - offset < width) return;
-    auto* data = static_cast<unsigned char*>(address);
-    for (std::size_t at = offset; at <= bytes - width; at += width) {
-        std::uintptr_t candidate;
-        std::memcpy(&candidate, data + at, width);
-        mark_candidate(candidate);
-    }
+void scan_slot(void* address) noexcept {
+    std::uintptr_t candidate;
+    std::memcpy(&candidate, address, sizeof(candidate));
+    mark_candidate(candidate);
 }
 }
 
 extern "C" {
-void* __gflat_gc_frame_enter() noexcept {
+void __gflat_gc_reference_added(void* address) noexcept {
     enter();
-    Frame* frame;
-    if (spare_frames) {
-        frame = spare_frames;
-        spare_frames = frame->next;
-        --spare_frame_count;
-    } else frame = static_cast<Frame*>(required_allocate(sizeof(Frame)));
-    *frame = {nullptr, frames};
-    frames = frame;
-    return frame;
+    if (!valid_range(address, sizeof(void*))) std::abort();
+    for (auto* slot = reference_slots; slot; slot = slot->next)
+        if (slot->address == address) return;
+    auto* slot = static_cast<ReferenceSlot*>(required_allocate(sizeof(ReferenceSlot)));
+    *slot = {address, reference_slots};
+    reference_slots = slot;
 }
-void __gflat_gc_frame_add(void* frame, void* address, std::size_t bytes) noexcept {
+void __gflat_gc_reference_removed(void* address) noexcept {
     enter();
-    add_range(checked_frame(frame)->roots, address, bytes);
-}
-void __gflat_gc_frame_leave(void* address) noexcept {
-    enter();
-    auto** slot = &frames;
-    while (*slot && *slot != address) slot = &(*slot)->next;
-    if (!*slot) std::abort();
-    Frame* frame = *slot;
-    *slot = frame->next;
-    while (frame->roots) {
-        Range* root = frame->roots;
-        frame->roots = root->next;
-        if (spare_range_count < max_spare_ranges) {
-            // Retired metadata is never scanned and contains no retained root.
-            *root = {nullptr, 0, spare_ranges};
-            spare_ranges = root;
-            ++spare_range_count;
-        } else std::free(root);
+    auto** slot = &reference_slots;
+    while (*slot && (*slot)->address != address) slot = &(*slot)->next;
+    if (*slot) {
+        auto* removed = *slot;
+        *slot = removed->next;
+        std::free(removed);
     }
-    if (spare_frame_count < max_spare_frames) {
-        *frame = {nullptr, spare_frames};
-        spare_frames = frame;
-        ++spare_frame_count;
-    } else std::free(frame);
-}
-void __gflat_gc_global_root(void* address, std::size_t bytes) noexcept {
-    enter();
-    // Global storage must remain valid for the process lifetime.
-    add_range(globals, address, bytes);
 }
 bool __gflat_gc_track_native(void* address, std::size_t bytes) noexcept {
     enter();
@@ -175,6 +137,7 @@ void __gflat_gc_forget_native(void* address) noexcept {
     if (*slot) {
         Allocation* allocation = *slot;
         *slot = allocation->next;
+        remove_slots(allocation->address, allocation->bytes);
         std::free(allocation);
     }
 }
@@ -197,6 +160,13 @@ bool __gflat_gc_adopt(void* address, std::size_t bytes) noexcept {
 void* __gflat_gc_adopt_reference(void* address, std::size_t bytes) noexcept {
     return __gflat_gc_adopt(address, bytes) ? address : nullptr;
 }
+bool __gflat_gc_prepare_allocation(void* address, std::size_t bytes) noexcept {
+    enter();
+    if (!__gflat_gc_adopt(address, bytes)) return false;
+    // No reference slot is live until the compiler reports its initialized store.
+    std::memset(address, 0, bytes);
+    return true;
+}
 bool __gflat_gc_should_collect(std::size_t threshold) noexcept {
     enter();
     return threshold != 0 && bytes_since_collection >= threshold;
@@ -207,23 +177,21 @@ std::size_t __gflat_gc_collect(void (*release)(void*)) noexcept {
     collecting = true;
     for (auto* allocation = managed_allocations; allocation; allocation = allocation->next)
         allocation->marked = allocation->scanned = false;
-    for (auto* frame = frames; frame; frame = frame->next)
-        for (auto* root = frame->roots; root; root = root->next) scan(root->address, root->bytes);
-    for (auto* root = globals; root; root = root->next) scan(root->address, root->bytes);
-    for (auto* allocation = native_allocations; allocation; allocation = allocation->next)
-        scan(allocation->address, allocation->bytes);
+    for (auto* root = reference_slots; root; root = root->next)
+        if (!managed_owner(root->address)) scan_slot(root->address);
     bool work;
     do {
         work = false;
         for (auto* allocation = managed_allocations; allocation; allocation = allocation->next)
             if (allocation->marked && !allocation->scanned) {
                 allocation->scanned = true;
-                scan(allocation->address, allocation->bytes);
+                for (auto* root = reference_slots; root; root = root->next)
+                    if (managed_owner(root->address) == allocation) scan_slot(root->address);
                 work = true;
             }
     } while (work);
-    // Detach all garbage before invoking callbacks. Free hooks may register
-    // temporary compiler root frames; no dead allocation remains discoverable.
+    // Detach all garbage before invoking callbacks so no dead allocation remains
+    // discoverable by the selected deallocator's ownership validation.
     Allocation* garbage = nullptr;
     auto** slot = &managed_allocations;
     while (*slot) {
@@ -239,6 +207,7 @@ std::size_t __gflat_gc_collect(void (*release)(void*)) noexcept {
     while (garbage) {
         Allocation* allocation = garbage;
         garbage = allocation->next;
+        remove_slots(allocation->address, allocation->bytes);
         release(allocation->address); // Throwing across this noexcept ABI terminates.
         std::free(allocation);
         ++reclaimed;

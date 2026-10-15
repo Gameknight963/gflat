@@ -27,13 +27,15 @@ public partial class LlvmEmitter
     {
         if (line.StartsWith("define ", StringComparison.Ordinal))
         {
+            BeginCollectorFunction(line);
             _ehFunction = true;
             _ehBoundary = line.Contains("@main(") || line.Contains("$dtor(") || line.Contains("@gflat_destroy_exception(");
             string personality = WindowsEh ? "__CxxFrameHandler3" : "__gxx_personality_v0";
             Raw(line[..^1] + $"personality i32 (...)* @{personality} {{");
             return;
         }
-        if (line == "}") { _ehFunction = false; Raw(line); return; }
+        if (line == "}") { EndCollectorFunction(); _ehFunction = false; Raw(line); return; }
+        if (line == "entry:") { Raw(line); BeginCollectorEntry(); return; }
         int call = line.IndexOf("call ", StringComparison.Ordinal);
         if (!_ehFunction || call < 0 || line.Contains("@llvm.") ||
             line.Contains("@gflat_is_instance(") || line.Contains("@gflat_get_parent_vtable(") ||
@@ -160,15 +162,15 @@ public partial class LlvmEmitter
             string llvm = EmitType(type), size = NewTemp(), bytes = NewTemp(), storage = NewTemp(), address = NewTemp();
             Emit($"    {size} = getelementptr {llvm}, {llvm}* null, i32 1");
             Emit($"    {bytes} = ptrtoint {llvm}* {size} to i64");
-            string allocate = _typeChecker.UsesCollector ? "__gflat_eh_allocate_exception_gc" : "__gflat_eh_allocate_exception";
-            string tracking = _typeChecker.UsesCollector ? ", i1 (i8*, i64)* @gflat$GC$TrackNative" : "";
+            string allocate = _typeChecker.HasCollectorNativeTracking ? "__gflat_eh_allocate_exception_gc" : "__gflat_eh_allocate_exception";
+            string tracking = _typeChecker.HasCollectorNativeTracking ? ", i1 (i8*, i64)* @gflat$GC$TrackNative" : "";
             Emit($"    {storage} = call i8* @{allocate}(i64 {bytes}, i8* (i64)* @gflat$Memory$Allocate{tracking})");
             GuardNonNull(storage, "i8*");
             Emit($"    {address} = bitcast i8* {storage} to {llvm}*");
             _deferScopes.Add(new() { new ExceptionOnlyCleanup(new ExceptionAllocationCleanup(storage)) });
             EmitValueForTarget(node.Expression, type);
             string value = Pop();
-            Emit($"    store {llvm} {value}, {llvm}* {address}");
+            EmitManagedStore(type, value, address, initialize: true);
             // Throwing a value constructs its static type. In particular, copying
             // a base catch binding must not retain a derived vtable in storage
             // sized only for the base. `throw;` preserves the dynamic object.

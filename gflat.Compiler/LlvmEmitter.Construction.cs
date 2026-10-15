@@ -48,8 +48,8 @@ public partial class LlvmEmitter
 
     private void EmitExceptionFree(string address)
     {
-        string name = _typeChecker.UsesCollector ? "__gflat_eh_free_exception_gc" : "__gflat_eh_free_exception";
-        string forgetting = _typeChecker.UsesCollector ? ", void (i8*)* @gflat$GC$ForgetNative" : "";
+        string name = _typeChecker.HasCollectorNativeTracking ? "__gflat_eh_free_exception_gc" : "__gflat_eh_free_exception";
+        string forgetting = _typeChecker.HasCollectorNativeTracking ? ", void (i8*)* @gflat$GC$ForgetNative" : "";
         Emit($"    call void @{name}(i8* {address}, void (i8*)* @gflat$Memory$Free{forgetting})");
     }
 
@@ -60,6 +60,9 @@ public partial class LlvmEmitter
         _parameterOwners.Clear();
         _constructionFields.Clear();
         _constructorLiveFlags.Clear();
+        var constructing = new NamedTypeExpression(name, null, constructor.Line);
+        if (_typeChecker.UsesCollector && HasManagedReferences(constructing))
+            _deferScopes[^1].Add(new ExceptionOnlyCleanup(new ManagedReferenceCleanup(constructing, "%this")));
         var cls = _typeChecker.GetClass(name);
         var str = _typeChecker.GetStruct(name);
         foreach (var field in str?.FieldDeclarations ?? cls!.FieldDeclarations)

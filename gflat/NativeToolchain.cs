@@ -97,10 +97,11 @@ public static class NativeToolchain
         return process.ExitCode;
     }
 
-    public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes)
+    public static ProcessResult CompileCpp(string source, string output, IEnumerable<string>? objects = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int optimizationLevel = 2)
     {
+        gflat.Projects.OptimizationLevel.Parse(optimizationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
         string compiler = FindClang(null);
-        var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler, exceptionReserveBytes) };
+        var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O" + optimizationLevel, "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler, exceptionReserveBytes) };
         args.AddRange(NativeRuntime.HostArguments());
         if (objects != null) args.AddRange(objects);
         return Run(compiler, args, 60000);
@@ -119,7 +120,8 @@ public static class NativeToolchain
         string ir = File.ReadAllText(irPath);
         bool exceptions = ir.Contains("@__gflat_eh_", StringComparison.Ordinal);
         bool stdio = ir.Contains("@__gflat_stdio_", StringComparison.Ordinal);
-        bool collector = ir.Contains("@__gflat_gc_frame_enter", StringComparison.Ordinal);
+        bool collector = ir.Contains("@__gflat_gc_reference_added", StringComparison.Ordinal) ||
+            ir.Contains("@__gflat_gc_prepare_allocation", StringComparison.Ordinal);
         if (exceptions || stdio || collector)
         {
             // Keep the selected LLVM version, including names such as clang-18.

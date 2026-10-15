@@ -79,7 +79,6 @@ struct Vector<T>
         if (count == (nuint)0) throw new Exception("Cannot pop an empty vector");
         nuint index = count - (nuint)1;
         T result = move *(data! + index);
-        this.ClearStorage(index);
         count = index;
         return result;
     }
@@ -90,17 +89,7 @@ struct Vector<T>
         {
             count--;
             (data! + count).~T();
-            this.ClearStorage(count);
         }
-    }
-
-    // The element's lifetime has ended. Clear dead bytes so conservative GC
-    // scanning of retained capacity does not keep removed managed values alive.
-    private void ClearStorage(nuint index)
-    {
-        char* bytes = (char*)(data! + index);
-        nuint size = (nuint)sizeof(T);
-        for (nuint i = 0; i < size; i++) bytes[i] = '\0';
     }
 
     ~Vector()

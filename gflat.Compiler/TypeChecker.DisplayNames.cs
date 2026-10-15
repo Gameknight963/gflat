@@ -31,7 +31,7 @@ public partial class TypeChecker
             PointerTypeExpression p => DisplayTypeName(p.Inner, inheritedReadOnly) + "*" + (p.IsNullable ? "?" : ""),
             ManagedTypeExpression p => DisplayTypeName(p.Inner, inheritedReadOnly) + "^" + (p.IsNullable ? "?" : ""),
             ArrayTypeExpression a => DisplayTypeName(a.ElementType, inheritedReadOnly) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
-            FunctionPointerTypeExpression f => $"{DisplayTypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(DisplayTypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
+            FunctionPointerTypeExpression f => $"{DisplayTypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(DisplayTypeName))}){(f.IsSignature ? "" : f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => TypeName(type)
         };
     }

@@ -2856,6 +2856,35 @@ public partial class LlvmEmitter : IVisitor
         }
     }
 
+    private bool EmitFunctionValue(AstNode node)
+    {
+        AstNode? fnTarget = _typeChecker.GetFunctionAddressTarget(node);
+        if (fnTarget is ExternDeclaration ext)
+        {
+            Push($"@{ext.Name}");
+            return true;
+        }
+        if (fnTarget is MethodDeclaration method)
+        {
+            if (method.IsStatic && _typeChecker.TryGetMethodOwner(method, out string owner, out bool isClass))
+            {
+                Push("@" + GetMethodMangledName(owner, method, _typeChecker.GetFunctionNamespace(method), isClass));
+                return true;
+            }
+            if (method.Name == "main")
+            {
+                Push("@main");
+                return true;
+            }
+            string ns = _typeChecker.GetFunctionNamespace(method);
+            string mangled = (ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}") + _typeChecker.GetOverloadSuffix(method);
+            Push($"@{mangled}");
+            return true;
+        }
+
+        return false;
+    }
+
     public void Visit(UnaryExpression node)
     {
         if (node.Operator == TokenKind.Ref) { EmitAddress(node.Operand); return; }
@@ -2868,32 +2897,7 @@ public partial class LlvmEmitter : IVisitor
         if (EmitPropertyWrite(node)) return;
         if (node.Operator == TokenKind.Ampersand)
         {
-            AstNode? fnTarget = _typeChecker.GetFunctionAddressTarget(node);
-            if (fnTarget != null)
-            {
-                if (fnTarget is ExternDeclaration ext)
-                {
-                    Push($"@{ext.Name}");
-                    return;
-                }
-                if (fnTarget is MethodDeclaration method)
-                {
-                    if (method.IsStatic && _typeChecker.TryGetMethodOwner(method, out string owner, out bool isClass))
-                    {
-                        Push("@" + GetMethodMangledName(owner, method, _typeChecker.GetFunctionNamespace(method), isClass));
-                        return;
-                    }
-                    if (method.Name == "main")
-                    {
-                        Push("@main");
-                        return;
-                    }
-                    string ns = _typeChecker.GetFunctionNamespace(method);
-                    string mangled = (ns.Length > 0 ? $"gflat${ns}${method.Name}" : $"gflat${method.Name}") + _typeChecker.GetOverloadSuffix(method);
-                    Push($"@{mangled}");
-                    return;
-                }
-            }
+            if (EmitFunctionValue(node)) return;
 
             EmitAddress(node.Operand);
             return;
@@ -3114,6 +3118,7 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(IdentifierExpression node)
     {
+        if (EmitFunctionValue(node)) return;
         if (EmitPropertyRead(node)) return;
         if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
         {
@@ -4142,6 +4147,7 @@ public partial class LlvmEmitter : IVisitor
     }
     public void Visit(NamespaceAccessExpression node)
     {
+        if (EmitFunctionValue(node)) return;
         if (EmitPropertyRead(node)) return;
         if (_typeChecker.TryGetEnumMember(node, out long val, out _))
         {

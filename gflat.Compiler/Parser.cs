@@ -1027,9 +1027,9 @@ namespace gflat
             return new FieldDeclaration(name, type, initializer, accessibility, isConst, isStatic, line, type.IsReadOnlyValue);
         }
 
-        private TypeExpression ParseTypeExpression() => Located(() => ParseTypeExpressionCoreLocated());
+        private TypeExpression ParseTypeExpression(bool allowSignature = true) => Located(() => ParseTypeExpressionCoreLocated(allowSignature));
 
-        private TypeExpression ParseTypeExpressionCoreLocated()
+        private TypeExpression ParseTypeExpressionCoreLocated(bool allowSignature)
         {
             int line = Current.Line;
             TypeExpression type;
@@ -1127,6 +1127,7 @@ namespace gflat
                     List<TypeExpression> paramTypes = new();
                     bool isManaged = false;
                     bool nullable = false;
+                    bool signature = false;
                     try
                     {
                         Consume(); // (
@@ -1151,6 +1152,7 @@ namespace gflat
 
                         if (isFnPtr)
                             nullable = Match(TokenKind.QuestionMark);
+                        else if (allowSignature && Current.Kind is not (TokenKind.OpenBrace or TokenKind.Colon or TokenKind.NoThrow or TokenKind.EqualsGreater)) { isFnPtr = true; signature = true; }
                     }
                     catch
                     {
@@ -1159,7 +1161,7 @@ namespace gflat
 
                     if (isFnPtr && _diagnostics.Count == diagMark)
                     {
-                        type = new FunctionPointerTypeExpression(type, paramTypes, isManaged, nullable, line);
+                        type = new FunctionPointerTypeExpression(type, paramTypes, isManaged, nullable, line, signature);
                     }
                     else
                     {
@@ -1594,7 +1596,7 @@ namespace gflat
                     {
                         if (op.Kind == TokenKind.Arrow)
                             throw new TypeCheckException("Use '.' for destructor calls, not '->'", op.Line);
-                        TypeExpression targetType = ParseTypeExpression();
+                        TypeExpression targetType = ParseTypeExpression(allowSignature: false);
                         Expect(TokenKind.OpenParen);
                         if (!Check(TokenKind.CloseParen))
                             throw new TypeCheckException("Destructor calls take no arguments", Current.Span);
@@ -1856,7 +1858,7 @@ namespace gflat
                 else if (Match(TokenKind.Caret))
                     kind = AllocationKind.Managed;
 
-                TypeExpression type = ParseTypeExpression();
+                TypeExpression type = ParseTypeExpression(allowSignature: false);
                 Expect(TokenKind.OpenParen);
                 List<AstNode> args = new();
                 while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))

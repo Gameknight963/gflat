@@ -168,7 +168,7 @@ namespace gflat.ast
             }
             if (type is FunctionPointerTypeExpression fnPtr)
             {
-                return new FunctionPointerTypeExpression(CloneType(fnPtr.ReturnType), fnPtr.ParameterTypes.Select(CloneType).ToList(), fnPtr.IsManaged, fnPtr.IsNullable, fnPtr.Line);
+                return new FunctionPointerTypeExpression(CloneType(fnPtr.ReturnType), fnPtr.ParameterTypes.Select(CloneType).ToList(), fnPtr.IsManaged, fnPtr.IsNullable, fnPtr.Line, fnPtr.IsSignature);
             }
             return type;
         }

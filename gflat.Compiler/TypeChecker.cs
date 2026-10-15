@@ -77,7 +77,7 @@ namespace gflat
         private readonly Dictionary<CallExpression, AstNode> _resolvedCalls = new();
         private readonly Dictionary<ReturnStatement, string> _ownedReturns = new();
         public string? GetTransferredLocal(ReturnStatement statement) => _ownedReturns.GetValueOrDefault(statement);
-        private readonly Dictionary<UnaryExpression, AstNode> _functionAddressTargets = new();
+        private readonly Dictionary<AstNode, AstNode> _functionAddressTargets = new();
         private readonly HashSet<CallExpression> _indirectCalls = new();
         private readonly Stack<Dictionary<string, TypeExpression>> _localAliases = new();
         private readonly Stack<Dictionary<string, EnumInfo>> _localEnums = new();
@@ -137,7 +137,7 @@ namespace gflat
             extensionCalls.TryGetValue(call, out var lowered) ? GetResolvedCall(lowered) :
             _resolvedCalls.TryGetValue(call, out AstNode? target) ? target : null;
 
-        public AstNode? GetFunctionAddressTarget(UnaryExpression unary) =>
+        public AstNode? GetFunctionAddressTarget(AstNode unary) =>
             _functionAddressTargets.TryGetValue(unary, out AstNode? target) ? target : null;
 
         public bool IsIndirectCall(CallExpression call) => _indirectCalls.Contains(call);
@@ -759,6 +759,10 @@ namespace gflat
             {
                 return $"{GetTypeMangledName(arr.ElementType)}Arr";
             }
+            if (type is FunctionPointerTypeExpression function)
+                return (function.IsSignature ? "Signature$" : "FunctionPointer$") + GetTypeMangledName(function.ReturnType) +
+                    "$Params" + function.ParameterTypes.Count + "$" + string.Join("$", function.ParameterTypes.Select(GetTypeMangledName)) +
+                    (function.IsNullable ? "$Nullable" : "");
             return type.ToString() ?? "Unknown";
         }
 
@@ -1141,6 +1145,8 @@ namespace gflat
             else if (type is PointerTypeExpression ptr)
             {
                 TypeExpression resolvedInner = ResolveAlias(ptr.Inner);
+                if (resolvedInner is FunctionPointerTypeExpression { IsSignature: true } signature)
+                    return new FunctionPointerTypeExpression(signature.ReturnType, signature.ParameterTypes, false, ptr.IsNullable, ptr.Line);
                 if (resolvedInner != ptr.Inner)
                     return new PointerTypeExpression(resolvedInner, ptr.IsNullable, ptr.Line, isReadOnly: ptr.IsReadOnly);
             }
@@ -1187,7 +1193,7 @@ namespace gflat
             {
                 var resolvedRet = ResolveAlias(fnPtr.ReturnType);
                 var resolvedParams = fnPtr.ParameterTypes.Select(ResolveAlias).ToList();
-                return new FunctionPointerTypeExpression(resolvedRet, resolvedParams, fnPtr.IsManaged, fnPtr.IsNullable, fnPtr.Line);
+                return new FunctionPointerTypeExpression(resolvedRet, resolvedParams, fnPtr.IsManaged, fnPtr.IsNullable, fnPtr.Line, fnPtr.IsSignature);
             }
 
             return type;
@@ -1287,6 +1293,7 @@ namespace gflat
             }
             else if (resolved is FunctionPointerTypeExpression function)
             {
+                if (function.IsSignature) throw new TypeCheckException("A function signature has no value storage; use a function pointer", line);
                 if (function.IsManaged)
                     throw new TypeCheckException("Managed function pointers are not supported", line);
                 ValidateTypeUsage(function.ReturnType, line);
@@ -1693,7 +1700,7 @@ namespace gflat
                 return TypesMatchPublic(aa.ElementType, ab.ElementType, symbols) && (aa.Size == ab.Size || aa.Size == null || ab.Size == null);
             if (a is FunctionPointerTypeExpression fa && b is FunctionPointerTypeExpression fb)
             {
-                if (fa.IsManaged != fb.IsManaged || fa.IsNullable != fb.IsNullable)
+                if (fa.IsSignature != fb.IsSignature || fa.IsManaged != fb.IsManaged || fa.IsNullable != fb.IsNullable)
                     return false;
                 if (!TypesMatchPublic(fa.ReturnType, fb.ReturnType, symbols))
                     return false;
@@ -1731,6 +1738,12 @@ namespace gflat
             }
 
             target = ResolveAlias(target);
+            if (valueNode != null && target is FunctionPointerTypeExpression { IsSignature: false } expected &&
+                _functionAddressTargets.ContainsKey(valueNode))
+            {
+                if (!SelectFunctionValue(valueNode, expected)) return false;
+                source = GetType(valueNode);
+            }
             source = ResolveAlias(source);
 
             if (source.IsReadOnlyValue && !target.IsReadOnlyValue && !CanCopyReadOnlyValue(source))
@@ -2050,6 +2063,7 @@ namespace gflat
             // Attribute evaluation has its own safety checks. Preserve those
             // diagnostics before reporting unavailable runtime storage forms.
             ValidateFieldStorage(node);
+            AnalyzeSafely(ValidateFunctionValueSelections);
 
             if (_recoverErrors && _diagnostics.HasErrors) return;
 
@@ -3901,6 +3915,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             if (CheckPropertyRead(node)) return;
+            if (!TryLookupVariable(node.Name, out _) && TryBindFunctionValue(node)) return;
             TypeExpression type = LookupVariable(node.Name, node.Line);
             RecordType(node, NullableReadType(node, type));
             if (TryGetConstValueByName(node.Name, out ConstValue? cv) && cv != null)
@@ -4761,6 +4776,7 @@ namespace gflat
         public void Visit(NamespaceAccessExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (TryBindFunctionValue(node)) return;
             if (CheckPropertyRead(node)) return;
             if (node.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
             {
@@ -5492,7 +5508,7 @@ namespace gflat
             PointerTypeExpression p => TypeName(p.Inner, inheritedReadOnly) + "*" + (p.IsNullable ? "?" : ""),
             ManagedTypeExpression m => TypeName(m.Inner, inheritedReadOnly) + "^" + (m.IsNullable ? "?" : ""),
             ArrayTypeExpression a => TypeName(a.ElementType, inheritedReadOnly) + (a.Size.HasValue ? $"[{a.Size}]" : "[]"),
-            FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
+            FunctionPointerTypeExpression f => $"{TypeName(f.ReturnType)}({string.Join(", ", f.ParameterTypes.Select(TypeName))}){(f.IsSignature ? "" : f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => "unknown"
         };
 

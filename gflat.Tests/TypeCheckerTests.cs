@@ -373,7 +373,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void FunctionUsedAsValueWithoutAmpersandThrowsHelpfulDiagnostic()
+        public void FunctionNameImplicitlyConvertsToFunctionPointer()
         {
             string code = """
                 int Add(int a, int b)
@@ -388,8 +388,7 @@ namespace gflat.Tests
                 }
                 """;
 
-            var ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot use function 'Add' as a value without '&'. Did you mean '&Add'?", ex.Message);
+            CompilerTestHelper.Check(code);
         }
 
         [Fact]

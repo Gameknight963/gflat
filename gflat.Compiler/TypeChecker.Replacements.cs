@@ -122,7 +122,7 @@ public partial class TypeChecker
             PointerTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}*{(p.IsNullable ? "?" : "")}",
             ManagedTypeExpression p => $"{(p.IsReadOnly ? "readonly " : "")}{SignatureType(p.Inner, method)}^{(p.IsNullable ? "?" : "")}",
             ArrayTypeExpression a => SignatureType(a.ElementType, method) + $"[{((ArrayTypeExpression)ResolveAlias(new ArrayTypeExpression(Int, a.Size, a.Line, a.SizeExpression))).Size}]",
-            FunctionPointerTypeExpression f => SignatureType(f.ReturnType, method) + "(" + string.Join(",", f.ParameterTypes.Select(t => SignatureType(t, method))) + $"){(f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
+            FunctionPointerTypeExpression f => SignatureType(f.ReturnType, method) + "(" + string.Join(",", f.ParameterTypes.Select(t => SignatureType(t, method))) + $"){(f.IsSignature ? "" : f.IsManaged ? "^" : "*")}{(f.IsNullable ? "?" : "")}",
             _ => TypeName(type)
         };
     }

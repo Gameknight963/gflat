@@ -65,6 +65,21 @@ Expression precedence, from weakest to strongest: assignment (right associative)
 
 `::` accesses namespaces, nested types, enum values, and static members. `.` accesses instance members, including through pointers. The legacy arrow spelling is rejected semantically. Function pointers are written with their return type, such as `int(int)*`.
 
+A bare function signature, such as `int(int)` or `void()`, is a type that describes
+a function but has no value storage. It can be used as an alias target or generic
+type argument; applying `*` gives a function pointer. Named namespace functions
+and static methods convert implicitly to matching function pointers. Explicit
+`&Function` remains valid. An overloaded function name requires an expected
+function pointer signature that selects exactly one overload. This conversion
+does not capture an instance receiver.
+
+```gflat
+alias Transform = int(int);
+int Double(int value) => value * 2;
+int Apply(Transform* transform) => transform(21);
+int Example() => Apply(Double);
+```
+
 `namespace A::B { ... }` is shorthand for nested namespace blocks. `namespace A::B;` puts the rest of the source file in that namespace. A file-scoped namespace must be the first declaration after any imports, cannot be nested, and occurs at most once per file. Imports may also appear immediately after its header. Nested block namespaces within it are relative to that namespace. Imports and the file-scoped namespace do not affect other source files.
 
 ```gflat

@@ -8,6 +8,7 @@ namespace gflat.ast
         public TypeExpression ReturnType { get; }
         public List<TypeExpression> ParameterTypes { get; }
         public bool IsManaged { get; }
+        public bool IsSignature { get; }
         public bool IsNullable { get; }
 
         public FunctionPointerTypeExpression(
@@ -15,8 +16,9 @@ namespace gflat.ast
             List<TypeExpression> parameterTypes,
             bool isManaged,
             bool isNullable,
-            int line) : base(line)
+            int line, bool isSignature = false) : base(line)
         {
+            IsSignature = isSignature;
             ReturnType = returnType;
             ParameterTypes = parameterTypes;
             IsManaged = isManaged;

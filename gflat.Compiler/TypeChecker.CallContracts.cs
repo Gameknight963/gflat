@@ -15,8 +15,6 @@ public partial class TypeChecker
     private void ValidateFunctionAddress(AstNode function, int line)
     {
         if (function is ExternDeclaration external) ValidateExternAccess(external, SourceContext.Current ?? SourceContext.ForLine(line));
-        if (function is MethodDeclaration overloaded && overloadFamilies.ContainsKey(overloaded))
-            throw new TypeCheckException("Taking the address of an overloaded function requires an unambiguous wrapper", line);
         var parameters = function switch
         {
             MethodDeclaration m => m.Parameters,

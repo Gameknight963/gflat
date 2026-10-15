@@ -120,15 +120,12 @@ public static class NativeToolchain
         string ir = File.ReadAllText(irPath);
         bool exceptions = ir.Contains("@__gflat_eh_", StringComparison.Ordinal);
         bool stdio = ir.Contains("@__gflat_stdio_", StringComparison.Ordinal);
-        bool collector = ir.Contains("@__gflat_gc_reference_added", StringComparison.Ordinal) ||
-            ir.Contains("@__gflat_gc_prepare_allocation", StringComparison.Ordinal);
-        if (exceptions || stdio || collector)
+        if (exceptions || stdio)
         {
             // Keep the selected LLVM version, including names such as clang-18.
             args.Add("--driver-mode=g++");
             if (exceptions) args.Add(NativeRuntime.GetObject(compiler, exceptionReserveBytes));
             if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler));
-            if (collector) args.Add(NativeRuntime.GetCollectorObject(compiler));
             args.AddRange(NativeRuntime.HostArguments());
         }
         return Run(compiler, args, 60000);

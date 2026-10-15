@@ -40,7 +40,6 @@ internal static class NativeRuntime
     }
 
     internal static string GetStdioObject(string driver) => BuildObject(driver, "Stdio", []);
-    internal static string GetCollectorObject(string driver) => BuildObject(driver, "Collector", []);
 
     private static string BuildObject(string driver, string name, string[] options)
     {

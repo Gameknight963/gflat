@@ -101,8 +101,8 @@ public class InterpolationTests
             int main() {
                 Value value = new Value();
                 readonly(IFormattable)* p = &value;
-                Value^ managed = new^ Value();
-                String a = s$"{p}{managed}";
+                Value^ managedReference = new^ Value();
+                String a = s$"{p}{managedReference}";
                 if (false && s$"{99}".Length == (nuint)2) return 1;
                 if (true && s$"{42}".Length != (nuint)2) return 2;
                 if (a.Length != (nuint)2) return 3; return 0;

@@ -124,7 +124,7 @@ public class ManagedPointerTests
             namespace Memory { public replace void*? Allocate(nuint size) { printf("R"); return malloc(size); } }
             namespace Memory { public replace void Free(void* p) { printf("F"); } }
             struct S { public int value; }
-            int main() { S* raw = new* S(); S^ managed = new^ S(); delete raw; return 0; }
+            int main() { S* raw = new* S(); S^ managedReference = new^ S(); delete raw; return 0; }
             """);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("RAF", result.StandardOutput);

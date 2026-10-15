@@ -212,9 +212,9 @@ public class TypeofTests
                 std::TypeInfo array = typeof(readonly(int)[4]);
                 if (array.Kind != std::TypeKind::Array || !array.HasFixedLength || array.Length != (nuint)4) return 1;
                 if (array.Size != (nuint)16 || array.IsReadOnly || !array.ElementType!.IsReadOnly) return 2;
-                std::TypeInfo managed = typeof(int^?);
-                if (managed.Kind != std::TypeKind::ManagedPointer || !managed.IsNullable) return 3;
-                if (managed.ElementType!.Kind != std::TypeKind::Primitive || managed.ElementType!.Size != (nuint)4) return 4;
+                std::TypeInfo managedType = typeof(int^?);
+                if (managedType.Kind != std::TypeKind::ManagedPointer || !managedType.IsNullable) return 3;
+                if (managedType.ElementType!.Kind != std::TypeKind::Primitive || managedType.ElementType!.Size != (nuint)4) return 4;
                 if (typeof(int*?).ElementType!.IsNullable) return 5;
                 if (typeof(int[]).Alignment != (nuint)alignof(int*) || typeof(int[]).Size != (nuint)sizeof(int*)) return 6;
                 return 0;

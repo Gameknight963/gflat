@@ -57,7 +57,7 @@ public class NullForgivingTests
                 I*? empty = null; I* nonnull = empty!;
                 I*? interfaceView = nonnull;
                 if (interfaceView != null) return 2;
-                S^? managed = null; S^ uncheckedManaged = managed!;
+                S^? managedReference = null; S^ uncheckedManaged = managedReference!;
                 S^? managedView = uncheckedManaged;
                 if (managedView != null) return 3;
                 return 0;

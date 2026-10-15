@@ -252,7 +252,7 @@ public sealed partial class EditorModel
         bool Known(TypeExpression candidate) => candidate switch
         {
             PointerTypeExpression p => Known(p.Inner), ManagedTypeExpression p => Known(p.Inner),
-            FunctionPointerTypeExpression => true,
+            FunctionPointerTypeExpression { IsSignature: false } => true,
             ArrayTypeExpression a => a.Size != null && Known(a.ElementType),
             NamedTypeExpression n => n.TypeArguments.Count == 0 && (TypeChecker.IsPrimitive(n.Name) || checker.GetClass(n.Name) != null || checker.GetStruct(n.Name) != null || checker.GetInterface(n.Name) != null || checker.ResolveEnum(n) != null),
             _ => false
@@ -312,7 +312,7 @@ public sealed partial class EditorModel
             var target = token.Kind == TokenKind.Identifier ? TypeSymbol(string.Concat(lexed[first..(i + 1)].Select(t => t.Text)), context) : null;
             if (target == null && token.Kind == TokenKind.Identifier)
                 target = Visible(path, offset).FirstOrDefault(s => (s.IsTypeParameter || IsType(s.Syntax.Node)) && s.Name == token.Text);
-            parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind == TokenKind.Readonly ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation"), token.Text, Target: SymbolLocation(target)));
+            parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind is TokenKind.Readonly or TokenKind.Managed ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation"), token.Text, Target: SymbolLocation(target)));
             cursor = token.End + 1;
         }
         return parts.ToArray();

@@ -14,6 +14,8 @@ public class EditorGrammarTests
     [InlineData("throw new std::IOException();", "new", "keyword")]
     [InlineData("throw new std::IOException();", "throw", "keyword - control")]
     [InlineData("if (ready) return;", "if", "keyword - control")]
+    [InlineData("managed<int, Collector> item;", "managed", "keyword")]
+    [InlineData("public expect alias GC : ICollector;", "expect", "keyword")]
     public void KeywordScopesSelectTheCorrectVisualStudioClassification(string line, string word, string expected)
     {
         int offset = line.IndexOf(word, StringComparison.Ordinal);

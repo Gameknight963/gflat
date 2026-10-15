@@ -31,10 +31,9 @@ public sealed class GenericTypeParameterEditorTests
     [Fact]
     public void UnspecializedManagedAdoptTypeParameterHasOneSourceIdentity()
     {
-        const string text = "namespace GC; public weak T^ Adopt<T>(T* storage) { nuint size = (nuint)sizeof(T); return (T^)storage; } " +
-            "private void* EnterFrame() nothrow => (void*)1; private void AddRoot(void* frame, void* address, nuint bytes) nothrow {} " +
-            "private void LeaveFrame(void* frame) nothrow {} private bool TrackNative(void* address, nuint bytes) nothrow => true; " +
-            "private void ForgetNative(void* address) nothrow {} public nuint Collect() => 0;";
+        const string text = "public T^ Adopt<T>(T* storage) { nuint size = (nuint)sizeof(T); return (T^)storage; } " +
+            "alias GC = Collector; static class Collector { public static void* Allocate(nuint bytes, nuint alignment) => (void*)1; " +
+            "public static void ReferenceAdded(void* slot) nothrow {} public static void ReferenceRemoved(void* slot) nothrow {} }";
         var (model, source) = Analyze(text);
         var occurrences = Lexer.Tokenize(source, new DiagnosticBag()).Where(token => token.Text == "T").ToArray();
         Assert.Equal(5, occurrences.Length);

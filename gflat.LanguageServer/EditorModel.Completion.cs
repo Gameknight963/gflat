@@ -26,6 +26,12 @@ public sealed partial class EditorModel
         int start = index - 1;
         while (start >= 0 && ts[start].Kind is not (TokenKind.OpenBrace or TokenKind.CloseBrace or TokenKind.Semicolon)) start--;
         start++;
+        int withIndex = -1;
+        for (int i = index - 1; i >= start; i--)
+            if (ts[i].Text == "with") { withIndex = i; break; }
+        if (withIndex > start && ts[withIndex - 1].Kind == TokenKind.CloseParen && Enumerable.Range(start, withIndex - start)
+            .Any(i => ts[i].Kind == TokenKind.New && i + 1 < withIndex && ts[i + 1].Kind == TokenKind.Caret))
+            return new(true, s => s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration or NamespaceDeclaration);
         if (start < index && ts[start].Kind == TokenKind.Using)
             return new(true, s => s.Syntax.Node is NamespaceDeclaration);
 

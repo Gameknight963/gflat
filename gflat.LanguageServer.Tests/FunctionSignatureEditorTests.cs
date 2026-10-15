@@ -16,7 +16,9 @@ public sealed class FunctionSignatureEditorTests
         var model = new EditorModel(snapshot, [source]);
         var hover = model.Hover(source.Path, text.IndexOf("Transform", StringComparison.Ordinal));
         Assert.NotNull(hover);
-        Assert.Contains("int(int)", JsonSerializer.SerializeToElement(hover, Protocol.JsonOptions).GetProperty("contents").GetProperty("value").GetString());
+        string description = JsonSerializer.SerializeToElement(hover, Protocol.JsonOptions).GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("int(int)", description);
+        Assert.DoesNotContain("Size:", description);
         Assert.NotNull(model.Definition(source.Path, text.LastIndexOf("Double", StringComparison.Ordinal)));
     }
 }

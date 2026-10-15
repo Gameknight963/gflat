@@ -45,7 +45,7 @@ public sealed class AnalysisSnapshot
                 NamedTypeExpression n => aliases.Contains(n.Name.Split("::").Last()) || n.TypeArguments.Any(ContainsAlias),
                 NestedTypeExpression n => aliases.Contains(n.Member) || ContainsAlias(n.Parent) || n.TypeArguments.Any(ContainsAlias),
                 PointerTypeExpression p => ContainsAlias(p.Inner),
-                ManagedTypeExpression p => ContainsAlias(p.Inner),
+                ManagedTypeExpression p => ContainsAlias(p.Inner) || p.Collector != null && ContainsAlias(p.Collector),
                 ReferenceTypeExpression r => ContainsAlias(r.Inner),
                 ArrayTypeExpression a => ContainsAlias(a.ElementType),
                 FunctionPointerTypeExpression f => ContainsAlias(f.ReturnType) || f.ParameterTypes.Any(ContainsAlias),

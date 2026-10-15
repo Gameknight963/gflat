@@ -108,7 +108,12 @@ public class IndexerTests
     public void ManagedReceiversAndInterfaceViewsSupportIndexers()
         => Assert.Equal(42, CompilerTestHelper.Run("""
             extern void*? malloc(nuint n);
-            void*? __gflat_gc_alloc(nuint n) => malloc(n);
+            alias GC = TestCollector;
+            static class TestCollector {
+                public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;
+                public static void ReferenceAdded(void* slot) nothrow {}
+                public static void ReferenceRemoved(void* slot) nothrow {}
+            }
             interface I { int this[int i] { get; set; } }
             struct S : I { int n; public int this[int i] { get => n + i; set => n = value; } }
             int main() { S^ s = new^ S(); s[0] = 40; I^ p = s; return p[2]; }

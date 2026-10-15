@@ -89,7 +89,12 @@ public class InterpolationTests
     {
         var result = Run("""
             using std;
-            void*? __gflat_gc_alloc(nuint size) { return malloc(size); }
+            alias GC = TestCollector;
+            static class TestCollector {
+                public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;
+                public static void ReferenceAdded(void* slot) nothrow {}
+                public static void ReferenceRemoved(void* slot) nothrow {}
+            }
             struct Value : IFormattable {
                 public readonly void Format(ITextWriter* output) { std::Format(3, output); }
             }

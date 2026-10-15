@@ -75,7 +75,12 @@ public sealed class NullableFlowTests
     {
         Assert.Equal(42, CompilerTestHelper.Run("""
             extern void*? malloc(nuint bytes);
-            void*? __gflat_gc_alloc(nuint bytes) => malloc(bytes);
+            alias GC = TestCollector;
+            static class TestCollector {
+                public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;
+                public static void ReferenceAdded(void* slot) nothrow {}
+                public static void ReferenceRemoved(void* slot) nothrow {}
+            }
             int Read(int^? p) { if (p == null) return 0; return *p; }
             int Call(int()*? f) { if (f == null) return 0; return f(); }
             int Value() => 2;

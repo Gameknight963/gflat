@@ -140,7 +140,12 @@ public sealed class ReadOnlyTypeTests
     {
         const string source = """
             extern void*? malloc(nuint size);
-            void*? __gflat_gc_alloc(nuint size) => malloc(size);
+            alias GC = TestCollector;
+            static class TestCollector {
+                public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;
+                public static void ReferenceAdded(void* slot) nothrow {}
+                public static void ReferenceRemoved(void* slot) nothrow {}
+            }
             struct S { public int^ data; public S(int^ p) { data = p; } }
             """;
         Assert.Equal(42, CompilerTestHelper.Run(source + "int main() { int^ p = new^ int(42); readonly(S)^ view = new^ S(p); readonly(int)^ q = view.data; return *q; }").ExitCode);

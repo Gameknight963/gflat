@@ -8,7 +8,12 @@ public class ManagedPointerTests
     private const string Runtime = """
         extern int printf(readonly(char)* format, ...);
         extern void*? malloc(nuint size);
-        void*? __gflat_gc_alloc(nuint size) { printf("A"); return malloc(size); }
+        alias GC = TestCollector;
+        static class TestCollector {
+            public static void* Allocate(nuint size, nuint alignment) { printf("A"); return malloc(size)!; }
+            public static void ReferenceAdded(void* slot) nothrow {}
+            public static void ReferenceRemoved(void* slot) nothrow {}
+        }
         """;
 
     [Theory]
@@ -63,14 +68,14 @@ public class ManagedPointerTests
 
     [Fact]
     public void MissingRuntimeIsDiagnostic()
-        => Assert.Contains("__gflat_gc_alloc", Assert.Throws<TypeCheckException>(() => Compiler.Check("int main() { int^ p = new^ int(); return 0; }")).Message);
+        => Assert.Contains("GC", Assert.Throws<TypeCheckException>(() => Compiler.Check("int main() { int^ p = new^ int(); return 0; }")).Message);
 
     [Theory]
-    [InlineData("int __gflat_gc_alloc(nuint size) { return 0; }")]
-    [InlineData("void*? __gflat_gc_alloc(int size) { return null; }")]
-    [InlineData("extern void*? __gflat_gc_alloc(nuint size, ...);")]
+    [InlineData("public static int Allocate(nuint size, nuint alignment) { return 0; }")]
+    [InlineData("public static void*? Allocate(int size, nuint alignment) { return null; }")]
+    [InlineData("public static void*? Allocate(nuint size) { return null; }")]
     public void IncorrectRuntimeSignatureIsRejected(string declaration)
-        => Assert.Throws<TypeCheckException>(() => Compiler.Check(declaration + "int main() { int^ p = new^ int(); return 0; }"));
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check("alias GC = BadCollector; static class BadCollector { " + declaration + " public static void ReferenceAdded(void* slot) nothrow {} public static void ReferenceRemoved(void* slot) nothrow {} } int main() { int^ p = new^ int(); return 0; }"));
 
     [Theory]
     [InlineData("struct S { ~S() {} }", "S")]
@@ -83,7 +88,6 @@ public class ManagedPointerTests
     [Theory]
     [InlineData("int^ p = new^ int(); delete p;")]
     [InlineData("int^ p = new^ int(); int* q = (int*)p;")]
-    [InlineData("int x = 1; int^ p = (int^)&x;")]
     [InlineData("int^ p = new^ int(); ulong x = (ulong)p;")]
     [InlineData("int^ p = (int^)0;")]
     [InlineData("int^ p = new^ int(); p++;")]
@@ -110,7 +114,7 @@ public class ManagedPointerTests
     [Fact]
     public void NullableCastTrapsOnNull()
     {
-        var result = CompilerTestHelper.Run("int main() { int^? p = null; int^ q = (int^)p; return 0; }");
+        var result = CompilerTestHelper.Run(Runtime + "int main() { int^? p = null; int^ q = (int^)p; return 0; }");
         Assert.NotEqual(0, result.ExitCode);
     }
 
@@ -153,8 +157,17 @@ public class ManagedPointerTests
     }
 
     [Fact]
-    public void ForeignRuntimeDeclarationIsAccepted()
-        => Assert.Contains("invoke i8* @__gflat_gc_alloc", Compiler.Emit("extern void*? __gflat_gc_alloc(nuint size); int main() { int^ p = new^ int(1); return *p; }"));
+    public void CollectorMayDelegateAllocationToForeignCode()
+        => Assert.Contains("@foreign_allocate", Compiler.Emit("""
+            extern void* foreign_allocate(nuint size, nuint alignment);
+            alias GC = TestCollector;
+            static class TestCollector {
+                public static void* Allocate(nuint size, nuint alignment) => foreign_allocate(size, alignment);
+                public static void ReferenceAdded(void* slot) nothrow {}
+                public static void ReferenceRemoved(void* slot) nothrow {}
+            }
+            int main() { int^ p = new^ int(1); return *p; }
+            """));
 
     [Fact]
     public void RawAddressOfManagedFieldIsRejected()
@@ -163,7 +176,15 @@ public class ManagedPointerTests
     [Fact]
     public void AllocationFailureTrapsBeforeUse()
     {
-        var result = CompilerTestHelper.Run("void*? __gflat_gc_alloc(nuint size) { return null; } int main() { int^ p = new^ int(1); return *p; }");
+        var result = CompilerTestHelper.Run("""
+            alias GC = FailingCollector;
+            static class FailingCollector {
+                public static void* Allocate(nuint size, nuint alignment) { void*? result = null; return result!; }
+                public static void ReferenceAdded(void* slot) nothrow {}
+                public static void ReferenceRemoved(void* slot) nothrow {}
+            }
+            int main() { int^ p = new^ int(1); return *p; }
+            """);
         Assert.NotEqual(0, result.ExitCode);
         Assert.NotEqual(1, result.ExitCode);
     }

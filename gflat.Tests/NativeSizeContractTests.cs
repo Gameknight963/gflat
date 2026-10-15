@@ -17,7 +17,7 @@ public class NativeSizeContractTests
 
     [Theory]
     [InlineData("namespace Memory { public replace void*? Allocate(ulong n) => null; public replace void Free(void* p) {} }")]
-    [InlineData("void*? __gflat_gc_alloc(ulong n) => null;")]
+    [InlineData("alias GC = BadCollector; static class BadCollector { public static void* Allocate(ulong n, nuint alignment) => (void*)1; public static void ReferenceAdded(void* slot) nothrow {} public static void ReferenceRemoved(void* slot) nothrow {} } int main() { int^ value = new^ int(); return 0; }")]
     [InlineData("struct S { public static S operator s\"\"(readonly(char)* p, ulong n) => new S(); }")]
     public void PreviousUnsignedLongContractsAreRejected(string source)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(source));

@@ -11,10 +11,11 @@ public sealed class ManagedReturnStorageTests
         extern void rc_removed(void* slot);
         extern int rc_live_count();
         extern int rc_first_references();
-        namespace GC {
-            public weak void* Allocate(nuint bytes, nuint alignment) => rc_allocate(bytes, alignment);
-            private weak void ReferenceAdded(void* slot) nothrow => rc_added(slot);
-            private weak void ReferenceRemoved(void* slot) nothrow => rc_removed(slot);
+        alias GC = TestCollector;
+        static class TestCollector {
+            public static void* Allocate(nuint bytes, nuint alignment) => rc_allocate(bytes, alignment);
+            public static void ReferenceAdded(void* slot) nothrow => rc_added(slot);
+            public static void ReferenceRemoved(void* slot) nothrow => rc_removed(slot);
         }
         """;
 

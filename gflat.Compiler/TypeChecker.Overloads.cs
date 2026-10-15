@@ -106,9 +106,11 @@ public partial class TypeChecker
         foreach (var arg in arguments) if (!_types.ContainsKey(arg)) arg.Accept(this);
         TypeExpression ArgumentType(AstNode arg) => arg is DefaultExpression { TargetType: null }
             ? new NamedTypeExpression("default", null, arg.Line) : GetType(arg);
+        bool ArgumentMatches(TypeExpression expected, AstNode argument) => IsOverloadedFunctionValue(argument)
+            ? CanSelectFunctionValue(argument, expected)
+            : IsAssignable(expected, ArgumentType(argument), argument is DefaultExpression { TargetType: null } ? null : argument);
         var viable = candidates.Where(c => AcceptsArgumentCount(parameters(c), arguments.Count) &&
-            parameters(c).Take(arguments.Count).Select((p, i) => IsAssignable(p.Type, ArgumentType(arguments[i]),
-                arguments[i] is DefaultExpression { TargetType: null } ? null : arguments[i])).All(v => v)).ToList();
+            parameters(c).Take(arguments.Count).Select((p, i) => ArgumentMatches(p.Type, arguments[i])).All(v => v)).ToList();
         bool Better(T first, T second)
         {
             bool strictly = false;
@@ -116,6 +118,10 @@ public partial class TypeChecker
             {
                 var a = parameters(first)[i].Type;
                 var b = parameters(second)[i].Type;
+                // A method group has no independently selected function type.
+                // Both viable target signatures are equally good conversions;
+                // ranking must not use a declaration-order representative.
+                if (IsOverloadedFunctionValue(arguments[i])) continue;
                 var source = ArgumentType(arguments[i]);
                 bool exactA = TypesMatch(a, source), exactB = TypesMatch(b, source);
                 if (exactA != exactB)
@@ -137,6 +143,9 @@ public partial class TypeChecker
         var best = viable.Where(c => !viable.Any(other => !ReferenceEquals(c, other) && Better(other, c))).ToList();
         if (best.Count == 0) throw new TypeCheckException($"No matching overload for '{name}'", line);
         if (best.Count > 1) throw new TypeCheckException($"Call to '{name}' is ambiguous", line);
+        for (int i = 0; i < arguments.Count; i++)
+            if (IsOverloadedFunctionValue(arguments[i]))
+                IsAssignable(parameters(best[0])[i].Type, ArgumentType(arguments[i]), arguments[i]);
         return best[0];
     }
 }

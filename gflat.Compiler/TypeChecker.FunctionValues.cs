@@ -7,6 +7,18 @@ public partial class TypeChecker
 {
     private readonly HashSet<AstNode> selectedFunctionValues = new();
 
+    private bool IsOverloadedFunctionValue(AstNode expression) =>
+        _functionAddressTargets.TryGetValue(expression, out var target) && target is MethodDeclaration method &&
+        overloadFamilies.ContainsKey(method);
+
+    private MethodDeclaration[] MatchingFunctionValues(MethodDeclaration method, FunctionPointerTypeExpression expected, int line)
+        => overloadFamilies[method].Where(candidate => TypesMatch(FunctionValueType(candidate, line),
+            new FunctionPointerTypeExpression(expected.ReturnType, expected.ParameterTypes, false, false, expected.Line))).ToArray();
+
+    private bool CanSelectFunctionValue(AstNode expression, TypeExpression expected)
+        => ResolveAlias(expected) is FunctionPointerTypeExpression { IsSignature: false, IsManaged: false } signature &&
+            _functionAddressTargets[expression] is MethodDeclaration method && MatchingFunctionValues(method, signature, expression.Line).Length == 1;
+
     private void ValidateFunctionValueSelections()
     {
         foreach (var (expression, target) in _functionAddressTargets)
@@ -44,8 +56,7 @@ public partial class TypeChecker
     {
         var target = _functionAddressTargets[expression];
         if (target is not MethodDeclaration method || !overloadFamilies.TryGetValue(method, out var family)) return true;
-        var matches = family.Where(m => TypesMatch(FunctionValueType(m, expression.Line),
-            new FunctionPointerTypeExpression(expected.ReturnType, expected.ParameterTypes, false, false, expected.Line))).ToArray();
+        var matches = MatchingFunctionValues(method, expected, expression.Line);
         if (matches.Length != 1) return false;
         NamespaceAccessExpression? name = expression switch {
             NamespaceAccessExpression access => access,

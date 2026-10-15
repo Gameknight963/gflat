@@ -108,4 +108,37 @@ public sealed class FunctionSignatureTests
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(declaration + "void Test() { long(long)* callback = " + expression + "; }"));
         Assert.Contains("private", error.Message);
     }
+
+    [Theory]
+    [InlineData(false, false, "F")]
+    [InlineData(false, true, "F")]
+    [InlineData(true, false, "F")]
+    [InlineData(true, true, "F")]
+    [InlineData(false, false, "&F")]
+    [InlineData(false, true, "&F")]
+    [InlineData(true, false, "&F")]
+    [InlineData(true, true, "&F")]
+    public void OverloadedCallbacksDoNotChooseTheirCallersOverload(bool reverseFunctions, bool reverseCallers, string expression)
+    {
+        const string integerFunction = "int F(int value) => value;";
+        const string longFunction = "long F(long value) => value;";
+        const string integerCaller = "int Apply(int(int)* callback) => 1;";
+        const string longCaller = "int Apply(long(long)* callback) => 2;";
+        string source = (reverseFunctions ? longFunction + integerFunction : integerFunction + longFunction) +
+            (reverseCallers ? longCaller + integerCaller : integerCaller + longCaller) + "int main() => Apply(" + expression + ");";
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(source));
+        Assert.Contains("ambiguous", error.Message);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OtherArgumentsCanSelectTheExpectedCallbackSignature(bool reverse)
+    {
+        const string integerCaller = "int Apply(int(int)* callback, int value) => callback(value);";
+        const string longCaller = "int Apply(long(long)* callback, long value) => (int)callback(value);";
+        string source = "int F(int value) => value * 2; long F(long value) => value * 3L;" +
+            (reverse ? longCaller + integerCaller : integerCaller + longCaller) + "int main() => Apply(F, 21);";
+        Assert.Equal(42, CompilerTestHelper.Run(source).ExitCode);
+    }
 }

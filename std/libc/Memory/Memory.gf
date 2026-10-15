@@ -1,6 +1,6 @@
 // Default memory hooks. Replace both functions to supply a custom allocator.
-extern void*? malloc(nuint size);
-extern void free(void* ptr);
+private extern void*? malloc(nuint size);
+private extern void free(void* ptr);
 
 namespace Memory
 {

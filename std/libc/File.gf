@@ -1,9 +1,9 @@
 namespace std;
 
-// Opaque libc FILE pointer. Ownership belongs to File, not this alias.
+// libc FILE
 public alias FileHandle = void*?;
 
-// Binary byte stream. Move transfers ownership; copying is deliberately unavailable.
+// Binary byte stream. 
 public struct File
 {
     private FileHandle handle;

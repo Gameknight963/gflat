@@ -14,7 +14,6 @@ int main()
     readonly(Vector<String>)* view = &names;
     String greeting = s$"Hello {(*view)[(nuint)0]} and {(*view)[(nuint)1]}. Count: {names.Count}";
     puts(greeting.ToString());
-
     String last = names.Pop();
     puts(last.ToString());
     puts(name.ToString());

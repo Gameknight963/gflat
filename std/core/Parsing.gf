@@ -3,7 +3,7 @@ namespace std;
 // Parse exactly count bytes as a signed decimal int. No whitespace is skipped.
 // Returns false and writes zero on empty input, invalid text, or overflow.
 // text must point to count readable bytes; result must point to writable storage.
-bool TryParseInt(this readonly(char)* text, nuint count, int* result)
+bool TryParseInt(readonly(char)* text, nuint count, int* result)
 {
     *result = 0;
     if (count == (nuint)0) return false;
@@ -30,16 +30,16 @@ bool TryParseInt(this readonly(char)* text, nuint count, int* result)
     return true;
 }
 
-// Convenience overload for null-terminated input.
-bool TryParseInt(this readonly(char)* text, int* result)
+// For null-terminated input
+bool TryParseInt(readonly(char)* text, int* result)
 {
     nuint count = 0;
     while (text[count] != '\0') count++;
     return TryParseInt(text, count, result);
 }
 
-// Same grammar as TryParseInt; invalid input and overflow throw Exception.
-int ParseInt(this readonly(char)* text, nuint count)
+// Invalid input and overflow throw Exception
+int ParseInt(readonly(char)* text, nuint count)
 {
     int result = 0;
     if (!TryParseInt(text, count, &result))
@@ -47,7 +47,7 @@ int ParseInt(this readonly(char)* text, nuint count)
     return result;
 }
 
-int ParseInt(this readonly(char)* text)
+int ParseInt(readonly(char)* text)
 {
     nuint count = 0;
     while (text[count] != '\0') count++;

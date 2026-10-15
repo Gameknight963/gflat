@@ -485,6 +485,17 @@ Structs provide inline fields, constructors, methods, properties, and optional d
 
 ## Properties
 
+Static classes are closed declaration scopes: their methods and explicit properties must be static, and they cannot be constructed, inherited from, or used as instance types (including pointers). Nested types remain ordinary types. Static classes may be generic, and a closed specialization can be named with an alias. They emit no instance layout, vtable, constructor, or destructor. Static storage and static constructors are not yet supported.
+
+```gflat
+static class Values<T> {
+    public static T Identity(T value) => value;
+    public struct Box { public T value; }
+}
+alias Integers = Values<int>;
+int Example() => Integers::Identity(42);
+```
+
 Classes and structs support explicit accessors, expression-bodied getters, and auto-properties:
 
 ```gflat

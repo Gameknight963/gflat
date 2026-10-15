@@ -261,6 +261,7 @@ namespace gflat
             bool isConst = false;
             bool isAbstract = false;
             bool isInline = false;
+            bool isStatic = false;
             FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
             AstNode Finish(AstNode node) => ApplyInline(ApplyImplementationKind(node, implementation), isInline);
 
@@ -292,9 +293,10 @@ namespace gflat
                     isAbstract = true;
                     Consume();
                 }
-                else if (Check(TokenKind.Static) && Peek().Kind == TokenKind.Class)
+                else if (Match(TokenKind.Static))
                 {
-                    throw new TypeCheckException("Static classes are not yet supported", Consume().Span);
+                    if (isStatic) throw new TypeCheckException("Duplicate static modifier", line);
+                    isStatic = true;
                 }
                 else if (Check(TokenKind.Weak) || Check(TokenKind.Replace))
                 {
@@ -304,6 +306,9 @@ namespace gflat
                 }
                 else break;
             }
+
+            if (isStatic && !Check(TokenKind.Class))
+                throw new TypeCheckException("Only classes can be declared static at namespace scope", Current.Span);
 
             if (Check(TokenKind.Extern))
             {
@@ -317,7 +322,7 @@ namespace gflat
             if (Check(TokenKind.Enum))
                 return Finish(ParseEnumDeclaration(accessibility, line));
             if (Check(TokenKind.Class))
-                return Finish(ParseClassDeclaration(accessibility, isAbstract, line, attributes));
+                return Finish(ParseClassDeclaration(accessibility, isAbstract, line, attributes, isStatic));
             if (Check(TokenKind.Struct))
                 return Finish(ParseStructDeclaration(accessibility, line, attributes));
             if (Check(TokenKind.Interface))
@@ -425,6 +430,7 @@ namespace gflat
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Internal;
             bool isAbstract = false;
+            bool isStatic = false;
 
             while (true)
             {
@@ -437,7 +443,8 @@ namespace gflat
                 else if (Check(TokenKind.Static))
                 {
                     Token modifier = Consume();
-                    throw new TypeCheckException("Static classes are not yet supported", modifier.Span);
+                    if (isStatic) throw new TypeCheckException("Duplicate static modifier", modifier.Span);
+                    isStatic = true;
                 }
                 else if (Check(TokenKind.Abstract))
                 {
@@ -447,7 +454,9 @@ namespace gflat
                 else break;
             }
 
-            if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, isAbstract, line, attributes);
+            if (isStatic && !Check(TokenKind.Class))
+                throw new TypeCheckException("Only classes can be declared static", Current.Span);
+            if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, isAbstract, line, attributes, isStatic);
             if (Check(TokenKind.Struct)) return ParseStructDeclaration(accessibility, line, attributes);
             if (Check(TokenKind.Interface)) return ParseInterfaceDeclaration(accessibility, line);
             if (Check(TokenKind.Enum)) return ParseEnumDeclaration(accessibility, line);
@@ -483,9 +492,9 @@ namespace gflat
             return tname;
         }
 
-        private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null) => Located(() => ParseClassDeclarationCoreLocated(accessibility, isAbstract, line, attributes));
+        private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null, bool isStatic = false) => Located(() => ParseClassDeclarationCoreLocated(accessibility, isAbstract, line, attributes, isStatic));
 
-        private ClassDeclaration ParseClassDeclarationCoreLocated(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null)
+        private ClassDeclaration ParseClassDeclarationCoreLocated(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null, bool isStatic = false)
         {
             Expect(TokenKind.Class);
             string name = Expect(TokenKind.Identifier).Text;
@@ -511,7 +520,7 @@ namespace gflat
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
 
-            return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line, attributes, genericParams);
+            return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line, attributes, genericParams) { IsStatic = isStatic };
         }
 
         private StructDeclaration ParseStructDeclaration(TokenKind accessibility, int line, List<AttributeNode>? attributes = null) => Located(() => ParseStructDeclarationCoreLocated(accessibility, line, attributes));
@@ -613,10 +622,10 @@ namespace gflat
                 return ParseExternDeclaration(attributes, line, accessibility);
             }
 
-            if (isStatic && Current.Kind is TokenKind.Class or TokenKind.Struct or TokenKind.Enum)
-                throw new TypeCheckException("Static type declarations are not yet supported", Current.Span);
+            if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Enum or TokenKind.Interface)
+                throw new TypeCheckException("Only classes can be declared static", Current.Span);
             if (Check(TokenKind.Class))
-                return Finish(ParseClassDeclaration(accessibility, isAbstract, line, attributes));
+                return Finish(ParseClassDeclaration(accessibility, isAbstract, line, attributes, isStatic));
             if (Check(TokenKind.Struct))
                 return Finish(ParseStructDeclaration(accessibility, line, attributes));
 

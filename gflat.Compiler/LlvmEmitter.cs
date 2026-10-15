@@ -1098,6 +1098,12 @@ public partial class LlvmEmitter : IVisitor
 
         try
         {
+            if (node.IsStatic)
+            {
+                // A static class is a declaration scope, not an object layout.
+                foreach (AstNode member in node.Members) member.Accept(this);
+                return;
+            }
             // 1. Emit class struct layout: %ClassName = type { i8**, fields... }
             List<string> llvmFieldTypes = new() { "i8**" };
             foreach (var field in _currentClass!.Fields)
@@ -4574,7 +4580,7 @@ public partial class LlvmEmitter : IVisitor
         Emit("define i8** @gflat_get_parent_vtable(i8** %vt) {");
         Emit("entry:");
         int idx = 0;
-        foreach (TypeChecker.ClassInfo cls in _typeChecker.GetAllClasses())
+        foreach (TypeChecker.ClassInfo cls in _typeChecker.GetAllClasses().Where(c => !c.IsStatic))
         {
             string checkNext = $"check_{idx++}";
             string matchLbl = $"match_{idx++}";

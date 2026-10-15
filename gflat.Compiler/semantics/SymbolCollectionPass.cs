@@ -114,6 +114,7 @@ namespace gflat.semantics
                             nestedCls.Attributes,
                             nestedCls.GenericParameters
                         );
+                        qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.Span = nestedCls.Span;
                         str.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath);
@@ -193,6 +194,7 @@ namespace gflat.semantics
                     Namespace = nsPath,
                     BaseClass = cls.BaseClass,
                     IsAbstract = cls.IsAbstract,
+                    IsStatic = cls.IsStatic,
                     Accessibility = cls.Accessibility,
                     Interfaces = new List<string>(cls.Interfaces),
                     Line = cls.Line,
@@ -215,6 +217,7 @@ namespace gflat.semantics
                             nestedCls.Attributes,
                             nestedCls.GenericParameters
                         );
+                        qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.Span = nestedCls.Span;
                         cls.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath);

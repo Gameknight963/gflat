@@ -106,6 +106,7 @@ public sealed partial class EditorModel
             if (access != null) Keyword(access);
         }
         if (symbol.Syntax.Node.IsInline) Keyword("inline");
+        if (symbol.Syntax.Node is ClassDeclaration { IsStatic: true }) Keyword("static");
         if (symbol.Syntax.Node is MethodDeclaration method)
         {
             if (method.IsStatic) Keyword("static");
@@ -217,7 +218,7 @@ public sealed partial class EditorModel
         // visited later declarations after an error, or specialized a template.
         if ((!IsType(symbol.Syntax.Node) && symbol.Syntax.Node is not AliasDeclaration) ||
             snapshot.Checker is not { } checker || snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error) ||
-            symbol.Syntax.Node is ClassDeclaration { IsGeneric: true } or StructDeclaration { IsGeneric: true }) return [];
+            symbol.Syntax.Node is ClassDeclaration { IsGeneric: true } or ClassDeclaration { IsStatic: true } or StructDeclaration { IsGeneric: true }) return [];
         TypeExpression? type = IsType(symbol.Syntax.Node) ? new NamedTypeExpression(symbol.Qualified, null, 0) : symbol.Type;
         if (type == null) return [];
         var recorded = checker.GetType(symbol.Syntax.Node);

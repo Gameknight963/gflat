@@ -237,6 +237,7 @@ namespace gflat
             public string Namespace = "";
             public string? BaseClass = null;
             public bool IsAbstract = false;
+            public bool IsStatic;
             public TokenKind Accessibility = TokenKind.Public;
             public List<string> Interfaces = new();
             public List<(string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass)> Fields = new();
@@ -1240,6 +1241,8 @@ namespace gflat
         private void ValidateTypeUsage(TypeExpression type, int line)
         {
             TypeExpression resolved = ResolveAlias(type);
+            if (resolved is NamedTypeExpression staticType && GetClass(staticType.Name) is { IsStatic: true })
+                throw new TypeCheckException($"Static class '{staticType.Name}' cannot be used as an instance type", line);
             if (resolved is NamedTypeExpression unknown && !IsPrimitive(unknown.Name) && !IsError(unknown) &&
                 !_classes.ContainsKey(unknown.Name) && !_structs.ContainsKey(unknown.Name) &&
                 !_interfaces.ContainsKey(unknown.Name) && ResolveEnum(unknown) == null)
@@ -2133,6 +2136,7 @@ namespace gflat
                             nestedCls.Attributes,
                             nestedCls.GenericParameters
                         );
+                        qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.Span = nestedCls.Span;
                         str.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath);
@@ -2208,6 +2212,7 @@ namespace gflat
                     Namespace = nsPath,
                     BaseClass = cls.BaseClass,
                     IsAbstract = cls.IsAbstract,
+                    IsStatic = cls.IsStatic,
                     Accessibility = cls.Accessibility,
                     Interfaces = new List<string>(cls.Interfaces),
                     Line = cls.Line,
@@ -2230,6 +2235,7 @@ namespace gflat
                             nestedCls.Attributes,
                             nestedCls.GenericParameters
                         );
+                        qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.Span = nestedCls.Span;
                         cls.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath);
@@ -2339,6 +2345,7 @@ namespace gflat
         public void Visit(ClassDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            ValidateStaticClass(node);
             if (node.IsGeneric) return;
 
             ClassInfo? prevClass = _currentClass;
@@ -5005,6 +5012,8 @@ namespace gflat
 
             if (_classes.TryGetValue(named.Name, out ClassInfo? cInfo))
             {
+                if (cInfo.IsStatic)
+                    throw new TypeCheckException($"Cannot construct static class '{cInfo.Name}'", node.Span);
                 if (cInfo.IsAbstract)
                 {
                     ReportError(DiagnosticRules.GF1000_GeneralTypeError, node.Line, 0, $"Cannot instantiate abstract class '{cInfo.Name}'");

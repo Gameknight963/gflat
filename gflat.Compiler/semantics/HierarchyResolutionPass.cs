@@ -80,6 +80,8 @@ namespace gflat.semantics
                         {
                             throw new TypeCheckException($"Class '{cls.Name}' cannot inherit from multiple classes ('{cls.BaseClass}' and '{resolvedItem}')", cls.Line);
                         }
+                        if (_symbols.Classes[resolvedItem].IsStatic)
+                            throw new TypeCheckException($"Cannot inherit from static class '{resolvedItem}'", cls.Span);
                         cls.BaseClass = resolvedItem;
                     }
                     else

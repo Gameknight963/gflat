@@ -31,6 +31,12 @@ public partial class TypeChecker
             scope?.Classes.TryGetValue(type.Member, out cls);
             scope?.Structs.TryGetValue(type.Member, out str);
         }
+        if (cls == null && str == null && StaticOwnerType(access.Left) is { } ownerType &&
+            ResolveAlias(ownerType) is NamedTypeExpression resolvedOwner)
+        {
+            cls = GetClass(resolvedOwner.Name);
+            str = GetStruct(resolvedOwner.Name);
+        }
         MethodDeclaration? method = null;
         string? owner = null;
         if (cls != null && cls.Methods.TryGetValue(access.Member, out var entry))
@@ -49,4 +55,12 @@ public partial class TypeChecker
             throw new TypeCheckException($"Cannot access protected method '{access.Member}'", access.Line);
         return method;
     }
+
+    private static TypeExpression? StaticOwnerType(AstNode expression) => expression switch
+    {
+        IdentifierExpression id => new NamedTypeExpression(id.Name, null, id.Line) { Span = id.Span },
+        NamespaceAccessExpression access when StaticOwnerType(access.Left) is { } parent
+            => new NestedTypeExpression(parent, access.Member, [], access.Line) { Span = access.Span },
+        _ => null
+    };
 }

@@ -72,7 +72,7 @@ namespace gflat.ast
             List<GenericParameter>? genericParams = c.GenericParameters != null && c.Name != _oldName
                 ? c.GenericParameters.ToList()
                 : null;
-            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams);
+            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams) { IsStatic = c.IsStatic };
         }
 
         public MethodDeclaration CloneMethod(MethodDeclaration m)

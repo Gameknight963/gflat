@@ -77,7 +77,7 @@ int value = ParseInt("42");
 
 ## Integer sequences
 
-With `using std;`, `Range(start, count)` describes consecutive integers without
+With `using std;`, `new IntRange(start, count)` describes consecutive integers without
 allocating a buffer. `Where` accepts a `bool(int)*` callback; typed noncapturing
 lambdas work directly. `Take` and `Skip` return new sequence values:
 
@@ -86,7 +86,7 @@ using std;
 
 int main()
 {
-    FilteredIntRange values = Range(0, 20).Where((int n) => n % 2 == 0).Skip(1).Take(3);
+    FilteredIntRange values = new IntRange(0, 20).Where((int n) => n % 2 == 0).Skip(1).Take(3);
     int total = 0;
     foreach (int n in values) total += n; // 2 + 4 + 6
     return total;
@@ -203,7 +203,7 @@ A string byte view is `new Span<readonly(char)>(text.Data, text.Length)`.
 `Attribute.gf`, `Exception.gf`, and `Text.gf` contain the compiler-recognized base
 classes and formatting interfaces. They currently retain their global names and
 are included automatically, once per compilation. The default memory implementation
-lives in `std/libc/Memory.gf` and is also included automatically for now.
+lives in `std/libc/Memory/Memory.gf` and is also included automatically for now.
 
 These files ship as source alongside the compiler and language server in `Std/`.
 Explicit project inputs with the same std-relative paths use those source snapshots

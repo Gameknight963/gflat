@@ -62,12 +62,12 @@ struct IntRange
     public inline readonly IntRange::Enumerator GetEnumerator() => new IntRange::Enumerator(first, count);
 
     FilteredIntRange Where(bool(int)* predicate)
-        => new FilteredIntRange(this, predicate, 0, source.Count, false);
+        => new FilteredIntRange(*this, predicate, 0, this.Count, false);
 
     IntRange Take(int count)
     {
         if (count < 0) throw new Exception("Take count must be nonnegative");
-        if (count > this.Count) count = source.Count;
+        if (count > this.Count) count = this.Count;
         return new IntRange(this.Start, count);
     }
 

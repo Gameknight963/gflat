@@ -11,11 +11,11 @@ int main(int argc, char** argv)
     }
     try
     {
-        int start = argv[1].ParseInt();
-        int count = argv[2].ParseInt();
+        int start = std::ParseInt(argv[1]);
+        int count = std::ParseInt(argv[2]);
         bool(int)* predicate = (int n) => true;
         if (argc == 4) predicate = (int n) => n % 2 == 0;
-        FilteredIntRange values = Range(start, count).Where(predicate);
+        FilteredIntRange values = new IntRange(start, count).Where(predicate);
         Console::Writer output = new Console::Writer();
         foreach (int value in values)
         {

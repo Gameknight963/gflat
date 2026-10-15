@@ -92,7 +92,7 @@ struct FilteredIntRange
     int Count()
     {
         int count = 0;
-        foreach (int value in this.source) count++;
+        foreach (int value in *this) count++;
         return count;
     }
 
@@ -104,7 +104,7 @@ struct FilteredIntRange
     long Sum()
     {
         long sum = 0;
-        foreach (int value in this) sum += (long)value;
+        foreach (int value in *this) sum += (long)value;
         return sum;
     }
 }

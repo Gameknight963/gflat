@@ -19,8 +19,8 @@ public class WeakReplacementTests
     [Theory]
     [InlineData("class")]
     [InlineData("struct")]
-    public void InstanceMethodsCanBeReplaced(string kind)
-        => Assert.Equal(42, CompilerTestHelper.Run(kind + " C { public int x; public weak int value() => 7; public replace int value() => x; } int main() { C c = new C(); c.x = 42; return c.value(); }").ExitCode);
+    public void InstanceMethodsUseInheritanceRatherThanProviderReplacement(string kind)
+        => Assert.Contains("static methods", Assert.Throws<TypeCheckException>(() => Compiler.Check(kind + " C { public weak int value() => 7; public replace int value() => 42; }")).Message);
 
     [Theory]
     [InlineData("class")]
@@ -29,8 +29,8 @@ public class WeakReplacementTests
         => Assert.Equal(42, CompilerTestHelper.Run("namespace N { " + kind + " C { public static weak int value(int x) => 7; public static replace int value(int x) => helper(x); private static int helper(int x) => x; } } int main() => N::C::value(42);").ExitCode);
 
     [Fact]
-    public void VirtualReplacementAndDerivedOverrideRemainSeparate()
-        => Assert.Equal(42, CompilerTestHelper.Run("class C { public virtual weak int value() => 7; public virtual replace int value() => 20; } class D : C { public override int value() => 22; } int main() { C c = new C(); D d = new D(); C* p = &d; return c.value() + p.value(); }").ExitCode);
+    public void VirtualMethodsCannotAlsoSelectACompileTimeReplacement()
+        => Assert.Contains("static methods", Assert.Throws<TypeCheckException>(() => Compiler.Check("class C { public virtual weak int value() => 7; }")).Message);
 
     [Fact]
     public void GenericReplacementMatchesParametersByPosition()
@@ -53,7 +53,7 @@ public class WeakReplacementTests
 
     [Fact]
     public void NestedTypeIsNotQualifiedTwiceDuringSelection()
-        => Assert.Equal(42, CompilerTestHelper.Run("class Outer { public class Inner { public weak int f() => 7; public replace int f() => 42; } } int main() { Outer::Inner x = new Outer::Inner(); return x.f(); }").ExitCode);
+        => Assert.Equal(42, CompilerTestHelper.Run("class Outer { public class Inner { public static weak int f() => 7; public static replace int f() => 42; } } int main() => Outer::Inner::f();").ExitCode);
 
     [Fact]
     public void GenericPointerShapesMatchWithoutEarlyInstantiation()
@@ -81,8 +81,8 @@ public class WeakReplacementTests
     [InlineData("const weak int f() nothrow => 1; replace int f() => 2;", "must match")]
     [InlineData("weak int f(readonly(char)* p) => 1; replace int f(char* p) => 2;", "matching weak")]
     [InlineData("weak int f(void*? p) => 1; replace int f(void* p) => 2;", "matching weak")]
-    [InlineData("class C { public weak int f() => 1; public static replace int f() => 2; }", "must match")]
-    [InlineData("class C { public weak int f() => 1; } class D : C { public replace int f() => 2; }", "matching weak")]
+    [InlineData("class C { public weak int f() => 1; public static replace int f() => 2; }", "static methods")]
+    [InlineData("class C { public weak int f() => 1; } class D : C { public replace int f() => 2; }", "static methods")]
     [InlineData("namespace N { weak int f() => 1; } namespace M { replace int f() => 2; }", "matching weak")]
     [InlineData("weak int x;", "ordinary functions")]
     [InlineData("weak class C {}", "ordinary functions")]
@@ -92,7 +92,7 @@ public class WeakReplacementTests
     [InlineData("weak replace int f() => 1;", "exactly one")]
     [InlineData("weak int f(int[2] x) => 1; replace int f(int[3] x) => 2;", "matching weak")]
     [InlineData("weak int f(const int x) => 1; replace int f(int x) => 2;", "must match")]
-    [InlineData("class C { public readonly weak int f() => 1; public replace int f() => 2; }", "must match")]
+    [InlineData("class C { public readonly weak int f() => 1; public replace int f() => 2; }", "static methods")]
     [InlineData("extern int f(); weak int f() => 1;", "extern declaration")]
     [InlineData("weak int f() => 1; int f(int x) => x;", "Overloading weak")]
     [InlineData("class C { public static virtual weak int f() => 1; }", "Static methods cannot")]

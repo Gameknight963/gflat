@@ -34,6 +34,9 @@ public partial class TypeChecker
                     if (method.ImplementationKind != FunctionImplementationKind.Ordinary &&
                         (method.ImplementationKind != FunctionImplementationKind.Expect && method.Body == null || method.IsAbstract || entry.Owner is InterfaceDeclaration))
                         throw new TypeCheckException("weak and replace require a concrete function body", method.Line);
+                    if (method.ImplementationKind != FunctionImplementationKind.Ordinary &&
+                        entry.Owner is ClassDeclaration or StructDeclaration && !method.IsStatic)
+                        throw new TypeCheckException("expect, weak and replace apply to namespace functions and static methods; use virtual and override for instance methods", method.Span);
                     if (method.ImplementationKind != FunctionImplementationKind.Replace) continue;
                     var defaults = functions.Where(e => e.Method.ImplementationKind is FunctionImplementationKind.Weak or FunctionImplementationKind.Expect &&
                         ParametersMatch(e.Method, method)).ToList();

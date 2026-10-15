@@ -8,6 +8,7 @@ public partial class TypeChecker
     private readonly Dictionary<string, AliasDeclaration> constrainedAliases = new();
     private readonly Dictionary<TypeExpression, string> aliasTargetNamespaces = new();
     private readonly Dictionary<TypeExpression, AliasDeclaration> aliasContracts = new();
+    private readonly HashSet<TypeExpression> selectedAliasTargets = new();
     private readonly HashSet<string> validatingAliasSpecializations = new();
 
     // A previously emitted specialization may have been reached first through the
@@ -111,10 +112,12 @@ public partial class TypeChecker
                 if (replacement.Alias.Constraints.Count != 0)
                     throw new TypeCheckException("A replacement inherits its alias contract and cannot redeclare constraints", replacement.Alias.Span);
                 original.Alias.TargetType = replacement.Alias.TargetType;
+                declarationNamespaces[replacement.Alias] = group.Key.Scope;
                 replacement.Members.Remove(replacement.Alias);
             }
             else if (original.Alias.ImplementationKind == FunctionImplementationKind.Expect)
                 throw new TypeCheckException($"Expected alias '{group.Key.Name}' has no implementation; provide replace alias", original.Alias.Span);
+            selectedAliasTargets.Add(original.Alias.TargetType);
             if (original.Alias.Constraints.Count != 0)
             {
                 constrainedAliases[Join(group.Key.Scope, group.Key.Name)] = original.Alias;
@@ -142,7 +145,7 @@ public partial class TypeChecker
                     throw new TypeCheckException($"Implementation of alias '{alias.Name}' does not satisfy '{TypeName(constraint)}'", alias.Span);
         }
         // Diagnose cycles even when an alias is never used by a body.
-        foreach (var target in aliasTargetNamespaces.Keys.ToArray()) ResolveAliasBindingTarget(target);
+        foreach (var target in selectedAliasTargets.ToArray()) ResolveAliasBindingTarget(target);
     }
 
     private void ValidateAliasMember(NamespaceAccessExpression access, MethodDeclaration? selectedMethod = null)

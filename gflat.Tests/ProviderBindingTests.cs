@@ -117,6 +117,16 @@ public sealed class ProviderBindingTests
             """).ExitCode);
     }
 
+    [Fact]
+    public void UnselectedAliasDefaultDoesNotInstantiateUnavailableDependencies()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run("""
+            weak alias Selected = Missing<int>;
+            replace alias Selected = int;
+            int main() { Selected value = 42; return value; }
+            """).ExitCode);
+    }
+
     [Theory]
     [InlineData("expect int Missing();", "has no implementation")]
     [InlineData("expect alias Missing;", "has no implementation")]

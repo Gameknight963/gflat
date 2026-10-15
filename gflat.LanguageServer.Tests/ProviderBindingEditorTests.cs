@@ -11,7 +11,8 @@ public sealed class ProviderBindingEditorTests
     [InlineData("Selected")]
     [InlineData("Another")]
     [InlineData("Api::Selected")]
-    public void ProviderCompletionOffersOnlyTheContract(string qualifier)
+    [InlineData("Selected", true)]
+    public void ProviderCompletionOffersOnlyTheContract(string qualifier, bool replace = false)
     {
         string ns = qualifier.Contains("::") ? "namespace Api {" : "";
         string close = ns.Length == 0 ? "" : "}";
@@ -23,6 +24,7 @@ public sealed class ProviderBindingEditorTests
                 public static int Extra() => 0;
             }
             weak alias Selected : IProvider = Answer;
+            {{(replace ? "replace alias Selected = Answer;" : "")}}
             alias Another = Selected;
             {{close}}
             int main() => {{qualifier}}::Read();

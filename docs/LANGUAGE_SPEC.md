@@ -1135,6 +1135,8 @@ that integration.
 `expect` declares a namespace function or static member whose implementation must
 be supplied by exactly one matching `replace` declaration in the compilation.
 `weak` supplies a default body instead. These modifiers are mutually exclusive.
+They apply to namespace functions and static methods. Instance methods use
+`abstract`, `virtual`, and `override` for implementations selected through inheritance.
 Qualified namespace function declarations use their named owner independently of
 file order. Qualified static definitions implement an `expect` or `weak` member
 already declared inside its closed type.
@@ -1144,6 +1146,9 @@ namespace Services { public expect int Read(); }
 replace int Services::Read() => 42;
 
 interface ILogger { static void Write(readonly(char*) text); }
+static class ApplicationLogger : ILogger {
+    public static void Write(readonly(char*) text) { }
+}
 public expect alias Logger : ILogger;
 replace alias Logger = ApplicationLogger;
 ```
@@ -1153,3 +1158,6 @@ An `expect alias` has no initializer. Missing implementations, multiple defaults
 multiple replacements, and replacement of an ordinary alias are errors. Alias
 constraints follow `:`. They validate the selected implementation and limit
 static member access through the alias to the declared contract.
+Provider aliases are namespace declarations; nested provider aliases inside types
+are not supported yet. Ordinary local aliases retain a constrained provider's
+contract, and generic forwarding does not expose implementation-only members.

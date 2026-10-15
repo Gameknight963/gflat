@@ -223,6 +223,13 @@ public sealed partial class EditorModel
         var seen = new HashSet<Symbol>();
         while (alias.Syntax.Node is AliasDeclaration declaration && seen.Add(alias))
         {
+            if (declaration.ImplementationKind == FunctionImplementationKind.Replace &&
+                symbols.FirstOrDefault(s => s.Qualified == alias.Qualified &&
+                    s.Syntax.Node is AliasDeclaration { ImplementationKind: not FunctionImplementationKind.Replace }) is { } original)
+            {
+                alias = original;
+                continue;
+            }
             string declaringPath = alias.NameSpan.Source?.Path ?? path;
             int declaringOffset = alias.NameSpan.Start;
             if (declaration.Constraints.Count > 0)

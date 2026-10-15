@@ -116,4 +116,25 @@ public sealed class ManagedCollectorSelectionTests
             """));
         Assert.Contains("different collector", error.Message);
     }
+
+    [Fact]
+    public void RawAdoptionRequiresAConcreteCollectorBinding()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("int main() { int value = 42; int^ reference = (int^)&value; return *reference; }"));
+        Assert.Contains("collector provider", error.Message);
+    }
+
+    [Fact]
+    public void InheritedProviderOperationsCallTheirDeclaringClass()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run(Providers + """
+            class BaseCollector {
+                public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;
+                public static void ReferenceAdded(void* slot) nothrow {}
+                public static void ReferenceRemoved(void* slot) nothrow {}
+            }
+            class DerivedCollector : BaseCollector {}
+            int main() { managed<int, DerivedCollector> item = new^ int(42) with DerivedCollector; return *item; }
+            """).ExitCode);
+    }
 }

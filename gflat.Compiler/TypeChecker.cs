@@ -5818,9 +5818,15 @@ namespace gflat
             dst = ResolveAlias(dst);
             if (src is ManagedTypeExpression sourceCollector && dst is ManagedTypeExpression targetCollector &&
                 !TypesMatch(ResolveCollectorType(sourceCollector.Collector, sourceCollector.Line), ResolveCollectorType(targetCollector.Collector, targetCollector.Line))) return false;
-            if (src is PointerTypeExpression && dst is ManagedTypeExpression rawTarget &&
-                (ResolveAlias(rawTarget.Inner) is not NamedTypeExpression rawInner || !IsInterface(rawInner))) return true;
-            if (src is ManagedTypeExpression rawSource && dst is PointerTypeExpression &&
+            if (src is PointerTypeExpression nativeSource && dst is ManagedTypeExpression rawTarget &&
+                (ResolveAlias(nativeSource.Inner) is not NamedTypeExpression nativeSourceInner || !IsInterface(nativeSourceInner)) &&
+                (ResolveAlias(rawTarget.Inner) is not NamedTypeExpression rawInner || !IsInterface(rawInner)))
+            {
+                GetCollectorBinding(rawTarget);
+                return true;
+            }
+            if (src is ManagedTypeExpression rawSource && dst is PointerTypeExpression nativeTarget &&
+                (ResolveAlias(nativeTarget.Inner) is not NamedTypeExpression nativeTargetInner || !IsInterface(nativeTargetInner)) &&
                 (ResolveAlias(rawSource.Inner) is not NamedTypeExpression rawSourceInner || !IsInterface(rawSourceInner))) return true;
             if (src.IsReadOnlyValue && !dst.IsReadOnlyValue && !CanCopyReadOnlyValue(src))
                 return false;

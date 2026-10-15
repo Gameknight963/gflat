@@ -285,8 +285,9 @@ This replaces the old prefix type syntax: write `readonly(char)*` instead of `re
 `managed<T, C>` is a copyable managed reference whose type identity includes the
 pointee `T` and collector provider `C`. `T^` abbreviates `managed<T, GC>`, where
 `GC` is a global type alias selected once for the whole compilation. File order
-and `using` directives do not select a different collector. A missing `GC` binding
-is diagnosed when the shorthand is used. `T^?` additionally permits null.
+and `using` directives do not select a different collector. Type-only queries can
+describe the default-reference shape without a provider; creating and tracking
+live references requires a concrete binding. `T^?` additionally permits null.
 
 The provider implements `std::IGarbageCollector`, a static interface declared in
 `std/core/GarbageCollector.gf`. Its operations are `Allocate(nuint bytes, nuint

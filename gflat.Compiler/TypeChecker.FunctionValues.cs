@@ -22,7 +22,7 @@ public partial class TypeChecker
             target = (AstNode?)ResolveFunction(id.Name) ?? ResolveExtern(id.Name);
         else if (expression is NamespaceAccessExpression access)
         {
-            target = ResolveStaticMethod(access);
+            target = ResolveStaticMethod(access, deferSelection: true);
             if (target == null && ResolveNamespace(access.Left) is { } scope)
                 target = (AstNode?)scope.Functions.GetValueOrDefault(access.Member) ?? scope.Externs.GetValueOrDefault(access.Member);
         }
@@ -47,6 +47,13 @@ public partial class TypeChecker
         var matches = family.Where(m => TypesMatch(FunctionValueType(m, expression.Line),
             new FunctionPointerTypeExpression(expected.ReturnType, expected.ParameterTypes, false, false, expected.Line))).ToArray();
         if (matches.Length != 1) return false;
+        NamespaceAccessExpression? name = expression switch {
+            NamespaceAccessExpression access => access,
+            UnaryExpression { Operand: NamespaceAccessExpression access } => access,
+            _ => null
+        };
+        if (name != null) ResolveStaticMethod(name, selectedValue: matches[0]);
+        ValidateFunctionAddress(matches[0], expression.Line);
         _functionAddressTargets[expression] = matches[0];
         selectedFunctionValues.Add(expression);
         RecordType(expression, FunctionValueType(matches[0], expression.Line));

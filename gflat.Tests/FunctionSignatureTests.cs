@@ -93,4 +93,19 @@ public sealed class FunctionSignatureTests
             int main() { int()*? callback = Answer; return callback!(); }
             """).ExitCode);
     }
+
+    [Theory]
+    [InlineData(false, "Functions::Double")]
+    [InlineData(true, "Functions::Double")]
+    [InlineData(false, "&Functions::Double")]
+    [InlineData(true, "&Functions::Double")]
+    public void SelectedOverloadControlsAccessChecks(bool reverse, string expression)
+    {
+        const string allowed = "public static int Double(int value) => value * 2;";
+        const string hidden = "private static long Double(long value) => value * 2L;";
+        string declaration = "static class Functions { " + (reverse ? hidden + allowed : allowed + hidden) + " }";
+        Assert.Equal(42, CompilerTestHelper.Run(declaration + "int main() { int(int)* callback = " + expression + "; return callback(21); }").ExitCode);
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(declaration + "void Test() { long(long)* callback = " + expression + "; }"));
+        Assert.Contains("private", error.Message);
+    }
 }

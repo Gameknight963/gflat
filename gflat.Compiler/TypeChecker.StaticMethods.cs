@@ -16,7 +16,8 @@ public partial class TypeChecker
         return false;
     }
 
-    private MethodDeclaration? ResolveStaticMethod(NamespaceAccessExpression access, CallExpression? call = null)
+    private MethodDeclaration? ResolveStaticMethod(NamespaceAccessExpression access, CallExpression? call = null,
+        bool deferSelection = false, MethodDeclaration? selectedValue = null)
     {
         ValidateAliasMember(access);
         ClassInfo? cls = null;
@@ -47,7 +48,10 @@ public partial class TypeChecker
         }
         else if (str != null && str.Methods.TryGetValue(access.Member, out method)) owner = str.Name;
         if (method == null) return null;
+        if (selectedValue != null) method = selectedValue;
         if (call != null) method = SelectOverload(method, call);
+        if (deferSelection && overloadFamilies.ContainsKey(method)) return method;
+        ValidateAliasMember(access, method);
         if (!method.IsStatic)
             throw new TypeCheckException($"Instance member '{access.Member}' must be accessed with '.', not '::'", access.Line);
         if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name ?? _currentStruct?.Name, owner!))

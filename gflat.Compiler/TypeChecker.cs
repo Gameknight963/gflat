@@ -3764,7 +3764,7 @@ namespace gflat
                 }
                 else if (node.Operand is NamespaceAccessExpression nsAccess)
                 {
-                    MethodDeclaration? staticMethod = ResolveStaticMethod(nsAccess);
+                    MethodDeclaration? staticMethod = ResolveStaticMethod(nsAccess, deferSelection: true);
                     if (staticMethod != null)
                     {
                         var parameters = staticMethod.Parameters.Select(p => ResolveAlias(p.Type)).ToList();

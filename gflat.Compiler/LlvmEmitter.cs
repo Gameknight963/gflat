@@ -1167,7 +1167,7 @@ public partial class LlvmEmitter : IVisitor
             foreach (string ifaceName in _currentClass.Interfaces)
             {
                 TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
-                if (ifaceInfo == null)
+                if (ifaceInfo == null || ifaceInfo.IsStaticContract)
                 {
                     continue;
                 }
@@ -1605,7 +1605,7 @@ public partial class LlvmEmitter : IVisitor
             foreach (string ifaceName in node.Interfaces)
             {
                 TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
-                if (ifaceInfo == null)
+                if (ifaceInfo == null || ifaceInfo.IsStaticContract)
                 {
                     continue;
                 }

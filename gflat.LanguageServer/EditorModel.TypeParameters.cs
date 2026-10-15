@@ -26,7 +26,7 @@ public sealed partial class EditorModel
             {
                 if (cursor >= ts.Length || ts[cursor].Kind != TokenKind.Identifier || ts[cursor].Text != parameter.Name) break;
                 symbols.Add(new(parameter.Name, 25, "typeParameter", owner.Syntax, ts[cursor].Span,
-                    owner.Namespace, owner.Owner, owner.Syntax, null, false, TokenKind.Public) { IsTypeParameter = true });
+                    owner.Namespace, owner.Owner, owner.Syntax, null, false, TokenKind.Public) { IsTypeParameter = true, TypeConstraint = parameter.Constraint });
                 // A later parameter can also occur inside an earlier constraint.
                 // Only a comma at the header's outer depth starts its declaration.
                 int depth = 1;

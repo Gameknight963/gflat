@@ -389,6 +389,8 @@ namespace gflat.ast
             }
             if (node is NamespaceAccessExpression nsAcc)
             {
+                if (nsAcc.Left is IdentifierExpression id && _typeMap.TryGetValue(id.Name, out var provider))
+                    return new NamespaceAccessExpression(provider, nsAcc.Member, nsAcc.Line);
                 return new NamespaceAccessExpression(CloneNode(nsAcc.Left), nsAcc.Member, nsAcc.Line);
             }
             if (node is ThrowStatement throwStmt)

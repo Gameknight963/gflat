@@ -20,6 +20,7 @@ public sealed partial class EditorModel
         public MethodDeclaration? BoundMethod { get; init; }
         public bool BoundExtension { get; init; }
         public bool IsTypeParameter { get; init; }
+        public TypeExpression? TypeConstraint { get; init; }
         public IReadOnlyList<Parameter>? Parameters => IsTypeParameter ? null : BoundParameters ?? (Syntax.Node switch { MethodDeclaration m => m.Parameters, ExternDeclaration e => e.Parameters, ConstructorDeclaration c => c.Parameters, _ => null });
     }
     private readonly AnalysisSnapshot snapshot;
@@ -187,8 +188,12 @@ public sealed partial class EditorModel
             string qualifier = string.Concat(ts[start..separatorIndex].Select(t => t.Text));
             if (qualifier.StartsWith("global::")) qualifier = qualifier[8..];
             if (qualifier == "global") qualifier = "";
-            var resolved = Visible(path, offset).FirstOrDefault(s => s.Name == qualifier && (IsType(s.Syntax.Node) || s.Classification == "namespace"));
-            qualifier = resolved?.Qualified ?? qualifier;
+            var resolved = Visible(path, offset).FirstOrDefault(s => s.Name == qualifier && (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || s.Classification == "namespace"));
+            qualifier = resolved is { IsTypeParameter: true }
+                ? TypeOwner(resolved.TypeConstraint, path, offset) ?? qualifier
+                : resolved?.Syntax.Node is AliasDeclaration
+                    ? TypeOwner(resolved.Type, path, offset) ?? qualifier
+                    : resolved?.Qualified ?? qualifier;
             return symbols.Where(s => s.Scope == null &&
                 (s.Namespace == qualifier && s.Owner == null || s.Owner == qualifier && (s.Static || IsType(s.Syntax.Node))) && Accessible(s, path, offset));
         }

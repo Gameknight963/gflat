@@ -29,7 +29,7 @@ public partial class TypeChecker
                 {
                     MethodDeclaration method = entry.Method;
                     using var methodContext = SourceContext.Enter(method.Span);
-                    if (method.IsStatic && (method.IsVirtual || method.IsOverride || method.IsAbstract))
+                    if (method.IsStatic && (method.IsVirtual || method.IsOverride || method.IsAbstract && entry.Owner is not InterfaceDeclaration))
                         throw new TypeCheckException("Static methods cannot be virtual, override or abstract", method.Line);
                     if (method.ImplementationKind != FunctionImplementationKind.Ordinary &&
                         (method.Body == null || method.IsAbstract || entry.Owner is InterfaceDeclaration))

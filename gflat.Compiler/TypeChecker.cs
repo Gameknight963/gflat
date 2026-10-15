@@ -223,6 +223,7 @@ namespace gflat
 
         public class InterfaceInfo
         {
+            public bool IsStaticContract => Methods.Count > 0 && Methods.All(m => m.IsStatic);
             public string Name = "";
             public string Namespace = "";
             public List<MethodDeclaration> Methods = new();
@@ -857,7 +858,7 @@ namespace gflat
             {
                 GenericParameter param = genericDef.GenericParameters[i];
                 TypeExpression arg = typeArgs[i];
-                if (param.Constraint != null && !TypeSatisfiesConstraint(arg, param.Constraint))
+                if (param.Constraint != null && !TypeSatisfiesDeclaredConstraint(genericDef, arg, param.Constraint))
                 {
                     throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on struct '{genericDef.Name}'", line);
                 }
@@ -899,7 +900,7 @@ namespace gflat
             {
                 GenericParameter param = genericDef.GenericParameters[i];
                 TypeExpression arg = typeArgs[i];
-                if (param.Constraint != null && !TypeSatisfiesConstraint(arg, param.Constraint))
+                if (param.Constraint != null && !TypeSatisfiesDeclaredConstraint(genericDef, arg, param.Constraint))
                 {
                     throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on class '{genericDef.Name}'", line);
                 }
@@ -1256,6 +1257,7 @@ namespace gflat
             }
             if (resolved is ManagedTypeExpression managed)
             {
+                ValidateInterfaceReference(managed.Inner, line);
                 if (HasDestructor(managed.Inner))
                     throw new TypeCheckException("Managed pointers cannot reference types with destructors (including base classes and inline fields)", line);
                 if (ResolveAlias(managed.Inner) is not NamedTypeExpression namedInner || !IsInterface(namedInner))
@@ -1272,6 +1274,7 @@ namespace gflat
             }
             else if (resolved is PointerTypeExpression ptr)
             {
+                ValidateInterfaceReference(ptr.Inner, line);
                 if (ResolveAlias(ptr.Inner) is not NamedTypeExpression inner || !IsInterface(inner))
                     ValidateTypeUsage(ptr.Inner, line);
             }
@@ -2372,6 +2375,7 @@ namespace gflat
                         }
 
                         MethodDeclaration classMethod = InterfaceImplementation(mEntry.Method, ifaceMethod);
+                        ValidateStaticContractImplementation(ifaceMethod, classMethod);
                         if (classMethod.PropertyName != null && classMethod.Accessibility != TokenKind.Public)
                             throw new TypeCheckException($"Property accessor '{classMethod.PropertyName}' must be public to implement an interface", classMethod.Line);
                         if (ifaceMethod.IsNoThrow != classMethod.IsNoThrow)
@@ -2538,7 +2542,7 @@ namespace gflat
             try
             {
                 // Validate implemented interfaces
-                foreach (string ifaceName in node.Interfaces)
+                foreach (string ifaceName in _currentStruct.Interfaces)
                 {
                     InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
                     if (ifaceInfo == null)
@@ -2554,6 +2558,7 @@ namespace gflat
                         }
 
                         structMethod = InterfaceImplementation(structMethod, ifaceMethod);
+                        ValidateStaticContractImplementation(ifaceMethod, structMethod);
                         if (structMethod.PropertyName != null && structMethod.Accessibility != TokenKind.Public)
                             throw new TypeCheckException($"Property accessor '{structMethod.PropertyName}' must be public to implement an interface", structMethod.Line);
                         if (ifaceMethod.IsNoThrow != structMethod.IsNoThrow)
@@ -2781,11 +2786,16 @@ namespace gflat
         public void Visit(InterfaceDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            var methods = node.Members.OfType<MethodDeclaration>().ToArray();
+            if (methods.Any(m => m.IsStatic) && methods.Any(m => !m.IsStatic))
+                throw new TypeCheckException("An interface cannot yet mix static and instance contracts", node.Span);
             foreach (AstNode member in node.Members)
             {
                 if (member is PropertyDeclaration) continue;
                 if (member is MethodDeclaration method)
                 {
+                    if (method.IsStatic && (method.IsReadOnly || method.IsVirtual || method.IsOverride || method.IsGeneric))
+                        throw new TypeCheckException("Static interface contracts cannot be readonly, virtual, override, or generic", method.Span);
                     ValidatePropertyAccessor(method);
                     if (method.Body != null)
                     {
@@ -4546,7 +4556,7 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
                 }
-                if (nsAccess.Left is not IdentifierExpression && nsAccess.Left is not GlobalExpression && nsAccess.Left is not NamespaceAccessExpression)
+                if (nsAccess.Left is not IdentifierExpression && nsAccess.Left is not GlobalExpression && nsAccess.Left is not NamespaceAccessExpression && nsAccess.Left is not TypeExpression)
                 {
                     throw new TypeCheckException($"Instance member '{nsAccess.Member}' must be accessed with '.', not '::'", node.Line);
                 }

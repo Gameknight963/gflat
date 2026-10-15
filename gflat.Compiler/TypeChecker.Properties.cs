@@ -60,8 +60,8 @@ public partial class TypeChecker
                         throw new TypeCheckException("All accessors of a property must either have bodies or be automatic", property.Line);
                     if (owner is StructDeclaration && accessors.Any(a => a.IsVirtual || a.IsOverride || a.IsAbstract))
                         throw new TypeCheckException("Struct properties cannot be virtual, override, or abstract", property.Line);
-                    if (accessors.Any(a => a.IsStatic && (a.IsVirtual || a.IsOverride || a.IsAbstract)) || owner is InterfaceDeclaration && accessors.Any(a => a.IsStatic))
-                        throw new TypeCheckException("Static properties cannot be virtual, abstract, or interface members", property.Line);
+                    if (accessors.Any(a => a.IsStatic && (a.IsVirtual || a.IsOverride || a.IsAbstract)))
+                        throw new TypeCheckException("Static properties cannot be virtual or abstract", property.Line);
                     if (property.Name == "$index" && (auto || property.Initializer != null))
                         throw new TypeCheckException("Indexers require accessor bodies (or abstract/interface signatures) and cannot have initializers", property.Line);
                     if (auto && accessors[0].IsStatic)
@@ -188,9 +188,13 @@ public partial class TypeChecker
                 {
                     if (TryLookupVariable(typeName.Name, out _)) return null;
                     owner = GetClass(typeName.Name)?.Name ?? GetStruct(typeName.Name)?.Name;
+                    if (owner == null && ResolveAlias(new NamedTypeExpression(typeName.Name, null, typeName.Line)) is NamedTypeExpression alias)
+                        owner = GetClass(alias.Name)?.Name ?? GetStruct(alias.Name)?.Name;
                 }
                 else if (access.Left is NamespaceAccessExpression qualified && ResolveNamespace(qualified.Left) is NamespaceScope scope)
                     owner = scope.Classes.GetValueOrDefault(qualified.Member)?.Name ?? scope.Structs.GetValueOrDefault(qualified.Member)?.Name;
+                else if (StaticOwnerType(access.Left) is { } ownerType && ResolveAlias(ownerType) is NamedTypeExpression namedOwner)
+                    owner = GetClass(namedOwner.Name)?.Name ?? GetStruct(namedOwner.Name)?.Name;
                 else return null;
                 break;
             default: return null;

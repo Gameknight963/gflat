@@ -496,6 +496,20 @@ alias Integers = Values<int>;
 int Example() => Integers::Identity(42);
 ```
 
+An interface whose members are all static describes a compile-time provider contract. Static classes, ordinary classes, and structs can implement it with public static methods or explicit static properties. Generic code calls these members with `P::Member`; specialization selects the implementation directly, without an instance or dispatch table. Such interfaces cannot be used as pointer or managed-reference types. Mixing static and instance members in one interface, generic interface methods, and overloaded interface methods are not yet supported. Constraints resolve in the declaring library's scope, not the caller's.
+
+```gflat
+interface ITransform { static int Apply(int value); }
+static class Increment : ITransform {
+    public static int Apply(int value) => value + 1;
+}
+static class Pipeline<P : ITransform> {
+    public static int Run(int value) => P::Apply(P::Apply(value));
+}
+alias Selected = Pipeline<Increment>;
+int Example() => Selected::Run(40);
+```
+
 Classes and structs support explicit accessors, expression-bodied getters, and auto-properties:
 
 ```gflat

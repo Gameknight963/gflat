@@ -5,12 +5,13 @@ namespace gflat;
 
 public partial class TypeChecker
 {
-    private static void ValidateStaticClass(ClassDeclaration node)
+    private void ValidateStaticClass(ClassDeclaration node)
     {
         if (!node.IsStatic) return;
         if (node.IsAbstract)
             throw new TypeCheckException("A static class cannot be abstract", node.Span);
-        if (node.BaseClass != null || node.Interfaces.Count != 0)
+        if (node.BaseClass != null || node.Interfaces.Any(name =>
+            GetInterface(ResolveTypeIdentity(name, null) ?? name) is not { IsStaticContract: true }))
             throw new TypeCheckException("Static classes cannot have base types or instance interfaces", node.Span);
         foreach (var member in node.Members)
         {

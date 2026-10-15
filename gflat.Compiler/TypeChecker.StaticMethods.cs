@@ -58,6 +58,7 @@ public partial class TypeChecker
 
     private static TypeExpression? StaticOwnerType(AstNode expression) => expression switch
     {
+        TypeExpression type => type,
         IdentifierExpression id => new NamedTypeExpression(id.Name, null, id.Line) { Span = id.Span },
         NamespaceAccessExpression access when StaticOwnerType(access.Left) is { } parent
             => new NestedTypeExpression(parent, access.Member, [], access.Line) { Span = access.Span },

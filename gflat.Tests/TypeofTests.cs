@@ -5,6 +5,30 @@ namespace gflat.Tests;
 public class TypeofTests
 {
     [Fact]
+    public void BareFunctionSignaturesDescribeTheirShapeWithoutValueLayout()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run("""
+            alias Transform = int(readonly(char*), ref int);
+            const bool NoLayout = !typeof(Transform).HasLayout;
+            int main() {
+                std::TypeInfo info = typeof(Transform);
+                if (!NoLayout || info.IsPointer || info.Kind != std::TypeKind::FunctionSignature) return 1;
+                if (info.Size != (nuint)0 || info.Alignment != (nuint)0) return 2;
+                if (info.ReturnType!.Size != (nuint)4 || info.ParameterCount != (nuint)2) return 3;
+                if (info.ParameterTypes![0].Kind != std::TypeKind::Pointer || info.ParameterTypes![1].Kind != std::TypeKind::Reference) return 4;
+                if (!typeof(Transform*).IsPointer || !typeof(Transform*).HasLayout) return 5;
+                return 42;
+            }
+            """).ExitCode);
+    }
+
+    [Theory]
+    [InlineData("sizeof(int(int))")]
+    [InlineData("alignof(int(int))")]
+    public void BareFunctionSignaturesHaveNoSizeOrAlignment(string expression)
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check("int main() => " + expression + ";"));
+
+    [Fact]
     public void FunctionSignaturesHaveRecursiveReturnAndParameterDescriptors()
     {
         Assert.Equal(0, CompilerTestHelper.Run("""

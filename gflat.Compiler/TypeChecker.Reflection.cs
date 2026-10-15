@@ -15,7 +15,12 @@ public partial class TypeChecker
     public ConstValue DescribeType(TypeExpression type, int line)
     {
         type = ResolveAlias(type);
-        ValidateTypeUsage(type, line);
+        if (type is FunctionPointerTypeExpression { IsSignature: true } signature)
+        {
+            ValidateTypeUsage(signature.ReturnType, line);
+            foreach (var parameter in signature.ParameterTypes) ValidateParameterType(parameter, line);
+        }
+        else ValidateTypeUsage(type, line);
         return DescribeResolvedType(type, line);
     }
 
@@ -24,13 +29,14 @@ public partial class TypeChecker
     private ConstValue DescribeResolvedType(TypeExpression type, int line)
     {
         type = ResolveAlias(type);
-        bool hasLayout = type is not NamedTypeExpression named ||
-            named.Name != "void" && !IsInterface(named);
+        bool hasLayout = type is not FunctionPointerTypeExpression { IsSignature: true } &&
+            (type is not NamedTypeExpression named || named.Name != "void" && !IsInterface(named));
         bool isReference = type is ReferenceTypeExpression;
         int kind = type switch {
             PointerTypeExpression => 5,
             ManagedTypeExpression => 6,
             ArrayTypeExpression => 7,
+            FunctionPointerTypeExpression { IsSignature: true } => 10,
             FunctionPointerTypeExpression => 8,
             ReferenceTypeExpression => 9,
             NamedTypeExpression n when IsInterface(n) => 4,
@@ -52,7 +58,7 @@ public partial class TypeChecker
             ["HasLayout"] = new ConstValue.Boolean(hasLayout),
             ["Size"] = new ConstValue.UInteger((ulong)(!hasLayout ? 0 : isReference ? TargetInfo.Default.PointerBytes : GetTypeSize(type))),
             ["Alignment"] = new ConstValue.UInteger((ulong)(!hasLayout ? 0 : isReference ? TargetInfo.Default.PointerBytes : GetTypeAlignment(type))),
-            ["IsPointer"] = new ConstValue.Boolean(type is PointerTypeExpression or FunctionPointerTypeExpression),
+            ["IsPointer"] = new ConstValue.Boolean(type is PointerTypeExpression or FunctionPointerTypeExpression { IsSignature: false }),
             ["IsManaged"] = new ConstValue.Boolean(type is ManagedTypeExpression),
             ["IsNullable"] = new ConstValue.Boolean(type is PointerTypeExpression { IsNullable: true } or ManagedTypeExpression { IsNullable: true } or FunctionPointerTypeExpression { IsNullable: true }),
             ["IsReadOnly"] = new ConstValue.Boolean(type.IsReadOnlyValue),

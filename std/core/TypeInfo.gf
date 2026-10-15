@@ -11,7 +11,8 @@ public enum TypeKind
     ManagedPointer = 6,
     Array = 7,
     FunctionPointer = 8,
-    Reference = 9
+    Reference = 9,
+    FunctionSignature = 10
 }
 
 // A compiler-produced snapshot. Names point to static UTF-8 text.
@@ -20,7 +21,7 @@ public struct TypeInfo
 {
     public readonly(char*) Name;
     public readonly(TypeKind) Kind;
-    // No value layout exists for void or an interface itself. Their size and
+    // No value layout exists for void, a function signature, or an interface itself. Their size and
     // alignment are zero; an interface pointer has its own meaningful layout.
     public readonly(bool) HasLayout;
     public readonly(nuint) Size;

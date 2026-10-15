@@ -18,6 +18,7 @@ public partial class TypeChecker
 
     private MethodDeclaration? ResolveStaticMethod(NamespaceAccessExpression access, CallExpression? call = null)
     {
+        ValidateAliasMember(access);
         ClassInfo? cls = null;
         StructInfo? str = null;
         if (access.Left is IdentifierExpression id)

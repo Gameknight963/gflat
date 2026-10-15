@@ -298,16 +298,16 @@ namespace gflat
                     if (isStatic) throw new TypeCheckException("Duplicate static modifier", line);
                     isStatic = true;
                 }
-                else if (Check(TokenKind.Weak) || Check(TokenKind.Replace))
+                else if (Check(TokenKind.Weak) || Check(TokenKind.Replace) || Check(TokenKind.Expect))
                 {
                     if (implementation != FunctionImplementationKind.Ordinary)
-                        throw new TypeCheckException("Use exactly one of weak or replace", Current.Line);
-                    implementation = Consume().Kind == TokenKind.Weak ? FunctionImplementationKind.Weak : FunctionImplementationKind.Replace;
+                        throw new TypeCheckException("Use exactly one of expect, weak or replace", Current.Line);
+                    implementation = Consume().Kind switch { TokenKind.Weak => FunctionImplementationKind.Weak, TokenKind.Expect => FunctionImplementationKind.Expect, _ => FunctionImplementationKind.Replace };
                 }
                 else break;
             }
 
-            if (isStatic && !Check(TokenKind.Class))
+            if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Interface or TokenKind.Enum)
                 throw new TypeCheckException("Only classes can be declared static at namespace scope", Current.Span);
 
             if (Check(TokenKind.Extern))
@@ -318,7 +318,7 @@ namespace gflat
             }
 
             if (Check(TokenKind.Alias))
-                return Finish(ParseAliasDeclaration(accessibility, line));
+                return Finish(ParseAliasDeclaration(accessibility, line, implementation));
             if (Check(TokenKind.Enum))
                 return Finish(ParseEnumDeclaration(accessibility, line));
             if (Check(TokenKind.Class))
@@ -330,10 +330,11 @@ namespace gflat
 
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
+            while (Match(TokenKind.DoubleColon)) name += "::" + Expect(TokenKind.Identifier).Text;
             List<GenericParameter> genericParams = ParseGenericParameters();
 
             if (Check(TokenKind.OpenParen))
-                return Finish(ParseMethodDeclaration(type, name, accessibility, false, false, false, false, line, isReadonly, isConst, attributes, genericParams));
+                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, false, false, false, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect));
 
             if (Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater))
             {
@@ -348,8 +349,11 @@ namespace gflat
         private static AstNode ApplyImplementationKind(AstNode node, FunctionImplementationKind kind)
         {
             if (kind == FunctionImplementationKind.Ordinary) return node;
+            if (node is AliasDeclaration alias) { alias.ImplementationKind = kind; return alias; }
             if (node is not MethodDeclaration method || method.StringLiteralPrefix != null)
                 throw new TypeCheckException("weak and replace apply only to ordinary functions and methods", node.Line);
+            if (kind == FunctionImplementationKind.Expect && method.Body != null)
+                throw new TypeCheckException("expect declarations cannot have a body", node.Line);
             method.ImplementationKind = kind;
             return method;
         }
@@ -454,7 +458,7 @@ namespace gflat
                 else break;
             }
 
-            if (isStatic && !Check(TokenKind.Class))
+            if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Interface or TokenKind.Enum)
                 throw new TypeCheckException("Only classes can be declared static", Current.Span);
             if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, isAbstract, line, attributes, isStatic);
             if (Check(TokenKind.Struct)) return ParseStructDeclaration(accessibility, line, attributes);
@@ -606,11 +610,11 @@ namespace gflat
                 else if (Check(TokenKind.Override)) { isOverride = true; Consume(); }
                 else if (Check(TokenKind.Abstract)) { isAbstract = true; Consume(); }
                 else if (Match(TokenKind.Inline)) { if (isInline) throw new TypeCheckException("Duplicate inline modifier", line); isInline = true; }
-                else if (Check(TokenKind.Weak) || Check(TokenKind.Replace))
+                else if (Check(TokenKind.Weak) || Check(TokenKind.Replace) || Check(TokenKind.Expect))
                 {
                     if (implementation != FunctionImplementationKind.Ordinary)
-                        throw new TypeCheckException("Use exactly one of weak or replace", Current.Line);
-                    implementation = Consume().Kind == TokenKind.Weak ? FunctionImplementationKind.Weak : FunctionImplementationKind.Replace;
+                        throw new TypeCheckException("Use exactly one of expect, weak or replace", Current.Line);
+                    implementation = Consume().Kind switch { TokenKind.Weak => FunctionImplementationKind.Weak, TokenKind.Expect => FunctionImplementationKind.Expect, _ => FunctionImplementationKind.Replace };
                 }
                 else break;
             }
@@ -649,7 +653,7 @@ namespace gflat
             }
 
             if (Check(TokenKind.Alias))
-                return Finish(ParseAliasDeclaration(accessibility, line));
+                return Finish(ParseAliasDeclaration(accessibility, line, implementation));
             if (Check(TokenKind.Enum))
                 return Finish(ParseEnumDeclaration(accessibility, line));
 
@@ -705,7 +709,7 @@ namespace gflat
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
-                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst, attributes, genericParams));
+                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect));
 
             if (Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater))
             {
@@ -979,9 +983,9 @@ namespace gflat
             return new OperatorDeclaration(opToken.Kind, opSymbol, returnType, parameters, body, accessibility, isStatic, line);
         }
 
-        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null) => Located(() => ParseMethodDeclarationCoreLocated(returnType, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters));
+        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool allowMissingBody = false) => Located(() => ParseMethodDeclarationCoreLocated(returnType, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, allowMissingBody));
 
-        private MethodDeclaration ParseMethodDeclarationCoreLocated(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null)
+        private MethodDeclaration ParseMethodDeclarationCoreLocated(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool allowMissingBody = false)
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
@@ -1002,7 +1006,7 @@ namespace gflat
             {
                 if (Match(TokenKind.Semicolon))
                 {
-                    if (_interfaceDepth == 0)
+                    if (_interfaceDepth == 0 && !allowMissingBody)
                         throw new TypeCheckException($"Function '{name}' must declare a body; use extern for a function implemented elsewhere", _tokens[_pos - 1].Span);
                 }
                 else body = ParseBodyOrBlock();
@@ -1292,16 +1296,28 @@ namespace gflat
             }
         }
 
-        private AliasDeclaration ParseAliasDeclaration(TokenKind accessibility, int line) => Located(() => ParseAliasDeclarationCoreLocated(accessibility, line));
+        private AliasDeclaration ParseAliasDeclaration(TokenKind accessibility, int line, FunctionImplementationKind kind = FunctionImplementationKind.Ordinary) => Located(() => ParseAliasDeclarationCoreLocated(accessibility, line, kind));
 
-        private AliasDeclaration ParseAliasDeclarationCoreLocated(TokenKind accessibility, int line)
+        private AliasDeclaration ParseAliasDeclarationCoreLocated(TokenKind accessibility, int line, FunctionImplementationKind kind)
         {
             Expect(TokenKind.Alias);
             string name = Expect(TokenKind.Identifier).Text;
-            Expect(TokenKind.Equals);
-            TypeExpression target = ParseTypeExpression();
+            while (Match(TokenKind.DoubleColon)) name += "::" + Expect(TokenKind.Identifier).Text;
+            List<TypeExpression> constraints = new();
+            if (Match(TokenKind.Colon))
+            {
+                do { constraints.Add(ParseTypeExpression()); } while (Match(TokenKind.Comma));
+            }
+            TypeExpression? target = null;
+            if (Match(TokenKind.Equals)) target = ParseTypeExpression();
+            if (kind == FunctionImplementationKind.Expect && target != null)
+                throw new TypeCheckException("expect aliases cannot have a default", line);
+            if (kind != FunctionImplementationKind.Expect && target == null)
+                throw new TypeCheckException("An alias requires a target; use expect for an implementation supplied elsewhere", line);
             Expect(TokenKind.Semicolon);
-            return new AliasDeclaration(name, target, accessibility, line);
+            var declaration = new AliasDeclaration(name, target!, accessibility, line) { ImplementationKind = kind };
+            declaration.Constraints.AddRange(constraints);
+            return declaration;
         }
 
         private EnumDeclaration ParseEnumDeclaration(TokenKind accessibility, int line) => Located(() => ParseEnumDeclarationCoreLocated(accessibility, line));

@@ -32,10 +32,10 @@ public partial class TypeChecker
                     if (method.IsStatic && (method.IsVirtual || method.IsOverride || method.IsAbstract && entry.Owner is not InterfaceDeclaration))
                         throw new TypeCheckException("Static methods cannot be virtual, override or abstract", method.Line);
                     if (method.ImplementationKind != FunctionImplementationKind.Ordinary &&
-                        (method.Body == null || method.IsAbstract || entry.Owner is InterfaceDeclaration))
+                        (method.ImplementationKind != FunctionImplementationKind.Expect && method.Body == null || method.IsAbstract || entry.Owner is InterfaceDeclaration))
                         throw new TypeCheckException("weak and replace require a concrete function body", method.Line);
                     if (method.ImplementationKind != FunctionImplementationKind.Replace) continue;
-                    var defaults = functions.Where(e => e.Method.ImplementationKind == FunctionImplementationKind.Weak &&
+                    var defaults = functions.Where(e => e.Method.ImplementationKind is FunctionImplementationKind.Weak or FunctionImplementationKind.Expect &&
                         ParametersMatch(e.Method, method)).ToList();
                     if (defaults.Count != 1)
                         throw new TypeCheckException($"replace '{method.Name}' requires exactly one matching weak definition in the same scope", method.Line);
@@ -43,6 +43,9 @@ public partial class TypeChecker
                     if (!ContractMatches(original, method))
                         throw new TypeCheckException($"Replacement of '{method.Name}' must match the weak function's return type, constraints, accessibility and modifiers", method.Line);
                 }
+                if (functions.Any(e => e.Method.ImplementationKind == FunctionImplementationKind.Expect) &&
+                    !functions.Any(e => e.Method.ImplementationKind == FunctionImplementationKind.Replace))
+                    throw new TypeCheckException($"Expected function '{group.Key.Name}' has no implementation; provide replace", functions[0].Method.Span);
                 if (functions.Count == 1 && functions[0].Method.ImplementationKind == FunctionImplementationKind.Ordinary) continue;
                 if (group.Key.Owner == null && group.Key.Scope.Externs.ContainsKey(group.Key.Name))
                     throw new TypeCheckException($"Function '{group.Key.Name}' cannot have both an extern declaration and a weak or replace definition", functions[0].Method.Line);
@@ -53,7 +56,7 @@ public partial class TypeChecker
                 {
                     var declarations = sameSignature.ToList();
                     if (declarations.Count == 1) continue;
-                    var weak = declarations.Where(e => e.Method.ImplementationKind == FunctionImplementationKind.Weak).ToList();
+                    var weak = declarations.Where(e => e.Method.ImplementationKind is FunctionImplementationKind.Weak or FunctionImplementationKind.Expect).ToList();
                     var replace = declarations.Where(e => e.Method.ImplementationKind == FunctionImplementationKind.Replace).ToList();
                     if (weak.Count > 1)
                         DuplicateDeclaration(weak[0].Method, weak[1].Method, $"Multiple weak defaults for '{group.Key.Name}'");

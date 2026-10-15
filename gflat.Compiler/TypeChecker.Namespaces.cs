@@ -6,6 +6,7 @@ namespace gflat;
 public partial class TypeChecker
 {
     private readonly Dictionary<AstNode, string> declarationNamespaces = new();
+    public string? DeclarationNamespace(AstNode node) => declarationNamespaces.GetValueOrDefault(node);
 
     private void ValidateFieldStorage(CompilationUnit unit)
     {

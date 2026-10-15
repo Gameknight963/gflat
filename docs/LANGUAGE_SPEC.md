@@ -1113,3 +1113,28 @@ This escape hatch is experimental. It does not configure a GC strategy on gflat
 functions, emit stack maps/statepoints, or supply a collector integration protocol.
 Those remain separate work; using an LLVM GC intrinsic alone does not establish
 that integration.
+
+
+### Expected implementations and provider aliases
+
+`expect` declares a namespace function or static member whose implementation must
+be supplied by exactly one matching `replace` declaration in the compilation.
+`weak` supplies a default body instead. These modifiers are mutually exclusive.
+Qualified namespace function declarations use their named owner independently of
+file order. Qualified static definitions implement an `expect` or `weak` member
+already declared inside its closed type.
+
+```gflat
+namespace Services { public expect int Read(); }
+replace int Services::Read() => 42;
+
+interface ILogger { static void Write(readonly(char*) text); }
+public expect alias Logger : ILogger;
+replace alias Logger = ApplicationLogger;
+```
+
+Aliases may declare an optional default with `weak alias Name = Type`.
+An `expect alias` has no initializer. Missing implementations, multiple defaults,
+multiple replacements, and replacement of an ordinary alias are errors. Alias
+constraints follow `:`. They validate the selected implementation and limit
+static member access through the alias to the declared contract.

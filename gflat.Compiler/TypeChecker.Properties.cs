@@ -180,6 +180,7 @@ public partial class TypeChecker
                 receiver = member.Object;
                 break;
             case NamespaceAccessExpression access:
+                ValidateAliasMember(access);
                 name = access.Member;
                 staticOwner = access.Left;
                 if (access.Left is not IdentifierExpression local || !TryLookupVariable(local.Name, out _))

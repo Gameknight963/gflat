@@ -1030,10 +1030,17 @@ namespace gflat
         }
 
         private readonly Dictionary<TypeExpression, TypeExpression> resolvedSourceTypes = new();
+        private readonly HashSet<TypeExpression> resolvingAliases = new();
         public TypeExpression ResolveAlias(TypeExpression type)
         {
-            var resolved = ResolveAliasCore(type);
-            return type.IsReadOnlyValue ? TypeQualifiers.ReadOnly(resolved) : resolved;
+            if (!resolvingAliases.Add(type))
+                throw new TypeCheckException("Cyclic type alias", type.Span);
+            try
+            {
+                var resolved = ResolveAliasCore(type);
+                return type.IsReadOnlyValue ? TypeQualifiers.ReadOnly(resolved) : resolved;
+            }
+            finally { resolvingAliases.Remove(type); }
         }
 
         private TypeExpression ResolveAliasCore(TypeExpression type)
@@ -1994,6 +2001,8 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             _compilationUnit = node;
+            BindQualifiedDeclarations(node);
+            SelectAliasBindings(node);
             ExpandProperties(node);
 
             CheckDeclarationConflicts(node);
@@ -2017,6 +2026,7 @@ namespace gflat
             // Pass 2: Hierarchy resolution
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
             hierarchyPass.Execute();
+            ValidateAliasContracts();
 
             // Resolve literal operators before checking uses, including forward references.
             RegisterStringLiteralOperators(node);
@@ -2283,7 +2293,7 @@ namespace gflat
                             throw new TypeCheckException($"Abstract method '{cm.Name}' can only be declared in an abstract class", cm.Line);
                         if (cm.IsAbstract && cm.Body != null)
                             throw new TypeCheckException($"Abstract method '{cm.Name}' cannot have a body", cm.Line);
-                        if (!cm.IsAbstract && cm.Body == null)
+                        if (!cm.IsAbstract && cm.Body == null && cm.ImplementationKind != FunctionImplementationKind.Expect)
                             throw new TypeCheckException($"Method '{cm.Name}' must declare a body unless marked abstract", cm.Line);
 
                         info.Methods[cm.Name] = (cm, cls.Name);

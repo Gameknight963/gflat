@@ -4,8 +4,10 @@ namespace gflat.ast
 {
     public class AliasDeclaration : AstNode
     {
-        public string Name { get; }
-        public TypeExpression TargetType { get; }
+        public string Name { get; internal set; }
+        public TypeExpression TargetType { get; internal set; }
+        public FunctionImplementationKind ImplementationKind { get; set; }
+        public List<TypeExpression> Constraints { get; } = new();
         public TokenKind Accessibility { get; }
 
         public AliasDeclaration(string name, TypeExpression targetType, TokenKind accessibility, int line) : base(line)

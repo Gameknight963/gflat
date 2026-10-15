@@ -63,8 +63,11 @@ public sealed partial class EditorModel
             if (entry.Node is ConstructorDeclaration)
                 name = parents.Where(parent => IsType(parent.Node)).Select(parent => SourceName(parent.Node)).FirstOrDefault() ?? name;
             if (name == null || name.Contains('$')) continue;
-            string ns = Namespace(parents);
+            string ns = snapshot.Checker?.DeclarationNamespace(entry.Node) ?? Namespace(parents);
             string? owner = Owner(parents);
+            if (owner == null && entry.Node is MethodDeclaration qualified && snapshot.Checker != null &&
+                snapshot.Checker.TryGetMethodOwner(qualified, out string methodOwner, out _))
+                owner = snapshot.Checker.DisplayTypeName(new NamedTypeExpression(methodOwner, null, qualified.Line));
             if (entry.Node is NamespaceDeclaration declaration && declaration.Name.Contains("::"))
             {
                 foreach (string part in declaration.Name.Split("::"))
@@ -189,6 +192,11 @@ public sealed partial class EditorModel
             if (qualifier.StartsWith("global::")) qualifier = qualifier[8..];
             if (qualifier == "global") qualifier = "";
             var resolved = Visible(path, offset).FirstOrDefault(s => s.Name == qualifier && (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || s.Classification == "namespace"));
+            if (resolved?.Syntax.Node is AliasDeclaration { Constraints.Count: > 0 } constrained)
+            {
+                var owners = constrained.Constraints.Select(c => TypeOwner(c, path, offset)).ToHashSet();
+                return symbols.Where(s => owners.Contains(s.Owner) && s.Static && Accessible(s, path, offset));
+            }
             qualifier = resolved is { IsTypeParameter: true }
                 ? TypeOwner(resolved.TypeConstraint, path, offset) ?? qualifier
                 : resolved?.Syntax.Node is AliasDeclaration
@@ -407,7 +415,7 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "ref", "copy", "const", "weak", "replace"];
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "ref", "copy", "const", "expect", "weak", "replace"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
             if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)

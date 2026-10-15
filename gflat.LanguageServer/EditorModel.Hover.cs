@@ -134,7 +134,14 @@ public sealed partial class EditorModel
 
         if (symbol.Syntax.Node is AliasDeclaration alias)
         {
-            Keyword("alias"); Name(); Add(" = ", "punctuation"); Type(alias.TargetType);
+            if (alias.ImplementationKind != FunctionImplementationKind.Ordinary) Keyword(alias.ImplementationKind.ToString().ToLowerInvariant());
+            Keyword("alias"); Name();
+            if (alias.Constraints.Count > 0)
+            {
+                Add(" : ", "punctuation");
+                for (int i = 0; i < alias.Constraints.Count; i++) { if (i > 0) Add(", ", "punctuation"); Type(alias.Constraints[i]); }
+            }
+            if (alias.TargetType != null) { Add(" = ", "punctuation"); Type(alias.TargetType); }
         }
         else
         {

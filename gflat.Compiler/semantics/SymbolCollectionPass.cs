@@ -268,7 +268,7 @@ namespace gflat.semantics
                         {
                             throw new TypeCheckException($"Abstract method '{cm.Name}' cannot have a body", cm.Line);
                         }
-                        if (!cm.IsAbstract && cm.Body == null)
+                        if (!cm.IsAbstract && cm.Body == null && cm.ImplementationKind != FunctionImplementationKind.Expect)
                         {
                             throw new TypeCheckException($"Method '{cm.Name}' must declare a body unless marked abstract", cm.Line);
                         }

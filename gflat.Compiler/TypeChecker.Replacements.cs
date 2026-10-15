@@ -115,7 +115,7 @@ public partial class TypeChecker
         // Resolve aliases without instantiating generic pointees during this pre-body pass.
         if (type is NamedTypeExpression or NestedTypeExpression)
         {
-            TypeExpression resolved = _symbols.ResolveAliasDirect(type);
+            TypeExpression resolved = ResolveAlias(type);
             if (!ReferenceEquals(type, resolved)) return SignatureType(resolved, method);
         }
         return type switch

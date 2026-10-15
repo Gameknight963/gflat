@@ -11,6 +11,8 @@ public sealed class ProviderBindingTests
     [InlineData("static class Invoke<P> { public static int Run() => P::Extra(); } alias Invocation = Invoke<Selected>; int main() => Invocation::Run();")]
     [InlineData("int Invoke<P>() => P::Extra(); int main() { int first = Invoke<Answer>(); return Invoke<Selected>(); }")]
     [InlineData("int Forward<P>() => Invoke<P>(); int Invoke<P>() => P::Extra(); int main() { int first = Forward<Answer>(); return Forward<Selected>(); }")]
+    [InlineData("int Invoke<P>() { alias Local = P; return Local::Extra(); } int main() { int first = Invoke<Answer>(); return Invoke<Selected>(); }")]
+    [InlineData("int Forward<P>() => Api::Invoke<P>(); namespace Api { public int Invoke<P>() => P::Extra(); } int main() { int first = Forward<Answer>(); return Forward<Selected>(); }")]
     public void ContractCannotBeBypassedThroughAnAliasOrGenericParameter(string use)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
@@ -42,6 +44,24 @@ public sealed class ProviderBindingTests
     }
 
     [Fact]
+    public void BaseClassContractsExposeTheirPublicStaticMembers()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run("""
+            class Base { public static int Read() => 42; }
+            class Answer : Base { public static int Extra() => 0; }
+            alias Selected : Base = Answer;
+            int main() => Selected::Read();
+            """).ExitCode);
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
+            class Base { public static int Read() => 42; }
+            class Answer : Base { public static int Extra() => 0; }
+            alias Selected : Base = Answer;
+            int main() => Selected::Extra();
+            """));
+        Assert.Contains("not exposed", error.Message);
+    }
+
+    [Fact]
     public void ProviderOnlyOverloadCannotBeAccessedThroughContract()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
@@ -57,6 +77,21 @@ public sealed class ProviderBindingTests
     }
 
     [Fact]
+    public void ProviderOnlyNestedTypesCannotBeAccessedThroughContract()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
+            interface IProvider { static int Read(); }
+            static class Answer : IProvider {
+                public static int Read() => 42;
+                public struct Hidden { public int value; }
+            }
+            weak alias Selected : IProvider = Answer;
+            int main() { Selected::Hidden value = new Selected::Hidden(); return 0; }
+            """));
+        Assert.Contains("not exposed", error.Message);
+    }
+
+    [Fact]
     public void QualifiedReplacementTargetResolvesInItsSourceNamespace()
     {
         Assert.Equal(42, CompilerTestHelper.Run([
@@ -64,6 +99,23 @@ public sealed class ProviderBindingTests
             new SourceFile("replacement.gf", "namespace App { static class Provider : Api::IProvider { public static int Read() => 42; } replace alias Api::Selected = Provider; }"),
             new SourceFile("main.gf", "int main() => Api::Selected::Read();")
         ]).ExitCode);
+    }
+
+    [Fact]
+    public void ReplacementTargetAliasesResolveBeforeExpectedFunctionSignatureMatching()
+    {
+        Assert.Equal(42, CompilerTestHelper.Run("""
+            namespace Api {
+                public expect alias Number;
+                public expect Number Read(Number value);
+            }
+            namespace App {
+                alias Number = int;
+                replace alias Api::Number = Number;
+                replace int Api::Read(int value) => value;
+            }
+            int main() => Api::Read(42);
+            """).ExitCode);
     }
 
     [Theory]

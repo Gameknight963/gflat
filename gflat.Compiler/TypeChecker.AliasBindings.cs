@@ -34,10 +34,30 @@ public partial class TypeChecker
 
         void Walk(AstNode node)
         {
+            if (node is BlockStatement block)
+            {
+                _localAliases.Push(new());
+                try { foreach (var statement in block.Statements) Walk(statement); }
+                finally { _localAliases.Pop(); }
+                return;
+            }
+            if (node is AliasDeclaration alias)
+            {
+                if (_localAliases.Count > 0) _localAliases.Peek()[alias.Name] = alias.TargetType;
+                return;
+            }
             if (node is NamespaceAccessExpression access) ValidateAliasMember(access);
-            if (node is CallExpression { TypeArguments.Count: > 0, Callee: IdentifierExpression id } call &&
-                ResolveGenericFunction(id.Name) is { IsGeneric: true } target)
-                ValidateAliasSpecialization(target, target.GenericParameters, call.TypeArguments);
+            if (node is CallExpression { TypeArguments.Count: > 0 } call)
+            {
+                MethodDeclaration? target = call.Callee switch {
+                    IdentifierExpression id => ResolveGenericFunction(id.Name),
+                    NamespaceAccessExpression qualified when ResolveNamespace(qualified.Left) is { } scope
+                        => scope.GenericFunctions.GetValueOrDefault(qualified.Member),
+                    _ => null
+                };
+                if (target is { IsGeneric: true })
+                    ValidateAliasSpecialization(target, target.GenericParameters, call.TypeArguments);
+            }
             foreach (var property in node.GetType().GetProperties().Where(p => p.GetIndexParameters().Length == 0))
             {
                 if (property.GetValue(node) is AstNode child) Walk(child);
@@ -64,7 +84,10 @@ public partial class TypeChecker
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
         try
         {
-            return declaration.Constraints.Any(c => TypesMatch(ResolveAlias(c), constraint));
+            return declaration.Constraints.Any(c => TypesMatch(ResolveAlias(c), constraint) ||
+                constraint is NamedTypeExpression named &&
+                (GetClass(named.Name) != null && TypeDerivesFromClass(ResolveAlias(c), named.Name) ||
+                 GetInterface(named.Name) != null && TypeImplementsInterface(ResolveAlias(c), named.Name)));
         }
         finally { _currentNamespace = previous; }
     }
@@ -163,8 +186,11 @@ public partial class TypeChecker
             try
             {
                 var resolved = ResolveAlias(constraint);
-                if (resolved is NamedTypeExpression type && GetInterface(type.Name) is { } contract &&
-                    contract.Methods.Any(m => (m.Name == access.Member || m.PropertyName == access.Member) &&
+                IEnumerable<MethodDeclaration> methods = resolved is NamedTypeExpression type
+                    ? GetInterface(type.Name)?.Methods ??
+                        GetClass(type.Name)?.Methods.Values.Select(m => m.Method).Where(m => m.IsStatic && m.Accessibility == TokenKind.Public) ?? []
+                    : [];
+                if (methods.Any(m => (m.Name == access.Member || m.PropertyName == access.Member) &&
                         (selectedMethod == null || m.Name == selectedMethod.Name &&
                             m.Parameters.Count == selectedMethod.Parameters.Count &&
                             m.Parameters.Zip(selectedMethod.Parameters).All(p => TypesMatch(p.First.Type, p.Second.Type)) &&

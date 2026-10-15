@@ -1061,6 +1061,7 @@ namespace gflat
             if (resolvedSourceTypes.TryGetValue(type, out var bound)) return bound;
             if (type is NestedTypeExpression nested)
             {
+                ValidateAliasMember(new NamespaceAccessExpression(nested.Parent, nested.Member, nested.Line) { Span = nested.Span });
                 TypeExpression resolvedParent = ResolveAlias(nested.Parent);
                 if (resolvedParent is NamedTypeExpression namedParent)
                 {

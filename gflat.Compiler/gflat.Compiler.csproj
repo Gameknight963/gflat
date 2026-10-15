@@ -5,9 +5,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <None Include="../std/core/Attribute.gf;../std/core/Exception.gf;../std/core/BadAllocException.gf;../std/core/Text.gf;../std/core/TypeInfo.gf;../std/core/GarbageCollector.gf"
+    <None Include="../std/core/Attribute.gf;../std/core/Exception.gf;../std/core/BadAllocException.gf;../std/core/Text.gf;../std/core/TypeInfo.gf;../std/core/IGarbageCollector.gf"
           Link="Std/core/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../std/libc/Memory.gf;../std/libc/ExceptionHandling.gf" Link="Std/libc/%(Filename)%(Extension)"
+    <None Include="../std/libc/Memory/Memory.gf" Link="Std/libc/Memory/%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="../std/libc/Exceptions/ExceptionHandling.gf" Link="Std/libc/Exceptions/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

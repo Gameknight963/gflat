@@ -168,6 +168,7 @@ public sealed class ExtensionMethodTests
     public void ManagedReceiverRemainsRootedDuringCall()
     {
         var result = CompilerTestHelper.Run(new[] {
+            new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
             new SourceFile("GC.gf", System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc/GC.gf"))),
             new SourceFile("main.gf", "int Read(this int^ self) { GC::Collect(); return *self; } int main() => (new^ int(42)).Read();") });
         Assert.Equal(42, result.ExitCode);
@@ -235,6 +236,7 @@ public sealed class ExtensionMethodTests
     public void ManagedPointeeDoesNotBecomeBorrowableThroughExtensions()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(new[] {
+            new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
             new SourceFile("GC.gf", System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc/GC.gf"))),
             new SourceFile("main.gf", "struct S {} int Read(this ref S self) => 42; int main() { S^ s = new^ S(); return s.Read(); }") }));
         Assert.Contains("no field or method", error.Message, StringComparison.OrdinalIgnoreCase);

@@ -4,7 +4,7 @@ public sealed class ConsoleWriterTests
 {
     internal static SourceFile[] Sources(string program) => new[] {
         "core/IOException.gf", "core/BufferTooSmallException.gf", "core/Formatting.gf",
-        "libc/Console.gf", "libc/ConsoleWriter.gf"
+        "libc/Console/Console.gf", "libc/Console/Writer.gf"
     }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
         .Append(new SourceFile("main.gf", program)).ToArray();
 

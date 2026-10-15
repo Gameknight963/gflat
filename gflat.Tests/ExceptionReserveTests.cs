@@ -120,6 +120,8 @@ public class ExceptionReserveTests
     public void ConstructorFailureReleasesNormalAllocationWithMatchingAllocator()
     {
         var result = CompilerTestHelper.Run("""
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char*) format, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A;"); return malloc(size); }

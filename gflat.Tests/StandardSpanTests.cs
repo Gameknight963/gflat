@@ -120,6 +120,8 @@ public class StandardSpanTests
     {
         var sources = Sources("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }

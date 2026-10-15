@@ -7,6 +7,8 @@ public class PlacementConstructionTests
     public void UsesDestinationOnceAndRunsNormalInitializationWithoutAllocation()
     {
         var result = CompilerTestHelper.Run("""
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
@@ -97,6 +99,8 @@ public class PlacementConstructionTests
     public void ThrowingPlacementExceptionDoesNotGiveCatchOwnershipOfStorage()
     {
         var result = CompilerTestHelper.Run("""
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }

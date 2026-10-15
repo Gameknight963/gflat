@@ -1,6 +1,6 @@
 # libc-dependent facilities
 
-`ExceptionHandling.gf` supplies the automatically included weak
+`Exceptions/ExceptionHandling.gf` supplies the automatically included weak
 `Exceptions::Unhandled(Exception*? error)` hook. Its default `void` implementation calls libc `exit` with the exception's
 `GetCode()` (1 by default), or 1 for a foreign exception, without printing.
 Replace it to report the error and terminate explicitly. If it returns or throws,
@@ -14,19 +14,19 @@ The result is written from a stack buffer; there is no intermediate heap string.
 Supply only core sources when these facilities are unwanted. `std.gfproj`
 currently includes both directories.
 
-`Memory.gf` supplies the automatically included weak `Memory::Allocate` and
+`Memory/Memory.gf` supplies the automatically included weak `Memory::Allocate` and
 `Memory::Free` implementations using libc. Replace both functions to provide a
 custom allocator. This default is kept in libc even though the core library calls
 the abstracted memory hooks; libc remains an unconditional dependency for now.
 
 ## Console
 
-`Console.gf` provides C-string and caller-buffer APIs. It needs `core/IOException.gf`
+`Console/Console.gf` provides C-string and caller-buffer APIs. It needs `core/IOException.gf`
 and `core/BufferTooSmallException.gf`, but does not require `String.gf`.
-`ConsoleString.gf` adds the optional owning-string conveniences. Referencing
+`Console/ConsoleString.gf` adds the optional owning-string conveniences. Referencing
 `std/std.gfproj` includes both.
 
-`ConsoleWriter.gf` adds `Console::Writer`, an `ITextWriter` adapter borrowing
+`Console/Writer.gf` adds `Console::Writer`, an `ITextWriter` adapter borrowing
 stdout. Pass its address to formatting functions to stream bytes without an
 intermediate string. It does not own or close stdout; call `Console::Flush()`
 explicitly when required:

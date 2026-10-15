@@ -3278,7 +3278,7 @@ public partial class LlvmEmitter : IVisitor
                 Emit($"    call void @{dtorMangled}(%{structInfo.Name}* {structPtr})");
             }
 
-            // gflat$Memory$Free is defined in user code (or std/libc/Memory.gf), no declare needed
+            // gflat$Memory$Free is defined in user code (or std/libc/Memory/Memory.gf), no declare needed
             _externNames.Add("gflat$Memory$Free");
 
             string castPtr;
@@ -3984,7 +3984,7 @@ public partial class LlvmEmitter : IVisitor
         {
             bool adopting = _typeChecker.GetManagedAllocation(node) != null;
             string allocator = "gflat$Memory$Allocate";
-            // gflat$Memory$Allocate is defined in user code (or std/libc/Memory.gf), no declare needed
+            // gflat$Memory$Allocate is defined in user code (or std/libc/Memory/Memory.gf), no declare needed
             _ = _externNames.Add("gflat$Memory$Allocate");
 
             string sizePtr = NewTemp();
@@ -4347,7 +4347,7 @@ public partial class LlvmEmitter : IVisitor
             rawPointer.Inner is not ArrayTypeExpression)
             EmitManagedReferences(rawPointer.Inner, ptrVal, false);
 
-        // gflat$Memory$Free is defined in user code (or std/libc/Memory.gf), no declare needed
+        // gflat$Memory$Free is defined in user code (or std/libc/Memory/Memory.gf), no declare needed
         _externNames.Add("gflat$Memory$Free");
 
         string castPtr;

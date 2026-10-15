@@ -8,6 +8,8 @@ public class ExplicitDestructorTests
     public void DestroysInteriorSlotsWithoutFreeingAndAllowsReconstruction()
     {
         var result = CompilerTestHelper.Run("""
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
@@ -87,7 +89,7 @@ public class ExplicitDestructorTests
     public void InvalidTargetsAreRejected(string body, string message)
     {
         var error = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(
-            "struct S { public int n; } int main() { " + body + " return 0; }"));
+            "extern void*? malloc(nuint size); struct S { public int n; } int main() { " + body + " return 0; }"));
         Assert.Contains(message, error.Message, StringComparison.OrdinalIgnoreCase);
     }
 

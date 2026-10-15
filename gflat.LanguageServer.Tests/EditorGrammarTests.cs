@@ -31,11 +31,11 @@ public class EditorGrammarTests
     public void ConsoleQualifiersRemainNeutralAcrossTheWholeFile()
     {
         string root = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(root, "std", "libc", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
+        while (!File.Exists(Path.Combine(root, "std", "libc", "Console", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
         var grammar = Grammar();
         ITokenizeLineResult? previous = null;
         int qualifiers = 0;
-        foreach (string line in File.ReadLines(Path.Combine(root, "std", "libc", "Console.gf")))
+        foreach (string line in File.ReadLines(Path.Combine(root, "std", "libc", "Console", "Console.gf")))
         {
             var result = grammar.TokenizeLine(line, previous?.RuleStack, TimeSpan.FromSeconds(2));
             foreach (Match match in Regex.Matches(line, @"\bstd(?=::)"))

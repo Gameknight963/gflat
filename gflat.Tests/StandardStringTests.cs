@@ -9,6 +9,8 @@ public class StandardStringTests
     {
         var result = Run("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
@@ -34,6 +36,8 @@ public class StandardStringTests
     {
         var result = Run("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) {
                     if (size == (nuint)7) return null;
@@ -59,6 +63,8 @@ public class StandardStringTests
     {
         var result = Run("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
@@ -173,6 +179,8 @@ public class StandardStringTests
     {
         var result = Run("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size == (nuint)101) return null; return malloc(size); }
                 public replace void Free(void* p) { free(p); }
@@ -197,6 +205,8 @@ public class StandardStringTests
     {
         var result = Run("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size != (nuint)4) return null; return malloc(size); }
                 public replace void Free(void* p) { free(p); }

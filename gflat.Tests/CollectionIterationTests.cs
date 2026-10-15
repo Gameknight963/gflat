@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class CollectionIterationTests
 {
     private static IEnumerable<SourceFile> Sources(string program, bool gc = false) =>
-        new[] { "core/Span.gf", "core/Vector.gf", "core/String.gf" }.Concat(gc ? ["libc/GC.gf"] : [])
+        new[] { "core/Span.gf", "core/Vector.gf", "core/String.gf" }.Concat(gc ? ["libc/GC.gf", "libc/TracingCollector.gf"] : [])
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
 
@@ -20,6 +20,8 @@ public sealed class CollectionIterationTests
     public void SpanVectorAndReadOnlyViewsIterateWithoutAllocating()
         => Run("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
@@ -48,16 +50,16 @@ public sealed class CollectionIterationTests
             using std;
             int main() {
                 int[1] buffer = [7]; Span<int> span = new Span<int>(buffer, 1);
-                SpanEnumerator<int> iterator = span.GetEnumerator();
+                Span<int>::Enumerator iterator = span.GetEnumerator();
                 try { int value = iterator.Current; return 1; } catch {}
                 if (!iterator.MoveNext()) return 2;
                 iterator.Current = 42;
                 if (buffer[0] != 42 || iterator.MoveNext()) return 3;
                 try { int value = iterator.Current; return 4; } catch {}
-                SpanEnumerator<int> empty = new SpanEnumerator<int>(null, 0);
+                Span<int>::Enumerator empty = new Span<int>::Enumerator(null, 0);
                 if (empty.MoveNext() || empty.MoveNext()) return 5;
                 try { int value = empty.Current; return 6; } catch {}
-                try { SpanEnumerator<int> invalid = new SpanEnumerator<int>(null, 1); return 7; } catch {}
+                try { Span<int>::Enumerator invalid = new Span<int>::Enumerator(null, 1); return 7; } catch {}
                 return 0;
             }
             """);
@@ -92,6 +94,8 @@ public sealed class CollectionIterationTests
     public void DirectTemporaryVectorOwnsItsElementsUntilIterationFinishes()
         => Run("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             extern int printf(readonly(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => malloc(size);

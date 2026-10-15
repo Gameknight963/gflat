@@ -13,10 +13,10 @@ public sealed class StandardExtensionTests
             using std;
             int main() {
                 int number = 0;
-                if (!"40".TryParseInt(&number) || number != 40) return 1;
-                if ("42".ParseInt() != 42) return 2;
+                if (!std::TryParseInt("40", &number) || number != 40) return 1;
+                if (std::ParseInt("42") != 42) return 2;
                 char[3] counted = ['4', '2', 'x'];
-                if (!counted.TryParseInt(2, &number) || number != 42) return 3;
+                if (!std::TryParseInt(counted, 2, &number) || number != 42) return 3;
                 String text = s"+42";
                 if (!text.TryParseInt(&number) || number != 42) return 4;
                 return text.ParseInt();

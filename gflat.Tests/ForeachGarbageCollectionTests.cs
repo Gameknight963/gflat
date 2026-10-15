@@ -5,6 +5,7 @@ public sealed class ForeachGarbageCollectionTests
     private static void Succeeds(string source)
     {
         var result = CompilerTestHelper.Run([
+            new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
             new SourceFile("GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "GC.gf"))),
             new SourceFile("main.gf", source)
         ]);

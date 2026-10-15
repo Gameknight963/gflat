@@ -7,7 +7,8 @@ public sealed class GarbageCollectorRuntimeTests
     private static void Succeeds(string body)
     {
         var result = CompilerTestHelper.Run([
-            new SourceFile("std/core/GarbageCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "GarbageCollector.gf"))),
+            new SourceFile("std/core/IGarbageCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "IGarbageCollector.gf"))),
+            new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
             new SourceFile("std/libc/GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "GC.gf"))),
             new SourceFile("main.gf", "alias Collector = std::TracingCollector; int main() { " + body + " }")
         ]);

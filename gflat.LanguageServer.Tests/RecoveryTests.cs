@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using gflat.ast;
 using gflat.LanguageServer;
 using gflat.diagnostics;
@@ -132,8 +132,8 @@ public class RecoveryTests
     public void ConsoleSourceExceptionQualifierHasNamespaceColor()
     {
         string root = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(root, "std", "libc", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
-        string path = Path.Combine(root, "std", "libc", "Console.gf");
+        while (!File.Exists(Path.Combine(root, "std", "libc", "Console", "Console.gf"))) root = Directory.GetParent(root)!.FullName;
+        string path = Path.Combine(root, "std", "libc", "Console", "Console.gf");
         var source = new SourceFile(path, File.ReadAllText(path));
         var files = Directory.EnumerateFiles(Path.Combine(root, "std"), "*.gf", SearchOption.AllDirectories)
             .Select(p => p == path ? source : new SourceFile(p, File.ReadAllText(p))).ToArray();

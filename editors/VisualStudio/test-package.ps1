@@ -23,7 +23,7 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted $asset))) { throw "VSIX is missing $asset" }
     }
     foreach ($tool in @('Compiler', 'Server')) {
-        foreach ($source in @('core/TypeInfo.gf', 'core/Attribute.gf', 'core/Exception.gf', 'libc/ExceptionHandling.gf', 'core/Text.gf', 'libc/Memory.gf')) {
+        foreach ($source in @('core/TypeInfo.gf', 'core/Attribute.gf', 'core/Exception.gf', 'libc/Exceptions/ExceptionHandling.gf', 'core/Text.gf', 'libc/Memory/Memory.gf')) {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Std/$source"))) { throw "VSIX is missing $tool/Std/$source" }
         }
     }
@@ -64,7 +64,7 @@ try {
     & (Join-Path $PSScriptRoot 'test-launch.ps1') -PackageDirectory $extracted
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp'))) { throw 'VSIX is missing the native stdio bridge source' }
-    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Std/core/GarbageCollector.gf'))) { throw 'VSIX is missing the managed collector contract' }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Std/core/IGarbageCollector.gf'))) { throw 'VSIX is missing the managed collector contract' }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }
@@ -80,9 +80,9 @@ int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) 
 void Drop() { int^ value = new^ int(42); }
 int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new^ int(7); GC::Collect(); return *value - 7; }
 '@ | Set-Content -LiteralPath $managed
-    & $compiler $managed (Join-Path $std 'libc/GC.gf') --optimization 2 --run -o (Join-Path $extracted 'managed.exe')
+    & $compiler $managed (Join-Path $std 'libc/GC.gf') (Join-Path $std 'libc/TracingCollector.gf') --optimization 2 --run -o (Join-Path $extracted 'managed.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged managed allocation/root/collector smoke test failed' }
-    $consoleResult = & $compiler $console (Join-Path $std 'core/IOException.gf') (Join-Path $std 'core/BufferTooSmallException.gf') (Join-Path $std 'libc/Console.gf') --run -o (Join-Path $extracted 'console.exe')
+    $consoleResult = & $compiler $console (Join-Path $std 'core/IOException.gf') (Join-Path $std 'core/BufferTooSmallException.gf') (Join-Path $std 'libc/Console/Console.gf') --run -o (Join-Path $extracted 'console.exe')
     if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
     $collections = Join-Path $extracted 'collections.gf'
     @'
@@ -121,9 +121,9 @@ finally {
     $env:GFLAT_EDITOR_ASSETS = $oldEditorAssets
     $env:GFLAT_HOVER_CATALOG = $oldHoverCatalog
     $env:GFLAT_HOVER_CAPTURE = $oldHoverCapture
-    # Only remove the unique extraction directory underneath this project's obj folder.
+    # Only remove this run's unique extraction directory under the selected test root.
     $resolved = [IO.Path]::GetFullPath($extracted)
-    $allowedRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'obj')) + [IO.Path]::DirectorySeparatorChar
+    $allowedRoot = [IO.Path]::GetFullPath($testRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
     if (-not $resolved.StartsWith($allowedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe package test cleanup path' }
     Remove-Item -LiteralPath $resolved -Recurse -Force
 }

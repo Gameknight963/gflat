@@ -11,7 +11,7 @@ struct Span<T>
 
     public nuint Length { readonly get => length; }
     public bool IsEmpty { readonly get => length == (nuint)0; }
-    public Span::Enumerator<T> GetEnumerator() => new Span::Enumerator<T>(data, length);
+    public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, length);
     public T*? Data { get => data; }
 
     public ref T this[nuint index]
@@ -44,7 +44,7 @@ struct Span<T>
     }
 
     // Borrows the same storage as its source view.
-    public struct Enumerator<T>
+    public struct Enumerator
     {
         private T*? data;
         private nuint length;

@@ -11,7 +11,7 @@ struct Vector<T>
 
     public nuint Count { readonly get => count; }
     public nuint Capacity { readonly get => capacity; }
-    public SpanEnumerator<T> GetEnumerator() => new SpanEnumerator<T>(data, count);
+    public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, count);
 
     public Span<T> AsSpan()
     {

@@ -34,13 +34,16 @@ public sealed class EarlyGenericHierarchyTests
     [Fact]
     public void ManagedVectorGrowthFailureUsesBadAllocAndPreservesRoots()
     {
-        var result = CompilerTestHelper.Run(new[] { "libc/GC.gf", "core/Vector.gf", "core/Span.gf" }
+        var result = CompilerTestHelper.Run(new[] { "libc/GC.gf", "libc/TracingCollector.gf", "core/Vector.gf", "core/Span.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", """
                 using std;
+                extern void*? malloc(nuint size);
+                extern void free(void* storage);
                 namespace Memory {
                     public replace void*? Allocate(nuint size) {
-                        if (size != (nuint)4 && size != (nuint)32) return null;
+                        if (size >= (nuint)100 * (nuint)sizeof(int^) ||
+                            size == (nuint)sizeof(BadAllocException)) return null;
                         return malloc(size);
                     }
                     public replace void Free(void* storage) { free(storage); }

@@ -89,6 +89,8 @@ public class InterpolationTests
     {
         var result = Run("""
             using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
             alias GC = TestCollector;
             static class TestCollector {
                 public static void* Allocate(nuint bytes, nuint alignment) => malloc(bytes)!;

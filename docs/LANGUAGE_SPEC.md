@@ -227,9 +227,11 @@ Constructors must initialize fields that cannot have a default value on every no
 
 `default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates; their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
 
-The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `std/libc/Memory.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
+The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `std/libc/Memory/Memory.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
 
 ```gflat
+extern void*? malloc(nuint size);
+extern void free(void* ptr);
 namespace Memory {
     public replace void*? Allocate(nuint size) { return malloc(size); }
     public replace void Free(void* ptr) { free(ptr); }
@@ -290,7 +292,7 @@ describe the default-reference shape without a provider; creating and tracking
 live references requires a concrete binding. `T^?` additionally permits null.
 
 The provider implements `std::IGarbageCollector`, a static interface declared in
-`std/core/GarbageCollector.gf`. Its operations are `Allocate(nuint bytes, nuint
+`std/core/IGarbageCollector.gf`. Its operations are `Allocate(nuint bytes, nuint
 alignment)` returning non-null `void*`, `ReferenceAdded(void* slot) nothrow`,
 `ReferenceRemoved(void* slot) nothrow`, and `Collect()` returning `nuint`.
 The first three operations are the compiler integration contract. `Collect` is
@@ -309,6 +311,8 @@ stored in each other's managed object graphs.
 
 `std/libc/GC.gf`, included by projects referencing std, declares the default
 `public weak alias GC : std::IGarbageCollector = std::TracingCollector;`.
+The implementation lives in `std/libc/TracingCollector.gf`; direct source builds
+using this default alias must include that file too.
 Applications select another provider with `replace alias GC = MyCollector;`.
 The constraint validates the selected implementation and limits member access
 through `GC` to the common contract. Provider-specific operations, such as
@@ -320,6 +324,9 @@ allocation failure, then throws `std::BadAllocException`. A returned native
 address that cannot satisfy the requested alignment is freed and rejected.
 Zero-sized managed objects receive one byte of storage. Allocation and collection
 policy belong to the library. There are no legacy `__gflat_gc_*` allocation hooks.
+Collector bookkeeping also uses `Memory::Allocate` and `Memory::Free`. Failure to
+allocate its process state or root-slot records terminates: the non-throwing
+reference-notification contract cannot report those failures as exceptions.
 
 `std::TracingCollector::Adopt<T>(T* storage)` is an ordinary generic library
 method returning `managed<T, std::TracingCollector>`. It transfers an already
@@ -691,7 +698,7 @@ Scope destructors and deferred actions run during unwinding. Failed construction
 
 `void Boundary() nothrow { ... }` permits local handlers but terminates if an exception escapes. Destructors and `main` are also termination boundaries. Cleanup runs up to the boundary; outer callers cannot catch past it. An exception escaping cleanup while another exception is unwinding terminates; cleanup may catch its own failures locally.
 
-Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. This weak `void` function lives in `std/libc/ExceptionHandling.gf`. Its default implementation calls libc `exit` with `error.GetCode()`, or 1 for a foreign exception, without printing. Exception constructors default the code to 1. A replacement hook should terminate explicitly; if it returns or throws, the runtime exits with status 1. A custom root `Exception` class must supply `GetCode()`. To use allocating `new*`, it must also support the standard `(message, code)` constructor used by the automatically included `std::BadAllocException`, or supply its own `std::BadAllocException` with a public constructor callable without arguments. Process termination does not unwind the remaining stack.
+Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. This weak `void` function lives in `std/libc/Exceptions/ExceptionHandling.gf`. Its default implementation calls libc `exit` with `error.GetCode()`, or 1 for a foreign exception, without printing. Exception constructors default the code to 1. A replacement hook should terminate explicitly; if it returns or throws, the runtime exits with status 1. A custom root `Exception` class must supply `GetCode()`. To use allocating `new*`, it must also support the standard `(message, code)` constructor used by the automatically included `std::BadAllocException`, or supply its own `std::BadAllocException` with a public constructor callable without arguments. Process termination does not unwind the remaining stack.
 
 The compiler driver links a small C++ runtime, requiring Clang's C++ driver and the platform C++ development libraries in addition to LLVM.
 
@@ -959,7 +966,7 @@ A compilation accepts multiple named source snapshots and produces one LLVM modu
 
 `using` directives apply only to their source file. They affect name lookup, not which files are compiled. Types and generic functions have namespace-qualified identities; same-named types in separate namespaces remain distinct. Ambiguous imports require explicit qualification. Generic bodies retain their definition's namespace and imports when instantiated from another file.
 
-Compilation setup automatically includes `std/core/Attribute.gf`, `std/core/Exception.gf`, `std/core/Text.gf`, and `std/libc/Memory.gf`. These ordinary source files are shipped in the compiler?s `Std` directory. Their current global names remain available without imports. The default `Exception` is omitted if explicitly supplied by the program. Explicit inputs at these std-relative paths take precedence over bundled files and are not included twice. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
+Compilation setup automatically includes `std/core/Attribute.gf`, `std/core/Exception.gf`, `std/core/Text.gf`, and `std/libc/Memory/Memory.gf`. These ordinary source files are shipped in the compiler?s `Std` directory. Their current global names remain available without imports. The default `Exception` is omitted if explicitly supplied by the program. Explicit inputs at these std-relative paths take precedence over bundled files and are not included twice. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
 
 The C# compiler API accepts immutable `SourceFile(path, text)` snapshots through `Compiler.Check(IEnumerable<SourceFile>, diagnostics)` and `Compiler.Emit(IEnumerable<SourceFile>, diagnostics)`. The path identifies the snapshot; the compiler does not read its text from disk. This permits unsaved editor buffers and independent command-line or IDE hosts. Source spans use UTF-16 offsets and one-based lines and columns. Diagnostics expose their source span, code, severity, message, and related declaration locations.
 

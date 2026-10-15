@@ -8,8 +8,8 @@ public class ConsoleTests
     private static SourceFile[] Sources(string program, bool strings = false)
     {
         string[] names = strings
-            ? ["core/IOException.gf", "core/BufferTooSmallException.gf", "libc/Console.gf", "core/String.gf", "libc/ConsoleString.gf"]
-            : ["core/IOException.gf", "core/BufferTooSmallException.gf", "libc/Console.gf"];
+            ? ["core/IOException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf", "core/String.gf", "libc/Console/ConsoleString.gf"]
+            : ["core/IOException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf"];
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
     }
@@ -65,7 +65,7 @@ public class ConsoleTests
     [InlineData("first\n\nlast")]
     [InlineData("first\r\n\r\nlast\r")]
     [InlineData("a\0b\n")]
-    [InlineData("é\n")]
+    [InlineData("ï¿½\n")]
     public void RawBufferReadsPreserveBytesAndDistinguishEmptyLinesFromEof(string input)
     {
         var result = Run("""

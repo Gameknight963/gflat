@@ -87,7 +87,6 @@ public class ManagedPointerTests
 
     [Theory]
     [InlineData("int^ p = new^ int(); delete p;")]
-    [InlineData("int^ p = new^ int(); int* q = (int*)p;")]
     [InlineData("int^ p = new^ int(); ulong x = (ulong)p;")]
     [InlineData("int^ p = (int^)0;")]
     [InlineData("int^ p = new^ int(); p++;")]

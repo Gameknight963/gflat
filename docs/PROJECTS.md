@@ -304,6 +304,13 @@ option is given; otherwise the default is 0. Project builds use their evaluated
 project setting instead of that environment variable. These levels control Clang
 and LLVM optimization; they do not change language semantics.
 
+On Windows, 128-bit integer code uses the selected Clang installation's
+`compiler-rt` builtins for operations such as division and remainder. That LLVM
+installation must include its builtins library. This also applies to `NoStdLib`
+programs: compiler arithmetic helpers are separate from gflat's standard library.
+Other hosts keep their normal compiler runtime selection. See Clang's
+[compiler runtime documentation](https://clang.llvm.org/docs/Toolchain.html#compiler-runtime).
+
 ```powershell
 gflat build app/app.gfproj --configuration Release --optimization 2
 ```

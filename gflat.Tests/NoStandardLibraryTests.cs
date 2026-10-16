@@ -52,6 +52,7 @@ public class NoStandardLibraryTests
             Assert.Equal(0, Program.Main([source, "--no-stdlib", "--emit-ir", "-o", output]));
             Assert.DoesNotContain("%Exception = type", File.ReadAllText(output));
             Assert.Equal(0, Program.Main([source, "--no-stdlib", "--check"]));
+            Assert.Equal(42, Program.Main([source, "--no-stdlib", "--run", "-o", Path.Combine(root, "bare.exe")]));
         }
         finally { Directory.Delete(root, true); }
     }

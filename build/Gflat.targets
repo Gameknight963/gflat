@@ -40,6 +40,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildProjectFullPath).user" Condition="Exists('$(MSBuildProjectFullPath).user')" />
   <Target Name="GflatGetSources" Returns="@(_GflatSources)">
+    <Error Condition="'$(NoStdLib)' != 'true' and '$(NoStdLib)' != 'false'" Text="NoStdLib must be true or false." />
     <Error Condition="'$(OutputType)' != 'Exe' and '$(OutputType)' != 'Library'" Text="OutputType must be Exe or Library." />
     <Error Condition="'$(GflatOptimizationLevel)' != '0' and '$(GflatOptimizationLevel)' != '1' and '$(GflatOptimizationLevel)' != '2' and '$(GflatOptimizationLevel)' != '3'" Text="GflatOptimizationLevel must be 0, 1, 2, or 3." />
     <Error Condition="'$(GflatAsReference)' == 'true' and '$(OutputType)' != 'Library'" Text="Only Library projects can be referenced." />

@@ -141,6 +141,19 @@ public sealed class ProjectSdkTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Fact]
+    public void InvalidStdSelectionIsRejectedRatherThanSilentlyIncludingTheLibrary()
+    {
+        string root = Temporary(); Directory.CreateDirectory(root);
+        try
+        {
+            string project = Path.Combine(root, "bad.gfproj");
+            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>yes</NoStdLib></PropertyGroup></Project>");
+            Assert.Contains("NoStdLib must be true or false", Assert.Throws<ProjectException>(() => ProjectModel.Load(project)).Message);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static void CreateSdk(string root)
     {
         Directory.CreateDirectory(Path.Combine(root, "build"));

@@ -18,12 +18,14 @@ internal static class MsBuildEvaluation
             if (noStdLib.HasValue) properties["NoStdLib"] = noStdLib.Value ? "true" : "false";
             using var collection = new ProjectCollection(properties);
             var project = new Project(path, null, null, collection, ProjectLoadSettings.RecordEvaluatedItemElements);
-            var kind = project.GetPropertyValue("OutputType") switch
+            var kind = project.GetPropertyValue("OutputType").ToLowerInvariant() switch
             {
-                "Exe" => ProjectKind.Executable,
-                "Library" => ProjectKind.SourceLibrary,
+                "exe" => ProjectKind.Executable,
+                "library" => ProjectKind.SourceLibrary,
                 _ => throw new ProjectException(path, "OutputType must be Exe or Library. Use <Project Sdk=\"Gflat.Sdk\">.")
             };
+            if (!bool.TryParse(project.GetPropertyValue("NoStdLib"), out bool excludesStd))
+                throw new ProjectException(path, "NoStdLib must be true or false.");
             string target = project.GetPropertyValue("TargetPath");
             if (string.IsNullOrEmpty(target)) throw new ProjectException(path, "TargetPath is missing. Use the Gflat.Sdk project SDK.");
             string[] Files(string type) => project.GetItems(type).Select(i => i.GetMetadataValue("FullPath"))
@@ -41,7 +43,7 @@ internal static class MsBuildEvaluation
                 project.Imports.Select(i => i.ImportedProject.FullPath).Distinct(ProjectModel.Paths).ToArray(),
                 file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,
                 project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null,
-                project.GetPropertyValue("NoStdLib").Equals("true", StringComparison.OrdinalIgnoreCase));
+                excludesStd);
         }
         catch (InvalidProjectFileException error)
         {

@@ -6,7 +6,7 @@ public static class ProjectSdkInstallation
 {
     public static int Run(string[] args)
     {
-        if (args is ["--help"] or ["-h"])
+        if (args is ["--help"] or ["-h"] or ["install", "--help"] or ["install", "-h"])
         {
             Console.WriteLine("gflat sdk install [--sdk-directory path]\nInstall Gflat.Sdk into the active .NET SDK's Sdks directory, or an explicit MSBuild SDK directory. This setup action may require administrator permissions.");
             return 0;

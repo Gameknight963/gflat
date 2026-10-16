@@ -4,7 +4,7 @@ using gflat.diagnostics;
 
 namespace gflat.LanguageServer.Tests;
 
-public sealed class FieldDeclarationRecoveryTests
+public sealed class MemberDeclarationRecoveryTests
 {
     [Theory]
     [InlineData("class", "virtual int broken;")]
@@ -12,8 +12,10 @@ public sealed class FieldDeclarationRecoveryTests
     [InlineData("class", "override int broken;")]
     [InlineData("struct", "abstract int broken;")]
     [InlineData("class", "int broken<T>;")]
-    [InlineData("struct", "int broken<T>; ")]
-    public void InvalidFieldsPreserveLaterMethodBodiesAndCallNavigation(string kind, string invalid)
+    [InlineData("struct", "int broken<T>;")]
+    [InlineData("class", "virtual Holder(){}")]
+    [InlineData("class", "static ~Holder(){}")]
+    public void InvalidMembersPreserveLaterMethodBodiesAndCallNavigation(string kind, string invalid)
     {
         string text = $$"""
             {{kind}} Holder {
@@ -22,7 +24,7 @@ public sealed class FieldDeclarationRecoveryTests
             }
             int main() { Holder holder=new Holder(); return holder.Read(); }
             """;
-        var source = new SourceFile(Path.GetFullPath("field-declaration-recovery.gf"), text);
+        var source = new SourceFile(Path.GetFullPath("member-declaration-recovery.gf"), text);
         var snapshot = new AnalysisSnapshot([source], new() { NoStdLib=true });
         Assert.Single(snapshot.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var local = snapshot.Nodes.Select(n => n.Node).OfType<VariableDeclaration>().Single(n => n.Name == "later");

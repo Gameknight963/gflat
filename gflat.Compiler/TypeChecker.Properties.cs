@@ -290,7 +290,7 @@ public partial class TypeChecker
         string? current = _currentClass?.Name ?? _currentStruct?.Name;
         if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(current, property.Owner))
             throw new TypeCheckException($"Cannot access private {(getter ? "getter" : "setter")} of property '{property.Name}'", site.Line);
-        if (method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, property.Owner)))
+        if (method.Accessibility == TokenKind.Protected && (current == null || !IsSubclassOf(current, property.Owner)))
             throw new TypeCheckException($"Cannot access protected accessor of property '{property.Name}'", site.Line);
         ValidatePropertyAccessor(method);
         return method;

@@ -67,7 +67,8 @@ public partial class TypeChecker
             throw new TypeCheckException($"Instance member '{access.Member}' must be accessed with '.', not '::'", access.Line);
         if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name ?? _currentStruct?.Name, owner!))
             throw new TypeCheckException($"Cannot access private method '{access.Member}'", access.Line);
-        if (method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, owner!)))
+        string? current = _currentClass?.Name ?? _currentStruct?.Name;
+        if (method.Accessibility == TokenKind.Protected && (current == null || !IsSubclassOf(current, owner!)))
             throw new TypeCheckException($"Cannot access protected method '{access.Member}'", access.Line);
         return method;
     }

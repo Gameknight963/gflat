@@ -102,8 +102,9 @@ public partial class TypeChecker
         if (owner != null && field.Accessibility == TokenKind.Private &&
             !CanAccessPrivate(_currentClass?.Name ?? _currentStruct?.Name, owner))
             throw new TypeCheckException($"Cannot access private field '{field.Name}'", expression.Span);
+        string? current = _currentClass?.Name ?? _currentStruct?.Name;
         if (owner != null && field.Accessibility == TokenKind.Protected &&
-            (_currentClass == null || !IsSubclassOf(_currentClass.Name, owner)))
+            (current == null || !IsSubclassOf(current, owner)))
             throw new TypeCheckException($"Cannot access protected field '{field.Name}'", expression.Span);
         staticStorageReads[expression] = field;
         var fieldType = ResolveAlias(field.Type);

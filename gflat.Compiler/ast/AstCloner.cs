@@ -124,7 +124,7 @@ namespace gflat.ast
             {
                 TypeExpression parent = CloneType(nested.Parent);
                 List<TypeExpression> typeArgs = nested.TypeArguments.Select(CloneType).ToList();
-                return new NestedTypeExpression(parent, nested.Member, typeArgs, nested.Line);
+                return new NestedTypeExpression(parent, nested.Member, typeArgs, nested.Line) { NameSpan = nested.NameSpan };
             }
             if (type is NamedTypeExpression named)
             {
@@ -136,7 +136,7 @@ namespace gflat.ast
                     (named.Name == _oldName || named.Name == _oldName.Split('$').Last()) &&
                     named.TypeArguments.Count == _typeMap.Count &&
                     named.TypeArguments.Zip(_typeMap.Keys).All(pair => pair.First is NamedTypeExpression argument && !argument.IsReadOnlyValue && argument.Name == pair.Second))
-                    return new NamedTypeExpression(_newName, null, named.Line);
+                    return new NamedTypeExpression(_newName, null, named.Line) { NameSpan = named.NameSpan };
                 string typeName = named.Name;
                 if (_newName != null && _oldName != null && named.Namespace == null)
                 {
@@ -150,7 +150,7 @@ namespace gflat.ast
                     }
                 }
                 List<TypeExpression> typeArgs = named.TypeArguments.Select(CloneType).ToList();
-                return new NamedTypeExpression(typeName, named.Namespace, named.Line, typeArgs);
+                return new NamedTypeExpression(typeName, named.Namespace, named.Line, typeArgs) { NameSpan = named.NameSpan };
             }
             if (type is ReferenceTypeExpression reference)
                 return new ReferenceTypeExpression(CloneType(reference.Inner), reference.Line);

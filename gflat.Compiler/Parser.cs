@@ -1056,6 +1056,7 @@ namespace gflat
             else
             {
                 string name = "";
+                Token nameToken = Current;
 
                 // handle built-in type keywords
                 if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
@@ -1089,7 +1090,7 @@ namespace gflat
                     if (typeArgs.Count != 2) throw new TypeCheckException("managed<T, Collector> requires an element type and a collector type", line);
                     type = new ManagedTypeExpression(typeArgs[0], Match(TokenKind.QuestionMark), line, collector: typeArgs[1]);
                 }
-                else type = new NamedTypeExpression(name, null, line, typeArgs);
+                else type = new NamedTypeExpression(name, null, line, typeArgs) { NameSpan = nameToken.Span };
 
                 if (Check(TokenKind.Dot))
                 {
@@ -1099,7 +1100,8 @@ namespace gflat
                 while (Match(TokenKind.DoubleColon))
                 {
                     int memberLine = Current.Line;
-                    string member = Expect(TokenKind.Identifier).Text;
+                    Token memberToken = Expect(TokenKind.Identifier);
+                    string member = memberToken.Text;
                     List<TypeExpression> memberTypeArgs = new();
                     if (Check(TokenKind.Less))
                     {
@@ -1112,7 +1114,7 @@ namespace gflat
                         }
                         Expect(TokenKind.Greater);
                     }
-                    type = new NestedTypeExpression(type, member, memberTypeArgs, memberLine);
+                    type = new NestedTypeExpression(type, member, memberTypeArgs, memberLine) { NameSpan = memberToken.Span };
 
                     if (Check(TokenKind.Dot))
                     {

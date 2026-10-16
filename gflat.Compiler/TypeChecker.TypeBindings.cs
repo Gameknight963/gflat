@@ -36,11 +36,13 @@ public partial class TypeChecker
             return active.Identity;
         }
         var binding = new ActiveTypeBinding(forward);
+        sourceTypeBindings.Remove(source);
         activeTypeBindings.Add(source, binding);
         try
         {
             var resolved = ResolveAliasCore(source, Publish);
             Publish(resolved);
+            RecordSourceTypeBinding(source, binding.Identity!);
             return binding.Identity!;
         }
         finally { activeTypeBindings.Remove(source); }

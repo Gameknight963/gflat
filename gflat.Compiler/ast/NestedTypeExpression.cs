@@ -8,6 +8,7 @@ namespace gflat.ast
     {
         public TypeExpression Parent { get; }
         public string Member { get; }
+        public SourceSpan NameSpan { get; set; }
         public List<TypeExpression> TypeArguments { get; }
 
         public NestedTypeExpression(TypeExpression parent, string member, List<TypeExpression>? typeArguments, int line) : base(line)

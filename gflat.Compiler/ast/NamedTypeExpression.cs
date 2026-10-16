@@ -7,6 +7,7 @@ namespace gflat.ast
     public class NamedTypeExpression : TypeExpression
     {
         public string Name { get; }
+        public SourceSpan NameSpan { get; set; }
         public string? Namespace { get; }
         public List<TypeExpression> TypeArguments { get; }
 

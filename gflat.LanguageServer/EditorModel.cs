@@ -98,6 +98,7 @@ public sealed partial class EditorModel
             declarations.TryAdd(entry.Node, symbol);
         }
         RegisterTypeParameters();
+        IndexSourceTypeNames();
         // Resolve once on the analysis worker. Hover and semantic-token requests
         // must not repeatedly walk the tree on the server's message loop.
         foreach (var (path, ts) in tokens)
@@ -433,8 +434,9 @@ public sealed partial class EditorModel
             if (qualifier != null) return qualifier;
         }
         var candidates = Candidates(path, token.Start, index);
+        if (BoundTypeName(token, candidates) is { } boundType) return boundType;
         // A local named `String` must not recolor a `String` type annotation.
-        bool typePosition = nodes[path].Any(n => n.Node is NamedTypeExpression && n.Span.Length > 0 && token.Start >= n.Span.Start && token.End < n.Span.Start + n.Span.Length);
+        bool typePosition = sourceTypeNames.ContainsKey(token.Span) || nodes[path].Any(n => n.Node is NamedTypeExpression && n.Span.Length > 0 && token.Start >= n.Span.Start && token.End < n.Span.Start + n.Span.Length);
         if (typePosition)
             candidates = candidates.Where(s => s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration);
         else if (candidates.FirstOrDefault(s => !s.IsTypeParameter && s.Name == token.Text) is { } value)

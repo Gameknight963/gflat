@@ -221,8 +221,8 @@ namespace gflat.semantics
                     {
                         throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' must be marked readonly to match base method", method.Span);
                     }
-                    var returnType = _symbols.ResolveAlias(method.ReturnType);
-                    var baseReturnType = _symbols.ResolveAlias(baseMethod.ReturnType);
+                    var returnType = _symbols.ResolveMethodType(method, method.ReturnType);
+                    var baseReturnType = _symbols.ResolveMethodType(baseMethod, baseMethod.ReturnType);
                     if (!TypeChecker.TypesMatchPublic(returnType, baseReturnType, _symbols))
                     {
                         throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' has return type '{_symbols.DisplayTypeName(returnType)}' which does not match base method return type '{_symbols.DisplayTypeName(baseReturnType)}'", method.Span);
@@ -233,8 +233,8 @@ namespace gflat.semantics
                     }
                     for (int p = 0; p < method.Parameters.Count; p++)
                     {
-                        var parameterType = _symbols.ResolveAlias(method.Parameters[p].Type);
-                        var baseParameterType = _symbols.ResolveAlias(baseMethod.Parameters[p].Type);
+                        var parameterType = _symbols.ResolveMethodType(method, method.Parameters[p].Type);
+                        var baseParameterType = _symbols.ResolveMethodType(baseMethod, baseMethod.Parameters[p].Type);
                         if (!TypeChecker.TypesMatchPublic(parameterType, baseParameterType, _symbols) || method.Parameters[p].IsConst != baseMethod.Parameters[p].IsConst)
                         {
                             throw new TypeCheckException($"Parameter '{method.Parameters[p].Name}' of overriding method '{method.Name}' has type '{_symbols.DisplayTypeName(parameterType)}' which does not match base parameter type '{_symbols.DisplayTypeName(baseParameterType)}'", method.Parameters[p].Span);

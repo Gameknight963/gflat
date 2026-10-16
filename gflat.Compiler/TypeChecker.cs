@@ -49,6 +49,7 @@ namespace gflat
             _symbols.AliasResolver = ResolveAlias;
             _symbols.NameFormatter = DisplayName;
             _symbols.TypeFormatter = DisplayTypeName;
+            _symbols.MethodTypeResolver = ResolveHierarchyMethodType;
         }
 
         public bool TryGetConstValueByName(string name, out ConstValue? value) => checkingDefaults.Count > 0

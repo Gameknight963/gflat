@@ -115,6 +115,11 @@ namespace gflat.symbols
         public TypeExpression ResolveAlias(TypeExpression type) =>
             AliasResolver != null ? AliasResolver(type) : ResolveAliasDirect(type);
 
+        public Func<MethodDeclaration, TypeExpression, TypeExpression>? MethodTypeResolver { get; set; }
+
+        public TypeExpression ResolveMethodType(MethodDeclaration method, TypeExpression type) =>
+            MethodTypeResolver != null ? MethodTypeResolver(method, type) : ResolveAlias(type);
+
         public TypeExpression ResolveAliasDirect(TypeExpression type)
         {
             var resolved = ResolveAliasDirectCore(type);

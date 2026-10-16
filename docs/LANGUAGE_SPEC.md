@@ -458,6 +458,8 @@ Destructor-bearing elements must be fresh values, explicit moves, or values supp
 
 Local scalar reads require definite assignment. Struct fields can be initialized individually. An assignment on only a skipped logical operand or only inside a potentially empty loop does not initialize a value after that operation. Return values are evaluated before deferred actions.
 
+Assignments evaluate the destination receiver and indices once, before the right-hand side. A simple `=` computes the destination address without reading its stored value. Compound assignments capture both the destination address and its old value before evaluating the right operand. This order also applies to pointer dereferences and ref-returning properties or indexers. If evaluating the destination throws, the right-hand side is not evaluated. If the right-hand side throws, the assignment does not overwrite or destroy the destination's old value; side effects performed while evaluating either operand still occur.
+
 `defer` executes in reverse registration order at lexical scope exit, including return, break, continue, and supported exception paths. Deferred code binds variables at its declaration site, even if a later scope shadows a name. Deferred reads are checked at cleanup; deferred writes do not take effect at registration. Nested defer is not supported.
 
 ```csharp

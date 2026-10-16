@@ -215,6 +215,22 @@ public sealed class ManagedReturnStorageTests
         }
         """);
 
+    [Theory]
+    [InlineData("=")]
+    [InlineData("+=")]
+    public void CapturedManagedFieldReceiverSurvivesReplacementDuringTheRightOperand(string assignment) => Succeeds("""
+        struct Box { public int value; public Box(int input) { value = input; } }
+        int Replace(ref Box^ slot) { slot = new^ Box(10); return rc_live_count(); }
+        int main() {
+            {
+                Box^ slot = new^ Box(0);
+                int observed = (slot.value ASSIGNMENT Replace(ref slot));
+                if (observed != 2 || slot.value != 10) return 1;
+            }
+            return rc_live_count();
+        }
+        """.Replace("ASSIGNMENT", assignment));
+
     [Fact]
     public void ReturnedValueSurvivesAllocatingDefers() => Succeeds("""
         int^ Create() {

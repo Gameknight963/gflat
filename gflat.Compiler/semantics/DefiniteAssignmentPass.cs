@@ -976,6 +976,27 @@ namespace gflat.semantics
             return merged;
         }
 
+        private void CheckAssignmentAddress(AstNode target)
+        {
+            if (_typeChecker.GetPropertyRead(target) != null) { CheckExpression(target); return; }
+            if (target is IdentifierExpression or NamespaceAccessExpression) return;
+            if (target is MemberAccessExpression member)
+            {
+                if (member.Object is IdentifierExpression id && Lookup(id.Name) is { } local &&
+                    _typeChecker.ResolveAlias(_typeChecker.ParameterValueType(local.Type)) is not (PointerTypeExpression or ManagedTypeExpression))
+                {
+                    if (!local.IsFullyAssigned && _typeChecker.HasDestructor(local.Type))
+                        throw new TypeCheckException("An uninitialized owning local must be initialized as a whole value", target.Span);
+                    return;
+                }
+                if (member.Object is not IdentifierExpression { Name: "this" }) CheckExpression(member.Object);
+                return;
+            }
+            // Indexing reads its base and indices, not the destination element;
+            // dereferencing reads the pointer, not the destination value.
+            CheckExpression(target);
+        }
+
         private void CheckAssignment(AssignmentExpression assign)
         {
             if (_constructorBeingChecked != null && ConstructorFieldPath(assign.Target) is string path &&
@@ -987,15 +1008,14 @@ namespace gflat.semantics
             }
             if (assign.Operator == TokenKind.Equals)
             {
-                // 1. Evaluate RHS Value FIRST!
-                CheckValue(assign.Value);
-
+                CheckAssignmentAddress(assign.Target);
                 if (ConstructorFieldPath(assign.Target) is string nestedPath && nestedPath.Contains('.'))
                 {
                     string root = nestedPath.Split('.')[0];
                     var field = ConstructorFields.FirstOrDefault(f => f.Name == root);
                     if (field != null && _typeChecker.HasDestructor(field.Type)) RequireConstructorFields(root, assign.Line);
                 }
+                CheckValue(assign.Value);
                 if (ConstructorFieldPath(assign.Target) is string fieldPath &&
                     _requiredFields.Any(f => f == fieldPath || f.StartsWith(fieldPath + ".")))
                 {
@@ -1005,7 +1025,7 @@ namespace gflat.semantics
                     return;
                 }
 
-                // 2. Perform write to LHS Target
+                // The address has been evaluated; writing initializes the target.
                 if (assign.Target is IdentifierExpression id)
                 {
                     if (Lookup(id.Name) is { IsFullyAssigned: false }) _typeChecker.MarkInitialization(assign);
@@ -1037,13 +1057,6 @@ namespace gflat.semantics
                         }
                     }
 
-                    // Not a local struct variable field write (e.g. pointer ptr.f = val)
-                    CheckExpression(member.Object);
-                }
-                else
-                {
-                    // Array indexing or pointer dereference target (*p = val, arr[i] = val)
-                    CheckExpression(assign.Target);
                 }
             }
             else

@@ -761,6 +761,7 @@ public partial class LlvmEmitter : IVisitor
                 string pointerType = EmitType(objType);
                 string loadedPtr = NewTemp();
                 Emit($"    {loadedPtr} = load {pointerType}, {pointerType}* {ptr}");
+                ProtectManagedValue(objType, loadedPtr);
                 objPtr = loadedPtr;
             }
             else
@@ -3745,35 +3746,17 @@ public partial class LlvmEmitter : IVisitor
         if (EmitPropertyWrite(node)) return;
         TypeExpression targetType = _typeChecker.GetType(node.Target);
         string llvmType = EmitType(targetType);
-        string? ptr = null;
+        EmitAddress(node.Target);
+        string ptr = Pop();
         string currentVal = "";
         if (node.Operator != TokenKind.Equals)
         {
-            EmitAddress(node.Target);
-            ptr = Pop();
             currentVal = NewTemp();
             Emit($"    {currentVal} = load {llvmType}, {llvmType}* {ptr}");
             ProtectManagedValue(targetType, currentVal);
         }
         EmitValueForTarget(node.Value, _typeChecker.GetType(node.Target));
         string val = Pop();
-
-        IDeferAction? pending = null;
-        TypeExpression assignedType = _typeChecker.GetType(node.Target);
-        if (_typeChecker.HasDestructor(assignedType))
-        {
-            string temporary = NewTemp(), llvm = EmitType(assignedType);
-            EmitAlloca($"{llvm}", temporary);
-            Emit($"    store {llvm} {val}, {llvm}* {temporary}");
-            pending = new TemporaryCleanup(assignedType, temporary);
-            _deferScopes[^1].Add(pending);
-        }
-        if (ptr == null)
-        {
-            EmitAddress(node.Target);
-            ptr = Pop();
-        }
-        if (pending != null) _deferScopes[^1].Remove(pending);
 
         bool isFloat = _typeChecker.ResolveAlias(targetType) is NamedTypeExpression { Name: "float" or "double" };
 

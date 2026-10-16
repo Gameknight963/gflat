@@ -127,6 +127,7 @@ namespace gflat.symbols
         }
         private TypeExpression ResolveAliasDirectCore(TypeExpression type)
         {
+            if (type is NamedTypeExpression { IsResolvedNominal: true }) return type;
             if (type is NestedTypeExpression nested)
             {
                 TypeExpression resolvedParent = ResolveAlias(nested.Parent);
@@ -179,7 +180,10 @@ namespace gflat.symbols
                     string? resolvedNested = ResolveNestedTypeName(named.Name);
                     if (resolvedNested != null && resolvedNested != named.Name)
                     {
-                        return new NamedTypeExpression(resolvedNested, named.Namespace, named.Line);
+                        var resolved = NamedTypeExpression.Resolved(resolvedNested, named.Line);
+                        resolved.Span = named.Span;
+                        resolved.NameSpan = named.NameSpan;
+                        return resolved;
                     }
                 }
             }

@@ -10,6 +10,18 @@ namespace gflat.ast
         public SourceSpan NameSpan { get; set; }
         public string? Namespace { get; }
         public List<TypeExpression> TypeArguments { get; }
+        internal bool IsResolvedNominal { get; private set; }
+
+        internal static NamedTypeExpression Resolved(string identity, int line) =>
+            new(identity, null, line) { IsResolvedNominal = true };
+
+        internal NamedTypeExpression AsResolvedNominal()
+        {
+            if (IsResolvedNominal) return this;
+            var copy = (NamedTypeExpression)MemberwiseClone();
+            copy.IsResolvedNominal = true;
+            return copy;
+        }
 
         public NamedTypeExpression(string name, string? ns, int line, List<TypeExpression>? typeArguments = null) : base(line)
         {

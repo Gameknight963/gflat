@@ -56,7 +56,7 @@ public partial class TypeChecker
                     IEnumerable<string> types = target is { IsVirtual: false, IsOverride: false, IsAbstract: false } && summaries.TryGetValue(target, out var known)
                         ? known.ToArray() : new[] { UnknownExceptionType };
                     foreach (string type in types)
-                        if (!catches.Any(c => c == "Exception" || c == type || type != UnknownExceptionType && TypeDerivesFromClass(new NamedTypeExpression(type, null, 0), c)))
+                        if (!catches.Any(c => c == "Exception" || c == type || type != UnknownExceptionType && TypeDerivesFromClass(NamedTypeExpression.Resolved(type, 0), c)))
                             changed |= result.Add(type);
                 }
             } while (changed);

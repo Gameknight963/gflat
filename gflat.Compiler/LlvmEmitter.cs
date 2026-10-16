@@ -141,7 +141,7 @@ public partial class LlvmEmitter : IVisitor
         {
             TypeChecker.StructInfo? sInfo = _typeChecker.GetStructByIdentity(sVal.StructName);
             if (sInfo == null) throw new Exception($"Unknown struct {sVal.StructName}");
-            string init = EmitConstInitializer(sVal, new NamedTypeExpression(sVal.StructName, null, 0));
+            string init = EmitConstInitializer(sVal, NamedTypeExpression.Resolved(sVal.StructName, 0));
             EmitGlobal($"{candidate} = internal constant {init}");
             return candidate;
         }
@@ -149,7 +149,7 @@ public partial class LlvmEmitter : IVisitor
         {
             TypeChecker.ClassInfo? cInfo = _typeChecker.GetClassByIdentity(cVal.ClassName);
             if (cInfo == null) throw new Exception($"Unknown class {cVal.ClassName}");
-            string init = EmitConstInitializer(cVal, new NamedTypeExpression(cVal.ClassName, null, 0));
+            string init = EmitConstInitializer(cVal, NamedTypeExpression.Resolved(cVal.ClassName, 0));
             EmitGlobal($"{candidate} = internal constant {init}");
             return candidate;
         }
@@ -1585,7 +1585,7 @@ public partial class LlvmEmitter : IVisitor
         if (_currentClass!.BaseClass != null)
         {
             TypeChecker.ClassInfo baseInfo = _typeChecker.GetClassByIdentity(_currentClass.BaseClass)!;
-            if (_typeChecker.HasAnyDestructor(baseInfo) || NeedsCleanup(new NamedTypeExpression(baseInfo.Name, null, 0)))
+            if (_typeChecker.HasAnyDestructor(baseInfo) || NeedsCleanup(NamedTypeExpression.Resolved(baseInfo.Name, 0)))
             {
                 string loadedThis = NewTemp();
                 Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
@@ -1694,7 +1694,7 @@ public partial class LlvmEmitter : IVisitor
             {
                 EmitStructDefaultConstructor(node.Name);
             }
-            if (_currentStruct.Destructor == null && NeedsCleanup(new NamedTypeExpression(node.Name, null, node.Line)))
+            if (_currentStruct.Destructor == null && NeedsCleanup(NamedTypeExpression.Resolved(node.Name, node.Line)))
                 EmitStructDestructor(node.Name, null);
         }
         finally
@@ -4485,7 +4485,7 @@ public partial class LlvmEmitter : IVisitor
         Emit("    %vt_slot = getelementptr %Exception, %Exception* %exception, i32 0, i32 0");
         Emit("    %vt = load i8**, i8*** %vt_slot");
         foreach (var cls in _typeChecker.GetAllClasses().Where(c => _typeChecker.HasAnyDestructor(c) ||
-            (_typeChecker.UsesCollector && HasManagedReferences(new NamedTypeExpression(c.Name, null, 0)))))
+            (_typeChecker.UsesCollector && HasManagedReferences(NamedTypeExpression.Resolved(c.Name, 0)))))
         {
             string next = NewLabel("exception_next");
             string destroy = NewLabel("exception_destroy");
@@ -4497,7 +4497,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"{destroy}:");
             string typed = NewTemp();
             Emit($"    {typed} = bitcast %Exception* %exception to %{cls.Name}*");
-            EmitDestroy(new NamedTypeExpression(cls.Name, null, 0), typed);
+            EmitDestroy(NamedTypeExpression.Resolved(cls.Name, 0), typed);
             Emit("    br label %release");
             Emit($"{next}:");
         }

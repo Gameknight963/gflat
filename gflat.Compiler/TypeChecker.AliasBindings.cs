@@ -86,7 +86,7 @@ public partial class TypeChecker
         {
             return declaration.Constraints.Any(c => TypesMatch(ResolveAlias(c), constraint) ||
                 constraint is NamedTypeExpression named &&
-                (GetClass(named.Name) != null && TypeDerivesFromClass(ResolveAlias(c), named.Name) ||
+                (GetClassByIdentity(named.Name) != null && TypeDerivesFromClass(ResolveAlias(c), named.Name) ||
                  GetInterface(named.Name) != null && TypeImplementsInterface(ResolveAlias(c), named.Name)));
         }
         finally { _currentNamespace = previous; }
@@ -113,6 +113,7 @@ public partial class TypeChecker
                 // Contract views belong to this alias use, not the shared implementation.
                 result = new NamedTypeExpression(named.Name, named.Namespace, target.Line, named.TypeArguments)
                     { Span = target.Span };
+                if (named.IsResolvedNominal) result = ((NamedTypeExpression)result).AsResolvedNominal();
                 result = result.WithReadOnlyValue(named.IsReadOnlyValue);
                 aliasContracts[result] = contract;
             }
@@ -194,7 +195,7 @@ public partial class TypeChecker
                 var resolved = ResolveAlias(constraint);
                 IEnumerable<MethodDeclaration> methods = resolved is NamedTypeExpression type
                     ? GetInterface(type.Name)?.Methods ??
-                        GetClass(type.Name)?.Methods.Values.Select(m => m.Method).Where(m => m.IsStatic && m.Accessibility == TokenKind.Public) ?? []
+                        GetClassByIdentity(type.Name)?.Methods.Values.Select(m => m.Method).Where(m => m.IsStatic && m.Accessibility == TokenKind.Public) ?? []
                     : [];
                 if (methods.Any(m => (m.Name == access.Member || m.PropertyName == access.Member) &&
                         (selectedMethod == null || m.Name == selectedMethod.Name &&

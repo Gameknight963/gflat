@@ -49,11 +49,22 @@ public partial class TypeChecker
 
         void Publish(TypeExpression identity)
         {
+            identity = MarkResolvedNominal(identity);
             CheckPublishedTypeBinding(identity, source.Line);
             TypeExpression qualified = source.IsReadOnlyValue ? TypeQualifiers.ReadOnly(identity) : identity;
             if (aliasContracts.TryGetValue(identity, out var contract)) aliasContracts[qualified] = contract;
             binding.Publish(qualified);
         }
+    }
+
+    private TypeExpression MarkResolvedNominal(TypeExpression type)
+    {
+        if (type is not NamedTypeExpression { Namespace: null, TypeArguments.Count: 0, IsResolvedNominal: false } named ||
+            !_classes.ContainsKey(named.Name) && !_structs.ContainsKey(named.Name) &&
+            !_interfaces.ContainsKey(named.Name) && !_enums.ContainsKey(named.Name)) return type;
+        var resolved = named.AsResolvedNominal();
+        if (aliasContracts.TryGetValue(named, out var contract)) aliasContracts[resolved] = contract;
+        return resolved;
     }
 
     // Publication carries registered identities only. It never evaluates bounds,
@@ -91,7 +102,9 @@ public partial class TypeChecker
         string identity = owner + "." + source.Member;
         if (!_classes.ContainsKey(identity) && !_structs.ContainsKey(identity) &&
             !_interfaces.ContainsKey(identity) && !_enums.ContainsKey(identity)) return null;
-        return new NamedTypeExpression(identity, null, source.Line) { Span = source.Span };
+        var resolved = NamedTypeExpression.Resolved(identity, source.Line);
+        resolved.Span = source.Span;
+        return resolved;
     }
 
     private int? ResolveArrayLength(ArrayTypeExpression array)

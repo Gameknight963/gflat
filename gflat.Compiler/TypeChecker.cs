@@ -414,7 +414,7 @@ namespace gflat
 
         public bool HasAnyDestructor(ClassInfo c)
         {
-            return HasDestructor(new NamedTypeExpression(c.Name, null, 0));
+            return HasDestructor(NamedTypeExpression.Resolved(c.Name, 0));
         }
 
         public bool HasDestructor(TypeExpression type)
@@ -455,7 +455,7 @@ namespace gflat
                 if (cInfo != null)
                 {
                     if (cInfo.Destructor != null || (cInfo.BaseClass != null &&
-                        HasDestructorInternal(new NamedTypeExpression(cInfo.BaseClass, null, 0), visited)))
+                        HasDestructorInternal(NamedTypeExpression.Resolved(cInfo.BaseClass, 0), visited)))
                     {
                         return true;
                     }
@@ -877,6 +877,11 @@ namespace gflat
         private NamedTypeExpression ResolveGenericType(string name, string? ns, List<TypeExpression> typeArgs, int line, Action<TypeExpression> publish)
         {
             name = ResolveTypeIdentity(name, ns) ?? name;
+            return ResolveGenericTypeByIdentity(name, typeArgs, line, publish);
+        }
+
+        private NamedTypeExpression ResolveGenericTypeByIdentity(string name, List<TypeExpression> typeArgs, int line, Action<TypeExpression> publish)
+        {
             if (_genericStructs.TryGetValue(name, out StructDeclaration? genericStruct))
             {
                 return MonomorphizeStruct(genericStruct, typeArgs, line, publish);
@@ -912,7 +917,7 @@ namespace gflat
             CheckFailedTypeSpecialization(mangledName, line);
             if (_structs.ContainsKey(mangledName))
             {
-                var identity = new NamedTypeExpression(mangledName, null, line);
+                var identity = NamedTypeExpression.Resolved(mangledName, line);
                 publish(identity);
                 return identity;
             }
@@ -930,11 +935,11 @@ namespace gflat
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
             ResolveSpecializedBaseTypes(genericDef, specialized);
-            publish(new NamedTypeExpression(mangledName, null, line));
+            publish(NamedTypeExpression.Resolved(mangledName, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
             CheckSpecialization(genericDef, specialized);
 
-            return new NamedTypeExpression(mangledName, null, line);
+            return NamedTypeExpression.Resolved(mangledName, line);
         }
 
         private NamedTypeExpression MonomorphizeClass(ClassDeclaration genericDef, List<TypeExpression> typeArgs, int line, Action<TypeExpression> publish)
@@ -961,7 +966,7 @@ namespace gflat
             CheckFailedTypeSpecialization(mangledName, line);
             if (_classes.ContainsKey(mangledName))
             {
-                var identity = new NamedTypeExpression(mangledName, null, line);
+                var identity = NamedTypeExpression.Resolved(mangledName, line);
                 publish(identity);
                 return identity;
             }
@@ -979,11 +984,11 @@ namespace gflat
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
             ResolveSpecializedBaseTypes(genericDef, specialized);
-            publish(new NamedTypeExpression(mangledName, null, line));
+            publish(NamedTypeExpression.Resolved(mangledName, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
             CheckSpecialization(genericDef, specialized);
 
-            return new NamedTypeExpression(mangledName, null, line);
+            return NamedTypeExpression.Resolved(mangledName, line);
         }
 
         private MethodDeclaration MonomorphizeFunction(MethodDeclaration genericDef, List<TypeExpression> typeArgs, int line)
@@ -1038,7 +1043,7 @@ namespace gflat
             if (paramType is ReferenceTypeExpression rp && argType is ReferenceTypeExpression ra)
                 return InferTypeParameter(rp.Inner, ra.Inner, genericParamNames, inferred);
 
-            if (paramType is NamedTypeExpression namedParam && genericParamNames.Contains(namedParam.Name) && namedParam.TypeArguments.Count == 0)
+            if (paramType is NamedTypeExpression namedParam && !namedParam.IsResolvedNominal && genericParamNames.Contains(namedParam.Name) && namedParam.TypeArguments.Count == 0)
             {
                 TypeExpression resolvedArg = ResolveAlias(argType);
                 if (inferred.TryGetValue(namedParam.Name, out TypeExpression? existing))
@@ -1085,6 +1090,7 @@ namespace gflat
 
         private TypeExpression ResolveAliasCore(TypeExpression type, Action<TypeExpression> publish)
         {
+            if (type is NamedTypeExpression { IsResolvedNominal: true }) return type;
             if (type is ReferenceTypeExpression reference)
             {
                 TypeExpression Project(TypeExpression inner) => new ReferenceTypeExpression(inner, reference.Line) { Span = reference.Span };
@@ -1102,7 +1108,7 @@ namespace gflat
                 if (resolvedParent is NamedTypeExpression namedParent)
                 {
                     string parentNs = namedParent.Namespace != null ? $"{namedParent.Namespace}::{namedParent.Name}" : namedParent.Name;
-                    NamespaceScope? ns = ResolveNamespaceByName(parentNs);
+                    NamespaceScope? ns = namedParent.IsResolvedNominal ? null : ResolveNamespaceByName(parentNs);
                     if (ns != null)
                     {
                         if (ns.Aliases.TryGetValue(nested.Member, out TypeExpression? target))
@@ -1122,7 +1128,7 @@ namespace gflat
                     if (nested.TypeArguments.Count > 0)
                     {
                         List<TypeExpression> resolvedArgs = nested.TypeArguments.Select(ResolveAlias).ToList();
-                        return ResolveGenericType(candidate, namedParent.Namespace, resolvedArgs, nested.Line, publish);
+                        return ResolveGenericTypeByIdentity(candidate, resolvedArgs, nested.Line, publish);
                     }
                     return ResolveAlias(new NamedTypeExpression(candidate, namedParent.Namespace, nested.Line), publish);
                 }
@@ -1131,13 +1137,14 @@ namespace gflat
             if (type is NamedTypeExpression named)
             {
                 string? identity = ResolveTypeIdentity(named.Name, named.Namespace);
-                if (identity != null && (identity != named.Name || named.Namespace != null))
-                    return resolvedSourceTypes[type] = ResolveAlias(new NamedTypeExpression(identity, null, named.Line, named.TypeArguments) { Span = named.Span }, publish);
                 if (named.TypeArguments.Count > 0)
                 {
                     List<TypeExpression> resolvedArgs = named.TypeArguments.Select(ResolveAlias).ToList();
-                    return ResolveGenericType(named.Name, named.Namespace, resolvedArgs, named.Line, publish);
+                    return identity != null ? ResolveGenericTypeByIdentity(identity, resolvedArgs, named.Line, publish)
+                        : ResolveGenericType(named.Name, named.Namespace, resolvedArgs, named.Line, publish);
                 }
+                if (identity != null && (identity != named.Name || named.Namespace != null))
+                    return resolvedSourceTypes[type] = MarkResolvedNominal(new NamedTypeExpression(identity, null, named.Line) { Span = named.Span, NameSpan = named.NameSpan });
                 if (named.Namespace != null)
                 {
                     NamespaceScope? ns = ResolveNamespaceByName(named.Namespace);
@@ -1183,7 +1190,7 @@ namespace gflat
                     string? resolvedNested = ResolveNestedTypeName(named.Name);
                     if (resolvedNested != null && resolvedNested != named.Name)
                     {
-                        return resolvedSourceTypes[type] = new NamedTypeExpression(resolvedNested, named.Namespace, named.Line) { Span = named.Span };
+                        return resolvedSourceTypes[type] = new NamedTypeExpression(resolvedNested, named.Namespace, named.Line) { Span = named.Span, NameSpan = named.NameSpan };
                     }
                 }
             }
@@ -2359,7 +2366,7 @@ namespace gflat
                 // Validate implemented interfaces
                 foreach (string ifaceName in _currentClass.Interfaces)
                 {
-                    InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
+                    InterfaceInfo? ifaceInfo = ResolveInterface(NamedTypeExpression.Resolved(ifaceName, node.Line));
                     if (ifaceInfo == null)
                     {
                         throw new TypeCheckException($"Class '{DisplayName(node.Name)}' implements unknown interface '{DisplayName(ifaceName)}'", node.Span);
@@ -2500,7 +2507,7 @@ namespace gflat
                             if (!method.IsAbstract)
                             {
                                 PushScope();
-                                NamedTypeExpression classType = new NamedTypeExpression(node.Name, null, method.Line);
+                                NamedTypeExpression classType = NamedTypeExpression.Resolved(node.Name, method.Line);
                                 PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line, isReadOnly: method.IsReadOnly);
                                 DeclareVariable("this", thisType, method.Line);
 
@@ -2554,7 +2561,7 @@ namespace gflat
                 // Validate implemented interfaces
                 foreach (string ifaceName in _currentStruct.Interfaces)
                 {
-                    InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
+                    InterfaceInfo? ifaceInfo = ResolveInterface(NamedTypeExpression.Resolved(ifaceName, node.Line));
                     if (ifaceInfo == null)
                     {
                         throw new TypeCheckException($"Struct '{DisplayName(node.Name)}' implements unknown interface '{DisplayName(ifaceName)}'", node.Span);
@@ -2695,7 +2702,7 @@ namespace gflat
                         {
                             ValidateReturnType(method.ReturnType, method.Line);
                             PushScope();
-                            NamedTypeExpression structType = new NamedTypeExpression(node.Name, null, method.Line);
+                            NamedTypeExpression structType = NamedTypeExpression.Resolved(node.Name, method.Line);
                             PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line, isReadOnly: method.IsReadOnly);
                             DeclareVariable("this", thisType, method.Line);
 
@@ -2968,7 +2975,7 @@ namespace gflat
             try
             {
                 PushScope();
-                NamedTypeExpression typeExpr = new NamedTypeExpression(ownerName, null, node.Line);
+                NamedTypeExpression typeExpr = NamedTypeExpression.Resolved(ownerName, node.Line);
                 PointerTypeExpression thisType = new PointerTypeExpression(typeExpr, false, node.Line);
                 DeclareVariable("this", thisType, node.Line);
 
@@ -3075,7 +3082,7 @@ namespace gflat
             try
             {
                 PushScope();
-                NamedTypeExpression typeExpr = new NamedTypeExpression(ownerName, null, node.Line);
+                NamedTypeExpression typeExpr = NamedTypeExpression.Resolved(ownerName, node.Line);
                 PointerTypeExpression thisType = new PointerTypeExpression(typeExpr, false, node.Line);
                 DeclareVariable("this", thisType, node.Line);
                 node.Body.Accept(this);
@@ -4848,7 +4855,7 @@ namespace gflat
                 if (!enumInfo.Members.TryGetValue(node.Member, out long val))
                     throw new TypeCheckException($"Enum '{enumInfo.Name}' does not contain member '{node.Member}'", node.Line);
 
-                RecordType(node, new NamedTypeExpression(enumInfo.Name, null, node.Line));
+                RecordType(node, NamedTypeExpression.Resolved(enumInfo.Name, node.Line));
                 _resolvedEnumMembers[node] = (enumInfo, val);
                 return;
             }
@@ -5161,7 +5168,7 @@ namespace gflat
                     _resolvedConstructors[node] = matchedCtor;
                     AddDefaultArguments(node.Arguments, matchedCtor.Parameters, node);
                     if (!matchedCtor.IsNoThrow) { _throwingCalls.Add(node); RecordImplicitException(); }
-                    if (matchedCtor.IsCopy && !CanAccessCopy(new NamedTypeExpression(cInfo.Name, null, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
+                    if (matchedCtor.IsCopy && !CanAccessCopy(NamedTypeExpression.Resolved(cInfo.Name, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
                         throw new TypeCheckException("Cannot access copy constructor", node.Line);
                     for (int i = 0; i < node.Arguments.Count; i++)
                     {
@@ -5175,9 +5182,9 @@ namespace gflat
                 CheckPlacementDestination(node, resolvedType);
                 TypeExpression resultType = node.Kind switch
                 {
-                    AllocationKind.Value => new NamedTypeExpression(cInfo.Name, null, node.Line),
-                    AllocationKind.Pointer => new PointerTypeExpression(new NamedTypeExpression(cInfo.Name, null, node.Line), false, node.Line),
-                    AllocationKind.Managed => new ManagedTypeExpression(new NamedTypeExpression(cInfo.Name, null, node.Line), false, node.Line, collector: node.Collector),
+                    AllocationKind.Value => NamedTypeExpression.Resolved(cInfo.Name, node.Line),
+                    AllocationKind.Pointer => new PointerTypeExpression(NamedTypeExpression.Resolved(cInfo.Name, node.Line), false, node.Line),
+                    AllocationKind.Managed => new ManagedTypeExpression(NamedTypeExpression.Resolved(cInfo.Name, node.Line), false, node.Line, collector: node.Collector),
                     _ => throw new Exception($"Unknown allocation kind {node.Kind}")
                 };
 
@@ -5257,7 +5264,7 @@ namespace gflat
                 _resolvedConstructors[node] = matchedStructCtor;
                 AddDefaultArguments(node.Arguments, matchedStructCtor.Parameters, node);
                 if (!matchedStructCtor.IsNoThrow) { _throwingCalls.Add(node); RecordImplicitException(); }
-                if (matchedStructCtor.IsCopy && !CanAccessCopy(new NamedTypeExpression(sInfo.Name, null, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
+                if (matchedStructCtor.IsCopy && !CanAccessCopy(NamedTypeExpression.Resolved(sInfo.Name, node.Line), _currentClass?.Name ?? _currentStruct?.Name))
                     throw new TypeCheckException("Cannot access copy constructor", node.Line);
                 for (int i = 0; i < node.Arguments.Count; i++)
                 {
@@ -5271,9 +5278,9 @@ namespace gflat
             CheckPlacementDestination(node, resolvedType);
             TypeExpression structResultType = node.Kind switch
             {
-                AllocationKind.Value => new NamedTypeExpression(sInfo.Name, null, node.Line),
-                AllocationKind.Pointer => new PointerTypeExpression(new NamedTypeExpression(sInfo.Name, null, node.Line), false, node.Line),
-                AllocationKind.Managed => new ManagedTypeExpression(new NamedTypeExpression(sInfo.Name, null, node.Line), false, node.Line, collector: node.Collector),
+                AllocationKind.Value => NamedTypeExpression.Resolved(sInfo.Name, node.Line),
+                AllocationKind.Pointer => new PointerTypeExpression(NamedTypeExpression.Resolved(sInfo.Name, node.Line), false, node.Line),
+                AllocationKind.Managed => new ManagedTypeExpression(NamedTypeExpression.Resolved(sInfo.Name, node.Line), false, node.Line, collector: node.Collector),
                 _ => throw new Exception($"Unknown allocation kind {node.Kind}")
             };
 
@@ -5488,7 +5495,7 @@ namespace gflat
                 throw new TypeCheckException($"Cannot instantiate abstract attribute '{node.Name}'", node.Line);
             if (HasAnyDestructor(info))
                 throw new TypeCheckException($"Attribute '{node.Name}' cannot contain destructors", node.Line);
-            var creation = new NewExpression(new NamedTypeExpression(info.Name, null, node.Line), node.Arguments, AllocationKind.Value, node.Line);
+            var creation = new NewExpression(NamedTypeExpression.Resolved(info.Name, node.Line), node.Arguments, AllocationKind.Value, node.Line);
             creation.Accept(this);
             ConstructorDeclaration? ctor = GetResolvedConstructor(creation);
             string? accessor = _currentClass?.Name ?? _currentStruct?.Name;
@@ -6150,14 +6157,14 @@ namespace gflat
                         typeName = mgdNamed.Name;
                     }
 
-                    if (typeName == null || !TypeDerivesFromClass(new NamedTypeExpression(typeName, null, clause.Line), "Exception"))
+                    if (typeName == null || !TypeDerivesFromClass(NamedTypeExpression.Resolved(typeName, clause.Line), "Exception"))
                     {
                         throw new TypeCheckException($"Catch type '{TypeName(clause.ExceptionType)}' must be 'Exception' or a subclass of 'Exception'", clause.Line);
                     }
 
                     foreach (string prevCaught in caughtTypeNames)
                     {
-                        if (prevCaught == "Exception" || (typeName != prevCaught && TypeDerivesFromClass(new NamedTypeExpression(typeName, null, clause.Line), prevCaught)) || typeName == prevCaught)
+                        if (prevCaught == "Exception" || (typeName != prevCaught && TypeDerivesFromClass(NamedTypeExpression.Resolved(typeName, clause.Line), prevCaught)) || typeName == prevCaught)
                         {
                             throw new TypeCheckException($"Catch clause for '{typeName}' is unreachable because a previous catch clause catches '{prevCaught}'", clause.Line);
                         }
@@ -6228,7 +6235,7 @@ namespace gflat
                     catchName = mgdNamed.Name;
                 }
 
-                if (catchName == "Exception" || catchName == thrownTypeName || TypeDerivesFromClass(new NamedTypeExpression(thrownTypeName, null, 0), catchName!))
+                if (catchName == "Exception" || catchName == thrownTypeName || TypeDerivesFromClass(NamedTypeExpression.Resolved(thrownTypeName, 0), catchName!))
                 {
                     return true;
                 }

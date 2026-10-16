@@ -76,7 +76,7 @@ public partial class LlvmEmitter
                 string src = NewTemp(), dst = NewTemp();
                 Emit($"    {src} = bitcast {llvm}* {source} to %{parent}*");
                 Emit($"    {dst} = bitcast {llvm}* {destination} to %{parent}*");
-                var baseType = new NamedTypeExpression(parent, null, type.Line);
+                var baseType = NamedTypeExpression.Resolved(parent, type.Line);
                 EmitCopyInto(baseType, src, dst);
                 if (_typeChecker.HasDestructor(baseType)) _deferScopes[^1].Add(new BaseCopyCleanup(parent, dst));
             }
@@ -108,7 +108,7 @@ public partial class LlvmEmitter
             string ns = emitter._typeChecker.GetClassByIdentity(name)!.Namespace;
             string destructor = ns.Length > 0 ? $"gflat${ns}${name}$dtor" : $"gflat${name}$dtor";
             emitter.Emit($"    call void @{destructor}(%{name}* {address})");
-            emitter.EmitManagedReferences(new NamedTypeExpression(name, null, 0), address, true);
+            emitter.EmitManagedReferences(NamedTypeExpression.Resolved(name, 0), address, true);
         }
     }
 

@@ -278,7 +278,7 @@ namespace gflat.semantics
             _constructorBeingChecked = ctor;
             PushScope();
 
-            NamedTypeExpression dummyThisType = new NamedTypeExpression(ctor.Name, null, ctor.Line);
+            NamedTypeExpression dummyThisType = NamedTypeExpression.Resolved(ctor.Name, ctor.Line);
             DeclareLocal("this", dummyThisType, isAssigned: true);
 
             BeginConstructorFields(initialize: false);
@@ -319,7 +319,7 @@ namespace gflat.semantics
             ResetState();
             PushScope();
 
-            NamedTypeExpression dummyThisType = new NamedTypeExpression(dtor.Name, null, dtor.Line);
+            NamedTypeExpression dummyThisType = NamedTypeExpression.Resolved(dtor.Name, dtor.Line);
             DeclareLocal("this", dummyThisType, isAssigned: true);
 
             CheckStatement(dtor.Body);

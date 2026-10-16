@@ -23,7 +23,7 @@ public partial class TypeChecker
                 return str.Constructors.Count == 0 && str.Fields.All(f => CanDefaultInitialize(f.Type, visiting));
             if (GetClassByIdentity(named.Name) is ClassInfo cls)
                 return (!cls.IsAbstract || isBase) && cls.Constructors.Count == 0 &&
-                    (cls.BaseClass == null || CanDefaultInitialize(new NamedTypeExpression(cls.BaseClass, null, type.Line), visiting, isBase: true)) &&
+                    (cls.BaseClass == null || CanDefaultInitialize(NamedTypeExpression.Resolved(cls.BaseClass, type.Line), visiting, isBase: true)) &&
                     cls.Fields.All(f => CanDefaultInitialize(f.Type, visiting));
             return !IsInterface(named);
         }

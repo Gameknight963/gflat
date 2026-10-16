@@ -55,7 +55,7 @@ public partial class TypeChecker
                         if (method.ReturnType is not NamedTypeExpression result ||
                             (result.Name != owner && result.Name != owner.Split('.').Last()))
                             throw new TypeCheckException("A string literal operator must return its containing class or struct", method.Line);
-                        method.ReturnType = new NamedTypeExpression(owner, null, method.Line);
+                        method.ReturnType = NamedTypeExpression.Resolved(owner, method.Line);
                     }
                     finally { _currentNamespace = previous; }
                     if (_literalOperators.Any(o => o.Scope == scope && o.Method.StringLiteralPrefix == method.StringLiteralPrefix))

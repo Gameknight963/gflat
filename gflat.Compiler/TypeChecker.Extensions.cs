@@ -194,7 +194,7 @@ public partial class TypeChecker
         }
         TypeExpression QualifyNamed(NamedTypeExpression n)
         {
-            if (names.Contains(n.Name)) return n;
+            if (n.IsResolvedNominal || names.Contains(n.Name)) return n;
             string identity = n.Name;
             if (n.Namespace != null)
             {
@@ -223,7 +223,7 @@ public partial class TypeChecker
                             }
                         }
             }
-            return new NamedTypeExpression(identity, null, n.Line, n.TypeArguments.Select(Qualify).ToList());
+            return MarkResolvedNominal(new NamedTypeExpression(identity, null, n.Line, n.TypeArguments.Select(Qualify).ToList()));
         }
         TypeExpression ExpandAlias(NamespaceScope aliasScope, string name, TypeExpression target)
         {
@@ -245,7 +245,7 @@ public partial class TypeChecker
                 pair.Value.Name == named.Name &&
                 pair.Value.TypeArguments.Count == named.TypeArguments.Count &&
                 pair.Value.TypeArguments.Zip(named.TypeArguments).All(p => TypesMatchPublic(p.First, p.Second)));
-            return known.Key == null ? null : new NamedTypeExpression(known.Key, null, type.Line).WithReadOnlyValue(type.IsReadOnlyValue);
+            return known.Key == null ? null : NamedTypeExpression.Resolved(known.Key, type.Line).WithReadOnlyValue(type.IsReadOnlyValue);
         }
         if (type is ReferenceTypeExpression r)
             return KnownExtensionType(r.Inner) is { } inner ? new ReferenceTypeExpression(inner, r.Line).WithReadOnlyValue(r.IsReadOnlyValue) : null;
@@ -290,7 +290,7 @@ public partial class TypeChecker
     }
 
     private bool HasUnboundExtensionType(TypeExpression type, ISet<string> names) => type switch {
-        NamedTypeExpression n => names.Contains(n.Name) || n.TypeArguments.Any(t => HasUnboundExtensionType(t, names)),
+        NamedTypeExpression n => !n.IsResolvedNominal && (names.Contains(n.Name) || n.TypeArguments.Any(t => HasUnboundExtensionType(t, names))),
         ReferenceTypeExpression r => HasUnboundExtensionType(r.Inner, names),
         PointerTypeExpression p => HasUnboundExtensionType(p.Inner, names),
         ManagedTypeExpression p => HasUnboundExtensionType(p.Inner, names) || p.Collector != null && HasUnboundExtensionType(p.Collector, names),

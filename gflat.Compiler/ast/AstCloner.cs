@@ -128,6 +128,9 @@ namespace gflat.ast
             }
             if (type is NamedTypeExpression named)
             {
+                // A semantic identity is no longer a template name. Keep its
+                // per-use contract metadata and identity when cloning syntax.
+                if (named.IsResolvedNominal) return named;
                 if (named.Namespace == null && _typeMap.TryGetValue(named.Name, out TypeExpression? mapped))
                 {
                     return mapped;
@@ -136,7 +139,11 @@ namespace gflat.ast
                     (named.Name == _oldName || named.Name == _oldName.Split('$').Last()) &&
                     named.TypeArguments.Count == _typeMap.Count &&
                     named.TypeArguments.Zip(_typeMap.Keys).All(pair => pair.First is NamedTypeExpression argument && !argument.IsReadOnlyValue && argument.Name == pair.Second))
-                    return new NamedTypeExpression(_newName, null, named.Line) { NameSpan = named.NameSpan };
+                {
+                    var identity = NamedTypeExpression.Resolved(_newName, named.Line);
+                    identity.NameSpan = named.NameSpan;
+                    return identity;
+                }
                 string typeName = named.Name;
                 if (_newName != null && _oldName != null && named.Namespace == null)
                 {

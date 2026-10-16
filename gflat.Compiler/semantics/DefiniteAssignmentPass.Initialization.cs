@@ -25,7 +25,7 @@ public partial class DefiniteAssignmentPass
     {
         ResetState();
         PushScope();
-        DeclareLocal("this", new NamedTypeExpression(name, null, line), true);
+        DeclareLocal("this", NamedTypeExpression.Resolved(name, line), true);
         BeginConstructorFields();
         _inConstructor = false;
         PopScope();

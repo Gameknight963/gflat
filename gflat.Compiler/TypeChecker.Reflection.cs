@@ -8,7 +8,7 @@ public partial class TypeChecker
     public void Visit(TypeofExpression node)
     {
         using var sourceContext = SourceContext.Enter(node.Span);
-        RecordType(node, new NamedTypeExpression("std$TypeInfo", null, node.Line));
+        RecordType(node, NamedTypeExpression.Resolved("std$TypeInfo", node.Line));
         _constValues[node] = DescribeType(node.TargetType, node.Line);
     }
 
@@ -70,7 +70,7 @@ public partial class TypeChecker
             ["ReturnType"] = type is FunctionPointerTypeExpression functionReturn
                 ? new ConstValue.Pointer("std$TypeInfo", DescribeResolvedType(functionReturn.ReturnType, line)) : new ConstValue.Integer(0),
             ["ParameterTypes"] = type is FunctionPointerTypeExpression { ParameterTypes.Count: > 0 } functionParameters
-                ? new ConstValue.ArrayPointer(new NamedTypeExpression("std$TypeInfo", null, line),
+                ? new ConstValue.ArrayPointer(NamedTypeExpression.Resolved("std$TypeInfo", line),
                     new ConstValue.Array(functionParameters.ParameterTypes.Select(p => DescribeResolvedType(p, line)).ToList())) : new ConstValue.Integer(0),
             ["ParameterCount"] = new ConstValue.UInteger((ulong)(type is FunctionPointerTypeExpression function ? function.ParameterTypes.Count : 0))
         });

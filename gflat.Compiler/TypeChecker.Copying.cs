@@ -23,7 +23,7 @@ public partial class TypeChecker
         if (CopyConstructor(type) != null || HasDestructor(type)) return true;
         if (type is not NamedTypeExpression n) return false;
         var cls = GetClassByIdentity(n.Name);
-        if (cls?.BaseClass is string parent && RequiresCopy(new NamedTypeExpression(parent, null, type.Line))) return true;
+        if (cls?.BaseClass is string parent && RequiresCopy(NamedTypeExpression.Resolved(parent, type.Line))) return true;
         var fields = GetStructByIdentity(n.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type);
         return fields?.Any(RequiresCopy) == true;
     }
@@ -38,7 +38,7 @@ public partial class TypeChecker
         var cls = GetClassByIdentity(n.Name);
         // A user-written destructor describes a resource contract we cannot infer.
         if (str?.Destructor != null || cls?.Destructor != null) return false;
-        if (cls?.BaseClass is string parent && !CanCopy(new NamedTypeExpression(parent, null, type.Line))) return false;
+        if (cls?.BaseClass is string parent && !CanCopy(NamedTypeExpression.Resolved(parent, type.Line))) return false;
         return (str?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type))?.All(CanCopy) ?? true;
     }
 
@@ -54,7 +54,7 @@ public partial class TypeChecker
                 _ => true
             };
         var cls = GetClassByIdentity(named.Name);
-        if (cls?.BaseClass is string parent && !CanAccessCopy(new NamedTypeExpression(parent, null, type.Line), named.Name)) return false;
+        if (cls?.BaseClass is string parent && !CanAccessCopy(NamedTypeExpression.Resolved(parent, type.Line), named.Name)) return false;
         var fields = GetStructByIdentity(named.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type);
         return fields?.All(f => CanAccessCopy(f, named.Name)) ?? true;
     }
@@ -66,7 +66,7 @@ public partial class TypeChecker
         if (CopyConstructor(type) is ConstructorDeclaration copy) return !copy.IsNoThrow;
         if (type is not NamedTypeExpression named) return false;
         var cls = GetClassByIdentity(named.Name);
-        if (cls?.BaseClass is string parent && CopyCanThrow(new NamedTypeExpression(parent, null, type.Line))) return true;
+        if (cls?.BaseClass is string parent && CopyCanThrow(NamedTypeExpression.Resolved(parent, type.Line))) return true;
         return (GetStructByIdentity(named.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type))?.Any(CopyCanThrow) == true;
     }
 

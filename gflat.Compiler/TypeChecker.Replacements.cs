@@ -101,6 +101,7 @@ public partial class TypeChecker
         using var context = SourceContext.Enter(method.Span);
         if (type.IsReadOnlyValue)
             return "readonly(" + SignatureType(type.WithReadOnlyValue(false), method) + ")";
+        if (type is NamedTypeExpression { IsResolvedNominal: true } nominal) return nominal.Name;
         if (type is NamedTypeExpression generic && generic.Namespace == null)
         {
             int index = method.GenericParameters.FindIndex(p => p.Name == generic.Name);

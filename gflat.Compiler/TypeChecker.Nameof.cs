@@ -53,7 +53,7 @@ public partial class TypeChecker
                 try { _currentNamespace = ns; return Bound(ResolveAlias(alias)); }
                 finally { _currentNamespace = saved; }
             }
-            if (ns.TypeNames.TryGetValue(member, out var identity)) return Bound(new NamedTypeExpression(identity, null, node.Line));
+            if (ns.TypeNames.TryGetValue(member, out var identity)) return Bound(NamedTypeExpression.Resolved(identity, node.Line));
             if (NameofNamespaceMember(ns, member, node) is { } entry) return entry;
             throw new TypeCheckException($"Name '{member}' not found in namespace", node.Span);
         }

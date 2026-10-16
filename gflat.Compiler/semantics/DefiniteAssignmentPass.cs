@@ -982,6 +982,12 @@ namespace gflat.semantics
             if (target is IdentifierExpression or NamespaceAccessExpression) return;
             if (target is MemberAccessExpression member)
             {
+                if (ConstructorFieldPath(member.Object) != null &&
+                    _typeChecker.ResolveAlias(_typeChecker.GetType(member.Object)) is NamedTypeExpression)
+                {
+                    CheckAssignmentAddress(member.Object);
+                    return;
+                }
                 if (member.Object is IdentifierExpression id && Lookup(id.Name) is { } local &&
                     _typeChecker.ResolveAlias(_typeChecker.ParameterValueType(local.Type)) is not (PointerTypeExpression or ManagedTypeExpression))
                 {

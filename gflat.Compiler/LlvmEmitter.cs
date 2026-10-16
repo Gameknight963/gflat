@@ -3062,15 +3062,7 @@ public partial class LlvmEmitter : IVisitor
             case TokenKind.FloatLiteral:
             case TokenKind.DoubleLiteral:
                 {
-                    string txt = node.Token.Text.TrimEnd('f', 'F', 'd', 'D');
-                    if (double.TryParse(txt, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d))
-                    {
-                        Push(FloatConstant(d, _typeChecker.GetType(node)));
-                    }
-                    else
-                    {
-                        Push(txt);
-                    }
+                    Push(FloatConstant(FloatingLiteralEncoding.Value(node.Token), _typeChecker.GetType(node)));
                     break;
                 }
             case TokenKind.CharLiteral:

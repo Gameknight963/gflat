@@ -113,8 +113,7 @@ namespace gflat.comptime
             {
                 TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.HexInt or
                     TokenKind.LongLiteral or TokenKind.ULongLiteral => ParseIntegerLiteral(node),
-                TokenKind.FloatLiteral => new ConstValue.Float((float)Convert.ToDouble(node.Token.Text.TrimEnd('f', 'F'), System.Globalization.CultureInfo.InvariantCulture)),
-                TokenKind.DoubleLiteral => new ConstValue.Float(Convert.ToDouble(node.Token.Text.TrimEnd('d', 'D'), System.Globalization.CultureInfo.InvariantCulture)),
+                TokenKind.FloatLiteral or TokenKind.DoubleLiteral => new ConstValue.Float(FloatingLiteralEncoding.Value(node.Token)),
                 TokenKind.CharLiteral => new ConstValue.Char((char)CharacterLiteralEncoding.Value(node.Token.Text, node.Line)),
                 TokenKind.StringLiteral => new ConstValue.String(node.Token.Text[1..^1]),
                 TokenKind.True => new ConstValue.Boolean(true),

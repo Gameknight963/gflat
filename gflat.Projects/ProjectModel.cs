@@ -109,7 +109,7 @@ public sealed class ProjectGraph
                 if (visited.Contains(reference)) continue;
                 var dependency = Visit(reference);
                 if (dependency.Kind != ProjectKind.SourceLibrary)
-                    throw new ProjectException(file, "Only projects with OutputType=Library can be referenced: " + reference);
+                    throw new ProjectException(file, "Only projects with OutputType=SourceLibrary can be referenced: " + reference);
             }
             active.Remove(file);
             visited.Add(file);

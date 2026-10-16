@@ -17,6 +17,8 @@ public sealed class ProjectCreationTests
             string path = ProjectCreation.Create(directory, "My & Project", library, std);
             var graph = ProjectGraph.Load(path, p => ProjectModel.Load(p));
             Assert.Equal(library ? ProjectKind.SourceLibrary : ProjectKind.Executable, graph.Root.Kind);
+            Assert.Equal(library ? "SourceLibrary" : "Executable",
+                System.Xml.Linq.XElement.Load(path).Element("PropertyGroup")!.Element("OutputType")!.Value);
             var sources = graph.Sources.Select(p => new SourceFile(p, File.ReadAllText(p)));
             string ir = Compiler.Emit(sources);
             Assert.NotEmpty(ir);

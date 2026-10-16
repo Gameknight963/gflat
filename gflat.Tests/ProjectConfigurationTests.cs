@@ -24,7 +24,7 @@ public class ProjectConfigurationTests
             File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => Answer();");
             File.WriteAllText(Path.Combine(root, "lib/lib.gfproj"), """
                 <Project Sdk="Gflat.Sdk">
-                  <PropertyGroup><NoStdLib>true</NoStdLib><OutputType>Library</OutputType><Configuration>Debug</Configuration><Platform>AnyCPU</Platform></PropertyGroup>
+                  <PropertyGroup><NoStdLib>true</NoStdLib><OutputType>SourceLibrary</OutputType><Configuration>Debug</Configuration><Platform>AnyCPU</Platform></PropertyGroup>
                   <ItemGroup Condition="'$(Configuration)' == 'Release' and '$(Platform)' == 'Custom'"><Compile Remove="debug.gf" /></ItemGroup>
                   <ItemGroup Condition="'$(Configuration)' != 'Release' or '$(Platform)' != 'Custom'"><Compile Remove="release.gf" /></ItemGroup>
                 </Project>

@@ -57,7 +57,7 @@ public static class ProjectCreation
         // An explicit toolchain root is validated for callers preparing distributions.
         if (toolchainRoot != null && !ProjectSdk.IsRoot(Path.GetFullPath(toolchainRoot)))
             throw new ArgumentException("Cannot locate gflat build rules: expected build/Gflat.props and build/Gflat.targets.");
-        var properties = new XElement("PropertyGroup", new XElement("OutputType", library ? "Library" : "Exe"));
+        var properties = new XElement("PropertyGroup", new XElement("OutputType", library ? "SourceLibrary" : "Executable"));
         if (!useStd) properties.Add(new XElement("NoStdLib", "true"));
         var xml = new XElement("Project", new XAttribute("Sdk", "Gflat.Sdk"), properties);
         string source = library ? "// Add reusable types and functions here.\nnamespace Library;\n\npublic int Answer() => 42;\n"

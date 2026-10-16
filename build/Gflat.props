@@ -6,7 +6,7 @@
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
     <NoStdLib Condition="'$(NoStdLib)' == ''">false</NoStdLib>
-    <OutputType Condition="'$(OutputType)' == ''">Exe</OutputType>
+    <OutputType Condition="'$(OutputType)' == ''">Executable</OutputType>
     <GflatExceptionReserveBytes Condition="'$(GflatExceptionReserveBytes)' == ''">65536</GflatExceptionReserveBytes>
     <EnableDefaultCompileItems Condition="'$(EnableDefaultCompileItems)' == ''">true</EnableDefaultCompileItems>
     <GflatDefaultExcludes>**/bin/**;**/obj/**;**/.git/**;**/.vs/**;**/.local-notes/**;**/*.gfproj.user</GflatDefaultExcludes>

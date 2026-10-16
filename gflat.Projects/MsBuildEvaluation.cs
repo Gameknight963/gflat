@@ -21,9 +21,9 @@ internal static class MsBuildEvaluation
             var project = new Project(path, null, null, collection, ProjectLoadSettings.RecordEvaluatedItemElements);
             var kind = project.GetPropertyValue("OutputType").ToLowerInvariant() switch
             {
-                "exe" => ProjectKind.Executable,
-                "library" => ProjectKind.SourceLibrary,
-                _ => throw new ProjectException(path, "OutputType must be Exe or Library. Use <Project Sdk=\"Gflat.Sdk\">.")
+                "executable" => ProjectKind.Executable,
+                "sourcelibrary" => ProjectKind.SourceLibrary,
+                _ => throw new ProjectException(path, "OutputType must be Executable or SourceLibrary. Use <Project Sdk=\"Gflat.Sdk\">.")
             };
             if (!bool.TryParse(project.GetPropertyValue("NoStdLib"), out bool excludesStd))
                 throw new ProjectException(path, "NoStdLib must be true or false.");

@@ -154,6 +154,44 @@ public sealed class ProjectSdkTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Theory]
+    [InlineData("Executable", ProjectKind.Executable)]
+    [InlineData("SourceLibrary", ProjectKind.SourceLibrary)]
+    public void ExplicitOutputTypesSelectNativeBuildOrSourceChecking(string outputType, ProjectKind expected)
+    {
+        string root = Temporary(); Directory.CreateDirectory(root);
+        try
+        {
+            string project = Path.Combine(root, "app.gfproj");
+            File.WriteAllText(project, $"<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib><OutputType>{outputType}</OutputType></PropertyGroup></Project>");
+            File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 42;");
+            Assert.Equal(expected, ProjectModel.Load(project).Kind);
+            Assert.Equal(0, Program.Main(expected == ProjectKind.Executable ? ["build", project, "--emit-ir"] : ["build", project]));
+            Assert.Equal(expected == ProjectKind.Executable, File.Exists(Path.Combine(root, "bin/Debug/app.ll")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Theory]
+    [InlineData("Exe")]
+    [InlineData("Library")]
+    [InlineData("SharedLibrary")]
+    [InlineData("invalid")]
+    public void UnsupportedOutputTypesFailBothEvaluationAndStandaloneMsBuild(string outputType)
+    {
+        string root = Temporary(); Directory.CreateDirectory(root);
+        try
+        {
+            string project = Path.Combine(root, "bad.gfproj");
+            File.WriteAllText(project, $"<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib><OutputType>{outputType}</OutputType></PropertyGroup></Project>");
+            Assert.Contains("OutputType must be Executable or SourceLibrary", Assert.Throws<ProjectException>(() => ProjectModel.Load(project)).Message);
+            var result = NativeToolchain.Run("dotnet", ["msbuild", project, "-nologo", "-v:q", "-t:GflatGetSources"], 30000);
+            Assert.NotEqual(0, result.ExitCode);
+            Assert.Contains("OutputType must be Executable or SourceLibrary", result.StandardOutput + result.StandardError);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     [Fact]
     public void CliInstallationIsAnExplicitSetupCommand()
     {

@@ -25,7 +25,7 @@ internal static class ProjectFileFixture
 
     public static string Xml(string kind = "Executable", string content = "") =>
         new XElement("Project", new XAttribute("Sdk", "Gflat.Sdk"),
-            new XElement("PropertyGroup", new XElement("OutputType", kind == "SourceLibrary" ? "Library" : "Exe"),
+            new XElement("PropertyGroup", new XElement("OutputType", kind),
                 new XElement("NoStdLib", "true")),
             XElement.Parse("<Content>" + content + "</Content>").Elements()).ToString();
 }

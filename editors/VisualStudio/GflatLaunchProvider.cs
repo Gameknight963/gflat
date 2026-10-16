@@ -53,7 +53,7 @@ internal static class GflatLaunch
 
     internal static bool CanLaunch(DebugLaunchOptions options, string kind, string emitIr) =>
         (options & DebugLaunchOptions.NoDebug) != 0 &&
-        string.Equals(kind, "Exe", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(kind, "Executable", StringComparison.OrdinalIgnoreCase) &&
         !string.Equals(emitIr, "true", StringComparison.OrdinalIgnoreCase);
 
     internal static void RequireNoDebug(DebugLaunchOptions options)

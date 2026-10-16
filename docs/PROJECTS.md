@@ -11,7 +11,7 @@ Project files use MSBuild's native SDK mechanism:
 ```xml
 <Project Sdk="Gflat.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Executable</OutputType>
   </PropertyGroup>
 </Project>
 ```
@@ -64,12 +64,12 @@ empty directory. It never overwrites existing files. `--name Name` changes the
 project filename. Applications use std and print a greeting by default.
 `--library` creates a source library. `--no-stdlib` sets `NoStdLib` in the project.
 
-The default `OutputType` is `Exe`. A source library uses `Library`:
+The default `OutputType` is `Executable`. A source library uses `SourceLibrary`:
 
 ```xml
 <Project Sdk="Gflat.Sdk">
   <PropertyGroup>
-    <OutputType>Library</OutputType>
+    <OutputType>SourceLibrary</OutputType>
     <NoStdLib>true</NoStdLib>
   </PropertyGroup>
 </Project>

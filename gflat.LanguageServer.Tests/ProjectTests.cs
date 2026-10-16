@@ -141,7 +141,7 @@ public sealed class ProjectTests : IDisposable
             """));
         Assert.Contains("Cyclic", Assert.Throws<ProjectException>(() => ProjectGraph.Load(project)).Message);
         Write("lib/lib.gfproj", ProjectFileFixture.Xml());
-        Assert.Contains("OutputType=Library", Assert.Throws<ProjectException>(() => ProjectGraph.Load(project)).Message);
+        Assert.Contains("OutputType=SourceLibrary", Assert.Throws<ProjectException>(() => ProjectGraph.Load(project)).Message);
     }
 
     [Fact]

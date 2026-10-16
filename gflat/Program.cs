@@ -73,7 +73,7 @@ public static class Program
                 outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
                 if (graph.Root.Kind == ProjectKind.SourceLibrary)
                 {
-                    if (run || irOnly || args.Contains("-o")) throw new ArgumentException("Library projects have no standalone output; build an executable referencing them.");
+                    if (run || irOnly || args.Contains("-o")) throw new ArgumentException("SourceLibrary projects have no standalone output; build an executable referencing them.");
                 }
             }
             if (clean)

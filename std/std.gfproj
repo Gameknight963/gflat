@@ -1,6 +1,6 @@
 <Project Sdk="Gflat.Sdk">
   <PropertyGroup>
-    <OutputType>Library</OutputType>
+    <OutputType>SourceLibrary</OutputType>
     <NoStdLib>true</NoStdLib>
   </PropertyGroup>
 </Project>

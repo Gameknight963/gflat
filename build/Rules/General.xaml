@@ -1,7 +1,7 @@
 <Rule Name="ConfigurationGeneral" DisplayName="General" PageTemplate="generic" xmlns="http://schemas.microsoft.com/build/2009/properties">
   <Rule.DataSource><DataSource Persistence="ProjectFile" HasConfigurationCondition="false" /></Rule.DataSource>
   <EnumProperty Name="OutputType" DisplayName="Output type">
-    <EnumValue Name="Exe" DisplayName="Executable" /><EnumValue Name="Library" DisplayName="Source library" />
+    <EnumValue Name="Executable" DisplayName="Executable" /><EnumValue Name="SourceLibrary" DisplayName="Source library" />
   </EnumProperty>
   <BoolProperty Name="NoStdLib" DisplayName="Exclude standard library" Description="Compile only the explicitly selected sources and project references. No bundled std declarations are added." />
   <StringProperty Name="OutputPath" DisplayName="Output directory" />

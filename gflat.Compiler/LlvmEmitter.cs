@@ -689,7 +689,7 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression or TypeofExpression or
                  UnaryExpression or BinaryExpression or DefaultExpression or CastExpression or LiteralExpression or
-                 SizeofExpression or AlignofExpression or NameofExpression ||
+                 SizeofExpression or AlignofExpression or NameofExpression or LambdaExpression ||
                  node is NamespaceAccessExpression enumMember && _typeChecker.TryGetEnumMember(enumMember, out _, out _))
         {
             node.Accept(this);

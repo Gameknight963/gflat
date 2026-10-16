@@ -9,6 +9,7 @@ public partial class TypeChecker
         if (_lambdaScopeBoundaries.Count != 0) return false;
         if (_currentFunction is MethodDeclaration { StaticConstructorName: not null } && GetStaticStorage(target) is { IsConst: false } field)
             return GetStaticStorageInfo(field).Owner == (_currentClass?.Name ?? _currentStruct?.Name);
+        if (GetStaticStorage(target) != null) return false;
         if (_currentConstructor == null) return false;
         string? name = target switch
         {

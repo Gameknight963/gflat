@@ -69,4 +69,14 @@ public sealed class StaticCallbackTests
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("A", result.StandardOutput);
     }
+
+    [Theory]
+    [InlineData("struct S { static readonly(int) value = 1; public S() { value = 2; } }", "readonly")]
+    [InlineData("class S { static readonly(int) value = 1; public S() { value = 2; } }", "readonly")]
+    [InlineData("struct V { public int x; } static class S { public static readonly(V) value; } int main() { S::value.x = 2; return 0; }", "readonly")]
+    public void ReadonlyStaticStorageCannotBeMutatedByAnInstanceConstructorOrThroughAnAggregate(string source, string message)
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(source));
+        Assert.Contains(message, error.Message, StringComparison.OrdinalIgnoreCase);
+    }
 }

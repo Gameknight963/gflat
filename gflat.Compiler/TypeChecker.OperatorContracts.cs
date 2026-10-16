@@ -28,6 +28,6 @@ public partial class TypeChecker
         if (operation.Accessibility == TokenKind.Private && !privateAccess ||
             operation.Accessibility == TokenKind.Protected && !privateAccess &&
             (_currentClass == null || !IsSubclassOf(_currentClass.Name, owner)))
-            throw new TypeCheckException($"Cannot access {operation.Accessibility.ToString().ToLowerInvariant()} operator '{operation.OperatorSymbol}' of '{TypeName(new NamedTypeExpression(owner, null, use.Line))}'", use.Span);
+            throw new TypeCheckException($"Cannot access {operation.Accessibility.ToString().ToLowerInvariant()} operator '{operation.OperatorSymbol}' of '{DisplayName(owner)}'", use.Span);
     }
 }

@@ -32,7 +32,7 @@ public partial class TypeChecker
         };
         if (valid) return true;
         ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, site.Line, 0,
-            OperatorText(operation), TypeName(left), TypeName(right));
+            OperatorText(operation), DisplayTypeName(left), DisplayTypeName(right));
         RecordType(site, Error);
         return false;
     }

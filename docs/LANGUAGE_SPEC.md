@@ -129,6 +129,12 @@ An empty parameter list is written `()`, not `(void)`.
 
 Explicit integer narrowing retains low bits and interprets them using the destination signedness. Constant casts use the same widths as runtime lowering. `uint -> int` and `ulong -> long` require explicit casts. `float` conversions round to binary32 during constant evaluation. Non-finite and out-of-range constant float-to-integer conversions are errors.
 
+Explicit `u` and `ul` integer suffixes require values within their unsigned 32-bit
+and 64-bit ranges. Decimal `l` literals use the signed 64-bit range; its minimum
+value can be written with unary minus. Hexadecimal `l` literals retain their
+64-bit signed bit-pattern interpretation. A wider destination does not waive
+an explicit suffix's bounds. Unsuffixed literals retain contextual widening.
+
 Integer-to-floating conversions round directly to the destination precision,
 using nearest with ties to even. Constant evaluation preserves all 128 bits of
 `extralong` values before conversions and arithmetic width normalization.

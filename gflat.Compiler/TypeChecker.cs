@@ -3794,7 +3794,7 @@ namespace gflat
                 return;
             }
 
-            node.Operand.Accept(this);
+            CheckUnaryLiteralOperand(node);
             TypeExpression operand = GetType(node.Operand);
 
             if (IsError(operand))
@@ -3867,6 +3867,7 @@ namespace gflat
         public void Visit(LiteralExpression node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            ValidateIntegerLiteralSuffix(node, signedMinimumOperands.Contains(node));
             if (node.Token.Kind == TokenKind.StringLiteral) StringLiteralEncoding.Bytes(node.Token.Text[1..^1], node.Line);
             if (node.Token.Kind == TokenKind.CharLiteral) CharacterLiteralEncoding.Value(node.Token.Text, node.Line);
             TypeExpression type = node.Token.Kind switch

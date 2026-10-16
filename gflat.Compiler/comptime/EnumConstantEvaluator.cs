@@ -41,7 +41,11 @@ internal static class EnumConstantEvaluator
 
         BigInteger Evaluate(AstNode expression)
         {
-            if (TypeChecker.TryGetIntegerLiteralValue(expression, out BigInteger literal)) return literal;
+            if (expression is LiteralExpression integer && TypeChecker.TryGetIntegerLiteralValue(integer, out BigInteger literal))
+            {
+                TypeChecker.ValidateIntegerLiteralSuffix(integer);
+                return literal;
+            }
             if (expression is LiteralExpression { Token.Kind: TokenKind.CharLiteral } character)
                 return unchecked((sbyte)CharacterLiteralEncoding.Value(character.Token.Text, character.Line));
             if (expression is IdentifierExpression identifier && values.TryGetValue(identifier.Name, out BigInteger previous)) return previous;
@@ -54,6 +58,7 @@ internal static class EnumConstantEvaluator
                 throw new TypeCheckException($"Enum member '{legacyEnum.Name}::{legacy.Member}' must be accessed with '::', not '.'", legacy.Span);
             if (expression is UnaryExpression unary)
             {
+                if (TypeChecker.SignedMinimumLiteralOperand(unary) != null) return -(BigInteger.One << 63);
                 BigInteger operand = Evaluate(unary.Operand);
                 return unary.Operator switch {
                     TokenKind.Minus => -operand,

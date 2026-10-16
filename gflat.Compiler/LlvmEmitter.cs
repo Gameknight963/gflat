@@ -3016,50 +3016,12 @@ public partial class LlvmEmitter : IVisitor
         switch (node.Token.Kind)
         {
             case TokenKind.IntLiteral:
-                Push(node.Token.Text);
-                break;
             case TokenKind.UIntLiteral:
-                {
-                    string txt = node.Token.Text.TrimEnd('u', 'U');
-                    if (txt.StartsWith("0x") || txt.StartsWith("0X"))
-                    {
-                        Push(Convert.ToUInt32(txt[2..], 16).ToString());
-                    }
-                    else
-                    {
-                        Push(uint.Parse(txt).ToString());
-                    }
-                    break;
-                }
-            case TokenKind.HexInt:
-                Push(Convert.ToInt64(node.Token.Text, 16).ToString());
-                break;
             case TokenKind.LongLiteral:
-                {
-                    string txt = node.Token.Text.TrimEnd('l', 'L');
-                    if (txt.StartsWith("0x") || txt.StartsWith("0X"))
-                    {
-                        Push(Convert.ToInt64(txt[2..], 16).ToString());
-                    }
-                    else
-                    {
-                        Push(long.Parse(txt).ToString());
-                    }
-                    break;
-                }
             case TokenKind.ULongLiteral:
-                {
-                    string txt = node.Token.Text.TrimEnd('u', 'U', 'l', 'L');
-                    if (txt.StartsWith("0x") || txt.StartsWith("0X"))
-                    {
-                        Push(Convert.ToUInt64(txt[2..], 16).ToString());
-                    }
-                    else
-                    {
-                        Push(ulong.Parse(txt).ToString());
-                    }
-                    break;
-                }
+            case TokenKind.HexInt:
+                Push(IntegerLiteralConstant(node));
+                break;
             case TokenKind.FloatLiteral:
             case TokenKind.DoubleLiteral:
                 {

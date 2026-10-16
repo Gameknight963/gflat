@@ -138,7 +138,7 @@ public partial class LlvmEmitter
         Emit($"    store i1 false, i1* {StaticLive(storage)}");
         string address = "@" + storage.Symbol;
         if (_typeChecker.HasDestructor(storage.Field.Type)) EmitDestroy(storage.Field.Type, address);
-        EmitManagedReferences(storage.Field.Type, address, false);
+        else EmitManagedReferences(storage.Field.Type, address, false);
         Emit($"    br label %{done}");
         Emit(done + ":");
     }

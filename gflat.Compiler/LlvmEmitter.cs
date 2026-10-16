@@ -3742,6 +3742,18 @@ public partial class LlvmEmitter : IVisitor
     private void EmitAssignment(AssignmentExpression node)
     {
         if (EmitPropertyWrite(node)) return;
+        TypeExpression targetType = _typeChecker.GetType(node.Target);
+        string llvmType = EmitType(targetType);
+        string? ptr = null;
+        string currentVal = "";
+        if (node.Operator != TokenKind.Equals)
+        {
+            EmitAddress(node.Target);
+            ptr = Pop();
+            currentVal = NewTemp();
+            Emit($"    {currentVal} = load {llvmType}, {llvmType}* {ptr}");
+            ProtectManagedValue(targetType, currentVal);
+        }
         EmitValueForTarget(node.Value, _typeChecker.GetType(node.Target));
         string val = Pop();
 
@@ -3755,12 +3767,13 @@ public partial class LlvmEmitter : IVisitor
             pending = new TemporaryCleanup(assignedType, temporary);
             _deferScopes[^1].Add(pending);
         }
-        EmitAddress(node.Target);
-        string ptr = Pop();
+        if (ptr == null)
+        {
+            EmitAddress(node.Target);
+            ptr = Pop();
+        }
         if (pending != null) _deferScopes[^1].Remove(pending);
 
-        TypeExpression targetType = _typeChecker.GetType(node.Target);
-        string llvmType = EmitType(targetType);
         bool isFloat = _typeChecker.ResolveAlias(targetType) is NamedTypeExpression { Name: "float" or "double" };
 
         TypeExpression valueType = _typeChecker.GetType(node.Value);
@@ -3768,8 +3781,6 @@ public partial class LlvmEmitter : IVisitor
 
         if (node.Operator != TokenKind.Equals)
         {
-            string currentVal = NewTemp();
-            Emit($"    {currentVal} = load {llvmType}, {llvmType}* {ptr}");
             string temp = NewTemp();
 
             if (_typeChecker.TryGetCompoundOperatorTarget(node, out (string StructName, OperatorDeclaration Operator) opTarget))

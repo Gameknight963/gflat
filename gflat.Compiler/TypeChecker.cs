@@ -2383,7 +2383,7 @@ namespace gflat
                     {
                         if (!_currentClass.Methods.TryGetValue(ifaceMethod.Name, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                         {
-                            throw new TypeCheckException($"Class '{DisplayName(node.Name)}' does not implement interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'", node.Span);
+                            throw new TypeCheckException($"Class '{DisplayName(node.Name)}' does not implement interface {DescribeSourceCallable(ifaceMethod, ifaceName)}", node.Span);
                         }
 
                         MethodDeclaration classMethod = InterfaceImplementation(mEntry.Method, ifaceMethod);
@@ -2393,13 +2393,13 @@ namespace gflat
                         if (ifaceMethod.IsNoThrow != classMethod.IsNoThrow)
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{DisplayName(node.Name)}' must match nothrow specification of interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'",
+                                $"{DescribeSourceCallable(classMethod, capitalized: true)} in class '{DisplayName(node.Name)}' must match nothrow specification of interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",
                                 classMethod.Span);
                         }
                         if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly)
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{DisplayName(node.Name)}' must be marked readonly to implement interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'",
+                                $"{DescribeSourceCallable(classMethod, capitalized: true)} in class '{DisplayName(node.Name)}' must be marked readonly to implement interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",
                                 classMethod.Span);
                         }
                         TypeExpression classReturnType = ResolveAlias(classMethod.ReturnType);
@@ -2407,14 +2407,14 @@ namespace gflat
                         if (!TypesMatchPublic(classReturnType, ifaceReturnType))
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{DisplayName(node.Name)}' has return type '{DisplayTypeName(classReturnType)}', but interface '{DisplayName(ifaceName)}' requires '{DisplayTypeName(ifaceReturnType)}'",
+                                $"{DescribeSourceCallable(classMethod, capitalized: true)} in class '{DisplayName(node.Name)}' has return type '{DisplayTypeName(classReturnType)}', but interface '{DisplayName(ifaceName)}' requires '{DisplayTypeName(ifaceReturnType)}'",
                                 classMethod.Span);
                         }
 
                         if (classMethod.Parameters.Count != ifaceMethod.Parameters.Count)
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{DisplayName(node.Name)}' has {classMethod.Parameters.Count} parameters, but interface '{DisplayName(ifaceName)}' expects {ifaceMethod.Parameters.Count}",
+                                $"{DescribeSourceCallable(classMethod, capitalized: true)} in class '{DisplayName(node.Name)}' has {classMethod.Parameters.Count} parameters, but interface '{DisplayName(ifaceName)}' expects {ifaceMethod.Parameters.Count}",
                                 classMethod.Span);
                         }
 
@@ -2425,7 +2425,7 @@ namespace gflat
                             if (!TypesMatchPublic(classParamType, ifaceParamType) || classMethod.Parameters[i].IsConst != ifaceMethod.Parameters[i].IsConst)
                             {
                                 throw new TypeCheckException(
-                                    $"Parameter '{classMethod.Parameters[i].Name}' of method '{classMethod.Name}' in class '{DisplayName(node.Name)}' has type '{DisplayTypeName(classParamType)}', but interface '{DisplayName(ifaceName)}' expects '{DisplayTypeName(ifaceParamType)}'",
+                                    $"Parameter '{classMethod.Parameters[i].Name}' of {DescribeSourceCallable(classMethod)} in class '{DisplayName(node.Name)}' has type '{DisplayTypeName(classParamType)}', but interface '{DisplayName(ifaceName)}' expects '{DisplayTypeName(ifaceParamType)}'",
                                     classMethod.Parameters[i].Span);
                             }
                         }
@@ -2578,7 +2578,7 @@ namespace gflat
                     {
                         if (!_currentStruct.Methods.TryGetValue(ifaceMethod.Name, out MethodDeclaration? structMethod))
                         {
-                            throw new TypeCheckException($"Struct '{DisplayName(node.Name)}' does not implement interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'", node.Span);
+                            throw new TypeCheckException($"Struct '{DisplayName(node.Name)}' does not implement interface {DescribeSourceCallable(ifaceMethod, ifaceName)}", node.Span);
                         }
 
                         structMethod = InterfaceImplementation(structMethod, ifaceMethod);
@@ -2588,14 +2588,14 @@ namespace gflat
                         if (ifaceMethod.IsNoThrow != structMethod.IsNoThrow)
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' must match nothrow specification of interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'",
+                                $"{DescribeSourceCallable(structMethod, capitalized: true)} in struct '{DisplayName(node.Name)}' must match nothrow specification of interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",
                                 structMethod.Span);
                         }
 
                         if (ifaceMethod.IsReadOnly && !structMethod.IsReadOnly)
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' must be marked readonly to implement interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'",
+                                $"{DescribeSourceCallable(structMethod, capitalized: true)} in struct '{DisplayName(node.Name)}' must be marked readonly to implement interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",
                                 structMethod.Span);
                         }
 
@@ -2604,14 +2604,14 @@ namespace gflat
                         if (!TypesMatchPublic(structReturnType, ifaceReturnType))
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' has return type '{DisplayTypeName(structReturnType)}', but interface '{DisplayName(ifaceName)}' requires '{DisplayTypeName(ifaceReturnType)}'",
+                                $"{DescribeSourceCallable(structMethod, capitalized: true)} in struct '{DisplayName(node.Name)}' has return type '{DisplayTypeName(structReturnType)}', but interface '{DisplayName(ifaceName)}' requires '{DisplayTypeName(ifaceReturnType)}'",
                                 structMethod.Span);
                         }
 
                         if (structMethod.Parameters.Count != ifaceMethod.Parameters.Count)
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' has {structMethod.Parameters.Count} parameters, but interface '{DisplayName(ifaceName)}' expects {ifaceMethod.Parameters.Count}",
+                                $"{DescribeSourceCallable(structMethod, capitalized: true)} in struct '{DisplayName(node.Name)}' has {structMethod.Parameters.Count} parameters, but interface '{DisplayName(ifaceName)}' expects {ifaceMethod.Parameters.Count}",
                                 structMethod.Span);
                         }
 
@@ -2622,7 +2622,7 @@ namespace gflat
                             if (!TypesMatchPublic(structParamType, ifaceParamType) || structMethod.Parameters[i].IsConst != ifaceMethod.Parameters[i].IsConst)
                             {
                                 throw new TypeCheckException(
-                                    $"Parameter '{structMethod.Parameters[i].Name}' of method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' has type '{DisplayTypeName(structParamType)}', but interface '{DisplayName(ifaceName)}' expects '{DisplayTypeName(ifaceParamType)}'",
+                                    $"Parameter '{structMethod.Parameters[i].Name}' of {DescribeSourceCallable(structMethod)} in struct '{DisplayName(node.Name)}' has type '{DisplayTypeName(structParamType)}', but interface '{DisplayName(ifaceName)}' expects '{DisplayTypeName(ifaceParamType)}'",
                                     structMethod.Parameters[i].Span);
                             }
                         }
@@ -4455,7 +4455,7 @@ namespace gflat
                         throw new TypeCheckException($"Interface '{DisplayName(namedIface.Name)}' has no method '{memberAccess.Member}'", node.Span);
 
                     if (isReceiverReadOnly && !ifaceMethod.IsReadOnly)
-                        throw new TypeCheckException($"Cannot call non-readonly method '{ifaceMethod.Name}' on readonly instance", node.Line);
+                        throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(ifaceMethod)} on readonly instance", node.Line);
 
                     if (!ifaceMethod.IsNoThrow)
                     {
@@ -4522,7 +4522,7 @@ namespace gflat
 
                     method = SelectOverload(mEntry.Method, node);
                     if (isReceiverReadOnly && !method.IsReadOnly)
-                        throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
+                        throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
                     if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
                         throw new TypeCheckException($"Cannot access private method '{memberAccess.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     if (method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
@@ -4555,7 +4555,7 @@ namespace gflat
 
                     method = SelectOverload(method, node);
                     if (isReceiverReadOnly && !method.IsReadOnly)
-                        throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
+                        throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
 
                     funcName = $"{named.Name}.{memberAccess.Member}";
                     _resolvedCalls[node] = method;
@@ -4585,7 +4585,7 @@ namespace gflat
                         TypeExpression resThisType = ResolveAlias(thisType);
                         if (((resThisType is PointerTypeExpression p && p.IsReadOnly) || (resThisType is ManagedTypeExpression m && m.IsReadOnly)) && !method.IsReadOnly)
                         {
-                            throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
+                            throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
                         }
                     }
                     if (_currentClass.VTableSlots.TryGetValue(funcName, out int slotIndex))
@@ -4602,7 +4602,7 @@ namespace gflat
                         TypeExpression resThisType = ResolveAlias(thisType);
                         if (((resThisType is PointerTypeExpression p && p.IsReadOnly) || (resThisType is ManagedTypeExpression m && m.IsReadOnly)) && !method.IsReadOnly)
                         {
-                            throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
+                            throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
                         }
                     }
                     _resolvedCalls[node] = method;

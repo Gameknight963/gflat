@@ -13,7 +13,7 @@ namespace gflat.Tests
             string code = @"
 struct Node
 {
-    int val;
+    public int val;
 }
 
 int main()
@@ -57,8 +57,8 @@ namespace Memory { public replace void Free(void* ptr)
 
 struct Point
 {
-    int x;
-    int y;
+    public int x;
+    public int y;
 }
 
 int main()
@@ -95,7 +95,7 @@ namespace Memory { public replace void Free(void* ptr) => free(ptr); }
 
 struct Data
 {
-    int value;
+    public int value;
 }
 
 int main()
@@ -148,7 +148,7 @@ namespace Memory { public replace void Free(void* ptr)
 
 struct Node
 {
-    int val;
+    public int val;
 }
 
 int main()
@@ -184,9 +184,9 @@ namespace Memory { public replace void Free(void* ptr)
 
 struct Vec
 {
-    int x;
-    int y;
-    int z;
+    public int x;
+    public int y;
+    public int z;
 }
 
 int main()

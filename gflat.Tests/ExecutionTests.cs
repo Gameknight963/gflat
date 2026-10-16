@@ -26,8 +26,8 @@ namespace gflat.Tests
             string code = """
                 struct Vector
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
                 }
 
                 int main()
@@ -100,14 +100,14 @@ namespace gflat.Tests
             string code = """
                 struct Counter
                 {
-                    int count;
+                    public int count;
 
-                    void Increment(int amount)
+                    public void Increment(int amount)
                     {
                         this.count += amount;
                     }
 
-                    int Get()
+                    public int Get()
                     {
                         return this.count;
                     }
@@ -132,10 +132,10 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
-                    void Move(int dx, int dy)
+                    public void Move(int dx, int dy)
                     {
                         this.x += dx;
                         this.y += dy;
@@ -165,16 +165,16 @@ namespace gflat.Tests
             string code = """
                 struct Vector
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
-                    void Add(int dx, int dy)
+                    public void Add(int dx, int dy)
                     {
                         x += dx;
                         y += dy;
                     }
 
-                    int Sum()
+                    public int Sum()
                     {
                         return x + y;
                     }
@@ -204,10 +204,10 @@ namespace gflat.Tests
                 {
                     struct Rect
                     {
-                        int width;
-                        int height;
+                        public int width;
+                        public int height;
 
-                        int Area()
+                        public int Area()
                         {
                             return this.width * this.height;
                         }
@@ -233,7 +233,7 @@ namespace gflat.Tests
             string code = """
                 struct Node
                 {
-                    int value;
+                    public int value;
                 }
 
                 int main()
@@ -298,8 +298,8 @@ namespace gflat.Tests
 
                 struct Item
                 {
-                    int id;
-                    int count;
+                    public int id;
+                    public int count;
                 }
 
                 int main()
@@ -679,7 +679,7 @@ namespace gflat.Tests
 
                 struct Calculator
                 {
-                    OpFunc op;
+                    public OpFunc op;
                 }
 
                 int Add(int a, int b)
@@ -1341,8 +1341,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
                     public static Point operator +(Point a, Point b)
                     {
@@ -1376,8 +1376,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
                     public static Point operator *(Point p, int scale)
                     {
@@ -1414,8 +1414,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
                     public static bool operator ==(Point a, Point b)
                     {
@@ -1458,8 +1458,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
                     public static Point operator -(Point a)
                     {
@@ -1490,8 +1490,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
                     public static Point operator +(Point a, Point b)
                     {
@@ -1525,7 +1525,7 @@ namespace gflat.Tests
             string code = """
                 struct Num
                 {
-                    int val;
+                    public int val;
 
                     public static int operator +(Num a, Num b) => a.val + b.val;
                 }
@@ -1687,8 +1687,8 @@ namespace gflat.Tests
 
                 struct Rect : IShape
                 {
-                    int w;
-                    int h;
+                    public int w;
+                    public int h;
 
                     int Area()
                     {
@@ -1737,8 +1737,8 @@ namespace gflat.Tests
 
                 struct Rect : IShape
                 {
-                    int w;
-                    int h;
+                    public int w;
+                    public int h;
 
                     int Area()
                     {
@@ -1781,7 +1781,7 @@ namespace gflat.Tests
 
                 struct Circle : IShape, IDescribable
                 {
-                    int r;
+                    public int r;
 
                     int Area()
                     {
@@ -1827,7 +1827,7 @@ namespace gflat.Tests
 
                 struct Multiplier : ICalc
                 {
-                    int factor;
+                    public int factor;
 
                     int Compute(int x)
                     {
@@ -1837,7 +1837,7 @@ namespace gflat.Tests
 
                 struct Adder : ICalc
                 {
-                    int delta;
+                    public int delta;
 
                     int Compute(int x)
                     {
@@ -1918,8 +1918,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
                 }
 
                 int main()
@@ -1977,8 +1977,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x = 15;
-                    int y = 27;
+                    public int x = 15;
+                    public int y = 27;
                 }
 
                 int main()
@@ -2010,8 +2010,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
                     Point(int x, int y)
                     {
@@ -2037,8 +2037,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
                     Point(int x, int y)
                     {
@@ -2066,9 +2066,9 @@ namespace gflat.Tests
             string code = """
                 struct Widget
                 {
-                    int a = 10;
-                    int b = 20;
-                    int c = 30;
+                    public int a = 10;
+                    public int b = 20;
+                    public int c = 30;
 
                     Widget(int customB)
                     {
@@ -2097,8 +2097,8 @@ namespace gflat.Tests
             string code = """
                 struct Point
                 {
-                    int x;
-                    int y;
+                    public int x;
+                    public int y;
 
                     Point()
                     {
@@ -2730,8 +2730,8 @@ namespace gflat.Tests
             string code = """
                 struct Rectangle
                 {
-                    int width;
-                    int height;
+                    public int width;
+                    public int height;
 
                     public readonly int Area()
                     {
@@ -2943,8 +2943,8 @@ namespace gflat.Tests
             string code = """
                 struct Pair<T, U>
                 {
-                    T first;
-                    U second;
+                    public T first;
+                    public U second;
                 }
 
                 int main()
@@ -3010,8 +3010,8 @@ namespace gflat.Tests
 
                 struct Item : HasValue
                 {
-                    int val;
-                    int GetValue()
+                    public int val;
+                    public int GetValue()
                     {
                         return this.val;
                     }
@@ -3760,16 +3760,16 @@ namespace gflat.Tests
             string code = """
                 struct RangeEnumerator
                 {
-                    int current;
-                    int max;
+                    public int current;
+                    public int max;
 
-                    bool MoveNext()
+                    public bool MoveNext()
                     {
                         this.current = this.current + 1;
                         return this.current <= this.max;
                     }
 
-                    int Current()
+                    public int Current()
                     {
                         return this.current;
                     }
@@ -3777,9 +3777,9 @@ namespace gflat.Tests
 
                 struct Range
                 {
-                    int max;
+                    public int max;
 
-                    RangeEnumerator GetEnumerator()
+                    public RangeEnumerator GetEnumerator()
                     {
                         RangeEnumerator it;
                         it.current = 0;

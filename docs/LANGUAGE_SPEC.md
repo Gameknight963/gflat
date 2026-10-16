@@ -318,7 +318,7 @@ Fixed-size array parameters receive independent copies, including nested arrays.
 Nullable raw pointers and function pointers require a proven non-null local read, checked non-null cast, or unchecked postfix `!` before operations requiring a non-null value. Raw pointers support dereference, indexing, member access, and pointer arithmetic as appropriate for their element type. Function pointers support calls, not arithmetic: functions do not form an array with a fixed element size. A raw pointer to function-pointer storage supports ordinary array traversal. Null guards narrow local and parameter reads while preserving their declared storage types. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
 
 ```csharp
-struct Point { int x; int y; }
+struct Point { public int x; public int y; }
 int main()
 {
     Point* p = new* Point();
@@ -799,6 +799,8 @@ file. Its native linker symbol is unchanged. Namespace extern declarations accep
 A declaration permits at most one explicit accessibility modifier. Repeated or conflicting modifiers are errors, including qualifiers split across an `extern` keyword; implicit defaults do not count as explicit modifiers.
 
 Namespace classes, structs, interfaces, and enums default to `internal`, including static classes and static interfaces.
+
+Class and struct fields and methods default to `private`. Access through another instance follows the same visibility rules as ordinary member access; the declaring type can access its own instances' private members.
 
 Scalar function boundaries use the host C ABI consistently for ordinary functions, externs, and function-pointer calls. Both supported targets zero-extend `bool`; Linux x64 also sign-extends signed 8/16-bit integers (including `char`) and zero-extends unsigned 8/16-bit integers. These LLVM ABI attributes do not change function-pointer type identity. Aggregate and fixed-buffer values do not thereby gain C ABI compatibility; use explicit pointers at those boundaries.
 

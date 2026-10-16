@@ -409,7 +409,7 @@ namespace gflat.Tests
 
                 struct Cool
                 {
-                    int x;
+                    public int x;
                     ~Cool()
                     {
                         printf("destructor ran");

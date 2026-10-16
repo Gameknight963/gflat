@@ -9,6 +9,7 @@ public partial class LlvmEmitter
     {
         public StringBuilder Output { get; } = output;
         public StringBuilder Prologue { get; } = new();
+        public Dictionary<string, string> PendingOwnerRoots { get; } = new();
         public int EntryPosition;
     }
     private readonly Stack<CollectorFunction> _collectorFunctions = new();
@@ -156,6 +157,21 @@ public partial class LlvmEmitter
         if (!_typeChecker.UsesCollector || !HasManagedReferences(type)) return;
         EmitManagedReferences(type, address, true, initialize: true);
         if (!_typeChecker.HasDestructor(type)) _deferScopes[scope].Add(new ManagedReferenceCleanup(type, address));
+        else
+        {
+            // Until a value is constructed, no destructor owns these registrations.
+            // Keep cleanup active through failed initialization and unused locals.
+            string pending = NewTemp();
+            EmitAlloca("i1", pending);
+            Emit($"    store i1 true, i1* {pending}");
+            _collectorFunctions.Peek().PendingOwnerRoots[address] = pending;
+            _deferScopes[scope].Add(new ManagedReferenceCleanup(type, address, pending));
+        }
+    }
+    private void CompleteManagedOwnerInitialization(string address)
+    {
+        if (_collectorFunctions.Count != 0 && _collectorFunctions.Peek().PendingOwnerRoots.TryGetValue(address, out string? pending))
+            Emit($"    store i1 false, i1* {pending}");
     }
     private void RegisterManagedParameter(Parameter p, string address)
     {

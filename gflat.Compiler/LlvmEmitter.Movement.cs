@@ -12,6 +12,7 @@ public partial class LlvmEmitter
         Emit($"    {flag} = alloca i1");
         Emit($"    store i1 {(live ? "true" : "false")}, i1* {flag}");
         _ownerLiveFlags[address] = flag;
+        if (live) CompleteManagedOwnerInitialization(address);
         return new ConditionalTemporaryCleanup(type, address, flag);
     }
 
@@ -36,6 +37,7 @@ public partial class LlvmEmitter
         {
             new ConditionalTemporaryCleanup(type, address, live).Execute(this);
             Emit($"    store i1 true, i1* {live}");
+            CompleteManagedOwnerInitialization(address);
         }
         else if (!_typeChecker.IsInitialization(node)) EmitDestroy(type, address);
     }

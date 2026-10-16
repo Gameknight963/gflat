@@ -21,8 +21,8 @@ the abstracted memory hooks; libc remains an unconditional dependency for now.
 
 ## Console
 
-`Console/Console.gf` provides C-string and caller-buffer APIs. It needs `core/IOException.gf`
-and `core/BufferTooSmallException.gf`, but does not require `String.gf`.
+`Console/Console.gf` provides C-string and caller-buffer APIs. It needs `core/IOException.gf`,
+`core/EndOfStreamException.gf`, and `core/BufferTooSmallException.gf`, but does not require `String.gf`.
 `Console/ConsoleString.gf` adds the optional owning-string conveniences. Referencing
 `std/std.gfproj` includes both.
 

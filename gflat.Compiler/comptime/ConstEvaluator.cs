@@ -188,6 +188,8 @@ namespace gflat.comptime
 
         private ConstValue EvaluateValueForTarget(AstNode expression, TypeExpression target)
         {
+            if (!_context.IsFreshValue(expression) && _context.RequiresCopy(target))
+                throw new ConstEvalException("Nontrivial copying is not supported during constant evaluation", expression.Line);
             if (NumericType(target) is NamedTypeExpression named &&
                 NumericSemantics.IntegerType(named.Name) is { } integerType &&
                 TypeChecker.TryGetIntegerLiteralValue(expression, out var integer) &&
@@ -195,7 +197,7 @@ namespace gflat.comptime
                 return integerType.Bits > 64 ? new ConstValue.WideInteger(integer) :
                     integerType.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
             expression.Accept(this);
-            return Normalize(_currentValue!, target, expression.Line);
+            return CopyTransferredValue(Normalize(_currentValue!, target, expression.Line), target);
         }
 
         private void EvaluateBinary(BinaryExpression node)
@@ -592,11 +594,9 @@ namespace gflat.comptime
         {
             CheckSteps(node.Line);
             var elements = new List<ConstValue>();
+            TypeExpression? elementType = (_context.ResolveAlias(_context.GetType(node)) as ArrayTypeExpression)?.ElementType;
             foreach (var element in node.Elements)
-            {
-                element.Accept(this);
-                elements.Add(_currentValue!);
-            }
+                elements.Add(EvaluateValueForTarget(element, elementType ?? _context.GetType(element)));
             _currentValue = new ConstValue.Array(elements);
         }
 
@@ -933,6 +933,8 @@ namespace gflat.comptime
                 throw new ConstEvalException($"Function '{funcName}' is not marked 'const' and cannot be evaluated at compile time", node.Line);
             }
 
+            if (method.Parameters.Any(parameter => _context.ResolveAlias(parameter.Type) is ReferenceTypeExpression))
+                throw new ConstEvalException("ref parameters are not supported during constant evaluation", node.Line);
             List<ConstValue> evaluatedArgs = new();
             foreach (AstNode arg in node.Arguments)
             {
@@ -1138,7 +1140,9 @@ namespace gflat.comptime
             for (int i = 0; i < arr.Elements.Count; i++)
             {
                 CheckSteps(node.Line);
-                _scopes.Peek()[node.VariableName] = arr.Elements[i];
+                if (_context.RequiresCopy(node.ElementType))
+                    throw new ConstEvalException("Nontrivial copying is not supported during constant evaluation", node.Line);
+                _scopes.Peek()[node.VariableName] = CopyTransferredValue(arr.Elements[i], node.ElementType);
                 node.Body.Accept(this);
 
                 if (_hasReturned) break;

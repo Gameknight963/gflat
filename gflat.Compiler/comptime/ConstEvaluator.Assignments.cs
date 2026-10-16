@@ -14,7 +14,7 @@ public partial class ConstEvaluator
         {
             foreach (var scope in _scopes)
                 if (scope.ContainsKey(identifier.Name))
-                    return new(() => scope[identifier.Name], value => scope[identifier.Name] = value);
+                    return new(() => scope[identifier.Name], value => scope[identifier.Name] = OverwriteValueStorage(scope[identifier.Name], value, _context.GetType(target)));
 
             if (TryGetVariable("this", out ConstValue? receiver))
             {
@@ -31,7 +31,7 @@ public partial class ConstEvaluator
                     _ => false
                 };
                 if (fields != null && exists)
-                    return new(() => fields[identifier.Name], value => fields[identifier.Name] = value);
+                    return new(() => fields[identifier.Name], value => fields[identifier.Name] = OverwriteValueStorage(fields.GetValueOrDefault(identifier.Name), value, _context.GetType(target)));
             }
             throw new ConstEvalException($"Cannot modify non-local variable '{identifier.Name}' at compile time", target.Line);
         }
@@ -68,7 +68,10 @@ public partial class ConstEvaluator
             }
             // Resolve the containing storage before evaluating the right operand.
             _ = Fields();
-            return new(() => Fields()[member.Member], value => Fields()[member.Member] = value);
+            return new(() => Fields()[member.Member], value => {
+                var fields = Fields();
+                fields[member.Member] = OverwriteValueStorage(fields.GetValueOrDefault(member.Member), value, _context.GetType(target));
+            });
         }
         throw new ConstEvalException("Invalid assignment target at compile time", target.Line);
     }

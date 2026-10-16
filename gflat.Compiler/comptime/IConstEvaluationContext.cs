@@ -11,6 +11,8 @@ namespace gflat.comptime
         bool TryGetConstValueByName(string name, out ConstValue? value);
         TypeExpression ResolveAlias(TypeExpression type);
         TypeExpression GetType(AstNode node);
+        bool RequiresCopy(TypeExpression type);
+        bool IsFreshValue(AstNode expression);
         bool TryGetNativeIntegerOperands(BinaryExpression node, out TypeExpression type);
         bool TryGetIntegerComparisonOperands(BinaryExpression node, out TypeExpression type);
         bool TryGetFloatingOperands(BinaryExpression node, out TypeExpression type);

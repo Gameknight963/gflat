@@ -5045,15 +5045,6 @@ namespace gflat
             TypeExpression resolvedType = ResolveAlias(node.Type);
             ValidateArrayValueShape(resolvedType, node.Line);
             node.Type = resolvedType;
-            if (node.Destination != null)
-            {
-                node.Destination.Accept(this);
-                TypeExpression destination = ResolveAlias(GetType(node.Destination));
-                if (node.Kind != AllocationKind.Pointer || resolvedType.IsReadOnlyValue ||
-                    destination is not PointerTypeExpression { IsNullable: false, IsReadOnly: false } pointer ||
-                    !TypesMatch(resolvedType, pointer.Inner))
-                    throw new TypeCheckException("Placement destination must be a non-null raw pointer to the exact mutable constructed type", node.Destination.Span);
-            }
             if (node.Kind == AllocationKind.Managed)
             {
                 ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line, collector: node.Collector), node.Line);
@@ -5069,6 +5060,7 @@ namespace gflat
                     if (!IsAssignable(resolvedType, GetType(node.Arguments[0]), node.Arguments[0]))
                         throw new TypeCheckException("Invalid scalar initializer", node.Line);
                 }
+                CheckPlacementDestination(node, resolvedType);
                 RecordType(node, node.Kind switch {
                     AllocationKind.Value => resolvedType,
                     AllocationKind.Pointer => new PointerTypeExpression(resolvedType, false, node.Line),
@@ -5169,6 +5161,7 @@ namespace gflat
                     }
                 }
 
+                CheckPlacementDestination(node, resolvedType);
                 TypeExpression resultType = node.Kind switch
                 {
                     AllocationKind.Value => new NamedTypeExpression(cInfo.Name, null, node.Line),
@@ -5264,6 +5257,7 @@ namespace gflat
                 }
             }
 
+            CheckPlacementDestination(node, resolvedType);
             TypeExpression structResultType = node.Kind switch
             {
                 AllocationKind.Value => new NamedTypeExpression(sInfo.Name, null, node.Line),

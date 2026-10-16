@@ -22,7 +22,7 @@ public partial class LlvmEmitter
             Emit($"    store i1 {(live ? "true" : "false")}, i1* {flag}");
     }
 
-    private readonly Stack<List<IDeferAction>> _argumentOwners = new();
+    private readonly Stack<List<(IDeferAction Cleanup, TypeExpression Type, string Address)>> _argumentOwners = new();
     private readonly List<IDeferAction> _parameterOwners = new();
     private readonly Dictionary<AssignmentExpression, string> _constructorLiveFlags = new();
 
@@ -62,8 +62,12 @@ public partial class LlvmEmitter
     private void TransferArguments()
     {
         if (_argumentOwners.Count == 0) return;
-        foreach (var action in _argumentOwners.Peek())
-            foreach (var scope in _deferScopes) scope.Remove(action);
+        // The callee takes destruction responsibility. Its parameter roots are
+        // established on entry, so retain caller roots through the whole call.
+        foreach (var argument in _argumentOwners.Peek())
+            foreach (var scope in _deferScopes)
+                if (scope.Remove(argument.Cleanup) && _typeChecker.UsesCollector && HasManagedReferences(argument.Type))
+                    scope.Add(new ManagedReferenceCleanup(argument.Type, argument.Address));
         _argumentOwners.Peek().Clear();
     }
 
@@ -71,10 +75,10 @@ public partial class LlvmEmitter
     {
         string address = NewTemp(), llvmType = EmitType(type);
         Emit($"    {address} = alloca {llvmType}");
-        Emit($"    store {llvmType} {value}, {llvmType}* {address}");
+        EmitManagedStore(type, value, address, initialize: true);
         var cleanup = new TemporaryCleanup(type, address);
         _deferScopes[^1].Add(cleanup);
-        _argumentOwners.Peek().Add(cleanup);
+        _argumentOwners.Peek().Add((cleanup, type, address));
     }
 
     private void GuardPlacementAlignment(string pointer, string pointerType, TypeExpression type)

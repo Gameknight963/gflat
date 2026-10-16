@@ -250,6 +250,26 @@ public sealed class StaticManagedLifetimeTests
         Assert.Equal("D", result.StandardOutput);
     }
 
+    [Theory]
+    [InlineData("Consume(new Owner(), Fail());")]
+    [InlineData("Consume(new Owner(), 0);")]
+    [InlineData("Throws(new Owner());")]
+    [InlineData("Holder holder = new Holder(new Owner(), Fail());")]
+    [InlineData("Holder holder = new Holder(new Owner(), 0);")]
+    public void OwningArgumentRootsAreBalancedBeforeAndAfterCallTransfer(string body)
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + OwnerSource.Replace("~Owner() {}", "~Owner() { putchar(68); }") + """
+            int Fail() { throw new Exception(); }
+            void Consume(Owner first, int second) {}
+            void Throws(Owner value) { throw new Exception(); }
+            struct Holder { public Holder(Owner first, int second) { throw new Exception(); } }
+            void Work() { BODY }
+            int main() { try { Work(); } catch {} return (int)Probe::Count(); }
+            """.Replace("BODY", body));
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("D", result.StandardOutput);
+    }
+
     private const string OwnerSource = """
         struct Owner {
             private managed<int, Probe>? item;

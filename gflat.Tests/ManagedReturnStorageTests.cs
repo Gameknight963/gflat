@@ -202,6 +202,20 @@ public sealed class ManagedReturnStorageTests
         """);
 
     [Fact]
+    public void OwningArgumentTransferKeepsItsManagedFieldsAliveAndReleasesCallerStorage() => Succeeds("""
+        struct Owner {
+            public int^ item;
+            public Owner(int^ value) { item = value; }
+            ~Owner() {}
+        }
+        int Consume(Owner value) => *value.item;
+        int main() {
+            if (Consume(new Owner(new^ int(42))) != 42) return 1;
+            return rc_live_count();
+        }
+        """);
+
+    [Fact]
     public void ReturnedValueSurvivesAllocatingDefers() => Succeeds("""
         int^ Create() {
             int^ value = new^ int(42);

@@ -11,7 +11,7 @@ public partial class TypeChecker
     private readonly HashSet<string> checkedInlineLayouts = new();
     private readonly Dictionary<string, TypeCheckException> invalidInlineLayouts = new();
     private readonly List<(string Type, string? Field)> inlineLayoutPath = new();
-    private const int MaximumTypeSpecializationDepth = 64;
+    private const int MaximumSpecializationDepth = 64;
     private readonly HashSet<string> activeTypeSpecializations = new();
     private readonly HashSet<string> failedTypeSpecializations = new();
     private readonly HashSet<string> activeFunctionSpecializations = new();
@@ -30,12 +30,12 @@ public partial class TypeChecker
     private void CheckFailedTypeSpecialization(string name, int line)
     {
         if (failedTypeSpecializations.Contains(name))
-            throw new TypeCheckException($"Type specialization exceeds the compiler nesting limit of {MaximumTypeSpecializationDepth}", line);
+            throw new TypeCheckException($"Type specialization exceeds the compiler nesting limit of {MaximumSpecializationDepth}", line);
     }
 
     private IDisposable EnterTypeSpecialization(string name, int line)
     {
-        if (activeTypeSpecializations.Count + activeFunctionSpecializations.Count >= MaximumTypeSpecializationDepth)
+        if (activeTypeSpecializations.Count + activeFunctionSpecializations.Count >= MaximumSpecializationDepth)
         {
             // Recovery revisits partial types registered before the error. Mark
             // this expansion's keys, leaving unrelated specializations available.
@@ -51,12 +51,12 @@ public partial class TypeChecker
     private void CheckFailedFunctionSpecialization(string name, int line)
     {
         if (failedFunctionSpecializations.Contains(name))
-            throw new TypeCheckException($"Function specialization exceeds the compiler nesting limit of {MaximumTypeSpecializationDepth}", line);
+            throw new TypeCheckException($"Function specialization exceeds the compiler nesting limit of {MaximumSpecializationDepth}", line);
     }
 
     private IDisposable EnterFunctionSpecialization(string name, int line)
     {
-        if (activeTypeSpecializations.Count + activeFunctionSpecializations.Count >= MaximumTypeSpecializationDepth)
+        if (activeTypeSpecializations.Count + activeFunctionSpecializations.Count >= MaximumSpecializationDepth)
         {
             failedTypeSpecializations.UnionWith(activeTypeSpecializations);
             failedFunctionSpecializations.UnionWith(activeFunctionSpecializations);

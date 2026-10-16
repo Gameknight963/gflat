@@ -1147,9 +1147,9 @@ fields and base classes must form a finite layout: direct or indirect cycles are
 rejected even in unused declarations. Raw pointers and managed references do not
 embed their pointee's instance layout and may be recursive. Static fields do not
 form part of their declaring type's instance layout.
-Nested type specialization is currently limited to 64 active specializations;
+Nested generic type and function specialization share a limit of 64 active specializations;
 this compiler resource limit prevents unbounded generic expansion from exhausting
-the compiler stack and does not limit the total number of specialized types.
+the compiler stack and does not limit the total number of specialized types or functions.
 
 For a class type these queries describe the complete object, including its vptr
 and padding. For `T*` and `T^` they describe the reference representation instead.

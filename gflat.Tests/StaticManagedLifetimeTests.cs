@@ -122,6 +122,134 @@ public sealed class StaticManagedLifetimeTests
         Assert.Equal("", result.StandardOutput);
     }
 
+    [Theory]
+    [InlineData("Owner value = new Owner();")]
+    [InlineData("Owner* value = new* Owner();")]
+    public void ThrowingConstructorLeavesNoManagedRoots(string declaration)
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + """
+            struct Owner {
+                private managed<int, Probe>? item;
+                public Owner() { item = null; throw new Exception(); }
+                ~Owner() { putchar(68); }
+            }
+            void Work() { DECLARATION }
+            int main() { try { Work(); } catch {} return (int)Probe::Count(); }
+            """.Replace("DECLARATION", declaration));
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
+
+    [Fact]
+    public void PartiallyConstructedArrayRemovesEachManagedRootExactlyOnce()
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + OwnerSource + """
+            Owner Fail() { throw new Exception(); }
+            void Work() { Owner[2] values = [new Owner(), Fail()]; }
+            int main() { try { Work(); } catch {} return (int)Probe::Count(); }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
+
+    [Theory]
+    [InlineData("Owner value = new Owner();", "D")]
+    [InlineData("Owner* value = new* Owner();", "D")]
+    [InlineData("void* storage = Memory::Allocate((nuint)sizeof(Owner))!; defer { Memory::Free(storage); } new* Owner() at (Owner*)storage;", "D")]
+    [InlineData("Child a = new Child(); Child b = a;", "D")]
+    [InlineData("Child[2] a = [new Child(), new Child()]; Child[2] b = a;", "DD")]
+    public void PartialSubobjectDestructionLeavesRootRemovalToItsEnclosingStorage(string body, string output)
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + """
+            struct Child {
+                private managed<int, Probe>? item;
+                public Child() { item = null; }
+                public copy Child(readonly(Child)* source) { item = null; throw new Exception(); }
+                ~Child() { putchar(68); }
+            }
+            struct Owner {
+                private Child child;
+                public Owner() { child = new Child(); throw new Exception(); }
+            }
+            void Work() { BODY }
+            int main() { try { Work(); } catch {} return (int)Probe::Count(); }
+            """.Replace("BODY", body));
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(output, result.StandardOutput);
+    }
+
+    [Theory]
+    [InlineData("Child[2] a = [new Child(), new Child()]; Child[2] b = a;")]
+    [InlineData("Pair a = new Pair(); Pair b = a;")]
+    public void PartialAutomaticCopyDestroysOnlyCompletedElementsAndBalancesRoots(string body)
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + """
+            struct Child {
+                private managed<int, Probe>? item;
+                private static int copies;
+                public Child() { item = null; }
+                public copy Child(readonly(Child)* source) {
+                    item = null; copies++;
+                    if (copies == 2) throw new Exception();
+                }
+                ~Child() { putchar(68); }
+            }
+            struct Pair {
+                private Child first;
+                private Child second;
+                public Pair() { first = new Child(); second = new Child(); }
+            }
+            void Work() { BODY }
+            int main() { try { Work(); } catch {} return (int)Probe::Count(); }
+            """.Replace("BODY", body));
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("DDD", result.StandardOutput);
+    }
+
+    [Fact]
+    public void CompletedBaseConstructionOnDerivedFailureLeavesRootRemovalToCaller()
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + """
+            class Base {
+                private managed<int, Probe>? item;
+                public Base() { item = null; }
+                ~Base() { putchar(66); }
+            }
+            class Derived : Base {
+                private managed<int, Probe>? other;
+                public Derived() { other = null; throw new Exception(); }
+            }
+            void Work() { Derived value = new Derived(); }
+            int main() { try { Work(); } catch {} return (int)Probe::Count(); }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("B", result.StandardOutput);
+    }
+
+    [Theory]
+    [InlineData("struct")]
+    [InlineData("class")]
+    public void ImplicitConstructorFailureDestroysCompletedOwningField(string kind)
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + """
+            struct Child {
+                private managed<int, Probe>? item;
+                public Child() { item = null; }
+                ~Child() { putchar(68); }
+            }
+            int Fail() { throw new Exception(); }
+            """ + kind + """
+             Owner {
+                private Child child = new Child();
+                private int failure = Fail();
+            }
+            void Work() { Owner value = new Owner(); }
+            int main() { try { Work(); } catch {} return (int)Probe::Count(); }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("D", result.StandardOutput);
+    }
+
     private const string OwnerSource = """
         struct Owner {
             private managed<int, Probe>? item;

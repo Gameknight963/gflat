@@ -88,7 +88,7 @@ public partial class LlvmEmitter
                 Emit($"    {src} = getelementptr {llvm}, {llvm}* {source}, i32 0, i32 {position}");
                 Emit($"    {dst} = getelementptr {llvm}, {llvm}* {destination}, i32 0, i32 {position}");
                 EmitCopyInto(field.Type, src, dst);
-                if (_typeChecker.HasDestructor(field.Type)) _deferScopes[^1].Add(new TemporaryCleanup(field.Type, dst));
+                if (_typeChecker.HasDestructor(field.Type)) _deferScopes[^1].Add(new PartialValueCleanup(field.Type, dst));
             }
             if (cls != null)
             {
@@ -108,6 +108,7 @@ public partial class LlvmEmitter
             string ns = emitter._typeChecker.GetClass(name)!.Namespace;
             string destructor = ns.Length > 0 ? $"gflat${ns}${name}$dtor" : $"gflat${name}$dtor";
             emitter.Emit($"    call void @{destructor}(%{name}* {address})");
+            emitter.EmitManagedReferences(new NamedTypeExpression(name, null, 0), address, true);
         }
     }
 
@@ -124,7 +125,8 @@ public partial class LlvmEmitter
             string i = e.NewTemp(), ptr = e.NewTemp(), llvm = e.EmitType(type);
             e.Emit($"    {i} = sub i32 {n}, 1"); e.Emit($"    store i32 {i}, i32* {count}");
             e.Emit($"    {ptr} = getelementptr {llvm}, {llvm}* {address}, i32 0, i32 {i}");
-            e.EmitDestroy(type.ElementType, ptr); e.Emit($"    br label %{test}"); e.Emit($"{done}:");
+            new PartialValueCleanup(type.ElementType, ptr).Execute(e);
+            e.Emit($"    br label %{test}"); e.Emit($"{done}:");
         }
     }
 }

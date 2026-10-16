@@ -1491,6 +1491,8 @@ public partial class LlvmEmitter : IVisitor
         Emit($"    store %{className}* %this, %{className}** {thisPtr}");
         _locals["this"] = thisPtr;
 
+        BeginConstruction(className);
+
         TypeChecker.ClassInfo? prevClass = _currentClass;
         _currentClass = _typeChecker.GetClass(className);
 
@@ -1503,6 +1505,7 @@ public partial class LlvmEmitter : IVisitor
             string baseThis = NewTemp();
             Emit($"    {baseThis} = bitcast %{className}* {loadedThis} to %{baseInfo.Name}*");
             EmitImplicitBaseConstruction(className, baseInfo, baseThis);
+            _deferScopes[^1].Insert(0, new ExceptionOnlyCleanup(new BaseCopyCleanup(baseInfo.Name, baseThis)));
         }
 
         // 2. Setup vtable pointer
@@ -1523,6 +1526,7 @@ public partial class LlvmEmitter : IVisitor
 
         _currentClass = prevClass;
 
+        CompleteConstruction();
         Emit("    ret void");
         Emit("}");
         Emit("");
@@ -1973,8 +1977,10 @@ public partial class LlvmEmitter : IVisitor
         Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
         _locals["this"] = thisPtr;
 
+        BeginConstruction(structName);
         EmitFieldInitializers(structName, thisPtr);
 
+        CompleteConstruction();
         Emit("    ret void");
         Emit("}");
         Emit("");
@@ -3982,8 +3988,11 @@ public partial class LlvmEmitter : IVisitor
                     allocationCleanup = new AllocationCleanup(rawMem);
                     _deferScopes[^1].Add(allocationCleanup);
                 }
+                var rootCleanup = new ExceptionOnlyCleanup(new ManagedReferenceCleanup(node.Type, typedPtr));
+                _deferScopes[^1].Add(rootCleanup);
                 TransferArguments();
                 EmitConstructorCall(mangledName, ctor, string.Join(", ", callArgs));
+                _deferScopes[^1].Remove(rootCleanup);
                 if (allocationCleanup != null) _deferScopes[^1].Remove(allocationCleanup);
             }
 
@@ -4128,7 +4137,7 @@ public partial class LlvmEmitter : IVisitor
             EmitManagedStore(type.ElementType, value, address);
             if (_typeChecker.HasDestructor(type.ElementType))
             {
-                var cleanup = new TemporaryCleanup(type.ElementType, address);
+                var cleanup = new PartialValueCleanup(type.ElementType, address);
                 scope.Add(cleanup);
                 transferred.Add(cleanup);
             }

@@ -34,6 +34,28 @@ public partial class LlvmEmitter
             if (emitter._exceptionCleanup > 0) action.Execute(emitter);
         }
     }
+    // Partial destruction runs before the caller releases the enclosing storage's
+    // root registrations. Restore the emptied subobject's slots so that enclosing
+    // cleanup remains the sole owner of unregistering that storage.
+    private sealed class PartialValueCleanup(TypeExpression type, string address, string? flag = null) : IDeferAction
+    {
+        public void Execute(LlvmEmitter emitter)
+        {
+            string? done = null;
+            if (flag != null)
+            {
+                string live = emitter.NewTemp(), destroy = emitter.NewLabel("partial_destroy");
+                done = emitter.NewLabel("partial_destroyed");
+                emitter.Emit($"    {live} = load i1, i1* {flag}");
+                emitter.Emit($"    br i1 {live}, label %{destroy}, label %{done}");
+                emitter.Emit(destroy + ":");
+                emitter.Emit($"    store i1 false, i1* {flag}");
+            }
+            emitter.EmitDestroy(type, address);
+            emitter.EmitManagedReferences(type, address, true);
+            if (done != null) { emitter.Emit($"    br label %{done}"); emitter.Emit(done + ":"); }
+        }
+    }
     private sealed class AllocationCleanup(string address) : IDeferAction
     {
         public void Execute(LlvmEmitter emitter)
@@ -51,16 +73,13 @@ public partial class LlvmEmitter
         Emit($"    call void @__gflat_eh_free_exception(i8* {address}, void (i8*)* @{RuntimeMemorySymbol("Free")})");
     }
 
-    private void BeginConstruction(string name, ConstructorDeclaration constructor)
+    private void BeginConstruction(string name, ConstructorDeclaration? constructor = null)
     {
         _deferScopes.Add(new());
         _deferScopes[^1].AddRange(_parameterOwners);
         _parameterOwners.Clear();
         _constructionFields.Clear();
         _constructorLiveFlags.Clear();
-        var constructing = new NamedTypeExpression(name, null, constructor.Line);
-        if (_typeChecker.UsesCollector && HasManagedReferences(constructing))
-            _deferScopes[^1].Add(new ExceptionOnlyCleanup(new ManagedReferenceCleanup(constructing, "%this")));
         var cls = _typeChecker.GetClass(name);
         var str = _typeChecker.GetStruct(name);
         foreach (var field in str?.FieldDeclarations ?? cls!.FieldDeclarations)
@@ -74,8 +93,9 @@ public partial class LlvmEmitter
             bool live = _typeChecker.CanDefaultInitialize(field.Type);
             Emit($"    store i1 {(live ? "true" : "false")}, i1* {flag}");
             _constructionFields[field.Name] = flag;
-            _deferScopes[^1].Add(new ExceptionOnlyCleanup(new ConditionalTemporaryCleanup(field.Type, address, flag)));
+            _deferScopes[^1].Add(new ExceptionOnlyCleanup(new PartialValueCleanup(field.Type, address, flag)));
         }
+        if (constructor == null) return;
         foreach (var group in _typeChecker.ConstructorWrites(constructor).GroupBy(w => w.Value.Path))
         {
             if (!_constructionFields.TryGetValue(group.Key, out string? flag))

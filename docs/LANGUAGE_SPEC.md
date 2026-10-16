@@ -186,6 +186,10 @@ The compiler supplies omitted arguments after selecting the declaration, without
 changing its ABI. Function pointers require every argument because their types
 do not carry defaults. Default values appear in editor signatures and hovers.
 
+Calls evaluate the receiver or function pointer before evaluating arguments from
+left to right. Later argument effects do not change the receiver or callable
+already captured for that call.
+
 Calls through interfaces and base pointers use the defaults of the statically
 selected declaration, even when another implementation runs. An explicit
 `Child(int value) : base(value)` initializer passes constructor arguments to the

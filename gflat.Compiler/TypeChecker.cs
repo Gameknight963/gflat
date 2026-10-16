@@ -4321,15 +4321,18 @@ namespace gflat
             if (TryCheckLlvmCall(node)) return;
             if (TryCheckExtensionCall(node)) return;
             RecordExceptionCall(node);
-            foreach (AstNode arg in checkedExtensionArguments.Contains(node) ? [] : node.Arguments)
+            bool argumentsChecked = checkedExtensionArguments.Contains(node);
+            void CheckArguments()
             {
-                CheckNullableArgument(arg);
-
+                if (argumentsChecked) return;
+                argumentsChecked = true;
+                foreach (AstNode argument in node.Arguments) CheckNullableArgument(argument);
             }
 
             if (node.Callee is NamespaceAccessExpression && TryBindStaticStorage(node.Callee) &&
                 ResolveAlias(GetType(node.Callee)) is FunctionPointerTypeExpression staticCallback)
             {
+                CheckArguments();
                 CheckIndirectCall(node, staticCallback);
                 return;
             }
@@ -4341,6 +4344,7 @@ namespace gflat
                 if (varType is FunctionPointerTypeExpression fnPtr)
                 {
                     identVar.Accept(this);
+                    CheckArguments();
                     CheckIndirectCall(node, (FunctionPointerTypeExpression)ResolveAlias(GetType(identVar)));
                     return;
                 }
@@ -4355,14 +4359,17 @@ namespace gflat
                 {
                     node.Callee.Accept(this);
                     TypeExpression calleeType = ResolveAlias(GetType(node.Callee));
-                    if (calleeType is FunctionPointerTypeExpression fnPtr)
+                    if (calleeType is FunctionPointerTypeExpression fnPtr &&
+                        (node.Callee is not MemberAccessExpression || _propertyReads.ContainsKey(node.Callee)))
                     {
+                        CheckArguments();
                         CheckIndirectCall(node, fnPtr);
                         return;
                     }
                 }
             }
 
+            CheckArguments();
             string? funcName = null;
             MethodDeclaration? method = null;
             ExternDeclaration? ext = null;
@@ -4398,7 +4405,7 @@ namespace gflat
                     }
                 }
 
-                memberAccess.Object.Accept(this);
+                // The callee visit above captured this receiver before arguments.
                 TypeExpression rawObjType = GetType(memberAccess.Object);
                 if (IsNullable(ResolveAlias(rawObjType)))
                     throw new TypeCheckException("Cast a nullable pointer to non-null before calling a method", node.Line);

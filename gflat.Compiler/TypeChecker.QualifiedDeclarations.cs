@@ -56,6 +56,14 @@ public partial class TypeChecker
                 if (node is AliasDeclaration binding && owner is ClassDeclaration or StructDeclaration &&
                     binding.ImplementationKind != FunctionImplementationKind.Ordinary)
                     throw new TypeCheckException("Provider alias declarations must be declared in a namespace", binding.Span);
+                if (node is AliasDeclaration ordinaryAlias && owner is ClassDeclaration or StructDeclaration)
+                {
+                    // Continue indexing unrelated declarations during editor recovery.
+                    AnalyzeSafely(() => throw new TypeCheckException(
+                        "Type aliases inside classes or structs are not supported; declare the alias in a namespace or local scope",
+                        ordinaryAlias.Span));
+                    continue;
+                }
                 if (node is AliasDeclaration { TargetType: not null } bindingTarget && owner is not (ClassDeclaration or StructDeclaration))
                     aliasTargetNamespaces[bindingTarget.TargetType] = scope;
                 string? qualified = node switch { MethodDeclaration m => m.Name, AliasDeclaration a => a.Name, _ => null };

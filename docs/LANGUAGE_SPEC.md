@@ -172,7 +172,7 @@ int main()
 }
 ```
 
-Enums are distinct integral types, optionally with an underlying type such as `uint`. Conversions between enums and numbers, or between different enum types, require explicit casts, including assignments, arguments, returns, and comparisons. Bitwise operations on the same enum preserve its type. Aliases use `alias Name = Type;`.
+Enums are distinct integral types, optionally with an underlying type such as `uint`. Conversions between enums and numbers, or between different enum types, require explicit casts, including assignments, arguments, returns, and comparisons. Bitwise operations on the same enum preserve its type. Aliases use `alias Name = Type;` and may be declared in namespaces or local scopes. Alias declarations inside classes or structs, including static and generic types, are not supported and are diagnosed at the declaration.
 
 Enum storage currently supports integer underlying types up to 64 bits; `extralong` enum storage is not yet supported. Each member value, including an automatically incremented value, must fit the selected underlying type. Different member names may share the same numeric value.
 

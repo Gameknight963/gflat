@@ -213,6 +213,7 @@ namespace gflat.ast
 
         private AstNode CloneNodeLocated(AstNode node)
         {
+            if (node is TypeExpression type) return CloneType(type);
             if (node is AliasDeclaration alias)
             {
                 var aliasClone = new AliasDeclaration(alias.Name, alias.TargetType == null ? null! : CloneType(alias.TargetType), alias.Accessibility, alias.Line) { ImplementationKind = alias.ImplementationKind };

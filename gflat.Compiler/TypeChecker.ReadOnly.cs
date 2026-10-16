@@ -7,6 +7,7 @@ public partial class TypeChecker
     private bool CanInitializeReadOnlyField(AstNode target)
     {
         if (_lambdaScopeBoundaries.Count != 0) return false;
+        if (CanWriteOwnPropertyBackingStorage(target)) return true;
         if (_currentFunction is MethodDeclaration { StaticConstructorName: not null } && GetStaticStorage(target) is { IsConst: false } field)
             return GetStaticStorageInfo(field).Owner == (_currentClass?.Name ?? _currentStruct?.Name);
         if (GetStaticStorage(target) != null) return false;
@@ -19,6 +20,28 @@ public partial class TypeChecker
         };
         return name != null && (_currentStruct?.FieldDeclarationsByName.ContainsKey(name) == true ||
             _currentClass?.FieldDeclarations.Any(f => f.Name == name) == true);
+    }
+
+    private bool CanWriteOwnPropertyBackingStorage(AstNode target)
+    {
+        if (_currentFunction is not MethodDeclaration { PropertyName: not null, IsReadOnly: false } accessor ||
+            target is not IdentifierExpression identifier || _scopes.Any(scope => scope.ContainsKey(identifier.Name))) return false;
+
+        FieldDeclaration? field;
+        if (_currentClass is { } ownerClass && ownerClass.AllMethods.Contains(accessor))
+            field = ownerClass.FieldDeclarations.FirstOrDefault(candidate => candidate.Name == identifier.Name);
+        else if (_currentStruct is { } ownerStruct && ownerStruct.AllMethods.Contains(accessor))
+            field = ownerStruct.FieldDeclarations.FirstOrDefault(candidate => candidate.Name == identifier.Name);
+        else if (_currentClass == null && _currentStruct == null && GetStaticStorage(target) is { } global &&
+            GetStaticStorageInfo(global).Owner == null && DeclarationNamespace(accessor) is { } declarationNamespace &&
+            DeclarationNamespace(global) == declarationNamespace)
+            field = global;
+        else return false;
+
+        // Only the lowering-generated field belonging to this exact accessor
+        // may be written. Its result qualifiers and pointee views stay intact.
+        return field != null && !field.IsConst && field.PropertyName == accessor.PropertyName &&
+            field.IsStatic == accessor.IsStatic && (!field.IsStatic || ReferenceEquals(GetStaticStorage(target), field));
     }
 
     // Copying scalar values is safe. Copying an aggregate must not expose mutable

@@ -5920,6 +5920,8 @@ namespace gflat
         {
             if (node.Parameters.Any(p => p.IsExtensionReceiver))
                 throw new TypeCheckException("Extension receivers are allowed only on namespace functions", node.Span);
+            if (node.Parameters.FirstOrDefault(p => p.IsConst) is { } constantParameter)
+                throw new TypeCheckException("Lambda parameters cannot be const; function pointers cannot express constant-argument requirements", constantParameter.Span);
             using var exceptionScope = IsolateExceptionHandlers();
             using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);

@@ -250,7 +250,7 @@ Ordinary free functions, static methods, and concrete instance methods support o
 
 Namespace functions cannot be `abstract`; use an `expect` declaration for an implementation supplied through `replace`.
 
-Overloaded generic function families and overloaded virtual/interface declarations are not yet supported and are diagnosed. An ordinary overloaded implementation can satisfy an interface's matching signature. Taking an overloaded function's address requires an unambiguous wrapper. Function addresses cannot discard const-parameter requirements or a variadic calling convention; those forms are rejected until callable types can express them.
+Overloaded generic function families and overloaded virtual/interface declarations are not yet supported and are diagnosed. An ordinary overloaded implementation can satisfy an interface's matching signature. Taking an overloaded function's address requires an unambiguous wrapper. Function addresses cannot discard const-parameter requirements or a variadic calling convention; those forms are rejected until callable types can express them. Lambda parameters cannot be `const` for the same reason.
 
 `weak` marks a function's default implementation. `replace` explicitly selects a different body for that function in the same namespace or containing type. Declaration order does not matter; reopened namespace blocks share the same scope.
 

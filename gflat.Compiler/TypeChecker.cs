@@ -2901,6 +2901,7 @@ namespace gflat
             if (node.Body == null)
                 throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
             if (node.IsGeneric) return;
+            BindMethodSignature(node);
             ValidateEntryPoint(node);
             ValidateParameterDefaults(node, node.Parameters);
             if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }

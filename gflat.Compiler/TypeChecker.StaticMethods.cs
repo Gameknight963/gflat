@@ -51,6 +51,14 @@ public partial class TypeChecker
         }
         else if (str != null && str.Methods.TryGetValue(access.Member, out method)) owner = str.Name;
         if (method == null) return null;
+        // A specialization body can inspect a later method before its own
+        // declaration is checked. Bind the whole family before selecting a call
+        // or exposing its function address to the caller's namespace.
+        if (overloadFamilies.TryGetValue(method, out var family))
+        {
+            foreach (var candidate in family.ToArray()) BindMethodSignature(candidate);
+        }
+        else BindMethodSignature(method);
         if (selectedValue != null) method = selectedValue;
         if (call != null) method = SelectOverload(method, call);
         if (deferSelection && overloadFamilies.ContainsKey(method)) return method;

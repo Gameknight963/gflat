@@ -4,6 +4,15 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    private void BindMethodSignature(MethodDeclaration method)
+    {
+        if (method.IsGeneric) return;
+        using var context = EnterMethodSignatureContext(method);
+        method.ReturnType = ResolveAlias(method.ReturnType);
+        foreach (var parameter in method.Parameters)
+            parameter.Type = ResolveAlias(parameter.Type);
+    }
+
     private TypeExpression ResolveHierarchyMethodType(MethodDeclaration method, TypeExpression type)
     {
         using var context = EnterMethodSignatureContext(method);

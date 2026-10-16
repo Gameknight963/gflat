@@ -75,10 +75,15 @@ The default `OutputType` is `Executable`. A source library uses `SourceLibrary`:
 </Project>
 ```
 
-Source libraries contribute source files to consumers; they don't produce binary
-libraries. Building one checks its sources. Project references must name libraries.
-Transitive references are supported, diamond dependencies deduplicated, and cycles
-rejected.
+A `SourceLibrary` contributes source files to projects that reference it. Building
+it checks those sources without producing an executable or LLVM output.
+It has no `TargetPath`; inherited executable output settings are ignored. `Clean`
+removes its generated source lists and build stamps, leaving other files intact.
+Use an `Executable` project to run the library or emit LLVM output.
+
+Source libraries don't produce binary libraries. Project references must name
+source libraries. Transitive references are supported, diamond dependencies
+deduplicated, and cycles rejected.
 
 ## Standard library selection
 

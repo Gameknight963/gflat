@@ -33,7 +33,8 @@ public sealed class ProjectModel
     public ProjectKind Kind { get; }
     public string Configuration { get; }
     public string Platform { get; }
-    public string TargetPath { get; }
+    /// <summary>Native executable path; source libraries have no output artifact.</summary>
+    public string? TargetPath { get; }
     public int ExceptionReserveBytes { get; }
     public int OptimizationLevel { get; }
     public bool NoStdLib { get; }
@@ -43,7 +44,7 @@ public sealed class ProjectModel
     private readonly string[] sources;
     private readonly Func<string, bool> matchesGlob;
 
-    internal ProjectModel(string path, ProjectKind kind, string targetPath, string[] sources,
+    internal ProjectModel(string path, ProjectKind kind, string? targetPath, string[] sources,
         string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU")
     {
         Configuration = configuration;

@@ -70,7 +70,8 @@ public static class Program
                 graph = ProjectGraph.Load(projectPath, path => ProjectModel.Paths.Equals(path, root.FilePath) ? root
                     : ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null));
                 sourcePaths = graph.Sources.ToList();
-                outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
+                if (graph.Root.Kind == ProjectKind.Executable)
+                    outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
                 if (graph.Root.Kind == ProjectKind.SourceLibrary)
                 {
                     if (run || irOnly || args.Contains("-o")) throw new ArgumentException("SourceLibrary projects have no standalone output; build an executable referencing them.");
@@ -84,7 +85,7 @@ public static class Program
                 {
                     var protectedFiles = graph.Sources.Concat(graph.Projects.Select(p => p.FilePath));
                     if (protectedFiles.Contains(outputPath!, ProjectModel.Paths) ||
-                        protectedFiles.Contains(Path.ChangeExtension(graph.Root.TargetPath, ".ll"), ProjectModel.Paths))
+                        protectedFiles.Contains(Path.ChangeExtension(graph.Root.TargetPath!, ".ll"), ProjectModel.Paths))
                         throw new ArgumentException("Clean output must differ from source and project files.");
                 }
                 return ProjectBuild.Run(graph.Root, "Clean", configuration, platform, sourceGraph: graph, noStdLib: noStdLib);
@@ -92,6 +93,10 @@ public static class Program
             if (sourcePaths.Count == 0 && graph == null) throw new ArgumentException("Specify a source file. Use --help for usage.");
             if (check && (run || irOnly)) throw new ArgumentException("--check cannot be combined with --run or --emit-ir.");
             if (run && irOnly) throw new ArgumentException("--run cannot be combined with --emit-ir.");
+            if (graph?.Root.Kind == ProjectKind.SourceLibrary)
+                return ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
+                    clang: clang, exceptionReserveBytes: exceptionReserveBytes, optimizationLevel: optimizationLevel,
+                    sourceGraph: graph, noStdLib: noStdLib);
             outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : ".exe"));
             var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)

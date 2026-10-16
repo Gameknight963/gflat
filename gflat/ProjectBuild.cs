@@ -23,7 +23,7 @@ internal static class ProjectBuild
         Property("GflatProjectInputs", string.Join(";", sourceGraph.Projects
             .SelectMany(item => item.Imports.Prepend(item.FilePath)).Distinct(ProjectModel.Paths)
             .Select(ProjectSdk.EscapePropertyValue)));
-        if (!emitIr && target is "Build" or "Rebuild")
+        if (project.Kind == ProjectKind.Executable && !emitIr && (target is "Build" or "Rebuild"))
         {
             try { Property("GflatDefaultClangInput", NativeToolchain.FindClang(clang)); }
             catch (FileNotFoundException) { /* The compiler reports the missing driver if needed. */ }

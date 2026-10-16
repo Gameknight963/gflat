@@ -27,8 +27,9 @@ internal static class MsBuildEvaluation
             };
             if (!bool.TryParse(project.GetPropertyValue("NoStdLib"), out bool excludesStd))
                 throw new ProjectException(path, "NoStdLib must be true or false.");
-            string target = project.GetPropertyValue("TargetPath");
-            if (string.IsNullOrEmpty(target)) throw new ProjectException(path, "TargetPath is missing. Use the Gflat.Sdk project SDK.");
+            string? target = kind == ProjectKind.Executable ? project.GetPropertyValue("TargetPath") : null;
+            if (kind == ProjectKind.Executable && string.IsNullOrEmpty(target))
+                throw new ProjectException(path, "TargetPath is missing. Use the Gflat.Sdk project SDK.");
             string[] Files(string type) => project.GetItems(type).Select(i => i.GetMetadataValue("FullPath"))
                 .Distinct(ProjectModel.Paths).ToArray();
             int reserveBytes;
@@ -39,7 +40,7 @@ internal static class MsBuildEvaluation
             catch (ArgumentException error) { throw new ProjectException(path, "GflatOptimizationLevel: " + error.Message); }
             var globs = project.GetAllGlobs("Compile").Select(g => g.MsBuildGlob).ToArray();
             // MSBuild's evaluated glob expressions match paths relative to the project.
-            return new ProjectModel(path, kind, Path.GetFullPath(target, Path.GetDirectoryName(path)!),
+            return new ProjectModel(path, kind, target == null ? null : Path.GetFullPath(target, Path.GetDirectoryName(path)!),
                 Files("Compile"), Files("ProjectReference"),
                 project.Imports.Select(i => i.ImportedProject.FullPath).Distinct(ProjectModel.Paths).ToArray(),
                 file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,

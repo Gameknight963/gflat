@@ -9,13 +9,37 @@ namespace gflat.ast
         private readonly Dictionary<string, TypeExpression> _typeMap;
         private readonly string? _oldName;
         private readonly string? _newName;
+        private readonly bool _canCloseAppliedSelf;
 
         public AstCloner(Dictionary<string, TypeExpression> typeMap, string? oldName = null, string? newName = null)
+            : this(typeMap, oldName, newName, true)
+        {
+        }
+
+        private AstCloner(Dictionary<string, TypeExpression> typeMap, string? oldName, string? newName, bool canCloseAppliedSelf)
         {
             _typeMap = typeMap;
             _oldName = oldName;
             _newName = newName;
+            _canCloseAppliedSelf = canCloseAppliedSelf;
         }
+
+        private AstCloner DeclarationScope(string name, List<GenericParameter> parameters)
+        {
+            if (name == _oldName || parameters.Count == 0 ||
+                !parameters.Any(p => _typeMap.ContainsKey(p.Name))) return this;
+            var names = parameters.Select(p => p.Name).ToHashSet();
+            var substitutions = _typeMap.Where(pair => !names.Contains(pair.Key))
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+            // A reduced map is not the original owner's generic parameter list.
+            // Resolve explicit applied owners normally instead of closing them.
+            return new AstCloner(substitutions, _oldName, _newName,
+                _canCloseAppliedSelf && substitutions.Count == _typeMap.Count);
+        }
+
+        private List<GenericParameter>? CloneGenericParameters(string name, List<GenericParameter> parameters)
+            => name == _oldName ? null : parameters.Select(p =>
+                new GenericParameter(p.Name, p.Constraint == null ? null : CloneType(p.Constraint), p.Line)).ToList();
 
         public StructDeclaration CloneStruct(StructDeclaration s)
         {
@@ -27,6 +51,7 @@ namespace gflat.ast
 
         private StructDeclaration CloneStructLocated(StructDeclaration s)
         {
+            var scope = DeclarationScope(s.Name, s.GenericParameters);
             string structName = s.Name;
             if (_newName != null && _oldName != null)
             {
@@ -39,11 +64,9 @@ namespace gflat.ast
                     structName = _newName + s.Name.Substring(_oldName.Length);
                 }
             }
-            List<AstNode> clonedMembers = s.Members.Select(CloneNode).ToList();
-            List<GenericParameter>? genericParams = s.GenericParameters != null && s.Name != _oldName
-                ? s.GenericParameters.ToList()
-                : null;
-            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams);
+            List<AstNode> clonedMembers = s.Members.Select(scope.CloneNode).ToList();
+            var genericParams = scope.CloneGenericParameters(s.Name, s.GenericParameters);
+            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams);
         }
 
         public ClassDeclaration CloneClass(ClassDeclaration c)
@@ -56,6 +79,7 @@ namespace gflat.ast
 
         private ClassDeclaration CloneClassLocated(ClassDeclaration c)
         {
+            var scope = DeclarationScope(c.Name, c.GenericParameters);
             string className = c.Name;
             if (_newName != null && _oldName != null)
             {
@@ -68,11 +92,9 @@ namespace gflat.ast
                     className = _newName + c.Name.Substring(_oldName.Length);
                 }
             }
-            List<AstNode> clonedMembers = c.Members.Select(CloneNode).ToList();
-            List<GenericParameter>? genericParams = c.GenericParameters != null && c.Name != _oldName
-                ? c.GenericParameters.ToList()
-                : null;
-            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams) { IsStatic = c.IsStatic };
+            List<AstNode> clonedMembers = c.Members.Select(scope.CloneNode).ToList();
+            var genericParams = scope.CloneGenericParameters(c.Name, c.GenericParameters);
+            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams) { IsStatic = c.IsStatic };
         }
 
         public MethodDeclaration CloneMethod(MethodDeclaration m)
@@ -85,6 +107,7 @@ namespace gflat.ast
 
         private MethodDeclaration CloneMethodLocated(MethodDeclaration m)
         {
+            var scope = DeclarationScope(m.Name, m.GenericParameters);
             string methodName = m.Name;
             if (_newName != null && _oldName != null)
             {
@@ -97,13 +120,11 @@ namespace gflat.ast
                     methodName = _newName + m.Name.Substring(_oldName.Length);
                 }
             }
-            TypeExpression retType = CloneType(m.ReturnType);
-            List<Parameter> parameters = m.Parameters.Select(CloneParameter).ToList();
-            BlockStatement? body = m.Body != null ? (BlockStatement)CloneNode(m.Body) : null;
-            List<GenericParameter>? genericParams = m.GenericParameters != null && m.Name != _oldName
-                ? m.GenericParameters.ToList()
-                : null;
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, isNoThrow: m.IsNoThrow) { IsInline = m.IsInline, StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, StaticConstructorName = m.StaticConstructorName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
+            TypeExpression retType = scope.CloneType(m.ReturnType);
+            List<Parameter> parameters = m.Parameters.Select(scope.CloneParameter).ToList();
+            BlockStatement? body = m.Body != null ? (BlockStatement)scope.CloneNode(m.Body) : null;
+            var genericParams = scope.CloneGenericParameters(m.Name, m.GenericParameters);
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams, isNoThrow: m.IsNoThrow) { IsInline = m.IsInline, StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, StaticConstructorName = m.StaticConstructorName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
         }
 
         public TypeExpression CloneType(TypeExpression type)
@@ -135,7 +156,7 @@ namespace gflat.ast
                 {
                     return mapped;
                 }
-                if (_oldName != null && _newName != null && named.Namespace == null &&
+                if (_canCloseAppliedSelf && _oldName != null && _newName != null && named.Namespace == null &&
                     (named.Name == _oldName || named.Name == _oldName.Split('$').Last()) &&
                     named.TypeArguments.Count == _typeMap.Count &&
                     named.TypeArguments.Zip(_typeMap.Keys).All(pair => pair.First is NamedTypeExpression argument && !argument.IsReadOnlyValue && argument.Name == pair.Second))
@@ -147,7 +168,7 @@ namespace gflat.ast
                 string typeName = named.Name;
                 if (_newName != null && _oldName != null && named.Namespace == null)
                 {
-                    if (named.Name == _oldName)
+                    if (named.Name == _oldName && named.TypeArguments.Count == 0)
                     {
                         typeName = _newName;
                     }

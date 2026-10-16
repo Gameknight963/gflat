@@ -27,7 +27,13 @@ public partial class TypeChecker
         try
         {
             var map = parameters.Zip(arguments).ToDictionary(p => p.First.Name, p => p.Second);
-            var clone = new AstCloner(map).CloneNode(definition);
+            string name = definition switch {
+                MethodDeclaration method => method.Name,
+                ClassDeclaration cls => cls.Name,
+                StructDeclaration str => str.Name,
+                _ => throw new InvalidOperationException("A provider specialization requires a generic declaration")
+            };
+            var clone = new AstCloner(map, name).CloneNode(definition);
             Walk(clone);
         }
         finally { _currentNamespace = previous; validatingAliasSpecializations.Remove(key); }

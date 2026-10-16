@@ -1372,9 +1372,7 @@ namespace gflat
                 }
                 if (GetClass(named.Name) is ClassInfo classInfo)
                 {
-                    using var layout = EnterLayoutQuery(classInfo.Name, named.Line);
-                    return classInfo.Fields.Aggregate(TargetInfo.Default.PointerBytes,
-                        (alignment, field) => Math.Max(alignment, GetTypeAlignment(field.Type)));
+                    return GetClassAlignment(classInfo);
                 }
                 return named.Name switch
                 {
@@ -1397,7 +1395,8 @@ namespace gflat
             int maxAlign = 1;
             foreach ((string Name, TypeExpression Type) field in structInfo.Fields)
             {
-                int align = GetTypeAlignment(field.Type);
+                using var context = EnterFieldLayoutContext(structInfo.Name, field.Name);
+                int align = GetTypeAlignment(ResolveFieldLayoutType(field.Type));
                 if (align > maxAlign)
                 {
                     maxAlign = align;
@@ -1414,8 +1413,10 @@ namespace gflat
             SourceSpan span = default;
             foreach ((string Name, TypeExpression Type) field in structInfo.Fields)
             {
-                int fieldSize = GetTypeSize(field.Type);
-                int fieldAlign = GetTypeAlignment(field.Type);
+                using var context = EnterFieldLayoutContext(structInfo.Name, field.Name);
+                var type = ResolveFieldLayoutType(field.Type);
+                int fieldSize = GetTypeSize(type);
+                int fieldAlign = GetTypeAlignment(type);
                 if (fieldAlign > maxAlign)
                 {
                     maxAlign = fieldAlign;
@@ -1437,8 +1438,10 @@ namespace gflat
             SourceSpan span = classInfo.Span;
             foreach ((string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field in classInfo.Fields)
             {
-                int fieldSize = GetTypeSize(field.Type);
-                int fieldAlign = GetTypeAlignment(field.Type);
+                using var context = EnterFieldLayoutContext(field.DeclaringClass, field.Name);
+                var type = ResolveFieldLayoutType(field.Type);
+                int fieldSize = GetTypeSize(type);
+                int fieldAlign = GetTypeAlignment(type);
                 if (fieldAlign > maxAlign)
                 {
                     maxAlign = fieldAlign;

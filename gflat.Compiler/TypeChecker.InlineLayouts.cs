@@ -94,19 +94,16 @@ public partial class TypeChecker
 
         void VisitField(string member, TypeExpression type, FieldDeclaration? declaration)
         {
-            var previousNamespace = _currentNamespace; var previousClass = _currentClass; var previousStruct = _currentStruct;
-            if (declaration != null && defaultConstantContexts.TryGetValue(declaration, out var context))
-            { _currentNamespace = context.Namespace; _currentClass = context.Class; _currentStruct = context.Struct; }
+            using var context = EnterFieldLayoutContext(name, member);
             SourceSpan span = declaration?.Span ?? fieldSpan ?? SourceContext.Current ?? default;
             using var source = SourceContext.Enter(span);
-            try { VisitValue(type, DisplayName(name) + "." + member, span); }
-            finally { _currentNamespace = previousNamespace; _currentClass = previousClass; _currentStruct = previousStruct; }
+            VisitValue(type, DisplayName(name) + "." + member, span);
         }
         void VisitValue(TypeExpression type, string path, SourceSpan span)
         {
             if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression or ReferenceTypeExpression) return;
             if (type is ArrayTypeExpression array) { VisitValue(array.ElementType, path, span); return; }
-            TypeExpression resolved = ResolveAlias(type);
+            TypeExpression resolved = ResolveFieldLayoutType(type);
             if (resolved is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression or ReferenceTypeExpression) return;
             if (resolved is ArrayTypeExpression resolvedArray) { VisitValue(resolvedArray.ElementType, path, span); return; }
             if (resolved is NamedTypeExpression named && (GetStruct(named.Name) != null || GetClass(named.Name) != null))

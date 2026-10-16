@@ -238,6 +238,11 @@ Free functions and concrete class/struct methods support these modifiers. Static
 
 `new Type(...)` constructs an inline value. `new* Type(...)` allocates storage, checks for allocation failure, initializes it, and invokes its constructor. If allocation returns null, it throws `std::BadAllocException` before any store or constructor call. Its exception storage uses the normal allocator first, then the exception reserve. `delete p` destroys and frees an allocated object; it does not make aliases safe or permit repeated deletion.
 
+Primitive scalar types use the same construction forms. Zero arguments produce
+the default value; one argument must be implicitly assignable to the scalar type.
+For example, `new int(42)` produces an `int`, `new* int(42)` produces an allocated
+`int*`, and `new* int(42) at address` initializes existing integer storage.
+
 Constructors must initialize fields that cannot have a default value on every normally completing path. Field initializers and automatic property assignments count. Reading such a field, exposing `this`, or calling an instance method requires the relevant initialization first. The analysis follows branches, loops, returns, and deferred assignments; it does not infer initialization performed inside arbitrary helper methods. Required array fields must be assigned a complete array value. An implicit parameterless constructor is available only when each field has an initializer or a valid default, and the base can be constructed without arguments.
 
 `default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates; their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
@@ -796,7 +801,7 @@ remains the caller's responsibility.
 
 ## Placement construction
 
-`new* T(arguments) at destination` initializes a struct or class directly in
+`new* T(arguments) at destination` initializes a scalar, struct, or class directly in
 caller-supplied storage and returns its `T*`. It performs normal field and class
 metadata initialization and constructor overload resolution, without allocating.
 Only `new*` supports `at`; value and managed construction do not. `at` is contextual

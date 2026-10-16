@@ -4985,19 +4985,24 @@ namespace gflat
             {
                 ValidateTypeUsage(new ManagedTypeExpression(resolvedType, false, node.Line, collector: node.Collector), node.Line);
                 CheckManagedAllocation(node);
-                if (resolvedType is NamedTypeExpression scalar && IsPrimitive(scalar.Name) && scalar.Name != "void")
+            }
+            if (resolvedType is NamedTypeExpression scalar && IsPrimitive(scalar.Name) && scalar.Name != "void")
+            {
+                if (node.Arguments.Count > 1)
+                    throw new TypeCheckException("Scalar construction accepts zero or one initializer", node.Line);
+                if (node.Arguments.Count == 1)
                 {
-                    if (node.Arguments.Count > 1)
-                        throw new TypeCheckException("Managed scalar allocation accepts zero or one initializer", node.Line);
-                    if (node.Arguments.Count == 1)
-                    {
-                        CheckNullableArgument(node.Arguments[0]);
-                        if (!IsAssignable(resolvedType, GetType(node.Arguments[0]), node.Arguments[0]))
-                            throw new TypeCheckException("Invalid managed scalar initializer", node.Line);
-                    }
-                    RecordType(node, new ManagedTypeExpression(resolvedType, false, node.Line, collector: node.Collector));
-                    return;
+                    CheckNullableArgument(node.Arguments[0]);
+                    if (!IsAssignable(resolvedType, GetType(node.Arguments[0]), node.Arguments[0]))
+                        throw new TypeCheckException("Invalid scalar initializer", node.Line);
                 }
+                RecordType(node, node.Kind switch {
+                    AllocationKind.Value => resolvedType,
+                    AllocationKind.Pointer => new PointerTypeExpression(resolvedType, false, node.Line),
+                    _ => new ManagedTypeExpression(resolvedType, false, node.Line, collector: node.Collector)
+                });
+                CheckAllocationFailure(node);
+                return;
             }
             if (resolvedType is not NamedTypeExpression named)
             {

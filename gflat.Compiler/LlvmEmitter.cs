@@ -3968,7 +3968,7 @@ public partial class LlvmEmitter : IVisitor
             throw new Exception($"Cannot emit 'new' for non-named type on line {node.Line}");
         }
         string typeName = namedType.Name;
-        if (node.Kind == AllocationKind.Managed && TypeChecker.IsPrimitive(typeName))
+        if (TypeChecker.IsPrimitive(typeName))
         {
             string scalarType = EmitType(resolvedType);
             string value = GetDefaultValue(resolvedType);
@@ -3977,9 +3977,19 @@ public partial class LlvmEmitter : IVisitor
                 EmitValueForTarget(node.Arguments[0], resolvedType);
                 value = EmitImplicitCast(Pop(), _typeChecker.GetType(node.Arguments[0]), resolvedType, node.Arguments[0]);
             }
+            if (node.Kind == AllocationKind.Value) { Push(value); return; }
             string memory = NewTemp();
-            memory = EmitManagedAllocation(node, Math.Max(1, _typeChecker.GetTypeSize(resolvedType)).ToString());
+            string size = Math.Max(1, _typeChecker.GetTypeSize(resolvedType)).ToString();
+            if (node.Kind == AllocationKind.Managed)
+                memory = EmitManagedAllocation(node, size);
+            else if (node.Destination != null)
+            {
+                node.Destination.Accept(this);
+                Emit($"    {memory} = bitcast {EmitType(_typeChecker.GetType(node.Destination))} {Pop()} to i8*");
+            }
+            else Emit($"    {memory} = call i8* @{RuntimeMemorySymbol("Allocate")}(i{TargetInfo.Default.PointerBits} {size})");
             GuardAllocation(node, memory);
+            if (node.Destination != null) GuardPlacementAlignment(memory, "i8*", resolvedType);
             string address = NewTemp();
             Emit($"    {address} = bitcast i8* {memory} to {scalarType}*");
             Emit($"    store {scalarType} {value}, {scalarType}* {address}");

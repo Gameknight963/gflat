@@ -2702,10 +2702,13 @@ namespace gflat
                     throw new TypeCheckException($"Unary operator '{node.OperatorSymbol}' must have exactly 1 parameter", node.Line);
                 }
             }
-            else if (node.Parameters.Count != 1 && node.Parameters.Count != 2)
+            else if (node.OperatorKind == TokenKind.Minus)
             {
-                throw new TypeCheckException($"Operator '{node.OperatorSymbol}' must have 1 or 2 parameters", node.Line);
+                if (node.Parameters.Count != 1 && node.Parameters.Count != 2)
+                    throw new TypeCheckException($"Operator '{node.OperatorSymbol}' must have 1 or 2 parameters", node.Line);
             }
+            else if (node.Parameters.Count != 2)
+                throw new TypeCheckException($"Binary operator '{node.OperatorSymbol}' must have exactly 2 parameters", node.Line);
 
             // At least one parameter must be the enclosing struct type
             bool hasContainingType = false;
@@ -2716,7 +2719,6 @@ namespace gflat
                 if (resolvedParam is NamedTypeExpression named && named.Name == _currentStruct.Name)
                 {
                     hasContainingType = true;
-                    break;
                 }
             }
 

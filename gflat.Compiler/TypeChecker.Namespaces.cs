@@ -105,17 +105,30 @@ public partial class TypeChecker
             {
                 string? parent = cls.BaseClass == null ? null : ResolveDeclaredBaseName(cls.BaseClass);
                 var interfaces = cls.Interfaces.Select(ResolveDeclaredBaseName).ToList();
+                ValidateDistinctBaseTypes(parent == null ? interfaces : interfaces.Prepend(parent), declaration);
                 cls.BaseClass = parent;
                 cls.Interfaces = interfaces;
             }
             if (_currentStruct is { } str)
-                str.Interfaces = str.Interfaces.Select(ResolveDeclaredBaseName).ToList();
+            {
+                var interfaces = str.Interfaces.Select(ResolveDeclaredBaseName).ToList();
+                ValidateDistinctBaseTypes(interfaces, declaration);
+                str.Interfaces = interfaces;
+            }
         }
         finally
         {
             _currentNamespace = previousNamespace; _currentNamespacePath = previousPath;
             _currentClass = previousClass; _currentStruct = previousStruct;
         }
+    }
+
+    private void ValidateDistinctBaseTypes(IEnumerable<string> types, AstNode declaration)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string type in types)
+            if (!seen.Add(type))
+                throw new TypeCheckException($"Duplicate base type '{DisplayName(type)}'", declaration.Span);
     }
 
     private string ResolveDeclaredBaseName(string name)

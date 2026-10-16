@@ -9,7 +9,6 @@ $testRoot = if ($env:GFLAT_TEST_OUTPUT_ROOT) { $env:GFLAT_TEST_OUTPUT_ROOT } els
 $extracted = Join-Path $testRoot ('package-test-' + [Guid]::NewGuid().ToString('N'))
 [IO.Compression.ZipFile]::ExtractToDirectory([IO.Path]::GetFullPath($Package), $extracted)
 $oldSdkPath = $env:MSBuildSDKsPath
-$env:MSBuildSDKsPath = Join-Path $extracted 'Sdk/build/Sdks'
 $oldExecutable = $env:GFLAT_LSP_EXECUTABLE
 $oldEditorAssets = $env:GFLAT_EDITOR_ASSETS
 $oldHoverCatalog = $env:GFLAT_HOVER_CATALOG
@@ -60,6 +59,9 @@ try {
     dotnet test (Join-Path $repoRoot 'gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
     if ($nativeHoverCheck) { & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Validate -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture }
+    # Scope the checkout-independent SDK search to native gfproj smoke tests;
+    # the earlier C# test build must retain the host's Microsoft.NET.Sdk.
+    $env:MSBuildSDKsPath = Join-Path $extracted 'Sdk/build/Sdks'
     $compiler = Join-Path $extracted 'Compiler/gflat.exe'
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
     & (Join-Path $PSScriptRoot 'test-project-templates.ps1') -PackageDirectory $extracted

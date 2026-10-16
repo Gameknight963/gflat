@@ -81,6 +81,47 @@ public sealed class ProjectOutputProtectionTests : IDisposable
         }
     }
 
+    [Fact]
+    public void CliProtectsAnImportEnabledOnlyByTheIrBuildFlag()
+    {
+        Directory.CreateDirectory(Path.Combine(root, "bin/Debug"));
+        string imported = Path.Combine(root, "bin/Debug/app.ll");
+        const string keep = "<Project><PropertyGroup><Keep>true</Keep></PropertyGroup></Project>";
+        File.WriteAllText(imported, keep);
+        File.SetLastWriteTimeUtc(imported, DateTime.UtcNow.AddYears(-1));
+        string project = Path.Combine(root, "app.gfproj");
+        File.WriteAllText(project, ProjectFileFixture.Xml(content: """
+            <Import Project="bin/Debug/app.ll" Condition="'$(GflatEmitIR)' == 'true'" />
+            """));
+        File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
+        Assert.NotEqual(0, Program.Main(["build", project, "--emit-ir"]));
+        Assert.Equal(keep, File.ReadAllText(imported));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ConditionalReferenceImportsAreProtectedWithReferenceBuildProperties(bool cli)
+    {
+        Directory.CreateDirectory(Path.Combine(root, "library"));
+        string imported = Path.Combine(root, "library/shared.props");
+        const string keep = "<Project><PropertyGroup><Keep>true</Keep></PropertyGroup></Project>";
+        File.WriteAllText(imported, keep);
+        File.WriteAllText(Path.Combine(root, "library/library.gfproj"), ProjectFileFixture.Xml("SourceLibrary", """
+            <Import Project="shared.props" Condition="'$(GflatAsReference)' == 'true'" />
+            """));
+        string project = Path.Combine(root, "app.gfproj");
+        File.WriteAllText(project, ProjectFileFixture.Xml(content: """
+            <PropertyGroup><GflatIROutput>library/shared.props</GflatIROutput></PropertyGroup>
+            <ItemGroup><ProjectReference Include="library/library.gfproj" /></ItemGroup>
+            """));
+        File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
+        if (cli) Assert.NotEqual(0, Program.Main(["clean", project]));
+        else
+            foreach (var host in Hosts()) Assert.NotEqual(0, RunHost(host, project, "Clean").ExitCode);
+        Assert.Equal(keep, File.ReadAllText(imported));
+    }
+
     private static IEnumerable<(string Driver, string[] Prefix)> Hosts()
     {
         yield return ("dotnet", ["msbuild"]);

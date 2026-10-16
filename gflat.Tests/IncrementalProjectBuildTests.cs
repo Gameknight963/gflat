@@ -146,6 +146,27 @@ public sealed class IncrementalProjectBuildTests
     }
 
     [Fact]
+    public void ImportsEnabledOnlyForReferencedBuildsInvalidateTheSuccessStamp()
+    {
+        WithProject((directory, project) => {
+            string library = Path.Combine(directory, "library");
+            Directory.CreateDirectory(library);
+            string imported = Path.Combine(library, "reference settings.props");
+            File.WriteAllText(imported, "<Project><PropertyGroup><RuleVersion>one</RuleVersion></PropertyGroup></Project>");
+            File.WriteAllText(Path.Combine(library, "library.gfproj"), TestSupport.ProjectFileFixture.Xml("SourceLibrary", """
+                <Import Project="reference settings.props" Condition="'$(GflatAsReference)' == 'true'" />
+                """));
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.Xml(content: "<ItemGroup><ProjectReference Include=\"library/library.gfproj\" /></ItemGroup>"));
+            Assert.Equal(0, Build(project));
+            Assert.Contains(imported.Replace('\\', '/'), File.ReadAllText(Path.Combine(directory, "obj/Debug/app.build.settings")).Replace('\\', '/'));
+            DateTime first = File.GetLastWriteTimeUtc(Marker(directory));
+            File.WriteAllText(imported, "<Project><PropertyGroup><RuleVersion>two</RuleVersion></PropertyGroup></Project>");
+            Assert.Equal(0, Build(project));
+            Assert.NotEqual(first, File.GetLastWriteTimeUtc(Marker(directory)));
+        });
+    }
+
+    [Fact]
     public void GeneratedBuildFilesCannotOverwriteExplicitInputs()
     {
         WithProject((directory, project) => {

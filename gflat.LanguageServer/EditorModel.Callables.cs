@@ -60,29 +60,13 @@ public sealed partial class EditorModel
     {
         if (ReferenceEquals(source.Syntax.Node, target) || snapshot.Checker is not { } checker) return source;
         var definition = (MethodDeclaration)source.Syntax.Node;
-        var genericNames = new[] { source.Syntax }.Concat(Parents(source.Syntax)).SelectMany(syntax => syntax.Node switch {
-            MethodDeclaration method => method.GenericParameters,
-            ClassDeclaration type => type.GenericParameters,
-            StructDeclaration type => type.GenericParameters,
-            _ => []
-        }).Select(parameter => parameter.Name).ToHashSet();
+        var genericNames = DisplayGenericNames(source);
         var bindings = new Dictionary<string, TypeExpression>();
         string? owner = source.Owner;
         if (checker.TryGetMethodOwner(target, out var identity, out _))
         {
             owner = checker.DisplayName(identity);
-            if (checker.GetGenericTypeOrigin(identity) is { } origin)
-            {
-                var parameters = Parents(source.Syntax).Select(syntax => syntax.Node switch {
-                    ClassDeclaration type => type.GenericParameters,
-                    StructDeclaration type => type.GenericParameters,
-                    _ => null
-                }).FirstOrDefault(parameters => parameters?.Count > 0);
-                if (parameters?.Count == origin.TypeArguments.Count)
-                    foreach (var (parameter, argument) in parameters.Zip(origin.TypeArguments))
-                        if (!definition.GenericParameters.Any(methodParameter => methodParameter.Name == parameter.Name))
-                            bindings[parameter.Name] = argument;
-            }
+            BindDisplayOwnerArguments(source, identity, bindings, definition.GenericParameters.Select(parameter => parameter.Name).ToHashSet());
         }
         Infer(snapshot.DeclaredTypes.GetValueOrDefault(definition) ?? definition.ReturnType, target.ReturnType);
         foreach (var (original, concrete) in definition.Parameters.Zip(target.Parameters))
@@ -101,28 +85,6 @@ public sealed partial class EditorModel
             BoundMethod = target
         };
 
-        void Infer(TypeExpression pattern, TypeExpression concrete)
-        {
-            if (pattern is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } parameter &&
-                genericNames.Contains(parameter.Name) && !checker.IsResolvedTypeIdentity(parameter))
-            { bindings.TryAdd(parameter.Name, concrete); return; }
-            switch (pattern, concrete)
-            {
-                case (PointerTypeExpression a, PointerTypeExpression b): Infer(a.Inner, b.Inner); break;
-                case (ManagedTypeExpression a, ManagedTypeExpression b): Infer(a.Inner, b.Inner); break;
-                case (ReferenceTypeExpression a, ReferenceTypeExpression b): Infer(a.Inner, b.Inner); break;
-                case (ArrayTypeExpression a, ArrayTypeExpression b): Infer(a.ElementType, b.ElementType); break;
-                case (FunctionPointerTypeExpression a, FunctionPointerTypeExpression b):
-                    Infer(a.ReturnType, b.ReturnType);
-                    foreach (var (left, right) in a.ParameterTypes.Zip(b.ParameterTypes)) Infer(left, right);
-                    break;
-                default:
-                    var arguments = pattern switch { NamedTypeExpression named => named.TypeArguments, NestedTypeExpression nested => nested.TypeArguments, _ => null };
-                    var actual = concrete is NamedTypeExpression namedConcrete ? checker.GetGenericTypeOrigin(namedConcrete.Name)?.TypeArguments ?? namedConcrete.TypeArguments : null;
-                    if (arguments != null && actual != null && arguments.Count == actual.Count)
-                        foreach (var (left, right) in arguments.Zip(actual)) Infer(left, right);
-                    break;
-            }
-        }
+        void Infer(TypeExpression pattern, TypeExpression concrete) => InferDisplayBindings(pattern, concrete, genericNames, bindings);
     }
 }

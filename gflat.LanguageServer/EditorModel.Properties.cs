@@ -59,7 +59,7 @@ public sealed partial class EditorModel
                 }
             }
             else display = snapshot.DeclaredTypes.GetValueOrDefault(source.Syntax.Node) ?? actual;
-            boundPropertyReferences[token] = source with { Owner = owner, Type = display, BoundMethod = target };
+            boundPropertyReferences[token] = source with { Owner = owner, Type = display, BoundType = display, BoundMethod = target };
         }
     }
 }

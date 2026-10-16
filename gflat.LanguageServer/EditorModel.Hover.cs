@@ -152,7 +152,7 @@ public sealed partial class EditorModel
         else
         {
             if (IsType(symbol.Syntax.Node) || symbol.Syntax.Node is NamespaceDeclaration) Keyword(symbol.Classification);
-            else if (symbol.Type != null) { Type(symbol.BoundMethod != null || symbol.BoundParameters != null ? symbol.Type : snapshot.DeclaredTypes.GetValueOrDefault(symbol.Syntax.Node) ?? symbol.Type); Add(" "); }
+            else if (symbol.Type != null) { Type(symbol.BoundType ?? (symbol.BoundParameters != null ? symbol.Type : snapshot.DeclaredTypes.GetValueOrDefault(symbol.Syntax.Node) ?? symbol.Type)); Add(" "); }
             Name();
         }
         if (symbol.Parameters is { } parameters)

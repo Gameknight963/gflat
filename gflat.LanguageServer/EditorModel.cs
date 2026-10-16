@@ -16,6 +16,7 @@ public sealed partial class EditorModel
     {
         public string Qualified => Scope != null ? Name : Join(Owner ?? Namespace, Name);
         public IReadOnlyList<Parameter>? BoundParameters { get; init; }
+        public TypeExpression? BoundType { get; init; }
         public IReadOnlyDictionary<string, TypeExpression>? GenericBindings { get; init; }
         public MethodDeclaration? BoundMethod { get; init; }
         public bool BoundExtension { get; init; }
@@ -104,6 +105,7 @@ public sealed partial class EditorModel
         IndexSourceTypeNames();
         IndexBoundCallables();
         IndexBoundProperties();
+        IndexBoundFields();
         // Resolve once on the analysis worker. Hover and semantic-token requests
         // must not repeatedly walk the tree on the server's message loop.
         foreach (var (path, ts) in tokens)
@@ -424,6 +426,7 @@ public sealed partial class EditorModel
         var declaration = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == token.Start && s.NameSpan.Length == token.Span.Length);
         if (declaration != null) return declaration;
         if (boundPropertyReferences.TryGetValue(token, out var boundProperty)) return boundProperty;
+        if (boundFieldReferences.TryGetValue(token, out var boundField)) return boundField;
         if (boundCallableReferences.TryGetValue(token, out var boundCallable)) return boundCallable;
         var call = nodes[path].Where(n => n.Node is CallExpression c && c.Callee.Span.Start <= token.Start && c.Callee.Span.Start + c.Callee.Span.Length == token.End + 1).MinBy(n => n.Span.Length);
         if (call?.Node is CallExpression expression && ExtensionCallSymbol(expression) is { } extension) return extension;

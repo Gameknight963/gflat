@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using gflat.ast;
+using gflat.comptime;
 using gflat.CompileExceptions;
 using gflat.symbols;
 
@@ -330,6 +331,14 @@ namespace gflat.semantics
 
         private void RegisterEnum(EnumDeclaration enumDecl, TypeChecker.NamespaceScope scope, string nsPath)
         {
+            var previous = _symbols.CurrentNamespace;
+            _symbols.CurrentNamespace = scope;
+            try { RegisterEnumCore(enumDecl, scope, nsPath); }
+            finally { _symbols.CurrentNamespace = previous; }
+        }
+
+        private void RegisterEnumCore(EnumDeclaration enumDecl, TypeChecker.NamespaceScope scope, string nsPath)
+        {
             TypeExpression underlying = enumDecl.UnderlyingType != null
                 ? _symbols.ResolveAlias(enumDecl.UnderlyingType)
                 : Int;
@@ -349,24 +358,7 @@ namespace gflat.semantics
                 Accessibility = enumDecl.Accessibility
             };
 
-            long nextValue = 0;
-            foreach (EnumMemberDeclaration memberDecl in enumDecl.Members)
-            {
-                if (info.Members.ContainsKey(memberDecl.Name))
-                {
-                    throw new TypeCheckException(
-                        $"Enum '{enumDecl.Name}' already contains a member named '{memberDecl.Name}'",
-                        memberDecl.Line);
-                }
-
-                if (memberDecl.Value != null)
-                {
-                    nextValue = EvaluateConstantInt(memberDecl.Value, info);
-                }
-
-                info.Members[memberDecl.Name] = nextValue;
-                nextValue++;
-            }
+            EnumConstantEvaluator.Populate(enumDecl, info, _symbols.ResolveEnum);
 
             scope.Enums[enumDecl.SourceName] = info;
             scope.TypeNames[enumDecl.SourceName] = enumDecl.Name;
@@ -377,102 +369,5 @@ namespace gflat.semantics
             }
         }
 
-        private long EvaluateConstantInt(AstNode expr, TypeChecker.EnumInfo enumInfo)
-        {
-            if (expr is LiteralExpression lit)
-            {
-                if (lit.Token.Kind == TokenKind.IntLiteral)
-                {
-                    return long.Parse(lit.Token.Text);
-                }
-                if (lit.Token.Kind == TokenKind.HexInt)
-                {
-                    string text = lit.Token.Text;
-                    if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                    {
-                        text = text[2..];
-                    }
-                    return Convert.ToInt64(text, 16);
-                }
-                if (lit.Token.Kind == TokenKind.LongLiteral)
-                {
-                    string text = lit.Token.Text.TrimEnd('L', 'l');
-                    return long.Parse(text);
-                }
-                if (lit.Token.Kind == TokenKind.CharLiteral)
-                    return unchecked((sbyte)CharacterLiteralEncoding.Value(lit.Token.Text, lit.Line));
-            }
-            else if (expr is UnaryExpression u)
-            {
-                if (u.Operator == TokenKind.Minus)
-                {
-                    return -EvaluateConstantInt(u.Operand, enumInfo);
-                }
-                if (u.Operator == TokenKind.Plus)
-                {
-                    return EvaluateConstantInt(u.Operand, enumInfo);
-                }
-                if (u.Operator == TokenKind.Bang)
-                {
-                    return ~EvaluateConstantInt(u.Operand, enumInfo);
-                }
-            }
-            else if (expr is BinaryExpression bin)
-            {
-                long left = EvaluateConstantInt(bin.Left, enumInfo);
-                long right = EvaluateConstantInt(bin.Right, enumInfo);
-                return bin.Operator switch
-                {
-                    TokenKind.Plus => left + right,
-                    TokenKind.Minus => left - right,
-                    TokenKind.Star => left * right,
-                    TokenKind.Slash => right != 0 ? left / right : throw new TypeCheckException("Division by zero in enum member value", expr.Line),
-                    TokenKind.Percent => right != 0 ? left % right : throw new TypeCheckException("Division by zero in enum member value", expr.Line),
-                    TokenKind.Pipe => left | right,
-                    TokenKind.Ampersand => left & right,
-                    TokenKind.Caret => left ^ right,
-                    TokenKind.Less => left < right ? 1 : 0,
-                    TokenKind.Greater => left > right ? 1 : 0,
-                    TokenKind.LessEquals => left <= right ? 1 : 0,
-                    TokenKind.GreaterEquals => left >= right ? 1 : 0,
-                    TokenKind.EqualsEquals => left == right ? 1 : 0,
-                    TokenKind.NotEquals => left != right ? 1 : 0,
-                    _ => throw new TypeCheckException($"Operator '{bin.Operator}' not supported in constant expression", expr.Line)
-                };
-            }
-            else if (expr is IdentifierExpression ident)
-            {
-                if (enumInfo.Members.TryGetValue(ident.Name, out long memberVal))
-                {
-                    return memberVal;
-                }
-                TypeChecker.EnumInfo? otherEnum = _symbols.ResolveEnum(ident);
-                if (otherEnum != null && otherEnum.Members.TryGetValue(ident.Name, out long otherVal))
-                {
-                    return otherVal;
-                }
-                throw new TypeCheckException($"Enum member or constant '{ident.Name}' not found", expr.Line);
-            }
-            else if (expr is NamespaceAccessExpression nsAccess)
-            {
-                TypeChecker.EnumInfo? otherEnum = _symbols.ResolveEnum(nsAccess.Left);
-                if (otherEnum != null && otherEnum.Members.TryGetValue(nsAccess.Member, out long memberVal))
-                {
-                    return memberVal;
-                }
-                throw new TypeCheckException($"Enum member '{nsAccess.Member}' not found", expr.Line);
-            }
-            else if (expr is MemberAccessExpression memAccess)
-            {
-                TypeChecker.EnumInfo? otherEnum = _symbols.ResolveEnum(memAccess.Object);
-                if (otherEnum != null && otherEnum.Members.TryGetValue(memAccess.Member, out long memberVal))
-                {
-                    return memberVal;
-                }
-                throw new TypeCheckException($"Enum member '{memAccess.Member}' not found", expr.Line);
-            }
-
-            throw new TypeCheckException("Enum member value must be a constant integer expression", expr.Line);
-        }
     }
 }

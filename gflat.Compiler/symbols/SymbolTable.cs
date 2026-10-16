@@ -433,6 +433,14 @@ namespace gflat.symbols
 
         public TypeChecker.EnumInfo? ResolveEnum(AstNode node)
         {
+            static TypeExpression? OwnerType(AstNode expression) => expression switch {
+                IdentifierExpression id => new NamedTypeExpression(id.Name, null, id.Line),
+                NamespaceAccessExpression access when OwnerType(access.Left) is { } parent
+                    => new NestedTypeExpression(parent, access.Member, [], access.Line),
+                _ => null
+            };
+            if (OwnerType(node) is { } owner && ResolveAlias(owner) is NamedTypeExpression aliased &&
+                ResolveEnum(aliased) is { } selected) return selected;
             if (node is IdentifierExpression ident)
             {
                 foreach (Dictionary<string, TypeChecker.EnumInfo> localScope in LocalEnums)

@@ -2581,6 +2581,16 @@ public partial class LlvmEmitter : IVisitor
         TypeExpression leftType = _typeChecker.GetType(node.Left);
         TypeExpression rightType = _typeChecker.GetType(node.Right);
         TypeExpression resultType = _typeChecker.GetType(node);
+        if (_typeChecker.TryGetNativeIntegerOperands(node, out TypeExpression nativeOperands))
+        {
+            left = TypeChecker.TryGetIntegerLiteralValue(node.Left, out var leftConstant)
+                ? leftConstant.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : EmitImplicitCast(left, leftType, nativeOperands);
+            right = TypeChecker.TryGetIntegerLiteralValue(node.Right, out var rightConstant)
+                ? rightConstant.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : EmitImplicitCast(right, rightType, nativeOperands);
+            leftType = rightType = nativeOperands;
+        }
         string llvmType = EmitType(resultType);
         bool isFloat = leftType is NamedTypeExpression { Name: "float" };
 

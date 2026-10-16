@@ -260,11 +260,18 @@ namespace gflat.comptime
                 return;
             }
 
-            node.Left.Accept(this);
-            ConstValue left = _currentValue!;
-
-            node.Right.Accept(this);
-            ConstValue right = _currentValue!;
+            _context.TryGetNativeIntegerOperands(node, out TypeExpression nativeOperands);
+            ConstValue EvaluateOperand(AstNode operand)
+            {
+                if (nativeOperands is NamedTypeExpression native &&
+                    TypeChecker.TryGetIntegerLiteralValue(operand, out var integer))
+                    return native.Name == "nuint" ? new ConstValue.UInteger((ulong)integer) :
+                        new ConstValue.Integer((long)integer);
+                operand.Accept(this);
+                return nativeOperands != null ? Normalize(_currentValue!, nativeOperands, operand.Line) : _currentValue!;
+            }
+            ConstValue left = EvaluateOperand(node.Left);
+            ConstValue right = EvaluateOperand(node.Right);
 
             switch (node.Operator)
             {
@@ -829,7 +836,7 @@ namespace gflat.comptime
                 var parameterScope = _scopes.Pop();
                 PushScope();
                 _scopes.Peek()["this"] = instance;
-                foreach (FieldDeclaration field in info.FieldDeclarations)
+                foreach (FieldDeclaration field in info.FieldDeclarations.Where(f => !f.IsStatic))
                 {
                     if (field.IsStatic || field.IsConst) continue;
                     if (field.Initializer != null)

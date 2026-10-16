@@ -108,6 +108,13 @@ int main()
 
 Explicit integer narrowing retains low bits and interprets them using the destination signedness. Constant casts use the same widths as runtime lowering. `uint -> int` and `ulong -> long` require explicit casts. `float` conversions round to binary32 during constant evaluation. Non-finite and out-of-range constant float-to-integer conversions are errors.
 
+In integer arithmetic, bitwise operations, and comparisons, a representable integer
+literal can adopt the other operand's `nint` or `nuint` type. For example,
+`length != 0` and `2 * length` do not need casts when `length` is `nuint`.
+This applies on either side and preserves the native type's width and signedness.
+Negative literals cannot adopt `nuint`; signed variables do not implicitly become
+unsigned. Shift counts remain independent of the left operand's type.
+
 Integer arithmetic without overflow flags wraps at its result width. Division by zero, signed division overflow, out-of-range shift counts, and out-of-range runtime float-to-integer conversions are not defined operations; callers must avoid them. Compile-time evaluation diagnoses operations it cannot evaluate. Wider numeric support and more complete runtime checks remain experimental.
 
 ```gflat

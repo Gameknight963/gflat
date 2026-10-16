@@ -1554,101 +1554,6 @@ namespace gflat
 
         public bool IsInteger(TypeExpression type) => IsSignedInteger(type) || IsUnsignedInteger(type);
 
-        private static bool TryGetIntegerConstant(AstNode node, out long value)
-        {
-            if (node is LiteralExpression lit)
-            {
-                if (lit.Token.Kind == TokenKind.IntLiteral)
-                {
-                    return long.TryParse(lit.Token.Text, out value);
-                }
-                if (lit.Token.Kind == TokenKind.UIntLiteral)
-                {
-                    string txt = lit.Token.Text.TrimEnd('u', 'U');
-                    if (txt.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                    {
-                        try
-                        {
-                            value = Convert.ToInt64(txt[2..], 16);
-                            return true;
-                        }
-                        catch
-                        {
-                            value = 0;
-                            return false;
-                        }
-                    }
-                    return long.TryParse(txt, out value);
-                }
-                if (lit.Token.Kind == TokenKind.HexInt)
-                {
-                    string txt = lit.Token.Text.TrimEnd('u', 'U', 'l', 'L');
-                    try
-                    {
-                        value = Convert.ToInt64(txt, 16);
-                        return true;
-                    }
-                    catch
-                    {
-                        value = 0;
-                        return false;
-                    }
-                }
-                if (lit.Token.Kind is TokenKind.LongLiteral or TokenKind.ULongLiteral)
-                {
-                    string txt = lit.Token.Text.TrimEnd('u', 'U', 'l', 'L');
-                    if (txt.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                    {
-                        try
-                        {
-                            value = Convert.ToInt64(txt[2..], 16);
-                            return true;
-                        }
-                        catch
-                        {
-                            value = 0;
-                            return false;
-                        }
-                    }
-                    return long.TryParse(txt, out value);
-                }
-            }
-            else if (node is UnaryExpression unary)
-            {
-                if (unary.Operator == TokenKind.Minus)
-                {
-                    if (TryGetIntegerConstant(unary.Operand, out long innerVal))
-                    {
-                        value = -innerVal;
-                        return true;
-                    }
-                }
-                else if (unary.Operator == TokenKind.Plus)
-                {
-                    return TryGetIntegerConstant(unary.Operand, out value);
-                }
-            }
-
-            value = 0;
-            return false;
-        }
-
-        private static bool FitsInIntegerType(string typeName, long value) => typeName switch
-        {
-            "byte" => value >= byte.MinValue && value <= byte.MaxValue,
-            "sbyte" => value >= sbyte.MinValue && value <= sbyte.MaxValue,
-            "short" => value >= short.MinValue && value <= short.MaxValue,
-            "ushort" => value >= ushort.MinValue && value <= ushort.MaxValue,
-            "int" => value >= int.MinValue && value <= int.MaxValue,
-            "uint" => value >= 0 && value <= uint.MaxValue,
-            "long" => true,
-            "ulong" => value >= 0,
-            "nint" => true,
-            "nuint" => value >= 0,
-            "extralong" => true,
-            _ => false
-        };
-
         private bool IsValidPointerForArithmetic(TypeExpression type, out string? error)
         {
             type = ResolveAlias(type);
@@ -1812,9 +1717,9 @@ namespace gflat
                 return false;
 
             // Integer constant literal in-range assignment
-            if (valueNode != null && IsInteger(source) && target is NamedTypeExpression targetNamed && TryGetIntegerConstant(valueNode, out long constVal))
+            if (valueNode != null && IsInteger(source) && target is NamedTypeExpression targetNamed && TryGetIntegerLiteralValue(valueNode, out var constVal))
             {
-                if (FitsInIntegerType(targetNamed.Name, constVal))
+                if (FitsIntegerLiteral(targetNamed.Name, constVal))
                     return true;
             }
 
@@ -3502,6 +3407,8 @@ namespace gflat
                 TokenKind.EqualsEquals or TokenKind.NotEquals or
                 TokenKind.Less or TokenKind.Greater or
                 TokenKind.LessEquals or TokenKind.GreaterEquals;
+
+            ContextualizeNativeIntegerOperands(node, ref left, ref right);
 
             bool isLogical = node.Operator is TokenKind.AmpersandAmpersand or TokenKind.PipePipe;
 

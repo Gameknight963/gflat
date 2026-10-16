@@ -137,6 +137,20 @@ public sealed class GenericStaticCallableTests
     }
 
     [Fact]
+    public void MethodTypeParameterShadowingUsesTheInnerConcreteTypeForHoverNavigationAndSignatureHelp()
+    {
+        const string library = "class Box<T>{public static T Read<T>(T value)=>value;}";
+        var (model, _, main, extra) = Analyze("long Test()=>Box<int>::Read<long>(3l);", library);
+        int member = main.Text.IndexOf("Read", StringComparison.Ordinal);
+        Assert.Contains("long Box<int>::Read<long>(long value)", Hover(model, main, member));
+        var definition = Json(model.Definition(main.Path, member));
+        Assert.Contains("generic-call-library.gf", definition.GetProperty("uri").GetString());
+        Assert.Equal(extra.Text.IndexOf("Read", StringComparison.Ordinal), definition.GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
+        var help = Json(model.SignatureHelp(main.Path, main.Text.IndexOf("(3l)", StringComparison.Ordinal) + 1));
+        Assert.Contains("long Box<int>::Read<long>(long value)", help.GetProperty("signatures")[0].GetProperty("label").GetString());
+    }
+
+    [Fact]
     public void EarlierErrorsDoNotHideHealthySelectedMethodMetadata()
     {
         var source = new SourceFile(Path.GetFullPath("generic-recovery-main.gf"), "int Broken()=>Missing(); int Healthy()=>Box<int>::Read(3);");

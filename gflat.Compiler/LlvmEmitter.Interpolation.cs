@@ -33,7 +33,15 @@ public partial class LlvmEmitter
                 _deferScopes.Add(new());
                 try
                 {
-                    part.Accept(this);
+                    if (part.Conversion != null)
+                    {
+                        part.Conversion.Accept(this);
+                        string converted = Bind(part.Converted!, Pop());
+                        TypeExpression convertedType = _typeChecker.GetType(part.Converted!);
+                        if (_typeChecker.HasDestructor(convertedType))
+                            _deferScopes[^1].Add(new TemporaryCleanup(convertedType, converted));
+                    }
+                    part.Action.Accept(this);
                     EmitDefersDownTo(_deferScopes.Count - 1);
                 }
                 finally { _deferScopes.RemoveAt(_deferScopes.Count - 1); }

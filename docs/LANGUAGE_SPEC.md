@@ -919,7 +919,10 @@ and their explicit count. A writer must consume or copy these bytes before retur
 It may not retain either the input pointer or a formatter's borrowed destination.
 
 Custom values, pointers, and managed references implement `IFormattable`; holes call
-`Format` with the destination. Interface views support dynamic dispatch. Nullable
+`Format` with the destination. Alternatively, `IStringConvertable` declares
+`readonly std::String ToString()`: the hole converts once, writes the returned
+string's counted bytes, and destroys the owning temporary. `IFormattable` takes
+precedence when both contracts are implemented. Interface views support dynamic dispatch. Nullable
 receivers require a checked cast or unchecked postfix `!`. Primitives call the exact
 `global::std::Format(value, writer)` overload independently of local using directives.
 Supported primitives are `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`,
@@ -928,8 +931,9 @@ arrays are not implicitly converted to text; provide an explicit string value.
 
 Formatting does not imply a heap allocation, a terminator scan, or a caller-owned
 C-string. `std::String` writes its existing counted bytes, preserving embedded nulls.
-Its `ToString()` method is a separate convenience returning borrowed readonly data,
-valid only while the original buffer remains alive and unchanged.
+Its `ToString()` method returns an independent owning string. Its optional
+`ToCString()` method borrows readonly data, valid only while the original buffer
+remains alive and unchanged; interpolation never implicitly uses that operation.
 
 Each hole is evaluated once. Temporary receivers remain alive through formatting
 and are then destroyed. If formatting or writing throws, the partial destination

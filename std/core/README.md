@@ -26,13 +26,13 @@ and checks bounds.
 - `String::From(cString)` copies null-terminated input.
 - `String::From(data, length)` copies exactly that many bytes, including nulls.
   The `s"..."` literal uses this counted form.
-- `Data` and `ToString()` borrow the existing buffer. Do not free it. Mutation,
+- `Data` and `ToCString()` borrow the existing buffer. Do not free it. Mutation,
   movement, or destruction can invalidate the view; mutations can change its text.
 - `Reserve`, `Append`, and `AppendLiteral` throw on overflow or allocation failure.
   Allocation failure throws `BadAllocException` and preserves the existing storage
   and contents; overflow remains a separate error.
   Appending from the same string works, including across growth.
-- `Clear` retains capacity. `Clone` makes an independent owned copy.
+- `Clear` retains capacity. `Clone` and `ToString()` make independent owned copies.
 - `String copy = text;` makes an independent owned copy and may throw on allocation failure.
 - `move text` transfers the buffer and leaves `text` uninitialized. Assign a new value before using it again.
 - `Equals(readonly(String)* other)` compares bytes.
@@ -44,6 +44,12 @@ including embedded nulls. Primitive `std::Format(value, writer)` overloads use
 stack buffers or literal text, without allocating intermediate strings.
 With `using std;`, primitive values also support `value.Format(writer)`.
 Floating-point overloads live in `../libc/Formatting.gf`.
+
+Types can instead implement `IStringConvertable`, whose readonly `ToString()`
+returns an owning `std::String`. Interpolation keeps that temporary alive while
+writing its counted bytes, then destroys it. If a type implements both contracts,
+the direct `Format` operation takes precedence. A borrowed `ToCString()` method
+is optional and is never selected implicitly for interpolation.
 
 Only C-string consumers stop at the first null; counted operations and interpolation
 preserve it. Constructors and factory methods follow ordinary exception propagation.

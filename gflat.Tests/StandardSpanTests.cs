@@ -141,7 +141,8 @@ public class StandardSpanTests
                 }
                 return 0;
             }
-            """).Append(new SourceFile("String.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/String.gf"))));
+            """).Append(new SourceFile("String.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/String.gf"))))
+                .Append(new SourceFile("IStringConvertable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/IStringConvertable.gf"))));
         var result = CompilerTestHelper.Run(sources);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("ASF", result.StandardOutput);

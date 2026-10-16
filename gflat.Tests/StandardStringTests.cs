@@ -144,10 +144,10 @@ public class StandardStringTests
                 empty.Clear();
                 if (empty.Length != (nuint)0 || empty.Data[0] != '\0') return 1;
                 String text = s"hello";
-                readonly(char)* borrowed = text.ToString();
+                readonly(char)* borrowed = text.ToCString();
                 text[(nuint)0] = 'X';
                 if (borrowed[0] != 'X') return 2;
-                readonly(char)* zero = empty.ToString();
+                readonly(char)* zero = empty.ToCString();
                 if (zero[0] != '\0') return 3;
                 return 0;
             }

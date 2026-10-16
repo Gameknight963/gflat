@@ -7,7 +7,7 @@ public class InterpolationTests
     internal static SourceFile[] Sources(string program, bool libc = false)
     {
         var files = new List<SourceFile>();
-        foreach (string file in new[] { "core/String.gf", "core/Formatting.gf" }.Concat(libc ? new[] { "libc/Formatting.gf" } : Array.Empty<string>()))
+        foreach (string file in new[] { "core/IStringConvertable.gf", "core/String.gf", "core/Formatting.gf" }.Concat(libc ? new[] { "libc/Formatting.gf" } : Array.Empty<string>()))
             files.Add(new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))));
         files.Add(new SourceFile("main.gf", program));
         return files.ToArray();

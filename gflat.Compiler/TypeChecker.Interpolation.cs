@@ -6,7 +6,9 @@ namespace gflat;
 public partial class TypeChecker
 {
     public sealed record InterpolationPlan(PrefixedStringLiteralExpression Factory,
-        IdentifierExpression Result, List<CallExpression> Parts);
+        IdentifierExpression Result, List<InterpolationPart> Parts);
+    public sealed record InterpolationPart(CallExpression Action,
+        CallExpression? Conversion = null, IdentifierExpression? Converted = null);
     private readonly Dictionary<InterpolatedStringExpression, InterpolationPlan> _interpolations = new();
     private int _interpolationTemporary;
     public InterpolationPlan GetInterpolation(InterpolatedStringExpression node) => _interpolations[node];
@@ -34,11 +36,13 @@ public partial class TypeChecker
                 return id;
             }
             var result = Temporary(resultType);
-            var parts = new List<CallExpression>();
+            var parts = new List<InterpolationPart>();
             foreach (AstNode part in node.Parts)
             {
                 using var context = SourceContext.Enter(part.Span);
                 CallExpression action;
+                CallExpression? conversion = null;
+                IdentifierExpression? converted = null;
                 if (part is LiteralExpression { Token.Kind: TokenKind.InterpolatedStringSegment } segment)
                 {
                     string raw = segment.Token.Text;
@@ -63,10 +67,21 @@ public partial class TypeChecker
                             throw new TypeCheckException($"Primitive interpolation requires std::Format({primitive.Name}, ITextWriter*); include std/core/Formatting.gf (and std/libc/Formatting.gf for floating-point values)", part.Line);
                         action = new(new NamespaceAccessExpression(new NamespaceAccessExpression(new GlobalExpression(part.Line), "std", part.Line), "Format", part.Line), new() { part, destination }, part.Line) { Span = part.Span };
                     }
-                    else throw new TypeCheckException($"Interpolation value of type '{TypeName(type)}' must implement IFormattable; raw pointers are not implicitly treated as text", part.Line);
+                    else if (TypeImplementsInterface(type, "IStringConvertable") || valueType is NamedTypeExpression { Name: "IStringConvertable" })
+                    {
+                        conversion = new(new MemberAccessExpression(part, "ToString", false, part.Line), new(), part.Line) { Span = part.Span };
+                        conversion.Accept(this);
+                        converted = Temporary(GetType(conversion));
+                        action = new(new MemberAccessExpression(result, "Write", false, part.Line), new()
+                        {
+                            new MemberAccessExpression(converted, "Data", false, part.Line),
+                            new MemberAccessExpression(converted, "Length", false, part.Line)
+                        }, part.Line) { Span = part.Span };
+                    }
+                    else throw new TypeCheckException($"Interpolation value of type '{TypeName(type)}' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text", part.Line);
                 }
                 action.Accept(this);
-                parts.Add(action);
+                parts.Add(new(action, conversion, converted));
             }
             _interpolations[node] = new(factory, result, parts);
             RecordType(node, resultType);

@@ -79,7 +79,7 @@ void List(readonly(Vector<Task>)* tasks)
         char mark = ' ';
         if (task.Done) mark = 'x';
         String row = s$"{i + (nuint)1}. [{mark}] {task.Title}";
-        puts(row.ToString());
+        puts(row.ToCString());
     }
 }
 

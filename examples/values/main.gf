@@ -13,9 +13,9 @@ int main()
     names[(nuint)0].Append("!", 1);
     readonly(Vector<String>)* view = &names;
     String greeting = s$"Hello {(*view)[(nuint)0]} and {(*view)[(nuint)1]}. Count: {names.Count}";
-    puts(greeting.ToString());
+    puts(greeting.ToCString());
     String last = names.Pop();
-    puts(last.ToString());
-    puts(name.ToString());
+    puts(last.ToCString());
+    puts(name.ToCString());
     return 0;
 }

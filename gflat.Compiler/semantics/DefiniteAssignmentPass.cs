@@ -861,7 +861,8 @@ namespace gflat.semantics
                 CheckExpression(plan.Factory);
                 foreach (var part in plan.Parts)
                 {
-                    CheckExpression(part);
+                    if (part.Conversion != null) CheckExpression(part.Conversion);
+                    CheckExpression(part.Action);
                     // Synthetic locals are initialized by lowering, not source declarations.
                     // Append may throw before the next hole has been evaluated.
                     RecordExceptionalState();

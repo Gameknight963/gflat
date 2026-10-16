@@ -1,7 +1,7 @@
 namespace std;
 
 // Owns UTF-8 bytes. Length and Capacity exclude the trailing null byte.
-struct String : ITextWriter, IFormattable
+struct String : ITextWriter, IFormattable, IStringConvertable
 {
     private char* data;
     private nuint length;
@@ -109,8 +109,10 @@ struct String : ITextWriter, IFormattable
         if (capacity != (nuint)0) data[0] = '\0';
     }
 
+    public readonly String ToString() => String::From(data, length);
+
     // Borrowed text: valid until mutation, movement, or destruction of this string.
-    public readonly readonly(char)* ToString() => data;
+    public readonly readonly(char)* ToCString() => data;
 
     public void Write(readonly(char)* text, nuint count) { this.AppendLiteral(text, count); }
     public readonly void Format(ITextWriter* output) { output.Write(data, length); }

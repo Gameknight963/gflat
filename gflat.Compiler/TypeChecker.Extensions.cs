@@ -188,7 +188,7 @@ public partial class TypeChecker
                 ManagedTypeExpression m => new ManagedTypeExpression(Qualify(m.Inner, allowMethodParameters), m.IsNullable, m.Line, m.IsReadOnly, m.Collector == null ? null : Qualify(m.Collector, allowMethodParameters)) { UsesDefaultCollector = m.UsesDefaultCollector },
                 ArrayTypeExpression a => new ArrayTypeExpression(Qualify(a.ElementType, allowMethodParameters), a.Size, a.Line),
                 FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(Qualify(f.ReturnType, allowMethodParameters),
-                    f.ParameterTypes.Select(p => Qualify(p, allowMethodParameters)).ToList(), f.IsManaged, f.IsNullable, f.Line),
+                    f.ParameterTypes.Select(p => Qualify(p, allowMethodParameters)).ToList(), f.IsManaged, f.IsNullable, f.Line, f.IsSignature),
                 NamedTypeExpression n => QualifyNamed(n, allowMethodParameters), _ => t };
             return result.WithReadOnlyValue(t.IsReadOnlyValue || result.IsReadOnlyValue);
         }
@@ -262,7 +262,7 @@ public partial class TypeChecker
             var parameters = function.ParameterTypes.Select(KnownExtensionType).ToList();
             if (result == null || parameters.Any(p => p == null)) return null;
             return new FunctionPointerTypeExpression(result, parameters.Select(p => p!).ToList(), function.IsManaged,
-                function.IsNullable, function.Line).WithReadOnlyValue(function.IsReadOnlyValue);
+                function.IsNullable, function.Line, function.IsSignature).WithReadOnlyValue(function.IsReadOnlyValue);
         }
         // Unresolved nested generic syntax cannot be inferred without specializing
         // its parent. Nongeneric signatures have already resolved these nodes.

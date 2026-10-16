@@ -2923,6 +2923,12 @@ public partial class LlvmEmitter : IVisitor
             return;
         }
 
+        if (node.Operator is TokenKind.Plus or TokenKind.Minus &&
+            TryContextualIntegerLiteral(node, _typeChecker.GetType(node), out string signedLiteral))
+        {
+            Push(signedLiteral);
+            return;
+        }
         string? updateAddress = null;
         if (node.Operator is TokenKind.PlusPlus or TokenKind.MinusMinus &&
             !_typeChecker.TryGetUnaryOperatorTarget(node, out _))

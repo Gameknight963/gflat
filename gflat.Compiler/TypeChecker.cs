@@ -864,7 +864,7 @@ namespace gflat
             {
                 return MonomorphizeClass(genericClass, typeArgs, line);
             }
-            throw new TypeCheckException($"Unknown generic type '{name}'", line);
+            throw new TypeCheckException($"Unknown generic type '{DisplayName(name)}'", line);
         }
 
         private NamedTypeExpression MonomorphizeStruct(StructDeclaration genericDef, List<TypeExpression> typeArgs, int line)
@@ -4982,7 +4982,7 @@ namespace gflat
                     return;
                 }
 
-                throw new TypeCheckException($"Class '{named.Name}' has no field or method '{node.Member}'", node.Line);
+                throw new TypeCheckException($"Class '{DisplayName(named.Name)}' has no field or method '{node.Member}'", node.Line);
             }
 
             if (!_structs.TryGetValue(named.Name, out StructInfo? info))
@@ -5001,7 +5001,7 @@ namespace gflat
                 return;
             }
 
-            throw new TypeCheckException($"'{named.Name}' has no field or method '{node.Member}'", node.Line);
+            throw new TypeCheckException($"'{DisplayName(named.Name)}' has no field or method '{node.Member}'", node.Line);
         }
 
         public void Visit(InterpolatedStringExpression node)
@@ -5139,8 +5139,8 @@ namespace gflat
                                 CheckNullableArgument(arg);
 
                         }
-                        string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
-                        throw new TypeCheckException($"No matching constructor found for '{cInfo.Name}' with arguments ({argTypes})", node.Line);
+                        string argTypes = string.Join(", ", node.Arguments.Select(a => DisplayTypeName(GetType(a))));
+                        throw new TypeCheckException($"No matching constructor found for '{DisplayName(cInfo.Name)}' with arguments ({argTypes})", node.Line);
                     }
                     matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line);
                     _resolvedConstructors[node] = matchedCtor;
@@ -5234,8 +5234,8 @@ namespace gflat
                             CheckNullableArgument(arg);
 
                     }
-                    string argTypes = string.Join(", ", node.Arguments.Select(a => TypeName(GetType(a))));
-                    throw new TypeCheckException($"No matching constructor found for '{sInfo.Name}' with arguments ({argTypes})", node.Line);
+                    string argTypes = string.Join(", ", node.Arguments.Select(a => DisplayTypeName(GetType(a))));
+                    throw new TypeCheckException($"No matching constructor found for '{DisplayName(sInfo.Name)}' with arguments ({argTypes})", node.Line);
                 }
                 matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line);
                 _resolvedConstructors[node] = matchedStructCtor;

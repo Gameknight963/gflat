@@ -24,7 +24,7 @@ public partial class TypeChecker
     private void ValidateInterfaceReference(TypeExpression type, int line)
     {
         if (ResolveAlias(type) is NamedTypeExpression named && GetInterface(named.Name) is { IsStaticContract: true })
-            throw new TypeCheckException($"Static interface '{named.Name}' is a type constraint, not an instance reference", line);
+            throw new TypeCheckException($"Static interface '{DisplayName(named.Name)}' is a type constraint, not an instance reference", line);
     }
 
     private static void ValidateStaticContractImplementation(MethodDeclaration contract, MethodDeclaration implementation)

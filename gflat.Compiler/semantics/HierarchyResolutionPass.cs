@@ -19,78 +19,8 @@ namespace gflat.semantics
 
         public void ResolveBaseTypes()
         {
-            // First partition base class vs interfaces for all classes
             foreach (TypeChecker.ClassInfo cls in _symbols.Classes.Values)
-            {
-                if (cls.BaseClass != null && !_symbols.Classes.ContainsKey(cls.BaseClass))
-                {
-                    string? current = cls.Name;
-                    while (current != null)
-                    {
-                        int lastDot = current.LastIndexOf('.');
-                        string enclosing = lastDot >= 0 ? current.Substring(0, lastDot) : "";
-                        if (enclosing.Length > 0)
-                        {
-                            string candidate = $"{enclosing}.{cls.BaseClass}";
-                            if (_symbols.Classes.ContainsKey(candidate))
-                            {
-                                cls.BaseClass = candidate;
-                                break;
-                            }
-                            current = enclosing;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                List<string> remainingInterfaces = new();
-                foreach (string item in cls.Interfaces)
-                {
-                    string resolvedItem = item;
-                    if (!_symbols.Classes.ContainsKey(resolvedItem))
-                    {
-                        string? current = cls.Name;
-                        while (current != null)
-                        {
-                            int lastDot = current.LastIndexOf('.');
-                            string enclosing = lastDot >= 0 ? current.Substring(0, lastDot) : "";
-                            if (enclosing.Length > 0)
-                            {
-                                string candidate = $"{enclosing}.{item}";
-                                if (_symbols.Classes.ContainsKey(candidate))
-                                {
-                                    resolvedItem = candidate;
-                                    break;
-                                }
-                                current = enclosing;
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-                    }
-
-                    if (_symbols.Classes.ContainsKey(resolvedItem))
-                    {
-                        if (cls.BaseClass != null)
-                        {
-                            throw new TypeCheckException($"Class '{cls.Name}' cannot inherit from multiple classes ('{cls.BaseClass}' and '{resolvedItem}')", cls.Line);
-                        }
-                        if (_symbols.Classes[resolvedItem].IsStatic)
-                            throw new TypeCheckException($"Cannot inherit from static class '{resolvedItem}'", cls.Span);
-                        cls.BaseClass = resolvedItem;
-                    }
-                    else
-                    {
-                        remainingInterfaces.Add(item);
-                    }
-                }
-                cls.Interfaces = remainingInterfaces;
-            }
+                ResolveBaseTypes(cls);
 
             // Generic bodies can inspect these edges before layout resolution.
             // Reject cycles now so their inheritance walks cannot loop forever.
@@ -105,6 +35,43 @@ namespace gflat.semantics
                         throw new TypeCheckException($"Circular inheritance detected involving class '{current.Name}'", current.Line);
                 }
                 completed.UnionWith(path);
+            }
+        }
+
+        public void ResolveBaseTypes(TypeChecker.ClassInfo cls)
+        {
+            if (cls.HierarchyResolved) return;
+            string? baseClass = cls.BaseClass == null ? null : ResolveClassName(cls.BaseClass);
+            List<string> interfaces = new();
+            foreach (string item in cls.Interfaces)
+            {
+                string candidate = ResolveClassName(item);
+                if (!_symbols.Classes.ContainsKey(candidate))
+                {
+                    interfaces.Add(item);
+                    continue;
+                }
+                if (baseClass != null)
+                    throw new TypeCheckException($"Class '{cls.Name}' cannot inherit from multiple classes ('{baseClass}' and '{candidate}')", cls.Span);
+                baseClass = candidate;
+            }
+            if (baseClass != null && _symbols.Classes.TryGetValue(baseClass, out var parent) && parent.IsStatic)
+                throw new TypeCheckException($"Cannot inherit from static class '{baseClass}'", cls.Span);
+            // Publish only validated edges so a failed partition can be retried.
+            cls.BaseClass = baseClass;
+            cls.Interfaces = interfaces;
+
+            string ResolveClassName(string name)
+            {
+                if (_symbols.Classes.ContainsKey(name)) return name;
+                string owner = cls.Name;
+                for (int separator = owner.LastIndexOf('.'); separator >= 0; separator = owner.LastIndexOf('.'))
+                {
+                    owner = owner[..separator];
+                    string nested = owner + "." + name;
+                    if (_symbols.Classes.ContainsKey(nested)) return nested;
+                }
+                return name;
             }
         }
 

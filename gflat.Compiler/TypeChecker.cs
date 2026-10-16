@@ -933,7 +933,7 @@ namespace gflat
             StructDeclaration specialized = cloner.CloneStruct(genericDef);
 
             _compilationUnit?.Members.Add(specialized);
-            RegisterMemberInScope(specialized, _globalScope, "");
+            RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
             ResolveSpecializedBaseTypes(genericDef, specialized);
             publish(NamedTypeExpression.Resolved(mangledName, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
@@ -982,7 +982,7 @@ namespace gflat
             ClassDeclaration specialized = cloner.CloneClass(genericDef);
 
             _compilationUnit?.Members.Add(specialized);
-            RegisterMemberInScope(specialized, _globalScope, "");
+            RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
             ResolveSpecializedBaseTypes(genericDef, specialized);
             publish(NamedTypeExpression.Resolved(mangledName, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
@@ -1031,7 +1031,7 @@ namespace gflat
             MethodDeclaration specialized = cloner.CloneMethod(genericDef);
 
             _compilationUnit?.Members.Add(specialized);
-            RegisterMemberInScope(specialized, _globalScope, "");
+            RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
             if (ownedMethod) specializedMethodOwners[specialized] = (methodOwner, ownerIsClass);
             CheckSpecialization(genericDef, specialized);
 
@@ -1136,6 +1136,11 @@ namespace gflat
             }
             if (type is NamedTypeExpression named)
             {
+                if (named.Namespace == null && named.TypeArguments.Count == 0 &&
+                    !_localEnums.Any(local => local.ContainsKey(named.Name)))
+                    foreach (var local in _localAliases)
+                        if (local.TryGetValue(named.Name, out var localTarget))
+                            return ResolveAliasBindingTarget(localTarget, publish);
                 string? identity = ResolveTypeIdentity(named.Name, named.Namespace);
                 if (named.TypeArguments.Count > 0)
                 {
@@ -1995,7 +2000,7 @@ namespace gflat
             QualifyTypeDeclarations(node);
 
             // Pass 1: Symbol collection
-            SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols);
+            SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration);
             collectionPass.Execute(node);
             ResolveFunctionReplacements(node);
             collectionPass.Execute(node);
@@ -2062,8 +2067,9 @@ namespace gflat
             new HierarchyResolutionPass(_symbols).Execute();
         }
 
-        private void RegisterMemberInScope(AstNode member, NamespaceScope scope, string nsPath)
+        private void RegisterMemberInScope(AstNode member, NamespaceScope scope, string nsPath, bool namespaceVisible = true)
         {
+            if (!namespaceVisible) namespaceHiddenDeclarations.Add(member);
             if (member is MethodDeclaration method)
             {
                 _functionNamespaces[method] = nsPath;
@@ -2082,7 +2088,7 @@ namespace gflat
             }
             else if (member is InterfaceDeclaration iface)
             {
-                scope.TypeNames[iface.SourceName] = iface.Name;
+                if (namespaceVisible) scope.TypeNames[iface.SourceName] = iface.Name;
                 InterfaceInfo info = new InterfaceInfo
                 {
                     Name = iface.Name,
@@ -2108,11 +2114,11 @@ namespace gflat
                     }
                 }
                 _interfaces[iface.Name] = info;
-                scope.Interfaces[iface.SourceName] = info;
+                if (namespaceVisible) scope.Interfaces[iface.SourceName] = info;
             }
             else if (member is StructDeclaration str)
             {
-                scope.TypeNames[str.SourceName] = str.Name;
+                if (namespaceVisible) scope.TypeNames[str.SourceName] = str.Name;
                 if (str.IsGeneric)
                 {
                     _genericStructs[str.Name] = str;
@@ -2144,7 +2150,7 @@ namespace gflat
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.Span = nestedCls.Span;
                         str.Members[i] = qualifiedCls;
-                        RegisterMemberInScope(qualifiedCls, scope, nsPath);
+                        RegisterMemberInScope(qualifiedCls, scope, nsPath, namespaceVisible: false);
                     }
                     else if (m is StructDeclaration nestedStruct)
                     {
@@ -2159,7 +2165,7 @@ namespace gflat
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         str.Members[i] = qualifiedStruct;
-                        RegisterMemberInScope(qualifiedStruct, scope, nsPath);
+                        RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
                     else if (m is FieldDeclaration field)
                     {
@@ -2197,15 +2203,15 @@ namespace gflat
                     }
                     else if (m is EnumDeclaration enumDecl)
                     {
-                        RegisterEnum(enumDecl, scope, nsPath.Length > 0 ? $"{nsPath}::{str.Name}" : str.Name);
+                        RegisterEnum(enumDecl, scope, nsPath.Length > 0 ? $"{nsPath}::{str.Name}" : str.Name, namespaceVisible: false);
                     }
                 }
                 _structs[str.Name] = info;
-                scope.Structs[str.SourceName] = info;
+                if (namespaceVisible) scope.Structs[str.SourceName] = info;
             }
             else if (member is ClassDeclaration cls)
             {
-                scope.TypeNames[cls.SourceName] = cls.Name;
+                if (namespaceVisible) scope.TypeNames[cls.SourceName] = cls.Name;
                 if (cls.IsGeneric)
                 {
                     _genericClasses[cls.Name] = cls;
@@ -2244,7 +2250,7 @@ namespace gflat
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.Span = nestedCls.Span;
                         cls.Members[i] = qualifiedCls;
-                        RegisterMemberInScope(qualifiedCls, scope, nsPath);
+                        RegisterMemberInScope(qualifiedCls, scope, nsPath, namespaceVisible: false);
                     }
                     else if (m is StructDeclaration nestedStruct)
                     {
@@ -2259,7 +2265,7 @@ namespace gflat
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         cls.Members[i] = qualifiedStruct;
-                        RegisterMemberInScope(qualifiedStruct, scope, nsPath);
+                        RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
                     else if (m is FieldDeclaration field)
                     {
@@ -2296,7 +2302,7 @@ namespace gflat
                 }
 
                 _classes[cls.Name] = info;
-                scope.Classes[cls.SourceName] = info;
+                if (namespaceVisible) scope.Classes[cls.SourceName] = info;
             }
             else if (member is NamespaceDeclaration nested)
             {
@@ -2308,7 +2314,7 @@ namespace gflat
             }
             else if (member is EnumDeclaration enumDecl)
             {
-                RegisterEnum(enumDecl, scope, nsPath);
+                RegisterEnum(enumDecl, scope, nsPath, namespaceVisible);
             }
             else if (member is FieldDeclaration field)
             {
@@ -5561,7 +5567,7 @@ namespace gflat
                 _globalScope.Aliases[node.Name] = node.TargetType;
         }
 
-        private void RegisterEnum(EnumDeclaration enumDecl, NamespaceScope scope, string nsPath)
+        private void RegisterEnum(EnumDeclaration enumDecl, NamespaceScope scope, string nsPath, bool namespaceVisible = true)
         {
             TypeExpression underlying = enumDecl.UnderlyingType != null
                 ? ResolveAlias(enumDecl.UnderlyingType)
@@ -5584,8 +5590,8 @@ namespace gflat
 
             EnumConstantEvaluator.Populate(enumDecl, info, ResolveEnum);
 
-            scope.Enums[enumDecl.SourceName] = info;
-            scope.TypeNames[enumDecl.SourceName] = enumDecl.Name;
+            if (namespaceVisible) scope.Enums[enumDecl.SourceName] = info;
+            if (namespaceVisible) scope.TypeNames[enumDecl.SourceName] = enumDecl.Name;
             _enums[enumDecl.Name] = info;
             if (nsPath.Length > 0)
             {

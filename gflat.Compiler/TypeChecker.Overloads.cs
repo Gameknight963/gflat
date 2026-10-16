@@ -39,6 +39,10 @@ public partial class TypeChecker
 
     private string OverloadKey(MethodDeclaration method)
     {
+        // Reserved primitive names cannot depend on a declaration's aliases or
+        // owner. Most already-bound overloads need no temporary lookup scope.
+        if (method.Parameters.All(p => p.Type is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } named && IsPrimitive(named.Name)))
+            return OverloadKey(method.Parameters);
         using var context = EnterMethodSignatureContext(method);
         return OverloadKey(method.Parameters);
     }

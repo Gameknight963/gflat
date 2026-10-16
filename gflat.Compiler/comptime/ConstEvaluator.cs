@@ -638,10 +638,18 @@ namespace gflat.comptime
         public void Visit(CastExpression node)
         {
             CheckSteps(node.Line);
-            node.Operand.Accept(this);
-            ConstValue val = _currentValue!;
+            ConstValue val = EvaluateValueForTarget(node.Operand, node.TargetType);
 
             TypeExpression resolved = NumericType(node.TargetType);
+            if (val is ConstValue.Boolean && resolved is NamedTypeExpression { Name: "bool" } ||
+                val is ConstValue.Integer { Value: 0 } && resolved is
+                    (PointerTypeExpression { IsNullable: true } or FunctionPointerTypeExpression { IsNullable: true } or ManagedTypeExpression { IsNullable: true }) ||
+                val is (ConstValue.Pointer or ConstValue.ArrayPointer) && resolved is PointerTypeExpression &&
+                    TypeChecker.TypesMatchPublic(_context.ResolveAlias(_context.GetType(node.Operand)), resolved))
+            {
+                _currentValue = val;
+                return;
+            }
             if (val is ConstValue.String && resolved is PointerTypeExpression pointer &&
                 _context.ResolveAlias(pointer.Inner) is NamedTypeExpression { Name: "char" })
             {

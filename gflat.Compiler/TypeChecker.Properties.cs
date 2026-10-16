@@ -33,6 +33,8 @@ public partial class TypeChecker
                 else if (member is PropertyDeclaration property && !property.Expanded)
                 {
                     using var context = SourceContext.Enter(property.Span);
+                    if (property.Type is NamedTypeExpression { Name: "void" })
+                        throw new TypeCheckException("Properties cannot currently return void or arrays", property.Line);
                     _hasProperties = true;
                     if (owner is InterfaceDeclaration && property.IsInline)
                         throw new TypeCheckException("inline requires a concrete implementation", property.Line);

@@ -144,10 +144,12 @@ public class Lexer
                         int charStart = i;
                         i++; // skip opening '
                         if (i >= code.Length) throw new TypeCheckException($"Unterminated char literal on line {line}", line);
+                        if (code[i] is '\r' or '\n') throw new TypeCheckException("Raw newline in character literal", line);
                         if (code[i] == '\\')
                         {
                             i++; // skip backslash
                             if (i >= code.Length) throw new TypeCheckException($"Unterminated char literal on line {line}", line);
+                            if (code[i] is '\r' or '\n') throw new TypeCheckException("Raw newline in character literal", line);
                             i++; // skip escaped char
                         }
                         else

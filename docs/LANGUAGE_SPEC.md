@@ -29,6 +29,11 @@ Identifiers contain ASCII letters, digits, and underscores and cannot begin with
 
 Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Prefixed interpolation uses `s$"text {expression}"`; doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
 
+Character literals hold one 8-bit value; characters above U+00FF are rejected.
+The supported escapes in strings and characters are `\n`, `\r`, `\t`, `\0`,
+`\\`, `\'`, and `\"`. Unsupported escapes are errors. Character arithmetic and
+ordering interpret the stored byte as signed, including during constant evaluation.
+
 There is no built-in `string` type or keyword. Plain `"text"` literals have type
 `readonly(char*)`: a non-null pointer to static, null-terminated UTF-8 storage.
 Returning that pointer is valid; writing through it is rejected. Embedded nulls

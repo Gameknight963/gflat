@@ -270,7 +270,7 @@ namespace gflat.comptime
             }
             if (left is Char lc && right is Char rc)
             {
-                comparison = lc.Value.CompareTo(rc.Value);
+                comparison = unchecked((sbyte)lc.Value).CompareTo(unchecked((sbyte)rc.Value));
                 return true;
             }
             if (left is String ls && right is String rs)

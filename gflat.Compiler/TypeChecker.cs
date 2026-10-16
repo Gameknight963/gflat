@@ -3833,6 +3833,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Token.Kind == TokenKind.StringLiteral) StringLiteralEncoding.Bytes(node.Token.Text[1..^1], node.Line);
+            if (node.Token.Kind == TokenKind.CharLiteral) CharacterLiteralEncoding.Value(node.Token.Text, node.Line);
             TypeExpression type = node.Token.Kind switch
             {
                 TokenKind.IntLiteral => Int,
@@ -5534,27 +5535,7 @@ namespace gflat
                     return long.Parse(text);
                 }
                 if (lit.Token.Kind == TokenKind.CharLiteral)
-                {
-                    string text = lit.Token.Text;
-                    if (text.Length >= 3 && text[0] == '\'' && text[^1] == '\'')
-                    {
-                        string inner = text[1..^1];
-                        if (inner.StartsWith("\\"))
-                        {
-                            return inner switch
-                            {
-                                "\\0" => '\0',
-                                "\\n" => '\n',
-                                "\\r" => '\r',
-                                "\\t" => '\t',
-                                "\\\\" => '\\',
-                                "\\'" => '\'',
-                                _ => inner.Length > 1 ? inner[1] : 0
-                            };
-                        }
-                        return inner.Length > 0 ? inner[0] : 0;
-                    }
-                }
+                    return unchecked((sbyte)CharacterLiteralEncoding.Value(lit.Token.Text, lit.Line));
             }
             else if (expr is UnaryExpression u)
             {

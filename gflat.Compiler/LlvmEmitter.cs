@@ -3057,33 +3057,8 @@ public partial class LlvmEmitter : IVisitor
                     break;
                 }
             case TokenKind.CharLiteral:
-                {
-                    string raw = node.Token.Text;
-                    char ch;
-                    if (raw.Length >= 3 && raw[1] == '\\')
-                    {
-                        ch = raw[2] switch
-                        {
-                            'n' => '\n',
-                            't' => '\t',
-                            'r' => '\r',
-                            '0' => '\0',
-                            '\\' => '\\',
-                            '\'' => '\'',
-                            _ => raw[2]
-                        };
-                    }
-                    else if (raw.Length >= 3)
-                    {
-                        ch = raw[1];
-                    }
-                    else
-                    {
-                        ch = '\0';
-                    }
-                    Push(((int)ch).ToString());
-                    break;
-                }
+                Push(CharacterLiteralEncoding.Value(node.Token.Text, node.Line).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                break;
             case TokenKind.True:
                 Push("1");
                 break;

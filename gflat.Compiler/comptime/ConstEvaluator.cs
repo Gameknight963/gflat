@@ -128,7 +128,7 @@ namespace gflat.comptime
                     TokenKind.LongLiteral or TokenKind.ULongLiteral => ParseIntegerLiteral(node),
                 TokenKind.FloatLiteral => new ConstValue.Float((float)Convert.ToDouble(node.Token.Text.TrimEnd('f', 'F'), System.Globalization.CultureInfo.InvariantCulture)),
                 TokenKind.DoubleLiteral => new ConstValue.Float(Convert.ToDouble(node.Token.Text.TrimEnd('d', 'D'), System.Globalization.CultureInfo.InvariantCulture)),
-                TokenKind.CharLiteral => new ConstValue.Char(ParseChar(node.Token.Text)),
+                TokenKind.CharLiteral => new ConstValue.Char((char)CharacterLiteralEncoding.Value(node.Token.Text, node.Line)),
                 TokenKind.StringLiteral => new ConstValue.String(node.Token.Text[1..^1]),
                 TokenKind.True => new ConstValue.Boolean(true),
                 TokenKind.False => new ConstValue.Boolean(false),
@@ -145,22 +145,6 @@ namespace gflat.comptime
             if (node.Token.Text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
                 return new ConstValue.Integer(unchecked((long)(ulong)integer));
             return new ConstValue.Integer((long)integer);
-        }
-
-        private static char ParseChar(string text)
-        {
-            if (text.Length >= 3 && text[0] == '\'' && text[^1] == '\'')
-            {
-                string inner = text[1..^1];
-                if (inner.Length == 1) return inner[0];
-                if (inner == "\\n") return '\n';
-                if (inner == "\\r") return '\r';
-                if (inner == "\\t") return '\t';
-                if (inner == "\\0") return '\0';
-                if (inner == "\\\\") return '\\';
-                if (inner == "\\'") return '\'';
-            }
-            return text[1];
         }
 
         public void Visit(IdentifierExpression node)

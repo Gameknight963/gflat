@@ -2,7 +2,8 @@
 
 Portable facilities use the replaceable `Memory` API. The default
 allocator delegates to libc; replacing it does not require changing these sources.
-Reference `std/std.gfproj` to include the library.
+SDK projects reference `std/std.gfproj` by default. Set `NoStdLib` to `true`
+to supply your own library inputs or build std itself.
 
 ## Strings and formatting
 
@@ -129,8 +130,8 @@ int main()
     String second = s"second";
     words.Add(move second); // second is now uninitialized.
     second = s"new value";
-    words[(nuint)0].Append("!", 1);
-    words[(nuint)1] = s"replacement";
+    words[0].Append("!", 1);
+    words[1] = s"replacement";
     String last = words.Pop();
     return 0;
 }
@@ -181,9 +182,9 @@ int main()
     int[3] values = [10, 20, 30];
     Span<int> items = new Span<int>(values, 3);
     Span<int> tail = items.Slice(1);
-    tail[(nuint)0] = 42;
+    tail[0] = 42;
     Span<readonly(int)> view = items.AsReadOnly();
-    if (view[(nuint)1] != 42) return 1;
+    if (view[1] != 42) return 1;
     return 0;
 }
 ```
@@ -206,15 +207,16 @@ A string byte view is `new Span<readonly(char)>(text.Data, text.Length)`.
 
 ## Automatically included definitions
 
-`Attribute.gf`, `Exception.gf`, and `Text.gf` contain the compiler-recognized base
-classes and formatting interfaces. They currently retain their global names and
-are included automatically, once per compilation. The default memory implementation
-lives in `std/libc/Memory/Memory.gf` and is also included automatically for now.
+Standalone source compilation includes a small set of base types and runtime
+contracts automatically. These sources ship beside the compiler and language
+server in `Std/`; explicit inputs with matching std-relative paths take precedence
+over the bundled copies.
 
-These files ship as source alongside the compiler and language server in `Std/`.
-Explicit project inputs with the same std-relative paths use those source snapshots
-instead of the bundled copies. Automatic inclusion and libc-free build selection
-remain separate, future build configuration work.
+SDK projects instead use their evaluated source graph, including the default std
+project reference. `NoStdLib` disables that reference and automatic definitions;
+the compiler API and standalone CLI offer the same choice. See
+[project setup](../../docs/PROJECTS.md#standard-library-selection) for details.
+Excluding std does not itself remove the host C runtime from native linking.
 
 ## Static type metadata
 

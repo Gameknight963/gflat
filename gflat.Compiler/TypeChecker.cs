@@ -4255,7 +4255,7 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Instance member '{nsTarget.Member}' must be accessed with '.', not '::'", node.Line);
                 }
-                if (nsTarget.Left is not IdentifierExpression && nsTarget.Left is not GlobalExpression && nsTarget.Left is not NamespaceAccessExpression)
+                if (nsTarget.Left is not IdentifierExpression && nsTarget.Left is not GlobalExpression && nsTarget.Left is not NamespaceAccessExpression && nsTarget.Left is not TypeExpression)
                 {
                     throw new TypeCheckException($"Instance member '{nsTarget.Member}' must be accessed with '.', not '::'", node.Line);
                 }

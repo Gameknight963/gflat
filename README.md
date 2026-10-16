@@ -106,7 +106,9 @@ library projects and optimization settings, or try the [line-search utility](exa
 If setup fails, run `gflat doctor --native` to check SDK discovery, MSBuild,
 Clang, and native exception runtime linking.
 
-For Visual Studio, extract and install the VSIX, restart VS, then use **File > New >
+For Visual Studio, extract and install the VSIX, restart VS, and
+[register the project SDK with Visual Studio's MSBuild](docs/PROJECTS.md#install-the-project-sdk).
+Then use **File > New >
 Project** and search for **gflat**. Choose a Console Application or Source Library,
 or open an existing `.gfproj` and add it to a solution. The VSIX build number increases
 ONLY so newer builds can replace older ones; it is not a language version.
@@ -117,6 +119,7 @@ With the requirements above installed:
 
 ```sh
 dotnet build gflat/gflat.csproj
+dotnet run --project gflat -- sdk install
 dotnet run --project gflat -- build examples/interpolation/interpolation.gfproj --run
 dotnet test gflat.Tests/gflat.Tests.csproj
 dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
@@ -124,6 +127,8 @@ dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
 
 Use the explicit test projects: the solution also contains `.gfproj` files, which
 are not .NET test projects. Set `GFLAT_OPT_LEVEL=2` to test optimized native output.
+SDK installation may require an elevated terminal. Before opening `gflat.slnx`,
+register the SDK with Visual Studio's MSBuild as described above.
 
 Build the VSIX on Windows using Visual Studio MSBuild:
 

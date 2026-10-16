@@ -24,7 +24,7 @@ public struct File
     public nuint Read(char* data, nuint count)
     {
         if (handle == null) throw new IOException("File is closed");
-        if (count == (nuint)0) return 0;
+        if (count == 0) return 0;
         nuint read = file_detail::fread(data, 1, count, handle!);
         if (read < count && file_detail::ferror(handle!) != 0)
             throw new IOException("File read failed");
@@ -34,7 +34,7 @@ public struct File
     public void Write(readonly(char*) data, nuint count)
     {
         if (handle == null) throw new IOException("File is closed");
-        if (count == (nuint)0) return;
+        if (count == 0) return;
         if (file_detail::fwrite(data, 1, count, handle!) != count)
             throw new IOException("File write failed");
     }

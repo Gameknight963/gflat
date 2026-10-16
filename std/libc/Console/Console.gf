@@ -10,7 +10,7 @@ void Write(readonly(char*) message)
 
 void Write(readonly(char*) data, nuint length)
 {
-    if (length == (nuint)0) return;
+    if (length == 0) return;
     if (fwrite((readonly(void)*)data, 1, length, __gflat_stdio_stdout()) != length)
         throw new std::IOException("Console write failed");
 }
@@ -30,7 +30,7 @@ void Flush()
 bool TryReadLine(char* data, nuint capacity, ref nuint length)
 {
     length = 0;
-    if (capacity == (nuint)0) throw new Exception("Console buffer capacity must include a terminator");
+    if (capacity == 0) throw new Exception("Console buffer capacity must include a terminator");
     detail::BufferWriter writer = new detail::BufferWriter(data, capacity);
     defer { length = writer.Length; }
     bool read = detail::ReadLine(&writer);
@@ -65,7 +65,7 @@ namespace detail
         {
             for (nuint i = 0; i < count; i++)
             {
-                if (Length < capacity - (nuint)1) { data[Length] = text[i]; Length++; }
+                if (Length < capacity - 1) { data[Length] = text[i]; Length++; }
                 else Overflow = true;
             }
             data[Length] = '\0';
@@ -88,25 +88,25 @@ namespace detail
             {
                 if (ferror(stream) != 0) throw new std::IOException("Console read failed");
                 if (pendingCR) { chunk[count] = '\r'; count++; }
-                if (count != (nuint)0) output.Write(chunk, count);
+                if (count != 0) output.Write(chunk, count);
                 return any;
             }
             if (value == 10)
             {
-                if (count != (nuint)0) output.Write(chunk, count);
+                if (count != 0) output.Write(chunk, count);
                 return true;
             }
             any = true;
             if (pendingCR)
             {
                 chunk[count] = '\r'; count++;
-                if (count == (nuint)256) { output.Write(chunk, count); count = 0; }
+                if (count == 256) { output.Write(chunk, count); count = 0; }
             }
             pendingCR = value == 13;
             if (!pendingCR)
             {
                 chunk[count] = (char)value; count++;
-                if (count == (nuint)256) { output.Write(chunk, count); count = 0; }
+                if (count == 256) { output.Write(chunk, count); count = 0; }
             }
         }
     }

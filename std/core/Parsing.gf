@@ -6,7 +6,7 @@ namespace std;
 bool TryParseInt(readonly(char)* text, nuint count, int* result)
 {
     *result = 0;
-    if (count == (nuint)0) return false;
+    if (count == 0) return false;
 
     nuint index = 0;
     bool negative = text[0] == '-';

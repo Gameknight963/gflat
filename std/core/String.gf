@@ -53,36 +53,36 @@ struct String : ITextWriter, IFormattable, IStringConvertable
         if (requested <= capacity) return;
         nuint maximum = (nuint)0 - (nuint)1;
         if (requested == maximum) throw new Exception("String capacity overflow", 1);
-        void*? allocation = Memory::Allocate(requested + (nuint)1);
+        void*? allocation = Memory::Allocate(requested + 1);
         if (allocation == null) throw new BadAllocException("String allocation failed");
         char* replacement = (char*)allocation;
         for (nuint i = 0; i < length; i++) replacement[i] = data[i];
         replacement[length] = '\0';
-        if (capacity != (nuint)0) Memory::Free((void*)data);
+        if (capacity != 0) Memory::Free((void*)data);
         data = replacement;
         capacity = requested;
     }
 
     public void AppendLiteral(readonly(char)* text, nuint count)
     {
-        if (count == (nuint)0) return;
+        if (count == 0) return;
         nuint maximum = (nuint)0 - (nuint)1;
-        if (count > maximum - (nuint)1 - length)
+        if (count > maximum - 1 - length)
             throw new Exception("String length overflow", 1);
         nuint required = length + count;
         if (required > capacity)
         {
             nuint grown = required;
-            if (capacity <= (maximum - (nuint)1) / (nuint)2 && capacity * (nuint)2 > grown)
-                grown = capacity * (nuint)2;
-            void*? allocation = Memory::Allocate(grown + (nuint)1);
+            if (capacity <= (maximum - 1) / 2 && capacity * 2 > grown)
+                grown = capacity * 2;
+            void*? allocation = Memory::Allocate(grown + 1);
             if (allocation == null) throw new BadAllocException("String allocation failed");
             char* replacement = (char*)allocation;
             for (nuint i = 0; i < length; i++) replacement[i] = data[i];
             // Copy before freeing: text may refer to this string's own buffer.
             for (nuint i = 0; i < count; i++) replacement[length + i] = text[i];
             replacement[required] = '\0';
-            if (capacity != (nuint)0) Memory::Free((void*)data);
+            if (capacity != 0) Memory::Free((void*)data);
             data = replacement;
             capacity = grown;
         }
@@ -92,7 +92,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable
             if ((readonly(char)*)(data + length) > text && (readonly(char)*)(data + length) < text + count)
             {
                 nuint i = count;
-                while (i != (nuint)0) { i--; data[length + i] = text[i]; }
+                while (i != 0) { i--; data[length + i] = text[i]; }
             }
             else
                 for (nuint i = 0; i < count; i++) data[length + i] = text[i];
@@ -106,7 +106,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable
     public void Clear()
     {
         length = 0;
-        if (capacity != (nuint)0) data[0] = '\0';
+        if (capacity != 0) data[0] = '\0';
     }
 
     public readonly String ToString() => String::From(data, length);
@@ -140,5 +140,5 @@ struct String : ITextWriter, IFormattable, IStringConvertable
         }
     }
 
-    ~String() { if (capacity != (nuint)0) Memory::Free((void*)data); }
+    ~String() { if (capacity != 0) Memory::Free((void*)data); }
 }

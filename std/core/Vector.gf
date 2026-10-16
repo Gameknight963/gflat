@@ -15,13 +15,13 @@ struct Vector<T>
 
     public Span<T> AsSpan()
     {
-        if (count == (nuint)0) return new Span<T>();
+        if (count == 0) return new Span<T>();
         return new Span<T>(data!, count);
     }
 
     public readonly Span<readonly(T)> AsReadOnly()
     {
-        if (count == (nuint)0) return new Span<readonly(T)>();
+        if (count == 0) return new Span<readonly(T)>();
         return new Span<readonly(T)>((readonly(T)*)data, count);
     }
 
@@ -39,7 +39,7 @@ struct Vector<T>
         if (requested <= capacity) return;
         nuint maximum = (nuint)0 - (nuint)1;
         nuint stride = (nuint)sizeof(T);
-        if (stride == (nuint)0) stride = 1;
+        if (stride == 0) stride = 1;
         if (requested > maximum / stride) throw new Exception("Vector capacity overflow");
         void*? allocation = Memory::Allocate(requested * stride);
         if (allocation == null) throw new BadAllocException("Vector allocation failed");
@@ -58,14 +58,14 @@ struct Vector<T>
         if (count == capacity)
         {
             nuint stride = (nuint)sizeof(T);
-            if (stride == (nuint)0) stride = 1;
+            if (stride == 0) stride = 1;
             nuint maximum = ((nuint)0 - (nuint)1) / stride;
             if (count == maximum) throw new Exception("Vector capacity overflow");
             nuint grown = 4;
-            if (capacity != (nuint)0)
+            if (capacity != 0)
             {
                 grown = maximum;
-                if (capacity <= maximum / (nuint)2) grown = capacity * (nuint)2;
+                if (capacity <= maximum / 2) grown = capacity * 2;
             }
             if (grown > maximum) grown = maximum;
             this.Reserve(grown);
@@ -76,8 +76,8 @@ struct Vector<T>
 
     public T Pop()
     {
-        if (count == (nuint)0) throw new Exception("Cannot pop an empty vector");
-        nuint index = count - (nuint)1;
+        if (count == 0) throw new Exception("Cannot pop an empty vector");
+        nuint index = count - 1;
         T result = move *(data! + index);
         count = index;
         return result;
@@ -85,7 +85,7 @@ struct Vector<T>
 
     public void Clear()
     {
-        while (count != (nuint)0)
+        while (count != 0)
         {
             count--;
             (data! + count).~T();

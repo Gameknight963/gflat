@@ -32,7 +32,7 @@ bool ReadLine(String* line)
     while (true)
     {
         int input = getchar();
-        if (input == -1) return line.Length != (nuint)0;
+        if (input == -1) return line.Length != 0;
         if (input == 10) return true;
         if (input != 13)
         {
@@ -64,7 +64,7 @@ bool IsCommand(readonly(String)* text, readonly(char)* command)
 bool Complete(Vector<Task>* tasks, readonly(String)* line)
 {
     int number = 0;
-    if (!TryParseInt(line.Data + 5, line.Length - (nuint)5, &number)) return false;
+    if (!TryParseInt(line.Data + 5, line.Length - 5, &number)) return false;
     if (number <= 0 || (nuint)number > tasks.Count) return false;
     (*tasks)[(nuint)(number - 1)].Done = true;
     return true;
@@ -72,13 +72,13 @@ bool Complete(Vector<Task>* tasks, readonly(String)* line)
 
 void List(readonly(Vector<Task>)* tasks)
 {
-    if (tasks.Count == (nuint)0) puts("No tasks yet.");
+    if (tasks.Count == 0) puts("No tasks yet.");
     for (nuint i = 0; i < tasks.Count; i++)
     {
         readonly(Task)* task = &(*tasks)[i];
         char mark = ' ';
         if (task.Done) mark = 'x';
-        String row = s$"{i + (nuint)1}. [{mark}] {task.Title}";
+        String row = s$"{i + 1}. [{mark}] {task.Title}";
         puts(row.ToCString());
     }
 }
@@ -94,10 +94,10 @@ int main()
         if (IsCommand(&line, "list")) List(&tasks);
         else if (StartsWith(&line, "add "))
         {
-            if (line.Length == (nuint)4) puts("A task needs a title.");
+            if (line.Length == 4) puts("A task needs a title.");
             else
             {
-                String title = String::From(line.Data + 4, line.Length - (nuint)4);
+                String title = String::From(line.Data + 4, line.Length - 4);
                 tasks.Add(new Task(move title));
                 puts("Added.");
             }
@@ -107,7 +107,7 @@ int main()
             if (Complete(&tasks, &line)) puts("Done.");
             else puts("Use done <number> with an existing task number.");
         }
-        else if (line.Length != (nuint)0)
+        else if (line.Length != 0)
             puts("Unknown command. Use add <title>, list, done <number>, or quit.");
     }
     return 0;

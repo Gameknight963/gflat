@@ -81,7 +81,7 @@ namespace std
         {
             nuint start = (nuint)address;
             nuint maximum = (nuint)0 - (nuint)1;
-            return start != (nuint)0 && bytes != (nuint)0 && bytes <= maximum - start;
+            return start != 0 && bytes != 0 && bytes <= maximum - start;
         }
 
         private static void Register(void* address, nuint bytes)
@@ -116,14 +116,14 @@ namespace std
         public static void* Allocate(nuint bytes, nuint alignment)
         {
             State* state = GetState();
-            if (bytes == (nuint)0) bytes = 1;
-            if (alignment == (nuint)0) throw new BadAllocException();
+            if (bytes == 0) bytes = 1;
+            if (alignment == 0) throw new BadAllocException();
             nuint threshold = CollectionThreshold();
-            if (threshold != (nuint)0 && state.bytesSinceCollection >= threshold) Collect();
+            if (threshold != 0 && state.bytesSinceCollection >= threshold) Collect();
             void*? storage = Memory::Allocate(bytes);
             if (storage == null) { Collect(); storage = Memory::Allocate(bytes); }
             if (storage == null) throw new BadAllocException();
-            if ((nuint)storage % alignment != (nuint)0)
+            if ((nuint)storage % alignment != 0)
             {
                 Memory::Free(storage!);
                 throw new BadAllocException();
@@ -142,7 +142,7 @@ namespace std
         public static managed<T, TracingCollector> Adopt<T>(T* storage)
         {
             nuint bytes = (nuint)sizeof(T);
-            if (bytes == (nuint)0) bytes = 1;
+            if (bytes == 0) bytes = 1;
             Register((void*)storage, bytes);
             return (managed<T, TracingCollector>)storage;
         }

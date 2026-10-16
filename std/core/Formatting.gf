@@ -14,7 +14,7 @@ namespace detail
             if (magnitude == 0ul) break;
         }
         if (negative) { start--; buffer[start] = '-'; }
-        output.Write((readonly(char)*)buffer + start, (nuint)21 - start);
+        output.Write((readonly(char)*)buffer + start, 21 - start);
     }
 }
 

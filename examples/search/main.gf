@@ -18,9 +18,9 @@ bool Contains(ref readonly(String) line, readonly(char*) needle)
 void EmitMatch(ref String line, readonly(char*) needle, bool endedWithLF)
 {
     // Preserve bytes within a line; normalize its ending for Console output.
-    if (endedWithLF && line.Length != (nuint)0 && line.Data[line.Length - (nuint)1] == '\r')
+    if (endedWithLF && line.Length != 0 && line.Data[line.Length - 1] == '\r')
     {
-        String trimmed = String::From(line.Data, line.Length - (nuint)1);
+        String trimmed = String::From(line.Data, line.Length - 1);
         if (Contains(ref trimmed, needle)) Console::WriteLine(ref trimmed);
     }
     else if (Contains(ref line, needle)) Console::WriteLine(ref line);
@@ -42,14 +42,14 @@ int main(int argc, char** argv)
         while (true)
         {
             nuint count = input.Read(buffer, 4096);
-            if (count == (nuint)0) break;
+            if (count == 0) break;
             for (nuint i = 0; i < count; i++)
             {
                 if (buffer[i] == '\n') EmitMatch(ref line, argv[2], true);
                 else line.Append(&buffer[i], 1);
             }
         }
-        if (line.Length != (nuint)0) EmitMatch(ref line, argv[2], false);
+        if (line.Length != 0) EmitMatch(ref line, argv[2], false);
         input.Close();
         return 0;
     }

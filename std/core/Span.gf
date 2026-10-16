@@ -10,7 +10,7 @@ struct Span<T>
     public Span(T* buffer, nuint count) { data = buffer; length = count; }
 
     public nuint Length { readonly get => length; }
-    public bool IsEmpty { readonly get => length == (nuint)0; }
+    public bool IsEmpty { readonly get => length == 0; }
     public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, length);
     public T*? Data { get => data; }
 
@@ -27,7 +27,7 @@ struct Span<T>
     {
         if (start > length || count > length - start)
             throw new Exception("Span slice out of range", 3);
-        if (count == (nuint)0) return new Span<T>();
+        if (count == 0) return new Span<T>();
         return new Span<T>((T*)data + start, count);
     }
 
@@ -39,7 +39,7 @@ struct Span<T>
 
     public readonly Span<readonly(T)> AsReadOnly()
     {
-        if (length == (nuint)0) return new Span<readonly(T)>();
+        if (length == 0) return new Span<readonly(T)>();
         return new Span<readonly(T)>((readonly(T)*)data, length);
     }
 
@@ -53,7 +53,7 @@ struct Span<T>
 
         public Enumerator(T*? storage, nuint count)
         {
-            if (storage == null && count != (nuint)0) throw new Exception("Enumerator storage is null");
+            if (storage == null && count != 0) throw new Exception("Enumerator storage is null");
             data = storage; length = count; position = 0; valid = false;
         }
 
@@ -71,7 +71,7 @@ struct Span<T>
             get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
-                return data![position - (nuint)1];
+                return data![position - 1];
             }
         }
     }

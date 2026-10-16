@@ -95,7 +95,13 @@ namespace gflat.semantics
             TypeExpression resolvedRet = _typeChecker.ResolveAlias(method.ReturnType);
             if (!IsVoidType(resolvedRet) && !terminates)
             {
-                throw new TypeCheckException($"Not all code paths return a value in function '{method.Name}'", method.Line);
+                string declaration = method.PropertyName switch
+                {
+                    null => $"function '{_typeChecker.DisplayName(method.Name)}'",
+                    "$index" => "indexer getter",
+                    var property => $"property getter '{property}'"
+                };
+                throw new TypeCheckException($"Not all code paths return a value in {declaration}", method.Line);
             }
         }
 

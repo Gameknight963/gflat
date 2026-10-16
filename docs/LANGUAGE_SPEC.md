@@ -73,7 +73,7 @@ and static methods convert implicitly to matching function pointers. Explicit
 function pointer signature that selects exactly one overload. This conversion
 does not capture an instance receiver.
 
-```gflat
+```csharp
 alias Transform = int(int);
 int Double(int value) => value * 2;
 int Apply(Transform* transform) => transform(21);
@@ -82,7 +82,7 @@ int Example() => Apply(Double);
 
 `namespace A::B { ... }` is shorthand for nested namespace blocks. `namespace A::B;` puts the rest of the source file in that namespace. A file-scoped namespace must be the first declaration after any imports, cannot be nested, and occurs at most once per file. Imports may also appear immediately after its header. Nested block namespaces within it are relative to that namespace. Imports and the file-scoped namespace do not affect other source files.
 
-```gflat
+```csharp
 struct Box<T> { T value; }
 int main()
 {
@@ -117,7 +117,7 @@ unsigned. Shift counts remain independent of the left operand's type.
 
 Integer arithmetic without overflow flags wraps at its result width. Division by zero, signed division overflow, out-of-range shift counts, and out-of-range runtime float-to-integer conversions are not defined operations; callers must avoid them. Compile-time evaluation diagnoses operations it cannot evaluate. Wider numeric support and more complete runtime checks remain experimental.
 
-```gflat
+```csharp
 const int answer()
 {
     int value = 5;
@@ -160,7 +160,7 @@ nontrivial copying or destruction.
 
 A namespace function can mark its first parameter with contextual `this`:
 
-```gflat
+```csharp
 namespace Numbers {
     int Plus(this int value, int extra = 2) => value + extra;
 }
@@ -207,7 +207,7 @@ Overloaded generic function families and overloaded virtual/interface declaratio
 
 `weak` marks a function's default implementation. `replace` explicitly selects a different body for that function in the same namespace or containing type. Declaration order does not matter; reopened namespace blocks share the same scope.
 
-```gflat
+```csharp
 namespace Settings {
     public weak int Capacity() => 16;
     public replace int Capacity() => 64;
@@ -220,7 +220,7 @@ class Buffer {
 
 Selection happens in the compiler before body checking, const evaluation, hierarchy resolution, and code generation. With no replacement, the default is used. With a replacement, the discarded body is parsed but is not type-checked or emitted. All calls and function addresses bind to the selected definition. LLVM receives one ordinary definition, with no weak linkage or linker-level override behavior.
 
-A replacement must match parameter types, return type, generic arity and constraints, accessibility, `static`, `virtual`, `override`, `readonly`, `const`, const parameters, and `nothrow`. Parameter names and generic parameter names may differ. Duplicate defaults, multiple replacements, unmatched replacements, and ordinary definitions attempting to replace a default are errors. Weak functions cannot be overloaded or combined with an extern declaration.
+A replacement must match parameter types, return type, generic arity and constraints, accessibility, `static`, `virtual`, `override`, `readonly`, `const`, const parameters, and `nothrow`. Parameter names and generic parameter names may differ. Duplicate defaults, multiple replacements, unmatched replacements, and ordinary definitions attempting to replace a default are errors. Selection happens independently for each overload: replacing one signature leaves other signatures intact, and every expected signature needs an implementation. A function family cannot combine language definitions with an extern declaration.
 
 Free functions and concrete class/struct methods support these modifiers. Static methods use `Type::Method(...)` and have no implicit `this`; instance methods use `value.Method(...)`. Replacement stays within the same containing type: inherited dispatch still uses `override`. Constructors, destructors, operators, abstract methods, and interface declarations cannot be weak or replaced. Partial classes are not implemented.
 
@@ -236,7 +236,7 @@ Constructors must initialize fields that cannot have a default value on every no
 
 The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `std/libc/Memory/Memory.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
 
-```gflat
+```csharp
 extern void*? malloc(nuint size);
 extern void free(void* ptr);
 namespace Memory {
@@ -253,7 +253,7 @@ Fixed-size array parameters receive independent copies, including nested arrays.
 
 Nullable raw pointers and function pointers require a proven non-null local read, checked non-null cast, or unchecked postfix `!` before dereference, indexing, member access, calls, or pointer arithmetic. Null guards narrow local and parameter reads while preserving their declared storage types. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
 
-```gflat
+```csharp
 struct Point { int x; int y; }
 int main()
 {
@@ -373,8 +373,8 @@ compiler interception. Collection removes registrations for reclaimed objects'
 fields before freeing their storage.
 
 All default tracing bookkeeping and collection algorithms are written in gflat.
-Private inline LLVM provides a global state slot, thread ownership validation,
-and an unaligned pointer load. There is no native collector runtime linked by
+Collector state uses ordinary static fields. Private inline LLVM provides thread
+ownership validation and an unaligned pointer load. There is no native collector runtime linked by
 symbol-name inspection. Other providers are ordinary implementations of the same
 static contract; moving collectors, pinning, and thread rendezvous still require
 additional compiler support.
@@ -401,7 +401,7 @@ function pointers and compile-time managed allocation remain unsupported.
 
 `[expression, ...]` creates a fixed-size array. Elements evaluate from left to right and must have the same resolved type, including nested array dimensions. A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected; use explicit casts when elements need a different numeric type. An unsized local declaration infers its size from the initializer.
 
-```gflat
+```csharp
 int main()
 {
     int[3] values = [1, 2, 3];
@@ -421,7 +421,7 @@ Local scalar reads require definite assignment. Struct fields can be initialized
 
 `defer` executes in reverse registration order at lexical scope exit, including return, break, continue, and supported exception paths. Deferred code binds variables at its declaration site, even if a later scope shadows a name. Deferred reads are checked at cleanup; deferred writes do not take effect at registration. Nested defer is not supported.
 
-```gflat
+```csharp
 int main()
 {
     int value;
@@ -440,7 +440,7 @@ old one; a failed right-hand side leaves the old value intact.
 
 An ordinary value copy duplicates the value using its copy constructor when one exists:
 
-```gflat
+```csharp
 struct Number {
     public int value;
     public Number(int n) { value = n; }
@@ -483,7 +483,7 @@ whole values before use. Owning fields must also be initialized as whole values 
 writing nested fields. Returning a whole owning local implicitly transfers it.
 Returning borrowed fields or indexed elements requires copying.
 
-```gflat std
+```csharp std
 using std;
 int main() {
     String a = s"hello";
@@ -522,9 +522,9 @@ Structs provide inline fields, constructors, methods, properties, and optional d
 
 ## Properties
 
-Static classes are closed declaration scopes: their methods and explicit properties must be static, and they cannot be constructed, inherited from, or used as instance types (including pointers). Nested types remain ordinary types. Static classes may be generic, and a closed specialization can be named with an alias. They emit no instance layout, vtable, constructor, or destructor. Static storage and static constructors are not yet supported.
+Static classes are closed declaration scopes: their methods and properties must be static, and they cannot be constructed, inherited from, or used as instance types (including pointers). Nested types remain ordinary types. Static classes may be generic, and a closed specialization can be named with an alias. They emit no instance layout, vtable, instance constructor, or destructor. Static fields and a parameterless static constructor are supported.
 
-```gflat
+```csharp
 static class Values<T> {
     public static T Identity(T value) => value;
     public struct Box { public T value; }
@@ -533,9 +533,9 @@ alias Integers = Values<int>;
 int Example() => Integers::Identity(42);
 ```
 
-An interface whose members are all static describes a compile-time provider contract. Static classes, ordinary classes, and structs can implement it with public static methods or explicit static properties. Generic code calls these members with `P::Member`; specialization selects the implementation directly, without an instance or dispatch table. Such interfaces cannot be used as pointer or managed-reference types. Mixing static and instance members in one interface, generic interface methods, and overloaded interface methods are not yet supported. Constraints resolve in the declaring library's scope, not the caller's.
+Declare a provider contract with `static interface`: all methods and property accessors are implicitly static, including in an empty contract. An ordinary interface with explicitly static members also remains supported. Static classes, ordinary classes, and structs can implement the contract with public static methods or static properties. Generic code calls these members with `P::Member`; specialization selects the implementation directly, without an instance or dispatch table. Such interfaces cannot be used as pointer or managed-reference types. Mixing static and instance members in one interface, generic interface methods, and overloaded interface methods are not yet supported. Constraints resolve in the declaring library's scope, not the caller's.
 
-```gflat
+```csharp
 interface ITransform { static int Apply(int value); }
 static class Increment : ITransform {
     public static int Apply(int value) => value + 1;
@@ -549,7 +549,7 @@ int Example() => Selected::Run(40);
 
 Classes and structs support explicit accessors, expression-bodied getters, and auto-properties:
 
-```gflat
+```csharp
 class Player
 {
     int score;
@@ -577,14 +577,14 @@ Reads call the getter. Assignments call the setter and evaluate to the assigned 
 
 Classes support `virtual`, `override`, and `abstract` properties through their accessors. Interface property contracts use accessor signatures, for example `interface ICount { int Count { get; set; } }`; implementing accessors must be public. A declaration in a derived class hides the whole inherited property, rather than borrowing missing accessors from it. Explicit static properties use `Type::Property`. Accessors follow ordinary exception rules and may declare `get nothrow` or `set nothrow`.
 
-Current restrictions: static auto-properties await static field storage; `init`, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
+Current restrictions: `init`, throwing interface accessors, and compile-time property evaluation are not implemented. Properties cannot have type `void`, return arrays, or be `const`, `weak`, `replace`, or individually generic. Pointer properties can expose owned storage without copying it. Properties in generic containing types are supported. Property annotations are retained on the property declaration; they are not copied onto synthetic accessors or backing fields.
 
 ### Namespace properties
 
-Properties may also be declared at global or namespace scope, with explicit
-accessor bodies or an expression-bodied getter:
+Properties may also be declared at global or namespace scope, with auto-accessors,
+explicit accessor bodies, or an expression-bodied getter:
 
-```gflat
+```csharp
 namespace Settings;
 private extern int putchar(int character);
 public int Limit => 256;
@@ -599,13 +599,46 @@ assignment and increment. A private property or accessor is accessible only
 within its declaring source file.
 
 Namespace properties have no receiver and do not use `static`, receiver
-`readonly`, `virtual`, `override`, or `abstract`. They require explicit accessors;
-auto-properties, initializers, namespace indexers, and `ref` returns are not
-supported.
+`readonly`, `virtual`, `override`, or `abstract`. Auto-properties may have
+initializers; a get-only namespace auto-property cannot subsequently be assigned.
+Namespace indexers and `ref` returns are not supported.
 
-Mutable global/namespace fields and static fields in classes or structs are not
-implemented. These declarations produce source diagnostics. Namespace constants,
-instance fields, and explicit namespace/static property accessors are supported.
+### Global and static storage
+
+Global/namespace fields and static fields in classes or structs have persistent,
+addressable storage. Static fields are excluded from instance layout, copying,
+construction, and destruction. Access them through `Type::Field`, or unqualified
+inside the containing type. Global fields follow enclosing namespace lookup;
+private globals are private to their source file. A closed generic type has its
+own static fields, for example `Cache<int>::Count` and `Cache<char>::Count`.
+
+Storage is default-initialized before dynamic initialization. A type without a
+valid default value, including a non-null pointer, requires an explicit initializer.
+Reading a non-defaultable value before its dynamic initializer completes traps,
+including an indirect read through another function. Defaultable values may be
+read in their initial zero/default state during startup.
+Constant initializers are emitted directly into mutable static storage. Other
+initializers run before `main`, in ordinal source-path order and declaration order
+within each source file. They may call ordinary functions and construct values.
+
+A parameterless `static TypeName() { ... }` runs once, after that type's static
+field initializers. It has no receiver or base-constructor initializer. Static
+auto-properties use static backing fields; get-only static auto-properties and
+readonly static scalar fields can be assigned by their declaring static constructor.
+A non-defaultable field still requires an explicit initializer; assigning it only
+inside a static constructor is not currently sufficient.
+
+Successfully initialized owning globals are destroyed in reverse initialization
+order on normal process shutdown, including `exit`. Managed static storage stays
+registered as roots until shutdown. An initializer failure destroys completed
+owning globals before invoking the unhandled-exception boundary; the failing value
+is never treated as fully constructed. Hosted shutdown registration uses the C
+runtime's `atexit`, only when static cleanup is needed. `NoStdLib` excludes bundled
+library inputs; it does not select a freestanding executable or remove the host CRT.
+
+Trivial static state with constant/default initializers does not require startup
+functions or shutdown registration. Explicit calls that terminate the process
+without normal shutdown, such as `abort`, do not run static destructors.
 
 ### Reference properties
 
@@ -628,7 +661,7 @@ Automatic owning getters remain invalid because they would copy their backing fi
 
 Instance indexers use property syntax with `this` and one or more typed parameters:
 
-```gflat
+```csharp
 struct IntBuffer {
     int* data;
     public IntBuffer(int* storage) { data = storage; }
@@ -650,7 +683,7 @@ Ordinary indexer results are values, not storage references. Modifying a field o
 
 `ref T` parameters borrow existing storage. Passing an argument requires an explicit `ref`:
 
-```gflat
+```csharp
 void Increment(ref int value) { value += 1; }
 int Read(ref readonly(int) value) => value;
 
@@ -727,7 +760,7 @@ storage. The receiver is evaluated once and must be a non-null, mutable raw
 pointer to the named type. `T` may be a generic type parameter or a qualified
 type such as `std::String`.
 
-```gflat
+```csharp
 void Destroy<T>(T* slot) {
     slot.~T();
 }
@@ -761,7 +794,7 @@ metadata initialization and constructor overload resolution, without allocating.
 Only `new*` supports `at`; value and managed construction do not. `at` is contextual
 and remains available as an identifier elsewhere.
 
-```gflat
+```csharp
 struct Item {
     public int value;
     public Item(int n) { value = n; }
@@ -802,7 +835,7 @@ evaluation, including side effects. User-defined equality operators do not
 establish nullability facts. Assigning a known non-null pointer value also
 establishes a fact. Paths that both continue retain only facts common to both.
 
-```gflat
+```csharp
 int Read(int*? pointer) {
     if (pointer == null) return 0;
     return *pointer;
@@ -837,7 +870,7 @@ or function pointer. It preserves readonly qualification, evaluates the operand
 once, and does not change the original variable's type. It also accepts already
 non-null pointer types. Bare `null!` has no pointer type and is rejected.
 
-```gflat
+```csharp
 int Read(int*? pointer) {
     return *pointer!;
 }
@@ -854,7 +887,7 @@ operations, such as placement construction's destination validation.
 
 A non-generic class or struct can declare a public static string literal operator. The operator takes exactly `readonly(char)* data, nuint length` and returns its containing type. The parameter names can differ. It executes as an ordinary runtime function and follows the normal exception rules.
 
-```gflat
+```csharp
 using Text;
 
 namespace Text
@@ -890,7 +923,7 @@ Literal operators have no implicit instance (`this`), but retain access to their
 
 ## String interpolation
 
-```gflat std
+```csharp std
 using std;
 
 int main()
@@ -954,7 +987,7 @@ implicit interpolation-to-type conversions, or compile-time interpolation.
 
 Attributes are classes derived, directly or indirectly, from the abstract `Attribute` class in `std/core/Attribute.gf`. The base class has a public parameterless constructor and no libc dependency. Its name is reserved at global scope.
 
-```gflat
+```csharp
 class Priority : Attribute
 {
     public int level;
@@ -1033,7 +1066,7 @@ arrays have their element type's alignment. `readonly(T)` preserves T's layout.
 Following the existing `sizeof(void) == 0` convention, `alignof(void)` is 1.
 Values follow the compilation target ABI, currently `x86_64-pc-windows-msvc`.
 
-```gflat
+```csharp
 struct Packet { public char tag; public long payload; }
 const int Alignment = alignof(Packet);
 int main() {
@@ -1051,7 +1084,7 @@ changes neither visibility nor linkage. On a property it applies to its accessor
 Abstract and extern declarations cannot use it. Optimization level 0 generally
 keeps calls; optimized builds let LLVM decide whether inlining is beneficial.
 
-```gflat
+```csharp
 inline int Add(int left, int right) => left + right;
 int main() { return Add(20, 22); }
 ```
@@ -1098,7 +1131,7 @@ pointers; managed references use `IsManaged`. This is not a runtime type registr
 and does not yet enumerate fields, methods, or properties. `typeof(expression)`
 is not supported.
 
-```gflat
+```csharp
 struct Packet { public int sequence; }
 const nuint Size<T>() => typeof(T).Size;
 const nuint PacketSize = Size<Packet>();
@@ -1109,7 +1142,7 @@ int main() {
 }
 ```
 
-```gflat
+```csharp
 const nuint ArgumentSize = typeof(void(int**)*).ParameterTypes![0].ElementType!.ElementType!.Size;
 int main() {
     std::TypeInfo signature = typeof(void(ref readonly(int), int**)*);
@@ -1126,7 +1159,7 @@ unqualified builtin emits a private `alwaysinline` helper whose argument types
 come from the gflat expressions and whose result type is explicit. LLVM arguments
 are `%0`, `%1`, and so on; the body must provide its own terminator.
 
-```gflat
+```csharp
 int Add(int a, int b) => __llvm<int>("%sum = add i32 %0, %1\nret i32 %sum", a, b);
 int main() => Add(20, 22);
 ```
@@ -1167,7 +1200,7 @@ Qualified namespace function declarations use their named owner independently of
 file order. Qualified static definitions implement an `expect` or `weak` member
 already declared inside its closed type.
 
-```gflat
+```csharp
 namespace Services { public expect int Read(); }
 replace int Services::Read() => 42;
 

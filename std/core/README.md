@@ -6,7 +6,7 @@ Reference `std/std.gfproj` to include the library.
 
 ## Strings and formatting
 
-```gflat
+```csharp
 using std;
 
 int main()
@@ -60,7 +60,7 @@ preserve it. Constructors and factory methods follow ordinary exception propagat
 `TryParseInt(data, count, &value)` parses exactly `count` bytes without requiring
 a terminator. Both return `bool` and write an `int` through the result pointer:
 
-```gflat
+```csharp
 int value = 0;
 if (TryParseInt("-42", &value)) {
     // value is -42.
@@ -77,7 +77,7 @@ calls using its counted bytes, without copying the string.
 `ParseInt(text)` and `ParseInt(data, count)` return the parsed `int` directly,
 using the same rules. They throw `Exception` on invalid input or overflow:
 
-```gflat
+```csharp
 int value = ParseInt("42");
 ```
 
@@ -87,7 +87,7 @@ With `using std;`, `new IntRange(start, count)` describes consecutive integers w
 allocating a buffer. `Where` accepts a `bool(int)*` callback; typed noncapturing
 lambdas work directly. `Take` and `Skip` return new sequence values:
 
-```gflat
+```csharp
 using std;
 
 int main()
@@ -119,7 +119,7 @@ The sequence and iterator values own no heap storage and need no manual disposal
 
 `Vector<T>` owns contiguous elements. It supports primitives and owning values:
 
-```gflat
+```csharp
 using std;
 
 int main()
@@ -173,7 +173,7 @@ obtaining a view from a temporary vector does not keep that vector alive.
 `Span<T>` borrows contiguous storage without allocating or freeing it. There is
 one span type; use `Span<readonly(T)>` for a view of readonly elements.
 
-```gflat
+```csharp
 using std;
 
 int main()

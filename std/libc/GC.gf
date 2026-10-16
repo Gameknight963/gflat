@@ -1,2 +1,1 @@
-public weak alias GC : std::IGarbageCollector 
-	= std::TracingCollector;
+public weak alias GC : std::IGarbageCollector = std::TracingCollector;

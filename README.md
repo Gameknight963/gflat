@@ -11,7 +11,7 @@ can change without notice. Consider currently nightly releases as "demos"
 
 Also this readme might be out of date
 
-```gflat
+```csharp
 using std;
 
 extern int printf(readonly(char)* text, ...);
@@ -77,9 +77,11 @@ These links select the latest successful `master` workflow using
    > Note: I am developing gflat on Windows, Linux support may be spotty atm
 - Set `GFLAT_CLANG` to the Clang executable if it is not on PATH. On Windows the compiler also searches Visual Studio installations.
 
-After extracting the Windows ZIP, run from its directory:
+After extracting the Windows ZIP, run from its directory. The one-time SDK
+installation may require an elevated terminal:
 
 ```powershell
+./compiler/gflat.exe sdk install
 ./compiler/gflat.exe build examples/interpolation/interpolation.gfproj --run
 ```
 
@@ -87,12 +89,15 @@ For Linux, unzip the download, extract its tarball into an empty directory, and 
 
 ```sh
 tar -xzf gflat-linux-x64.tar.gz
+sudo ./compiler/gflat sdk install
 GFLAT_CLANG=clang-18 ./compiler/gflat build examples/interpolation/interpolation.gfproj --run
 ```
 
 You can also compile individual files: `gflat main.gf helper.gf --run`.
 Add the bundle's `compiler` directory to PATH to use `gflat` anywhere.
-Keep std and the `build` directory together; example projects use relative imports.
+Keep std and the `build` directory together. Project files use `<Project Sdk="Gflat.Sdk">`;
+SDK installation is a one-time setup step for each MSBuild/.NET SDK host.
+See [project setup](docs/PROJECTS.md) for Visual Studio registration and `NoStdLib`.
 
 Create a project with `gflat new MyApp`, then run
 `gflat build MyApp/MyApp.gfproj --run`. See [project setup](docs/PROJECTS.md) for

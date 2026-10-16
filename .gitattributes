@@ -1,0 +1,2 @@
+# gflat is not registered with Linguist; C++ provides useful source highlighting.
+*.gf linguist-language=C++

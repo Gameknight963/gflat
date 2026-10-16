@@ -31,7 +31,7 @@ stdout. Pass its address to formatting functions to stream bytes without an
 intermediate string. It does not own or close stdout; call `Console::Flush()`
 explicitly when required:
 
-```gflat
+```csharp
 using std;
 int main()
 {
@@ -43,7 +43,7 @@ int main()
 }
 ```
 
-```gflat
+```csharp
 int main()
 {
     Console::Write("Name: ");
@@ -75,7 +75,7 @@ int main()
 
 With the String conveniences:
 
-```gflat
+```csharp
 using std;
 int main()
 {
@@ -104,7 +104,7 @@ The compiler links the small native standard-stream accessor only when reference
 The nullable `std::FileHandle` alias represents libc's opaque `FILE*` internally.
 It is not a Windows kernel handle, and callers must not free it through `Memory`.
 
-```gflat
+```csharp
 using std;
 int main()
 {
@@ -138,7 +138,7 @@ int main()
 written in gflat. Include that source or reference `std/std.gfproj`. The global
 binding is a constrained, replaceable alias:
 
-```gflat
+```csharp
 public weak alias GC : std::IGarbageCollector = std::TracingCollector;
 ```
 

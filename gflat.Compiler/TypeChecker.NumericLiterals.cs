@@ -57,7 +57,7 @@ public partial class TypeChecker
         return false;
     }
 
-    private static bool FitsIntegerLiteral(string name, BigInteger value)
+    internal static bool FitsIntegerLiteral(string name, BigInteger value)
     {
         int bits = name switch
         {

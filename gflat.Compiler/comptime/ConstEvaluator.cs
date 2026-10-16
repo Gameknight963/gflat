@@ -124,13 +124,10 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             _currentValue = node.Token.Kind switch
             {
-                TokenKind.IntLiteral => new ConstValue.Integer(Convert.ToInt64(node.Token.Text)),
-                TokenKind.UIntLiteral => new ConstValue.UInteger(Convert.ToUInt64(node.Token.Text.TrimEnd('u', 'U'))),
-                TokenKind.HexInt => ParseHexInt(node.Token.Text),
+                TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.HexInt or
+                    TokenKind.LongLiteral or TokenKind.ULongLiteral => ParseIntegerLiteral(node),
                 TokenKind.FloatLiteral => new ConstValue.Float(Convert.ToDouble(node.Token.Text.TrimEnd('f', 'F'), System.Globalization.CultureInfo.InvariantCulture)),
                 TokenKind.DoubleLiteral => new ConstValue.Float(Convert.ToDouble(node.Token.Text, System.Globalization.CultureInfo.InvariantCulture)),
-                TokenKind.LongLiteral => new ConstValue.Integer(Convert.ToInt64(node.Token.Text.TrimEnd('l', 'L'))),
-                TokenKind.ULongLiteral => new ConstValue.UInteger(Convert.ToUInt64(node.Token.Text.TrimEnd('u', 'U', 'l', 'L'))),
                 TokenKind.CharLiteral => new ConstValue.Char(ParseChar(node.Token.Text)),
                 TokenKind.StringLiteral => new ConstValue.String(node.Token.Text[1..^1]),
                 TokenKind.True => new ConstValue.Boolean(true),
@@ -139,22 +136,15 @@ namespace gflat.comptime
             };
         }
 
-        private static ConstValue ParseHexInt(string text)
+        private static ConstValue ParseIntegerLiteral(LiteralExpression node)
         {
-            string clean = text[2..];
-            if (text.EndsWith("ul", StringComparison.OrdinalIgnoreCase) || text.EndsWith("lu", StringComparison.OrdinalIgnoreCase))
-            {
-                return new ConstValue.UInteger(Convert.ToUInt64(clean[..^2], 16));
-            }
-            if (text.EndsWith("u", StringComparison.OrdinalIgnoreCase))
-            {
-                return new ConstValue.UInteger(Convert.ToUInt64(clean[..^1], 16));
-            }
-            if (text.EndsWith("l", StringComparison.OrdinalIgnoreCase))
-            {
-                return new ConstValue.Integer(Convert.ToInt64(clean[..^1], 16));
-            }
-            return new ConstValue.Integer(Convert.ToInt64(clean, 16));
+            if (!TypeChecker.TryGetIntegerLiteralValue(node, out var integer))
+                throw new ConstEvalException("Invalid integer literal", node.Line);
+            if (node.Token.Kind is TokenKind.UIntLiteral or TokenKind.ULongLiteral)
+                return new ConstValue.UInteger((ulong)integer);
+            if (node.Token.Text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                return new ConstValue.Integer(unchecked((long)(ulong)integer));
+            return new ConstValue.Integer((long)integer);
         }
 
         private static char ParseChar(string text)
@@ -212,6 +202,17 @@ namespace gflat.comptime
             return value;
         }
 
+        private ConstValue EvaluateValueForTarget(AstNode expression, TypeExpression target)
+        {
+            if (_context.ResolveAlias(target) is NamedTypeExpression named &&
+                NumericSemantics.IntegerType(named.Name) is { } integerType &&
+                TypeChecker.TryGetIntegerLiteralValue(expression, out var integer) &&
+                TypeChecker.FitsIntegerLiteral(named.Name, integer))
+                return integerType.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
+            expression.Accept(this);
+            return Normalize(_currentValue!, target, expression.Line);
+        }
+
         private void EvaluateBinary(BinaryExpression node)
         {
             CheckSteps(node.Line);
@@ -263,12 +264,9 @@ namespace gflat.comptime
             _context.TryGetNativeIntegerOperands(node, out TypeExpression nativeOperands);
             ConstValue EvaluateOperand(AstNode operand)
             {
-                if (nativeOperands is NamedTypeExpression native &&
-                    TypeChecker.TryGetIntegerLiteralValue(operand, out var integer))
-                    return native.Name == "nuint" ? new ConstValue.UInteger((ulong)integer) :
-                        new ConstValue.Integer((long)integer);
+                if (nativeOperands != null) return EvaluateValueForTarget(operand, nativeOperands);
                 operand.Accept(this);
-                return nativeOperands != null ? Normalize(_currentValue!, nativeOperands, operand.Line) : _currentValue!;
+                return _currentValue!;
             }
             ConstValue left = EvaluateOperand(node.Left);
             ConstValue right = EvaluateOperand(node.Right);
@@ -420,6 +418,14 @@ namespace gflat.comptime
             if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
                 throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
+
+            if (_context.ResolveAlias(_context.GetType(node)) is NamedTypeExpression unaryType &&
+                NumericSemantics.IntegerType(unaryType.Name) is { } integerType &&
+                TypeChecker.TryGetIntegerLiteralValue(node, out var integer) && TypeChecker.FitsIntegerLiteral(unaryType.Name, integer))
+            {
+                _currentValue = integerType.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
+                return;
+            }
 
             if (node.Operator == TokenKind.PlusPlus)
             {
@@ -701,10 +707,12 @@ namespace gflat.comptime
             }
 
             List<ConstValue> args = new();
+            ConstructorDeclaration? resolvedConstructor = _context.GetResolvedConstructor(node);
             foreach (AstNode arg in node.Arguments)
             {
-                arg.Accept(this);
-                args.Add(_currentValue!);
+                if (resolvedConstructor != null)
+                    args.Add(EvaluateValueForTarget(arg, resolvedConstructor.Parameters[args.Count].Type));
+                else { arg.Accept(this); args.Add(_currentValue!); }
             }
 
             TypeChecker.StructInfo? structInfo = _context.GetStruct(named.Name);
@@ -821,15 +829,15 @@ namespace gflat.comptime
                 if (info.BaseClass != null && _context.GetClass(info.BaseClass) is TypeChecker.ClassInfo baseInfo)
                 {
                     List<ConstValue> baseArgs = new();
-                    if (ctor?.BaseArguments != null)
-                        foreach (AstNode arg in ctor.BaseArguments)
-                        {
-                            arg.Accept(this);
-                            baseArgs.Add(_currentValue!);
-                        }
                     ConstructorDeclaration? baseCtor = ctor?.BaseArguments != null
                         ? _context.GetResolvedBaseConstructor(ctor)
                         : baseInfo.Constructors.FirstOrDefault(c => c.Parameters.Count == 0);
+                    if (ctor?.BaseArguments != null)
+                        foreach (AstNode arg in ctor.BaseArguments)
+                        {
+                            if (baseCtor != null) baseArgs.Add(EvaluateValueForTarget(arg, baseCtor.Parameters[baseArgs.Count].Type));
+                            else { arg.Accept(this); baseArgs.Add(_currentValue!); }
+                        }
                     ExecuteClassConstructor(baseInfo, baseCtor, baseArgs, instance, line);
                 }
                 // Initializers are bound in the class scope, outside constructor parameters.
@@ -841,8 +849,7 @@ namespace gflat.comptime
                     if (field.IsStatic || field.IsConst) continue;
                     if (field.Initializer != null)
                     {
-                        field.Initializer.Accept(this);
-                        instance.Fields[field.Name] = Normalize(_currentValue!, field.Type, field.Line);
+                        instance.Fields[field.Name] = EvaluateValueForTarget(field.Initializer, field.Type);
                     }
                     else instance.Fields[field.Name] = DefaultValue(field.Type, field.Line);
                 }
@@ -948,8 +955,7 @@ namespace gflat.comptime
             List<ConstValue> evaluatedArgs = new();
             foreach (AstNode arg in node.Arguments)
             {
-                arg.Accept(this);
-                evaluatedArgs.Add(_currentValue!);
+                evaluatedArgs.Add(EvaluateValueForTarget(arg, method.Parameters[evaluatedArgs.Count].Type));
             }
 
             _callDepth++;
@@ -983,8 +989,7 @@ namespace gflat.comptime
             if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
                 throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
-            node.Value.Accept(this);
-            ConstValue val = _currentValue!;
+            ConstValue val = EvaluateValueForTarget(node.Value, _context.GetType(node.Target));
 
             if (node.Operator != TokenKind.Equals)
             {
@@ -1072,9 +1077,7 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             if (node.Initializer != null)
             {
-                node.Initializer.Accept(this);
-                ConstValue val = _currentValue!;
-                _scopes.Peek()[node.Name] = Normalize(val, node.Type, node.Line);
+                _scopes.Peek()[node.Name] = EvaluateValueForTarget(node.Initializer, node.Type);
             }
             else
             {

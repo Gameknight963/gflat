@@ -54,7 +54,7 @@ public partial class LlvmEmitter
                 {
                     TypeExpression target = _typeChecker.GetType(argument.Temporary);
                     EmitValueForTarget(argument.Value, target);
-                    Bind(argument.Temporary, EmitImplicitCast(Pop(), _typeChecker.GetType(argument.Value), target));
+                    Bind(argument.Temporary, EmitImplicitCast(Pop(), _typeChecker.GetType(argument.Value), target, argument.Value));
                 }
                 string? oldValue = null;
                 if (write.Getter != null)
@@ -65,7 +65,7 @@ public partial class LlvmEmitter
                 }
                 TypeExpression type = _typeChecker.GetType(write.ValueTemporary);
                 EmitValueForTarget(write.Value, type);
-                string assigned = EmitImplicitCast(Pop(), _typeChecker.GetType(write.Value), type);
+                string assigned = EmitImplicitCast(Pop(), _typeChecker.GetType(write.Value), type, write.Value);
                 Bind(write.ValueTemporary, assigned);
                 write.Setter.Accept(this);
                 Push(write.Postfix ? oldValue! : assigned);

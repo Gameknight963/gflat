@@ -1054,8 +1054,12 @@ public partial class LlvmEmitter : IVisitor
         return val;
     }
 
-    private string EmitImplicitCast(string val, TypeExpression fromType, TypeExpression toType)
+    private string EmitImplicitCast(string val, TypeExpression fromType, TypeExpression toType, AstNode? expression = null)
     {
+        // A contextually converted literal is already a value of its target
+        // width. Casting it through the token's default width first can lose
+        // high bits (for example int-token 0xffffffff widened to nuint).
+        if (expression != null && TryContextualIntegerLiteral(expression, toType, out string literal)) return literal;
         return EmitCast(val, fromType, toType);
     }
 
@@ -1339,7 +1343,7 @@ public partial class LlvmEmitter : IVisitor
             EmitValueForTarget(field.Initializer, field.Type);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(field.Initializer);
-            val = EmitImplicitCast(val, initType, field.Type);
+            val = EmitImplicitCast(val, initType, field.Type, field.Initializer);
             EmitManagedStore(field.Type, val, fieldPtr);
             if (_constructionFields.TryGetValue(field.Name, out string? flag)) Emit($"    store i1 true, i1* {flag}");
         }
@@ -1412,7 +1416,7 @@ public partial class LlvmEmitter : IVisitor
                     EmitArgument(arg, resolvedBaseCtor.Parameters[i].Type);
                     string val = Pop();
                     TypeExpression argType = _typeChecker.GetType(arg);
-                    val = EmitImplicitCast(val, argType, resolvedBaseCtor.Parameters[i].Type);
+                    val = EmitImplicitCast(val, argType, resolvedBaseCtor.Parameters[i].Type, arg);
                     string llvmType = EmitParamType(resolvedBaseCtor.Parameters[i].Type);
                     baseArgs.Add($"{llvmType} {val}");
                 }
@@ -1879,7 +1883,7 @@ public partial class LlvmEmitter : IVisitor
             EmitValueForTarget(field.Initializer, field.Type);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(field.Initializer);
-            val = EmitImplicitCast(val, initType, field.Type);
+            val = EmitImplicitCast(val, initType, field.Type, field.Initializer);
             EmitManagedStore(field.Type, val, fieldPtr);
             if (_constructionFields.TryGetValue(field.Name, out string? flag)) Emit($"    store i1 true, i1* {flag}");
         }
@@ -2185,7 +2189,7 @@ public partial class LlvmEmitter : IVisitor
                 {
                     if (_currentFunctionExpectedType != null)
                     {
-                        val = EmitImplicitCast(val, returnType, _currentFunctionExpectedType);
+                        val = EmitImplicitCast(val, returnType, _currentFunctionExpectedType, node.Value);
                         llvmReturnType = targetRet;
                     }
                 }
@@ -2495,7 +2499,7 @@ public partial class LlvmEmitter : IVisitor
             EmitValueForTarget(node.Initializer, resolvedVarType);
             string val = Pop();
             TypeExpression initType = _typeChecker.GetType(node.Initializer);
-            val = EmitImplicitCast(val, initType, resolvedVarType);
+            val = EmitImplicitCast(val, initType, resolvedVarType, node.Initializer);
             EmitManagedStore(resolvedVarType, val, ptr);
         }
         else
@@ -2554,17 +2558,26 @@ public partial class LlvmEmitter : IVisitor
             Push(result);
             return;
         }
-        node.Left.Accept(this);
+        TypeExpression? nativeOperandType = _typeChecker.TryGetNativeIntegerOperands(node, out var nativeType) ? nativeType : null;
+        TypeExpression? leftContext = nativeOperandType, rightContext = nativeOperandType;
+        if (_typeChecker.TryGetOperatorTarget(node, out var selectedOperator))
+        {
+            leftContext = selectedOperator.Operator.Parameters[0].Type;
+            rightContext = selectedOperator.Operator.Parameters[1].Type;
+        }
+        if (leftContext != null && TryContextualIntegerLiteral(node.Left, leftContext, out string leftLiteral)) Push(leftLiteral);
+        else node.Left.Accept(this);
         string left = Pop();
-        node.Right.Accept(this);
+        if (rightContext != null && TryContextualIntegerLiteral(node.Right, rightContext, out string rightLiteral)) Push(rightLiteral);
+        else node.Right.Accept(this);
         string right = Pop();
 
         if (_typeChecker.TryGetOperatorTarget(node, out (string StructName, OperatorDeclaration Operator) opTarget))
         {
             TypeExpression leftType1 = _typeChecker.GetType(node.Left);
             TypeExpression rightType1 = _typeChecker.GetType(node.Right);
-            left = EmitImplicitCast(left, leftType1, opTarget.Operator.Parameters[0].Type);
-            right = EmitImplicitCast(right, rightType1, opTarget.Operator.Parameters[1].Type);
+            left = EmitImplicitCast(left, leftType1, opTarget.Operator.Parameters[0].Type, node.Left);
+            right = EmitImplicitCast(right, rightType1, opTarget.Operator.Parameters[1].Type, node.Right);
 
             string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
             string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
@@ -2583,12 +2596,8 @@ public partial class LlvmEmitter : IVisitor
         TypeExpression resultType = _typeChecker.GetType(node);
         if (_typeChecker.TryGetNativeIntegerOperands(node, out TypeExpression nativeOperands))
         {
-            left = TypeChecker.TryGetIntegerLiteralValue(node.Left, out var leftConstant)
-                ? leftConstant.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                : EmitImplicitCast(left, leftType, nativeOperands);
-            right = TypeChecker.TryGetIntegerLiteralValue(node.Right, out var rightConstant)
-                ? rightConstant.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                : EmitImplicitCast(right, rightType, nativeOperands);
+            left = EmitImplicitCast(left, leftType, nativeOperands, node.Left);
+            right = EmitImplicitCast(right, rightType, nativeOperands, node.Right);
             leftType = rightType = nativeOperands;
         }
         string llvmType = EmitType(resultType);
@@ -2934,7 +2943,7 @@ public partial class LlvmEmitter : IVisitor
 
         if (_typeChecker.TryGetUnaryOperatorTarget(node, out (string StructName, OperatorDeclaration Operator) opTarget))
         {
-            operand = EmitImplicitCast(operand, type, opTarget.Operator.Parameters[0].Type);
+            operand = EmitImplicitCast(operand, type, opTarget.Operator.Parameters[0].Type, node.Operand);
             string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
             string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
 
@@ -3346,7 +3355,7 @@ public partial class LlvmEmitter : IVisitor
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(ifaceCall.Method.Parameters[i].Type);
-                val = EmitImplicitCast(val, argType, ifaceCall.Method.Parameters[i].Type);
+                val = EmitImplicitCast(val, argType, ifaceCall.Method.Parameters[i].Type, arg);
                 callArgs.Add($"{llvmArgType} {val}");
             }
 
@@ -3435,7 +3444,7 @@ public partial class LlvmEmitter : IVisitor
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(vcall.Method.Parameters[i].Type);
-                val = EmitImplicitCast(val, argType, vcall.Method.Parameters[i].Type);
+                val = EmitImplicitCast(val, argType, vcall.Method.Parameters[i].Type, arg);
                 callArgs.Add($"{llvmArgType} {val}");
             }
 
@@ -3464,7 +3473,7 @@ public partial class LlvmEmitter : IVisitor
 
                 if (i < fnPtr.ParameterTypes.Count)
                 {
-                    val = EmitImplicitCast(val, argType, fnPtr.ParameterTypes[i]);
+                    val = EmitImplicitCast(val, argType, fnPtr.ParameterTypes[i], arg);
                     llvmArgType = EmitParamType(fnPtr.ParameterTypes[i]);
                 }
 
@@ -3522,7 +3531,7 @@ public partial class LlvmEmitter : IVisitor
                 string llvmArgType = argType is ArrayTypeExpression a ? EmitType(a.ElementType) + "*" : EmitType(argType);
                 if (i < structMethod.Parameters.Count)
                 {
-                    val = EmitImplicitCast(val, argType, structMethod.Parameters[i].Type);
+                    val = EmitImplicitCast(val, argType, structMethod.Parameters[i].Type, arg);
                     llvmArgType = EmitParamType(structMethod.Parameters[i].Type);
                 }
                 argValues.Add(val);
@@ -3569,7 +3578,7 @@ public partial class LlvmEmitter : IVisitor
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
                 string llvmArgType = EmitParamType(methodMember.Parameters[i].Type);
-                val = EmitImplicitCast(val, argType, methodMember.Parameters[i].Type);
+                val = EmitImplicitCast(val, argType, methodMember.Parameters[i].Type, arg);
                 argValues.Add(val);
                 argTypes.Add(llvmArgType);
             }
@@ -3589,14 +3598,14 @@ public partial class LlvmEmitter : IVisitor
 
                 if (target is MethodDeclaration methodTarget && i < methodTarget.Parameters.Count)
                 {
-                    val = EmitImplicitCast(val, argType, methodTarget.Parameters[i].Type);
+                    val = EmitImplicitCast(val, argType, methodTarget.Parameters[i].Type, arg);
                     llvmArgType = EmitParamType(methodTarget.Parameters[i].Type);
                 }
                 else if (target is ExternDeclaration extDecl)
                 {
                     if (i < extDecl.Parameters.Count)
                     {
-                        val = EmitImplicitCast(val, argType, extDecl.Parameters[i].Type);
+                        val = EmitImplicitCast(val, argType, extDecl.Parameters[i].Type, arg);
                         llvmArgType = EmitParamType(extDecl.Parameters[i].Type);
                     }
                     else if (extDecl.IsVariadic)
@@ -3813,7 +3822,7 @@ public partial class LlvmEmitter : IVisitor
         bool isFloat = targetType is NamedTypeExpression { Name: "float" };
 
         TypeExpression valueType = _typeChecker.GetType(node.Value);
-        string finalVal = EmitImplicitCast(val, valueType, targetType);
+        string finalVal = EmitImplicitCast(val, valueType, targetType, node.Value);
 
         if (node.Operator != TokenKind.Equals)
         {
@@ -3824,7 +3833,7 @@ public partial class LlvmEmitter : IVisitor
             if (_typeChecker.TryGetCompoundOperatorTarget(node, out (string StructName, OperatorDeclaration Operator) opTarget))
             {
                 currentVal = EmitImplicitCast(currentVal, targetType, opTarget.Operator.Parameters[0].Type);
-                val = EmitImplicitCast(val, valueType, opTarget.Operator.Parameters[1].Type);
+                val = EmitImplicitCast(val, valueType, opTarget.Operator.Parameters[1].Type, node.Value);
 
                 string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
                 string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
@@ -3879,7 +3888,7 @@ public partial class LlvmEmitter : IVisitor
                     TokenKind.SlashEquals => "fdiv",
                     _ => throw new NotImplementedException($"Compound assignment {node.Operator} not supported on float")
                 };
-                Emit($"    {temp} = {op} float {currentVal}, {val}");
+                Emit($"    {temp} = {op} float {currentVal}, {finalVal}");
             }
             else
             {
@@ -3893,7 +3902,7 @@ public partial class LlvmEmitter : IVisitor
                     TokenKind.PercentEquals => isUnsigned ? "urem" : "srem",
                     _ => throw new NotImplementedException($"Compound assignment {node.Operator} not supported")
                 };
-                Emit($"    {temp} = {op} {llvmType} {currentVal}, {val}");
+                Emit($"    {temp} = {op} {llvmType} {currentVal}, {finalVal}");
             }
             finalVal = temp;
         }
@@ -3926,8 +3935,8 @@ public partial class LlvmEmitter : IVisitor
             string value = GetDefaultValue(resolvedType);
             if (node.Arguments.Count == 1)
             {
-                node.Arguments[0].Accept(this);
-                value = EmitImplicitCast(Pop(), _typeChecker.GetType(node.Arguments[0]), resolvedType);
+                EmitValueForTarget(node.Arguments[0], resolvedType);
+                value = EmitImplicitCast(Pop(), _typeChecker.GetType(node.Arguments[0]), resolvedType, node.Arguments[0]);
             }
             string memory = NewTemp();
             memory = EmitManagedAllocation(node, Math.Max(1, _typeChecker.GetTypeSize(resolvedType)).ToString());
@@ -3978,7 +3987,7 @@ public partial class LlvmEmitter : IVisitor
                     for (int i = 0; i < ctor.Parameters.Count; i++)
                     {
                         TypeExpression argType = _typeChecker.GetType(node.Arguments[i]);
-                        string castVal = EmitImplicitCast(argVals[i], argType, ctor.Parameters[i].Type);
+                        string castVal = EmitImplicitCast(argVals[i], argType, ctor.Parameters[i].Type, node.Arguments[i]);
                         callArgs.Add($"{EmitParamType(ctor.Parameters[i].Type)} {castVal}");
                     }
                 }
@@ -4033,7 +4042,7 @@ public partial class LlvmEmitter : IVisitor
                     for (int i = 0; i < ctor.Parameters.Count; i++)
                     {
                         TypeExpression argType = _typeChecker.GetType(node.Arguments[i]);
-                        string castVal = EmitImplicitCast(argVals[i], argType, ctor.Parameters[i].Type);
+                        string castVal = EmitImplicitCast(argVals[i], argType, ctor.Parameters[i].Type, node.Arguments[i]);
                         callArgs.Add($"{EmitParamType(ctor.Parameters[i].Type)} {castVal}");
                     }
                 }
@@ -4225,7 +4234,8 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitValueForTarget(AstNode expression, TypeExpression target)
     {
-        if (_typeChecker.CopiesValue(expression, target)) EmitCopyValue(expression, target);
+        if (TryContextualIntegerLiteral(expression, target, out string integerLiteral)) Push(integerLiteral);
+        else if (_typeChecker.CopiesValue(expression, target)) EmitCopyValue(expression, target);
         else if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression targetArray && expression is ArrayLiteralExpression literalArray &&
             EmitType(targetArray) != EmitType(_typeChecker.GetType(expression)))
             EmitExpressionWithCleanup(() => EmitArrayLiteral(literalArray, targetArray));
@@ -4480,13 +4490,13 @@ public partial class LlvmEmitter : IVisitor
             _parameterOwners.Clear();
             EmitExpressionWithCleanup(() =>
             {
-                node.Body.Accept(this);
+                EmitValueForTarget(node.Body, returnType);
                 string? res = null;
                 if (llvmReturnType != "void")
                 {
                     res = Pop();
                     TypeExpression bodyType = _typeChecker.GetType(node.Body);
-                    res = EmitImplicitCast(res, bodyType, returnType);
+                    res = EmitImplicitCast(res, bodyType, returnType, node.Body);
                     if (UsesManagedResultStorage(returnType))
                         EmitManagedStore(returnType, res, "%gc.result");
                 }

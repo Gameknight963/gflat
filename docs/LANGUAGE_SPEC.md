@@ -715,9 +715,11 @@ rules. The body must therefore work without mutating its receiver.
 
 Reference properties support address-taking and in-place method calls, including
 on owning values. They can implement interface contracts and virtual class properties.
-Obvious local/temporary returns are rejected, but pointers still carry no checked
-lifetime. Keep the returned storage alive. Explicit by-value getters may return
-fresh owning values. An owning setter takes ownership like an ordinary function;
+Obvious local/temporary returns are rejected, including fields and inline array
+elements of those values. Storage obtained through an explicit pointer or another
+reference getter remains a borrow whose lifetime the caller must respect. Keep
+the returned storage alive. Explicit by-value getters may return fresh owning
+values. An owning setter takes ownership like an ordinary function;
 its assignment expression has type `void` to prevent duplicating that ownership.
 Automatic owning getters remain invalid because they would copy their backing field.
 

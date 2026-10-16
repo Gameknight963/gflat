@@ -3164,7 +3164,7 @@ namespace gflat
                     if (method.IsRefReturn)
                     {
                         if (node.Value is not (IdentifierExpression or MemberAccessExpression or IndexExpression or UnaryExpression { Operator: TokenKind.Star }) ||
-                            node.Value is IdentifierExpression local && _scopes.Any(scope => scope.ContainsKey(local.Name)))
+                            IsLocalOrTemporaryReferenceStorage(node.Value))
                             throw new TypeCheckException("A ref getter must return existing storage, not a local or temporary", node.Line);
                         var address = new UnaryExpression(node.Value, TokenKind.Ampersand, true, node.Line) { Span = node.Span };
                         address.Accept(this);

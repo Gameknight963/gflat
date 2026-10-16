@@ -920,8 +920,16 @@ namespace gflat.comptime
                 }
             }
 
-            if (_context is TypeChecker checker && checker.GetResolvedCall(node) is MethodDeclaration selected)
-                method = selected;
+            if (_context is TypeChecker checker)
+            {
+                var selected = checker.GetResolvedCall(node);
+                if (selected is MethodDeclaration selectedMethod) method = selectedMethod;
+                else if (selected is ExternDeclaration external)
+                {
+                    string declarationNamespace = checker.DeclarationNamespace(external) ?? "";
+                    funcName = declarationNamespace.Length == 0 ? external.Name : declarationNamespace + "::" + external.Name;
+                }
+            }
 
             if (method == null)
             {

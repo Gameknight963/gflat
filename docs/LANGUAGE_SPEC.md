@@ -247,7 +247,7 @@ Constructors must initialize fields that cannot have a default value on every no
 
 `default(T)` does not execute field initializers or user constructors. It rejects non-null pointers, types with user-defined constructors, and aggregates containing fields that cannot be default-initialized. Nullable pointers become null. Class values receive valid virtual tables, including classes nested in arrays and other aggregates; their destructors run normally. `new T()` invokes the parameterless constructor when one is declared.
 
-The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `std/libc/Memory/Memory.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public, non-throwing signatures:
+The public allocation hooks are `Memory::Allocate(nuint size) -> void*?` and `Memory::Free(void* ptr) -> void`. `std/libc/Memory/Memory.gf` provides automatically included public weak definitions calling libc `malloc` and `free`. `new*`, `delete`, and exception cleanup use these same functions. Applications may call them directly. Custom allocators must replace **both** functions with matching public signatures and non-throwing callback behavior:
 
 ```csharp
 extern void*? malloc(nuint size);
@@ -257,6 +257,16 @@ namespace Memory {
     public replace void Free(void* ptr) { free(ptr); }
 }
 ```
+
+The non-throwing requirement is a behavioral callback contract, not a `nothrow`
+modifier on these declarations. `Allocate` must report allocation failure by
+returning null; neither hook may let an exception escape. The exception runtime
+uses these same hooks for payload allocation and release. Throwing from an
+allocator can recursively request exception storage through that allocator, and
+throwing during release can fail while another exception is being cleaned up.
+Ordinary direct calls participate in unwinding, but this does not make throwing
+implementations safe runtime callbacks. Signature checking does not prove this
+behavioral requirement.
 
 `Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `std::BadAllocException` on null before initialization; direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`; hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
 

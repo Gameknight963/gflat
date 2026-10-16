@@ -311,6 +311,8 @@ namespace gflat
             }
 
             int modifierEnd = _pos;
+            if (firstAccessibility == null && Current.Kind is TokenKind.Class or TokenKind.Struct or TokenKind.Interface or TokenKind.Enum)
+                accessibility = TokenKind.Internal;
             if (Current.Kind is TokenKind.Class or TokenKind.Struct or TokenKind.Interface or TokenKind.Enum or TokenKind.Alias &&
                 (isConst || isReadonly || isAbstract && Current.Kind is not (TokenKind.Class or TokenKind.Interface) ||
                  isStatic && Check(TokenKind.Alias)))

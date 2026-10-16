@@ -2734,6 +2734,8 @@ namespace gflat
                 throw new TypeCheckException($"One of the parameters of a user-defined operator must be the containing type '{_currentStruct.Name}'", node.Line);
             }
 
+            ValidateOperatorContract(node);
+
             AstNode? prevFunc = _currentFunction;
             _currentFunction = node;
             try
@@ -3426,8 +3428,9 @@ namespace gflat
                 return;
             }
 
-            if (TryResolveBinaryOperatorForTypes(node.Operator, left, right, out string opStruct, out OperatorDeclaration opDecl))
+            if (TryResolveBinaryOperatorForTypes(node.Operator, left, right, node, out string opStruct, out OperatorDeclaration opDecl))
             {
+                ValidateOperatorAccess(opDecl, opStruct, node);
                 _operatorTargets[node] = (opStruct, opDecl);
                 RecordType(node, ResolveAlias(opDecl.ReturnType));
                 return;
@@ -3782,6 +3785,7 @@ namespace gflat
 
             if (TryResolveUnaryOperatorForType(node.Operator, operand, out string opStruct, out OperatorDeclaration opDecl))
             {
+                ValidateOperatorAccess(opDecl, opStruct, node);
                 _unaryOperatorTargets[node] = (opStruct, opDecl);
                 RecordType(node, ResolveAlias(opDecl.ReturnType));
                 return;
@@ -4199,8 +4203,9 @@ namespace gflat
             if (node.Operator != TokenKind.Equals)
             {
                 TokenKind? binOp = GetBinaryOperatorForCompound(node.Operator);
-                if (binOp.HasValue && TryResolveBinaryOperatorForTypes(binOp.Value, targetType, valueType, out string opStruct, out OperatorDeclaration opDecl))
+                if (binOp.HasValue && TryResolveBinaryOperatorForTypes(binOp.Value, targetType, valueType, node, out string opStruct, out OperatorDeclaration opDecl))
                 {
+                    ValidateOperatorAccess(opDecl, opStruct, node);
                     TypeExpression returnType = ResolveAlias(opDecl.ReturnType);
                     if (!IsAssignable(targetType, returnType))
                     {
@@ -6004,7 +6009,7 @@ namespace gflat
             _ => null
         };
 
-        private bool TryResolveBinaryOperatorForTypes(TokenKind opKind, TypeExpression left, TypeExpression right, out string structName, out OperatorDeclaration opDecl)
+        private bool TryResolveBinaryOperatorForTypes(TokenKind opKind, TypeExpression left, TypeExpression right, AstNode use, out string structName, out OperatorDeclaration opDecl)
         {
             structName = "";
             opDecl = null!;
@@ -6012,9 +6017,15 @@ namespace gflat
             TypeExpression resLeft = ResolveAlias(left);
             TypeExpression resRight = ResolveAlias(right);
 
+            var owners = new List<StructInfo>();
             if (resLeft is NamedTypeExpression namedLeft && _structs.TryGetValue(namedLeft.Name, out StructInfo? leftInfo))
+                owners.Add(leftInfo);
+            if (resRight is NamedTypeExpression namedRight && _structs.TryGetValue(namedRight.Name, out StructInfo? rightInfo) &&
+                !owners.Contains(rightInfo)) owners.Add(rightInfo);
+
+            foreach (var owner in owners)
             {
-                foreach (OperatorDeclaration op in leftInfo.Operators)
+                foreach (OperatorDeclaration op in owner.Operators)
                 {
                     if (op.OperatorKind == opKind && op.Parameters.Count == 2)
                     {
@@ -6022,36 +6033,16 @@ namespace gflat
                         TypeExpression p1 = ResolveAlias(op.Parameters[1].Type);
                         if (TypesMatch(resLeft, p0) && TypesMatch(resRight, p1))
                         {
-                            structName = leftInfo.Name;
+                            if (opDecl != null)
+                                throw new TypeCheckException($"Operator '{OperatorText(opKind)}' is ambiguous between '{TypeName(new NamedTypeExpression(structName, null, use.Line))}' and '{TypeName(new NamedTypeExpression(owner.Name, null, use.Line))}'", use.Span);
+                            structName = owner.Name;
                             opDecl = op;
-                            return true;
                         }
                     }
                 }
             }
 
-            if (resRight is NamedTypeExpression namedRight && _structs.TryGetValue(namedRight.Name, out StructInfo? rightInfo))
-            {
-                if (rightInfo.Name != structName)
-                {
-                    foreach (OperatorDeclaration op in rightInfo.Operators)
-                    {
-                        if (op.OperatorKind == opKind && op.Parameters.Count == 2)
-                        {
-                            TypeExpression p0 = ResolveAlias(op.Parameters[0].Type);
-                            TypeExpression p1 = ResolveAlias(op.Parameters[1].Type);
-                            if (TypesMatch(resLeft, p0) && TypesMatch(resRight, p1))
-                            {
-                                structName = rightInfo.Name;
-                                opDecl = op;
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return false;
+            return opDecl != null;
         }
 
         private bool TryResolveUnaryOperatorForType(TokenKind opKind, TypeExpression operand, out string structName, out OperatorDeclaration opDecl)

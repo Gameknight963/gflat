@@ -693,6 +693,8 @@ namespace gflat
                     method.StringLiteralPrefix = prefix.Text;
                     return Finish(method);
                 }
+                if (isConst || isReadonly || isVirtual || isOverride || isAbstract || isRef)
+                    throw new TypeCheckException("Operators are static value functions and cannot be const, readonly, virtual, override, abstract, or ref-returning", line);
                 return Finish(ParseOperatorDeclaration(type, accessibility, true, line));
             }
 

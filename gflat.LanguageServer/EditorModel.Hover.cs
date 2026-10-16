@@ -17,7 +17,13 @@ public sealed partial class EditorModel
         })) return symbols.FirstOrDefault(s => s.IsTypeParameter && s.Name == name &&
             s.Scope != null && (s.Scope == context.Syntax || Parents(context.Syntax).Contains(s.Scope)));
         var types = symbols.Where(s => !s.IsTypeParameter && (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration)).ToArray();
-        var exact = types.FirstOrDefault(s => s.Qualified == name);
+        if (!name.Contains("::", StringComparison.Ordinal) && context?.NameSpan.Source is { } declaringSource)
+        {
+            var visible = Visible(declaringSource.Path, context.NameSpan.Start).FirstOrDefault(s =>
+                (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration) && s.Name == name);
+            if (visible != null) return visible;
+        }
+        var exact = types.FirstOrDefault(s => s.Scope == null && s.Qualified == name);
         if (exact != null) return exact;
         if (context?.NameSpan.Source is { } source)
             return Visible(source.Path, context.NameSpan.Start).FirstOrDefault(s => (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration) && s.Name == name);

@@ -361,7 +361,9 @@ public sealed partial class EditorModel
             string? baseClass = snapshot.Checker?.GetClass(owner)?.BaseClass ?? c.BaseClass ??
                 c.Interfaces.FirstOrDefault(name => symbols.Any(s => s.Syntax.Node is ClassDeclaration && (s.Qualified == name || s.Qualified == Join(type.Namespace, name))));
             if (baseClass == null) yield break;
-            owner = symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && (s.Qualified == baseClass || s.Qualified == Join(type.Namespace, baseClass)))?.Qualified ?? baseClass;
+            owner = symbols.FirstOrDefault(s => IsType(s.Syntax.Node) &&
+                (s.Syntax.Node is ClassDeclaration baseDeclaration && baseDeclaration.Name == baseClass ||
+                 s.Qualified == baseClass || s.Qualified == Join(type.Namespace, baseClass)))?.Qualified ?? baseClass;
         }
     }
     private IEnumerable<Symbol> Candidates(string path, int offset, int tokenIndex)

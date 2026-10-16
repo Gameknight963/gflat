@@ -481,7 +481,7 @@ public sealed class ServerTests
         const string source = """
             extern int printf(readonly(char)* fmt, ...);
             struct Cool {
-                int x;
+                public int x;
                 ~Cool() { printf("destructor ran"); }
             }
             int main() {

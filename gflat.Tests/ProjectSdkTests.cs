@@ -217,6 +217,22 @@ public sealed class ProjectSdkTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Fact]
+    public void ExplicitToolchainSelectionWinsOverBundledSdkDiscovery()
+    {
+        string root = Temporary();
+        try
+        {
+            string extension = Path.Combine(root, "extension");
+            string bundled = Path.Combine(extension, "Sdk"); CreateSdk(bundled);
+            string selected = Path.Combine(root, "selected"); CreateSdk(selected);
+            Assert.Equal(bundled, ProjectSdk.FindRoot(extension));
+            Assert.Equal(selected, ProjectSdk.FindRoot(extension, selected));
+            Assert.Throws<ArgumentException>(() => ProjectSdk.FindRoot(extension, Path.Combine(root, "missing")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static void CreateSdk(string root)
     {
         Directory.CreateDirectory(Path.Combine(root, "build"));

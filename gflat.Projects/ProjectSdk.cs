@@ -12,8 +12,14 @@ public static class ProjectSdk
         File.Exists(Path.Combine(directory, "build", "Gflat.props")) &&
         File.Exists(Path.Combine(directory, "build", "Gflat.targets"));
 
-    public static string? FindRoot(string startingDirectory)
+    public static string? FindRoot(string startingDirectory, string? configuredRoot = null)
     {
+        if (!string.IsNullOrWhiteSpace(configuredRoot))
+        {
+            string explicitRoot = Path.GetFullPath(configuredRoot);
+            if (!IsRoot(explicitRoot)) throw new ArgumentException("GflatSdkRoot must point to a directory containing build/Gflat.props and build/Gflat.targets.");
+            return explicitRoot;
+        }
         for (var directory = new DirectoryInfo(Path.GetFullPath(startingDirectory)); directory != null; directory = directory.Parent)
         {
             if (IsRoot(directory.FullName)) return directory.FullName;

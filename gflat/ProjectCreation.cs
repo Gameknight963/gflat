@@ -88,14 +88,7 @@ public static class ProjectCreation
 
     public static string FindToolchainRoot()
     {
-        string? configured = Environment.GetEnvironmentVariable("GflatSdkRoot");
-        if (!string.IsNullOrWhiteSpace(configured))
-        {
-            configured = Path.GetFullPath(configured);
-            if (!ProjectSdk.IsRoot(configured)) throw new ArgumentException("GflatSdkRoot must point to a directory containing build/Gflat.props and build/Gflat.targets.");
-            return configured;
-        }
-        if (ProjectSdk.FindRoot(AppContext.BaseDirectory) is string root) return root;
+        if (ProjectSdk.FindRoot(AppContext.BaseDirectory, Environment.GetEnvironmentVariable("GflatSdkRoot")) is string root) return root;
         throw new ArgumentException("Cannot locate gflat build rules. Keep build/ alongside the compiler distribution.");
     }
 }

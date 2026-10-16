@@ -15,6 +15,19 @@ public partial class TypeChecker
 
     private TypeExpression ResolveAlias(TypeExpression source, Action<TypeExpression>? forward)
     {
+        // Primitive keywords cannot name lexical aliases. Their qualifiers are
+        // already part of the source type, and resolving them cannot specialize.
+        if (source is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } primitive && IsPrimitive(primitive.Name))
+        {
+            forward?.Invoke(source);
+            return source;
+        }
+        return ResolveAliasScoped(source, forward);
+    }
+
+    // Keep the captured publication delegate out of the common primitive path.
+    private TypeExpression ResolveAliasScoped(TypeExpression source, Action<TypeExpression>? forward)
+    {
         if (activeTypeBindings.TryGetValue(source, out var active))
         {
             if (active.Identity == null) throw new TypeCheckException("Cyclic type alias", source.Span);

@@ -43,7 +43,7 @@ public sealed class StaticInterfaceDeclarationTests
     }
 
     [Theory]
-    [InlineData("static interface I { readonly void Run(); }", "cannot be readonly")]
+    [InlineData("static interface I { readonly void Run(); }", "Readonly methods require an instance receiver")]
     [InlineData("static interface I { void Run() {} }", "cannot have a body")]
     [InlineData("static interface I {} void Use(I* value) {}", "not an instance reference")]
     [InlineData("static interface I { void Run(); } class C : I { public void Run() {} }", "static modifier")]

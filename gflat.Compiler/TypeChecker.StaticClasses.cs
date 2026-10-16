@@ -23,7 +23,6 @@ public partial class TypeChecker
                 MethodDeclaration { IsStatic: false } => "Methods in a static class must be static",
                 MethodDeclaration { IsVirtual: true } or MethodDeclaration { IsOverride: true } or
                     MethodDeclaration { IsAbstract: true } => "Static class methods cannot be virtual, override, or abstract",
-                MethodDeclaration { IsReadOnly: true } => "Static methods have no receiver to mark readonly",
                 PropertyDeclaration p when p.Getter is { IsStatic: false } || p.Setter is { IsStatic: false }
                     => "Properties in a static class must be static",
                 _ => null

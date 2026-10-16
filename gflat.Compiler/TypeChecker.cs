@@ -2832,8 +2832,8 @@ namespace gflat
                 if (member is PropertyDeclaration) continue;
                 if (member is MethodDeclaration method)
                 {
-                    if (method.IsStatic && (method.IsReadOnly || method.IsVirtual || method.IsOverride || method.IsGeneric))
-                        throw new TypeCheckException("Static interface contracts cannot be readonly, virtual, override, or generic", method.Span);
+                    if (method.IsStatic && (method.IsVirtual || method.IsOverride || method.IsGeneric))
+                        throw new TypeCheckException("Static interface contracts cannot be virtual, override, or generic", method.Span);
                     ValidatePropertyAccessor(method);
                     if (method.Body != null)
                     {

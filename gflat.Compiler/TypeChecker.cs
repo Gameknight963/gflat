@@ -3427,6 +3427,7 @@ namespace gflat
             }
 
             if (CheckFloatingBinary(node, left, right)) return;
+            if (!CheckBuiltinOperatorOperands(node, node.Operator, left, right)) return;
 
             bool isComparison = node.Operator is
                 TokenKind.EqualsEquals or TokenKind.NotEquals or
@@ -4218,6 +4219,9 @@ namespace gflat
                 if (errPtr != null)
                     throw new TypeCheckException(errPtr, node.Line);
             }
+
+            if (GetBinaryOperatorForCompound(node.Operator) is { } builtinOperator &&
+                !CheckBuiltinOperatorOperands(node, builtinOperator, targetType, valueType)) return;
 
             if (!IsAssignable(targetType, valueType, node.Value))
             {

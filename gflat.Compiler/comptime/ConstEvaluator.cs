@@ -29,6 +29,7 @@ namespace gflat.comptime
         private ConstValue? _returnValue = null;
         private bool _hasBroken = false;
         private bool _hasContinued = false;
+        private bool _evaluating;
 
         public ConstEvaluator(IConstEvaluationContext context)
         {
@@ -37,6 +38,11 @@ namespace gflat.comptime
 
         public bool TryEvaluate(AstNode node, out ConstValue? result, out string? failureReason)
         {
+            // Resolving a type during evaluation may require another constant
+            // (for example an array bound). Give that query independent state.
+            if (_evaluating)
+                return new ConstEvaluator(_context).TryEvaluate(node, out result, out failureReason);
+            _evaluating = true;
             result = null;
             failureReason = null;
             _stepCount = 0;
@@ -65,6 +71,7 @@ namespace gflat.comptime
                 failureReason = ex.Message;
                 return false;
             }
+            finally { _evaluating = false; }
         }
 
         private void CheckSteps(int line)

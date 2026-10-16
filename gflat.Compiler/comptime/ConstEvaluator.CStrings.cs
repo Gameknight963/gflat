@@ -44,6 +44,11 @@ public partial class ConstEvaluator
     private bool EvaluateCStringBinary(BinaryExpression expression, ConstValue left, ConstValue right)
     {
         if (left is not ConstValue.String && right is not ConstValue.String) return false;
+        // Immutable string storage has an address even for an empty string.
+        // Let ordinary pointer equality handle its comparison with null.
+        if (expression.Operator is TokenKind.EqualsEquals or TokenKind.NotEquals &&
+            (left is ConstValue.Integer { Value: 0 } || right is ConstValue.Integer { Value: 0 }))
+            return false;
         if (expression.Operator == TokenKind.Plus)
         {
             _currentValue = left is ConstValue.String text

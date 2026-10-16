@@ -131,6 +131,7 @@ namespace gflat.comptime
                 TokenKind.StringLiteral => new ConstValue.String(node.Token.Text[1..^1]),
                 TokenKind.True => new ConstValue.Boolean(true),
                 TokenKind.False => new ConstValue.Boolean(false),
+                TokenKind.Null => new ConstValue.Integer(0),
                 _ => throw new ConstEvalException($"Unsupported compile-time literal '{node.Token.Kind}'", node.Line)
             };
         }

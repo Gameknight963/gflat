@@ -755,6 +755,11 @@ language feature or a requirement for future builds without the exception runtim
 The host C++ runtime still owns native exception transport storage and its own
 allocation-failure policy; this setting does not configure its emergency pool.
 
+If the payload allocator reenters exception allocation, the nested request uses
+the reserve directly instead of calling that allocator again. An unavailable or
+exhausted reserve terminates. This prevents recursive allocation failures; it
+does not relax the allocation hooks' non-throwing callback contract.
+
 `throw new Error(...)` transfers a fresh exception-derived value to runtime storage. `throw value` copies and requires a copyable type; `throw move value` consumes it. Pointers cannot be thrown. `catch (ref Error error)` borrows the runtime-owned object, which remains live until the handler exits. The binding aliases the exception value, without a copy or ownership transfer. The older `catch (Error* error)` form also remains available; its pointer is borrowed and must not be deleted or retained. `throw;` inside a handler rethrows the original object, preserving its dynamic type. Throwing a borrowed base value with `throw error` instead copies its static base type. Bare `catch` also handles foreign exceptions; typed gflat catches do not.
 
 Scope destructors and deferred actions run during unwinding. Failed construction destroys completed owning fields and the completed base, without invoking the incomplete object's destructor. Failed `new*` frees its fresh storage; failed placement construction leaves storage ownership with the caller. Raw resources acquired during construction still require explicit cleanup on failure paths.

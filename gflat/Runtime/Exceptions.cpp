@@ -98,6 +98,11 @@ struct Exception final {
         : object(value, cleanup, RuntimeAllocator<unsigned char>{}) {}
 };
 struct Handle { std::exception_ptr exception; };
+thread_local bool invoking_payload_allocator = false;
+struct PayloadAllocatorScope {
+    PayloadAllocatorScope() noexcept { invoking_payload_allocator = true; }
+    ~PayloadAllocatorScope() { invoking_payload_allocator = false; }
+};
 void release_handle(Handle* handle) noexcept {
     handle->~Handle();
     release(handle);
@@ -106,7 +111,13 @@ void release_handle(Handle* handle) noexcept {
 extern "C" {
 // Payload allocation respects the user's allocator before using the reserve.
 void* __gflat_eh_allocate_exception(std::size_t size, void* (*allocator)(std::size_t)) {
-    if (auto* value = allocator(size)) return value;
+    // A callback can itself throw and need payload storage before its exception
+    // can unwind. Do not recursively call it to allocate that nested payload.
+    // The scope resets on both return and unwinding, independently per thread.
+    if (!invoking_payload_allocator) {
+        PayloadAllocatorScope scope;
+        if (auto* value = allocator(size)) return value;
+    }
     if (auto* value = reserve_allocate(size)) return value;
     std::terminate();
 }

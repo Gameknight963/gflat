@@ -1188,17 +1188,11 @@ namespace gflat
                 {
                     if (_constEvaluator.TryEvaluate(arr.SizeExpression, out ConstValue? cv, out string? err))
                     {
-                        if (cv is ConstValue.Integer ci)
+                        if (ConstValue.TryIntegerValue(cv!, out var arrayBound))
                         {
-                            if (ci.Value <= 0 || ci.Value > int.MaxValue)
+                            if (arrayBound <= 0 || arrayBound > int.MaxValue)
                                 throw new TypeCheckException("Array size must be between 1 and 2147483647", arr.Line);
-                            size = (int)ci.Value;
-                        }
-                        else if (cv is ConstValue.UInteger cui)
-                        {
-                            if (cui.Value == 0 || cui.Value > int.MaxValue)
-                                throw new TypeCheckException("Array size must be between 1 and 2147483647", arr.Line);
-                            size = (int)cui.Value;
+                            size = (int)arrayBound;
                         }
                         else
                         {

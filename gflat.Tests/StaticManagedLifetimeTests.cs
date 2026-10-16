@@ -288,6 +288,35 @@ public sealed class StaticManagedLifetimeTests
         Assert.Equal("", result.StandardOutput);
     }
 
+    [Theory]
+    [InlineData("throw new Exception();", "t$\"text\";")]
+    [InlineData("item = null;", "t$\"text\";")]
+    [InlineData("item = null;", "Destination value = t$\"text\";")]
+    [InlineData("", "t$\"text\";")]
+    [InlineData("item = null;", "Destination value = t$\"text\"; value.Write(\"x\", 1);")]
+    [InlineData("item = null;", "Destination value = t$\"text\";", false)]
+    [InlineData("throw new Exception();", "t$\"text\";", false)]
+    [InlineData("item = null;", "Destination value = t$\"\";")]
+    [InlineData("item = null;", "t$\"{t$\"nested\"}\";", true, "DD")]
+    public void InterpolationDestinationBalancesManagedRootsDuringWritesAndTransfer(string write, string body, bool owning = true, string output = "D")
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + """
+            struct Destination : ITextWriter, IFormattable {
+                private managed<int, Probe>? item;
+                public Destination() { item = null; }
+                public static Destination operator t""(readonly(char)* text, nuint count) => new Destination();
+                public void Write(readonly(char)* text, nuint count) { WRITE }
+                public readonly void Format(ITextWriter* output) { output.Write("nested", 6); }
+                DESTRUCTOR
+            }
+            void Work() { BODY }
+            int main() { try { Work(); } catch {} return (int)Probe::Count(); }
+            """.Replace("WRITE", write).Replace("BODY", body)
+                .Replace("DESTRUCTOR", owning ? "~Destination() { putchar(68); }" : ""));
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(owning ? output : "", result.StandardOutput);
+    }
+
     private const string OwnerSource = """
         struct Owner {
             private managed<int, Probe>? item;

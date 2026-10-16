@@ -7,13 +7,26 @@ public partial class LlvmEmitter
     private void EmitInterpolation(InterpolatedStringExpression node)
     {
         var plan = _typeChecker.GetInterpolation(node);
+        TypeExpression resultType = _typeChecker.GetType(node);
+        // Publish the transferred value into the surrounding expression's root
+        // storage before releasing the interpolation's own temporary scopes.
+        string? resultRoot = _typeChecker.UsesCollector && HasManagedReferences(resultType)
+            ? CreateManagedTemporary(resultType) : null;
         var bindings = new List<string>();
         string Bind(IdentifierExpression id, string value)
         {
-            string type = EmitType(_typeChecker.GetType(id));
+            TypeExpression type = _typeChecker.GetType(id);
             string slot = NewTemp();
-            Emit($"    {slot} = alloca {type}");
-            Emit($"    store {type} {value}, {type}* {slot}");
+            if (_typeChecker.UsesCollector && HasManagedReferences(type) && !_typeChecker.HasDestructor(type))
+            {
+                slot = CreateManagedTemporary(type);
+                EmitManagedStore(type, value, slot);
+            }
+            else
+            {
+                EmitAlloca(EmitType(type), slot);
+                EmitManagedStore(type, value, slot, initialize: true);
+            }
             _locals[id.Name] = slot;
             bindings.Add(id.Name);
             return slot;
@@ -23,11 +36,14 @@ public partial class LlvmEmitter
         {
             plan.Factory.Accept(this);
             string result = Bind(plan.Result, Pop());
-            TypeExpression resultType = _typeChecker.GetType(node);
             // Keep the partial destination alive for every exceptional edge. On
             // success the returned value transfers ownership to the surrounding expression.
+            IDeferAction? resultCleanup = null;
             if (_typeChecker.HasDestructor(resultType))
-                _deferScopes[^1].Add(new TemporaryCleanup(resultType, result));
+            {
+                resultCleanup = new TemporaryCleanup(resultType, result);
+                _deferScopes[^1].Add(resultCleanup);
+            }
             foreach (var part in plan.Parts)
             {
                 _deferScopes.Add(new());
@@ -48,6 +64,13 @@ public partial class LlvmEmitter
             }
             string value = NewTemp(), llvmType = EmitType(resultType);
             Emit($"    {value} = load {llvmType}, {llvmType}* {result}");
+            if (resultRoot != null) EmitManagedStore(resultType, value, resultRoot);
+            if (resultCleanup != null)
+            {
+                _deferScopes[^1].Remove(resultCleanup);
+                EmitManagedReferences(resultType, result, false);
+            }
+            EmitDefersDownTo(_deferScopes.Count - 1);
             Push(value);
         }
         finally

@@ -215,6 +215,21 @@ public sealed class ManagedReturnStorageTests
         }
         """);
 
+    [Fact]
+    public void InterpolationResultKeepsItsUpdatedManagedFieldsAliveDuringTransfer() => Succeeds("""
+        struct Destination : ITextWriter {
+            public int^ item;
+            public Destination() { item = new^ int(42); }
+            public static Destination operator t""(readonly(char)* text, nuint length) => new Destination();
+            public void Write(readonly(char)* text, nuint length) { item = new^ int(43); }
+            ~Destination() {}
+        }
+        int main() {
+            { Destination value = t$"text"; if (*value.item != 43) return 1; }
+            return rc_live_count();
+        }
+        """);
+
     [Theory]
     [InlineData("=")]
     [InlineData("+=")]

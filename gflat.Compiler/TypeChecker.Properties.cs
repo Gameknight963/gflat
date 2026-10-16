@@ -86,8 +86,9 @@ public partial class TypeChecker
                         additions.Add(new MethodDeclaration(accessor.Name, accessor.ReturnType, accessor.Parameters, body,
                             owner is InterfaceDeclaration ? TokenKind.Public : accessor.Accessibility,
                             accessor.IsStatic, accessor.IsVirtual, accessor.IsOverride, signature, accessor.Line,
-                            accessor.IsReadOnly || auto && getter && !accessor.IsStatic && owner != null && !accessor.IsVirtual && !accessor.IsOverride, isNoThrow: accessor.IsNoThrow)
-                        { IsInline = accessor.IsInline, PropertyName = property.Name, Span = accessor.Span.Source == null ? property.Span : accessor.Span });
+                            accessor.IsReadOnly, isNoThrow: accessor.IsNoThrow)
+                        { InferAutoGetterReadOnly = auto && getter && !accessor.IsReadOnly && !accessor.IsStatic && owner != null && !accessor.IsVirtual && !accessor.IsOverride,
+                            IsInline = accessor.IsInline, PropertyName = property.Name, Span = accessor.Span.Source == null ? property.Span : accessor.Span });
                     }
                     if (auto && property.Setter == null)
                     {
@@ -250,11 +251,22 @@ public partial class TypeChecker
     private void ValidatePropertyAccessor(MethodDeclaration method)
     {
         if (method.PropertyName == null) return;
+        InferAutoGetterReceiver(method);
         if (method.Parameters.Take(method.Name.StartsWith("$get$") ? method.Parameters.Count : method.Parameters.Count - 1).Any(p => RequiresCopy(p.Type)))
             throw new TypeCheckException("Indexer arguments must be copyable; borrow owning arguments through pointers", method.Line);
         TypeExpression type = ResolveAlias(method.Name.StartsWith("$get$") ? method.ReturnType : method.Parameters[^1].Type);
         if (type is ArrayTypeExpression || type is NamedTypeExpression { Name: "void" })
             throw new TypeCheckException("Properties cannot currently return void or arrays", method.Line);
+    }
+
+    private void InferAutoGetterReceiver(MethodDeclaration method)
+    {
+        if (!method.InferAutoGetterReadOnly) return;
+        // Classify generated getters when accessors are checked or used, after
+        // normal layout validation, rather than during declaration signatures.
+        using var context = EnterMethodSignatureContext(method);
+        TypeExpression result = ResolveAlias(method.ReturnType);
+        method.IsReadOnly = IsAssignable(result, TypeQualifiers.ReadOnly(result));
     }
 
     private MethodDeclaration RequireAccessor(PropertyAccess property, bool getter, AstNode site)

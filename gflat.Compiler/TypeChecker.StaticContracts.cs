@@ -28,8 +28,9 @@ public partial class TypeChecker
             throw new TypeCheckException($"Static interface '{DisplayName(named.Name)}' is a type constraint, not an instance reference", line);
     }
 
-    private static void ValidateStaticContractImplementation(MethodDeclaration contract, MethodDeclaration implementation)
+    private void ValidateStaticContractImplementation(MethodDeclaration contract, MethodDeclaration implementation)
     {
+        InferAutoGetterReceiver(implementation);
         if (contract.IsStatic != implementation.IsStatic)
             throw new TypeCheckException($"Implementation of '{contract.Name}' must match the interface's static modifier", implementation.Span);
         if (contract.IsStatic && implementation.Accessibility != TokenKind.Public)

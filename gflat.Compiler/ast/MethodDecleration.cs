@@ -24,7 +24,10 @@ namespace gflat.ast
         public bool IsVirtual { get; }
         public bool IsOverride { get; }
         public bool IsAbstract { get; }
-        public bool IsReadOnly { get; }
+        public bool IsReadOnly { get; internal set; }
+        // Synthetic auto-getters infer their receiver capability from the bound
+        // result; explicit readonly accessors must retain their source contract.
+        internal bool InferAutoGetterReadOnly { get; set; }
         public bool IsConst { get; }
 
         public List<GenericParameter> GenericParameters { get; }

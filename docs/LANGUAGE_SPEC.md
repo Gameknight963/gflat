@@ -796,6 +796,8 @@ are equivalent. A private extern is accessible throughout its source file, inclu
 from other namespaces in that file, but cannot be called or addressed from another
 file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers; `static` and `protected` are not supported.
 
+Private namespace functions are also accessible only within their declaring source file.
+
 A declaration permits at most one explicit accessibility modifier. Repeated or conflicting modifiers are errors, including qualifiers split across an `extern` keyword; implicit defaults do not count as explicit modifiers.
 
 Namespace classes, structs, interfaces, and enums default to `internal`, including static classes and static interfaces.

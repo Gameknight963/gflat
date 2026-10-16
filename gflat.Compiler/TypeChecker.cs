@@ -4716,6 +4716,7 @@ namespace gflat
                 }
                 method = MonomorphizeFunction(method, arguments, node.Line);
             }
+            ValidateNamespaceFunctionAccess(method, node.Callee.Span);
             _resolvedCalls[node] = method;
             AddDefaultArguments(node.Arguments, method.Parameters, node);
 

@@ -22,9 +22,12 @@ public partial class TypeChecker
     private void ValidateFunctionValueSelections()
     {
         foreach (var (expression, target) in _functionAddressTargets)
+        {
             if (!selectedFunctionValues.Contains(expression) && target is MethodDeclaration method &&
                 overloadFamilies.TryGetValue(method, out var family) && family.Count > 1)
                 throw new TypeCheckException($"Overloaded function '{method.Name}' requires a target function pointer signature", expression.Span);
+            if (target is MethodDeclaration selected) ValidateNamespaceFunctionAccess(selected, expression.Span);
+        }
     }
 
     private bool TryBindFunctionValue(AstNode expression)
@@ -55,7 +58,12 @@ public partial class TypeChecker
     private bool SelectFunctionValue(AstNode expression, FunctionPointerTypeExpression expected)
     {
         var target = _functionAddressTargets[expression];
-        if (target is not MethodDeclaration method || !overloadFamilies.TryGetValue(method, out var family)) return true;
+        if (target is not MethodDeclaration method) return true;
+        if (!overloadFamilies.TryGetValue(method, out var family))
+        {
+            ValidateNamespaceFunctionAccess(method, expression.Span);
+            return true;
+        }
         var matches = MatchingFunctionValues(method, expected, expression.Line);
         if (matches.Length != 1) return false;
         NamespaceAccessExpression? name = expression switch {
@@ -65,6 +73,7 @@ public partial class TypeChecker
         };
         if (name != null) ResolveStaticMethod(name, selectedValue: matches[0]);
         ValidateFunctionAddress(matches[0], expression.Line);
+        ValidateNamespaceFunctionAccess(matches[0], expression.Span);
         _functionAddressTargets[expression] = matches[0];
         selectedFunctionValues.Add(expression);
         RecordType(expression, FunctionValueType(matches[0], expression.Line));

@@ -1314,7 +1314,7 @@ namespace gflat
             {
                 if (GetInterface(named.Name) is { IsStaticContract: true })
                     throw new TypeCheckException($"Static interface '{DisplayName(named.Name)}' can only be used as a type constraint", line);
-                throw new TypeCheckException($"Cannot use interface '{named.Name}' as a value type. Interfaces must be used as pointers ('{named.Name}*')", line);
+                throw new TypeCheckException($"Cannot use interface '{DisplayName(named.Name)}' as a value type. Interfaces must be used as pointers ('{DisplayName(named.Name)}*')", line);
             }
             else if (resolved is ArrayTypeExpression arr)
             {
@@ -5087,10 +5087,10 @@ namespace gflat
             if (_classes.TryGetValue(named.Name, out ClassInfo? cInfo))
             {
                 if (cInfo.IsStatic)
-                    throw new TypeCheckException($"Cannot construct static class '{cInfo.Name}'", node.Span);
+                    throw new TypeCheckException($"Cannot construct static class '{DisplayName(cInfo.Name)}'", node.Span);
                 if (cInfo.IsAbstract)
                 {
-                    ReportError(DiagnosticRules.GF1000_GeneralTypeError, node.Line, 0, $"Cannot instantiate abstract class '{cInfo.Name}'");
+                    ReportError(DiagnosticRules.GF1000_GeneralTypeError, node.Line, 0, $"Cannot instantiate abstract class '{DisplayName(cInfo.Name)}'");
                     RecordType(node, Error);
                     return;
                 }
@@ -5104,7 +5104,7 @@ namespace gflat
 
                     if (node.Arguments.Count != 0)
                     {
-                        throw new TypeCheckException($"Class '{cInfo.Name}' does not define a constructor taking {node.Arguments.Count} arguments", node.Line);
+                        throw new TypeCheckException($"Class '{DisplayName(cInfo.Name)}' does not define a constructor taking {node.Arguments.Count} arguments", node.Line);
                     }
                 }
                 else
@@ -5199,7 +5199,7 @@ namespace gflat
 
                 if (node.Arguments.Count != 0)
                 {
-                    throw new TypeCheckException($"Struct '{sInfo.Name}' does not define a constructor taking {node.Arguments.Count} arguments", node.Line);
+                    throw new TypeCheckException($"Struct '{DisplayName(sInfo.Name)}' does not define a constructor taking {node.Arguments.Count} arguments", node.Line);
                 }
             }
             else

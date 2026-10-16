@@ -6,6 +6,21 @@ public sealed class TypeNameDiagnosticTests
 {
     [Theory]
     [InlineData(
+        "namespace App { interface IItem {} } void F(App::IItem value) {}",
+        "Cannot use interface 'App::IItem' as a value type. Interfaces must be used as pointers ('App::IItem*')")]
+    [InlineData(
+        "namespace App { static class Tools {} } int main() { new App::Tools(); return 0; }",
+        "Cannot construct static class 'App::Tools'")]
+    [InlineData(
+        "namespace App { abstract class Base {} } int main() { new App::Base(); return 0; }",
+        "Cannot instantiate abstract class 'App::Base'")]
+    [InlineData(
+        "namespace App { class Box<T> {} } int main() { new App::Box<int>(1); return 0; }",
+        "Class 'App::Box<int>' does not define a constructor taking 1 arguments")]
+    [InlineData(
+        "namespace App { struct Box<T> {} } int main() { new App::Box<int>(1); return 0; }",
+        "Struct 'App::Box<int>' does not define a constructor taking 1 arguments")]
+    [InlineData(
         "struct Nest<T> { public struct Inner {} } int main() { Nest<int>::Inner<int> value; return 0; }",
         "Unknown generic type 'Nest<int>::Inner'")]
     [InlineData(

@@ -12,6 +12,7 @@ public partial class TypeChecker
     {
         type = ResolveAlias(type);
         if (type is not NamedTypeExpression n) return null;
+        CheckInvalidInlineLayout(n.Name);
         return (GetStruct(n.Name)?.Constructors ?? GetClass(n.Name)?.Constructors)?.FirstOrDefault(c => c.IsCopy);
     }
 

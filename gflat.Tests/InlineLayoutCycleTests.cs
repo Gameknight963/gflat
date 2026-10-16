@@ -68,6 +68,17 @@ public sealed class InlineLayoutCycleTests
     }
 
     [Fact]
+    public void SpecializedMethodCanConstructItsContainingLayoutQueryType()
+    {
+        Assert.Equal(0, CompilerTestHelper.Run("""
+            Box<int>*? specialization;
+            struct A { public Box<int> value; }
+            struct Box<T> { public T value; public static A Make() => new A(); }
+            int main() { A value = Box<int>::Make(); return 0; }
+            """).ExitCode);
+    }
+
+    [Fact]
     public void SpecializationLimitCountsNestedWorkRatherThanAllInstantiations()
     {
         var declarations = new System.Text.StringBuilder("struct Box<T> { public T value; } ");

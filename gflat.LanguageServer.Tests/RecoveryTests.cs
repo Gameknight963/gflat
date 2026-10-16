@@ -19,6 +19,10 @@ public class RecoveryTests
         "class Outer { public static struct Broken { public int Inner() => 1; } }\n",
         "class Outer { public static enum Broken { A } }\n",
         "struct Recursive { Recursive child; }\n",
+        "struct Recursive { Recursive child; } int BadDefault() { Recursive value = default(Recursive); return 0; }\n",
+        "struct Recursive { Recursive child; } void BadParameter(Recursive value) {}\n",
+        "struct Recursive { Recursive child; } Recursive BadReturn(Recursive value) => value;\n",
+        "struct Recursive { Recursive child; } struct Wrapper { Recursive value; } Wrapper BadWrapper(Wrapper value) => value;\n",
         "struct ExpandA<T> { ExpandB<T*> child; } struct ExpandB<T> { ExpandA<T*> child; } int Expand() => sizeof(ExpandA<int>);\n",
         "class Broken {\n", "struct Broken {\n", "interface Broken {\n"
     ];

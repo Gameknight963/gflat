@@ -9,6 +9,7 @@ public partial class TypeChecker
     private readonly HashSet<string> activeLayoutQueries = new();
     private readonly List<string> layoutQueryPath = new();
     private readonly HashSet<string> checkedInlineLayouts = new();
+    private readonly Dictionary<string, TypeCheckException> invalidInlineLayouts = new();
     private readonly List<(string Type, string? Field)> inlineLayoutPath = new();
     private const int MaximumTypeSpecializationDepth = 64;
     private readonly HashSet<string> activeTypeSpecializations = new();
@@ -17,6 +18,7 @@ public partial class TypeChecker
     private IDisposable EnterLayoutQuery(string name, int line)
     {
         CheckFailedTypeSpecialization(name, line);
+        CheckInvalidInlineLayout(name);
         if (!activeLayoutQueries.Add(name))
             throw new TypeCheckException("Recursive inline layout query: " + string.Join(" -> ", layoutQueryPath.Append(name).Select(DisplayName)), line);
         layoutQueryPath.Add(name);
@@ -43,6 +45,11 @@ public partial class TypeChecker
         return new LayoutScope(() => activeTypeSpecializations.Remove(name));
     }
 
+    private void CheckInvalidInlineLayout(string name)
+    {
+        if (invalidInlineLayouts.TryGetValue(name, out var error)) throw error;
+    }
+
     private void ValidateCollectedInlineLayouts()
     {
         foreach (string name in _structs.Keys.Concat(_classes.Keys).ToArray())
@@ -52,12 +59,17 @@ public partial class TypeChecker
     private void ValidateInlineLayout(string name, string? fieldPath = null, SourceSpan? fieldSpan = null)
     {
         CheckFailedTypeSpecialization(name, fieldSpan?.Line ?? SourceContext.Current?.Line ?? 0);
+        CheckInvalidInlineLayout(name);
         if (checkedInlineLayouts.Contains(name)) return;
         int cycle = inlineLayoutPath.FindIndex(entry => entry.Type == name);
         if (cycle >= 0)
         {
             var path = inlineLayoutPath.Skip(cycle + 1).Select(entry => entry.Field!).Append(fieldPath!).Append(DisplayName(name));
-            throw new TypeCheckException("Inline value layout is recursive: " + string.Join(" -> ", path) + ". Store a pointer or managed reference to break the cycle.", fieldSpan ?? SourceContext.Current ?? default);
+            var error = new TypeCheckException("Inline value layout is recursive: " + string.Join(" -> ", path) + ". Store a pointer or managed reference to break the cycle.", fieldSpan ?? SourceContext.Current ?? default);
+            // All containing values embed this impossible layout. Remember them
+            // so editor recovery cannot restart structural copy traversal later.
+            foreach (var entry in inlineLayoutPath) invalidInlineLayouts[entry.Type] = error;
+            throw error;
         }
         inlineLayoutPath.Add((name, fieldPath));
         try
@@ -72,6 +84,11 @@ public partial class TypeChecker
                     VisitField(field.Name, field.Type, cls.FieldDeclarationsByName.GetValueOrDefault(field.Name));
             }
             checkedInlineLayouts.Add(name);
+        }
+        catch (TypeCheckException error) when (invalidInlineLayouts.ContainsValue(error))
+        {
+            invalidInlineLayouts[name] = error;
+            throw;
         }
         finally { inlineLayoutPath.RemoveAt(inlineLayoutPath.Count - 1); }
 

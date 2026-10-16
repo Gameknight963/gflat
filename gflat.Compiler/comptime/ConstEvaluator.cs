@@ -180,7 +180,7 @@ namespace gflat.comptime
 
         private ConstValue Normalize(ConstValue value, TypeExpression type, int line)
         {
-            if (_context.ResolveAlias(type) is NamedTypeExpression named &&
+            if (NumericType(type) is NamedTypeExpression named &&
                 (NumericSemantics.IntegerType(named.Name) != null || named.Name is "float" or "double"))
                 return NumericSemantics.Cast(value, named.Name, line);
             return value;
@@ -188,7 +188,7 @@ namespace gflat.comptime
 
         private ConstValue EvaluateValueForTarget(AstNode expression, TypeExpression target)
         {
-            if (_context.ResolveAlias(target) is NamedTypeExpression named &&
+            if (NumericType(target) is NamedTypeExpression named &&
                 NumericSemantics.IntegerType(named.Name) is { } integerType &&
                 TypeChecker.TryGetIntegerLiteralValue(expression, out var integer) &&
                 TypeChecker.FitsIntegerLiteral(named.Name, integer))
@@ -248,9 +248,12 @@ namespace gflat.comptime
             _context.TryGetNativeIntegerOperands(node, out TypeExpression nativeOperands);
             if (nativeOperands == null) _context.TryGetIntegerComparisonOperands(node, out nativeOperands);
             if (nativeOperands == null) _context.TryGetFloatingOperands(node, out nativeOperands);
+            TypeExpression? operandType = nativeOperands ?? IntegerArithmeticOperands(node);
             ConstValue EvaluateOperand(AstNode operand)
             {
-                if (nativeOperands != null) return EvaluateValueForTarget(operand, nativeOperands);
+                if (operandType != null) return EvaluateValueForTarget(operand, operandType);
+                if (node.Operator is TokenKind.LessLess or TokenKind.GreaterGreater)
+                    return EvaluateValueForTarget(operand, _context.GetType(operand));
                 operand.Accept(this);
                 return _currentValue!;
             }
@@ -258,6 +261,10 @@ namespace gflat.comptime
             ConstValue right = EvaluateOperand(node.Right);
 
             if (EvaluateCStringBinary(node, left, right)) return;
+            left = ArithmeticOperand(left);
+            right = ArithmeticOperand(right);
+            if (EvaluateIntegerShift(node, left, right)) return;
+            CheckIntegerDivision(node, left, right);
 
             if (left is ConstValue.Float a && right is ConstValue.Float b &&
                 node.Operator is TokenKind.EqualsEquals or TokenKind.NotEquals or TokenKind.Less or TokenKind.LessEquals or TokenKind.Greater or TokenKind.GreaterEquals)
@@ -435,7 +442,7 @@ namespace gflat.comptime
                 if (node.Operand is IdentifierExpression ppIdent && TryGetVariable(ppIdent.Name, out ConstValue? ppVal))
                 {
                     ConstValue one = ppVal is ConstValue.Float ? new ConstValue.Float(1) : ppVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                    if (StepCString(ppVal!, node.Operand, false, out ConstValue? nextVal) || ConstValue.TryAdd(ppVal!, one, out nextVal))
+                    if (StepCString(ppVal!, node.Operand, false, out ConstValue? nextVal) || ConstValue.TryAdd(ArithmeticOperand(ppVal!), one, out nextVal))
                     {
                         nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                         SetVariable(ppIdent.Name, nextVal!);
@@ -449,7 +456,7 @@ namespace gflat.comptime
                     if (_currentValue is ConstValue.Struct ppStruct && ppStruct.Fields.TryGetValue(ppMem.Member, out ConstValue? memVal))
                     {
                         ConstValue one = memVal is ConstValue.Float ? new ConstValue.Float(1) : memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                        if (StepCString(memVal, node.Operand, false, out ConstValue? nextVal) || ConstValue.TryAdd(memVal, one, out nextVal))
+                        if (StepCString(memVal, node.Operand, false, out ConstValue? nextVal) || ConstValue.TryAdd(ArithmeticOperand(memVal), one, out nextVal))
                         {
                             nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                             ppStruct.Fields[ppMem.Member] = nextVal!;
@@ -466,7 +473,7 @@ namespace gflat.comptime
                 if (node.Operand is IdentifierExpression mmIdent && TryGetVariable(mmIdent.Name, out ConstValue? mmVal))
                 {
                     ConstValue one = mmVal is ConstValue.Float ? new ConstValue.Float(1) : mmVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                    if (StepCString(mmVal!, node.Operand, true, out ConstValue? nextVal) || ConstValue.TrySubtract(mmVal!, one, out nextVal))
+                    if (StepCString(mmVal!, node.Operand, true, out ConstValue? nextVal) || ConstValue.TrySubtract(ArithmeticOperand(mmVal!), one, out nextVal))
                     {
                         nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                         SetVariable(mmIdent.Name, nextVal!);
@@ -480,7 +487,7 @@ namespace gflat.comptime
                     if (_currentValue is ConstValue.Struct mmStruct && mmStruct.Fields.TryGetValue(mmMem.Member, out ConstValue? memVal))
                     {
                         ConstValue one = memVal is ConstValue.Float ? new ConstValue.Float(1) : memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                        if (StepCString(memVal, node.Operand, true, out ConstValue? nextVal) || ConstValue.TrySubtract(memVal, one, out nextVal))
+                        if (StepCString(memVal, node.Operand, true, out ConstValue? nextVal) || ConstValue.TrySubtract(ArithmeticOperand(memVal), one, out nextVal))
                         {
                             nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                             mmStruct.Fields[mmMem.Member] = nextVal!;
@@ -533,9 +540,14 @@ namespace gflat.comptime
                     throw new ConstEvalException($"Cannot dereference non-pointer '{operand}' at compile time", node.Line);
 
                 case TokenKind.Minus:
-                    if (ConstValue.TryNegate(operand, out ConstValue? negRes))
+                    if (operand is ConstValue.UInteger unsigned)
                     {
-                        _currentValue = negRes;
+                        _currentValue = Normalize(new ConstValue.UInteger(unchecked(0ul - unsigned.Value)), _context.GetType(node), node.Line);
+                        return;
+                    }
+                    if (ConstValue.TryNegate(ArithmeticOperand(operand), out ConstValue? negRes))
+                    {
+                        _currentValue = Normalize(negRes!, _context.GetType(node), node.Line);
                         return;
                     }
                     throw new ConstEvalException($"Cannot negate '{operand}' at compile time", node.Line);
@@ -674,7 +686,7 @@ namespace gflat.comptime
             node.Operand.Accept(this);
             ConstValue val = _currentValue!;
 
-            TypeExpression resolved = _context.ResolveAlias(node.TargetType);
+            TypeExpression resolved = NumericType(node.TargetType);
             if (val is ConstValue.String && resolved is PointerTypeExpression pointer &&
                 _context.ResolveAlias(pointer.Inner) is NamedTypeExpression { Name: "char" })
             {
@@ -1001,6 +1013,7 @@ namespace gflat.comptime
             {
                 node.Target.Accept(this);
                 ConstValue previous = _currentValue!;
+                CheckIntegerDivision(node.Operator, _context.GetType(node.Target), ArithmeticOperand(previous), ArithmeticOperand(val), node.Line);
                 ConstValue? result = null;
                 string? error = null;
                 bool valid;
@@ -1011,11 +1024,11 @@ namespace gflat.comptime
                 }
                 else valid = node.Operator switch
                 {
-                    TokenKind.PlusEquals => ConstValue.TryAdd(previous, val, out result),
-                    TokenKind.MinusEquals => ConstValue.TrySubtract(previous, val, out result),
-                    TokenKind.StarEquals => ConstValue.TryMultiply(previous, val, out result),
-                    TokenKind.SlashEquals => ConstValue.TryDivide(previous, val, out result, out error),
-                    TokenKind.PercentEquals => ConstValue.TryModulo(previous, val, out result, out error),
+                    TokenKind.PlusEquals => ConstValue.TryAdd(ArithmeticOperand(previous), ArithmeticOperand(val), out result),
+                    TokenKind.MinusEquals => ConstValue.TrySubtract(ArithmeticOperand(previous), ArithmeticOperand(val), out result),
+                    TokenKind.StarEquals => ConstValue.TryMultiply(ArithmeticOperand(previous), ArithmeticOperand(val), out result),
+                    TokenKind.SlashEquals => ConstValue.TryDivide(ArithmeticOperand(previous), ArithmeticOperand(val), out result, out error),
+                    TokenKind.PercentEquals => ConstValue.TryModulo(ArithmeticOperand(previous), ArithmeticOperand(val), out result, out error),
                     _ => false
                 };
                 if (!valid || result == null) throw new ConstEvalException(error ?? "Unsupported compound assignment", node.Line);

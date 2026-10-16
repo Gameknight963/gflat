@@ -224,7 +224,7 @@ public partial class TypeChecker
         _currentStruct = null;
         if (definition is MethodDeclaration method && TryGetMethodOwner(method, out string owner, out bool isClass))
         {
-            if (isClass) _currentClass = GetClass(owner); else _currentStruct = GetStruct(owner);
+            if (isClass) _currentClass = GetClassByIdentity(owner); else _currentStruct = GetStructByIdentity(owner);
         }
         string ns = declarationNamespaces.GetValueOrDefault(definition) ??
             (definition is MethodDeclaration m ? GetFunctionNamespace(m).Replace("$", "::") : "");
@@ -257,7 +257,7 @@ public partial class TypeChecker
                     {
                         var previousClass = _currentClass;
                         var previousStruct = _currentStruct;
-                        _currentClass = GetClass(cls.Name);
+                        _currentClass = GetClassByIdentity(cls.Name);
                         _currentStruct = null;
                         try { Walk(cls.Members, scope); }
                         finally { _currentClass = previousClass; _currentStruct = previousStruct; }
@@ -268,7 +268,7 @@ public partial class TypeChecker
                         var previousClass = _currentClass;
                         var previousStruct = _currentStruct;
                         _currentClass = null;
-                        _currentStruct = GetStruct(str.Name);
+                        _currentStruct = GetStructByIdentity(str.Name);
                         try { Walk(str.Members, scope); }
                         finally { _currentClass = previousClass; _currentStruct = previousStruct; }
                         break;

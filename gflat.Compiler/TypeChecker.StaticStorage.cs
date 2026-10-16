@@ -86,8 +86,8 @@ public partial class TypeChecker
             if (access.Left is IdentifierExpression left && TryLookupVariable(left.Name, out _)) return false;
             if (StaticOwnerType(access.Left) is { } type && ResolveAlias(type) is NamedTypeExpression named)
             {
-                field = GetClass(named.Name)?.FieldDeclarationsByName.GetValueOrDefault(access.Member) ??
-                    GetStruct(named.Name)?.FieldDeclarationsByName.GetValueOrDefault(access.Member);
+                field = GetClassByIdentity(named.Name)?.FieldDeclarationsByName.GetValueOrDefault(access.Member) ??
+                    GetStructByIdentity(named.Name)?.FieldDeclarationsByName.GetValueOrDefault(access.Member);
                 if (field != null && !field.IsStatic && !field.IsConst)
                     throw new TypeCheckException($"Instance field '{access.Member}' must be accessed through an object", access.Span);
                 if (field != null) owner = named.Name;

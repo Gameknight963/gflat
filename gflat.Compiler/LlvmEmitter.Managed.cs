@@ -47,7 +47,7 @@ public partial class LlvmEmitter
         if (type is not NamedTypeExpression named || TypeChecker.IsPrimitive(named.Name)) return false;
         visited ??= new();
         if (!visited.Add(named.Name)) return false;
-        var fields = _typeChecker.GetStruct(named.Name)?.Fields.Select(f => f.Type) ?? _typeChecker.GetClass(named.Name)?.Fields.Select(f => f.Type);
+        var fields = _typeChecker.GetStructByIdentity(named.Name)?.Fields.Select(f => f.Type) ?? _typeChecker.GetClassByIdentity(named.Name)?.Fields.Select(f => f.Type);
         return fields?.Any(f => HasManagedReferences(f, visited)) == true;
     }
     private bool NeedsCleanup(TypeExpression type)
@@ -86,8 +86,8 @@ public partial class LlvmEmitter
         }
         else if (type is NamedTypeExpression named)
         {
-            var structure = _typeChecker.GetStruct(named.Name);
-            var cls = _typeChecker.GetClass(named.Name);
+            var structure = _typeChecker.GetStructByIdentity(named.Name);
+            var cls = _typeChecker.GetClassByIdentity(named.Name);
             var fields = (structure?.Fields.Select(f => f.Type) ?? cls!.Fields.Select(f => f.Type)).ToArray();
             for (int i = 0; i < fields.Length; i++)
             {
@@ -202,7 +202,7 @@ public partial class LlvmEmitter
     private string CollectorMethodName(TypeChecker.CollectorBinding collector, MethodDeclaration method)
     {
         string owner = collector.IsClass
-            ? _typeChecker.GetClass(collector.Owner)!.Methods[method.Name].DeclaringClass : collector.Owner;
+            ? _typeChecker.GetClassByIdentity(collector.Owner)!.Methods[method.Name].DeclaringClass : collector.Owner;
         return GetMethodMangledName(owner, method, _typeChecker.GetFunctionNamespace(method), collector.IsClass);
     }
 

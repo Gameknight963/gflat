@@ -8,7 +8,7 @@ public sealed partial class EditorModel
     {
         var declaration = ContextParents(path, offset).FirstOrDefault(p => p.Node is ClassDeclaration);
         if (declaration?.Node is not ClassDeclaration type) return [];
-        string? baseName = snapshot.Checker?.GetClass(type.Name)?.BaseClass ?? type.BaseClass ??
+        string? baseName = snapshot.Checker?.GetClassByIdentity(type.Name)?.BaseClass ?? type.BaseClass ??
             type.Interfaces.FirstOrDefault(name => symbols.Any(s => s.Syntax.Node is ClassDeclaration &&
                 (s.Qualified == name || s.Name == name)));
         if (baseName == null) return [];

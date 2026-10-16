@@ -22,8 +22,8 @@ public partial class TypeChecker
             {
                 using var groupContext = SourceContext.Enter(group.First().Method.Span);
                 _currentNamespace = group.Key.Scope;
-                _currentClass = group.Key.Owner is ClassDeclaration cls ? GetClass(cls.Name) : null;
-                _currentStruct = group.Key.Owner is StructDeclaration str ? GetStruct(str.Name) : null;
+                _currentClass = group.Key.Owner is ClassDeclaration cls ? GetClassByIdentity(cls.Name) : null;
+                _currentStruct = group.Key.Owner is StructDeclaration str ? GetStructByIdentity(str.Name) : null;
                 var functions = group.ToList();
                 foreach (FunctionEntry entry in functions)
                 {

@@ -96,10 +96,10 @@ public partial class TypeChecker
         inlineLayoutPath.Add((name, fieldPath));
         try
         {
-            if (GetStruct(name) is { } str)
+            if (GetStructByIdentity(name) is { } str)
                 foreach (var field in str.Fields)
                     VisitField(field.Name, field.Type, str.FieldDeclarationsByName.GetValueOrDefault(field.Name));
-            else if (GetClass(name) is { } cls)
+            else if (GetClassByIdentity(name) is { } cls)
             {
                 if (cls.BaseClass != null) ValidateInlineLayout(cls.BaseClass, DisplayName(name) + " : " + DisplayName(cls.BaseClass), fieldSpan);
                 foreach (var field in cls.Fields.Where(field => field.DeclaringClass == name))
@@ -128,7 +128,7 @@ public partial class TypeChecker
             TypeExpression resolved = ResolveFieldLayoutType(type);
             if (resolved is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression or ReferenceTypeExpression) return;
             if (resolved is ArrayTypeExpression resolvedArray) { VisitValue(resolvedArray.ElementType, path, span); return; }
-            if (resolved is NamedTypeExpression named && (GetStruct(named.Name) != null || GetClass(named.Name) != null))
+            if (resolved is NamedTypeExpression named && (GetStructByIdentity(named.Name) != null || GetClassByIdentity(named.Name) != null))
                 ValidateInlineLayout(named.Name, path, span);
         }
     }

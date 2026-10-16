@@ -161,6 +161,9 @@ namespace gflat
 
         public bool IsInterface(string name) => _interfaces.ContainsKey(name);
 
+        public StructInfo? GetStructByIdentity(string identity) => _structs.GetValueOrDefault(identity);
+        TypeChecker.StructInfo? IConstEvaluationContext.GetStruct(string identity) => GetStructByIdentity(identity);
+
         public StructInfo? GetStruct(string name)
         {
             name = ResolveTypeIdentity(name, null) ?? name;
@@ -273,6 +276,10 @@ namespace gflat
         }
 
         private readonly Dictionary<string, ClassInfo> _classes = new();
+        public ClassInfo? GetClassByIdentity(string identity) => _classes.GetValueOrDefault(identity);
+        public bool IsClassByIdentity(string identity) => _classes.ContainsKey(identity);
+        TypeChecker.ClassInfo? IConstEvaluationContext.GetClass(string identity) => GetClassByIdentity(identity);
+
         public ClassInfo? GetClass(string name)
         {
             name = ResolveTypeIdentity(name, null) ?? name;
@@ -427,7 +434,7 @@ namespace gflat
                     return false;
                 }
 
-                StructInfo? sInfo = GetStruct(named.Name);
+                StructInfo? sInfo = GetStructByIdentity(named.Name);
                 if (sInfo != null)
                 {
                     if (sInfo.Destructor != null)
@@ -444,7 +451,7 @@ namespace gflat
                     return false;
                 }
 
-                ClassInfo? cInfo = GetClass(named.Name);
+                ClassInfo? cInfo = GetClassByIdentity(named.Name);
                 if (cInfo != null)
                 {
                     if (cInfo.Destructor != null || (cInfo.BaseClass != null &&
@@ -1281,7 +1288,7 @@ namespace gflat
         private void ValidateTypeUsage(TypeExpression type, int line)
         {
             TypeExpression resolved = ResolveAlias(type);
-            if (resolved is NamedTypeExpression staticType && GetClass(staticType.Name) is { IsStatic: true })
+            if (resolved is NamedTypeExpression staticType && GetClassByIdentity(staticType.Name) is { IsStatic: true })
                 throw new TypeCheckException($"Static class '{DisplayName(staticType.Name)}' cannot be used as an instance type", type.Span.Source != null ? type.Span : SourceContext.ForLine(line));
             if (resolved is NamedTypeExpression unknown && !IsPrimitive(unknown.Name) && !IsError(unknown) &&
                 !_classes.ContainsKey(unknown.Name) && !_structs.ContainsKey(unknown.Name) &&
@@ -1361,12 +1368,12 @@ namespace gflat
                 {
                     return TargetInfo.Default.PointerBytes;
                 }
-                StructInfo? structInfo = GetStruct(named.Name);
+                StructInfo? structInfo = GetStructByIdentity(named.Name);
                 if (structInfo != null)
                 {
                     return GetStructAlignment(structInfo);
                 }
-                if (GetClass(named.Name) is ClassInfo classInfo)
+                if (GetClassByIdentity(named.Name) is ClassInfo classInfo)
                 {
                     return GetClassAlignment(classInfo);
                 }
@@ -1505,12 +1512,12 @@ namespace gflat
                 {
                     return 16;
                 }
-                StructInfo? structInfo = GetStruct(named.Name);
+                StructInfo? structInfo = GetStructByIdentity(named.Name);
                 if (structInfo != null)
                 {
                     return GetStructSize(structInfo);
                 }
-                ClassInfo? classInfo = GetClass(named.Name);
+                ClassInfo? classInfo = GetClassByIdentity(named.Name);
                 if (classInfo != null)
                 {
                     return GetClassSize(classInfo);
@@ -5437,13 +5444,13 @@ namespace gflat
                 IEnumerable<AstNode> members = Array.Empty<AstNode>();
                 if (node is ClassDeclaration cls)
                 {
-                    _currentClass = GetClass(cls.Name);
+                    _currentClass = GetClassByIdentity(cls.Name);
                     _currentStruct = null;
                     members = cls.Members;
                 }
                 else if (node is StructDeclaration str)
                 {
-                    _currentStruct = GetStruct(str.Name);
+                    _currentStruct = GetStructByIdentity(str.Name);
                     _currentClass = null;
                     members = str.Members;
                 }

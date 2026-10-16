@@ -173,7 +173,7 @@ public partial class LlvmEmitter
             // Throwing a value constructs its static type. In particular, copying
             // a base catch binding must not retain a derived vtable in storage
             // sized only for the base. `throw;` preserves the dynamic object.
-            var exceptionClass = _typeChecker.GetClass(((NamedTypeExpression)_typeChecker.ResolveAlias(type)).Name)!;
+            var exceptionClass = _typeChecker.GetClassByIdentity(((NamedTypeExpression)_typeChecker.ResolveAlias(type)).Name)!;
             string vtable = NewTemp();
             Emit($"    {vtable} = getelementptr {llvm}, {llvm}* {address}, i32 0, i32 0");
             Emit($"    store i8** bitcast ([{exceptionClass.VirtualMethods.Count} x i8*]* @{exceptionClass.Name}$vtable to i8**), i8*** {vtable}");
@@ -213,7 +213,7 @@ public partial class LlvmEmitter
                 var binding = _typeChecker.ResolveAlias(clause.ExceptionType);
                 var inner = binding is ReferenceTypeExpression reference ? reference.Inner : ((PointerTypeExpression)binding).Inner;
                 var named = (NamedTypeExpression)_typeChecker.ResolveAlias(inner);
-                var cls = _typeChecker.GetClass(named.Name)!;
+                var cls = _typeChecker.GetClassByIdentity(named.Name)!;
                 string vtSlot = NewTemp(), vt = NewTemp(), matches = NewTemp();
                 Emit($"    {vtSlot} = getelementptr %Exception, %Exception* {error}, i32 0, i32 0");
                 Emit($"    {vt} = load i8**, i8*** {vtSlot}");

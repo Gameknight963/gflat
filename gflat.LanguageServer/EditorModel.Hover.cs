@@ -250,7 +250,7 @@ public sealed partial class EditorModel
             type = checker.ResolveAlias(type);
             if (!Known(type)) return [];
             int size = checker.GetTypeSize(type), alignment = checker.GetTypeAlignment(type);
-            string label = type is NamedTypeExpression named && checker.GetClass(named.Name) != null ? "Object size" : "Size";
+            string label = type is NamedTypeExpression named && checker.GetClassByIdentity(named.Name) != null ? "Object size" : "Size";
             return [new(label, $"{size} bytes"), new("Alignment", $"{alignment} bytes")];
         }
         catch (TypeCheckException) { return []; }
@@ -260,7 +260,7 @@ public sealed partial class EditorModel
             PointerTypeExpression p => Known(p.Inner), ManagedTypeExpression p => Known(p.Inner),
             FunctionPointerTypeExpression { IsSignature: false } => true,
             ArrayTypeExpression a => a.Size != null && Known(a.ElementType),
-            NamedTypeExpression n => n.TypeArguments.Count == 0 && (TypeChecker.IsPrimitive(n.Name) || checker.GetClass(n.Name) != null || checker.GetStruct(n.Name) != null || checker.GetInterface(n.Name) != null || checker.ResolveEnum(n) != null),
+            NamedTypeExpression n => n.TypeArguments.Count == 0 && (TypeChecker.IsPrimitive(n.Name) || checker.GetClassByIdentity(n.Name) != null || checker.GetStructByIdentity(n.Name) != null || checker.GetInterface(n.Name) != null || checker.ResolveEnum(n) != null),
             _ => false
         };
     }

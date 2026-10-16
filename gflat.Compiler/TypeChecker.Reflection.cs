@@ -41,8 +41,8 @@ public partial class TypeChecker
             ReferenceTypeExpression => 9,
             NamedTypeExpression n when IsInterface(n) => 4,
             NamedTypeExpression n when ResolveEnum(n) != null => 3,
-            NamedTypeExpression n when IsClass(n.Name) => 1,
-            NamedTypeExpression n when GetStruct(n.Name) != null => 2,
+            NamedTypeExpression n when IsClassByIdentity(n.Name) => 1,
+            NamedTypeExpression n when GetStructByIdentity(n.Name) != null => 2,
             _ => 0
         };
         TypeExpression? element = type switch {

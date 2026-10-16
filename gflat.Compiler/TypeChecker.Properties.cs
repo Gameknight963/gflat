@@ -188,12 +188,12 @@ public partial class TypeChecker
                     if (TryLookupVariable(typeName.Name, out _)) return null;
                     owner = GetClass(typeName.Name)?.Name ?? GetStruct(typeName.Name)?.Name;
                     if (owner == null && ResolveAlias(new NamedTypeExpression(typeName.Name, null, typeName.Line)) is NamedTypeExpression alias)
-                        owner = GetClass(alias.Name)?.Name ?? GetStruct(alias.Name)?.Name;
+                        owner = GetClassByIdentity(alias.Name)?.Name ?? GetStructByIdentity(alias.Name)?.Name;
                 }
                 else if (access.Left is NamespaceAccessExpression qualified && ResolveNamespace(qualified.Left) is NamespaceScope scope)
                     owner = scope.Classes.GetValueOrDefault(qualified.Member)?.Name ?? scope.Structs.GetValueOrDefault(qualified.Member)?.Name;
                 else if (StaticOwnerType(access.Left) is { } ownerType && ResolveAlias(ownerType) is NamedTypeExpression namedOwner)
-                    owner = GetClass(namedOwner.Name)?.Name ?? GetStruct(namedOwner.Name)?.Name;
+                    owner = GetClassByIdentity(namedOwner.Name)?.Name ?? GetStructByIdentity(namedOwner.Name)?.Name;
                 else return null;
                 break;
             default: return null;

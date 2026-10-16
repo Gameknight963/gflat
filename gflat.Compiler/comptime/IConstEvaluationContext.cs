@@ -19,8 +19,9 @@ namespace gflat.comptime
         bool TryGetConstValue(AstNode node, out ConstValue? value);
         CallExpression? GetPropertyRead(AstNode node);
         TypeChecker.PropertyWrite? GetPropertyWrite(AstNode node);
-        TypeChecker.StructInfo? GetStruct(string name);
-        TypeChecker.ClassInfo? GetClass(string name);
+        // Evaluation receives bound type identities, not source lookup names.
+        TypeChecker.StructInfo? GetStruct(string identity);
+        TypeChecker.ClassInfo? GetClass(string identity);
         bool IsInterface(string name);
         TypeChecker.InterfaceInfo? GetInterface(string name);
         TypeChecker.EnumInfo? ResolveEnum(NamedTypeExpression named);

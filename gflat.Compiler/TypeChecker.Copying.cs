@@ -13,7 +13,7 @@ public partial class TypeChecker
         type = ResolveAlias(type);
         if (type is not NamedTypeExpression n) return null;
         CheckInvalidInlineLayout(n.Name);
-        return (GetStruct(n.Name)?.Constructors ?? GetClass(n.Name)?.Constructors)?.FirstOrDefault(c => c.IsCopy);
+        return (GetStructByIdentity(n.Name)?.Constructors ?? GetClassByIdentity(n.Name)?.Constructors)?.FirstOrDefault(c => c.IsCopy);
     }
 
     public bool RequiresCopy(TypeExpression type)
@@ -22,9 +22,9 @@ public partial class TypeChecker
         if (type is ArrayTypeExpression a) return RequiresCopy(a.ElementType);
         if (CopyConstructor(type) != null || HasDestructor(type)) return true;
         if (type is not NamedTypeExpression n) return false;
-        var cls = GetClass(n.Name);
+        var cls = GetClassByIdentity(n.Name);
         if (cls?.BaseClass is string parent && RequiresCopy(new NamedTypeExpression(parent, null, type.Line))) return true;
-        var fields = GetStruct(n.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type);
+        var fields = GetStructByIdentity(n.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type);
         return fields?.Any(RequiresCopy) == true;
     }
 
@@ -34,8 +34,8 @@ public partial class TypeChecker
         if (type is ArrayTypeExpression a) return a.Size != null && CanCopy(a.ElementType);
         if (CopyConstructor(type) != null) return true;
         if (type is not NamedTypeExpression n) return true;
-        var str = GetStruct(n.Name);
-        var cls = GetClass(n.Name);
+        var str = GetStructByIdentity(n.Name);
+        var cls = GetClassByIdentity(n.Name);
         // A user-written destructor describes a resource contract we cannot infer.
         if (str?.Destructor != null || cls?.Destructor != null) return false;
         if (cls?.BaseClass is string parent && !CanCopy(new NamedTypeExpression(parent, null, type.Line))) return false;
@@ -53,9 +53,9 @@ public partial class TypeChecker
                 TokenKind.Protected => accessor != null && (accessor == named.Name || IsSubclassOf(accessor, named.Name)),
                 _ => true
             };
-        var cls = GetClass(named.Name);
+        var cls = GetClassByIdentity(named.Name);
         if (cls?.BaseClass is string parent && !CanAccessCopy(new NamedTypeExpression(parent, null, type.Line), named.Name)) return false;
-        var fields = GetStruct(named.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type);
+        var fields = GetStructByIdentity(named.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type);
         return fields?.All(f => CanAccessCopy(f, named.Name)) ?? true;
     }
 
@@ -65,9 +65,9 @@ public partial class TypeChecker
         if (type is ArrayTypeExpression array) return CopyCanThrow(array.ElementType);
         if (CopyConstructor(type) is ConstructorDeclaration copy) return !copy.IsNoThrow;
         if (type is not NamedTypeExpression named) return false;
-        var cls = GetClass(named.Name);
+        var cls = GetClassByIdentity(named.Name);
         if (cls?.BaseClass is string parent && CopyCanThrow(new NamedTypeExpression(parent, null, type.Line))) return true;
-        return (GetStruct(named.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type))?.Any(CopyCanThrow) == true;
+        return (GetStructByIdentity(named.Name)?.Fields.Select(f => f.Type) ?? cls?.Fields.Select(f => f.Type))?.Any(CopyCanThrow) == true;
     }
 
     public bool CopiesValue(AstNode expression, TypeExpression target)

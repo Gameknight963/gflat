@@ -70,7 +70,7 @@ public partial class LlvmEmitter : IVisitor
                 return $"{typeStr} {ConstArrayAddress(arrayPointer, typeStr)}";
             case ConstValue.Struct structVal:
                 {
-                    TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(structVal.StructName);
+                    TypeChecker.StructInfo? sInfo = _typeChecker.GetStructByIdentity(structVal.StructName);
                     if (sInfo == null) throw new Exception($"Unknown struct {structVal.StructName}");
                     List<string> fieldInits = new();
                     foreach ((string Name, TypeExpression Type) fld in sInfo.Fields)
@@ -88,7 +88,7 @@ public partial class LlvmEmitter : IVisitor
                 }
             case ConstValue.ClassInstance classVal:
                 {
-                    TypeChecker.ClassInfo? cInfo = _typeChecker.GetClass(classVal.ClassName);
+                    TypeChecker.ClassInfo? cInfo = _typeChecker.GetClassByIdentity(classVal.ClassName);
                     if (cInfo == null) throw new Exception($"Unknown class {classVal.ClassName}");
                     int vtableSize = cInfo.VirtualMethods.Count;
                     string vtableCast = vtableSize == 0
@@ -139,7 +139,7 @@ public partial class LlvmEmitter : IVisitor
 
         if (target is ConstValue.Struct sVal)
         {
-            TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(sVal.StructName);
+            TypeChecker.StructInfo? sInfo = _typeChecker.GetStructByIdentity(sVal.StructName);
             if (sInfo == null) throw new Exception($"Unknown struct {sVal.StructName}");
             string init = EmitConstInitializer(sVal, new NamedTypeExpression(sVal.StructName, null, 0));
             EmitGlobal($"{candidate} = internal constant {init}");
@@ -147,7 +147,7 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (target is ConstValue.ClassInstance cVal)
         {
-            TypeChecker.ClassInfo? cInfo = _typeChecker.GetClass(cVal.ClassName);
+            TypeChecker.ClassInfo? cInfo = _typeChecker.GetClassByIdentity(cVal.ClassName);
             if (cInfo == null) throw new Exception($"Unknown class {cVal.ClassName}");
             string init = EmitConstInitializer(cVal, new NamedTypeExpression(cVal.ClassName, null, 0));
             EmitGlobal($"{candidate} = internal constant {init}");
@@ -229,7 +229,7 @@ public partial class LlvmEmitter : IVisitor
                 return true;
             case ConstValue.Struct structVal:
                 {
-                    TypeChecker.StructInfo? sInfo = _typeChecker.GetStruct(structVal.StructName);
+                    TypeChecker.StructInfo? sInfo = _typeChecker.GetStructByIdentity(structVal.StructName);
                     if (sInfo != null)
                     {
                         string temp = NewTemp();
@@ -498,10 +498,10 @@ public partial class LlvmEmitter : IVisitor
             EmitManagedReferences(type, address, false);
             return;
         }
-        if (type is not NamedTypeExpression named || (!_typeChecker.HasDestructor(type) && !_typeChecker.IsClass(named.Name))) return;
-        if (_typeChecker.GetStruct(named.Name) is { } structure)
+        if (type is not NamedTypeExpression named || (!_typeChecker.HasDestructor(type) && !_typeChecker.IsClassByIdentity(named.Name))) return;
+        if (_typeChecker.GetStructByIdentity(named.Name) is { } structure)
             new StructDestructorDeferAction(structure.Name, address, structure.Namespace).Execute(this);
-        else if (_typeChecker.GetClass(named.Name) is { } cls)
+        else if (_typeChecker.GetClassByIdentity(named.Name) is { } cls)
             new ClassDestructorDeferAction(cls, address, cls.DestructorSlot >= 0, cls.DestructorSlot).Execute(this);
     }
 
@@ -790,9 +790,9 @@ public partial class LlvmEmitter : IVisitor
             objType = mgdType.Inner;
 
         string typeName = ((NamedTypeExpression)objType).Name;
-        if (_typeChecker.IsClass(typeName))
+        if (_typeChecker.IsClassByIdentity(typeName))
         {
-            TypeChecker.ClassInfo cInfo = _typeChecker.GetClass(typeName)!;
+            TypeChecker.ClassInfo cInfo = _typeChecker.GetClassByIdentity(typeName)!;
             int fieldIdx = cInfo.FieldIndex(node.Member);
             TypeExpression fieldType = cInfo.Fields[fieldIdx].Type;
             string llvmFieldType = EmitType(fieldType);
@@ -804,7 +804,7 @@ public partial class LlvmEmitter : IVisitor
         }
 
         string structName = typeName;
-        TypeChecker.StructInfo info = _typeChecker.GetStruct(structName)!;
+        TypeChecker.StructInfo info = _typeChecker.GetStructByIdentity(structName)!;
         int sFieldIdx = info.FieldIndex(node.Member);
         TypeExpression sFieldType = info.Fields[sFieldIdx].Type;
         string llvmSFieldType = EmitType(sFieldType);
@@ -1111,7 +1111,7 @@ public partial class LlvmEmitter : IVisitor
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
         TypeChecker.StructInfo? prevStruct = _currentStruct;
-        _currentClass = _typeChecker.GetClass(node.Name);
+        _currentClass = _typeChecker.GetClassByIdentity(node.Name);
         _currentStruct = null;
 
         try
@@ -1159,7 +1159,7 @@ public partial class LlvmEmitter : IVisitor
                     else
                     {
                         string declaringClass = _currentClass.Methods[vm.Name].DeclaringClass;
-                        TypeChecker.ClassInfo declaringClassInfo = _typeChecker.GetClass(declaringClass)!;
+                        TypeChecker.ClassInfo declaringClassInfo = _typeChecker.GetClassByIdentity(declaringClass)!;
                         string methodNs = declaringClassInfo.Namespace;
                         string mangled = methodNs.Length > 0
                             ? $"gflat${methodNs}${declaringClass}${vm.Name}"
@@ -1197,7 +1197,7 @@ public partial class LlvmEmitter : IVisitor
                         (MethodDeclaration Method, string DeclaringClass) mEntry = _currentClass.Methods[ifaceMethod.Name];
                         MethodDeclaration classMethod = _typeChecker.InterfaceImplementation(mEntry.Method, ifaceMethod);
                         string declaringClass = mEntry.DeclaringClass;
-                        TypeChecker.ClassInfo declaringInfo = _typeChecker.GetClass(declaringClass)!;
+                        TypeChecker.ClassInfo declaringInfo = _typeChecker.GetClassByIdentity(declaringClass)!;
                         string methodNs = declaringInfo.Namespace;
                         string mangled = methodNs.Length > 0
                             ? $"gflat${methodNs}${declaringClass}${classMethod.Name}"
@@ -1319,7 +1319,7 @@ public partial class LlvmEmitter : IVisitor
         }
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
-        _currentClass = _typeChecker.GetClass(className);
+        _currentClass = _typeChecker.GetClassByIdentity(className);
 
         if (node.Body != null)
             node.Body.Accept(this);
@@ -1408,12 +1408,12 @@ public partial class LlvmEmitter : IVisitor
         BeginConstruction(className, node);
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
-        _currentClass = _typeChecker.GetClass(className);
+        _currentClass = _typeChecker.GetClassByIdentity(className);
 
         // 1. Call base class constructor if base class exists
         if (_currentClass!.BaseClass != null)
         {
-            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClass(_currentClass.BaseClass)!;
+            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClassByIdentity(_currentClass.BaseClass)!;
             string loadedThis = NewTemp();
             Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
             string baseThis = NewTemp();
@@ -1506,12 +1506,12 @@ public partial class LlvmEmitter : IVisitor
         BeginConstruction(className);
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
-        _currentClass = _typeChecker.GetClass(className);
+        _currentClass = _typeChecker.GetClassByIdentity(className);
 
         // 1. Call base class constructor if base class exists
         if (_currentClass!.BaseClass != null)
         {
-            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClass(_currentClass.BaseClass)!;
+            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClassByIdentity(_currentClass.BaseClass)!;
             string loadedThis = NewTemp();
             Emit($"    {loadedThis} = load %{className}*, %{className}** {thisPtr}");
             string baseThis = NewTemp();
@@ -1569,7 +1569,7 @@ public partial class LlvmEmitter : IVisitor
         _locals["this"] = thisPtr;
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
-        _currentClass = _typeChecker.GetClass(className);
+        _currentClass = _typeChecker.GetClassByIdentity(className);
 
         if (node?.Body != null)
         {
@@ -1584,7 +1584,7 @@ public partial class LlvmEmitter : IVisitor
 
         if (_currentClass!.BaseClass != null)
         {
-            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClass(_currentClass.BaseClass)!;
+            TypeChecker.ClassInfo baseInfo = _typeChecker.GetClassByIdentity(_currentClass.BaseClass)!;
             if (_typeChecker.HasAnyDestructor(baseInfo) || NeedsCleanup(new NamedTypeExpression(baseInfo.Name, null, 0)))
             {
                 string loadedThis = NewTemp();
@@ -1620,7 +1620,7 @@ public partial class LlvmEmitter : IVisitor
 
         TypeChecker.StructInfo? prevStruct = _currentStruct;
         TypeChecker.ClassInfo? prevClass = _currentClass;
-        _currentStruct = _typeChecker.GetStruct(node.Name);
+        _currentStruct = _typeChecker.GetStructByIdentity(node.Name);
         _currentClass = null;
 
         try
@@ -2023,7 +2023,7 @@ public partial class LlvmEmitter : IVisitor
         _locals["this"] = thisPtr;
 
         TypeChecker.StructInfo? prevStruct = _currentStruct;
-        _currentStruct = _typeChecker.GetStruct(structName);
+        _currentStruct = _typeChecker.GetStructByIdentity(structName);
 
         if (node?.Body != null)
         {
@@ -2531,7 +2531,7 @@ public partial class LlvmEmitter : IVisitor
         else
         {
             TypeExpression unwrappedInit = _typeChecker.ResolveAlias(resolvedVarType);
-            if (unwrappedInit is NamedTypeExpression namedInit && _typeChecker.GetClass(namedInit.Name) != null)
+            if (unwrappedInit is NamedTypeExpression namedInit && _typeChecker.GetClassByIdentity(namedInit.Name) != null)
             {
                 Emit($"    store {type} zeroinitializer, {type}* {ptr}");
             }
@@ -3463,9 +3463,9 @@ public partial class LlvmEmitter : IVisitor
 
             string rawName = ((NamedTypeExpression)(objType is PointerTypeExpression p ? p.Inner : (objType is ManagedTypeExpression m ? m.Inner : objType))).Name;
             string typeName = rawName;
-            if (_typeChecker.IsClass(rawName))
+            if (_typeChecker.IsClassByIdentity(rawName))
             {
-                TypeChecker.ClassInfo cInfo = _typeChecker.GetClass(rawName)!;
+                TypeChecker.ClassInfo cInfo = _typeChecker.GetClassByIdentity(rawName)!;
                 string declaringClass = cInfo.Methods[structMethod.Name].DeclaringClass;
                 typeName = declaringClass;
                 if (rawName != declaringClass)
@@ -3478,7 +3478,7 @@ public partial class LlvmEmitter : IVisitor
             }
 
             string ns = _typeChecker.GetFunctionNamespace(structMethod);
-            funcName = GetMethodMangledName(typeName, structMethod, ns, isClass: _typeChecker.IsClass(rawName));
+            funcName = GetMethodMangledName(typeName, structMethod, ns, isClass: _typeChecker.IsClassByIdentity(rawName));
         }
         else if (node.Callee is IdentifierExpression idMethod && target is MethodDeclaration methodMember && _currentClass != null && !methodMember.IsStatic && _currentClass.Methods.ContainsKey(idMethod.Name))
         {
@@ -3857,9 +3857,9 @@ public partial class LlvmEmitter : IVisitor
             PushManaged(node, address);
             return;
         }
-        bool isClass = _typeChecker.IsClass(typeName);
-        TypeChecker.StructInfo? sInfo = isClass ? null : _typeChecker.GetStruct(typeName);
-        TypeChecker.ClassInfo? cInfo = isClass ? _typeChecker.GetClass(typeName) : null;
+        bool isClass = _typeChecker.IsClassByIdentity(typeName);
+        TypeChecker.StructInfo? sInfo = isClass ? null : _typeChecker.GetStructByIdentity(typeName);
+        TypeChecker.ClassInfo? cInfo = isClass ? _typeChecker.GetClassByIdentity(typeName) : null;
         if (isClass && cInfo == null)
         {
             throw new Exception($"Cannot emit 'new' for unknown class '{typeName}' on line {node.Line}");
@@ -4055,9 +4055,9 @@ public partial class LlvmEmitter : IVisitor
         }
         if (type is NamedTypeExpression named)
         {
-            if (_typeChecker.GetStruct(named.Name) is TypeChecker.StructInfo str)
+            if (_typeChecker.GetStructByIdentity(named.Name) is TypeChecker.StructInfo str)
                 return "{ " + string.Join(", ", str.Fields.Select(f => $"{EmitType(f.Type)} {GetDefaultValue(f.Type)}")) + " }";
-            if (_typeChecker.GetClass(named.Name) is TypeChecker.ClassInfo cls)
+            if (_typeChecker.GetClassByIdentity(named.Name) is TypeChecker.ClassInfo cls)
             {
                 var fields = new List<string> { $"i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**)" };
                 fields.AddRange(cls.Fields.Select(f => $"{EmitType(f.Type)} {GetDefaultValue(f.Type)}"));
@@ -4478,7 +4478,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitExceptionDestroyHelper()
     {
-        if (_typeChecker.GetClass("Exception") == null || _typeChecker.GetMemoryFunction("Free") == null) return;
+        if (_typeChecker.GetClassByIdentity("Exception") == null || _typeChecker.GetMemoryFunction("Free") == null) return;
         _tempCounter = 0;
         Emit("define void @gflat_destroy_exception(%Exception* %exception) {");
         Emit("entry:");
@@ -4535,7 +4535,7 @@ public partial class LlvmEmitter : IVisitor
             Emit($"{matchLbl}:");
             if (cls.BaseClass != null)
             {
-                TypeChecker.ClassInfo? baseCls = _typeChecker.GetClass(cls.BaseClass);
+                TypeChecker.ClassInfo? baseCls = _typeChecker.GetClassByIdentity(cls.BaseClass);
                 int baseVtSize = baseCls != null ? baseCls.VirtualMethods.Count : 0;
                 string baseGlobal = NewTemp();
                 if (baseVtSize > 0)

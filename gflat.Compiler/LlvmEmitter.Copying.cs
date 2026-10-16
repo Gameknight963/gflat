@@ -37,7 +37,7 @@ public partial class LlvmEmitter
         if (_typeChecker.CopyConstructor(type) is ConstructorDeclaration constructor)
         {
             string name = ((NamedTypeExpression)type).Name;
-            string ns = _typeChecker.GetStruct(name)?.Namespace ?? _typeChecker.GetClass(name)!.Namespace;
+            string ns = _typeChecker.GetStructByIdentity(name)?.Namespace ?? _typeChecker.GetClassByIdentity(name)!.Namespace;
             EmitManagedStore(type, GetDefaultValue(type), destination);
             EmitConstructorCall(GetConstructorMangledName(name, constructor, ns), constructor,
                 $"{llvm}* {destination}, {llvm}* {source}");
@@ -68,8 +68,8 @@ public partial class LlvmEmitter
                 return;
             }
             string name = ((NamedTypeExpression)type).Name;
-            var cls = _typeChecker.GetClass(name);
-            var str = _typeChecker.GetStruct(name);
+            var cls = _typeChecker.GetClassByIdentity(name);
+            var str = _typeChecker.GetStructByIdentity(name);
             EmitManagedStore(type, GetDefaultValue(type), destination);
             if (cls?.BaseClass is string parent)
             {
@@ -105,7 +105,7 @@ public partial class LlvmEmitter
     {
         public void Execute(LlvmEmitter emitter)
         {
-            string ns = emitter._typeChecker.GetClass(name)!.Namespace;
+            string ns = emitter._typeChecker.GetClassByIdentity(name)!.Namespace;
             string destructor = ns.Length > 0 ? $"gflat${ns}${name}$dtor" : $"gflat${name}$dtor";
             emitter.Emit($"    call void @{destructor}(%{name}* {address})");
             emitter.EmitManagedReferences(new NamedTypeExpression(name, null, 0), address, true);

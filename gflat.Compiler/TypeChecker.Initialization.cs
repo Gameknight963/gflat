@@ -19,9 +19,9 @@ public partial class TypeChecker
         if (!visiting.Add(named.Name)) return false;
         try
         {
-            if (GetStruct(named.Name) is StructInfo str)
+            if (GetStructByIdentity(named.Name) is StructInfo str)
                 return str.Constructors.Count == 0 && str.Fields.All(f => CanDefaultInitialize(f.Type, visiting));
-            if (GetClass(named.Name) is ClassInfo cls)
+            if (GetClassByIdentity(named.Name) is ClassInfo cls)
                 return (!cls.IsAbstract || isBase) && cls.Constructors.Count == 0 &&
                     (cls.BaseClass == null || CanDefaultInitialize(new NamedTypeExpression(cls.BaseClass, null, type.Line), visiting, isBase: true)) &&
                     cls.Fields.All(f => CanDefaultInitialize(f.Type, visiting));
@@ -33,10 +33,10 @@ public partial class TypeChecker
     private void ValidateImplicitConstruction(string name, int line)
     {
         IEnumerable<FieldDeclaration> fields;
-        if (GetClass(name) is ClassInfo cls)
+        if (GetClassByIdentity(name) is ClassInfo cls)
         {
             fields = cls.FieldDeclarations;
-            if (cls.BaseClass != null && GetClass(cls.BaseClass) is ClassInfo parent)
+            if (cls.BaseClass != null && GetClassByIdentity(cls.BaseClass) is ClassInfo parent)
             {
                 if (parent.Constructors.Count == 0) ValidateImplicitConstruction(parent.Name, line);
                 else if (!parent.Constructors.Any(c => AcceptsArgumentCount(c.Parameters, 0)))
@@ -50,7 +50,7 @@ public partial class TypeChecker
                 }
             }
         }
-        else fields = GetStruct(name)!.FieldDeclarations;
+        else fields = GetStructByIdentity(name)!.FieldDeclarations;
         foreach (var field in fields.Where(f => !f.IsStatic))
             if (field.Initializer == null && !CanDefaultInitialize(field.Type))
                 throw new TypeCheckException($"Field '{name}.{field.Name}' requires an initializer or constructor assignment", line);

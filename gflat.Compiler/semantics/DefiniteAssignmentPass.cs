@@ -372,20 +372,7 @@ namespace gflat.semantics
 
             if (resolved is NamedTypeExpression named)
             {
-                structInfo = _typeChecker.GetStruct(named.Name);
-                if (structInfo == null && _currentClass != null)
-                {
-                    structInfo = _typeChecker.GetStruct($"{_currentClass.Name}.{named.Name}");
-                }
-                if (structInfo == null && _currentStruct != null)
-                {
-                    structInfo = _typeChecker.GetStruct($"{_currentStruct.Name}.{named.Name}");
-                }
-                if (structInfo == null)
-                {
-                    structInfo = _typeChecker.Symbols.Structs.Values
-                        .FirstOrDefault(s => s.Name == named.Name || s.Name.EndsWith("." + named.Name) || s.Name.EndsWith("::" + named.Name));
-                }
+                structInfo = _typeChecker.GetStructByIdentity(named.Name);
             }
 
             bool fullyAssigned = isAssigned;

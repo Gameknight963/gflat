@@ -9,8 +9,8 @@ public partial class DefiniteAssignmentPass
     private bool _inConstructor;
 
     private bool IsCurrentInstanceMethod(MethodDeclaration method)
-        => (_currentClass != null && _typeChecker.GetClass(_currentClass.Name)!.Methods.Values.Any(m => m.Method == method)) ||
-           (_currentStruct != null && _typeChecker.GetStruct(_currentStruct.Name)!.AllMethods.Contains(method));
+        => (_currentClass != null && _typeChecker.GetClassByIdentity(_currentClass.Name)!.Methods.Values.Any(m => m.Method == method)) ||
+           (_currentStruct != null && _typeChecker.GetStructByIdentity(_currentStruct.Name)!.AllMethods.Contains(method));
 
     private static string? AutoPropertyStorage(MethodDeclaration method)
     {
@@ -32,8 +32,8 @@ public partial class DefiniteAssignmentPass
     }
 
     private IEnumerable<FieldDeclaration> ConstructorFields => _currentClass != null
-        ? _typeChecker.GetClass(_currentClass.Name)!.FieldDeclarations
-        : _typeChecker.GetStruct(_currentStruct!.Name)!.FieldDeclarations;
+        ? _typeChecker.GetClassByIdentity(_currentClass.Name)!.FieldDeclarations
+        : _typeChecker.GetStructByIdentity(_currentStruct!.Name)!.FieldDeclarations;
 
     private void BeginConstructorFields(bool initialize = true)
     {
@@ -58,7 +58,7 @@ public partial class DefiniteAssignmentPass
     {
         if (_typeChecker.CanDefaultInitialize(type)) return;
         type = _typeChecker.ResolveAlias(type);
-        if (type is NamedTypeExpression named && _typeChecker.GetStruct(named.Name) is TypeChecker.StructInfo { Constructors.Count: 0 } str)
+        if (type is NamedTypeExpression named && _typeChecker.GetStructByIdentity(named.Name) is TypeChecker.StructInfo { Constructors.Count: 0 } str)
         {
             foreach (var field in str.Fields) AddRequiredField(path + "." + field.Name, field.Type);
             return;

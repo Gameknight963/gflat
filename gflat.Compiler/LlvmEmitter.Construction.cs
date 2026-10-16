@@ -80,8 +80,8 @@ public partial class LlvmEmitter
         _parameterOwners.Clear();
         _constructionFields.Clear();
         _constructorLiveFlags.Clear();
-        var cls = _typeChecker.GetClass(name);
-        var str = _typeChecker.GetStruct(name);
+        var cls = _typeChecker.GetClassByIdentity(name);
+        var str = _typeChecker.GetStructByIdentity(name);
         foreach (var field in str?.FieldDeclarations ?? cls!.FieldDeclarations)
         {
             if (field.IsStatic) continue;

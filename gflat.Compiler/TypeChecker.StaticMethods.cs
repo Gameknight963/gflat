@@ -39,8 +39,8 @@ public partial class TypeChecker
         if (cls == null && str == null && StaticOwnerType(access.Left) is { } ownerType &&
             ResolveAlias(ownerType) is NamedTypeExpression resolvedOwner)
         {
-            cls = GetClass(resolvedOwner.Name);
-            str = GetStruct(resolvedOwner.Name);
+            cls = GetClassByIdentity(resolvedOwner.Name);
+            str = GetStructByIdentity(resolvedOwner.Name);
         }
         MethodDeclaration? method = null;
         string? owner = null;

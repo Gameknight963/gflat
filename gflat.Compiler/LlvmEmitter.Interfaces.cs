@@ -13,10 +13,10 @@ public partial class LlvmEmitter
         {
             EmitGlobal($"define internal void @{thunk}(i8* %data) {{");
             EmitGlobal("entry:");
-            if (_typeChecker.IsClass(owner) || NeedsCleanup(new NamedTypeExpression(owner, null, 0)))
+            if (_typeChecker.IsClassByIdentity(owner) || NeedsCleanup(new NamedTypeExpression(owner, null, 0)))
             {
-                var cls = _typeChecker.GetClass(owner);
-                string ns = cls?.Namespace ?? _typeChecker.GetStruct(owner)!.Namespace;
+                var cls = _typeChecker.GetClassByIdentity(owner);
+                string ns = cls?.Namespace ?? _typeChecker.GetStructByIdentity(owner)!.Namespace;
                 string name = ns.Length > 0 ? $"gflat${ns}${owner}$dtor" : $"gflat${owner}$dtor";
                 EmitGlobal($"    %object = bitcast i8* %data to %{owner}*");
                 if (cls is { DestructorSlot: >= 0 })

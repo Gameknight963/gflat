@@ -369,7 +369,7 @@ public sealed partial class EditorModel
             if (type?.Syntax.Node is not ClassDeclaration c) yield break;
             // The parser records the colon list in Interfaces; checking separates
             // its base class into ClassInfo without rewriting the declaration.
-            string? baseClass = snapshot.Checker?.GetClass(owner)?.BaseClass ?? c.BaseClass ??
+            string? baseClass = snapshot.Checker?.GetClassByIdentity(c.Name)?.BaseClass ?? c.BaseClass ??
                 c.Interfaces.FirstOrDefault(name => symbols.Any(s => s.Syntax.Node is ClassDeclaration && (s.Qualified == name || s.Qualified == Join(type.Namespace, name))));
             if (baseClass == null) yield break;
             owner = symbols.FirstOrDefault(s => IsType(s.Syntax.Node) &&

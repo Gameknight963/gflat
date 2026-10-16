@@ -4722,18 +4722,24 @@ namespace gflat
             }
 
             if (node.Arguments.Count != method.Parameters.Count)
+            {
+                string callable = method.PropertyName == null ? $"Function '{funcName}'" : DescribeSourceCallable(method, capitalized: true);
                 throw new TypeCheckException(
-                    $"Function '{funcName}' expects {method.Parameters.Count} arguments but got {node.Arguments.Count}",
+                    $"{callable} expects {method.Parameters.Count} arguments but got {node.Arguments.Count}",
                     node.Line);
+            }
 
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 TypeExpression argType = GetType(node.Arguments[i]);
                 TypeExpression paramType = method.Parameters[i].Type;
                 if (!IsAssignable(paramType, argType, node.Arguments[i]))
+                {
+                    string callable = method.PropertyName == null ? $"'{funcName}'" : DescribeSourceCallable(method);
                     throw new TypeCheckException(
-                        $"Argument {i + 1} of '{funcName}': cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
+                        $"Argument {i + 1} of {callable}: cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
                         node.Arguments[i].Span);
+                }
 
                 if (method.Parameters[i].IsConst)
                 {

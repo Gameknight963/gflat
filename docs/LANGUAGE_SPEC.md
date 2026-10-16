@@ -1128,6 +1128,11 @@ constant expressions and fixed-array lengths, and work through aliases and gener
 specialization. Like `sizeof`, `alignof` also accepts a simple variable name to query
 its declared type; it does not evaluate a value expression.
 
+Concrete array and aggregate layouts are currently limited to 2147483647 bytes.
+`sizeof` and construction diagnose layouts exceeding this implementation
+limit, including field and tail padding; size arithmetic does not wrap. Declaring
+a raw pointer does not require calculating its pointee's complete size.
+
 For a class type these queries describe the complete object, including its vptr
 and padding. For `T*` and `T^` they describe the reference representation instead.
 An interface reference has two pointer-sized words but pointer alignment. Fixed

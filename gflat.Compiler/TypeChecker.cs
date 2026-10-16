@@ -1402,8 +1402,9 @@ namespace gflat
 
         public int GetStructSize(StructInfo structInfo)
         {
-            int offset = 0;
+            long offset = 0;
             int maxAlign = 1;
+            SourceSpan span = default;
             foreach ((string Name, TypeExpression Type) field in structInfo.Fields)
             {
                 int fieldSize = GetTypeSize(field.Type);
@@ -1412,17 +1413,20 @@ namespace gflat
                 {
                     maxAlign = fieldAlign;
                 }
-                offset = (offset + fieldAlign - 1) & ~(fieldAlign - 1);
+                span = field.Type.Span;
+                offset = (offset + fieldAlign - 1) & ~((long)fieldAlign - 1);
                 offset += fieldSize;
+                CheckAggregateLayoutSize(offset, span);
             }
-            offset = (offset + maxAlign - 1) & ~(maxAlign - 1);
-            return offset;
+            offset = (offset + maxAlign - 1) & ~((long)maxAlign - 1);
+            return CheckAggregateLayoutSize(offset, span);
         }
 
         public int GetClassSize(ClassInfo classInfo)
         {
-            int offset = TargetInfo.Default.PointerBytes; // vtable pointer
+            long offset = TargetInfo.Default.PointerBytes; // vtable pointer
             int maxAlign = 8;
+            SourceSpan span = classInfo.Span;
             foreach ((string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field in classInfo.Fields)
             {
                 int fieldSize = GetTypeSize(field.Type);
@@ -1431,11 +1435,20 @@ namespace gflat
                 {
                     maxAlign = fieldAlign;
                 }
-                offset = (offset + fieldAlign - 1) & ~(fieldAlign - 1);
+                span = field.Type.Span;
+                offset = (offset + fieldAlign - 1) & ~((long)fieldAlign - 1);
                 offset += fieldSize;
+                CheckAggregateLayoutSize(offset, span);
             }
-            offset = (offset + maxAlign - 1) & ~(maxAlign - 1);
-            return offset;
+            offset = (offset + maxAlign - 1) & ~((long)maxAlign - 1);
+            return CheckAggregateLayoutSize(offset, span);
+        }
+
+        private static int CheckAggregateLayoutSize(long size, SourceSpan span)
+        {
+            if (size > int.MaxValue)
+                throw new TypeCheckException("Aggregate layout exceeds the supported size of 2147483647 bytes", span);
+            return (int)size;
         }
 
         public int GetTypeSize(TypeExpression type)
@@ -5055,6 +5068,7 @@ namespace gflat
                     return;
                 }
 
+                GetClassSize(cInfo);
                 ConstructorDeclaration? matchedCtor = null;
                 if (cInfo.Constructors.Count == 0)
                 {
@@ -5148,6 +5162,7 @@ namespace gflat
                 return;
             }
 
+            GetStructSize(sInfo);
             ConstructorDeclaration? matchedStructCtor = null;
 
             if (sInfo.Constructors.Count == 0)

@@ -2922,7 +2922,17 @@ public partial class LlvmEmitter : IVisitor
             return;
         }
 
-        node.Operand.Accept(this);
+        string? updateAddress = null;
+        if (node.Operator is TokenKind.PlusPlus or TokenKind.MinusMinus &&
+            !_typeChecker.TryGetUnaryOperatorTarget(node, out _))
+        {
+            EmitAddress(node.Operand);
+            updateAddress = Pop();
+            string value = NewTemp(), valueType = EmitType(_typeChecker.GetType(node.Operand));
+            Emit($"    {value} = load {valueType}, {valueType}* {updateAddress}");
+            Push(value);
+        }
+        else node.Operand.Accept(this);
         string operand = Pop();
         TypeExpression type = _typeChecker.GetType(node.Operand);
 
@@ -2983,9 +2993,7 @@ public partial class LlvmEmitter : IVisitor
                         Emit($"    {temp} = {op} {llvmType} {operand}, 1");
                     }
 
-                    EmitAddress(node.Operand);
-                    string targetSlot = Pop();
-                    Emit($"    store {llvmType} {temp}, {llvmType}* {targetSlot}");
+                    Emit($"    store {llvmType} {temp}, {llvmType}* {updateAddress!}");
 
                     Push(node.IsPrefix ? temp : operand);
                     break;

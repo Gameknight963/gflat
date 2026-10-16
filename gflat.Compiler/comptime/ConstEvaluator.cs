@@ -86,19 +86,6 @@ namespace gflat.comptime
             _scopes.Pop();
         }
 
-        private void SetVariable(string name, ConstValue value)
-        {
-            foreach (Dictionary<string, ConstValue> scope in _scopes)
-            {
-                if (scope.ContainsKey(name))
-                {
-                    scope[name] = value;
-                    return;
-                }
-            }
-            throw new ConstEvalException($"Cannot modify non-local variable '{name}' at compile time", 0);
-        }
-
         private bool TryGetVariable(string name, out ConstValue? value, AstNode? binding = null)
         {
             foreach (Dictionary<string, ConstValue> scope in _scopes)
@@ -439,66 +426,23 @@ namespace gflat.comptime
                 return;
             }
 
-            if (node.Operator == TokenKind.PlusPlus)
+            if (node.Operator is TokenKind.PlusPlus or TokenKind.MinusMinus)
             {
-                if (node.Operand is IdentifierExpression ppIdent && TryGetVariable(ppIdent.Name, out ConstValue? ppVal))
-                {
-                    ConstValue one = ppVal is ConstValue.Float ? new ConstValue.Float(1) : ppVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                    if (StepCString(ppVal!, node.Operand, false, out ConstValue? nextVal) || ConstValue.TryAdd(ArithmeticOperand(ppVal!), one, out nextVal))
-                    {
-                        nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
-                        SetVariable(ppIdent.Name, nextVal!);
-                        _currentValue = node.IsPrefix ? nextVal : ppVal;
-                        return;
-                    }
-                }
-                else if (node.Operand is MemberAccessExpression ppMem)
-                {
-                    ppMem.Object.Accept(this);
-                    if (_currentValue is ConstValue.Struct ppStruct && ppStruct.Fields.TryGetValue(ppMem.Member, out ConstValue? memVal))
-                    {
-                        ConstValue one = memVal is ConstValue.Float ? new ConstValue.Float(1) : memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                        if (StepCString(memVal, node.Operand, false, out ConstValue? nextVal) || ConstValue.TryAdd(ArithmeticOperand(memVal), one, out nextVal))
-                        {
-                            nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
-                            ppStruct.Fields[ppMem.Member] = nextVal!;
-                            _currentValue = node.IsPrefix ? nextVal : memVal;
-                            return;
-                        }
-                    }
-                }
-                throw new ConstEvalException($"Cannot apply '++' to '{node.Operand}' at compile time", node.Line);
-            }
-
-            if (node.Operator == TokenKind.MinusMinus)
-            {
-                if (node.Operand is IdentifierExpression mmIdent && TryGetVariable(mmIdent.Name, out ConstValue? mmVal))
-                {
-                    ConstValue one = mmVal is ConstValue.Float ? new ConstValue.Float(1) : mmVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                    if (StepCString(mmVal!, node.Operand, true, out ConstValue? nextVal) || ConstValue.TrySubtract(ArithmeticOperand(mmVal!), one, out nextVal))
-                    {
-                        nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
-                        SetVariable(mmIdent.Name, nextVal!);
-                        _currentValue = node.IsPrefix ? nextVal : mmVal;
-                        return;
-                    }
-                }
-                else if (node.Operand is MemberAccessExpression mmMem)
-                {
-                    mmMem.Object.Accept(this);
-                    if (_currentValue is ConstValue.Struct mmStruct && mmStruct.Fields.TryGetValue(mmMem.Member, out ConstValue? memVal))
-                    {
-                        ConstValue one = memVal is ConstValue.Float ? new ConstValue.Float(1) : memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                        if (StepCString(memVal, node.Operand, true, out ConstValue? nextVal) || ConstValue.TrySubtract(ArithmeticOperand(memVal), one, out nextVal))
-                        {
-                            nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
-                            mmStruct.Fields[mmMem.Member] = nextVal!;
-                            _currentValue = node.IsPrefix ? nextVal : memVal;
-                            return;
-                        }
-                    }
-                }
-                throw new ConstEvalException($"Cannot apply '--' to '{node.Operand}' at compile time", node.Line);
+                var storage = CaptureAssignmentStorage(node.Operand);
+                ConstValue previous = storage.Read();
+                ConstValue one = previous is ConstValue.Float ? new ConstValue.Float(1) :
+                    previous is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                bool decrement = node.Operator == TokenKind.MinusMinus;
+                bool valid = StepCString(previous, node.Operand, decrement, out ConstValue? next);
+                if (!valid)
+                    valid = decrement ? ConstValue.TrySubtract(ArithmeticOperand(previous), one, out next) :
+                        ConstValue.TryAdd(ArithmeticOperand(previous), one, out next);
+                if (!valid || next == null)
+                    throw new ConstEvalException($"Cannot apply '{(decrement ? "--" : "++")}' to '{node.Operand}' at compile time", node.Line);
+                next = Normalize(next, _context.GetType(node.Operand), node.Line);
+                storage.Write(next);
+                _currentValue = node.IsPrefix ? next : previous;
+                return;
             }
 
             node.Operand.Accept(this);

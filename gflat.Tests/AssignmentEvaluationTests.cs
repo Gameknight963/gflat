@@ -3,6 +3,42 @@ namespace gflat.Tests;
 public sealed class AssignmentEvaluationTests
 {
     [Theory]
+    [InlineData("data[Index()]++", 708)]
+    [InlineData("++data[Index()]", 808)]
+    [InlineData("data[Index()]--", 706)]
+    [InlineData("--data[Index()]", 606)]
+    public void NumericUpdatesEvaluateTheirIndexOnce(string expression, int expected)
+    {
+        var result = CompilerTestHelper.Run($$"""
+            extern int putchar(int value);
+            int Index() { putchar(73); return 0; }
+            int main() {
+                int[1] data = [7]; int result = {{expression}};
+                if (result * 100 + data[0] != {{expected}}) return 1;
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("I", result.StandardOutput);
+    }
+
+    [Fact]
+    public void NumericUpdateCallsItsReferenceIndexerGetterOnce()
+    {
+        var result = CompilerTestHelper.Run("""
+            extern int putchar(int value);
+            struct Buffer {
+                private int* data;
+                public Buffer(int* storage) { data = storage; }
+                public ref int this[int index] { get { putchar(71); return data[index]; } }
+            }
+            int main() { int value = 7; Buffer buffer = new Buffer(&value); int old = buffer[0]++; if (old != 7 || value != 8) return 1; return 0; }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("G", result.StandardOutput);
+    }
+
+    [Theory]
     [InlineData("*Target(&value) = Value();")]
     [InlineData("Target(&value)[0] = Value();")]
     public void SimpleStorageTargetIsEvaluatedOnceBeforeTheValue(string statement)

@@ -5774,7 +5774,8 @@ namespace gflat
             {
                 if (sourceType is NamedTypeExpression { Name: "null" } ||
                     (_constEvaluator.TryEvaluate(node.Operand, out ConstValue? castConstant, out _) &&
-                     castConstant is ConstValue.Integer { Value: 0 } or ConstValue.UInteger { Value: 0 }))
+                     castConstant != null && ConstValue.TryIntegerValue(castConstant, out var integerConstant) &&
+                     integerConstant % (System.Numerics.BigInteger.One << TargetInfo.Default.PointerBits) == 0))
                     throw new TypeCheckException("Cannot cast null or zero to a non-null pointer", node.Line);
             }
             if (!IsValidCast(sourceType, targetType))

@@ -35,4 +35,26 @@ public class NullablePointerUseTests
     public void FunctionPointerReturnTypesCannotSilentlyChangeCallingConvention()
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(
             "int F() => 1; int main() { long()* f = &F; return 0; }"));
+
+    [Theory]
+    [InlineData("(int*)(char)0")]
+    [InlineData("(int*)(extralong)0")]
+    [InlineData("(int()*)(extralong)0")]
+    [InlineData("(int*)((extralong)1 << 64)")]
+    [InlineData("(int*)-((extralong)1 << 64)")]
+    public void EveryIntegerRepresentationRejectsKnownNullAsNonNullable(string expression)
+        => Assert.Contains("null or zero", Assert.Throws<TypeCheckException>(() => Compiler.Check(
+            "int main() { " + expression + "; return 0; }")).Message);
+
+    [Fact]
+    public void IntegerZeroCanStillProduceNullablePointers()
+        => Assert.Equal(0, CompilerTestHelper.Run("""
+            int main() {
+                int*? first = (int*?)(char)0;
+                int*? second = (int*?)(extralong)0;
+                int*? truncated = (int*?)((extralong)1 << 64);
+                if (first == null && second == null && truncated == null) return 0;
+                return 1;
+            }
+            """).ExitCode);
 }

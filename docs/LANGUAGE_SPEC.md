@@ -349,6 +349,8 @@ Copying a readonly scalar into a mutable scalar is allowed. Copying a pointer re
 
 Aliases and generic arguments preserve qualification. Explicit raw-pointer casts may remove readonly; managed-pointer casts cannot. `const` remains the compile-time constant mechanism.
 
+Declaration modifiers must apply to the declaration itself: types, enums, and aliases cannot be declared `const` or bare `readonly`. Use an explicitly qualified alias target such as `alias View = readonly(int)*;`. Only classes and interfaces accept `abstract`; aliases cannot be `static`, and nested type, enum, or alias declarations cannot be `virtual` or `override`.
+
 This replaces the old prefix type syntax: write `readonly(char)*` instead of `readonly char*`. For an old readonly pointer field, use `readonly(char*)` to keep both the field and pointee readonly. Bare `readonly` is now exclusively a receiver modifier on methods and property accessors.
 
 ## Initialization, ownership, and cleanup

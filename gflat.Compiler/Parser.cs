@@ -262,6 +262,7 @@ namespace gflat
             bool isAbstract = false;
             bool isInline = false;
             bool isStatic = false;
+            int modifierStart = _pos;
             Token? fieldModifier = null;
             FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
             AstNode Finish(AstNode node) => ApplyInline(ApplyImplementationKind(node, implementation), isInline);
@@ -308,6 +309,11 @@ namespace gflat
                 }
                 else break;
             }
+
+            if (Current.Kind is TokenKind.Class or TokenKind.Struct or TokenKind.Interface or TokenKind.Enum or TokenKind.Alias &&
+                (isConst || isReadonly || isAbstract && Current.Kind is not (TokenKind.Class or TokenKind.Interface) ||
+                 isStatic && Check(TokenKind.Alias)))
+                RejectUnsupportedNonCallableModifier(modifierStart, _pos, Current.Kind);
 
             if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Enum)
                 throw new TypeCheckException("Only classes and interfaces can be declared static at namespace scope", Current.Span);
@@ -381,6 +387,31 @@ namespace gflat
                     copy ? "Copy constructors cannot be static, readonly, virtual, override, or abstract" :
                     "Constructors cannot be readonly, virtual, override, or abstract";
                 throw new TypeCheckException(message, modifier.Span);
+            }
+        }
+
+        private void RejectUnsupportedNonCallableModifier(int start, int end, TokenKind declaration)
+        {
+            // Only invalid flag combinations reach this scan; ordinary declarations
+            // do not allocate or collect their modifier tokens.
+            for (int i = start; i < end; i++)
+            {
+                Token modifier = _tokens[i];
+                bool invalid = modifier.Kind switch {
+                    TokenKind.Const or TokenKind.Readonly or TokenKind.Virtual or TokenKind.Override => true,
+                    TokenKind.Abstract => declaration is not (TokenKind.Class or TokenKind.Interface),
+                    TokenKind.Static => declaration == TokenKind.Alias,
+                    _ => false
+                };
+                if (invalid)
+                {
+                    string message = $"The '{modifier.Text}' modifier is not valid on {declaration.ToString().ToLowerInvariant()} declarations";
+                    if (!_recoverErrors) throw new TypeCheckException(message, modifier.Span);
+                    // The declaration's shape is known. Keep it for editor analysis;
+                    // the recorded error still prevents normal compilation.
+                    _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, modifier.Span, message);
+                    return;
+                }
             }
         }
 
@@ -473,6 +504,7 @@ namespace gflat
             TokenKind accessibility = TokenKind.Internal;
             bool isAbstract = false;
             bool isStatic = false;
+            int modifierStart = _pos;
 
             while (true)
             {
@@ -496,6 +528,8 @@ namespace gflat
                 else break;
             }
 
+            if (isAbstract && Current.Kind is TokenKind.Struct or TokenKind.Enum)
+                RejectUnsupportedNonCallableModifier(modifierStart, _pos, Current.Kind);
             if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Enum)
                 throw new TypeCheckException("Only classes and interfaces can be declared static", Current.Span);
             if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, isAbstract, line, attributes, isStatic);
@@ -663,6 +697,11 @@ namespace gflat
             }
 
             int modifierEnd = _pos;
+
+            if (Current.Kind is TokenKind.Class or TokenKind.Struct or TokenKind.Enum or TokenKind.Alias &&
+                (isConst || isReadonly || isVirtual || isOverride || isAbstract && !Check(TokenKind.Class) ||
+                 isStatic && Check(TokenKind.Alias)))
+                RejectUnsupportedNonCallableModifier(modifierStart, modifierEnd, Current.Kind);
 
             if (Check(TokenKind.Extern))
             {

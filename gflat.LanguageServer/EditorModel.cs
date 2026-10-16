@@ -103,6 +103,7 @@ public sealed partial class EditorModel
         RegisterTypeParameters();
         IndexSourceTypeNames();
         IndexBoundCallables();
+        IndexBoundProperties();
         // Resolve once on the analysis worker. Hover and semantic-token requests
         // must not repeatedly walk the tree on the server's message loop.
         foreach (var (path, ts) in tokens)
@@ -422,6 +423,7 @@ public sealed partial class EditorModel
             placement.PlacementKeywordSpan.Length > 0 && placement.PlacementKeywordSpan.Start == token.Start)) return null;
         var declaration = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == token.Start && s.NameSpan.Length == token.Span.Length);
         if (declaration != null) return declaration;
+        if (boundPropertyReferences.TryGetValue(token, out var boundProperty)) return boundProperty;
         if (boundCallableReferences.TryGetValue(token, out var boundCallable)) return boundCallable;
         var call = nodes[path].Where(n => n.Node is CallExpression c && c.Callee.Span.Start <= token.Start && c.Callee.Span.Start + c.Callee.Span.Length == token.End + 1).MinBy(n => n.Span.Length);
         if (call?.Node is CallExpression expression && ExtensionCallSymbol(expression) is { } extension) return extension;

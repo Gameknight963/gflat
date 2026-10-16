@@ -792,6 +792,8 @@ are equivalent. A private extern is accessible throughout its source file, inclu
 from other namespaces in that file, but cannot be called or addressed from another
 file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers; `static` and `protected` are not supported.
 
+A declaration permits at most one explicit accessibility modifier. Repeated or conflicting modifiers are errors, including qualifiers split across an `extern` keyword; implicit defaults do not count as explicit modifiers.
+
 ## Control flow, exceptions, and constants
 
 Non-void functions must return or throw on every reachable path, or never terminate. Shared control-flow graphs model branches, loops, return, throw, break, and continue. Definite assignment uses these termination facts and tracks assignment states separately.

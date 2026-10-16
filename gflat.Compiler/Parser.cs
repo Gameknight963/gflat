@@ -257,6 +257,7 @@ namespace gflat
         {
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Public; // default for free functions
+            Token? firstAccessibility = null;
             bool isReadonly = false;
             bool isConst = false;
             bool isAbstract = false;
@@ -272,8 +273,7 @@ namespace gflat
                 if (Check(TokenKind.Public) || Check(TokenKind.Private) ||
                     Check(TokenKind.Protected) || Check(TokenKind.Internal))
                 {
-                    accessibility = Current.Kind;
-                    Consume();
+                    ParseAccessibilityModifier(ref accessibility, ref firstAccessibility);
                 }
                 else if (Check(TokenKind.Readonly) && Peek().Kind != TokenKind.OpenParen && !isReadonly)
                 {
@@ -325,7 +325,7 @@ namespace gflat
                     throw new TypeCheckException("extern declarations accept only accessibility modifiers", Current.Span);
                 if (isStatic) RejectDeclarationModifier(modifierStart, modifierEnd, TokenKind.Static,
                     "extern declarations accept only accessibility modifiers");
-                return ParseExternDeclaration(attributes, line, accessibility);
+                return ParseExternDeclaration(attributes, line, accessibility, firstAccessibility);
             }
 
             if (Check(TokenKind.Alias))
@@ -434,6 +434,20 @@ namespace gflat
             }
         }
 
+        private void ParseAccessibilityModifier(ref TokenKind accessibility, ref Token? firstExplicit)
+        {
+            Token modifier = Consume();
+            if (firstExplicit != null)
+            {
+                const string message = "A declaration can have only one accessibility modifier";
+                if (!_recoverErrors) throw new TypeCheckException(message, modifier.Span);
+                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, modifier.Span, message);
+                return;
+            }
+            firstExplicit = modifier;
+            accessibility = modifier.Kind;
+        }
+
         private static AstNode ApplyImplementationKind(AstNode node, FunctionImplementationKind kind)
         {
             if (kind == FunctionImplementationKind.Ordinary) return node;
@@ -521,6 +535,7 @@ namespace gflat
         {
             int line = Current.Line;
             TokenKind accessibility = TokenKind.Internal;
+            Token? firstAccessibility = null;
             bool isAbstract = false;
             bool isStatic = false;
             int modifierStart = _pos;
@@ -530,8 +545,7 @@ namespace gflat
                 if (Check(TokenKind.Public) || Check(TokenKind.Private) ||
                     Check(TokenKind.Protected) || Check(TokenKind.Internal))
                 {
-                    accessibility = Current.Kind;
-                    Consume();
+                    ParseAccessibilityModifier(ref accessibility, ref firstAccessibility);
                 }
                 else if (Check(TokenKind.Static))
                 {
@@ -682,6 +696,7 @@ namespace gflat
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, line);
             TokenKind accessibility = TokenKind.Private;
+            Token? firstAccessibility = null;
             bool isStatic = _inStaticInterface;
             int modifierStart = _pos;
             bool isConst = false;
@@ -698,7 +713,7 @@ namespace gflat
             {
                 if (Check(TokenKind.Public) || Check(TokenKind.Private) ||
                     Check(TokenKind.Protected) || Check(TokenKind.Internal))
-                { accessibility = Current.Kind; Consume(); }
+                { ParseAccessibilityModifier(ref accessibility, ref firstAccessibility); }
                 else if (Check(TokenKind.Static)) { isStatic = true; Consume(); }
                 else if (Check(TokenKind.Const)) { isConst = true; Consume(); }
                 else if (Check(TokenKind.Readonly) && Peek().Kind != TokenKind.OpenParen && !isReadonly) { isReadonly = true; Consume(); }
@@ -726,7 +741,7 @@ namespace gflat
             {
                 if (isReadonly || isConst || isStatic || isVirtual || isOverride || isAbstract || isInline || implementation != FunctionImplementationKind.Ordinary)
                     throw new TypeCheckException("extern declarations accept only accessibility modifiers", Current.Span);
-                return ParseExternDeclaration(attributes, line, accessibility);
+                return ParseExternDeclaration(attributes, line, accessibility, firstAccessibility);
             }
 
             if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Enum or TokenKind.Interface)
@@ -973,13 +988,13 @@ namespace gflat
             return attributes;
         }
 
-        private ExternDeclaration ParseExternDeclaration(List<AttributeNode> attributes, int line, TokenKind accessibility = TokenKind.Public) => Located(() => ParseExternDeclarationCoreLocated(attributes, line, accessibility));
+        private ExternDeclaration ParseExternDeclaration(List<AttributeNode> attributes, int line, TokenKind accessibility = TokenKind.Public, Token? firstAccessibility = null) => Located(() => ParseExternDeclarationCoreLocated(attributes, line, accessibility, firstAccessibility));
 
-        private ExternDeclaration ParseExternDeclarationCoreLocated(List<AttributeNode> attributes, int line, TokenKind accessibility)
+        private ExternDeclaration ParseExternDeclarationCoreLocated(List<AttributeNode> attributes, int line, TokenKind accessibility, Token? firstAccessibility)
         {
             Expect(TokenKind.Extern);
-            if (Check(TokenKind.Public) || Check(TokenKind.Private) || Check(TokenKind.Protected) || Check(TokenKind.Internal))
-                accessibility = Consume().Kind;
+            while (Check(TokenKind.Public) || Check(TokenKind.Private) || Check(TokenKind.Protected) || Check(TokenKind.Internal))
+                ParseAccessibilityModifier(ref accessibility, ref firstAccessibility);
             TypeExpression returnType = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
             Expect(TokenKind.OpenParen);

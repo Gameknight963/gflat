@@ -680,7 +680,8 @@ public partial class LlvmEmitter : IVisitor
         {
             deref.Operand.Accept(this);
         }
-        else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression or TypeofExpression)
+        else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression or TypeofExpression or
+                 UnaryExpression or BinaryExpression)
         {
             node.Accept(this);
             string value = Pop();

@@ -7,6 +7,10 @@ public partial class TypeChecker
     private void BindMethodSignature(MethodDeclaration method)
     {
         if (method.IsGeneric) return;
+        // Reserved primitive names already carry their complete qualifiers and
+        // cannot depend on declaration scope or specialize another type.
+        if (method.ReturnType is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } result && IsPrimitive(result.Name) &&
+            method.Parameters.All(p => p.Type is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } type && IsPrimitive(type.Name))) return;
         using var context = EnterMethodSignatureContext(method);
         method.ReturnType = ResolveAlias(method.ReturnType);
         foreach (var parameter in method.Parameters)

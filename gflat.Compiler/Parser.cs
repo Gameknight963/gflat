@@ -310,6 +310,7 @@ namespace gflat
                 else break;
             }
 
+            int modifierEnd = _pos;
             if (Current.Kind is TokenKind.Class or TokenKind.Struct or TokenKind.Interface or TokenKind.Enum or TokenKind.Alias &&
                 (isConst || isReadonly || isAbstract && Current.Kind is not (TokenKind.Class or TokenKind.Interface) ||
                  isStatic && Check(TokenKind.Alias)))
@@ -343,7 +344,10 @@ namespace gflat
             List<GenericParameter> genericParams = ParseGenericParameters();
 
             if (Check(TokenKind.OpenParen))
+            {
+                if (isAbstract) RejectAbstractNamespaceFunction(modifierStart, modifierEnd);
                 return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, false, false, false, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect));
+            }
 
             if (Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater))
             {
@@ -412,6 +416,19 @@ namespace gflat
                     _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, modifier.Span, message);
                     return;
                 }
+            }
+        }
+
+        private void RejectAbstractNamespaceFunction(int start, int end)
+        {
+            for (int i = start; i < end; i++)
+            {
+                Token modifier = _tokens[i];
+                if (modifier.Kind != TokenKind.Abstract) continue;
+                const string message = "Namespace functions cannot be abstract";
+                if (!_recoverErrors) throw new TypeCheckException(message, modifier.Span);
+                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, modifier.Span, message);
+                return;
             }
         }
 

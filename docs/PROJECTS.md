@@ -81,6 +81,11 @@ It has no `TargetPath`; inherited executable output settings are ignored. `Clean
 removes its generated source lists and build stamps, leaving other files intact.
 Use an `Executable` project to run the library or emit LLVM output.
 
+Standalone library builds and checks validate a complete compilation, so every
+`expect` declaration needs an implementation even when unused. A consuming project
+can provide those implementations: references collect the library's sources
+without separately building or checking the library first.
+
 Source libraries don't produce binary libraries. Project references must name
 source libraries. Transitive references are supported, diamond dependencies
 deduplicated, and cycles rejected.

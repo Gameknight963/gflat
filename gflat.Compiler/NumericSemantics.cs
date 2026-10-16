@@ -21,13 +21,11 @@ public static class NumericSemantics
     {
         if (target is "float" or "double")
         {
-            double number = value switch
-            {
-                ConstValue.Integer i => i.Value, ConstValue.UInteger u => u.Value,
-                ConstValue.Char c => unchecked((sbyte)c.Value), ConstValue.Float f => f.Value,
-                ConstValue.WideInteger wide => (double)wide.Value,
-                _ => throw new ConstEvalException("Expected a numeric constant", line)
-            };
+            double number;
+            if (ConstValue.TryIntegerValue(value, out var integerInput))
+                number = RoundInteger(integerInput, target == "float" ? 24 : 53);
+            else if (value is ConstValue.Float floating) number = floating.Value;
+            else throw new ConstEvalException("Expected a numeric constant", line);
             return new ConstValue.Float(target == "float" ? (float)number : number);
         }
         if (IntegerType(target) is not { } type)
@@ -53,5 +51,23 @@ public static class NumericSemantics
         if (type.Signed && integer >= (modulus >> 1)) integer -= modulus;
         if (type.Bits > 64) return new ConstValue.WideInteger(integer);
         return type.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
+    }
+
+    private static double RoundInteger(BigInteger value, int precision)
+    {
+        bool negative = value.Sign < 0;
+        BigInteger magnitude = BigInteger.Abs(value);
+        int discardedBits = (int)magnitude.GetBitLength() - precision;
+        if (discardedBits <= 0) return (double)value;
+
+        // Round the exact integer directly to the destination significand.
+        // Going through double first can turn an above-halfway integer into
+        // an exact tie and incorrectly round a subsequent float conversion.
+        BigInteger significand = magnitude >> discardedBits;
+        BigInteger remainder = magnitude - (significand << discardedBits);
+        BigInteger halfway = BigInteger.One << (discardedBits - 1);
+        if (remainder > halfway || remainder == halfway && !significand.IsEven) significand++;
+        double rounded = Math.ScaleB((double)significand, discardedBits);
+        return negative ? -rounded : rounded;
     }
 }

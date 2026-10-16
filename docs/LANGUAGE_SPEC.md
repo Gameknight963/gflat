@@ -114,6 +114,7 @@ int main()
 | ushort / short | Unsigned / signed 16-bit integer |
 | uint / int | Unsigned / signed 32-bit integer |
 | ulong / long | Unsigned / signed 64-bit integer |
+| extralong | Signed 128-bit integer |
 | nuint / nint | Unsigned / signed target pointer width, currently 64 bits |
 | float / double | IEEE binary32 / binary64 |
 | void | No value |
@@ -123,6 +124,10 @@ be a local, field, parameter, array element, or the value of `default(void)`.
 An empty parameter list is written `()`, not `(void)`.
 
 Explicit integer narrowing retains low bits and interprets them using the destination signedness. Constant casts use the same widths as runtime lowering. `uint -> int` and `ulong -> long` require explicit casts. `float` conversions round to binary32 during constant evaluation. Non-finite and out-of-range constant float-to-integer conversions are errors.
+
+Integer-to-floating conversions round directly to the destination precision,
+using nearest with ties to even. Constant evaluation preserves all 128 bits of
+`extralong` values before conversions and arithmetic width normalization.
 
 In integer arithmetic, bitwise operations, and comparisons, a representable integer
 literal can adopt the other operand's `nint` or `nuint` type. For example,

@@ -194,7 +194,7 @@ namespace gflat.semantics
                 {
                     throw new TypeCheckException($"Class '{cls.Name}' cannot declare field '{f.Name}' because it is already declared in a base class", f.Line);
                 }
-                cls.Fields.Add((f.Name, f.Type, f.Accessibility, cls.Name));
+                if (!f.IsStatic) cls.Fields.Add((f.Name, f.Type, f.Accessibility, cls.Name));
                 cls.FieldDeclarationsByName[f.Name] = f;
             }
 

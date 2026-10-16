@@ -307,8 +307,8 @@ namespace gflat
                 else break;
             }
 
-            if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Interface or TokenKind.Enum)
-                throw new TypeCheckException("Only classes can be declared static at namespace scope", Current.Span);
+            if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Enum)
+                throw new TypeCheckException("Only classes and interfaces can be declared static at namespace scope", Current.Span);
 
             if (Check(TokenKind.Extern))
             {
@@ -326,7 +326,7 @@ namespace gflat
             if (Check(TokenKind.Struct))
                 return Finish(ParseStructDeclaration(accessibility, line, attributes));
             if (Check(TokenKind.Interface))
-                return Finish(ParseInterfaceDeclaration(accessibility, line));
+                return Finish(ParseInterfaceDeclaration(accessibility, line, isStatic));
 
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
@@ -400,7 +400,7 @@ namespace gflat
             return parameters;
         }
 
-        private bool IsGenericCallAhead()
+        private bool IsGenericCallAhead(TokenKind following = TokenKind.OpenParen)
         {
             if (!Check(TokenKind.Less))
                 return false;
@@ -416,7 +416,7 @@ namespace gflat
                     depth -= _tokens[i].Kind == TokenKind.GreaterGreater ? 2 : 1;
                     if (depth == 0)
                     {
-                        return i + 1 < _tokens.Count && _tokens[i + 1].Kind == TokenKind.OpenParen;
+                        return i + 1 < _tokens.Count && _tokens[i + 1].Kind == following;
                     }
                 }
                 else if (_tokens[i].Kind is TokenKind.Semicolon or TokenKind.OpenBrace or TokenKind.CloseBrace)
@@ -458,11 +458,11 @@ namespace gflat
                 else break;
             }
 
-            if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Interface or TokenKind.Enum)
-                throw new TypeCheckException("Only classes can be declared static", Current.Span);
+            if (isStatic && Current.Kind is TokenKind.Struct or TokenKind.Enum)
+                throw new TypeCheckException("Only classes and interfaces can be declared static", Current.Span);
             if (Check(TokenKind.Class)) return ParseClassDeclaration(accessibility, isAbstract, line, attributes, isStatic);
             if (Check(TokenKind.Struct)) return ParseStructDeclaration(accessibility, line, attributes);
-            if (Check(TokenKind.Interface)) return ParseInterfaceDeclaration(accessibility, line);
+            if (Check(TokenKind.Interface)) return ParseInterfaceDeclaration(accessibility, line, isStatic);
             if (Check(TokenKind.Enum)) return ParseEnumDeclaration(accessibility, line);
 
             _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Span, $"Expected type declaration on line {Current.Line}");
@@ -552,22 +552,25 @@ namespace gflat
         }
 
 
-        private InterfaceDeclaration ParseInterfaceDeclaration(TokenKind accessibility, int line) => Located(() => ParseInterfaceDeclarationCoreLocated(accessibility, line));
+        private bool _inStaticInterface;
+        private InterfaceDeclaration ParseInterfaceDeclaration(TokenKind accessibility, int line, bool isStatic = false) => Located(() => ParseInterfaceDeclarationCoreLocated(accessibility, line, isStatic));
 
-        private InterfaceDeclaration ParseInterfaceDeclarationCoreLocated(TokenKind accessibility, int line)
+        private InterfaceDeclaration ParseInterfaceDeclarationCoreLocated(TokenKind accessibility, int line, bool isStatic)
         {
             Expect(TokenKind.Interface);
             string name = Expect(TokenKind.Identifier).Text;
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
             _interfaceDepth++;
+            bool previousStaticInterface = _inStaticInterface;
+            _inStaticInterface = isStatic;
             try
             {
                 while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace))) members.Add(ParseMember());
                 Expect(TokenKind.CloseBrace);
             }
-            finally { _interfaceDepth--; }
-            return new InterfaceDeclaration(name, members, accessibility, line);
+            finally { _interfaceDepth--; _inStaticInterface = previousStaticInterface; }
+            return new InterfaceDeclaration(name, members, accessibility, line, isStatic);
         }
 
         private AstNode ParseMember() => ParseDeclaration(() => ParseMemberCoreLocated());
@@ -588,7 +591,7 @@ namespace gflat
             if (Check(TokenKind.Extern))
                 return ParseExternDeclaration(attributes, line);
             TokenKind accessibility = TokenKind.Private;
-            bool isStatic = false;
+            bool isStatic = _inStaticInterface;
             bool isConst = false;
             bool isReadonly = false;
             bool isVirtual = false;
@@ -666,7 +669,14 @@ namespace gflat
             {
                 // constructor - type was actually the name
                 name = ((NamedTypeExpression)type).Name;
-                return Finish(ParseConstructorDeclaration(name, accessibility, line, attributes, isConst));
+                var ctor = ParseConstructorDeclaration(name, accessibility, line, attributes, isConst);
+                if (!isStatic) return Finish(ctor);
+                if (isConst || isReadonly || isVirtual || isOverride || isAbstract || isRef ||
+                    implementation != FunctionImplementationKind.Ordinary || ctor.Parameters.Count != 0 || ctor.BaseArguments != null)
+                    throw new TypeCheckException("A static constructor must be parameterless and cannot have a base initializer or other method modifiers", line);
+                return Finish(new MethodDeclaration("$cctor", new NamedTypeExpression("void", null, line), [], ctor.Body,
+                    TokenKind.Private, true, false, false, false, line, attributes: attributes, isNoThrow: ctor.IsNoThrow)
+                    { StaticConstructorName = name });
             }
 
             if (Match(TokenKind.Operator))
@@ -1557,6 +1567,21 @@ namespace gflat
                 // and the final access need their own complete source ranges.
                 if (start.Source != null && _pos > 0)
                     left.Span = start.Source.Span(start.Start, Math.Max(0, _tokens[_pos - 1].End + 1 - start.Start));
+                if (Check(TokenKind.Less) && IsGenericCallAhead(TokenKind.DoubleColon))
+                {
+                    Consume();
+                    var typeArguments = new List<TypeExpression>();
+                    do { typeArguments.Add(ParseTypeExpression()); } while (Match(TokenKind.Comma));
+                    Expect(TokenKind.Greater);
+                    left = left switch
+                    {
+                        IdentifierExpression id => new NamedTypeExpression(id.Name, null, id.Line, typeArguments),
+                        NamespaceAccessExpression access when QualifiedExpressionType(access.Left) is { } parent =>
+                            new NestedTypeExpression(parent, access.Member, typeArguments, access.Line),
+                        _ => throw new TypeCheckException("A qualified generic type requires a type name", left.Span)
+                    };
+                    continue;
+                }
                 if (Check(TokenKind.Less) && IsGenericCallAhead())
                 {
                     int callLine = Current.Line;
@@ -1669,6 +1694,15 @@ namespace gflat
 
             return left;
         }
+
+        private static TypeExpression? QualifiedExpressionType(AstNode expression) => expression switch
+        {
+            TypeExpression type => type,
+            IdentifierExpression id => new NamedTypeExpression(id.Name, null, id.Line),
+            NamespaceAccessExpression access when QualifiedExpressionType(access.Left) is { } parent =>
+                new NestedTypeExpression(parent, access.Member, [], access.Line),
+            _ => null
+        };
 
         private AstNode ParsePrefix() => Located(() => ParsePrefixCoreLocated());
 

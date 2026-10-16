@@ -106,7 +106,7 @@ public sealed partial class EditorModel
             if (access != null) Keyword(access);
         }
         if (symbol.Syntax.Node.IsInline) Keyword("inline");
-        if (symbol.Syntax.Node is ClassDeclaration { IsStatic: true }) Keyword("static");
+        if (symbol.Syntax.Node is ClassDeclaration { IsStatic: true } or InterfaceDeclaration { IsStatic: true }) Keyword("static");
         if (symbol.Syntax.Node is MethodDeclaration method)
         {
             if (method.IsStatic) Keyword("static");

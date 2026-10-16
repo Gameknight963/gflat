@@ -6,7 +6,10 @@ public partial class TypeChecker
 {
     private bool CanInitializeReadOnlyField(AstNode target)
     {
-        if (_currentConstructor == null || _lambdaScopeBoundaries.Count != 0) return false;
+        if (_lambdaScopeBoundaries.Count != 0) return false;
+        if (_currentFunction is MethodDeclaration { StaticConstructorName: not null } && GetStaticStorage(target) is { IsConst: false } field)
+            return GetStaticStorageInfo(field).Owner == (_currentClass?.Name ?? _currentStruct?.Name);
+        if (_currentConstructor == null) return false;
         string? name = target switch
         {
             IdentifierExpression id when !_scopes.Any(s => s.ContainsKey(id.Name)) => id.Name,

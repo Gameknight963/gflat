@@ -53,8 +53,7 @@ public class NamespacePropertyTests
     }
 
     [Theory]
-    [InlineData("int P { get; set; }", "explicit accessor")]
-    [InlineData("int P { get => 1; set; }", "explicit accessor")]
+    [InlineData("int P { get => 1; set; }", "either have bodies")]
     [InlineData("int P { get => 1; } = 2;", "initializers")]
     [InlineData("readonly int P => 1;", "receiver modifiers")]
     [InlineData("int P { readonly get => 1; }", "readonly")]

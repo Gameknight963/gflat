@@ -81,7 +81,7 @@ public partial class LlvmEmitter
                 if (_typeChecker.HasDestructor(baseType)) _deferScopes[^1].Add(new BaseCopyCleanup(parent, dst));
             }
             var fields = str?.FieldDeclarations ?? cls!.FieldDeclarations;
-            foreach (var field in fields)
+            foreach (var field in fields.Where(f => !f.IsStatic))
             {
                 int position = str != null ? str.FieldIndex(field.Name) : cls!.FieldIndex(field.Name) + 1;
                 string src = NewTemp(), dst = NewTemp();

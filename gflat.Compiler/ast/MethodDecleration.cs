@@ -13,6 +13,7 @@ namespace gflat.ast
         public FunctionImplementationKind ImplementationKind { get; set; }
         public string? StringLiteralPrefix { get; set; }
         public string? PropertyName { get; set; }
+        public string? StaticConstructorName { get; set; }
         public bool IsRefReturn { get; set; }
         public bool IsPropertyInitializer { get; set; }
         public TypeExpression ReturnType { get; set; }

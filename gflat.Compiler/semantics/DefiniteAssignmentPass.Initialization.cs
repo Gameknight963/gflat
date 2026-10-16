@@ -38,7 +38,7 @@ public partial class DefiniteAssignmentPass
     private void BeginConstructorFields(bool initialize = true)
     {
         _inConstructor = true;
-        foreach (var field in ConstructorFields)
+        foreach (var field in ConstructorFields.Where(f => !f.IsStatic))
             AddRequiredField(field.Name, field.Type);
         if (initialize) CheckDeclaredFieldInitializers();
     }
@@ -46,7 +46,7 @@ public partial class DefiniteAssignmentPass
     private void CheckDeclaredFieldInitializers()
     {
         // Initializers run in declaration order, before the constructor body.
-        foreach (var field in ConstructorFields)
+        foreach (var field in ConstructorFields.Where(f => !f.IsStatic))
             if (field.Initializer != null)
             {
                 CheckValue(field.Initializer);

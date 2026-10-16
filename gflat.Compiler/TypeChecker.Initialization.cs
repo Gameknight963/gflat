@@ -51,7 +51,7 @@ public partial class TypeChecker
             }
         }
         else fields = GetStruct(name)!.FieldDeclarations;
-        foreach (var field in fields)
+        foreach (var field in fields.Where(f => !f.IsStatic))
             if (field.Initializer == null && !CanDefaultInitialize(field.Type))
                 throw new TypeCheckException($"Field '{name}.{field.Name}' requires an initializer or constructor assignment", line);
     }

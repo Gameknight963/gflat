@@ -8,29 +8,6 @@ public partial class TypeChecker
     private readonly Dictionary<AstNode, string> declarationNamespaces = new();
     public string? DeclarationNamespace(AstNode node) => declarationNamespaces.GetValueOrDefault(node);
 
-    private void ValidateFieldStorage(CompilationUnit unit)
-    {
-        Walk(unit.Members, inType: false);
-        foreach (var ns in unit.Namespaces) Walk(ns.Members, inType: false);
-        void Walk(IEnumerable<AstNode> members, bool inType)
-        {
-            foreach (var member in members)
-            {
-                if (member is NamespaceDeclaration ns) Walk(ns.Members, inType: false);
-                else if (member is ClassDeclaration cls) Walk(cls.Members, inType: true);
-                else if (member is StructDeclaration str) Walk(str.Members, inType: true);
-                else if (member is FieldDeclaration field)
-                    AnalyzeSafely(() =>
-                    {
-                        if (inType && field.IsStatic)
-                            throw new TypeCheckException("Static field storage is not yet supported; use an explicit static property or a namespace constant", field.Span);
-                        if (!inType && !field.IsConst)
-                            throw new TypeCheckException("Mutable global and namespace fields are not yet supported", field.Span);
-                    });
-            }
-        }
-    }
-
     private void QualifyTypeDeclarations(CompilationUnit unit)
     {
         Walk(unit.Members, "", null);

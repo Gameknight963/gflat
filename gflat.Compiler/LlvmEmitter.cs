@@ -7,6 +7,8 @@ namespace gflat;
 public partial class LlvmEmitter : IVisitor
 {
     private static string InlineHint(AstNode? node) => node?.IsInline == true ? " inlinehint" : "";
+    private string RuntimeMemorySymbol(string name) => "gflat$Memory$" + name +
+        (_typeChecker.GetMemoryFunction(name) is { } method ? _typeChecker.GetOverloadSuffix(method) : "");
     private readonly TypeChecker _typeChecker;
 
     public LlvmEmitter(TypeChecker typeChecker)
@@ -597,12 +599,22 @@ public partial class LlvmEmitter : IVisitor
         return string.Join('\n', lines.Where(l => l.StartsWith('%')).Concat(lines.Where(l => !l.StartsWith('%'))));
     }
 
-    public string GetOutput() => ("target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" + "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" + NativeDeclarations + OrderedGlobals() + "\n" + llvmFunctions.ToString() + "\n" + _lambdaFunctions.ToString() + "\n" + _output.ToString());
+    public string GetOutput()
+    {
+        string body = OrderedGlobals() + "\n" + llvmFunctions + "\n" + _lambdaFunctions + "\n" + _output;
+        bool needsExceptionRuntime = body.Contains("@__gflat_eh_", StringComparison.Ordinal);
+        if (!needsExceptionRuntime)
+            body = body.Replace("personality i32 (...)* @__CxxFrameHandler3", "").Replace("personality i32 (...)* @__gxx_personality_v0", "");
+        return "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" +
+            "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" +
+            (needsExceptionRuntime ? NativeDeclarations : "") + body;
+    }
 
     private enum EmitMode { RValue, LValue }
 
     private void EmitAddress(AstNode node)
     {
+        if (TryEmitStaticAddress(node)) return;
         if (_typeChecker.GetPropertyRead(node) is CallExpression getter) { if (_typeChecker.IsReferenceRead(node)) getter.Accept(this); else EmitAddress(getter); return; }
         if (node is IdentifierExpression ident)
         {
@@ -1072,6 +1084,7 @@ public partial class LlvmEmitter : IVisitor
         foreach (NamespaceDeclaration ns in node.Namespaces)
             ns.Accept(this);
 
+        EmitStaticStorage();
         EmitIsInstanceHelper();
         EmitExceptionDestroyHelper();
     }
@@ -1329,7 +1342,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitClassFieldInitializers(string className, string thisPtr)
     {
         if (_currentClass == null) return;
-        foreach (FieldDeclaration field in _currentClass.FieldDeclarations)
+        foreach (FieldDeclaration field in _currentClass.FieldDeclarations.Where(f => !f.IsStatic))
         {
             if (field.Initializer == null) continue;
             int fieldIdx = _currentClass.FieldIndex(field.Name);
@@ -1372,6 +1385,7 @@ public partial class LlvmEmitter : IVisitor
         Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
+        EmitStaticLifetimePrologue();
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{className}*", thisPtr);
@@ -1595,6 +1609,7 @@ public partial class LlvmEmitter : IVisitor
 
         string fields = string.Join(", ", node.Members
             .OfType<FieldDeclaration>()
+            .Where(f => !f.IsStatic)
             .Select(f => EmitType(f.Type)));
         EmitGlobal($"%{node.Name} = type {{ {fields} }}");
 
@@ -1869,7 +1884,7 @@ public partial class LlvmEmitter : IVisitor
     private void EmitFieldInitializers(string structName, string thisPtr)
     {
         if (_currentStruct == null) return;
-        foreach (FieldDeclaration field in _currentStruct.FieldDeclarations)
+        foreach (FieldDeclaration field in _currentStruct.FieldDeclarations.Where(f => !f.IsStatic))
         {
             if (field.Initializer == null) continue;
             int fieldIdx = _currentStruct.FieldIndex(field.Name);
@@ -1912,6 +1927,7 @@ public partial class LlvmEmitter : IVisitor
         Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
+        EmitStaticLifetimePrologue();
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{structName}*", thisPtr);
@@ -2031,7 +2047,7 @@ public partial class LlvmEmitter : IVisitor
         {
             return;
         }
-        throw new NotImplementedException("Mutable global fields are not yet supported");
+        if (_staticStoragePhase != 0) EmitStaticFieldLifetime(node);
     }
 
     public void Visit(OperatorDeclaration node) => throw new NotImplementedException();
@@ -2093,6 +2109,7 @@ public partial class LlvmEmitter : IVisitor
         Emit($"define {EmitFunctionReturnType(node.ReturnType)} @{name}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
+        EmitStaticLifetimePrologue();
 
         foreach (Parameter p in node.Parameters)
         {
@@ -3143,6 +3160,7 @@ public partial class LlvmEmitter : IVisitor
     {
         if (EmitFunctionValue(node)) return;
         if (EmitPropertyRead(node)) return;
+        if (TryEmitStaticRead(node)) return;
         if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
         {
             if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
@@ -3305,7 +3323,7 @@ public partial class LlvmEmitter : IVisitor
             }
 
             // gflat$Memory$Free is defined in user code (or std/libc/Memory/Memory.gf), no declare needed
-            _externNames.Add("gflat$Memory$Free");
+            _externNames.Add(RuntimeMemorySymbol("Free"));
 
             string castPtr;
             if (llvmPtrType != "i8*")
@@ -3320,7 +3338,7 @@ public partial class LlvmEmitter : IVisitor
 
             TransferArguments();
 
-            Emit($"    call void @gflat$Memory$Free(i8* {castPtr})");
+            Emit($"    call void @{RuntimeMemorySymbol("Free")}(i8* {castPtr})");
             return;
         }
 
@@ -4009,9 +4027,9 @@ public partial class LlvmEmitter : IVisitor
         else if (node.Kind is AllocationKind.Pointer or AllocationKind.Managed)
         {
             bool adopting = _typeChecker.GetManagedAllocation(node) != null;
-            string allocator = "gflat$Memory$Allocate";
+            string allocator = RuntimeMemorySymbol("Allocate");
             // gflat$Memory$Allocate is defined in user code (or std/libc/Memory/Memory.gf), no declare needed
-            _ = _externNames.Add("gflat$Memory$Allocate");
+            _ = _externNames.Add(allocator);
 
             string sizePtr = NewTemp();
             Emit($"    {sizePtr} = getelementptr %{typeName}, %{typeName}* null, i32 1");
@@ -4164,6 +4182,9 @@ public partial class LlvmEmitter : IVisitor
     }
     public void Visit(NamespaceAccessExpression node)
     {
+        if (TryEmitStaticRead(node)) return;
+        if (_typeChecker.TryGetConstValue(node, out var constant) && constant != null &&
+            TryEmitConstValue(constant, _typeChecker.GetType(node))) return;
         if (EmitFunctionValue(node)) return;
         if (EmitPropertyRead(node)) return;
         if (_typeChecker.TryGetEnumMember(node, out long val, out _))
@@ -4308,7 +4329,7 @@ public partial class LlvmEmitter : IVisitor
         {
             GuardNonNull(ptrVal, llvmPtrType);
             string data = EmitInterfaceDestruction(ptrVal, iface.Name);
-            Emit($"    call void @gflat$Memory$Free(i8* {data})");
+            Emit($"    call void @{RuntimeMemorySymbol("Free")}(i8* {data})");
             return;
         }
 
@@ -4375,7 +4396,7 @@ public partial class LlvmEmitter : IVisitor
             EmitManagedReferences(rawPointer.Inner, ptrVal, false);
 
         // gflat$Memory$Free is defined in user code (or std/libc/Memory/Memory.gf), no declare needed
-        _externNames.Add("gflat$Memory$Free");
+        _externNames.Add(RuntimeMemorySymbol("Free"));
 
         string castPtr;
         if (llvmPtrType != "i8*")
@@ -4388,7 +4409,7 @@ public partial class LlvmEmitter : IVisitor
             castPtr = ptrVal;
         }
 
-        Emit($"    call void @gflat$Memory$Free(i8* {castPtr})");
+        Emit($"    call void @{RuntimeMemorySymbol("Free")}(i8* {castPtr})");
     }
     public void Visit(BreakStatement node)
     {
@@ -4568,6 +4589,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitExceptionDestroyHelper()
     {
+        if (_typeChecker.GetClass("Exception") == null || _typeChecker.GetMemoryFunction("Free") == null) return;
         _tempCounter = 0;
         Emit("define void @gflat_destroy_exception(%Exception* %exception) {");
         Emit("entry:");

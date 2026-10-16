@@ -223,7 +223,8 @@ namespace gflat
 
         public class InterfaceInfo
         {
-            public bool IsStaticContract => Methods.Count > 0 && Methods.All(m => m.IsStatic);
+            public bool IsDeclaredStatic;
+            public bool IsStaticContract => IsDeclaredStatic || Methods.Count > 0 && Methods.All(m => m.IsStatic);
             public string Name = "";
             public string Namespace = "";
             public List<MethodDeclaration> Methods = new();
@@ -483,7 +484,16 @@ namespace gflat
                     return field;
                 scope = scope.Parent;
             }
-            return null;
+            FieldDeclaration? found = null;
+            foreach (string imported in CurrentUsings.Distinct())
+            {
+                var candidate = ResolveNamespaceByName(imported)?.Fields.GetValueOrDefault(name);
+                if (candidate == null) continue;
+                if (found != null && found != candidate)
+                    throw new TypeCheckException($"Global field '{name}' is ambiguous between namespaces", SourceContext.Current ?? SourceContext.ForLine(0));
+                found = candidate;
+            }
+            return found;
         }
 
         public TypeExpression GetType(AstNode node)
@@ -568,6 +578,8 @@ namespace gflat
                 depth--;
             }
 
+            if (FindStaticStorage(name) is { } staticField) return ResolveAlias(staticField.Type);
+
             if (_currentStruct != null && _currentFunction is not MethodDeclaration { IsStatic: true })
             {
                 int idx = _currentStruct.FieldIndex(name);
@@ -638,6 +650,8 @@ namespace gflat
                 if (scope.TryGetValue(name, out type))
                     return true;
             }
+
+            if (FindStaticStorage(name) is { } staticField) { type = ResolveAlias(staticField.Type); return true; }
 
             if (_currentStruct != null && _currentFunction is not MethodDeclaration { IsStatic: true })
             {
@@ -1291,6 +1305,8 @@ namespace gflat
             }
             if (resolved is NamedTypeExpression named && IsInterface(named))
             {
+                if (GetInterface(named.Name) is { IsStaticContract: true })
+                    throw new TypeCheckException($"Static interface '{DisplayName(named.Name)}' can only be used as a type constraint", line);
                 throw new TypeCheckException($"Cannot use interface '{named.Name}' as a value type. Interfaces must be used as pointers ('{named.Name}*')", line);
             }
             else if (resolved is ArrayTypeExpression arr)
@@ -1946,7 +1962,6 @@ namespace gflat
             collectionPass.Execute(node);
             ResolveFunctionReplacements(node);
             collectionPass.Execute(node);
-            ValidateAllocatorPair();
 
             ResolveDeclaredBaseTypes(node);
             // Signature resolution can specialize generic bodies. Their exception
@@ -1954,6 +1969,8 @@ namespace gflat
             new HierarchyResolutionPass(_symbols).ResolveBaseTypes();
             ResolveDeclarationSignatures(node);
             PrepareOverloads(node);
+            ValidateAllocatorPair();
+            RegisterStaticStorage(node);
 
             // Pass 2: Hierarchy resolution
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
@@ -1981,7 +1998,7 @@ namespace gflat
             for (int i = 0; i < node.Members.Count; i++) CheckDeclarationAttributes(node.Members[i]);
             // Attribute evaluation has its own safety checks. Preserve those
             // diagnostics before reporting unavailable runtime storage forms.
-            ValidateFieldStorage(node);
+            ValidateStaticStorage();
             AnalyzeSafely(ValidateFunctionValueSelections);
 
             if (_recoverErrors && _diagnostics.HasErrors) return;
@@ -2030,6 +2047,7 @@ namespace gflat
                 InterfaceInfo info = new InterfaceInfo
                 {
                     Name = iface.Name,
+                    IsDeclaredStatic = iface.IsStatic,
                     Namespace = nsPath,
                     Accessibility = iface.Accessibility
                 };
@@ -2104,7 +2122,7 @@ namespace gflat
                     }
                     else if (m is FieldDeclaration field)
                     {
-                        info.Fields.Add((field.Name, field.Type));
+                        if (!field.IsStatic) info.Fields.Add((field.Name, field.Type));
                         info.FieldDeclarations.Add(field);
                         info.FieldDeclarationsByName[field.Name] = field;
                     }
@@ -2296,6 +2314,7 @@ namespace gflat
 
             ClassInfo? prevClass = _currentClass;
             StructInfo? prevStruct = _currentStruct;
+            RegisterStaticTypeStorage(node.Members, node.Name);
             _currentClass = _classes[node.Name];
             _currentStruct = null;
 
@@ -2365,6 +2384,7 @@ namespace gflat
                 {
                     if (member is FieldDeclaration field)
                     {
+                        if (field.IsStatic) { CheckStaticField(field); continue; }
                         field.Type = ResolveAlias(field.Type);
                         int fIdx = _currentClass.FieldIndex(field.Name);
                         if (fIdx >= 0)
@@ -2479,6 +2499,7 @@ namespace gflat
 
             StructInfo? previousStruct = _currentStruct;
             ClassInfo? prevClass = _currentClass;
+            RegisterStaticTypeStorage(node.Members, node.Name);
             _currentStruct = _structs[node.Name];
             _currentClass = null;
 
@@ -2550,6 +2571,7 @@ namespace gflat
                 {
                     if (member is FieldDeclaration field)
                     {
+                        if (field.IsStatic) { CheckStaticField(field); continue; }
                         field.Type = ResolveAlias(field.Type);
                         int fIdx = _currentStruct.Fields.FindIndex(f => f.Name == field.Name);
                         if (fIdx >= 0)
@@ -2811,6 +2833,7 @@ namespace gflat
             }
 
             RecordType(node, fieldType);
+            RecordStaticInitializer(node);
         }
 
         private static ConstValue NormalizeStringBufferConstant(ConstValue value, TypeExpression type)
@@ -2827,6 +2850,7 @@ namespace gflat
             using var nullableScope = IsolateNullableFlow();
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidatePropertyAccessor(node);
+            ValidateStaticConstructor(node);
             if (node.Body == null)
                 throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
             if (node.IsGeneric) return;
@@ -3066,6 +3090,7 @@ namespace gflat
             }
 
             TypeExpression inner = ResolveAlias(ptr.Inner);
+            RequireMemoryFunction("Free", node);
             if (inner is NamedTypeExpression namedCls && _classes.TryGetValue(namedCls.Name, out ClassInfo? clsInfo))
             {
                 bool hasVirtualDtor = clsInfo.DestructorSlot >= 0;
@@ -3836,6 +3861,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             if (CheckPropertyRead(node)) return;
+            if (TryBindStaticStorage(node)) return;
             if (!TryLookupVariable(node.Name, out _) && TryBindFunctionValue(node)) return;
             TypeExpression type = LookupVariable(node.Name, node.Line);
             RecordType(node, NullableReadType(node, type));
@@ -3962,6 +3988,11 @@ namespace gflat
 
         private void CheckAssignmentTargetCore(AstNode target, int line)
         {
+            if (GetStaticStorage(target) is { } storage)
+            {
+                if ((storage.IsConst || storage.IsReadOnly) && !CanInitializeReadOnlyField(target)) throw new TypeCheckException("Cannot assign to readonly static or global storage", line);
+                return;
+            }
             if (IsPropertyValueStorage(target))
                 throw new TypeCheckException("Cannot modify a value returned by a property", line);
             if (target is UnaryExpression deref && deref.Operator == TokenKind.Star)
@@ -4141,7 +4172,7 @@ namespace gflat
                 }
             }
 
-            if (node.Target is not (IdentifierExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression))
+            if (node.Target is not (IdentifierExpression or NamespaceAccessExpression or MemberAccessExpression or UnaryExpression { Operator: TokenKind.Star } or IndexExpression))
                 throw new TypeCheckException($"Invalid assignment target '{node.Target.GetType().Name}'", node.Line);
 
             if (node.Target is MemberAccessExpression { IsArrow: true })
@@ -4229,6 +4260,13 @@ namespace gflat
             {
                 CheckNullableArgument(arg);
 
+            }
+
+            if (node.Callee is NamespaceAccessExpression && TryBindStaticStorage(node.Callee) &&
+                ResolveAlias(GetType(node.Callee)) is FunctionPointerTypeExpression staticCallback)
+            {
+                CheckIndirectCall(node, staticCallback);
+                return;
             }
 
             // Check if callee is a local variable or struct member holding a function pointer
@@ -4696,6 +4734,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             if (TryBindFunctionValue(node)) return;
             if (CheckPropertyRead(node)) return;
+            if (TryBindStaticStorage(node)) return;
             if (node.Left is IdentifierExpression id && TryLookupVariable(id.Name, out _))
             {
                 throw new TypeCheckException($"Instance member '{node.Member}' must be accessed with '.', not '::'", node.Line);
@@ -4915,6 +4954,8 @@ namespace gflat
         private void CheckAllocationFailure(NewExpression node)
         {
             if (node.Kind != AllocationKind.Pointer || node.Destination != null || _allocationFailures.ContainsKey(node)) return;
+            RequireMemoryFunction("Allocate", node);
+            RequireMemoryFunction("Free", node);
             if (GetClass("std::BadAllocException") == null)
                 throw new TypeCheckException("new* requires std::BadAllocException; a custom Exception root must provide the standard (message, code) constructor or define its own std::BadAllocException", node.Span);
             var value = new NewExpression(new NamedTypeExpression("BadAllocException", "std", node.Line), [], AllocationKind.Value, node.Line) { Span = node.Span };
@@ -6060,6 +6101,8 @@ namespace gflat
                 return;
             }
             node.Expression.Accept(this);
+            RequireMemoryFunction("Allocate", node);
+            RequireMemoryFunction("Free", node);
             TypeExpression exprType = ResolveAlias(_types[node.Expression]);
             if (exprType is not NamedTypeExpression named || !TypeDerivesFromClass(named, "Exception"))
                 throw new TypeCheckException("Throw requires an Exception-derived value; pointers cannot be thrown", node.Line);

@@ -38,8 +38,6 @@ public partial class TypeChecker
                         throw new TypeCheckException("inline requires a concrete implementation", property.Line);
                     if (owner == null)
                     {
-                        if (property.Initializer != null || new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>().Any(a => a.Body == null))
-                            throw new TypeCheckException("Namespace properties require explicit accessor bodies and cannot have initializers", property.Line);
                         if (new[] { property.Getter, property.Setter }.OfType<MethodDeclaration>().Any(a => a.IsReadOnly || a.Accessibility == TokenKind.Protected))
                             throw new TypeCheckException("Namespace property accessors cannot be readonly or protected", property.Line);
                     }
@@ -64,8 +62,6 @@ public partial class TypeChecker
                         throw new TypeCheckException("Static properties cannot be virtual or abstract", property.Line);
                     if (property.Name == "$index" && (auto || property.Initializer != null))
                         throw new TypeCheckException("Indexers require accessor bodies (or abstract/interface signatures) and cannot have initializers", property.Line);
-                    if (auto && accessors[0].IsStatic)
-                        throw new TypeCheckException("Static auto-properties require static field storage, which is not yet supported; use explicit accessors", property.Line);
                     if (property.Initializer != null && !auto)
                         throw new TypeCheckException("Only auto-properties may have initializers", property.Line);
                     if (auto && property.Getter == null)
@@ -73,7 +69,7 @@ public partial class TypeChecker
                     var additions = new List<AstNode>();
                     string backing = "$property$" + _propertyBackingField++ + "$" + property.Name;
                     if (auto)
-                        additions.Add(new FieldDeclaration(backing, property.Type, property.Initializer, TokenKind.Private, false, false, property.Line) { Span = property.Span });
+                        additions.Add(new FieldDeclaration(backing, property.Type, property.Initializer, TokenKind.Private, false, accessors[0].IsStatic, property.Line) { Span = property.Span });
                     foreach (var accessor in accessors)
                     {
                         bool getter = accessor == property.Getter;
@@ -88,7 +84,7 @@ public partial class TypeChecker
                         additions.Add(new MethodDeclaration(accessor.Name, accessor.ReturnType, accessor.Parameters, body,
                             owner is InterfaceDeclaration ? TokenKind.Public : accessor.Accessibility,
                             accessor.IsStatic, accessor.IsVirtual, accessor.IsOverride, signature, accessor.Line,
-                            accessor.IsReadOnly || auto && getter && !accessor.IsVirtual && !accessor.IsOverride, isNoThrow: accessor.IsNoThrow)
+                            accessor.IsReadOnly || auto && getter && !accessor.IsStatic && owner != null && !accessor.IsVirtual && !accessor.IsOverride, isNoThrow: accessor.IsNoThrow)
                         { IsInline = accessor.IsInline, PropertyName = property.Name, Span = accessor.Span.Source == null ? property.Span : accessor.Span });
                     }
                     if (auto && property.Setter == null)
@@ -97,7 +93,7 @@ public partial class TypeChecker
                         additions.Add(new MethodDeclaration("$set$" + property.Name, new NamedTypeExpression("void", null, property.Line),
                             new() { new Parameter("value", property.Type, property.Line) },
                             new BlockStatement(new() { new ExpressionStatement(assignment, property.Line) }, property.Line),
-                            TokenKind.Private, false, false, false, false, property.Line)
+                            TokenKind.Private, accessors[0].IsStatic, false, false, false, property.Line)
                         { PropertyName = property.Name, IsPropertyInitializer = true, Span = property.Span });
                     }
                     members.InsertRange(members.IndexOf(property) + 1, additions);
@@ -265,13 +261,17 @@ public partial class TypeChecker
         if (method == null) throw new TypeCheckException($"Property '{property.Name}' has no {(getter ? "getter" : "setter")}", site.Line);
         if (property.IsNamespace)
         {
+            if (method.IsPropertyInitializer)
+                throw new TypeCheckException($"Get-only namespace property '{property.Name}' cannot be assigned", site.Line);
             if (method.Accessibility == TokenKind.Private && method.Span.SourceId != site.Span.SourceId)
                 throw new TypeCheckException($"Cannot access private {(getter ? "getter" : "setter")} of property '{property.Name}'", site.Line);
             ValidatePropertyAccessor(method);
             return method;
         }
-        if (method.IsPropertyInitializer && !(_currentConstructor != null &&
-            (_currentClass?.Name ?? _currentStruct?.Name) == property.Owner && property.Receiver is IdentifierExpression { Name: "this" }))
+        bool declaringConstructor = (_currentClass?.Name ?? _currentStruct?.Name) == property.Owner &&
+            (method.IsStatic ? _currentFunction is MethodDeclaration { StaticConstructorName: not null } :
+                _currentConstructor != null && property.Receiver is IdentifierExpression { Name: "this" });
+        if (method.IsPropertyInitializer && !declaringConstructor)
             throw new TypeCheckException($"Get-only auto-property '{property.Name}' can only be assigned in its declaring constructor", site.Line);
         string? current = _currentClass?.Name ?? _currentStruct?.Name;
         if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(current, property.Owner))

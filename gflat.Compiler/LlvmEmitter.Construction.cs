@@ -37,7 +37,7 @@ public partial class LlvmEmitter
     private sealed class AllocationCleanup(string address) : IDeferAction
     {
         public void Execute(LlvmEmitter emitter)
-            => emitter.Emit($"    call void @gflat$Memory$Free(i8* {address})");
+            => emitter.Emit($"    call void @{emitter.RuntimeMemorySymbol("Free")}(i8* {address})");
     }
 
     private sealed class ExceptionAllocationCleanup(string address) : IDeferAction
@@ -48,7 +48,7 @@ public partial class LlvmEmitter
 
     private void EmitExceptionFree(string address)
     {
-        Emit($"    call void @__gflat_eh_free_exception(i8* {address}, void (i8*)* @gflat$Memory$Free)");
+        Emit($"    call void @__gflat_eh_free_exception(i8* {address}, void (i8*)* @{RuntimeMemorySymbol("Free")})");
     }
 
     private void BeginConstruction(string name, ConstructorDeclaration constructor)
@@ -65,6 +65,7 @@ public partial class LlvmEmitter
         var str = _typeChecker.GetStruct(name);
         foreach (var field in str?.FieldDeclarations ?? cls!.FieldDeclarations)
         {
+            if (field.IsStatic) continue;
             if (!_typeChecker.HasDestructor(field.Type)) continue;
             string flag = NewTemp(), address = NewTemp();
             int index = str != null ? str.FieldIndex(field.Name) : cls!.FieldIndex(field.Name) + 1;

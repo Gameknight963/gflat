@@ -124,7 +124,9 @@ public partial class LlvmEmitter
 
     private void EmitTermination(string handle)
     {
-        Raw($"    call void @__gflat_eh_terminate(i8* {handle}, void (i8*)* bitcast (void (%Exception*)* @gflat$Exceptions$Unhandled to void (i8*)*))");
+        string hook = _typeChecker.HasUnhandledExceptionHook
+            ? "bitcast (void (%Exception*)* @gflat$Exceptions$Unhandled to void (i8*)*)" : "null";
+        Raw($"    call void @__gflat_eh_terminate(i8* {handle}, void (i8*)* {hook})");
         Raw("    unreachable");
     }
 
@@ -160,7 +162,7 @@ public partial class LlvmEmitter
             string llvm = EmitType(type), size = NewTemp(), bytes = NewTemp(), storage = NewTemp(), address = NewTemp();
             Emit($"    {size} = getelementptr {llvm}, {llvm}* null, i32 1");
             Emit($"    {bytes} = ptrtoint {llvm}* {size} to i64");
-            Emit($"    {storage} = call i8* @__gflat_eh_allocate_exception(i64 {bytes}, i8* (i64)* @gflat$Memory$Allocate)");
+            Emit($"    {storage} = call i8* @__gflat_eh_allocate_exception(i64 {bytes}, i8* (i64)* @{RuntimeMemorySymbol("Allocate")})");
             GuardNonNull(storage, "i8*");
             Emit($"    {address} = bitcast i8* {storage} to {llvm}*");
             _deferScopes.Add(new() { new ExceptionOnlyCleanup(new ExceptionAllocationCleanup(storage)) });

@@ -46,18 +46,15 @@ public partial class TypeChecker
                     if (!ContractMatches(original, method))
                         throw new TypeCheckException($"Replacement of '{method.Name}' must match the weak function's return type, constraints, accessibility and modifiers", method.Line);
                 }
-                if (functions.Any(e => e.Method.ImplementationKind == FunctionImplementationKind.Expect) &&
-                    !functions.Any(e => e.Method.ImplementationKind == FunctionImplementationKind.Replace))
-                    throw new TypeCheckException($"Expected function '{group.Key.Name}' has no implementation; provide replace", functions[0].Method.Span);
                 if (functions.Count == 1 && functions[0].Method.ImplementationKind == FunctionImplementationKind.Ordinary) continue;
                 if (group.Key.Owner == null && group.Key.Scope.Externs.ContainsKey(group.Key.Name))
                     throw new TypeCheckException($"Function '{group.Key.Name}' cannot have both an extern declaration and a weak or replace definition", functions[0].Method.Line);
-                if (functions.Any(e => e.Method.ImplementationKind != FunctionImplementationKind.Ordinary) &&
-                    functions.Select(e => ParameterKey(e.Method)).Distinct().Count() > 1)
-                    throw new TypeCheckException($"Overloading weak function '{group.Key.Name}' is not supported; replacements must match its signature", functions[1].Method.Line);
                 foreach (var sameSignature in functions.GroupBy(e => ParameterKey(e.Method)))
                 {
                     var declarations = sameSignature.ToList();
+                    if (declarations.Any(e => e.Method.ImplementationKind == FunctionImplementationKind.Expect) &&
+                        !declarations.Any(e => e.Method.ImplementationKind == FunctionImplementationKind.Replace))
+                        throw new TypeCheckException($"Expected function '{group.Key.Name}' has no implementation; provide replace", declarations[0].Method.Span);
                     if (declarations.Count == 1) continue;
                     var weak = declarations.Where(e => e.Method.ImplementationKind is FunctionImplementationKind.Weak or FunctionImplementationKind.Expect).ToList();
                     var replace = declarations.Where(e => e.Method.ImplementationKind == FunctionImplementationKind.Replace).ToList();
@@ -147,10 +144,39 @@ public partial class TypeChecker
 
     private void ValidateAllocatorPair()
     {
-        NamespaceScope scope = _globalScope.Children["Memory"];
-        MethodDeclaration allocate = scope.Functions["Allocate"];
-        MethodDeclaration free = scope.Functions["Free"];
+        if (!_globalScope.Children.TryGetValue("Memory", out var scope)) return;
+        var allocate = GetMemoryFunction("Allocate");
+        var free = GetMemoryFunction("Free");
+        if (allocate == null || free == null)
+        {
+            if (allocate?.ImplementationKind == FunctionImplementationKind.Replace || free?.ImplementationKind == FunctionImplementationKind.Replace)
+                throw new TypeCheckException("Replace Memory::Allocate and Memory::Free together", (allocate ?? free)!.Span);
+            return;
+        }
         if ((allocate.ImplementationKind == FunctionImplementationKind.Replace) != (free.ImplementationKind == FunctionImplementationKind.Replace))
             throw new TypeCheckException("Replace Memory::Allocate and Memory::Free together", allocate.Line);
     }
+
+    private void RequireMemoryFunction(string name, AstNode use)
+    {
+        if (!HasMemoryFunction(name))
+            throw new TypeCheckException($"This operation requires Memory::{name}; include a memory implementation or provide the function explicitly", use.Span);
+        if (GetMemoryFunction(name) == null)
+            throw new TypeCheckException($"Memory::{name} must provide the public non-generic signature " +
+                (name == "Allocate" ? "void*? Allocate(nuint bytes)" : "void Free(void* storage)"), use.Span);
+    }
+
+    public bool HasMemoryFunction(string name) => _globalScope.Children.TryGetValue("Memory", out var scope) && scope.Functions.ContainsKey(name);
+    public MethodDeclaration? GetMemoryFunction(string name)
+    {
+        if (!_globalScope.Children.TryGetValue("Memory", out var scope) || !scope.Functions.TryGetValue(name, out var first)) return null;
+        var family = overloadFamilies.TryGetValue(first, out var overloads) ? overloads : [first];
+        return family.FirstOrDefault(method => !method.IsGeneric && method.Accessibility == TokenKind.Public && method.Parameters.Count == 1 &&
+            (name == "Allocate"
+                ? ResolveAlias(method.Parameters[0].Type) is NamedTypeExpression { Name: "nuint" } &&
+                    ResolveAlias(method.ReturnType) is PointerTypeExpression { IsReadOnly: false, Inner: NamedTypeExpression { Name: "void" } }
+                : ResolveAlias(method.Parameters[0].Type) is PointerTypeExpression { IsReadOnly: false, Inner: NamedTypeExpression { Name: "void" } } &&
+                    ResolveAlias(method.ReturnType) is NamedTypeExpression { Name: "void" }));
+    }
+    public bool HasUnhandledExceptionHook => _globalScope.Children.TryGetValue("Exceptions", out var scope) && scope.Functions.ContainsKey("Unhandled");
 }

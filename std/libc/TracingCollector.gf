@@ -32,23 +32,24 @@ namespace std
             public bool collecting;
         }
 
-        // A private global State* slot. The state itself is allocated at sizeof(State),
-        // so this bridge depends on no record offsets or hardcoded record layout.
+        private static State*? stateStorage;
+
         private static State* GetState() nothrow
         {
+            // Thread identity and its atomic claim still need a low-level primitive.
+            // Collector state itself is ordinary gflat static storage.
             bool owner = __llvm_module<bool>("@owner = private global i8* null\n@identity = private thread_local global i8 0\ndefine i1 @enter() {\n%claim = cmpxchg i8** @owner, i8* null, i8* @identity acq_rel acquire\n%previous = extractvalue { i8*, i1 } %claim, 0\n%empty = icmp eq i8* %previous, null\n%same = icmp eq i8* %previous, @identity\n%allowed = or i1 %empty, %same\nret i1 %allowed\n}", "enter");
             if (!owner) collector_detail::abort();
-            nuint* slot = (nuint*)__llvm_module<void*>("@state = private global i8* null\ndefine i8* @address() {\n%result = bitcast i8** @state to i8*\nret i8* %result\n}", "address");
-            if (*slot == (nuint)0)
+            if (stateStorage == null)
             {
                 State* state = (State*)RequiredAllocate((nuint)sizeof(State));
                 state.slots = null;
                 state.allocations = null;
                 state.bytesSinceCollection = 0;
                 state.collecting = false;
-                *slot = (nuint)state;
+                stateStorage = state;
             }
-            return (State*)*slot;
+            return stateStorage!;
         }
 
         private static void* RequiredAllocate(nuint bytes) nothrow

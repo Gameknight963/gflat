@@ -57,7 +57,7 @@ namespace gflat
 
         public void Visit(InterfaceDeclaration node)
         {
-            Print($"Interface: {node.Accessibility} {node.Name}");
+            Print($"Interface: {node.Accessibility} {(node.IsStatic ? "static " : "")}{node.Name}");
             Indented(() => { foreach (AstNode m in node.Members) m.Accept(this); });
         }
 

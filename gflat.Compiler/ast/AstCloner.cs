@@ -103,7 +103,7 @@ namespace gflat.ast
             List<GenericParameter>? genericParams = m.GenericParameters != null && m.Name != _oldName
                 ? m.GenericParameters.ToList()
                 : null;
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, isNoThrow: m.IsNoThrow) { IsInline = m.IsInline, StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(CloneAttribute).ToList(), genericParameters: genericParams, isNoThrow: m.IsNoThrow) { IsInline = m.IsInline, StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, StaticConstructorName = m.StaticConstructorName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
         }
 
         public TypeExpression CloneType(TypeExpression type)

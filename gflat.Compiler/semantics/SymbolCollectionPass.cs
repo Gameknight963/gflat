@@ -59,6 +59,7 @@ namespace gflat.semantics
                 TypeChecker.InterfaceInfo info = new TypeChecker.InterfaceInfo
                 {
                     Name = iface.Name,
+                    IsDeclaredStatic = iface.IsStatic,
                     Namespace = nsPath,
                     Accessibility = iface.Accessibility
                 };
@@ -136,7 +137,7 @@ namespace gflat.semantics
                     }
                     else if (m is FieldDeclaration field)
                     {
-                        info.Fields.Add((field.Name, field.Type));
+                        if (!field.IsStatic) info.Fields.Add((field.Name, field.Type));
                         info.FieldDeclarations.Add(field);
                         info.FieldDeclarationsByName[field.Name] = field;
                     }

@@ -261,7 +261,6 @@ public class PropertyTests
     [InlineData("struct S { public int P { get; set; } } int main() { S s = new S(); int* p = &s.P; return 0; }", "address of a property")]
     [InlineData("struct S { public int P { get; set {} } }", "either have bodies")]
     [InlineData("struct S { public int P { get; get; } }", "Duplicate get")]
-    [InlineData("struct S { public static int P { get; set; } }", "static field storage")]
     [InlineData("struct S { public int P { get; public set; } }", "more restrictive")]
     [InlineData("struct S { public int P; public int P => 1; }", "Duplicate declaration")]
     [InlineData("struct S { public int P { get; set; } } int main() { S s; s.P = 1; return 0; }", "unassigned")]

@@ -819,6 +819,11 @@ Constants follow lexical scope: a local or parameter can shadow a namespace
 constant without becoming constant itself. Constant evaluation uses the resolved
 declaration, rather than another constant with the same spelling.
 
+Taking a constant variable's address materializes immutable storage for that
+declaration. Repeated addresses of the same declaration are stable; distinct
+declarations retain distinct storage even when their constant values are equal.
+Constant array reads and addresses refer to the same underlying buffer.
+
 Generic bodies resolve names in their declaration context. Specialization does
 not capture the caller's locals, aliases, local enums, or control-flow state.
 Local enums belong to their enclosing block; identically named enums in different

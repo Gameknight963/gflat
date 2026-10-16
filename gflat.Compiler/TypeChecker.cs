@@ -533,7 +533,7 @@ namespace gflat
             _scopes.Push(new Dictionary<string, TypeExpression>());
             _localAliases.Push(new Dictionary<string, TypeExpression>());
             _localEnums.Push(new Dictionary<string, EnumInfo>());
-            localConstants.Push(new Dictionary<string, ConstValue>());
+            localConstants.Push(new Dictionary<string, (ConstValue Value, VariableDeclaration Declaration)>());
         }
 
         private void PopScope()
@@ -3430,7 +3430,7 @@ namespace gflat
 
             RecordType(node, varType);
             DeclareVariable(node.Name, varType, node.Line);
-            if (node.IsConst) localConstants.Peek()[node.Name] = _constValues[node];
+            if (node.IsConst) localConstants.Peek()[node.Name] = (_constValues[node], node);
             NullableAssignment(new IdentifierExpression(node.Name, node.Line), node.Initializer);
             if (node.Initializer != null && CopiesValue(node.Initializer, varType)) InvalidateNullableEscapes();
         }
@@ -3914,6 +3914,7 @@ namespace gflat
             if (TryGetConstValueByName(node.Name, out ConstValue? cv) && cv != null)
             {
                 _constValues[node] = cv;
+                BindConstantDeclaration(node);
             }
         }
 

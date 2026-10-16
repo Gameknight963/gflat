@@ -609,6 +609,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitAddress(AstNode node)
     {
+        if (TryEmitConstantAddress(node)) return;
         if (TryEmitStaticAddress(node)) return;
         if (_typeChecker.GetPropertyRead(node) is CallExpression getter) { if (_typeChecker.IsReferenceRead(node)) getter.Accept(this); else EmitAddress(getter); return; }
         if (node is IdentifierExpression ident)
@@ -688,7 +689,8 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression or TypeofExpression or
                  UnaryExpression or BinaryExpression or DefaultExpression or CastExpression or LiteralExpression or
-                 SizeofExpression or AlignofExpression or NameofExpression)
+                 SizeofExpression or AlignofExpression or NameofExpression ||
+                 node is NamespaceAccessExpression enumMember && _typeChecker.TryGetEnumMember(enumMember, out _, out _))
         {
             node.Accept(this);
             string value = Pop();
@@ -3056,6 +3058,7 @@ public partial class LlvmEmitter : IVisitor
         if (EmitFunctionValue(node)) return;
         if (EmitPropertyRead(node)) return;
         if (TryEmitStaticRead(node)) return;
+        if (TryEmitConstantArrayRead(node)) return;
         if (_typeChecker.TryGetConstValue(node, out ConstValue? constVal) && constVal != null)
         {
             if (TryEmitConstValue(constVal, _typeChecker.GetType(node)))
@@ -4068,6 +4071,7 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(NamespaceAccessExpression node)
     {
         if (TryEmitStaticRead(node)) return;
+        if (TryEmitConstantArrayRead(node)) return;
         if (_typeChecker.TryGetConstValue(node, out var constant) && constant != null &&
             TryEmitConstValue(constant, _typeChecker.GetType(node))) return;
         if (EmitFunctionValue(node)) return;

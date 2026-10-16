@@ -30,7 +30,8 @@ public sealed class TypeAliasRecoveryTests
         Assert.Equal(expected, model.Definition(source.Path, use));
         var hover = JsonSerializer.SerializeToElement(model.Hover(source.Path, use), Protocol.JsonOptions);
         Assert.Contains("int later", hover.GetProperty("contents").GetProperty("value").GetString());
-        Assert.Equal(model.Definition(source.Path, text.IndexOf("Read()", StringComparison.Ordinal)),
-            model.Definition(caller.Path, caller.Text.IndexOf("Read()", StringComparison.Ordinal)));
+        var method = model.Definition(source.Path, text.IndexOf("Read()", StringComparison.Ordinal));
+        Assert.NotNull(method);
+        Assert.Equal(method, model.Definition(caller.Path, caller.Text.IndexOf("Read()", StringComparison.Ordinal)));
     }
 }

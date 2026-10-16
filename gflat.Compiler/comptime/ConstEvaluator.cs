@@ -1005,13 +1005,13 @@ namespace gflat.comptime
             if (_context.GetPropertyRead(node) != null || _context.GetPropertyWrite(node) != null)
                 throw new ConstEvalException("Property access is not yet supported in constant evaluation", node.Line);
             CheckSteps(node.Line);
+            var storage = CaptureAssignmentStorage(node.Target);
+            ConstValue? previous = node.Operator == TokenKind.Equals ? null : storage.Read();
             ConstValue val = EvaluateValueForTarget(node.Value, _context.GetType(node.Target));
 
             if (node.Operator != TokenKind.Equals)
             {
-                node.Target.Accept(this);
-                ConstValue previous = _currentValue!;
-                CheckIntegerDivision(node.Operator, _context.GetType(node.Target), ArithmeticOperand(previous), ArithmeticOperand(val), node.Line);
+                CheckIntegerDivision(node.Operator, _context.GetType(node.Target), ArithmeticOperand(previous!), ArithmeticOperand(val), node.Line);
                 ConstValue? result = null;
                 string? error = null;
                 bool valid;
@@ -1022,11 +1022,11 @@ namespace gflat.comptime
                 }
                 else valid = node.Operator switch
                 {
-                    TokenKind.PlusEquals => ConstValue.TryAdd(ArithmeticOperand(previous), ArithmeticOperand(val), out result),
-                    TokenKind.MinusEquals => ConstValue.TrySubtract(ArithmeticOperand(previous), ArithmeticOperand(val), out result),
-                    TokenKind.StarEquals => ConstValue.TryMultiply(ArithmeticOperand(previous), ArithmeticOperand(val), out result),
-                    TokenKind.SlashEquals => ConstValue.TryDivide(ArithmeticOperand(previous), ArithmeticOperand(val), out result, out error),
-                    TokenKind.PercentEquals => ConstValue.TryModulo(ArithmeticOperand(previous), ArithmeticOperand(val), out result, out error),
+                    TokenKind.PlusEquals => ConstValue.TryAdd(ArithmeticOperand(previous!), ArithmeticOperand(val), out result),
+                    TokenKind.MinusEquals => ConstValue.TrySubtract(ArithmeticOperand(previous!), ArithmeticOperand(val), out result),
+                    TokenKind.StarEquals => ConstValue.TryMultiply(ArithmeticOperand(previous!), ArithmeticOperand(val), out result),
+                    TokenKind.SlashEquals => ConstValue.TryDivide(ArithmeticOperand(previous!), ArithmeticOperand(val), out result, out error),
+                    TokenKind.PercentEquals => ConstValue.TryModulo(ArithmeticOperand(previous!), ArithmeticOperand(val), out result, out error),
                     _ => false
                 };
                 if (!valid || result == null) throw new ConstEvalException(error ?? "Unsupported compound assignment", node.Line);
@@ -1034,65 +1034,8 @@ namespace gflat.comptime
             }
             val = Normalize(val, _context.GetType(node.Target), node.Line);
 
-            if (node.Target is IdentifierExpression ident)
-            {
-                if (_scopes.Any(scope => scope.ContainsKey(ident.Name)))
-                {
-                    SetVariable(ident.Name, val);
-                    _currentValue = val;
-                    return;
-                }
-                if (TryGetVariable("this", out ConstValue? thisVal))
-                {
-                    if (thisVal is ConstValue.Struct thisStruct)
-                    {
-                        TypeChecker.StructInfo? sInfo = _context.GetStruct(thisStruct.StructName);
-                        if ((sInfo != null && sInfo.FieldIndex(ident.Name) >= 0) || thisStruct.Fields.ContainsKey(ident.Name))
-                        {
-                            thisStruct.Fields[ident.Name] = val;
-                            _currentValue = val;
-                            return;
-                        }
-                    }
-                    if (thisVal is ConstValue.ClassInstance thisClass)
-                    {
-                        TypeChecker.ClassInfo? cInfo = _context.GetClass(thisClass.ClassName);
-                        if ((cInfo != null && cInfo.FieldIndex(ident.Name) >= 0) || thisClass.Fields.ContainsKey(ident.Name))
-                        {
-                            thisClass.Fields[ident.Name] = val;
-                            _currentValue = val;
-                            return;
-                        }
-                    }
-                }
-                SetVariable(ident.Name, val);
-                _currentValue = val;
-                return;
-            }
-
-            if (node.Target is MemberAccessExpression memberAccess)
-            {
-                memberAccess.Object.Accept(this);
-                ConstValue obj = _currentValue!;
-                if (obj is ConstValue.Pointer pVal)
-                {
-                    obj = pVal.Target;
-                }
-                if (obj is ConstValue.Struct sVal)
-                {
-                    sVal.Fields[memberAccess.Member] = val;
-                    _currentValue = val;
-                    return;
-                }
-                if (obj is ConstValue.ClassInstance cVal)
-                {
-                    cVal.Fields[memberAccess.Member] = val;
-                    _currentValue = val;
-                    return;
-                }
-            }
-
-            throw new ConstEvalException("Invalid assignment target at compile time", node.Line);
+            storage.Write(val);
+            _currentValue = val;
         }
 
         public void Visit(VariableDeclaration node)

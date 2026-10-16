@@ -28,6 +28,7 @@ public sealed partial class EditorModel
     private readonly Dictionary<string, Token[]> tokens = new(Workspace.Paths);
     private readonly Dictionary<string, Syntax[]> nodes = new(Workspace.Paths);
     private readonly List<Symbol> symbols = [];
+    private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceTypeDeclarations = [];
     private readonly Dictionary<AstNode, Symbol> declarations = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Token, Symbol?> references = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Syntax, int> scopeEnds = new(ReferenceEqualityComparer.Instance);
@@ -92,6 +93,8 @@ public sealed partial class EditorModel
             var symbol = new Symbol(name, kind, classification, entry, nameSpan, ns, owner, scope, type,
                 IsStatic(entry.Node), entry.Node is MethodDeclaration && entry.Parent?.Node is InterfaceDeclaration ? TokenKind.Public : Access(entry.Node));
             symbols.Add(symbol);
+            if (IsType(entry.Node) && entry.Span.Source != null)
+                sourceTypeDeclarations.TryAdd((entry.Node.GetType(), entry.Span), symbol);
             declarations.TryAdd(entry.Node, symbol);
         }
         RegisterTypeParameters();
@@ -336,6 +339,13 @@ public sealed partial class EditorModel
                 type = alias.Type;
                 continue;
             }
+            // Specialized declarations retain their original source spans. Use
+            // their registered origin before falling back to incomplete-source
+            // name recovery, which cannot distinguish a nested specialization
+            // from its generic containing type.
+            if (snapshot.Checker?.GetTypeDeclaration(named.Name) is { } declaration &&
+                sourceTypeDeclarations.TryGetValue((declaration.GetType(), declaration.Span), out var sourceType))
+                return sourceType.Qualified;
             // Source declarations retain their internal names after checking. Match
             // those before decoding a specialization, even when checking is incomplete.
             var internalMatch = symbols.Where(s => IsType(s.Syntax.Node)).Select(s => (Symbol: s, Name: s.Syntax.Node switch {

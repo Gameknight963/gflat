@@ -105,6 +105,13 @@ namespace gflat
         public bool CanCallThrow(AstNode call) => call is CallExpression or NewExpression || _throwingCalls.Contains(call);
         public IEnumerable<ClassInfo> GetAllClasses() => _classes.Values;
 
+        public AstNode? GetTypeDeclaration(string identity)
+        {
+            if (_structs.TryGetValue(identity, out var structure)) return structure.Declaration;
+            if (_classes.TryGetValue(identity, out var cls)) return cls.Declaration;
+            return _interfaces.GetValueOrDefault(identity)?.Declaration;
+        }
+
         public bool TryGetOperatorTarget(BinaryExpression node, out (string StructName, OperatorDeclaration Operator) target) =>
             _operatorTargets.TryGetValue(node, out target);
 
@@ -206,6 +213,7 @@ namespace gflat
 
         public class StructInfo
         {
+            public StructDeclaration? Declaration;
             public string Name = "";
             public string Namespace = "";
             public List<(string Name, TypeExpression Type)> Fields = new();
@@ -226,6 +234,7 @@ namespace gflat
 
         public class InterfaceInfo
         {
+            public InterfaceDeclaration? Declaration;
             public bool IsDeclaredStatic;
             public bool IsStaticContract => IsDeclaredStatic || Methods.Count > 0 && Methods.All(m => m.IsStatic);
             public string Name = "";
@@ -238,6 +247,7 @@ namespace gflat
 
         public class ClassInfo
         {
+            public ClassDeclaration? Declaration;
             public string Name = "";
             public string Namespace = "";
             public string? BaseClass = null;
@@ -2061,6 +2071,7 @@ namespace gflat
                 InterfaceInfo info = new InterfaceInfo
                 {
                     Name = iface.Name,
+                    Declaration = iface,
                     IsDeclaredStatic = iface.IsStatic,
                     Namespace = nsPath,
                     Accessibility = iface.Accessibility
@@ -2095,6 +2106,7 @@ namespace gflat
                 StructInfo info = new StructInfo
                 {
                     Name = str.Name,
+                    Declaration = str,
                     Namespace = nsPath,
                     Interfaces = new List<string>(str.Interfaces)
                 };
@@ -2187,6 +2199,7 @@ namespace gflat
                 ClassInfo info = new ClassInfo
                 {
                     Name = cls.Name,
+                    Declaration = cls,
                     Namespace = nsPath,
                     BaseClass = cls.BaseClass,
                     IsAbstract = cls.IsAbstract,

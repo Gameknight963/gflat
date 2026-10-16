@@ -60,6 +60,7 @@ namespace gflat.semantics
                 TypeChecker.InterfaceInfo info = new TypeChecker.InterfaceInfo
                 {
                     Name = iface.Name,
+                    Declaration = iface,
                     IsDeclaredStatic = iface.IsStatic,
                     Namespace = nsPath,
                     Accessibility = iface.Accessibility
@@ -97,6 +98,7 @@ namespace gflat.semantics
                 TypeChecker.StructInfo info = new TypeChecker.StructInfo
                 {
                     Name = str.Name,
+                    Declaration = str,
                     Namespace = nsPath,
                     Interfaces = new List<string>(str.Interfaces)
                 };
@@ -193,6 +195,7 @@ namespace gflat.semantics
                 TypeChecker.ClassInfo info = new TypeChecker.ClassInfo
                 {
                     Name = cls.Name,
+                    Declaration = cls,
                     Namespace = nsPath,
                     BaseClass = cls.BaseClass,
                     IsAbstract = cls.IsAbstract,

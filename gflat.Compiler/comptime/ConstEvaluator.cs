@@ -930,7 +930,9 @@ namespace gflat.comptime
 
             if (!method.IsConst)
             {
-                throw new ConstEvalException($"Function '{funcName}' is not marked 'const' and cannot be evaluated at compile time", node.Line);
+                string displayName = _context is TypeChecker displayChecker
+                    ? displayChecker.DisplayName(funcName ?? method.Name) : funcName ?? method.Name;
+                throw new ConstEvalException($"Function '{displayName}' is not marked 'const' and cannot be evaluated at compile time", node.Line);
             }
 
             if (method.Parameters.Any(parameter => _context.ResolveAlias(parameter.Type) is ReferenceTypeExpression))

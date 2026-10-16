@@ -4332,7 +4332,7 @@ namespace gflat
             if (target.IsReadOnlyValue || ResolveAlias(pointer.Inner).IsReadOnlyValue)
                 throw new TypeCheckException("Cannot explicitly destroy a readonly object", node.Line);
             if (!TypesMatch(ResolveAlias(pointer.Inner), target))
-                throw new TypeCheckException($"Destructor type '{TypeName(target)}' must match the pointed-to type '{TypeName(pointer.Inner)}'", node.Line);
+                throw new TypeCheckException($"Destructor type '{DisplayTypeName(target)}' must match the pointed-to type '{DisplayTypeName(pointer.Inner)}'", node.Line);
             if (target is NamedTypeExpression { Name: "void" })
                 throw new TypeCheckException("Explicit destructor calls require a concrete object type", node.Line);
             RecordType(node, Void);
@@ -4413,7 +4413,7 @@ namespace gflat
                 EnumInfo? calleeEnum = ResolveEnum(memberAccess.Object);
                 if (calleeEnum != null)
                 {
-                    throw new TypeCheckException($"Enum member '{calleeEnum.Name}::{memberAccess.Member}' must be accessed with '::', not '.'", node.Line);
+                    throw new TypeCheckException($"Enum member '{DisplayName(calleeEnum.Name)}::{memberAccess.Member}' must be accessed with '::', not '.'", node.Line);
                 }
 
                 NamespaceScope? calleeNs = ResolveNamespace(memberAccess.Object);
@@ -4860,7 +4860,7 @@ namespace gflat
             if (enumInfo != null)
             {
                 if (!enumInfo.Members.TryGetValue(node.Member, out long val))
-                    throw new TypeCheckException($"Enum '{enumInfo.Name}' does not contain member '{node.Member}'", node.Line);
+                    throw new TypeCheckException($"Enum '{DisplayName(enumInfo.Name)}' does not contain member '{node.Member}'", node.Line);
 
                 RecordType(node, NamedTypeExpression.Resolved(enumInfo.Name, node.Line));
                 _resolvedEnumMembers[node] = (enumInfo, val);
@@ -4939,7 +4939,7 @@ namespace gflat
             EnumInfo? enumInfo = ResolveEnum(node.Object);
             if (enumInfo != null)
             {
-                throw new TypeCheckException($"Enum member '{enumInfo.Name}::{node.Member}' must be accessed with '::', not '.'", node.Line);
+                throw new TypeCheckException($"Enum member '{DisplayName(enumInfo.Name)}::{node.Member}' must be accessed with '::', not '.'", node.Line);
             }
 
             NamespaceScope? ns = ResolveNamespace(node.Object);
@@ -5405,7 +5405,7 @@ namespace gflat
             else if (targetType is PointerTypeExpression ptr)
             {
                 if (ResolveAlias(ptr.Inner) is NamedTypeExpression iface && IsInterface(iface))
-                    throw new TypeCheckException($"Interface '{iface.Name}' has no indexer", node.Line);
+                    throw new TypeCheckException($"Interface '{DisplayName(iface.Name)}' has no indexer", node.Line);
                 if (ptr.IsNullable)
                     throw new TypeCheckException("Cast a nullable pointer to non-null before indexing", node.Line);
                 ValidateValueType(ptr.Inner, node.Line);
@@ -5414,7 +5414,7 @@ namespace gflat
             }
             else
             {
-                throw new TypeCheckException($"Cannot index non-array and non-pointer type '{TypeName(targetType)}'", node.Line);
+                throw new TypeCheckException($"Cannot index non-array and non-pointer type '{DisplayTypeName(targetType)}'", node.Line);
             }
         }
         public void Visit(BreakStatement node)
@@ -5747,7 +5747,7 @@ namespace gflat
             }
             if (!IsValidCast(sourceType, targetType))
             {
-                throw new TypeCheckException($"Cannot cast '{TypeName(sourceType)}' to '{TypeName(targetType)}'", node.Line);
+                throw new TypeCheckException($"Cannot cast '{DisplayTypeName(sourceType)}' to '{DisplayTypeName(targetType)}'", node.Line);
             }
             if (!ValidateCopyUse(node.Operand, targetType))
                 throw new TypeCheckException("Cast requires a copyable value, a fresh value, or 'move value'", node.Span);

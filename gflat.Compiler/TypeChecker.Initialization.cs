@@ -40,7 +40,7 @@ public partial class TypeChecker
             {
                 if (parent.Constructors.Count == 0) ValidateImplicitConstruction(parent.Name, line);
                 else if (!parent.Constructors.Any(c => AcceptsArgumentCount(c.Parameters, 0)))
-                    throw new TypeCheckException($"Base class '{parent.Name}' requires an explicit constructor call", line);
+                    throw new TypeCheckException($"Base class '{DisplayName(parent.Name)}' requires an explicit constructor call", line);
                 else
                 {
                     var arguments = new List<AstNode>();
@@ -53,6 +53,6 @@ public partial class TypeChecker
         else fields = GetStructByIdentity(name)!.FieldDeclarations;
         foreach (var field in fields.Where(f => !f.IsStatic))
             if (field.Initializer == null && !CanDefaultInitialize(field.Type))
-                throw new TypeCheckException($"Field '{name}.{field.Name}' requires an initializer or constructor assignment", line);
+                throw new TypeCheckException($"Field '{DisplayName(name)}.{field.Name}' requires an initializer or constructor assignment", line);
     }
 }

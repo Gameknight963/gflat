@@ -100,7 +100,7 @@ public sealed partial class EditorModel
         }
         if (symbol.IsTypeParameter)
             return [new("text", "type parameter "), new("typeParameter", symbol.Name, Target: navigable ? SymbolLocation(symbol) : null)];
-        if (symbol.Scope == null && symbol.Syntax.Node is not NamespaceDeclaration and not EnumMemberDeclaration)
+        if (symbol.Scope == null && symbol.Syntax.Node is not NamespaceDeclaration and not EnumMemberDeclaration and not MethodDeclaration { StaticConstructorName: not null })
         {
             string? access = symbol.Access switch { TokenKind.Public => "public", TokenKind.Private => "private", TokenKind.Protected => "protected", TokenKind.Internal => "internal", _ => null };
             if (access != null) Keyword(access);

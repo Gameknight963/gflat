@@ -62,7 +62,7 @@ public sealed partial class EditorModel
     private static int OutlineKind(AstNode node) => node switch {
         NamespaceDeclaration => 3, ClassDeclaration => 5, StructDeclaration => 23,
         InterfaceDeclaration => 11, EnumDeclaration => 10, EnumMemberDeclaration => 22,
-        ConstructorDeclaration => 9, DestructorDeclaration => 6, OperatorDeclaration => 25,
+        ConstructorDeclaration or MethodDeclaration { StaticConstructorName: not null } => 9, DestructorDeclaration => 6, OperatorDeclaration => 25,
         MethodDeclaration { PropertyName: null } => 6, ExternDeclaration => 12,
         PropertyDeclaration => 7, FieldDeclaration { IsConst: true } => 14,
         FieldDeclaration => 8, AliasDeclaration => 5, _ => 0

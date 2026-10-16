@@ -128,6 +128,7 @@ public sealed partial class EditorModel
         InterfaceDeclaration i => (i.SourceName, 8, "interface", null),
         EnumDeclaration e => (e.SourceName, 13, "enum", null),
         NamespaceDeclaration n => (n.Name, 9, "namespace", null),
+        MethodDeclaration { StaticConstructorName: not null } m => (m.StaticConstructorName, 4, "method", null),
         MethodDeclaration m when m.PropertyName == null => (m.Name, 2, "method", m.ReturnType),
         ExternDeclaration e => (e.Name, 3, "function", e.ReturnType),
         ConstructorDeclaration c => (c.Name.Split("::").Last(), 4, "method", null),
@@ -352,7 +353,7 @@ public sealed partial class EditorModel
         var visited = new HashSet<string>();
         while (visited.Add(owner))
         {
-            foreach (var symbol in symbols.Where(s => s.Owner == owner && s.Scope == null && s.Syntax.Node is not ConstructorDeclaration)) yield return symbol;
+            foreach (var symbol in symbols.Where(s => s.Owner == owner && s.Scope == null && s.Syntax.Node is not ConstructorDeclaration and not MethodDeclaration { StaticConstructorName: not null })) yield return symbol;
             var type = symbols.FirstOrDefault(s => s.Qualified == owner && s.Syntax.Node is ClassDeclaration);
             if (type?.Syntax.Node is not ClassDeclaration c) yield break;
             // The parser records the colon list in Interfaces; checking separates

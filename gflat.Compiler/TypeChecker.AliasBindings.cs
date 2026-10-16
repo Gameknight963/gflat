@@ -92,26 +92,32 @@ public partial class TypeChecker
         finally { _currentNamespace = previous; }
     }
 
-    private TypeExpression ResolveAliasBindingTarget(TypeExpression target)
+    private TypeExpression ResolveAliasBindingTarget(TypeExpression target, Action<TypeExpression>? publish = null)
     {
-        if (!aliasTargetNamespaces.TryGetValue(target, out var ns)) return ResolveAlias(target);
+        if (!aliasTargetNamespaces.TryGetValue(target, out var ns)) return ResolveAlias(target, publish);
         using var source = SourceContext.Enter(target.Span);
         using var locals = IsolateDeclarationContext();
         var previous = _currentNamespace;
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
         try
         {
-            var result = ResolveAlias(target);
+            var result = ResolveAlias(target, publish == null ? null : value => publish(ContractView(value)));
+            return ContractView(result);
+        }
+        finally { _currentNamespace = previous; }
+
+        TypeExpression ContractView(TypeExpression result)
+        {
             if (aliasContracts.TryGetValue(target, out var contract) && result is NamedTypeExpression named)
             {
-                // Keep the contract on this use, rather than on the shared concrete
-                // declaration. Naming the implementation directly still exposes it.
-                result = new NamedTypeExpression(named.Name, named.Namespace, target.Line, named.TypeArguments) { Span = target.Span };
+                // Contract views belong to this alias use, not the shared implementation.
+                result = new NamedTypeExpression(named.Name, named.Namespace, target.Line, named.TypeArguments)
+                    { Span = target.Span };
+                result = result.WithReadOnlyValue(named.IsReadOnlyValue);
                 aliasContracts[result] = contract;
             }
             return result;
         }
-        finally { _currentNamespace = previous; }
     }
 
     private void SelectAliasBindings(CompilationUnit unit)

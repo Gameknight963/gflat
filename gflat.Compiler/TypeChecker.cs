@@ -854,21 +854,21 @@ namespace gflat
             return false;
         }
 
-        private NamedTypeExpression ResolveGenericType(string name, string? ns, List<TypeExpression> typeArgs, int line)
+        private NamedTypeExpression ResolveGenericType(string name, string? ns, List<TypeExpression> typeArgs, int line, Action<TypeExpression> publish)
         {
             name = ResolveTypeIdentity(name, ns) ?? name;
             if (_genericStructs.TryGetValue(name, out StructDeclaration? genericStruct))
             {
-                return MonomorphizeStruct(genericStruct, typeArgs, line);
+                return MonomorphizeStruct(genericStruct, typeArgs, line, publish);
             }
             if (_genericClasses.TryGetValue(name, out ClassDeclaration? genericClass))
             {
-                return MonomorphizeClass(genericClass, typeArgs, line);
+                return MonomorphizeClass(genericClass, typeArgs, line, publish);
             }
             throw new TypeCheckException($"Unknown generic type '{DisplayName(name)}'", line);
         }
 
-        private NamedTypeExpression MonomorphizeStruct(StructDeclaration genericDef, List<TypeExpression> typeArgs, int line)
+        private NamedTypeExpression MonomorphizeStruct(StructDeclaration genericDef, List<TypeExpression> typeArgs, int line, Action<TypeExpression> publish)
         {
             ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
@@ -892,7 +892,9 @@ namespace gflat
             CheckFailedTypeSpecialization(mangledName, line);
             if (_structs.ContainsKey(mangledName))
             {
-                return new NamedTypeExpression(mangledName, null, line);
+                var identity = new NamedTypeExpression(mangledName, null, line);
+                publish(identity);
+                return identity;
             }
             using var specialization = EnterTypeSpecialization(mangledName, line);
 
@@ -907,13 +909,14 @@ namespace gflat
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
+            publish(new NamedTypeExpression(mangledName, null, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
             CheckSpecialization(genericDef, specialized);
 
             return new NamedTypeExpression(mangledName, null, line);
         }
 
-        private NamedTypeExpression MonomorphizeClass(ClassDeclaration genericDef, List<TypeExpression> typeArgs, int line)
+        private NamedTypeExpression MonomorphizeClass(ClassDeclaration genericDef, List<TypeExpression> typeArgs, int line, Action<TypeExpression> publish)
         {
             ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
@@ -937,7 +940,9 @@ namespace gflat
             CheckFailedTypeSpecialization(mangledName, line);
             if (_classes.ContainsKey(mangledName))
             {
-                return new NamedTypeExpression(mangledName, null, line);
+                var identity = new NamedTypeExpression(mangledName, null, line);
+                publish(identity);
+                return identity;
             }
             using var specialization = EnterTypeSpecialization(mangledName, line);
 
@@ -963,6 +968,7 @@ namespace gflat
                     new HierarchyResolutionPass(_symbols).ResolveHierarchy(nestedClsInfo);
                 }
             }
+            publish(new NamedTypeExpression(mangledName, null, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
             CheckSpecialization(genericDef, specialized);
 
@@ -1064,22 +1070,15 @@ namespace gflat
         }
 
         private readonly Dictionary<TypeExpression, TypeExpression> resolvedSourceTypes = new();
-        private readonly HashSet<TypeExpression> resolvingAliases = new();
-        public TypeExpression ResolveAlias(TypeExpression type)
-        {
-            if (!resolvingAliases.Add(type))
-                throw new TypeCheckException("Cyclic type alias", type.Span);
-            try
-            {
-                var resolved = ResolveAliasCore(type);
-                return type.IsReadOnlyValue ? TypeQualifiers.ReadOnly(resolved) : resolved;
-            }
-            finally { resolvingAliases.Remove(type); }
-        }
+        public TypeExpression ResolveAlias(TypeExpression type) => ResolveAlias(type, null);
 
-        private TypeExpression ResolveAliasCore(TypeExpression type)
+        private TypeExpression ResolveAliasCore(TypeExpression type, Action<TypeExpression> publish)
         {
-            if (type is ReferenceTypeExpression reference) return new ReferenceTypeExpression(ResolveAlias(reference.Inner), reference.Line);
+            if (type is ReferenceTypeExpression reference)
+            {
+                TypeExpression Project(TypeExpression inner) => new ReferenceTypeExpression(inner, reference.Line) { Span = reference.Span };
+                return Project(ResolveAlias(reference.Inner, inner => publish(Project(inner))));
+            }
             if (resolvedSourceTypes.TryGetValue(type, out var bound)) return bound;
             if (type is NestedTypeExpression nested)
             {
@@ -1093,24 +1092,24 @@ namespace gflat
                     {
                         if (ns.Aliases.TryGetValue(nested.Member, out TypeExpression? target))
                         {
-                            return ResolveAliasBindingTarget(target);
+                            return ResolveAliasBindingTarget(target, publish);
                         }
 
                         if (nested.TypeArguments.Count > 0)
                         {
                             List<TypeExpression> resolvedArgs = nested.TypeArguments.Select(ResolveAlias).ToList();
-                            return ResolveGenericType(nested.Member, parentNs, resolvedArgs, nested.Line);
+                            return ResolveGenericType(nested.Member, parentNs, resolvedArgs, nested.Line, publish);
                         }
-                        return ResolveAlias(new NamedTypeExpression(nested.Member, parentNs, nested.Line));
+                        return ResolveAlias(new NamedTypeExpression(nested.Member, parentNs, nested.Line), publish);
                     }
 
                     string candidate = $"{namedParent.Name}.{nested.Member}";
                     if (nested.TypeArguments.Count > 0)
                     {
                         List<TypeExpression> resolvedArgs = nested.TypeArguments.Select(ResolveAlias).ToList();
-                        return ResolveGenericType(candidate, namedParent.Namespace, resolvedArgs, nested.Line);
+                        return ResolveGenericType(candidate, namedParent.Namespace, resolvedArgs, nested.Line, publish);
                     }
-                    return ResolveAlias(new NamedTypeExpression(candidate, namedParent.Namespace, nested.Line));
+                    return ResolveAlias(new NamedTypeExpression(candidate, namedParent.Namespace, nested.Line), publish);
                 }
                 throw new TypeCheckException($"Cannot resolve nested type member '{nested.Member}' on non-named type '{TypeName(resolvedParent)}'", nested.Line);
             }
@@ -1118,34 +1117,34 @@ namespace gflat
             {
                 string? identity = ResolveTypeIdentity(named.Name, named.Namespace);
                 if (identity != null && (identity != named.Name || named.Namespace != null))
-                    return resolvedSourceTypes[type] = ResolveAlias(new NamedTypeExpression(identity, null, named.Line, named.TypeArguments) { Span = named.Span });
+                    return resolvedSourceTypes[type] = ResolveAlias(new NamedTypeExpression(identity, null, named.Line, named.TypeArguments) { Span = named.Span }, publish);
                 if (named.TypeArguments.Count > 0)
                 {
                     List<TypeExpression> resolvedArgs = named.TypeArguments.Select(ResolveAlias).ToList();
-                    return ResolveGenericType(named.Name, named.Namespace, resolvedArgs, named.Line);
+                    return ResolveGenericType(named.Name, named.Namespace, resolvedArgs, named.Line, publish);
                 }
                 if (named.Namespace != null)
                 {
                     NamespaceScope? ns = ResolveNamespaceByName(named.Namespace);
                     if (ns != null && ns.Aliases.TryGetValue(named.Name, out var target))
-                        return ResolveAliasBindingTarget(target);
+                        return ResolveAliasBindingTarget(target, publish);
                 }
                 else
                 {
                     foreach (var localScope in _localAliases)
                     {
                         if (localScope.TryGetValue(named.Name, out var target))
-                            return ResolveAliasBindingTarget(target);
+                            return ResolveAliasBindingTarget(target, publish);
                     }
                     var cur = _currentNamespace;
                     while (cur != null)
                     {
                         if (cur.Aliases.TryGetValue(named.Name, out var target))
-                            return ResolveAliasBindingTarget(target);
+                            return ResolveAliasBindingTarget(target, publish);
                         cur = cur.Parent;
                     }
                     if (_globalScope.Aliases.TryGetValue(named.Name, out var gTarget))
-                        return ResolveAliasBindingTarget(gTarget);
+                        return ResolveAliasBindingTarget(gTarget, publish);
 
                     TypeExpression? importedAlias = null;
                     NamespaceScope? aliasScope = null;
@@ -1162,7 +1161,7 @@ namespace gflat
                     {
                         var previousScope = _currentNamespace;
                         _currentNamespace = aliasScope!;
-                        try { return resolvedSourceTypes[type] = ResolveAliasBindingTarget(importedAlias); }
+                        try { return resolvedSourceTypes[type] = ResolveAliasBindingTarget(importedAlias, publish); }
                         finally { _currentNamespace = previousScope; }
                     }
 
@@ -1175,7 +1174,10 @@ namespace gflat
             }
             else if (type is PointerTypeExpression ptr)
             {
-                TypeExpression resolvedInner = ResolveAlias(ptr.Inner);
+                TypeExpression Project(TypeExpression inner) => inner is FunctionPointerTypeExpression { IsSignature: true } signature
+                    ? new FunctionPointerTypeExpression(signature.ReturnType, signature.ParameterTypes, false, ptr.IsNullable, ptr.Line) { Span = ptr.Span }
+                    : new PointerTypeExpression(inner, ptr.IsNullable, ptr.Line, isReadOnly: ptr.IsReadOnly) { Span = ptr.Span };
+                TypeExpression resolvedInner = ResolveAlias(ptr.Inner, inner => publish(Project(inner)));
                 if (resolvedInner is FunctionPointerTypeExpression { IsSignature: true } signature)
                     return new FunctionPointerTypeExpression(signature.ReturnType, signature.ParameterTypes, false, ptr.IsNullable, ptr.Line);
                 if (resolvedInner != ptr.Inner)
@@ -1183,35 +1185,18 @@ namespace gflat
             }
             else if (type is ManagedTypeExpression mgd)
             {
-                TypeExpression resolvedInner = ResolveAlias(mgd.Inner);
                 TypeExpression collector = ResolveCollectorType(mgd.Collector, mgd.Line);
+                TypeExpression Project(TypeExpression inner) => new ManagedTypeExpression(inner, mgd.IsNullable, mgd.Line, mgd.IsReadOnly, collector)
+                    { Span = mgd.Span, UsesDefaultCollector = mgd.UsesDefaultCollector };
+                TypeExpression resolvedInner = ResolveAlias(mgd.Inner, inner => publish(Project(inner)));
                 return new ManagedTypeExpression(resolvedInner, mgd.IsNullable, mgd.Line, mgd.IsReadOnly, collector) { UsesDefaultCollector = mgd.UsesDefaultCollector };
             }
             else if (type is ArrayTypeExpression arr)
             {
-                TypeExpression resolvedElem = ResolveAlias(arr.ElementType);
-                int? size = arr.Size;
-                if (!size.HasValue && arr.SizeExpression != null)
-                {
-                    if (!_types.ContainsKey(arr.SizeExpression)) arr.SizeExpression.Accept(this);
-                    if (_constEvaluator.TryEvaluate(arr.SizeExpression, out ConstValue? cv, out string? err))
-                    {
-                        if (ConstValue.TryIntegerValue(cv!, out var arrayBound))
-                        {
-                            if (arrayBound <= 0 || arrayBound > int.MaxValue)
-                                throw new TypeCheckException("Array size must be between 1 and 2147483647", arr.Line);
-                            size = (int)arrayBound;
-                        }
-                        else
-                        {
-                            throw new TypeCheckException($"Array size expression must evaluate to integer, got {cv}", arr.Line);
-                        }
-                    }
-                    else
-                    {
-                        throw new TypeCheckException($"Array size must be a compile-time constant: {err}", arr.Line);
-                    }
-                }
+                // Complete the bound before the pure element-to-array publication.
+                int? size = ResolveArrayLength(arr);
+                TypeExpression Project(TypeExpression element) => new ArrayTypeExpression(element, size, arr.Line, arr.SizeExpression) { Span = arr.Span };
+                TypeExpression resolvedElem = ResolveAlias(arr.ElementType, element => publish(Project(element)));
                 if (resolvedElem != arr.ElementType || size != arr.Size)
                     return new ArrayTypeExpression(resolvedElem, size, arr.Line, arr.SizeExpression);
             }

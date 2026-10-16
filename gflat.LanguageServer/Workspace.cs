@@ -11,7 +11,7 @@ public sealed record Location(string Uri, TextRange Range);
 public sealed record RelatedInformation(Location Location, string Message);
 public sealed record EditorDiagnostic(TextRange Range, int Severity, string Code, string Source, string Message,
     RelatedInformation[]? RelatedInformation = null);
-public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null, Dictionary<string, EditorModel>? Models = null);
+public sealed record Analysis(Dictionary<string, EditorDiagnostic[]> Diagnostics, string[] WatchedPaths, string[]? ProjectDirectories = null, Dictionary<string, EditorModel>? Models = null, string[]? ProjectDiscoveryDirectories = null);
 
 public static class Workspace
 {
@@ -32,10 +32,12 @@ public static class Workspace
         var configured = new HashSet<string>(Paths);
         var watched = new HashSet<string>(Paths);
         var projectDirectories = new HashSet<string>(Paths);
+        var discoveryDirectories = new HashSet<string>(Paths);
         var evaluated = new HashSet<string>(Paths);
         projects ??= new();
         foreach (var document in documents.Values.Where(d => d.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)))
         {
+            WatchDiscovery(document.Path);
             try
             {
                 string? project = ProjectWorkspace.FindProject(document.Path);
@@ -54,6 +56,7 @@ public static class Workspace
                 }
                 if (result.Graph != null)
                 {
+                    foreach (var evaluatedProject in result.Graph.Projects) WatchDiscovery(evaluatedProject.FilePath);
                     var files = result.Graph.Sources.Concat(documents.Keys.Where(path =>
                         result.Graph.Projects.Any(p => p.IncludesFile(path) && Paths.Equals(ProjectWorkspace.FindProject(path), p.FilePath)))).Distinct(Paths).ToArray();
                     configured.UnionWith(files);
@@ -94,7 +97,17 @@ public static class Workspace
         }
         foreach (var document in documents.Values)
             if (!configured.Contains(document.Path) && document.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)) Check([document.Path]);
-        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray(), models);
+        return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray(), models, discoveryDirectories.ToArray());
+
+        void WatchDiscovery(string path)
+        {
+            foreach (string directory in ProjectWorkspace.DiscoveryDirectories(path))
+            {
+                discoveryDirectories.Add(directory);
+                watched.Add(Path.Combine(directory, "Directory.Build.props"));
+                watched.Add(Path.Combine(directory, "Directory.Build.targets"));
+            }
+        }
 
         void Check(IEnumerable<string> paths, CompilationOptions? options = null)
         {

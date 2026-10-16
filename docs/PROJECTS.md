@@ -256,7 +256,9 @@ metadata. The launch provider accepts Start Without Debugging only.
 
 The language server discovers the nearest project and includes referenced sources
 and unsaved buffers. Evaluation is cached between edits; source and imported
-project-file changes invalidate it. Invalid project files produce diagnostics while
+project-file changes invalidate it. Creating a nearer project or shared
+`Directory.Build.props`/`Directory.Build.targets` file also refreshes evaluation.
+Invalid project files produce diagnostics while
 the previous valid source graph remains available. Editor evaluation currently
 uses `Debug|AnyCPU` independently of the active VS build configuration.
 

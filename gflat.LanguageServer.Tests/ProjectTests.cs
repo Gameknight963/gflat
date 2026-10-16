@@ -39,6 +39,40 @@ public sealed class ProjectTests : IDisposable
     }
 
     [Fact]
+    public void DiscoveryWatchesSharedSettingsAndProjectsOnlyInSourceAncestors()
+    {
+        string main = Write("app/nested/main.gf", "int main() => 0;");
+        var open = new Dictionary<string, OpenDocument>(Workspace.Paths) { [main] = new(main, File.ReadAllText(main), 1) };
+        var result = Workspace.Analyze(root, open);
+        var directories = result.ProjectDiscoveryDirectories!.ToHashSet(Workspace.Paths);
+        Assert.Contains(root, directories);
+        Assert.Contains(Path.Combine(root, "app"), directories);
+        Assert.Contains(Path.Combine(root, "Directory.Build.props"), result.WatchedPaths);
+        Assert.Contains(Path.Combine(root, "Directory.Build.targets"), result.WatchedPaths);
+        Assert.True(ProjectWorkspace.IsProjectDiscoveryChange(Path.Combine(root, "app/app.gfproj"), directories));
+        Assert.False(ProjectWorkspace.IsProjectDiscoveryChange(Path.Combine(root, "other/app.gfproj"), directories));
+        Assert.False(ProjectWorkspace.IsProjectDiscoveryChange(Path.Combine(root, "unrelated.txt"), directories));
+        Assert.Empty(result.ProjectDirectories!); // Ancestors do not become recursive source watches.
+    }
+
+    [Fact]
+    public void SharedSettingsCandidatesIncludeUnopenedReferencedProjectAncestors()
+    {
+        Write("app/app.gfproj", ProjectFileFixture.Xml(content: """
+            <ItemGroup><ProjectReference Include="../dependencies/lib/lib.gfproj" /></ItemGroup>
+            """));
+        Write("dependencies/lib/lib.gfproj", ProjectFileFixture.Xml("SourceLibrary"));
+        Write("dependencies/lib/helper.gf", "int answer() => 42;");
+        string main = Write("app/main.gf", "int main() => answer();");
+        var open = new Dictionary<string, OpenDocument>(Workspace.Paths) { [main] = new(main, File.ReadAllText(main), 1) };
+        var result = Workspace.Analyze(root, open);
+        Assert.Empty(result.Diagnostics[main]);
+        Assert.Contains(Path.Combine(root, "dependencies", "Directory.Build.props"), result.WatchedPaths);
+        Assert.Contains(Path.Combine(root, "dependencies", "Directory.Build.targets"), result.WatchedPaths);
+        Assert.DoesNotContain(Path.Combine(root, "dependencies"), result.ProjectDirectories!);
+    }
+
+    [Fact]
     public void MSBuildEvaluatesCommentsImportsConditionsAndRemovesWithoutRunningTargets()
     {
         string imported = Write("shared/items.props", """

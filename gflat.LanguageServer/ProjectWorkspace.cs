@@ -50,4 +50,16 @@ public sealed class ProjectWorkspace
         }
         return null;
     }
+
+    // Both nearest-project discovery and MSBuild's Directory.Build.* lookup walk
+    // parents. Watch those directories without recursively watching their trees.
+    public static IEnumerable<string> DiscoveryDirectories(string source)
+    {
+        for (var directory = new DirectoryInfo(Path.GetDirectoryName(Path.GetFullPath(source))!); directory != null; directory = directory.Parent)
+            yield return directory.FullName;
+    }
+
+    public static bool IsProjectDiscoveryChange(string path, IReadOnlySet<string> directories) =>
+        Path.GetExtension(path).Equals(".gfproj", StringComparison.OrdinalIgnoreCase) &&
+        Path.GetDirectoryName(path) is string directory && directories.Contains(directory);
 }

@@ -16,6 +16,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
     private readonly HashSet<string> published = new(Workspace.Paths);
     private readonly HashSet<string> watchedPaths = new(Workspace.Paths);
     private readonly HashSet<string> projectDirectories = new(Workspace.Paths);
+    private readonly HashSet<string> projectDiscoveryDirectories = new(Workspace.Paths);
     private readonly ProjectWorkspace projects = new();
     private readonly List<FileSystemWatcher> watchers = new();
     private readonly SemaphoreSlim analysisGate = new(1, 1);
@@ -53,6 +54,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         break;
                     case Changed changed when !shutdown:
                         if (watchedPaths.Contains(changed.Path) ||
+                            ProjectWorkspace.IsProjectDiscoveryChange(changed.Path, projectDiscoveryDirectories) ||
                             projectDirectories.Any(dir => changed.Path.StartsWith(dir + Path.DirectorySeparatorChar, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) ||
                             root != null && Workspace.Paths.Equals(changed.Path, Path.Combine(root, Workspace.ConfigurationName)))
                         { Schedule(invalidateProjects: true); }
@@ -64,6 +66,8 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
                         watchedPaths.UnionWith(result.Result.WatchedPaths);
                         projectDirectories.Clear();
                         projectDirectories.UnionWith(result.Result.ProjectDirectories ?? []);
+                        projectDiscoveryDirectories.Clear();
+                        projectDiscoveryDirectories.UnionWith(result.Result.ProjectDiscoveryDirectories ?? []);
                         UpdateWatchers();
                         foreach (string path in published.Union(result.Result.Diagnostics.Keys, Workspace.Paths).ToArray())
                         {
@@ -350,7 +354,7 @@ public sealed class LanguageServer(Stream input, Stream output, TextWriter log)
         watchers.Clear();
         var explicitPaths = new HashSet<string>(watchedPaths, Workspace.Paths);
         // Watch only source/config directories, never recursively scan or watch build output trees.
-        foreach (string directory in watchedPaths.Select(Path.GetDirectoryName).OfType<string>().Concat(projectDirectories).Distinct(Workspace.Paths))
+        foreach (string directory in watchedPaths.Select(Path.GetDirectoryName).OfType<string>().Concat(projectDirectories).Concat(projectDiscoveryDirectories).Distinct(Workspace.Paths))
         {
             if (!Directory.Exists(directory)) continue;
             try

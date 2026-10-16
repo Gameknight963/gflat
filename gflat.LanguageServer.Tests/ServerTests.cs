@@ -574,6 +574,70 @@ public sealed class ServerTests
     }
 
     [Fact]
+    public async Task CreatingAnAdjacentProjectUpdatesAnAlreadyOpenLooseFile()
+    {
+        await using var s = new Session();
+        System.IO.File.WriteAllText(s.File("helper.gf"), "int answer() => 42;");
+        await s.Initialize();
+        await s.Open("main.gf", "int main() => answer();");
+        Assert.Contains("answer", (await s.Diagnostics("main.gf", 1)).ToString());
+        System.IO.File.WriteAllText(s.File("app.gfproj"), gflat.TestSupport.ProjectFileFixture.Xml());
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").GetArrayLength() == 0);
+        await s.Stop();
+
+        bool IsMainDiagnostics(JsonElement x) => x.TryGetProperty("method", out var method) && method.GetString() == "textDocument/publishDiagnostics" &&
+            x.GetProperty("params").GetProperty("uri").GetString() == s.Uri("main.gf");
+    }
+
+    [Theory]
+    [InlineData("Directory.Build.props")]
+    [InlineData("Directory.Build.targets")]
+    public async Task CreatingSharedBuildInputsReloadsAndRecoversFromMalformedXml(string sharedName)
+    {
+        await using var s = new Session();
+        Directory.CreateDirectory(s.File("app"));
+        System.IO.File.WriteAllText(s.File("app/app.gfproj"), gflat.TestSupport.ProjectFileFixture.Xml());
+        System.IO.File.WriteAllText(s.File("shared.gf"), "int answer() => 42;");
+        await s.Initialize();
+        await s.Open("app/main.gf", "int main() => answer();");
+        Assert.Contains("answer", (await s.Diagnostics("app/main.gf", 1)).ToString());
+        System.IO.File.WriteAllText(s.File(sharedName), "<Project");
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("code").GetString() == "GFPROJ"));
+        System.IO.File.WriteAllText(s.File(sharedName), """
+            <Project><ItemGroup><Compile Include="$(MSBuildThisFileDirectory)shared.gf" /></ItemGroup></Project>
+            """);
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").GetArrayLength() == 0);
+        System.IO.File.Delete(s.File(sharedName));
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("message").GetString()!.Contains("answer")));
+        await s.Stop();
+
+        bool IsMainDiagnostics(JsonElement x) => x.TryGetProperty("method", out var method) && method.GetString() == "textDocument/publishDiagnostics" &&
+            x.GetProperty("params").GetProperty("uri").GetString() == s.Uri("app/main.gf");
+    }
+
+    [Fact]
+    public async Task SharedNoStdLibChangesRemainInEffectDuringInvalidProjectEdits()
+    {
+        await using var s = new Session();
+        Directory.CreateDirectory(s.File("app"));
+        System.IO.File.WriteAllText(s.File("app/app.gfproj"), "<Project Sdk=\"Gflat.Sdk\" />");
+        await s.Initialize();
+        await s.Open("app/main.gf", "int main() { Exception*? error = null; return 0; }");
+        Assert.Empty((await s.Diagnostics("app/main.gf", 1)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());
+        System.IO.File.WriteAllText(s.File("Directory.Build.props"), "<Project><PropertyGroup><NoStdLib>true</NoStdLib></PropertyGroup></Project>");
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("message").GetString()!.Contains("Exception")));
+        System.IO.File.WriteAllText(s.File("Directory.Build.props"), "<Project");
+        var broken = await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").EnumerateArray().Any(d => d.GetProperty("code").GetString() == "GFPROJ"));
+        Assert.Contains(broken.GetProperty("params").GetProperty("diagnostics").EnumerateArray(), d => d.GetProperty("message").GetString()!.Contains("Exception"));
+        System.IO.File.Delete(s.File("Directory.Build.props"));
+        await s.Receive(x => IsMainDiagnostics(x) && x.GetProperty("params").GetProperty("diagnostics").GetArrayLength() == 0);
+        await s.Stop();
+
+        bool IsMainDiagnostics(JsonElement x) => x.TryGetProperty("method", out var method) && method.GetString() == "textDocument/publishDiagnostics" &&
+            x.GetProperty("params").GetProperty("uri").GetString() == s.Uri("app/main.gf");
+    }
+
+    [Fact]
     public async Task RapidEditsPublishLatestVersionAndIgnoreOlderVersions()
     {
         await using var s = new Session();

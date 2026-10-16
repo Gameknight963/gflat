@@ -262,6 +262,7 @@ namespace gflat.comptime
             }
 
             _context.TryGetNativeIntegerOperands(node, out TypeExpression nativeOperands);
+            if (nativeOperands == null) _context.TryGetIntegerComparisonOperands(node, out nativeOperands);
             ConstValue EvaluateOperand(AstNode operand)
             {
                 if (nativeOperands != null) return EvaluateValueForTarget(operand, nativeOperands);

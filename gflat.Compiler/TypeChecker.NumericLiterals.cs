@@ -7,9 +7,26 @@ namespace gflat;
 public partial class TypeChecker
 {
     private readonly Dictionary<BinaryExpression, TypeExpression> _nativeIntegerOperands = new();
+    private readonly Dictionary<BinaryExpression, TypeExpression> _integerComparisons = new();
 
     public bool TryGetNativeIntegerOperands(BinaryExpression expression, out TypeExpression type)
         => _nativeIntegerOperands.TryGetValue(expression, out type!);
+
+    public bool TryGetIntegerComparisonOperands(BinaryExpression expression, out TypeExpression type)
+        => _integerComparisons.TryGetValue(expression, out type!);
+
+    private void PlanIntegerComparison(BinaryExpression expression, TypeExpression left, TypeExpression right)
+    {
+        left = ResolveAlias(left);
+        right = ResolveAlias(right);
+        // Enum identity has its own comparison rules. This common-type plan is
+        // for built-in integers, including promoted small integer operands.
+        if (left is not NamedTypeExpression l || right is not NamedTypeExpression r ||
+            NumericSemantics.IntegerType(l.Name) == null || NumericSemantics.IntegerType(r.Name) == null) return;
+        TypeExpression? common = TypesMatch(left, right) || IsAssignable(left, right) ? left :
+            IsAssignable(right, left) ? right : IsAssignable(Int, left) && IsAssignable(Int, right) ? Int : null;
+        if (common != null) _integerComparisons[expression] = common;
+    }
 
     // A representable literal can adopt the other operand's native integer type,
     // just as it can when passed to a native integer parameter or initializer.

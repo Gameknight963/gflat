@@ -2610,6 +2610,13 @@ public partial class LlvmEmitter : IVisitor
 
         if (isComparison)
         {
+            if (_typeChecker.TryGetIntegerComparisonOperands(node, out TypeExpression commonInteger))
+            {
+                left = EmitImplicitCast(left, leftType, commonInteger, node.Left);
+                right = EmitImplicitCast(right, rightType, commonInteger, node.Right);
+                leftType = rightType = commonInteger;
+                isUnsigned = _typeChecker.IsUnsignedInteger(commonInteger);
+            }
             string cmpLlvm = EmitType(leftType);
             string rightLlvm = EmitType(rightType);
             if (_typeChecker.ResolveAlias(leftType) is NamedTypeExpression { Name: "null" })

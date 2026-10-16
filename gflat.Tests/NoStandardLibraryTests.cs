@@ -72,4 +72,26 @@ public class NoStandardLibraryTests
         }
         finally { Directory.Delete(root, true); }
     }
+    [Fact]
+    public void CleanPreservesTheCliStdExclusionInAStdFreeToolchain()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "gflat-bare-clean-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(root, "toolchain/build"));
+        try
+        {
+            string toolchain = Path.Combine(root, "toolchain");
+            foreach (string name in new[] { "Gflat.props", "Gflat.targets" })
+                File.Copy(Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot, "build", name), Path.Combine(toolchain, "build", name));
+            string project = Path.Combine(root, "app.gfproj");
+            File.WriteAllText(project, new System.Xml.Linq.XElement("Project", new System.Xml.Linq.XAttribute("Sdk", "Gflat.Sdk"),
+                new System.Xml.Linq.XElement("PropertyGroup", new System.Xml.Linq.XElement("GflatSdkRoot", toolchain))).ToString());
+            File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
+            Assert.Equal(0, Program.Main(["build", project, "--no-stdlib", "--emit-ir"]));
+            string output = Path.Combine(root, "bin/Debug/app.ll");
+            Assert.True(File.Exists(output));
+            Assert.Equal(0, Program.Main(["clean", project, "--no-stdlib"]));
+            Assert.False(File.Exists(output));
+        }
+        finally { Directory.Delete(root, true); }
+    }
 }

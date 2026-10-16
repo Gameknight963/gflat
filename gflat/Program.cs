@@ -81,7 +81,7 @@ public static class Program
                         protectedFiles.Contains(Path.ChangeExtension(graph.Root.TargetPath, ".ll"), ProjectModel.Paths))
                         throw new ArgumentException("Clean output must differ from source and project files.");
                 }
-                return ProjectBuild.Run(graph.Root, "Clean", configuration, platform, sourceGraph: graph);
+                return ProjectBuild.Run(graph.Root, "Clean", configuration, platform, sourceGraph: graph, noStdLib: noStdLib);
             }
             if (sourcePaths.Count == 0 && graph == null) throw new ArgumentException("Specify a source file. Use --help for usage.");
             if (check && (run || irOnly)) throw new ArgumentException("--check cannot be combined with --run or --emit-ir.");

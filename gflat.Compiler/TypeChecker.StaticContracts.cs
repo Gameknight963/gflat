@@ -5,7 +5,8 @@ namespace gflat;
 
 public partial class TypeChecker
 {
-    private bool TypeSatisfiesDeclaredConstraint(AstNode definition, TypeExpression argument, TypeExpression constraint)
+    private bool TypeSatisfiesDeclaredConstraint(AstNode definition, TypeExpression argument, TypeExpression constraint,
+        Action<TypeExpression>? constraintBinding = null)
     {
         using var context = SourceContext.Enter(definition.Span);
         using var locals = IsolateDeclarationContext();
@@ -17,7 +18,7 @@ public partial class TypeChecker
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
         _currentClass = null;
         _currentStruct = null;
-        try { return TypeSatisfiesConstraint(argument, constraint); }
+        try { return TypeSatisfiesConstraint(argument, constraint, constraintBinding); }
         finally { _currentNamespace = previous; _currentClass = previousClass; _currentStruct = previousStruct; }
     }
 

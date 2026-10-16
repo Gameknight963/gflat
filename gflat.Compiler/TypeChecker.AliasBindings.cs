@@ -8,6 +8,7 @@ public partial class TypeChecker
     private readonly Dictionary<string, AliasDeclaration> constrainedAliases = new();
     private readonly Dictionary<TypeExpression, string> aliasTargetNamespaces = new();
     private readonly Dictionary<TypeExpression, AliasDeclaration> aliasContracts = new();
+    private readonly Dictionary<AliasDeclaration, List<TypeExpression>> boundAliasConstraints = new();
     private readonly HashSet<TypeExpression> selectedAliasTargets = new();
     private readonly HashSet<string> validatingAliasSpecializations = new();
 
@@ -176,9 +177,11 @@ public partial class TypeChecker
         foreach (var alias in constrainedAliases.Values)
         {
             var implementation = ResolveAliasBindingTarget(alias.TargetType);
+            var constraints = new List<TypeExpression>();
             foreach (var constraint in alias.Constraints)
-                if (!TypeSatisfiesDeclaredConstraint(alias, implementation, constraint))
+                if (!TypeSatisfiesDeclaredConstraint(alias, implementation, constraint, constraints.Add))
                     throw new TypeCheckException($"Implementation of alias '{alias.Name}' does not satisfy '{TypeName(constraint)}'", alias.Span);
+            boundAliasConstraints[alias] = constraints;
         }
         // Diagnose cycles even when an alias is never used by a body.
         foreach (var target in selectedAliasTargets.ToArray()) ResolveAliasBindingTarget(target);

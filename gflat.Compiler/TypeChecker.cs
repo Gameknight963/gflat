@@ -802,10 +802,11 @@ namespace gflat
             return type.ToString() ?? "Unknown";
         }
 
-        private bool TypeSatisfiesConstraint(TypeExpression argType, TypeExpression constraint)
+        private bool TypeSatisfiesConstraint(TypeExpression argType, TypeExpression constraint, Action<TypeExpression>? constraintBinding = null)
         {
             argType = ResolveAlias(argType);
             constraint = ResolveAlias(constraint);
+            constraintBinding?.Invoke(constraint);
             if (!AliasExposesConstraint(argType, constraint)) return false;
 
             if (constraint is NamedTypeExpression namedConstraint)

@@ -146,11 +146,23 @@ public partial class TypeChecker
 
     private bool ExtensionConstraintSatisfied(TypeExpression argument, TypeExpression? constraint)
     {
+        if (constraint == null) return false;
+        if (aliasContracts.TryGetValue(argument, out var alias) &&
+            (!boundAliasConstraints.TryGetValue(alias, out var exposed) ||
+                !exposed.Any(type => KnownExtensionConstraintSatisfied(type, constraint, allowInterfaceIdentity: true)))) return false;
+        return KnownExtensionConstraintSatisfied(argument, constraint);
+    }
+
+    // Applicability reads validated alias constraints and registered hierarchy
+    // metadata without resolving aliases or specializing types during queries.
+    private bool KnownExtensionConstraintSatisfied(TypeExpression argument, TypeExpression constraint, bool allowInterfaceIdentity = false)
+    {
         if (argument is PointerTypeExpression pointer) argument = pointer.Inner;
         if (argument is ManagedTypeExpression managed) argument = managed.Inner;
         if (argument is not NamedTypeExpression source || constraint is not NamedTypeExpression required) return false;
         if (_interfaces.ContainsKey(required.Name))
         {
+            if (allowInterfaceIdentity && source.Name == required.Name) return true;
             if (_structs.TryGetValue(source.Name, out var str)) return str.Interfaces.Contains(required.Name);
             return _classes.TryGetValue(source.Name, out var cls) && ClassImplementsInterface(cls, required.Name);
         }

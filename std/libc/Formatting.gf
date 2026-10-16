@@ -14,5 +14,5 @@ namespace detail
 }
 
 // Locale follows the application's C locale. Enough digits for round trips.
-void Format(float value, ITextWriter* output) { detail::FloatingText((double)value, "%.9g", output); }
-void Format(double value, ITextWriter* output) { detail::FloatingText(value, "%.17g", output); }
+void Format(this float value, ITextWriter* output) { detail::FloatingText((double)value, "%.9g", output); }
+void Format(this double value, ITextWriter* output) { detail::FloatingText(value, "%.17g", output); }

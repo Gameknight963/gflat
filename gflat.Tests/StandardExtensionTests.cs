@@ -2,6 +2,28 @@ namespace gflat.Tests;
 
 public sealed class StandardExtensionTests
 {
+    [Fact]
+    public void FloatingFormattingSupportsTheSameInstanceSyntaxWithoutStringDependencies()
+    {
+        var sources = ConsoleWriterTests.Sources("""
+            using std;
+            int main() {
+                Console::Writer output = new Console::Writer();
+                float single = 1.25f;
+                single.Format(&output);
+                Console::Write("|");
+                double wide = 2.5d;
+                wide.Format(&output);
+                Console::Write("|");
+                std::Format(single, &output);
+                return 0;
+            }
+            """).Append(new SourceFile("libc/Formatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "Formatting.gf"))));
+        var result = CompilerTestHelper.Run(sources);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("1.25|2.5|1.25", result.StandardOutput);
+    }
+
     private static SourceFile[] Sources(string program) => InterpolationTests.Sources(program).Concat(
         new[] { "core/Parsing.gf", "core/StringParsing.gf" }.Select(file =>
             new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))))).ToArray();

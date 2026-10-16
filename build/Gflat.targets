@@ -1,4 +1,57 @@
 <Project DefaultTargets="Build">
+  <!-- MSBuildAllProjects does not contain every arbitrary user import on all
+       supported hosts. Direct MSBuild/VS builds need the same complete read-only
+       input graph that the compiler CLI supplies through GflatProjectInputs. -->
+  <UsingTask TaskName="GflatReadProjectInputs" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <ProjectFile ParameterType="System.String" Required="true" />
+      <Configuration ParameterType="System.String" Required="true" />
+      <Platform ParameterType="System.String" Required="true" />
+      <ProjectInputs ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System" />
+      <Using Namespace="System.Collections" />
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Using Namespace="System.Collections.Generic" />
+      <Using Namespace="System.Reflection" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        var globals = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in ((Microsoft.Build.Framework.IBuildEngine6)BuildEngine).GetGlobalProperties())
+            globals[pair.Key] = pair.Value;
+        globals["Configuration"] = Configuration;
+        globals["Platform"] = Platform;
+        var comparer = Path.DirectorySeparatorChar == '\\' ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        var visited = new HashSet<string>(comparer);
+        var inputs = new HashSet<string>(comparer);
+        // The task factory targets netstandard, while the host evaluation API
+        // targets either .NET Framework or the installed .NET runtime. Invoke
+        // that same public API without compiling against a different runtime.
+        var build = Assembly.Load("Microsoft.Build");
+        var projectType = build.GetType("Microsoft.Build.Evaluation.Project", true);
+        var collectionType = build.GetType("Microsoft.Build.Evaluation.ProjectCollection", true);
+        Func<object, string, object> property = (target, name) => target.GetType().GetProperty(name).GetValue(target, null);
+        using (var collection = (IDisposable)Activator.CreateInstance(collectionType))
+        {
+            Action<string> visit = null;
+            visit = file => {
+                file = Path.GetFullPath(file);
+                if (!visited.Add(file)) return;
+                var project = Activator.CreateInstance(projectType, new object[] { file, globals, null, collection });
+                inputs.Add(file);
+                foreach (var import in (IEnumerable)property(project, "Imports"))
+                    inputs.Add((string)property(property(import, "ImportedProject"), "FullPath"));
+                var references = (IEnumerable)projectType.GetMethod("GetItems", new[] { typeof(string) }).Invoke(project, new object[] { "ProjectReference" });
+                foreach (var reference in references)
+                    visit((string)reference.GetType().GetMethod("GetMetadataValue", new[] { typeof(string) }).Invoke(reference, new object[] { "FullPath" }));
+            };
+            visit(ProjectFile);
+        }
+        ProjectInputs = inputs.Select(path => (Microsoft.Build.Framework.ITaskItem)new Microsoft.Build.Utilities.TaskItem(path)).ToArray();
+      ]]></Code>
+    </Task>
+  </UsingTask>
   <PropertyGroup>
     <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == '' and '$(Configuration)' == 'Release'">2</GflatOptimizationLevel>
     <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == ''">0</GflatOptimizationLevel>
@@ -55,7 +108,10 @@
     <RemoveDuplicates Inputs="@(_GflatAllSources)"><Output TaskParameter="Filtered" ItemName="_GflatSources" /></RemoveDuplicates>
   </Target>
   <Target Name="_GflatValidateOutputs" DependsOnTargets="GflatGetSources">
-    <ItemGroup><_GflatProtectedFiles Include="@(_GflatSources);$(MSBuildProjectFullPath);@(ProjectReference);$(MSBuildAllProjects);$(_GflatProjectInputs)" /></ItemGroup>
+    <GflatReadProjectInputs Condition="'$(GflatProjectInputs)' == ''" ProjectFile="$(MSBuildProjectFullPath)" Configuration="$(Configuration)" Platform="$(Platform)">
+      <Output TaskParameter="ProjectInputs" ItemName="_GflatEvaluatedProjectInputs" />
+    </GflatReadProjectInputs>
+    <ItemGroup><_GflatProtectedFiles Include="@(_GflatSources);$(MSBuildProjectFullPath);@(ProjectReference);$(MSBuildAllProjects);$(_GflatProjectInputs);@(_GflatEvaluatedProjectInputs)" /></ItemGroup>
     <PropertyGroup Condition="'$(OutputType)' == 'Executable'">
       <_GflatFullTargetPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(TargetPath)'))</_GflatFullTargetPath>
       <_GflatFullIRPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(GflatIROutput)'))</_GflatFullIRPath>
@@ -123,7 +179,7 @@
   <Target Name="Clean" DependsOnTargets="_GflatValidateOutputs">
     <PropertyGroup Condition="'$(OutputType)' == 'Executable'"><_GflatCleanExtension>$([System.IO.Path]::GetExtension('$(TargetPath)'))</_GflatCleanExtension></PropertyGroup>
     <Error Condition="'$(OutputType)' == 'Executable' and '$(_GflatCleanExtension)' != '.exe'" Text="Clean requires an .exe TargetPath; custom output names must be cleaned explicitly." />
-    <Delete Files="$(TargetPath);$([System.IO.Path]::ChangeExtension('$(TargetPath)', '.ll'))" Condition="'$(OutputType)' == 'Executable'" />
+    <Delete Files="$(_GflatFullTargetPath);$(_GflatFullIRPath)" Condition="'$(OutputType)' == 'Executable'" />
     <Delete Files="$(_GflatSourceList);$(_GflatBuildSettings);$(_GflatBuildSuccess)" />
   </Target>
   <Target Name="Rebuild" DependsOnTargets="Clean;Build" />

@@ -188,6 +188,10 @@ removing sources and changing build options also invalidates the build. A failed
 compilation removes the success stamp; `gflat clean` removes it too. Library
 builds and `gflat check` always run analysis.
 
+Library cleaning removes only intermediate files. Executable cleaning removes the
+configured `TargetPath` and `GflatIROutput`, after checking that neither overlaps
+sources, project files, or imports anywhere in the reference graph.
+
 Visual Studio and direct MSBuild builds still compile every time unless the
 caller supplies the complete evaluated import graph in `GflatProjectInputs`.
 The CLI supplies that graph automatically. A custom compiler command remains

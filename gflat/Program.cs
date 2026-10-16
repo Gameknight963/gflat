@@ -80,14 +80,8 @@ public static class Program
             if (clean)
             {
                 if (graph == null || run || irOnly || args.Contains("-o")) throw new ArgumentException("Use clean with a project file and no output options.");
-                // Delete only the two known output files, never a directory or an arbitrary path.
-                if (graph.Root.Kind == ProjectKind.Executable)
-                {
-                    var protectedFiles = graph.Sources.Concat(graph.Projects.Select(p => p.FilePath));
-                    if (protectedFiles.Contains(outputPath!, ProjectModel.Paths) ||
-                        protectedFiles.Contains(Path.ChangeExtension(graph.Root.TargetPath!, ".ll"), ProjectModel.Paths))
-                        throw new ArgumentException("Clean output must differ from source and project files.");
-                }
+                // The SDK validates the actual executable/IR paths against all
+                // sources and imports before deleting those same normalized paths.
                 return ProjectBuild.Run(graph.Root, "Clean", configuration, platform, sourceGraph: graph, noStdLib: noStdLib);
             }
             if (sourcePaths.Count == 0 && graph == null) throw new ArgumentException("Specify a source file. Use --help for usage.");

@@ -6,6 +6,7 @@ namespace gflat.semantics;
 public partial class DefiniteAssignmentPass
 {
     private readonly HashSet<string> _requiredFields = new();
+    private readonly Dictionary<string, (string Path, bool IsProperty)> _requiredFieldDisplay = new();
     private bool _inConstructor;
 
     private bool IsCurrentInstanceMethod(MethodDeclaration method)
@@ -39,7 +40,7 @@ public partial class DefiniteAssignmentPass
     {
         _inConstructor = true;
         foreach (var field in ConstructorFields.Where(f => !f.IsStatic))
-            AddRequiredField(field.Name, field.Type);
+            AddRequiredField(field.Name, field.Type, field.PropertyName ?? field.Name, field.PropertyName != null);
         if (initialize) CheckDeclaredFieldInitializers();
     }
 
@@ -54,16 +55,21 @@ public partial class DefiniteAssignmentPass
             }
     }
 
-    private void AddRequiredField(string path, TypeExpression type)
+    private void AddRequiredField(string path, TypeExpression type, string displayPath, bool isProperty)
     {
         if (_typeChecker.CanDefaultInitialize(type)) return;
         type = _typeChecker.ResolveAlias(type);
         if (type is NamedTypeExpression named && _typeChecker.GetStructByIdentity(named.Name) is TypeChecker.StructInfo { Constructors.Count: 0 } str)
         {
-            foreach (var field in str.Fields) AddRequiredField(path + "." + field.Name, field.Type);
+            foreach (var field in str.Fields)
+            {
+                string? property = str.FieldDeclarationsByName.GetValueOrDefault(field.Name)?.PropertyName;
+                AddRequiredField(path + "." + field.Name, field.Type, displayPath + "." + (property ?? field.Name), property != null);
+            }
             return;
         }
         _requiredFields.Add(path);
+        _requiredFieldDisplay[path] = (displayPath, isProperty);
         DeclareLocal("$init$" + path, type, false);
     }
 
@@ -89,6 +95,9 @@ public partial class DefiniteAssignmentPass
         foreach (string field in _requiredFields)
             if ((path.Length == 0 || field == path || field.StartsWith(path + ".") || path.StartsWith(field + ".")) &&
                 Lookup("$init$" + field) is { IsFullyAssigned: false })
-                throw new TypeCheckException($"Field '{field}' must be initialized before use or constructor completion", line);
+            {
+                var display = _requiredFieldDisplay[field];
+                throw new TypeCheckException($"{(display.IsProperty ? "Property" : "Field")} '{display.Path}' must be initialized before use or constructor completion", line);
+            }
     }
 }

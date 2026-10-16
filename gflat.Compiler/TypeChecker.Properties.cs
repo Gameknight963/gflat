@@ -71,7 +71,7 @@ public partial class TypeChecker
                     var additions = new List<AstNode>();
                     string backing = "$property$" + _propertyBackingField++ + "$" + property.Name;
                     if (auto)
-                        additions.Add(new FieldDeclaration(backing, property.Type, property.Initializer, TokenKind.Private, false, accessors[0].IsStatic, property.Line) { Span = property.Span });
+                        additions.Add(new FieldDeclaration(backing, property.Type, property.Initializer, TokenKind.Private, false, accessors[0].IsStatic, property.Line) { Span = property.Span, PropertyName = property.Name });
                     foreach (var accessor in accessors)
                     {
                         bool getter = accessor == property.Getter;

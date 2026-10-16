@@ -329,6 +329,7 @@ namespace gflat.semantics
         private void ResetState()
         {
             _requiredFields.Clear();
+            _requiredFieldDisplay.Clear();
             _inConstructor = false;
             _state = new Dictionary<string, Stack<VariableAssignment>>();
             _scopeVars.Clear();

@@ -13,6 +13,8 @@ namespace gflat.ast
         public bool IsConst { get; }
         public bool IsStatic { get; }
         public bool IsReadOnly { get; }
+        // Source property for generated backing storage; ordinary fields leave this unset.
+        public string? PropertyName { get; init; }
 
         public FieldDeclaration(string name, TypeExpression type, AstNode? initializer, TokenKind accessibility, bool isConst, bool isStatic, int line, bool isReadOnly = false) : base(line)
         {

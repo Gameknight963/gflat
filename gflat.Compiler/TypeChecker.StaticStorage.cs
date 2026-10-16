@@ -135,7 +135,7 @@ public partial class TypeChecker
             var field = storage.Field;
             if (!field.IsConst && field.Initializer == null && !CanDefaultInitialize(field.Type))
                 AnalyzeSafely(() => throw new TypeCheckException(
-                    $"Static or global field '{field.Name}' requires an initializer", field.Span));
+                    $"Static or global {(field.PropertyName == null ? "field" : "property")} '{field.PropertyName ?? field.Name}' requires an initializer", field.Span));
         }
     }
 

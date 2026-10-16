@@ -230,7 +230,7 @@ namespace gflat.ast
         {
             if (node is FieldDeclaration f)
             {
-                return new FieldDeclaration(f.Name, CloneType(f.Type), f.Initializer != null ? CloneNode(f.Initializer) : null, f.Accessibility, f.IsConst, f.IsStatic, f.Line, f.IsReadOnly);
+                return new FieldDeclaration(f.Name, CloneType(f.Type), f.Initializer != null ? CloneNode(f.Initializer) : null, f.Accessibility, f.IsConst, f.IsStatic, f.Line, f.IsReadOnly) { PropertyName = f.PropertyName };
             }
             if (node is ConstructorDeclaration ctor)
             {

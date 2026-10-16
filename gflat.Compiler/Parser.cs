@@ -685,7 +685,11 @@ namespace gflat
             if (Check(TokenKind.OpenParen))
             {
                 // constructor - type was actually the name
-                name = ((NamedTypeExpression)type).Name;
+                if (isRef)
+                    throw new TypeCheckException("ref currently applies to properties and indexers", type.Span);
+                if (type is not NamedTypeExpression { Namespace: null, TypeArguments.Count: 0, IsReadOnlyValue: false } constructorName)
+                    throw new TypeCheckException("A constructor declaration requires a plain, unqualified name without type arguments", type.Span);
+                name = constructorName.Name;
                 var ctor = ParseConstructorDeclaration(name, accessibility, line, attributes, isConst);
                 if (!isStatic) return Finish(ctor);
                 if (isConst || isReadonly || isVirtual || isOverride || isAbstract || isRef ||

@@ -1275,6 +1275,13 @@ namespace gflat
 
         public bool IsInterface(NamedTypeExpression named) => ResolveInterface(named) != null;
 
+        private void ValidateValueType(TypeExpression type, int line)
+        {
+            ValidateTypeUsage(type, line);
+            if (ResolveAlias(type) is NamedTypeExpression { Name: "void" })
+                throw new TypeCheckException("void has no value storage; use it as a return type or through an opaque pointer", line);
+        }
+
         private void ValidateTypeUsage(TypeExpression type, int line)
         {
             TypeExpression resolved = ResolveAlias(type);
@@ -1311,7 +1318,7 @@ namespace gflat
             }
             else if (resolved is ArrayTypeExpression arr)
             {
-                ValidateTypeUsage(arr.ElementType, line);
+                ValidateValueType(arr.ElementType, line);
             }
             else if (resolved is PointerTypeExpression ptr)
             {
@@ -2387,7 +2394,7 @@ namespace gflat
                         {
                             _currentClass.Fields[fIdx] = (field.Name, field.Type, field.Accessibility, _currentClass.Name);
                         }
-                        ValidateTypeUsage(field.Type, field.Line);
+                        ValidateValueType(field.Type, field.Line);
                         TypeExpression fieldType = field.Type;
                         if (field.IsConst && fieldType is PointerTypeExpression cPtr && !cPtr.IsReadOnly)
                         {
@@ -2574,7 +2581,7 @@ namespace gflat
                         {
                             _currentStruct.Fields[fIdx] = (field.Name, field.Type);
                         }
-                        ValidateTypeUsage(field.Type, field.Line);
+                        ValidateValueType(field.Type, field.Line);
                         TypeExpression fieldType = field.Type;
                         if (field.IsConst && fieldType is PointerTypeExpression sPtr && !sPtr.IsReadOnly)
                         {
@@ -2781,7 +2788,7 @@ namespace gflat
         public void Visit(FieldDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
-            ValidateTypeUsage(node.Type, node.Line);
+            ValidateValueType(node.Type, node.Line);
             TypeExpression fieldType = ResolveAlias(node.Type);
             if (fieldType is ArrayTypeExpression { Size: null } textArray &&
                 node.Initializer is LiteralExpression { Token.Kind: TokenKind.StringLiteral } text &&
@@ -3238,7 +3245,7 @@ namespace gflat
             NullableLoopEntry();
             using var sourceContext = SourceContext.Enter(node.Span);
             node.ElementType = ResolveAlias(node.ElementType);
-            ValidateTypeUsage(node.ElementType, node.Line);
+            ValidateValueType(node.ElementType, node.Line);
             if (!CanCopy(node.ElementType))
                 throw new TypeCheckException($"Foreach iteration variable '{node.VariableName}' requires a copyable element type; borrow elements through an indexer instead", node.Line);
 
@@ -3339,7 +3346,7 @@ namespace gflat
             {
                 varType = new PointerTypeExpression(ptr.Inner, ptr.IsNullable, ptr.Line, isReadOnly: true);
             }
-            ValidateTypeUsage(varType, node.Line);
+            ValidateValueType(varType, node.Line);
             if (varType is ArrayTypeExpression && HasDestructor(varType) && node.Initializer == null)
                 throw new TypeCheckException("An array with destructor-bearing elements requires an initializer; use default(Type) for zero-initialized elements", node.Line);
             if (node.Initializer != null)
@@ -5209,7 +5216,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             if (node.TargetType != null)
             {
-                ValidateTypeUsage(node.TargetType, node.Line);
+                ValidateValueType(node.TargetType, node.Line);
                 TypeExpression resolved = ResolveAlias(node.TargetType);
                 if (!CanDefaultInitialize(resolved))
                 {
@@ -5315,6 +5322,7 @@ namespace gflat
                     throw new TypeCheckException($"Interface '{iface.Name}' has no indexer", node.Line);
                 if (ptr.IsNullable)
                     throw new TypeCheckException("Cast a nullable pointer to non-null before indexing", node.Line);
+                ValidateValueType(ptr.Inner, node.Line);
                 RecordType(node, ptr.Inner);
             }
             else

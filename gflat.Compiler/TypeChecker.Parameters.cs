@@ -7,7 +7,7 @@ public partial class TypeChecker
 {
     private void ValidateParameterType(TypeExpression type, int line)
     {
-        ValidateTypeUsage(type, line);
+        ValidateValueType(type, line);
         type = ResolveAlias(type);
         if (type is ReferenceTypeExpression reference) type = ResolveAlias(reference.Inner);
         if (type is ArrayTypeExpression { Size: null })

@@ -118,6 +118,10 @@ int main()
 | float / double | IEEE binary32 / binary64 |
 | void | No value |
 
+`void` is valid as a function return type and behind an opaque pointer. It cannot
+be a local, field, parameter, array element, or the value of `default(void)`.
+An empty parameter list is written `()`, not `(void)`.
+
 Explicit integer narrowing retains low bits and interprets them using the destination signedness. Constant casts use the same widths as runtime lowering. `uint -> int` and `ulong -> long` require explicit casts. `float` conversions round to binary32 during constant evaluation. Non-finite and out-of-range constant float-to-integer conversions are errors.
 
 In integer arithmetic, bitwise operations, and comparisons, a representable integer

@@ -54,9 +54,11 @@ public partial class LlvmEmitter
         MethodDeclaration method, int slot, string returnType, List<string> parameterTypes)
     {
         string name = $"gflat${owner.Name}${iface}${method.Name}$interface_thunk";
-        var parameters = parameterTypes.Select((t, i) => $"{t} %arg{i}").ToList();
+        var parameters = parameterTypes.Select((t, i) =>
+            $"{(i > 0 && i <= method.Parameters.Count ? EmitAbiParamType(method.Parameters[i - 1].Type) : t)} %arg{i}").ToList();
         string signature = $"{returnType} ({string.Join(", ", parameterTypes)})*";
-        EmitGlobal($"define internal {returnType} @{name}({string.Join(", ", parameters)}) {{");
+        string abiReturn = EmitAbiFunctionReturnType(method.ReturnType);
+        EmitGlobal($"define internal {abiReturn} @{name}({string.Join(", ", parameters)}) {{");
         EmitGlobal("entry:");
         EmitGlobal($"    %object = bitcast {parameterTypes[0]} %arg0 to %{owner.Name}*");
         EmitGlobal($"    %vptr = getelementptr %{owner.Name}, %{owner.Name}* %object, i32 0, i32 0");
@@ -64,7 +66,7 @@ public partial class LlvmEmitter
         EmitGlobal($"    %slot = getelementptr i8*, i8** %table, i32 {slot}");
         EmitGlobal("    %raw = load i8*, i8** %slot");
         EmitGlobal($"    %fn = bitcast i8* %raw to {signature}");
-        string call = $"call {returnType} %fn({string.Join(", ", parameters)})";
+        string call = $"call {abiReturn} %fn({string.Join(", ", parameters)})";
         if (returnType == "void")
         {
             EmitGlobal("    " + call);

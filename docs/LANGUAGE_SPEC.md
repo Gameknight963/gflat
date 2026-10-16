@@ -798,6 +798,8 @@ file. Its native linker symbol is unchanged. Namespace extern declarations accep
 
 A declaration permits at most one explicit accessibility modifier. Repeated or conflicting modifiers are errors, including qualifiers split across an `extern` keyword; implicit defaults do not count as explicit modifiers.
 
+Scalar function boundaries use the host C ABI consistently for ordinary functions, externs, and function-pointer calls. Both supported targets zero-extend `bool`; Linux x64 also sign-extends signed 8/16-bit integers (including `char`) and zero-extends unsigned 8/16-bit integers. These LLVM ABI attributes do not change function-pointer type identity. Aggregate and fixed-buffer values do not thereby gain C ABI compatibility; use explicit pointers at those boundaries.
+
 ## Control flow, exceptions, and constants
 
 Non-void functions must return or throw on every reachable path, or never terminate. Shared control-flow graphs model branches, loops, return, throw, break, and continue. Definite assignment uses these termination facts and tracks assignment states separately.

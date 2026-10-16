@@ -18,7 +18,7 @@ public partial class LlvmEmitter
             for (int i = 0; i < call.Arguments.Count; i++)
             {
                 EmitArgument(call.Arguments[i], call.Constructor.Parameters[i].Type);
-                arguments.Add($"{EmitParamType(call.Constructor.Parameters[i].Type)} {Pop()}");
+                arguments.Add($"{EmitAbiParamType(call.Constructor.Parameters[i].Type)} {Pop()}");
             }
             TransferArguments();
             EmitConstructorCall(GetConstructorMangledName(baseInfo.Name, call.Constructor, baseInfo.Namespace), call.Constructor, string.Join(", ", arguments));

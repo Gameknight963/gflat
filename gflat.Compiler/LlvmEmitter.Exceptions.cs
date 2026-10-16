@@ -217,7 +217,7 @@ public partial class LlvmEmitter
                 string vtSlot = NewTemp(), vt = NewTemp(), matches = NewTemp();
                 Emit($"    {vtSlot} = getelementptr %Exception, %Exception* {error}, i32 0, i32 0");
                 Emit($"    {vt} = load i8**, i8*** {vtSlot}");
-                Emit($"    {matches} = call i1 @gflat_is_instance(i8** {vt}, i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**))");
+                Emit($"    {matches} = call zeroext i1 @gflat_is_instance(i8** {vt}, i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**))");
                 Emit($"    br i1 {matches}, label %{body}, label %{next}");
             }
             else Emit($"    br label %{body}");

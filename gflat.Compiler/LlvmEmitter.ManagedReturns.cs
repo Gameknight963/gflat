@@ -41,7 +41,7 @@ public partial class LlvmEmitter
             return value;
         }
 
-        string returnType = callSignature ?? EmitType(type);
+        string returnType = callSignature ?? EmitAbiReturnType(type);
         if (transferArguments) TransferArguments();
         if (EmitType(type) == "void")
         {

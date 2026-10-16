@@ -1292,12 +1292,12 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{className}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
 
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {EmitFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
+        Emit($"define {EmitAbiFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
@@ -1379,7 +1379,7 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{className}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
 
         string parameters = string.Join(", ", paramList);
 
@@ -1432,7 +1432,7 @@ public partial class LlvmEmitter : IVisitor
                     string val = Pop();
                     TypeExpression argType = _typeChecker.GetType(arg);
                     val = EmitImplicitCast(val, argType, resolvedBaseCtor.Parameters[i].Type, arg);
-                    string llvmType = EmitParamType(resolvedBaseCtor.Parameters[i].Type);
+                    string llvmType = EmitAbiParamType(resolvedBaseCtor.Parameters[i].Type);
                     baseArgs.Add($"{llvmType} {val}");
                 }
                 string baseCtorName = GetConstructorMangledName(baseInfo.Name, resolvedBaseCtor, baseInfo.Namespace);
@@ -1775,12 +1775,12 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new();
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
 
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {EmitFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
+        Emit($"define {EmitAbiFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
@@ -1828,12 +1828,12 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{structName}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
 
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {EmitFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
+        Emit($"define {EmitAbiFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
         Emit("entry:");
 
@@ -1925,7 +1925,7 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{structName}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
 
         string parameters = string.Join(", ", paramList);
 
@@ -2064,8 +2064,8 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(ExternDeclaration node)
     {
         _externNames.Add(node.Name);
-        string returnType = EmitType(node.ReturnType);
-        string parameters = string.Join(", ", node.Parameters.Select(p => EmitParamType(p.Type)));
+        string returnType = EmitAbiReturnType(node.ReturnType);
+        string parameters = string.Join(", ", node.Parameters.Select(p => EmitAbiParamType(p.Type)));
         if (node.IsVariadic)
             parameters = parameters.Length > 0 ? parameters + ", ..." : "...";
         string declaration = $"declare {returnType} @{node.Name}({parameters})";
@@ -2110,10 +2110,10 @@ public partial class LlvmEmitter : IVisitor
             name = $"gflat${node.Name}" + _typeChecker.GetOverloadSuffix(node);
 
         string parameters = string.Join(", ", node.Parameters.Select(p =>
-            $"{EmitParamType(p.Type)} %{p.Name}"));
+            $"{EmitAbiParamType(p.Type)} %{p.Name}"));
         parameters = WithManagedResultParameter(node.ReturnType, parameters, named: true);
 
-        Emit($"define {EmitFunctionReturnType(node.ReturnType)} @{name}({parameters}){InlineHint(node)} {{");
+        Emit($"define {EmitAbiFunctionReturnType(node.ReturnType)} @{name}({parameters}){InlineHint(node)} {{");
         _ehBoundary |= node.IsNoThrow;
         Emit("entry:");
         EmitStaticLifetimePrologue();
@@ -2606,8 +2606,8 @@ public partial class LlvmEmitter : IVisitor
             right = EmitImplicitCast(right, rightType1, opTarget.Operator.Parameters[1].Type, node.Right);
 
             string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
-            string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
-            string param1Type = EmitParamType(opTarget.Operator.Parameters[1].Type);
+            string param0Type = EmitAbiParamType(opTarget.Operator.Parameters[0].Type);
+            string param1Type = EmitAbiParamType(opTarget.Operator.Parameters[1].Type);
 
             string temp1 = EmitValueCall(opTarget.Operator.ReturnType, "@" + mangledName,
                 $"{param0Type} {left}, {param1Type} {right}", transferArguments: false)!;
@@ -2951,7 +2951,7 @@ public partial class LlvmEmitter : IVisitor
         {
             operand = EmitImplicitCast(operand, type, opTarget.Operator.Parameters[0].Type, node.Operand);
             string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
-            string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
+            string param0Type = EmitAbiParamType(opTarget.Operator.Parameters[0].Type);
 
             string temp1 = EmitValueCall(opTarget.Operator.ReturnType, "@" + mangledName,
                 $"{param0Type} {operand}", transferArguments: false)!;
@@ -3277,7 +3277,7 @@ public partial class LlvmEmitter : IVisitor
                 EmitArgument(arg, ifaceCall.Method.Parameters[i].Type);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
-                string llvmArgType = EmitParamType(ifaceCall.Method.Parameters[i].Type);
+                string llvmArgType = EmitAbiParamType(ifaceCall.Method.Parameters[i].Type);
                 val = EmitImplicitCast(val, argType, ifaceCall.Method.Parameters[i].Type, arg);
                 callArgs.Add($"{llvmArgType} {val}");
             }
@@ -3366,7 +3366,7 @@ public partial class LlvmEmitter : IVisitor
                 EmitArgument(arg, vcall.Method.Parameters[i].Type);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
-                string llvmArgType = EmitParamType(vcall.Method.Parameters[i].Type);
+                string llvmArgType = EmitAbiParamType(vcall.Method.Parameters[i].Type);
                 val = EmitImplicitCast(val, argType, vcall.Method.Parameters[i].Type, arg);
                 callArgs.Add($"{llvmArgType} {val}");
             }
@@ -3397,7 +3397,7 @@ public partial class LlvmEmitter : IVisitor
                 if (i < fnPtr.ParameterTypes.Count)
                 {
                     val = EmitImplicitCast(val, argType, fnPtr.ParameterTypes[i], arg);
-                    llvmArgType = EmitParamType(fnPtr.ParameterTypes[i]);
+                    llvmArgType = EmitAbiParamType(fnPtr.ParameterTypes[i]);
                 }
 
                 argVals.Add(val);
@@ -3455,7 +3455,7 @@ public partial class LlvmEmitter : IVisitor
                 if (i < structMethod.Parameters.Count)
                 {
                     val = EmitImplicitCast(val, argType, structMethod.Parameters[i].Type, arg);
-                    llvmArgType = EmitParamType(structMethod.Parameters[i].Type);
+                    llvmArgType = EmitAbiParamType(structMethod.Parameters[i].Type);
                 }
                 argValues.Add(val);
                 argTypes.Add(llvmArgType);
@@ -3500,7 +3500,7 @@ public partial class LlvmEmitter : IVisitor
                 EmitArgument(arg, methodMember.Parameters[i].Type);
                 string val = Pop();
                 TypeExpression argType = _typeChecker.GetType(arg);
-                string llvmArgType = EmitParamType(methodMember.Parameters[i].Type);
+                string llvmArgType = EmitAbiParamType(methodMember.Parameters[i].Type);
                 val = EmitImplicitCast(val, argType, methodMember.Parameters[i].Type, arg);
                 argValues.Add(val);
                 argTypes.Add(llvmArgType);
@@ -3522,14 +3522,14 @@ public partial class LlvmEmitter : IVisitor
                 if (target is MethodDeclaration methodTarget && i < methodTarget.Parameters.Count)
                 {
                     val = EmitImplicitCast(val, argType, methodTarget.Parameters[i].Type, arg);
-                    llvmArgType = EmitParamType(methodTarget.Parameters[i].Type);
+                    llvmArgType = EmitAbiParamType(methodTarget.Parameters[i].Type);
                 }
                 else if (target is ExternDeclaration extDecl)
                 {
                     if (i < extDecl.Parameters.Count)
                     {
                         val = EmitImplicitCast(val, argType, extDecl.Parameters[i].Type, arg);
-                        llvmArgType = EmitParamType(extDecl.Parameters[i].Type);
+                        llvmArgType = EmitAbiParamType(extDecl.Parameters[i].Type);
                     }
                     else if (extDecl.IsVariadic)
                     {
@@ -3625,7 +3625,7 @@ public partial class LlvmEmitter : IVisitor
             return;
         }
 
-        string callSignature = retType;
+        string callSignature = EmitAbiReturnType(callType);
         if (target is ExternDeclaration { IsVariadic: true } variadic)
             callSignature += " (" + string.Join(", ", variadic.Parameters.Select(p => EmitParamType(p.Type)).Append("...")) + ")";
         {
@@ -3752,8 +3752,8 @@ public partial class LlvmEmitter : IVisitor
                 val = EmitImplicitCast(val, valueType, opTarget.Operator.Parameters[1].Type, node.Value);
 
                 string mangledName = GetOperatorMangledName(opTarget.StructName, opTarget.Operator);
-                string param0Type = EmitParamType(opTarget.Operator.Parameters[0].Type);
-                string param1Type = EmitParamType(opTarget.Operator.Parameters[1].Type);
+                string param0Type = EmitAbiParamType(opTarget.Operator.Parameters[0].Type);
+                string param1Type = EmitAbiParamType(opTarget.Operator.Parameters[1].Type);
 
                 temp = EmitValueCall(opTarget.Operator.ReturnType, "@" + mangledName,
                     $"{param0Type} {currentVal}, {param1Type} {val}", transferArguments: false)!;
@@ -3898,7 +3898,7 @@ public partial class LlvmEmitter : IVisitor
                     {
                         TypeExpression argType = _typeChecker.GetType(node.Arguments[i]);
                         string castVal = EmitImplicitCast(argVals[i], argType, ctor.Parameters[i].Type, node.Arguments[i]);
-                        callArgs.Add($"{EmitParamType(ctor.Parameters[i].Type)} {castVal}");
+                        callArgs.Add($"{EmitAbiParamType(ctor.Parameters[i].Type)} {castVal}");
                     }
                 }
                 TransferArguments();
@@ -3953,7 +3953,7 @@ public partial class LlvmEmitter : IVisitor
                     {
                         TypeExpression argType = _typeChecker.GetType(node.Arguments[i]);
                         string castVal = EmitImplicitCast(argVals[i], argType, ctor.Parameters[i].Type, node.Arguments[i]);
-                        callArgs.Add($"{EmitParamType(ctor.Parameters[i].Type)} {castVal}");
+                        callArgs.Add($"{EmitAbiParamType(ctor.Parameters[i].Type)} {castVal}");
                     }
                 }
                 IDeferAction? allocationCleanup = null;
@@ -4384,9 +4384,9 @@ public partial class LlvmEmitter : IVisitor
         _emitterTryStack.Clear();
         _deferScopes.Clear();
 
-        string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitParamType(p.Type)} %{p.Name}"));
+        string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitAbiParamType(p.Type)} %{p.Name}"));
         parameters = WithManagedResultParameter(returnType, parameters, named: true);
-        Emit($"define {EmitFunctionReturnType(returnType)} @{funcName}({parameters}){InlineHint(node)} {{");
+        Emit($"define {EmitAbiFunctionReturnType(returnType)} @{funcName}({parameters}){InlineHint(node)} {{");
         Emit("entry:");
 
         foreach (Parameter p in node.Parameters)
@@ -4559,7 +4559,7 @@ public partial class LlvmEmitter : IVisitor
         Emit("");
 
         _tempCounter = 0;
-        Emit("define i1 @gflat_is_instance(i8** %obj_vt, i8** %target_vt) {");
+        Emit("define zeroext i1 @gflat_is_instance(i8** %obj_vt, i8** %target_vt) {");
         Emit("entry:");
         Emit("    %is_target_null = icmp eq i8** %target_vt, null");
         Emit("    br i1 %is_target_null, label %found, label %loop_entry");

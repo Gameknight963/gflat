@@ -4541,6 +4541,8 @@ namespace gflat
                     int fieldIdx = sInfo.FieldIndex(memberAccess.Member);
                     if (fieldIdx >= 0)
                     {
+                        if (sInfo.FieldDeclarationsByName.TryGetValue(memberAccess.Member, out var field))
+                            ValidateStructMemberAccess(sInfo, field.Name, field.Accessibility, false, memberAccess.Span);
                         TypeExpression fieldType = ResolveAlias(sInfo.Fields[fieldIdx].Type);
                         if (fieldType is FunctionPointerTypeExpression fnPtrField)
                         {
@@ -4554,6 +4556,7 @@ namespace gflat
                         throw new TypeCheckException($"'{DisplayName(named.Name)}' has no method '{memberAccess.Member}'", node.Span);
 
                     method = SelectOverload(method, node);
+                    ValidateStructMemberAccess(sInfo, method.Name, method.Accessibility, true, node.Callee.Span);
                     if (isReceiverReadOnly && !method.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
 
@@ -5016,11 +5019,13 @@ namespace gflat
 
                 if (classInfo.Methods.TryGetValue(node.Member, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                 {
-                    if (mEntry.Method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
+                    bool accessibleOverload = overloadFamilies.TryGetValue(mEntry.Method, out var family)
+                        && family.Any(candidate => CanAccessClassMethod(candidate, mEntry.DeclaringClass));
+                    if (!accessibleOverload && mEntry.Method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
                     {
                         throw new TypeCheckException($"Cannot access private method '{node.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     }
-                    if (mEntry.Method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
+                    if (!accessibleOverload && mEntry.Method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
                     {
                         throw new TypeCheckException($"Cannot access protected method '{node.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     }
@@ -5037,12 +5042,16 @@ namespace gflat
             int idx = info.FieldIndex(node.Member);
             if (idx >= 0)
             {
+                if (info.FieldDeclarationsByName.TryGetValue(node.Member, out var field))
+                    ValidateStructMemberAccess(info, field.Name, field.Accessibility, false, node.Span);
                 RecordType(node, info.Fields[idx].Type);
                 return;
             }
 
             if (info.Methods.TryGetValue(node.Member, out MethodDeclaration? method))
             {
+                if (!overloadFamilies.TryGetValue(method, out var family) || !family.Any(candidate => CanAccessStructMember(info, candidate.Accessibility)))
+                    ValidateStructMemberAccess(info, method.Name, method.Accessibility, true, node.Span);
                 RecordType(node, method.ReturnType);
                 return;
             }

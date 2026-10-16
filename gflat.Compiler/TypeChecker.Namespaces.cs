@@ -211,7 +211,7 @@ public partial class TypeChecker
                         RegisterParameterDefaults(external, external.Parameters);
                         break;
                     case FieldDeclaration field:
-                        ResolveAlias(field.Type);
+                        PrepareArrayFieldShape(field);
                         defaultConstantContexts[field] = new(scope, declarationNamespaces.GetValueOrDefault(field) ?? "", _currentClass, _currentStruct);
                         break;
                 }

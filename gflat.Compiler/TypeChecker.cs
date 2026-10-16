@@ -1331,7 +1331,7 @@ namespace gflat
                 if (function.IsSignature) throw new TypeCheckException("A function signature has no value storage; use a function pointer", line);
                 if (function.IsManaged)
                     throw new TypeCheckException("Managed function pointers are not supported", line);
-                ValidateTypeUsage(function.ReturnType, line);
+                ValidateReturnType(function.ReturnType, line);
                 foreach (var parameter in function.ParameterTypes) ValidateParameterType(parameter, line);
             }
         }
@@ -1592,6 +1592,11 @@ namespace gflat
             }
             if (type is PointerTypeExpression ptr)
             {
+                if (HasIncompleteArrayValueShape(ptr.Inner))
+                {
+                    error = "Pointer arithmetic requires array element types with fixed sizes";
+                    return false;
+                }
                 if (ptr.Inner is NamedTypeExpression { Name: "void" })
                 {
                     error = "Pointer arithmetic is not allowed on 'void*'";
@@ -2404,11 +2409,18 @@ namespace gflat
                         {
                             field.Initializer.Accept(this);
                             TypeExpression initType = ResolveAlias(GetType(field.Initializer));
+                            fieldType = InferArrayStorageType(fieldType, field.Initializer, initType);
+                            if (fieldType is ArrayTypeExpression)
+                            {
+                                field.Type = fieldType;
+                                UpdateInferredClassField(_currentClass.Name, field, fieldType);
+                            }
                             if (!IsAssignable(fieldType, initType, field.Initializer))
                             {
                                 throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Initializer.Span);
                             }
                         }
+                        ValidateArrayValueShape(fieldType, field.Line);
                         if (field.IsConst)
                         {
                             if (field.Initializer == null)
@@ -2454,7 +2466,7 @@ namespace gflat
                         if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
-                            ValidateTypeUsage(method.ReturnType, method.Line);
+                            ValidateReturnType(method.ReturnType, method.Line);
                             if (!method.IsAbstract)
                             {
                                 PushScope();
@@ -2591,11 +2603,18 @@ namespace gflat
                         {
                             field.Initializer.Accept(this);
                             TypeExpression initType = ResolveAlias(GetType(field.Initializer));
+                            fieldType = InferArrayStorageType(fieldType, field.Initializer, initType);
+                            if (fieldType is ArrayTypeExpression)
+                            {
+                                field.Type = fieldType;
+                                if (fIdx >= 0) _currentStruct.Fields[fIdx] = (field.Name, fieldType);
+                            }
                             if (!IsAssignable(fieldType, initType, field.Initializer))
                             {
                                 throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Initializer.Span);
                             }
                         }
+                        ValidateArrayValueShape(fieldType, field.Line);
                         if (field.IsConst)
                         {
                             if (field.Initializer == null)
@@ -2641,7 +2660,7 @@ namespace gflat
                         if (method.Body != null) { _exceptionMethods.Add(method); _exceptionSummaries = null; }
                         try
                         {
-                            ValidateTypeUsage(method.ReturnType, method.Line);
+                            ValidateReturnType(method.ReturnType, method.Line);
                             PushScope();
                             NamedTypeExpression structType = new NamedTypeExpression(node.Name, null, method.Line);
                             PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line, isReadOnly: method.IsReadOnly);
@@ -2698,7 +2717,7 @@ namespace gflat
                 throw new TypeCheckException("Operator overloads must be declared inside a struct", node.Line);
             }
 
-            ValidateTypeUsage(node.ReturnType, node.Line);
+            ValidateReturnType(node.ReturnType, node.Line);
             if (RequiresCopy(node.ReturnType) || node.Parameters.Any(p => RequiresCopy(p.Type)))
                 throw new TypeCheckException("Owning operator operands and results are not yet supported; use an explicit method", node.Line);
 
@@ -2773,7 +2792,7 @@ namespace gflat
                     {
                         throw new TypeCheckException($"Interface method '{node.Name}.{method.Name}' cannot have a body", method.Line);
                     }
-                    ValidateTypeUsage(method.ReturnType, method.Line);
+                    ValidateReturnType(method.ReturnType, method.Line);
                     ValidateParameterDefaults(method, method.Parameters);
                     foreach (Parameter p in method.Parameters)
                     {
@@ -2792,14 +2811,6 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateValueType(node.Type, node.Line);
             TypeExpression fieldType = ResolveAlias(node.Type);
-            if (fieldType is ArrayTypeExpression { Size: null } textArray &&
-                node.Initializer is LiteralExpression { Token.Kind: TokenKind.StringLiteral } text &&
-                TypesMatch(ResolveAlias(textArray.ElementType), Char))
-            {
-                fieldType = new ArrayTypeExpression(textArray.ElementType, GetStringLiteralLength(text.Token.Text[1..^1], text.Line), node.Line)
-                    .WithReadOnlyValue(fieldType.IsReadOnlyValue);
-                node.Type = fieldType;
-            }
             if (node.IsConst && RequiresCopy(fieldType))
                 throw new TypeCheckException("Constants cannot contain values with nontrivial copying or destruction", node.Line);
             if (node.IsConst && node.Initializer is ArrayLiteralExpression && HasDestructor(fieldType))
@@ -2812,6 +2823,8 @@ namespace gflat
             {
                 node.Initializer.Accept(this);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
+                fieldType = InferArrayStorageType(fieldType, node.Initializer, initType);
+                if (fieldType is ArrayTypeExpression) node.Type = fieldType;
                 if (!IsAssignable(fieldType, initType, node.Initializer))
                 {
                     throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{node.Name}' of type '{TypeName(fieldType)}'", node.Initializer.Span);
@@ -2822,6 +2835,7 @@ namespace gflat
                 throw new TypeCheckException($"Const variable '{node.Name}' must have an initializer", node.Line);
             }
 
+            ValidateArrayValueShape(fieldType, node.Line);
             if (node.IsConst)
             {
                 if (node.Initializer == null)
@@ -2870,7 +2884,7 @@ namespace gflat
             _currentFunction = node;
             try
             {
-                ValidateTypeUsage(node.ReturnType, node.Line);
+                ValidateReturnType(node.ReturnType, node.Line);
                 PushScope();
                 foreach (Parameter p in node.Parameters)
                 {
@@ -3366,17 +3380,7 @@ namespace gflat
                 if (!precheckedForeachInitializers.Remove(node)) node.Initializer.Accept(this);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
 
-                if (varType is ArrayTypeExpression { Size: null } textArray &&
-                    node.Initializer is LiteralExpression { Token.Kind: TokenKind.StringLiteral } text &&
-                    TypesMatch(ResolveAlias(textArray.ElementType), Char))
-                    varType = new ArrayTypeExpression(textArray.ElementType, GetStringLiteralLength(text.Token.Text[1..^1], text.Line), node.Line)
-                        .WithReadOnlyValue(varType.IsReadOnlyValue);
-
-                // Size inference for inferred arrays: char[] a = "string";
-                if (varType is ArrayTypeExpression { Size: null } arr && initType is ArrayTypeExpression { Size: not null } initArr)
-                {
-                    varType = new ArrayTypeExpression(arr.ElementType, initArr.Size, node.Line, arr.SizeExpression).WithReadOnlyValue(varType.IsReadOnlyValue);
-                }
+                varType = InferArrayStorageType(varType, node.Initializer, initType);
 
                 if (!ValidateCopyUse(node.Initializer, varType))
                 {
@@ -3393,6 +3397,7 @@ namespace gflat
                 throw new TypeCheckException($"Const variable '{node.Name}' must have an initializer", node.Line);
             }
 
+            ValidateArrayValueShape(varType, node.Line);
             if (node.IsConst)
             {
                 if (node.Initializer == null)
@@ -3846,6 +3851,7 @@ namespace gflat
                         throw new TypeCheckException("Cannot dereference 'void*'", node.Line);
                     }
                     ValidateTypeUsage(inner, node.Line);
+                    ValidateArrayValueShape(inner, node.Line);
                     RecordType(node, inner);
                     break;
                 default:
@@ -4996,6 +5002,7 @@ namespace gflat
             using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
             TypeExpression resolvedType = ResolveAlias(node.Type);
+            ValidateArrayValueShape(resolvedType, node.Line);
             node.Type = resolvedType;
             if (node.Destination != null)
             {
@@ -5232,6 +5239,7 @@ namespace gflat
             if (node.TargetType != null)
             {
                 ValidateValueType(node.TargetType, node.Line);
+                ValidateArrayValueShape(node.TargetType, node.Line);
                 TypeExpression resolved = ResolveAlias(node.TargetType);
                 if (!CanDefaultInitialize(resolved))
                 {
@@ -5264,6 +5272,7 @@ namespace gflat
                 targetType = ResolveAlias(varType);
             }
             ValidateTypeUsage(targetType, node.Line);
+            ValidateArrayValueShape(targetType, node.Line);
             int size = alignment ? GetTypeAlignment(targetType) : GetTypeSize(targetType);
             RecordType(node, Int);
             ConstValue.Integer constVal = new ConstValue.Integer(size);
@@ -5338,6 +5347,7 @@ namespace gflat
                 if (ptr.IsNullable)
                     throw new TypeCheckException("Cast a nullable pointer to non-null before indexing", node.Line);
                 ValidateValueType(ptr.Inner, node.Line);
+                ValidateArrayValueShape(ptr.Inner, node.Line);
                 RecordType(node, ptr.Inner);
             }
             else
@@ -5447,7 +5457,7 @@ namespace gflat
             if (node.Accessibility == TokenKind.Protected)
                 throw new TypeCheckException("Namespace extern declarations cannot be protected", node.Span);
             using var sourceContext = SourceContext.Enter(node.Span);
-            ValidateTypeUsage(node.ReturnType, node.Line);
+            ValidateReturnType(node.ReturnType, node.Line);
             if (ContainsManagedReference(node.ReturnType) ||
                 node.Parameters.Any(p => ContainsManagedReference(p.Type)))
                 throw new TypeCheckException("Extern signatures cannot contain managed references or storage containing them; use a raw native boundary", node.Span);
@@ -5758,6 +5768,7 @@ namespace gflat
             TypeExpression sourceType = ResolveAlias(GetType(node.Operand));
             TypeExpression targetType = ResolveAlias(node.TargetType);
             ValidateTypeUsage(targetType, node.Line);
+            ValidateArrayValueShape(targetType, node.Line);
 
             if (targetType is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false } or ManagedTypeExpression { IsNullable: false })
             {

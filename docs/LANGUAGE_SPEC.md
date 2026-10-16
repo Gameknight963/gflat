@@ -288,7 +288,7 @@ behavioral requirement.
 
 Arrays have inline storage. Array-to-pointer decay does not establish bounds or ownership. Uninitialized stack arrays are buffers; allocation alone does not guarantee initialized elements. Initialize elements before reading them.
 
-Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Unsized array parameters are rejected; spell buffer parameters as pointers. Array value conversions preserve dimensions and element representation; cast individual elements explicitly when changing numeric types. Owning values transfer from fresh values or explicit moves, or copy using a copy constructor.
+Fixed-size array parameters receive independent copies, including nested arrays. Use an explicit element pointer or pointer to a whole fixed-size array to share storage. Array values require fixed sizes in every dimension, including parameters, return types, and fields. Spell buffer parameters of unknown length as pointers. Array value conversions preserve dimensions and element representation; cast individual elements explicitly when changing numeric types. Owning values transfer from fresh values or explicit moves, or copy using a copy constructor.
 
 Nullable raw pointers and function pointers require a proven non-null local read, checked non-null cast, or unchecked postfix `!` before operations requiring a non-null value. Raw pointers support dereference, indexing, member access, and pointer arithmetic as appropriate for their element type. Function pointers support calls, not arithmetic: functions do not form an array with a fixed element size. A raw pointer to function-pointer storage supports ordinary array traversal. Null guards narrow local and parameter reads while preserving their declared storage types. The cast traps if the value is null. Function pointer conversions preserve the exact return and parameter types, including readonly qualifications; implicit numeric return conversions do not change a function's calling convention.
 
@@ -438,7 +438,7 @@ function pointers and compile-time managed allocation remain unsupported.
 
 ### Array literals
 
-`[expression, ...]` creates a fixed-size array. Elements evaluate from left to right and must have the same resolved type, including nested array dimensions. A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected; use explicit casts when elements need a different numeric type. An unsized local declaration infers its size from the initializer.
+`[expression, ...]` creates a fixed-size array. Elements evaluate from left to right and must have the same resolved type, including nested array dimensions. A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected; use explicit casts when elements need a different numeric type. A local or field declaration can infer its outer array bound from an array literal or a string literal. Local declarations can also infer that bound from another fixed-size array value. Nested bounds must be explicit. Incomplete array types can still be described by `typeof` or named behind opaque pointers; reading, constructing, or measuring such a value, or using its size for pointer arithmetic, requires a complete shape.
 
 ```csharp
 int main()

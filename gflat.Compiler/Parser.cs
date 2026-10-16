@@ -262,6 +262,7 @@ namespace gflat
             bool isAbstract = false;
             bool isInline = false;
             bool isStatic = false;
+            Token? fieldModifier = null;
             FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
             AstNode Finish(AstNode node) => ApplyInline(ApplyImplementationKind(node, implementation), isInline);
 
@@ -290,6 +291,7 @@ namespace gflat
                 }
                 else if (Check(TokenKind.Abstract))
                 {
+                    fieldModifier ??= Current;
                     isAbstract = true;
                     Consume();
                 }
@@ -331,6 +333,7 @@ namespace gflat
             TypeExpression type = ParseTypeExpression();
             string name = Expect(TokenKind.Identifier).Text;
             while (Match(TokenKind.DoubleColon)) name += "::" + Expect(TokenKind.Identifier).Text;
+            Token genericStart = Current;
             List<GenericParameter> genericParams = ParseGenericParameters();
 
             if (Check(TokenKind.OpenParen))
@@ -343,7 +346,20 @@ namespace gflat
                 return Finish(ParseProperty(type, name, accessibility, false, false, false, false, false, line));
             }
 
+            ValidateFieldModifiers(fieldModifier, genericStart);
             return Finish(ParseFieldDeclaration(type, name, accessibility, false, isConst, isReadonly, line));
+        }
+
+        private void ValidateFieldModifiers(Token? modifier, Token genericStart)
+        {
+            if (modifier != null)
+                throw new TypeCheckException("Fields cannot be virtual, override, or abstract", modifier.Span);
+            if (genericStart.Kind == TokenKind.Less)
+            {
+                SourceSpan span = genericStart.Source?.Span(genericStart.Start,
+                    _tokens[_pos - 1].End + 1 - genericStart.Start) ?? genericStart.Span;
+                throw new TypeCheckException("Fields cannot declare generic parameters", span);
+            }
         }
 
         private static AstNode ApplyImplementationKind(AstNode node, FunctionImplementationKind kind)
@@ -598,6 +614,7 @@ namespace gflat
             bool isOverride = false;
             bool isAbstract = false;
             bool isInline = false;
+            Token? fieldModifier = null;
             FunctionImplementationKind implementation = FunctionImplementationKind.Ordinary;
             AstNode Finish(AstNode node) => ApplyInline(ApplyImplementationKind(node, implementation), isInline);
 
@@ -609,9 +626,9 @@ namespace gflat
                 else if (Check(TokenKind.Static)) { isStatic = true; Consume(); }
                 else if (Check(TokenKind.Const)) { isConst = true; Consume(); }
                 else if (Check(TokenKind.Readonly) && Peek().Kind != TokenKind.OpenParen && !isReadonly) { isReadonly = true; Consume(); }
-                else if (Check(TokenKind.Virtual)) { isVirtual = true; Consume(); }
-                else if (Check(TokenKind.Override)) { isOverride = true; Consume(); }
-                else if (Check(TokenKind.Abstract)) { isAbstract = true; Consume(); }
+                else if (Check(TokenKind.Virtual)) { fieldModifier ??= Current; isVirtual = true; Consume(); }
+                else if (Check(TokenKind.Override)) { fieldModifier ??= Current; isOverride = true; Consume(); }
+                else if (Check(TokenKind.Abstract)) { fieldModifier ??= Current; isAbstract = true; Consume(); }
                 else if (Match(TokenKind.Inline)) { if (isInline) throw new TypeCheckException("Duplicate inline modifier", line); isInline = true; }
                 else if (Check(TokenKind.Weak) || Check(TokenKind.Replace) || Check(TokenKind.Expect))
                 {
@@ -714,6 +731,7 @@ namespace gflat
             }
 
             name = Expect(TokenKind.Identifier).Text;
+            Token genericStart = Current;
             List<GenericParameter> genericParams = ParseGenericParameters();
 
             if (isRef && !(Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater)))
@@ -730,6 +748,7 @@ namespace gflat
                 return Finish(ParseProperty(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, isReadonly, line, isRef: isRef));
             }
 
+            ValidateFieldModifiers(fieldModifier, genericStart);
             return Finish(ParseFieldDeclaration(type, name, accessibility, isStatic, isConst, isReadonly, line));
         }
 

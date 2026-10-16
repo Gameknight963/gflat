@@ -2759,30 +2759,6 @@ public partial class LlvmEmitter : IVisitor
                     Push(temp);
                     return;
                 }
-                if (resLeftType is FunctionPointerTypeExpression fnLeft)
-                {
-                    string fnTypeStr = EmitType(fnLeft);
-                    string idxType = EmitType(rightType);
-                    string castPtr = NewTemp();
-                    Emit($"    {castPtr} = bitcast {fnTypeStr} {left} to i8**");
-                    string gepPtr = NewTemp();
-                    Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, {idxType} {right}");
-                    Emit($"    {temp} = bitcast i8** {gepPtr} to {fnTypeStr}");
-                    Push(temp);
-                    return;
-                }
-                if (resRightType is FunctionPointerTypeExpression fnRight)
-                {
-                    string fnTypeStr = EmitType(fnRight);
-                    string idxType = EmitType(leftType);
-                    string castPtr = NewTemp();
-                    Emit($"    {castPtr} = bitcast {fnTypeStr} {right} to i8**");
-                    string gepPtr = NewTemp();
-                    Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, {idxType} {left}");
-                    Emit($"    {temp} = bitcast i8** {gepPtr} to {fnTypeStr}");
-                    Push(temp);
-                    return;
-                }
             }
             else if (node.Operator == TokenKind.Minus)
             {
@@ -2803,18 +2779,6 @@ public partial class LlvmEmitter : IVisitor
                     Push(temp);
                     return;
                 }
-                if (resLeftType is FunctionPointerTypeExpression fnLeft && resRightType is FunctionPointerTypeExpression fnRight)
-                {
-                    string p1Int = NewTemp();
-                    string p2Int = NewTemp();
-                    Emit($"    {p1Int} = ptrtoint {EmitType(fnLeft)} {left} to i64");
-                    Emit($"    {p2Int} = ptrtoint {EmitType(fnRight)} {right} to i64");
-                    string diffBytes = NewTemp();
-                    Emit($"    {diffBytes} = sub i64 {p1Int}, {p2Int}");
-                    Emit($"    {temp} = sdiv i64 {diffBytes}, 8");
-                    Push(temp);
-                    return;
-                }
                 if (resLeftType is PointerTypeExpression pLeftSingle)
                 {
                     string elemType = EmitType(pLeftSingle.Inner);
@@ -2822,20 +2786,6 @@ public partial class LlvmEmitter : IVisitor
                     string negIdx = NewTemp();
                     Emit($"    {negIdx} = sub {idxType} 0, {right}");
                     Emit($"    {temp} = getelementptr {elemType}, {elemType}* {left}, {idxType} {negIdx}");
-                    Push(temp);
-                    return;
-                }
-                if (resLeftType is FunctionPointerTypeExpression fnLeftSingle)
-                {
-                    string fnTypeStr = EmitType(fnLeftSingle);
-                    string idxType = EmitType(rightType);
-                    string negIdx = NewTemp();
-                    Emit($"    {negIdx} = sub {idxType} 0, {right}");
-                    string castPtr = NewTemp();
-                    Emit($"    {castPtr} = bitcast {fnTypeStr} {left} to i8**");
-                    string gepPtr = NewTemp();
-                    Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, {idxType} {negIdx}");
-                    Emit($"    {temp} = bitcast i8** {gepPtr} to {fnTypeStr}");
                     Push(temp);
                     return;
                 }
@@ -3015,16 +2965,6 @@ public partial class LlvmEmitter : IVisitor
                         string elemType = EmitType(ptrType.Inner);
                         temp = NewTemp();
                         Emit($"    {temp} = getelementptr {elemType}, {elemType}* {operand}, i32 {step}");
-                    }
-                    else if (resType is FunctionPointerTypeExpression fnPtrType)
-                    {
-                        string fnPtrTypeStr = EmitType(fnPtrType);
-                        string castPtr = NewTemp();
-                        Emit($"    {castPtr} = bitcast {fnPtrTypeStr} {operand} to i8**");
-                        string gepPtr = NewTemp();
-                        Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, i32 {step}");
-                        temp = NewTemp();
-                        Emit($"    {temp} = bitcast i8** {gepPtr} to {fnPtrTypeStr}");
                     }
                     else if (resType is NamedTypeExpression { Name: "float" or "double" })
                     {
@@ -3898,23 +3838,6 @@ public partial class LlvmEmitter : IVisitor
                     stepVal = negVal;
                 }
                 Emit($"    {temp} = getelementptr {elemType}, {elemType}* {currentVal}, {idxType} {stepVal}");
-            }
-            else if (resTargetType is FunctionPointerTypeExpression fnPtrType && node.Operator is TokenKind.PlusEquals or TokenKind.MinusEquals)
-            {
-                string fnPtrTypeStr = EmitType(fnPtrType);
-                string idxType = EmitType(valueType);
-                string stepVal = val;
-                if (node.Operator == TokenKind.MinusEquals)
-                {
-                    string negVal = NewTemp();
-                    Emit($"    {negVal} = sub {idxType} 0, {val}");
-                    stepVal = negVal;
-                }
-                string castPtr = NewTemp();
-                Emit($"    {castPtr} = bitcast {fnPtrTypeStr} {currentVal} to i8**");
-                string gepPtr = NewTemp();
-                Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, {idxType} {stepVal}");
-                Emit($"    {temp} = bitcast i8** {gepPtr} to {fnPtrTypeStr}");
             }
             else if (isFloat)
             {

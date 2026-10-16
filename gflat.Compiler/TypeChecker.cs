@@ -1593,15 +1593,10 @@ namespace gflat
                 error = null;
                 return true;
             }
-            if (type is FunctionPointerTypeExpression fnPtr)
+            if (type is FunctionPointerTypeExpression)
             {
-                if (fnPtr.IsManaged)
-                {
-                    error = "Pointer arithmetic is not allowed on managed function pointers ('^')";
-                    return false;
-                }
-                error = null;
-                return true;
+                error = "Pointer arithmetic is not allowed on function pointers; use a pointer to function-pointer storage for array traversal";
+                return false;
             }
             error = null;
             return false;

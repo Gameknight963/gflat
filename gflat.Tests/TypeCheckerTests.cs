@@ -520,7 +520,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void FunctionPointerArithmeticTypeChecksCleanly()
+        public void FunctionPointerArithmeticProducesSourceDiagnostic()
         {
             string code = """
                 alias Fn = int(int, int)*;
@@ -540,8 +540,8 @@ namespace gflat.Tests
                 }
                 """;
 
-            var (ast, checker) = CompilerTestHelper.Check(code);
-            Assert.NotNull(ast);
+            var error = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
+            Assert.Contains("function pointers", error.Message);
         }
 
         [Fact]

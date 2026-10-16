@@ -877,7 +877,7 @@ namespace gflat.Tests
         }
 
         [Fact]
-        public void FunctionPointerDirectArithmetic()
+        public void FunctionPointerDirectArithmeticIsRejected()
         {
             string code = """
                 alias BinaryOp = int(int, int)*;
@@ -911,8 +911,7 @@ namespace gflat.Tests
                 }
                 """;
 
-            ExecutionResult result = CompilerTestHelper.Run(code);
-            Assert.Equal(42, result.ExitCode);
+            Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => Compiler.Emit(code));
         }
 
         [Fact]

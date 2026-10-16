@@ -61,26 +61,26 @@ struct IntRange
     public int Count { readonly get => count; }
     public inline readonly IntRange::Enumerator GetEnumerator() => new IntRange::Enumerator(first, count);
 
-    FilteredIntRange Where(bool(int)* predicate)
+    readonly FilteredIntRange Where(bool(int)* predicate)
         => new FilteredIntRange(*this, predicate, 0, this.Count, false);
 
-    IntRange Take(int count)
+    readonly IntRange Take(int count)
     {
         if (count < 0) throw new Exception("Take count must be nonnegative");
         if (count > this.Count) count = this.Count;
         return new IntRange(this.Start, count);
     }
 
-    IntRange Skip(int count)
+    readonly IntRange Skip(int count)
     {
         if (count < 0) throw new Exception("Skip count must be nonnegative");
         if (count >= this.Count) return new IntRange(0, 0);
         return new IntRange(this.Start + count, this.Count - count);
     }
 
-    bool Any() => this.Count != 0;
+    readonly bool Any() => this.Count != 0;
 
-    long Sum()
+    readonly long Sum()
     {
         long count = (long)this.Count;
         return count * (2L * (long)this.Start + count - 1L) / 2L;

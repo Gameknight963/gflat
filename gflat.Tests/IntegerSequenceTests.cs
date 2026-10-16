@@ -9,6 +9,32 @@ public sealed class IntegerSequenceTests
     ]);
 
     [Fact]
+    public void ReadonlyRangesSupportQueriesWithoutMutatingTheSource()
+    {
+        var result = Run("""
+            using std;
+            bool Even(int value) => value % 2 == 0;
+            int main() {
+                readonly(IntRange) source = new IntRange(0, 10);
+                if (!source.Any() || source.Sum() != 45l) return 1;
+                if (source.Take(3).Sum() != 3l || source.Skip(8).Sum() != 17l) return 2;
+                readonly(FilteredIntRange) filtered = source.Where(Even);
+                if (!filtered.Any() || filtered.Count() != 5 || filtered.Sum() != 20l) return 3;
+                if (filtered.Take(2).Sum() != 2l || filtered.Skip(3).Sum() != 14l) return 4;
+                int first = 0;
+                int second = 0;
+                foreach (int value in filtered) first += value;
+                foreach (int value in filtered) second += value;
+                if (first != 20 || second != 20 || source.Count != 10) return 5;
+                readonly(IntRange)* view = &source;
+                if (!view.Any() || view.Take(2).Sum() != 1l) return 6;
+                return 0;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public void LazyPipelineIsRepeatableAndAllocatesNoMemory()
     {
         var result = Run("""

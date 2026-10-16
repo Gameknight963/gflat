@@ -89,19 +89,19 @@ struct FilteredIntRange
         return new FilteredIntRange(source, predicate, skipped, remaining, explicitLimit);
     }
     
-    int Count()
+    readonly int Count()
     {
         int count = 0;
         foreach (int value in *this) count++;
         return count;
     }
 
-    bool Any()
+    readonly bool Any()
     {
         FilteredIntRange::Enumerator iterator = this.GetEnumerator();
         return iterator.MoveNext();
     }
-    long Sum()
+    readonly long Sum()
     {
         long sum = 0;
         foreach (int value in *this) sum += (long)value;

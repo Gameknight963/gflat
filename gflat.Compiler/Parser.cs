@@ -1989,7 +1989,7 @@ namespace gflat
             TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
-            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Default or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or TokenKind.Typeof or
             TokenKind.InterpolatedStringStart or
             TokenKind.Minus or TokenKind.Bang or TokenKind.Star or TokenKind.Ampersand or
             TokenKind.PlusPlus or TokenKind.MinusMinus;
@@ -1999,7 +1999,7 @@ namespace gflat
             TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.LongLiteral or TokenKind.ULongLiteral or
             TokenKind.HexInt or TokenKind.FloatLiteral or TokenKind.DoubleLiteral or
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
-            TokenKind.OpenParen or TokenKind.New or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or
+            TokenKind.OpenParen or TokenKind.New or TokenKind.Default or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or TokenKind.Typeof or
             TokenKind.InterpolatedStringStart or
             TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
 

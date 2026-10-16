@@ -991,10 +991,12 @@ namespace gflat
             string ownerPrefix = ownedMethod ? methodOwner + "$" : "";
             string mangledName = (definitionNamespace.Length > 0 ? definitionNamespace + "$" : "") + ownerPrefix + $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
             _displayNames[mangledName] = (definitionNamespace.Length > 0 ? definitionNamespace + "::" : "") + DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
+            CheckFailedFunctionSpecialization(mangledName, line);
             if (_globalScope.Functions.TryGetValue(mangledName, out MethodDeclaration? existing))
             {
                 return existing;
             }
+            using var specialization = EnterFunctionSpecialization(mangledName, line);
 
             Dictionary<string, TypeExpression> typeMap = new();
             for (int i = 0; i < genericDef.GenericParameters.Count; i++)

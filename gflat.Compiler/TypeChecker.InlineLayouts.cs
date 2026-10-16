@@ -14,6 +14,8 @@ public partial class TypeChecker
     private const int MaximumTypeSpecializationDepth = 64;
     private readonly HashSet<string> activeTypeSpecializations = new();
     private readonly HashSet<string> failedTypeSpecializations = new();
+    private readonly HashSet<string> activeFunctionSpecializations = new();
+    private readonly HashSet<string> failedFunctionSpecializations = new();
 
     private IDisposable EnterLayoutQuery(string name, int line)
     {
@@ -33,16 +35,36 @@ public partial class TypeChecker
 
     private IDisposable EnterTypeSpecialization(string name, int line)
     {
-        if (activeTypeSpecializations.Count >= MaximumTypeSpecializationDepth)
+        if (activeTypeSpecializations.Count + activeFunctionSpecializations.Count >= MaximumTypeSpecializationDepth)
         {
             // Recovery revisits partial types registered before the error. Mark
             // this expansion's keys, leaving unrelated specializations available.
             failedTypeSpecializations.UnionWith(activeTypeSpecializations);
+            failedFunctionSpecializations.UnionWith(activeFunctionSpecializations);
             failedTypeSpecializations.Add(name);
             CheckFailedTypeSpecialization(name, line);
         }
         activeTypeSpecializations.Add(name);
         return new LayoutScope(() => activeTypeSpecializations.Remove(name));
+    }
+
+    private void CheckFailedFunctionSpecialization(string name, int line)
+    {
+        if (failedFunctionSpecializations.Contains(name))
+            throw new TypeCheckException($"Function specialization exceeds the compiler nesting limit of {MaximumTypeSpecializationDepth}", line);
+    }
+
+    private IDisposable EnterFunctionSpecialization(string name, int line)
+    {
+        if (activeTypeSpecializations.Count + activeFunctionSpecializations.Count >= MaximumTypeSpecializationDepth)
+        {
+            failedTypeSpecializations.UnionWith(activeTypeSpecializations);
+            failedFunctionSpecializations.UnionWith(activeFunctionSpecializations);
+            failedFunctionSpecializations.Add(name);
+            CheckFailedFunctionSpecialization(name, line);
+        }
+        activeFunctionSpecializations.Add(name);
+        return new LayoutScope(() => activeFunctionSpecializations.Remove(name));
     }
 
     private void CheckInvalidInlineLayout(string name)

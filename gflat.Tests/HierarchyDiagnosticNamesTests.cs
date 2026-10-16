@@ -40,6 +40,22 @@ public sealed class HierarchyDiagnosticNamesTests
         var error = Assert.Single(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         Assert.Equal(expected, error.Message);
         Assert.DoesNotContain("$", error.Message);
+        Assert.Equal("hierarchy.gf", error.FilePath);
+    }
+
+    [Theory]
+    [InlineData("class Derived : Base {\n public int value;\n}", "class Base { public int value; }", "derived.gf", "value", 2)]
+    [InlineData("class Derived : Base {}", "class Base {\n public override int Read()=>0;\n}", "base.gf", "Read", 2)]
+    [InlineData("class Derived : Base {}", "abstract class Base { public abstract int Read(); }", "derived.gf", "Derived", 1)]
+    public void HierarchyErrorsRetainTheOffendingDeclarationSpan(string derived, string parent, string path, string identifier, int line)
+    {
+        var sources = new[] { new SourceFile("derived.gf", derived), new SourceFile("base.gf", parent) };
+        var diagnostics = Compiler.Analyze(sources, new() { NoStdLib = true });
+        var error = Assert.Single(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Equal(path, error.FilePath);
+        Assert.Equal(line, error.Line);
+        var source = path == "derived.gf" ? derived : parent;
+        Assert.Contains(identifier, source.Substring(error.Span.Start, error.Span.Length));
     }
 
     [Fact]

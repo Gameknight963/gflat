@@ -32,7 +32,7 @@ namespace gflat.semantics
                     current = current.BaseClass == null ? null : _symbols.Classes.GetValueOrDefault(current.BaseClass))
                 {
                     if (!path.Add(current.Name))
-                        throw new TypeCheckException($"Circular inheritance detected involving class '{_symbols.DisplayName(current.Name)}'", current.Line);
+                        throw new TypeCheckException($"Circular inheritance detected involving class '{_symbols.DisplayName(current.Name)}'", current.Span);
                 }
                 completed.UnionWith(path);
             }
@@ -101,7 +101,7 @@ namespace gflat.semantics
             }
             if (visiting.Contains(cls.Name))
             {
-                throw new TypeCheckException($"Circular inheritance detected involving class '{_symbols.DisplayName(cls.Name)}'", cls.Line);
+                throw new TypeCheckException($"Circular inheritance detected involving class '{_symbols.DisplayName(cls.Name)}'", cls.Span);
             }
 
             visiting.Add(cls.Name);
@@ -147,7 +147,7 @@ namespace gflat.semantics
             {
                 if (!_symbols.Classes.TryGetValue(cls.BaseClass, out TypeChecker.ClassInfo? baseInfo))
                 {
-                    throw new TypeCheckException($"Class '{_symbols.DisplayName(cls.Name)}' inherits from unknown class '{_symbols.DisplayName(cls.BaseClass)}'", cls.Line);
+                    throw new TypeCheckException($"Class '{_symbols.DisplayName(cls.Name)}' inherits from unknown class '{_symbols.DisplayName(cls.BaseClass)}'", cls.Span);
                 }
 
                 ResolveClassHierarchy(baseInfo, visiting, visited);
@@ -196,7 +196,7 @@ namespace gflat.semantics
             {
                 if (cls.FieldIndex(f.Name) >= 0)
                 {
-                    throw new TypeCheckException($"Class '{_symbols.DisplayName(cls.Name)}' cannot declare field '{f.Name}' because it is already declared in a base class", f.Line);
+                    throw new TypeCheckException($"Class '{_symbols.DisplayName(cls.Name)}' cannot declare field '{f.Name}' because it is already declared in a base class", f.Span);
                 }
                 if (!f.IsStatic) cls.Fields.Add((f.Name, f.Type, f.Accessibility, cls.Name));
                 cls.FieldDeclarationsByName[f.Name] = f;
@@ -210,26 +210,26 @@ namespace gflat.semantics
                 {
                     if (!cls.VTableSlots.TryGetValue(method.Name, out int slot))
                     {
-                        throw new TypeCheckException($"Method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' is marked override but does not override any virtual or abstract method in a base class", method.Line);
+                        throw new TypeCheckException($"Method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' is marked override but does not override any virtual or abstract method in a base class", method.Span);
                     }
                     MethodDeclaration baseMethod = cls.VirtualMethods[slot];
                     if (baseMethod.IsNoThrow != method.IsNoThrow)
                     {
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' must match nothrow specification of base method", method.Line);
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' must match nothrow specification of base method", method.Span);
                     }
                     if (baseMethod.IsReadOnly && !method.IsReadOnly)
                     {
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' must be marked readonly to match base method", method.Line);
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' must be marked readonly to match base method", method.Span);
                     }
                     var returnType = _symbols.ResolveAlias(method.ReturnType);
                     var baseReturnType = _symbols.ResolveAlias(baseMethod.ReturnType);
                     if (!TypeChecker.TypesMatchPublic(returnType, baseReturnType, _symbols))
                     {
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' has return type '{_symbols.DisplayTypeName(returnType)}' which does not match base method return type '{_symbols.DisplayTypeName(baseReturnType)}'", method.Line);
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' has return type '{_symbols.DisplayTypeName(returnType)}' which does not match base method return type '{_symbols.DisplayTypeName(baseReturnType)}'", method.Span);
                     }
                     if (method.Parameters.Count != baseMethod.Parameters.Count)
                     {
-                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' has {method.Parameters.Count} parameters, but base method has {baseMethod.Parameters.Count}", method.Line);
+                        throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' has {method.Parameters.Count} parameters, but base method has {baseMethod.Parameters.Count}", method.Span);
                     }
                     for (int p = 0; p < method.Parameters.Count; p++)
                     {
@@ -237,16 +237,16 @@ namespace gflat.semantics
                         var baseParameterType = _symbols.ResolveAlias(baseMethod.Parameters[p].Type);
                         if (!TypeChecker.TypesMatchPublic(parameterType, baseParameterType, _symbols) || method.Parameters[p].IsConst != baseMethod.Parameters[p].IsConst)
                         {
-                            throw new TypeCheckException($"Parameter '{method.Parameters[p].Name}' of overriding method '{method.Name}' has type '{_symbols.DisplayTypeName(parameterType)}' which does not match base parameter type '{_symbols.DisplayTypeName(baseParameterType)}'", method.Parameters[p].Line);
+                            throw new TypeCheckException($"Parameter '{method.Parameters[p].Name}' of overriding method '{method.Name}' has type '{_symbols.DisplayTypeName(parameterType)}' which does not match base parameter type '{_symbols.DisplayTypeName(baseParameterType)}'", method.Parameters[p].Span);
                         }
                     }
                     if (baseMethod.Accessibility == TokenKind.Public && method.Accessibility != TokenKind.Public)
                     {
-                        throw new TypeCheckException($"Overriding method '{method.Name}' cannot reduce accessibility of public base method", method.Line);
+                        throw new TypeCheckException($"Overriding method '{method.Name}' cannot reduce accessibility of public base method", method.Span);
                     }
                     if (baseMethod.Accessibility == TokenKind.Protected && method.Accessibility == TokenKind.Private)
                     {
-                        throw new TypeCheckException($"Overriding method '{method.Name}' cannot reduce accessibility of protected base method", method.Line);
+                        throw new TypeCheckException($"Overriding method '{method.Name}' cannot reduce accessibility of protected base method", method.Span);
                     }
 
                     cls.VirtualMethods[slot] = method;
@@ -256,7 +256,7 @@ namespace gflat.semantics
                 {
                     if (cls.VTableSlots.ContainsKey(method.Name))
                     {
-                        throw new TypeCheckException($"Method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' hides base virtual method without 'override' keyword", method.Line);
+                        throw new TypeCheckException($"Method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' hides base virtual method without 'override' keyword", method.Span);
                     }
                     int slot = cls.VirtualMethods.Count;
                     cls.VirtualMethods.Add(method);
@@ -290,7 +290,7 @@ namespace gflat.semantics
                     if (vm.IsAbstract)
                     {
                         string declaringClass = cls.Methods[vm.Name].DeclaringClass;
-                        throw new TypeCheckException($"Class '{_symbols.DisplayName(cls.Name)}' must implement abstract method '{_symbols.DisplayName(declaringClass)}.{vm.Name}' or be declared abstract", cls.Line);
+                        throw new TypeCheckException($"Class '{_symbols.DisplayName(cls.Name)}' must implement abstract method '{_symbols.DisplayName(declaringClass)}.{vm.Name}' or be declared abstract", cls.Span);
                     }
                 }
             }

@@ -105,6 +105,13 @@ namespace gflat.symbols
 
         public Func<TypeExpression, TypeExpression>? AliasResolver { get; set; }
 
+        public Func<string, string>? NameFormatter { get; set; }
+        public Func<TypeExpression, string>? TypeFormatter { get; set; }
+
+        public string DisplayName(string name) => NameFormatter?.Invoke(name) ?? name;
+        public string DisplayTypeName(TypeExpression type) =>
+            TypeFormatter?.Invoke(type) ?? TypeChecker.TypeNamePublic(type);
+
         public TypeExpression ResolveAlias(TypeExpression type) =>
             AliasResolver != null ? AliasResolver(type) : ResolveAliasDirect(type);
 

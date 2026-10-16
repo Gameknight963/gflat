@@ -47,6 +47,8 @@ namespace gflat
             );
             _symbols.EnclosingTypeNameProvider = () => _currentClass?.Name ?? _currentStruct?.Name;
             _symbols.AliasResolver = ResolveAlias;
+            _symbols.NameFormatter = DisplayName;
+            _symbols.TypeFormatter = DisplayTypeName;
         }
 
         public bool TryGetConstValueByName(string name, out ConstValue? value) => checkingDefaults.Count > 0

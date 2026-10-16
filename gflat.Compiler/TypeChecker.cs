@@ -5857,9 +5857,15 @@ namespace gflat
             if (node.Parameters.Any(p => p.DefaultValue != null))
                 throw new TypeCheckException("Lambda defaults are not supported; function pointers require every argument", node.Span);
             int prevLoopDepth = _loopDepth;
+            bool previousDefer = _inDefer;
+            int previousScopeCount = _scopes.Count;
+            int previousBoundaryCount = _lambdaScopeBoundaries.Count;
+            int previousStaticCount = _lambdaStaticStack.Count;
+            int previousReturnCount = _actualReturnTypes.Count;
             AstNode? previousFunction = _currentFunction;
             _currentFunction = node;
             _loopDepth = 0;
+            _inDefer = false;
             try
             {
                 _lambdaScopeBoundaries.Push(_scopes.Count);
@@ -5910,11 +5916,6 @@ namespace gflat
                 if (RequiresCopy(returnType))
                     throw new TypeCheckException("Owning lambda results are not yet supported; use a named function", node.Line);
 
-                PopScope();
-                _actualReturnTypes.Pop();
-                _lambdaStaticStack.Pop();
-                _lambdaScopeBoundaries.Pop();
-
                 if (returnType is ReferenceTypeExpression)
                     throw new TypeCheckException("Reference-returning lambdas are not supported", node.Line);
                 _lambdaReturnTypes[node] = returnType;
@@ -5923,7 +5924,12 @@ namespace gflat
             }
             finally
             {
+                while (_scopes.Count > previousScopeCount) PopScope();
+                while (_actualReturnTypes.Count > previousReturnCount) _actualReturnTypes.Pop();
+                while (_lambdaStaticStack.Count > previousStaticCount) _lambdaStaticStack.Pop();
+                while (_lambdaScopeBoundaries.Count > previousBoundaryCount) _lambdaScopeBoundaries.Pop();
                 _loopDepth = prevLoopDepth;
+                _inDefer = previousDefer;
                 _currentFunction = previousFunction;
             }
         }

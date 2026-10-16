@@ -86,4 +86,25 @@ public sealed class OperatorSignatureTests
             }
             int main() { Number a = default; readonly(Number) b = a + a; return 0; }
             """);
+
+    [Theory]
+    [InlineData("Value")]
+    [InlineData("Read()")]
+    public void OperatorsCannotImplicitlyAccessInstanceMembers(string expression)
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check($$"""
+            struct Number {
+                public int Value;
+                public int Read() => Value;
+                public static int operator +(Number a, Number b) => {{expression}};
+            }
+            """));
+
+    [Theory]
+    [InlineData("int", "return \"not an integer\";")]
+    [InlineData("int", "return;")]
+    [InlineData("void", "return 1;")]
+    public void OperatorBodiesMustHonorTheirDeclaredReturnType(string result, string statement)
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check($$"""
+            struct Number { public static {{result}} operator +(Number a, Number b) { {{statement}} } }
+            """));
 }

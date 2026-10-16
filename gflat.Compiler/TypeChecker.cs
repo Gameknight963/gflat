@@ -580,7 +580,7 @@ namespace gflat
 
             if (FindStaticStorage(name) is { } staticField) return ResolveAlias(staticField.Type);
 
-            if (_currentStruct != null && _currentFunction is not MethodDeclaration { IsStatic: true })
+            if (_currentStruct != null && !IsStaticFunctionContext)
             {
                 int idx = _currentStruct.FieldIndex(name);
                 if (idx >= 0)
@@ -601,7 +601,7 @@ namespace gflat
                 }
             }
 
-            if (_currentClass != null && _currentFunction is not MethodDeclaration { IsStatic: true })
+            if (_currentClass != null && !IsStaticFunctionContext)
             {
                 int idx = _currentClass.FieldIndex(name);
                 if (idx >= 0)
@@ -653,7 +653,7 @@ namespace gflat
 
             if (FindStaticStorage(name) is { } staticField) { type = ResolveAlias(staticField.Type); return true; }
 
-            if (_currentStruct != null && _currentFunction is not MethodDeclaration { IsStatic: true })
+            if (_currentStruct != null && !IsStaticFunctionContext)
             {
                 int idx = _currentStruct.FieldIndex(name);
                 if (idx >= 0)
@@ -663,7 +663,7 @@ namespace gflat
                 }
             }
 
-            if (_currentClass != null && _currentFunction is not MethodDeclaration { IsStatic: true })
+            if (_currentClass != null && !IsStaticFunctionContext)
             {
                 int idx = _currentClass.FieldIndex(name);
                 if (idx >= 0)
@@ -3158,6 +3158,13 @@ namespace gflat
                         throw new TypeCheckException($"Cannot return '{TypeName(valType)}' from function returning '{TypeName(retType)}'", node.Line);
                     }
                 }
+                else if (_currentFunction is OperatorDeclaration operation)
+                {
+                    TypeExpression result = ResolveAlias(operation.ReturnType);
+                    TypeExpression value = GetType(node.Value);
+                    if (!IsAssignable(result, value, node.Value))
+                        throw new TypeCheckException($"Cannot return '{TypeName(value)}' from operator returning '{TypeName(result)}'", node.Value.Span);
+                }
                 else if (_currentFunction is ConstructorDeclaration or DestructorDeclaration)
                 {
                     throw new TypeCheckException("Cannot return a value from a constructor or destructor", node.Line);
@@ -3178,6 +3185,9 @@ namespace gflat
                         throw new TypeCheckException($"Cannot return void from function returning '{TypeName(retType)}'", node.Line);
                     }
                 }
+                else if (_currentFunction is OperatorDeclaration operation &&
+                    ResolveAlias(operation.ReturnType) is not NamedTypeExpression { Name: "void" })
+                    throw new TypeCheckException($"Cannot return void from operator returning '{TypeName(operation.ReturnType)}'", node.Span);
             }
         }
 
@@ -4488,7 +4498,7 @@ namespace gflat
             else if (node.Callee is IdentifierExpression ident)
             {
                 funcName = ident.Name;
-                if (_currentFunction is MethodDeclaration { IsStatic: true } &&
+                if (IsStaticFunctionContext &&
                     ((_currentClass?.Methods.TryGetValue(funcName, out var instance) == true && !instance.Method.IsStatic) ||
                      (_currentStruct?.Methods.TryGetValue(funcName, out var structInstance) == true && !structInstance.IsStatic)))
                     throw new TypeCheckException("Instance methods require an explicit receiver in a static method", node.Line);

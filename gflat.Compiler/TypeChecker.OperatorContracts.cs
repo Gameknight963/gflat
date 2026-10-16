@@ -5,6 +5,8 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    private bool IsStaticFunctionContext => _currentFunction is MethodDeclaration { IsStatic: true } or OperatorDeclaration;
+
     private void ValidateOperatorContract(OperatorDeclaration operation)
     {
         foreach (var parameter in operation.Parameters)

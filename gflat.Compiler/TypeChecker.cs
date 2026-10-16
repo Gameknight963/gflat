@@ -909,6 +909,7 @@ namespace gflat
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
+            ResolveSpecializedBaseTypes(genericDef, specialized);
             publish(new NamedTypeExpression(mangledName, null, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
             CheckSpecialization(genericDef, specialized);
@@ -957,17 +958,7 @@ namespace gflat
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "");
-            if (_classes.TryGetValue(specialized.Name, out ClassInfo? clsInfo))
-            {
-                new HierarchyResolutionPass(_symbols).ResolveHierarchy(clsInfo);
-            }
-            foreach (AstNode m in specialized.Members)
-            {
-                if (m is ClassDeclaration nestedCls && _classes.TryGetValue(nestedCls.Name, out ClassInfo? nestedClsInfo))
-                {
-                    new HierarchyResolutionPass(_symbols).ResolveHierarchy(nestedClsInfo);
-                }
-            }
+            ResolveSpecializedBaseTypes(genericDef, specialized);
             publish(new NamedTypeExpression(mangledName, null, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
             CheckSpecialization(genericDef, specialized);

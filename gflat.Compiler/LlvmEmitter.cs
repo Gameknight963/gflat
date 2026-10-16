@@ -1626,7 +1626,7 @@ public partial class LlvmEmitter : IVisitor
         try
         {
             // Emit vtables for implemented interfaces
-            foreach (string ifaceName in node.Interfaces)
+            foreach (string ifaceName in _currentStruct!.Interfaces)
             {
                 TypeChecker.InterfaceInfo? ifaceInfo = _typeChecker.GetInterface(ifaceName);
                 if (ifaceInfo == null || ifaceInfo.IsStaticContract)

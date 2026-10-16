@@ -1,5 +1,6 @@
 using gflat.ast;
 using gflat.CompileExceptions;
+using gflat.semantics;
 
 namespace gflat;
 
@@ -81,23 +82,92 @@ public partial class TypeChecker
 
     private void ResolveDeclaredBaseTypes(CompilationUnit unit)
     {
-        var previous = _currentNamespace;
+        foreach (var (declaration, ns) in declarationNamespaces.ToArray())
+            ResolveDeclaredBaseTypes(declaration, ns);
+    }
+
+    private void ResolveDeclaredBaseTypes(AstNode declaration, string ns)
+    {
+        var classInfo = declaration is ClassDeclaration c ? _classes.GetValueOrDefault(c.Name) : null;
+        var structInfo = declaration is StructDeclaration s ? _structs.GetValueOrDefault(s.Name) : null;
+        if (structInfo == null && (classInfo == null || classInfo.HierarchyResolved)) return;
+        using var source = SourceContext.Enter(declaration.Span);
+        using var locals = IsolateDeclarationContext();
+        var previousNamespace = _currentNamespace; var previousPath = _currentNamespacePath;
+        var previousClass = _currentClass; var previousStruct = _currentStruct;
+        _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
+        _currentNamespacePath = ns;
+        _currentClass = classInfo;
+        _currentStruct = structInfo;
         try
         {
-            foreach (var (declaration, ns) in declarationNamespaces)
+            if (_currentClass is { HierarchyResolved: false } cls)
             {
-                using var context = SourceContext.Enter(declaration.Span);
-                _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
-                if (declaration is ClassDeclaration cls && _classes.TryGetValue(cls.Name, out var info))
-                {
-                    if (info.BaseClass != null) info.BaseClass = ResolveTypeIdentity(info.BaseClass, null) ?? info.BaseClass;
-                    for (int i = 0; i < info.Interfaces.Count; i++) info.Interfaces[i] = ResolveTypeIdentity(info.Interfaces[i], null) ?? info.Interfaces[i];
-                }
-                if (declaration is StructDeclaration str && _structs.TryGetValue(str.Name, out var structInfo))
-                    for (int i = 0; i < structInfo.Interfaces.Count; i++) structInfo.Interfaces[i] = ResolveTypeIdentity(structInfo.Interfaces[i], null) ?? structInfo.Interfaces[i];
+                string? parent = cls.BaseClass == null ? null : ResolveDeclaredBaseName(cls.BaseClass);
+                var interfaces = cls.Interfaces.Select(ResolveDeclaredBaseName).ToList();
+                cls.BaseClass = parent;
+                cls.Interfaces = interfaces;
             }
+            if (_currentStruct is { } str)
+                str.Interfaces = str.Interfaces.Select(ResolveDeclaredBaseName).ToList();
         }
-        finally { _currentNamespace = previous; }
+        finally
+        {
+            _currentNamespace = previousNamespace; _currentNamespacePath = previousPath;
+            _currentClass = previousClass; _currentStruct = previousStruct;
+        }
+    }
+
+    private string ResolveDeclaredBaseName(string name)
+    {
+        bool Exists(string candidate) => _classes.ContainsKey(candidate) || _structs.ContainsKey(candidate) || _interfaces.ContainsKey(candidate);
+        string nested = name.Replace("::", ".");
+        string? owner = _currentClass?.Name ?? _currentStruct?.Name;
+        while (owner != null)
+        {
+            string candidate = owner + "." + nested;
+            if (Exists(candidate)) return candidate;
+            int separator = owner.LastIndexOf('.');
+            owner = separator < 0 ? null : owner[..separator];
+        }
+        if (ResolveTypeIdentity(name, null) is { } identity) return identity;
+        if (Exists(nested)) return nested;
+        // A qualified nested type may have a namespace prefix and then type
+        // scopes; those use distinct internal separators.
+        for (int separator = name.LastIndexOf("::", StringComparison.Ordinal); separator >= 0;
+            separator = name.LastIndexOf("::", separator - 1, StringComparison.Ordinal))
+        {
+            string prefix = name[..separator];
+            if (ResolveNamespaceByName(prefix) is not { } scope) continue;
+            var segments = new List<string>();
+            for (var current = scope; current.Parent is { } parent; current = parent)
+                segments.Add(parent.Children.First(child => child.Value == current).Key);
+            string path = string.Join("$", segments.AsEnumerable().Reverse());
+            string candidate = path + "$" + name[(separator + 2)..].Replace("::", ".");
+            if (Exists(candidate)) return candidate;
+        }
+        return name;
+    }
+
+    private void ResolveSpecializedBaseTypes(AstNode definition, AstNode specialized)
+    {
+        string ns = declarationNamespaces.GetValueOrDefault(definition) ?? "";
+        var classes = new List<ClassInfo>();
+        Walk(specialized);
+        var hierarchy = new HierarchyResolutionPass(_symbols);
+        foreach (var cls in classes) hierarchy.ResolveBaseTypes(cls);
+        foreach (var cls in classes) hierarchy.ResolveHierarchy(cls);
+
+        void Walk(AstNode declaration)
+        {
+            declarationNamespaces[declaration] = ns;
+            ResolveDeclaredBaseTypes(declaration, ns);
+            if (declaration is ClassDeclaration cls && _classes.TryGetValue(cls.Name, out var info)) classes.Add(info);
+            IEnumerable<AstNode> members = declaration switch {
+                ClassDeclaration childClass => childClass.Members, StructDeclaration str => str.Members, _ => []
+            };
+            foreach (var member in members) Walk(member);
+        }
     }
 
     private MethodDeclaration? ResolveGenericFunction(string name)

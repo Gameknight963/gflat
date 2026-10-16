@@ -55,6 +55,17 @@ public sealed class StaticManagedLifetimeTests
         Assert.Equal("", result.StandardOutput);
     }
 
+    [Fact]
+    public void ReturningAnOwningLocalTransfersTheValueAndUnregistersItsStackStorage()
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + OwnerSource + """
+            Owner Create() { Owner value = new Owner(); return value; }
+            void Work() { Owner value = Create(); }
+            int main() { Work(); return (int)Probe::Count(); }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
 
     private const string OwnerSource = """
         struct Owner {

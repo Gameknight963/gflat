@@ -2223,6 +2223,8 @@ public partial class LlvmEmitter : IVisitor
         bool managedResult = _currentFunctionExpectedType != null && UsesManagedResultStorage(_currentFunctionExpectedType);
         if (managedResult && val != null)
             EmitManagedStore(_currentFunctionExpectedType!, val, "%gc.result");
+        if (skipLocalPtr != null && _currentFunctionExpectedType != null)
+            EmitManagedReferences(_currentFunctionExpectedType, skipLocalPtr, false);
 
         EmitDefersDownTo(0, skipLocalPtr);
         if (_hasTerminated) return;

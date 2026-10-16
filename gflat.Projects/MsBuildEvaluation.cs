@@ -7,11 +7,12 @@ namespace gflat.Projects;
 internal static class MsBuildEvaluation
 {
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib)
+    internal static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib, bool asReference)
     {
         try
         {
             var properties = new Dictionary<string, string>();
+            if (asReference) properties["GflatAsReference"] = "true";
             if (configuration != null) properties["Configuration"] = configuration;
             if (platform != null) properties["Platform"] = platform;
             if (exceptionReserveBytes.HasValue) properties["GflatExceptionReserveBytes"] = exceptionReserveBytes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);

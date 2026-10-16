@@ -102,7 +102,7 @@ public sealed class StdFileTests
         {
             string root = TestSupport.ProjectFileFixture.RepositoryRoot;
             string project = Path.Combine(root, "examples", "search", "search.gfproj");
-            var graph = Projects.ProjectGraph.Load(project, p => Projects.ProjectModel.Load(p));
+            var graph = Projects.ProjectGraph.Load(project);
             string ir = Path.Combine(directory, "search.ll"), exe = Path.Combine(directory, "search.exe");
             System.IO.File.WriteAllText(ir, Compiler.Emit(graph.Sources.Select(p => new SourceFile(p, System.IO.File.ReadAllText(p)))));
             var compiled = NativeToolchain.Compile(ir, exe);

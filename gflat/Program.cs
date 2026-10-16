@@ -67,8 +67,8 @@ public static class Program
                     explicitPlatform ? platform : null, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null);
                 configuration = root.Configuration;
                 platform = root.Platform;
-                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Paths.Equals(path, root.FilePath) ? root
-                    : ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null));
+                graph = ProjectGraph.Load(projectPath, (path, asReference) => !asReference ? root
+                    : ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, asReference: true));
                 sourcePaths = graph.Sources.ToList();
                 if (graph.Root.Kind == ProjectKind.Executable)
                     outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;

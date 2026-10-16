@@ -16,7 +16,7 @@ public sealed class ProjectWorkspace
         var attempted = new HashSet<string>(Workspace.Paths) { file };
         try
         {
-            var graph = ProjectGraph.Load(file, path => { attempted.Add(path); return ProjectModel.Load(path, "Debug", "AnyCPU"); });
+            var graph = ProjectGraph.Load(file, (path, asReference) => { attempted.Add(path); return ProjectModel.Load(path, "Debug", "AnyCPU", asReference: asReference); });
             foreach (var project in graph.Projects) attempted.UnionWith(project.Imports);
             previous[file] = graph;
             return cache[file] = (graph, null, attempted.ToArray());

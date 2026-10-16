@@ -15,7 +15,7 @@ public sealed class ProjectCreationTests
         try
         {
             string path = ProjectCreation.Create(directory, "My & Project", library, std);
-            var graph = ProjectGraph.Load(path, p => ProjectModel.Load(p));
+            var graph = ProjectGraph.Load(path);
             Assert.Equal(library ? ProjectKind.SourceLibrary : ProjectKind.Executable, graph.Root.Kind);
             Assert.Equal(library ? "SourceLibrary" : "Executable",
                 System.Xml.Linq.XElement.Load(path).Element("PropertyGroup")!.Element("OutputType")!.Value);

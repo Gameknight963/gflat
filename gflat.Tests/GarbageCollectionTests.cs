@@ -266,7 +266,7 @@ public sealed class GarbageCollectionTests
     {
         string project = Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot,
             "examples", "managed", "managed.gfproj");
-        var graph = Projects.ProjectGraph.Load(project, path => Projects.ProjectModel.Load(path));
+        var graph = Projects.ProjectGraph.Load(project);
         var result = CompilerTestHelper.Run(graph.Sources.Select(path => new SourceFile(path, System.IO.File.ReadAllText(path))));
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("20 cyclic nodes survive through a native Vector.\nRemoving the roots reclaims all 20 cycles.\n",

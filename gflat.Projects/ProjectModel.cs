@@ -57,14 +57,14 @@ public sealed class ProjectModel
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
     }
     public static ProjectModel Load(string path) => Load(path, null, null);
-    public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null)
+    public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false)
     {
         path = Path.GetFullPath(path);
         try { _ = registered.Value; }
         catch (Exception error) { throw new ProjectException(path, "Cannot locate MSBuild. Install the .NET SDK. " + error.Message); }
         // The evaluator lives in a separate method/type: MSBuild must not be loaded
         // by the JIT until Locator has registered its assembly resolver.
-        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib);
+        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib, asReference);
     }
     public bool IncludesFile(string path)
     {
@@ -85,30 +85,32 @@ public sealed class ProjectGraph
     private ProjectGraph(ProjectModel root, List<ProjectModel> projects, List<string> sources)
     { Root = root; Projects = projects; Sources = sources; }
 
-    public static ProjectGraph Load(string path, Func<string, ProjectModel>? loader = null)
+    /// <summary>Evaluates the root normally and each dependency in reference context.</summary>
+    /// <param name="loader">Optional evaluator receiving the project path and whether it is a reference.</param>
+    public static ProjectGraph Load(string path, Func<string, bool, ProjectModel>? loader = null)
     {
         if (loader == null)
         {
             ProjectModel? rootSettings = null;
-            loader = file => rootSettings == null
+            loader = (file, asReference) => rootSettings == null
                 ? rootSettings = ProjectModel.Load(file)
-                : ProjectModel.Load(file, rootSettings.Configuration, rootSettings.Platform);
+                : ProjectModel.Load(file, rootSettings.Configuration, rootSettings.Platform, asReference: asReference);
         }
         var active = new HashSet<string>(ProjectModel.Paths);
         var visited = new HashSet<string>(ProjectModel.Paths);
         var projects = new List<ProjectModel>();
         var sources = new List<string>();
         var sourceSet = new HashSet<string>(ProjectModel.Paths);
-        ProjectModel Visit(string file)
+        ProjectModel Visit(string file, bool asReference)
         {
             file = Path.GetFullPath(file);
             if (!active.Add(file)) throw new ProjectException(file, "Cyclic project reference.");
-            var project = loader(file);
+            var project = loader(file, asReference);
             foreach (string reference in project.References)
             {
                 if (active.Contains(reference)) throw new ProjectException(file, "Cyclic project reference: " + reference);
                 if (visited.Contains(reference)) continue;
-                var dependency = Visit(reference);
+                var dependency = Visit(reference, asReference: true);
                 if (dependency.Kind != ProjectKind.SourceLibrary)
                     throw new ProjectException(file, "Only projects with OutputType=SourceLibrary can be referenced: " + reference);
             }
@@ -118,7 +120,7 @@ public sealed class ProjectGraph
             foreach (string source in project.SourceFiles()) if (sourceSet.Add(source)) sources.Add(source);
             return project;
         }
-        var root = Visit(path);
+        var root = Visit(path, asReference: false);
         return new ProjectGraph(root, projects, sources);
     }
 }

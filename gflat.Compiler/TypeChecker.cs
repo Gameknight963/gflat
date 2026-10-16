@@ -886,7 +886,7 @@ namespace gflat
             ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
             {
-                throw new TypeCheckException($"Generic struct '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
+                throw new TypeCheckException($"Generic struct '{DisplayName(genericDef.Name)}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
             }
 
             for (int i = 0; i < genericDef.GenericParameters.Count; i++)
@@ -895,7 +895,7 @@ namespace gflat
                 TypeExpression arg = typeArgs[i];
                 if (param.Constraint != null && !TypeSatisfiesDeclaredConstraint(genericDef, arg, param.Constraint))
                 {
-                    throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on struct '{genericDef.Name}'", line);
+                    throw new TypeCheckException($"Type '{DisplayTypeName(arg)}' does not satisfy constraint '{DisplayTypeName(param.Constraint)}' for type parameter '{param.Name}' on struct '{DisplayName(genericDef.Name)}'", line);
                 }
             }
 
@@ -935,7 +935,7 @@ namespace gflat
             ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
             {
-                throw new TypeCheckException($"Generic class '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
+                throw new TypeCheckException($"Generic class '{DisplayName(genericDef.Name)}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
             }
 
             for (int i = 0; i < genericDef.GenericParameters.Count; i++)
@@ -944,7 +944,7 @@ namespace gflat
                 TypeExpression arg = typeArgs[i];
                 if (param.Constraint != null && !TypeSatisfiesDeclaredConstraint(genericDef, arg, param.Constraint))
                 {
-                    throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on class '{genericDef.Name}'", line);
+                    throw new TypeCheckException($"Type '{DisplayTypeName(arg)}' does not satisfy constraint '{DisplayTypeName(param.Constraint)}' for type parameter '{param.Name}' on class '{DisplayName(genericDef.Name)}'", line);
                 }
             }
 
@@ -984,7 +984,7 @@ namespace gflat
             ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
             if (typeArgs.Count != genericDef.GenericParameters.Count)
             {
-                throw new TypeCheckException($"Generic function '{genericDef.Name}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
+                throw new TypeCheckException($"Generic function '{DisplayName(genericDef.Name)}' expects {genericDef.GenericParameters.Count} type arguments, but got {typeArgs.Count}", line);
             }
 
             for (int i = 0; i < genericDef.GenericParameters.Count; i++)
@@ -993,7 +993,7 @@ namespace gflat
                 TypeExpression arg = typeArgs[i];
                 if (param.Constraint != null && !FunctionConstraintSatisfied(genericDef, arg, param.Constraint))
                 {
-                    throw new TypeCheckException($"Type '{TypeName(arg)}' does not satisfy constraint '{TypeName(param.Constraint)}' for type parameter '{param.Name}' on function '{genericDef.Name}'", line);
+                    throw new TypeCheckException($"Type '{DisplayTypeName(arg)}' does not satisfy constraint '{DisplayTypeName(param.Constraint)}' for type parameter '{param.Name}' on function '{DisplayName(genericDef.Name)}'", line);
                 }
             }
 
@@ -1282,7 +1282,7 @@ namespace gflat
         {
             TypeExpression resolved = ResolveAlias(type);
             if (resolved is NamedTypeExpression staticType && GetClass(staticType.Name) is { IsStatic: true })
-                throw new TypeCheckException($"Static class '{staticType.Name}' cannot be used as an instance type", line);
+                throw new TypeCheckException($"Static class '{DisplayName(staticType.Name)}' cannot be used as an instance type", type.Span.Source != null ? type.Span : SourceContext.ForLine(line));
             if (resolved is NamedTypeExpression unknown && !IsPrimitive(unknown.Name) && !IsError(unknown) &&
                 !_classes.ContainsKey(unknown.Name) && !_structs.ContainsKey(unknown.Name) &&
                 !_interfaces.ContainsKey(unknown.Name) && ResolveEnum(unknown) == null)
@@ -2355,44 +2355,46 @@ namespace gflat
                     InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
                     if (ifaceInfo == null)
                     {
-                        throw new TypeCheckException($"Class '{node.Name}' implements unknown interface '{ifaceName}'", node.Line);
+                        throw new TypeCheckException($"Class '{DisplayName(node.Name)}' implements unknown interface '{DisplayName(ifaceName)}'", node.Span);
                     }
 
                     foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
                     {
                         if (!_currentClass.Methods.TryGetValue(ifaceMethod.Name, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                         {
-                            throw new TypeCheckException($"Class '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                            throw new TypeCheckException($"Class '{DisplayName(node.Name)}' does not implement interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'", node.Span);
                         }
 
                         MethodDeclaration classMethod = InterfaceImplementation(mEntry.Method, ifaceMethod);
                         ValidateStaticContractImplementation(ifaceMethod, classMethod);
                         if (classMethod.PropertyName != null && classMethod.Accessibility != TokenKind.Public)
-                            throw new TypeCheckException($"Property accessor '{classMethod.PropertyName}' must be public to implement an interface", classMethod.Line);
+                            throw new TypeCheckException($"Property accessor '{classMethod.PropertyName}' must be public to implement an interface", classMethod.Span);
                         if (ifaceMethod.IsNoThrow != classMethod.IsNoThrow)
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{node.Name}' must match nothrow specification of interface method '{ifaceName}.{ifaceMethod.Name}'",
-                                classMethod.Line);
+                                $"Method '{classMethod.Name}' in class '{DisplayName(node.Name)}' must match nothrow specification of interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'",
+                                classMethod.Span);
                         }
                         if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly)
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
-                                classMethod.Line);
+                                $"Method '{classMethod.Name}' in class '{DisplayName(node.Name)}' must be marked readonly to implement interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'",
+                                classMethod.Span);
                         }
-                        if (!TypesMatchPublic(ResolveAlias(classMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
+                        TypeExpression classReturnType = ResolveAlias(classMethod.ReturnType);
+                        TypeExpression ifaceReturnType = ResolveAlias(ifaceMethod.ReturnType);
+                        if (!TypesMatchPublic(classReturnType, ifaceReturnType))
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{node.Name}' has return type '{TypeName(classMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
-                                classMethod.Line);
+                                $"Method '{classMethod.Name}' in class '{DisplayName(node.Name)}' has return type '{DisplayTypeName(classReturnType)}', but interface '{DisplayName(ifaceName)}' requires '{DisplayTypeName(ifaceReturnType)}'",
+                                classMethod.Span);
                         }
 
                         if (classMethod.Parameters.Count != ifaceMethod.Parameters.Count)
                         {
                             throw new TypeCheckException(
-                                $"Method '{classMethod.Name}' in class '{node.Name}' has {classMethod.Parameters.Count} parameters, but interface '{ifaceName}' expects {ifaceMethod.Parameters.Count}",
-                                classMethod.Line);
+                                $"Method '{classMethod.Name}' in class '{DisplayName(node.Name)}' has {classMethod.Parameters.Count} parameters, but interface '{DisplayName(ifaceName)}' expects {ifaceMethod.Parameters.Count}",
+                                classMethod.Span);
                         }
 
                         for (int i = 0; i < ifaceMethod.Parameters.Count; i++)
@@ -2402,8 +2404,8 @@ namespace gflat
                             if (!TypesMatchPublic(classParamType, ifaceParamType) || classMethod.Parameters[i].IsConst != ifaceMethod.Parameters[i].IsConst)
                             {
                                 throw new TypeCheckException(
-                                    $"Parameter '{classMethod.Parameters[i].Name}' of method '{classMethod.Name}' in class '{node.Name}' has type '{TypeName(classParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
-                                    classMethod.Parameters[i].Line);
+                                    $"Parameter '{classMethod.Parameters[i].Name}' of method '{classMethod.Name}' in class '{DisplayName(node.Name)}' has type '{DisplayTypeName(classParamType)}', but interface '{DisplayName(ifaceName)}' expects '{DisplayTypeName(ifaceParamType)}'",
+                                    classMethod.Parameters[i].Span);
                             }
                         }
                     }
@@ -2438,7 +2440,7 @@ namespace gflat
                             }
                             if (!IsAssignable(fieldType, initType, field.Initializer))
                             {
-                                throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Initializer.Span);
+                                throw new TypeCheckException($"Cannot assign expression of type '{DisplayTypeName(initType)}' to field '{field.Name}' of type '{DisplayTypeName(fieldType)}'", field.Initializer.Span);
                             }
                         }
                         ValidateArrayValueShape(fieldType, field.Line);
@@ -2548,46 +2550,48 @@ namespace gflat
                     InterfaceInfo? ifaceInfo = ResolveInterface(new NamedTypeExpression(ifaceName, null, node.Line));
                     if (ifaceInfo == null)
                     {
-                        throw new TypeCheckException($"Struct '{node.Name}' implements unknown interface '{ifaceName}'", node.Line);
+                        throw new TypeCheckException($"Struct '{DisplayName(node.Name)}' implements unknown interface '{DisplayName(ifaceName)}'", node.Span);
                     }
 
                     foreach (MethodDeclaration ifaceMethod in ifaceInfo.Methods)
                     {
                         if (!_currentStruct.Methods.TryGetValue(ifaceMethod.Name, out MethodDeclaration? structMethod))
                         {
-                            throw new TypeCheckException($"Struct '{node.Name}' does not implement interface method '{ifaceName}.{ifaceMethod.Name}'", node.Line);
+                            throw new TypeCheckException($"Struct '{DisplayName(node.Name)}' does not implement interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'", node.Span);
                         }
 
                         structMethod = InterfaceImplementation(structMethod, ifaceMethod);
                         ValidateStaticContractImplementation(ifaceMethod, structMethod);
                         if (structMethod.PropertyName != null && structMethod.Accessibility != TokenKind.Public)
-                            throw new TypeCheckException($"Property accessor '{structMethod.PropertyName}' must be public to implement an interface", structMethod.Line);
+                            throw new TypeCheckException($"Property accessor '{structMethod.PropertyName}' must be public to implement an interface", structMethod.Span);
                         if (ifaceMethod.IsNoThrow != structMethod.IsNoThrow)
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{node.Name}' must match nothrow specification of interface method '{ifaceName}.{ifaceMethod.Name}'",
-                                structMethod.Line);
+                                $"Method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' must match nothrow specification of interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'",
+                                structMethod.Span);
                         }
 
                         if (ifaceMethod.IsReadOnly && !structMethod.IsReadOnly)
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{node.Name}' must be marked readonly to implement interface method '{ifaceName}.{ifaceMethod.Name}'",
-                                structMethod.Line);
+                                $"Method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' must be marked readonly to implement interface method '{DisplayName(ifaceName)}.{ifaceMethod.Name}'",
+                                structMethod.Span);
                         }
 
-                        if (!TypesMatchPublic(ResolveAlias(structMethod.ReturnType), ResolveAlias(ifaceMethod.ReturnType)))
+                        TypeExpression structReturnType = ResolveAlias(structMethod.ReturnType);
+                        TypeExpression ifaceReturnType = ResolveAlias(ifaceMethod.ReturnType);
+                        if (!TypesMatchPublic(structReturnType, ifaceReturnType))
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{node.Name}' has return type '{TypeName(structMethod.ReturnType)}', but interface '{ifaceName}' requires '{TypeName(ifaceMethod.ReturnType)}'",
-                                structMethod.Line);
+                                $"Method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' has return type '{DisplayTypeName(structReturnType)}', but interface '{DisplayName(ifaceName)}' requires '{DisplayTypeName(ifaceReturnType)}'",
+                                structMethod.Span);
                         }
 
                         if (structMethod.Parameters.Count != ifaceMethod.Parameters.Count)
                         {
                             throw new TypeCheckException(
-                                $"Method '{structMethod.Name}' in struct '{node.Name}' has {structMethod.Parameters.Count} parameters, but interface '{ifaceName}' expects {ifaceMethod.Parameters.Count}",
-                                structMethod.Line);
+                                $"Method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' has {structMethod.Parameters.Count} parameters, but interface '{DisplayName(ifaceName)}' expects {ifaceMethod.Parameters.Count}",
+                                structMethod.Span);
                         }
 
                         for (int i = 0; i < ifaceMethod.Parameters.Count; i++)
@@ -2597,8 +2601,8 @@ namespace gflat
                             if (!TypesMatchPublic(structParamType, ifaceParamType) || structMethod.Parameters[i].IsConst != ifaceMethod.Parameters[i].IsConst)
                             {
                                 throw new TypeCheckException(
-                                    $"Parameter '{structMethod.Parameters[i].Name}' of method '{structMethod.Name}' in struct '{node.Name}' has type '{TypeName(structParamType)}', but interface '{ifaceName}' expects '{TypeName(ifaceParamType)}'",
-                                    structMethod.Parameters[i].Line);
+                                    $"Parameter '{structMethod.Parameters[i].Name}' of method '{structMethod.Name}' in struct '{DisplayName(node.Name)}' has type '{DisplayTypeName(structParamType)}', but interface '{DisplayName(ifaceName)}' expects '{DisplayTypeName(ifaceParamType)}'",
+                                    structMethod.Parameters[i].Span);
                             }
                         }
                     }
@@ -2633,7 +2637,7 @@ namespace gflat
                             }
                             if (!IsAssignable(fieldType, initType, field.Initializer))
                             {
-                                throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{field.Name}' of type '{TypeName(fieldType)}'", field.Initializer.Span);
+                                throw new TypeCheckException($"Cannot assign expression of type '{DisplayTypeName(initType)}' to field '{field.Name}' of type '{DisplayTypeName(fieldType)}'", field.Initializer.Span);
                             }
                         }
                         ValidateArrayValueShape(fieldType, field.Line);
@@ -2849,7 +2853,7 @@ namespace gflat
                 if (fieldType is ArrayTypeExpression) node.Type = fieldType;
                 if (!IsAssignable(fieldType, initType, node.Initializer))
                 {
-                    throw new TypeCheckException($"Cannot assign expression of type '{TypeName(initType)}' to field '{node.Name}' of type '{TypeName(fieldType)}'", node.Initializer.Span);
+                    throw new TypeCheckException($"Cannot assign expression of type '{DisplayTypeName(initType)}' to field '{node.Name}' of type '{DisplayTypeName(fieldType)}'", node.Initializer.Span);
                 }
             }
             else if (node.IsConst)
@@ -3410,7 +3414,7 @@ namespace gflat
 
                 if (!ValidateCopyUse(node.Initializer, varType))
                 {
-                    throw new TypeCheckException($"Cannot copy value of type '{TypeName(varType)}' because it has no accessible copy constructor. Borrow through a pointer or move a local.", node.Line);
+                    throw new TypeCheckException($"Cannot copy value of type '{DisplayTypeName(varType)}' because it has no accessible copy constructor. Borrow through a pointer or move a local.", node.Initializer.Span);
                 }
 
                 if (!IsAssignable(varType, initType, node.Initializer))
@@ -4423,7 +4427,7 @@ namespace gflat
                 if (objType is NamedTypeExpression namedIface && ResolveInterface(namedIface) is InterfaceInfo ifaceInfo)
                 {
                     if (!ifaceInfo.MethodsByName.TryGetValue(memberAccess.Member, out MethodDeclaration? ifaceMethod))
-                        throw new TypeCheckException($"Interface '{namedIface.Name}' has no method '{memberAccess.Member}'", node.Line);
+                        throw new TypeCheckException($"Interface '{DisplayName(namedIface.Name)}' has no method '{memberAccess.Member}'", node.Span);
 
                     if (isReceiverReadOnly && !ifaceMethod.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly method '{ifaceMethod.Name}' on readonly instance", node.Line);
@@ -4439,7 +4443,7 @@ namespace gflat
 
                     if (node.Arguments.Count != ifaceMethod.Parameters.Count)
                         throw new TypeCheckException(
-                            $"Method '{namedIface.Name}.{memberAccess.Member}' expects {ifaceMethod.Parameters.Count} arguments but got {node.Arguments.Count}",
+                            $"Method '{DisplayName(namedIface.Name)}.{memberAccess.Member}' expects {ifaceMethod.Parameters.Count} arguments but got {node.Arguments.Count}",
                             node.Line);
 
                     for (int i = 0; i < node.Arguments.Count; i++)
@@ -4448,8 +4452,8 @@ namespace gflat
                         TypeExpression paramType = ifaceMethod.Parameters[i].Type;
                         if (!IsAssignable(paramType, argType, node.Arguments[i]))
                             throw new TypeCheckException(
-                                $"Argument {i + 1} of '{namedIface.Name}.{memberAccess.Member}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
-                                node.Line);
+                                $"Argument {i + 1} of '{DisplayName(namedIface.Name)}.{memberAccess.Member}': cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
+                                node.Arguments[i].Span);
 
                         if (ifaceMethod.Parameters[i].IsConst)
                         {
@@ -4475,9 +4479,9 @@ namespace gflat
                     {
                         (string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field = classInfo.Fields[fieldIdx];
                         if (field.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, field.DeclaringClass))
-                            throw new TypeCheckException($"Cannot access private field '{memberAccess.Member}' of class '{field.DeclaringClass}'", node.Line);
+                            throw new TypeCheckException($"Cannot access private field '{memberAccess.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
                         if (field.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, field.DeclaringClass)))
-                            throw new TypeCheckException($"Cannot access protected field '{memberAccess.Member}' of class '{field.DeclaringClass}'", node.Line);
+                            throw new TypeCheckException($"Cannot access protected field '{memberAccess.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
 
                         TypeExpression fieldType = ResolveAlias(field.Type);
                         if (fieldType is FunctionPointerTypeExpression fnPtrField)
@@ -4489,15 +4493,15 @@ namespace gflat
                     }
 
                     if (!classInfo.Methods.TryGetValue(memberAccess.Member, out (MethodDeclaration Method, string DeclaringClass) mEntry))
-                        throw new TypeCheckException($"Class '{named.Name}' has no method '{memberAccess.Member}'", node.Line);
+                        throw new TypeCheckException($"Class '{DisplayName(named.Name)}' has no method '{memberAccess.Member}'", node.Span);
 
                     method = SelectOverload(mEntry.Method, node);
                     if (isReceiverReadOnly && !method.IsReadOnly)
                         throw new TypeCheckException($"Cannot call non-readonly method '{method.Name}' on readonly instance", node.Line);
                     if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
-                        throw new TypeCheckException($"Cannot access private method '{memberAccess.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
+                        throw new TypeCheckException($"Cannot access private method '{memberAccess.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     if (method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
-                        throw new TypeCheckException($"Cannot access protected method '{memberAccess.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
+                        throw new TypeCheckException($"Cannot access protected method '{memberAccess.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
 
                     if (classInfo.VTableSlots.TryGetValue(memberAccess.Member, out int slotIndex))
                     {
@@ -4522,7 +4526,7 @@ namespace gflat
                     }
 
                     if (!sInfo.Methods.TryGetValue(memberAccess.Member, out method))
-                        throw new TypeCheckException($"'{named.Name}' has no method '{memberAccess.Member}'", node.Line);
+                        throw new TypeCheckException($"'{DisplayName(named.Name)}' has no method '{memberAccess.Member}'", node.Span);
 
                     method = SelectOverload(method, node);
                     if (isReceiverReadOnly && !method.IsReadOnly)
@@ -4652,7 +4656,7 @@ namespace gflat
                     TypeExpression paramType = ext.Parameters[i].Type;
                     if (!IsAssignable(paramType, argType, node.Arguments[i]))
                         throw new TypeCheckException(
-                            $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
+                            $"Argument {i + 1} of '{funcName}': cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
                             node.Arguments[i].Span);
 
                     if (ext.Parameters[i].IsConst)
@@ -4703,7 +4707,7 @@ namespace gflat
                 TypeExpression paramType = method.Parameters[i].Type;
                 if (!IsAssignable(paramType, argType, node.Arguments[i]))
                     throw new TypeCheckException(
-                        $"Argument {i + 1} of '{funcName}': cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
+                        $"Argument {i + 1} of '{funcName}': cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
                         node.Arguments[i].Span);
 
                 if (method.Parameters[i].IsConst)
@@ -4744,7 +4748,7 @@ namespace gflat
                 TypeExpression paramType = fnPtr.ParameterTypes[i];
                 if (!IsAssignable(paramType, argType, node.Arguments[i]))
                     throw new TypeCheckException(
-                        $"Argument {i + 1} of indirect call: cannot pass '{TypeName(argType)}' as '{TypeName(paramType)}'",
+                        $"Argument {i + 1} of indirect call: cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
                         node.Arguments[i].Span);
             }
 
@@ -4955,7 +4959,7 @@ namespace gflat
                     RecordType(node, ifaceMethod.ReturnType);
                     return;
                 }
-                throw new TypeCheckException($"Interface '{namedIface.Name}' has no method '{node.Member}'", node.Line);
+                throw new TypeCheckException($"Interface '{DisplayName(namedIface.Name)}' has no method '{node.Member}'", node.Span);
             }
 
             if (objType is not NamedTypeExpression named)
@@ -4969,11 +4973,11 @@ namespace gflat
                     (string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) field = classInfo.Fields[fIdx];
                     if (field.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, field.DeclaringClass))
                     {
-                        throw new TypeCheckException($"Cannot access private field '{node.Member}' of class '{field.DeclaringClass}'", node.Line);
+                        throw new TypeCheckException($"Cannot access private field '{node.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
                     }
                     if (field.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, field.DeclaringClass)))
                     {
-                        throw new TypeCheckException($"Cannot access protected field '{node.Member}' of class '{field.DeclaringClass}'", node.Line);
+                        throw new TypeCheckException($"Cannot access protected field '{node.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
                     }
                     RecordType(node, field.Type);
                     return;
@@ -4983,11 +4987,11 @@ namespace gflat
                 {
                     if (mEntry.Method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
                     {
-                        throw new TypeCheckException($"Cannot access private method '{node.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
+                        throw new TypeCheckException($"Cannot access private method '{node.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     }
                     if (mEntry.Method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
                     {
-                        throw new TypeCheckException($"Cannot access protected method '{node.Member}' of class '{mEntry.DeclaringClass}'", node.Line);
+                        throw new TypeCheckException($"Cannot access protected method '{node.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     }
                     RecordType(node, mEntry.Method.ReturnType);
                     return;

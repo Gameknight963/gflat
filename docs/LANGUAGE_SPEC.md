@@ -833,6 +833,10 @@ not capture the caller's locals, aliases, local enums, or control-flow state.
 Local enums belong to their enclosing block; identically named enums in different
 functions remain distinct types and retain their source names in type metadata.
 
+Ordinary overload signatures in generic types are checked when the containing
+type is specialized. Declaration modifier checks and weak/expect/replace selection
+still occur before specialization.
+
 ## Explicit destructor calls
 
 `pointer.~T()` ends the lifetime of the pointed-to `T` without freeing its

@@ -70,7 +70,7 @@ public class WeakReplacementTests
 
     [Theory]
     [InlineData("replace int f() => 1;", "matching weak")]
-    [InlineData("int f() => 1; int f() => 2;", "Duplicate definition")]
+    [InlineData("int f() => 1; int f() => 2;", "cannot differ only")]
     [InlineData("weak int f() => 1; int f() => 2;", "requires replace")]
     [InlineData("weak int f() => 1; weak int f() => 2;", "Multiple weak")]
     [InlineData("weak int f() => 1; replace int f() => 2; replace int f() => 3;", "Multiple replacements")]

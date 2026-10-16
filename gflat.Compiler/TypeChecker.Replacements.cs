@@ -46,7 +46,9 @@ public partial class TypeChecker
                     if (!ContractMatches(original, method))
                         throw new TypeCheckException($"Replacement of '{method.Name}' must match the weak function's return type, constraints, accessibility and modifiers", method.Line);
                 }
-                if (functions.Count == 1 && functions[0].Method.ImplementationKind == FunctionImplementationKind.Ordinary) continue;
+                // Ordinary overloads are validated by PrepareOverloads in their
+                // concrete declaration context. This pass only selects implementations.
+                if (functions.All(e => e.Method.ImplementationKind == FunctionImplementationKind.Ordinary)) continue;
                 if (group.Key.Owner == null && group.Key.Scope.Externs.ContainsKey(group.Key.Name))
                     throw new TypeCheckException($"Function '{group.Key.Name}' cannot have both an extern declaration and a weak or replace definition", functions[0].Method.Line);
                 foreach (var sameSignature in functions.GroupBy(e => ParameterKey(e.Method)))

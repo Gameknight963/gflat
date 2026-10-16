@@ -1076,7 +1076,11 @@ namespace gflat
             if (type is NestedTypeExpression nested)
             {
                 ValidateAliasMember(new NamespaceAccessExpression(nested.Parent, nested.Member, nested.Line) { Span = nested.Span });
-                TypeExpression resolvedParent = ResolveAlias(nested.Parent);
+                TypeExpression resolvedParent = ResolveAlias(nested.Parent, parent =>
+                {
+                    if (TryProjectRegisteredNestedType(nested, parent) is { } identity)
+                        publish(identity);
+                });
                 if (resolvedParent is NamedTypeExpression namedParent)
                 {
                     string parentNs = namedParent.Namespace != null ? $"{namedParent.Namespace}::{namedParent.Name}" : namedParent.Name;

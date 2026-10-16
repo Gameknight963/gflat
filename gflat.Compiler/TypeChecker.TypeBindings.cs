@@ -78,6 +78,20 @@ public partial class TypeChecker
         }
     }
 
+    // A parent's registration includes its concrete nested declarations before
+    // its bodies are checked. Forward only those existing identities: resolving
+    // an alias or creating a nested specialization here would reenter checking
+    // before the enclosing binding has published its own identity.
+    private NamedTypeExpression? TryProjectRegisteredNestedType(NestedTypeExpression source, TypeExpression parent)
+    {
+        if (source.TypeArguments.Count != 0 || parent is not NamedTypeExpression named) return null;
+        string owner = named.Namespace == null ? named.Name : named.Namespace.Replace("::", "$") + "$" + named.Name;
+        string identity = owner + "." + source.Member;
+        if (!_classes.ContainsKey(identity) && !_structs.ContainsKey(identity) &&
+            !_interfaces.ContainsKey(identity) && !_enums.ContainsKey(identity)) return null;
+        return new NamedTypeExpression(identity, null, source.Line) { Span = source.Span };
+    }
+
     private int? ResolveArrayLength(ArrayTypeExpression array)
     {
         if (array.Size.HasValue || array.SizeExpression == null) return array.Size;

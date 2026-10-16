@@ -188,6 +188,11 @@ removing sources and changing build options also invalidates the build. A failed
 compilation removes the success stamp; `gflat clean` removes it too. Library
 builds and `gflat check` always run analysis.
 
+An output newer than its configuration's success stamp is rebuilt, including when
+another configuration overwrites a shared output directory. As with other
+timestamp-based build checks, manually restoring old output timestamps can hide
+an external modification; use `Rebuild` after doing so.
+
 Library cleaning removes only intermediate files. Executable cleaning removes the
 configured `TargetPath` and `GflatIROutput`, after checking that neither overlaps
 sources, project files, or imports anywhere in the reference graph.

@@ -163,7 +163,12 @@
     </ItemGroup>
     <WriteLinesToFile File="$(_GflatBuildSettings)" Lines="@(_GflatSetting->'%(Identity)=%(Value)');@(_GflatBuildInputs)" Overwrite="true" WriteOnlyWhenDifferent="true" />
   </Target>
-  <Target Name="_GflatCompile" DependsOnTargets="_GflatPrepareBuild" Inputs="@(_GflatBuildInputs);$(_GflatSourceList);$(_GflatBuildSettings)" Outputs="$(_GflatBuildOutput);$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' == 'true'">
+  <Target Name="_GflatCheckOutputProvenance" Condition="'$(_GflatCanCache)' == 'true'">
+    <!-- Another configuration or an external tool may have overwritten a shared
+         output since this configuration last built successfully. -->
+    <Delete Files="$(_GflatBuildSuccess)" Condition="Exists('$(_GflatBuildOutput)') and Exists('$(_GflatBuildSuccess)') and $([System.IO.File]::GetLastWriteTime('$(_GflatBuildOutput)').ToUniversalTime().Ticks) &gt; $([System.IO.File]::GetLastWriteTime('$(_GflatBuildSuccess)').ToUniversalTime().Ticks)" />
+  </Target>
+  <Target Name="_GflatCompile" DependsOnTargets="_GflatPrepareBuild;_GflatCheckOutputProvenance" Inputs="@(_GflatBuildInputs);$(_GflatSourceList);$(_GflatBuildSettings)" Outputs="$(_GflatBuildOutput);$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' == 'true'">
     <Delete Files="$(_GflatBuildSuccess)" />
     <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption)  $(_GflatOptions) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
     <Touch Files="$(_GflatBuildSuccess)" AlwaysCreate="true" />

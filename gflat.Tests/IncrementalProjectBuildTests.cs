@@ -111,6 +111,41 @@ public sealed class IncrementalProjectBuildTests
     }
 
     [Fact]
+    public void ConfigurationsSharingAnOutputDoNotReuseAnotherConfigurationsArtifact()
+    {
+        WithProject((directory, project) => {
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.Xml(content: """
+                <PropertyGroup><OutputPath>bin/shared/</OutputPath></PropertyGroup>
+                <ItemGroup Condition="'$(Configuration)' == 'Debug'"><Compile Remove="release.gf" /></ItemGroup>
+                <ItemGroup Condition="'$(Configuration)' == 'Release'"><Compile Remove="debug.gf" /></ItemGroup>
+                """));
+            File.WriteAllText(Path.Combine(directory, "main.gf"), "int main() => Answer();");
+            File.WriteAllText(Path.Combine(directory, "debug.gf"), "int Answer() => 42;");
+            File.WriteAllText(Path.Combine(directory, "release.gf"), "int Answer() => 7;");
+            string output = Path.Combine(directory, "bin/shared/app.ll");
+            Assert.Equal(0, Program.Main(["build", project, "--emit-ir", "--configuration", "Debug"]));
+            Assert.Contains("ret i32 42", File.ReadAllText(output));
+            Assert.Equal(0, Program.Main(["build", project, "--emit-ir", "--configuration", "Release"]));
+            Assert.Contains("ret i32 7", File.ReadAllText(output));
+            Assert.Equal(0, Program.Main(["build", project, "--emit-ir", "--configuration", "Debug"]));
+            Assert.Contains("ret i32 42", File.ReadAllText(output));
+        });
+    }
+
+    [Fact]
+    public void ReplacedOutputNewerThanItsSuccessStampIsRebuilt()
+    {
+        WithProject((directory, project) => {
+            Assert.Equal(0, Build(project));
+            string output = Output(directory);
+            File.WriteAllText(output, "externally replaced output");
+            File.SetLastWriteTimeUtc(output, File.GetLastWriteTimeUtc(Marker(directory)).AddSeconds(1));
+            Assert.Equal(0, Build(project));
+            Assert.Contains("ret i32 0", File.ReadAllText(output));
+        });
+    }
+
+    [Fact]
     public void GeneratedBuildFilesCannotOverwriteExplicitInputs()
     {
         WithProject((directory, project) => {

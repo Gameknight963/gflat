@@ -3221,7 +3221,7 @@ namespace gflat
                     }
                     if (!IsAssignable(retType, valType, _ownedReturns.ContainsKey(node) ? null : node.Value))
                     {
-                        throw new TypeCheckException($"Cannot return '{TypeName(valType)}' from function returning '{TypeName(retType)}'", node.Line);
+                        throw new TypeCheckException($"Cannot return '{DisplayTypeName(valType)}' from function returning '{DisplayTypeName(retType)}'", node.Line);
                     }
                 }
                 else if (_currentFunction is OperatorDeclaration operation)
@@ -3229,7 +3229,7 @@ namespace gflat
                     TypeExpression result = ResolveAlias(operation.ReturnType);
                     TypeExpression value = GetType(node.Value);
                     if (!IsAssignable(result, value, node.Value))
-                        throw new TypeCheckException($"Cannot return '{TypeName(value)}' from operator returning '{TypeName(result)}'", node.Value.Span);
+                        throw new TypeCheckException($"Cannot return '{DisplayTypeName(value)}' from operator returning '{DisplayTypeName(result)}'", node.Value.Span);
                 }
                 else if (_currentFunction is ConstructorDeclaration or DestructorDeclaration)
                 {
@@ -3248,12 +3248,15 @@ namespace gflat
                     TypeExpression retType = ResolveAlias(method.ReturnType);
                     if (retType is not NamedTypeExpression { Name: "void" })
                     {
-                        throw new TypeCheckException($"Cannot return void from function returning '{TypeName(retType)}'", node.Line);
+                        throw new TypeCheckException($"Cannot return void from function returning '{DisplayTypeName(retType)}'", node.Line);
                     }
                 }
-                else if (_currentFunction is OperatorDeclaration operation &&
-                    ResolveAlias(operation.ReturnType) is not NamedTypeExpression { Name: "void" })
-                    throw new TypeCheckException($"Cannot return void from operator returning '{TypeName(operation.ReturnType)}'", node.Span);
+                else if (_currentFunction is OperatorDeclaration operation)
+                {
+                    TypeExpression result = ResolveAlias(operation.ReturnType);
+                    if (result is not NamedTypeExpression { Name: "void" })
+                        throw new TypeCheckException($"Cannot return void from operator returning '{DisplayTypeName(result)}'", node.Span);
+                }
             }
         }
 

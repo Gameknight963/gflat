@@ -1,5 +1,4 @@
 using gflat.ast;
-using System.Text.RegularExpressions;
 
 namespace gflat;
 
@@ -36,8 +35,4 @@ public partial class TypeChecker
         };
     }
 
-    public string DisplayDiagnostic(string message) => Regex.Replace(message,
-        @"[\p{L}_$][\p{L}\p{N}_$]*(?:(?:::|\.)[\p{L}_$][\p{L}\p{N}_$]*)*",
-        match => _displayNames.ContainsKey(match.Value) || _classes.ContainsKey(match.Value) || _structs.ContainsKey(match.Value) || _interfaces.ContainsKey(match.Value) || _enums.ContainsKey(match.Value)
-            ? DisplayName(match.Value) : match.Value);
 }

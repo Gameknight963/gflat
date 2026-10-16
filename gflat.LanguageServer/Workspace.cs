@@ -139,7 +139,7 @@ public static class Workspace
                     // Synthetic source failures are visible on a real document, never as invalid file URIs.
                     if (path.StartsWith('<')) path = snapshots[0].Path;
                     output.TryAdd(path, new());
-                    output[path].Add(Convert(diagnostic) with { Message = analysis.Checker?.DisplayDiagnostic(diagnostic.Message) ?? diagnostic.Message });
+                    output[path].Add(Convert(diagnostic));
                 }
             }
             catch (Exception error)

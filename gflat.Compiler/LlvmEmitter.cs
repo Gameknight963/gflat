@@ -43,15 +43,12 @@ public partial class LlvmEmitter : IVisitor
                 return $"i8 {(int)c.Value}";
             case ConstValue.String s:
                 {
-                    string raw = s.Value;
-                    byte[] escaped = StringLiteralEncoding.Bytes(raw);
-                    string globalName = NewGlobal();
-                    int len = escaped.Length + 1;
-                    string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
                     if (type is ArrayTypeExpression { Size: not null } buffer)
+                    {
+                        byte[] escaped = s.BytesFromOffset();
                         return $"{typeStr} [{string.Join(", ", Enumerable.Range(0, buffer.Size.Value).Select(i => "i8 " + (i < escaped.Length ? escaped[i] : 0)))}]";
-                    EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
-                    return $"i8* bitcast ([{len} x i8]* {globalName} to i8*)";
+                    }
+                    return $"i8* {CStringAddress(s)}";
                 }
             case ConstValue.Pointer ptrVal:
                 {
@@ -200,15 +197,7 @@ public partial class LlvmEmitter : IVisitor
                 return true;
             case ConstValue.String s:
                 {
-                    string raw = s.Value;
-                    byte[] escaped = StringLiteralEncoding.Bytes(raw);
-                    string globalName = NewGlobal();
-                    int len = escaped.Length + 1;
-                    string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
-                    EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
-                    string ptr = NewTemp();
-                    Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
-                    Push(ptr);
+                    Push(CStringAddress(s));
                     return true;
                 }
             case ConstValue.Pointer ptrVal:
@@ -3070,15 +3059,7 @@ public partial class LlvmEmitter : IVisitor
                 break;
             case TokenKind.StringLiteral:
                 {
-                    string raw = node.Token.Text[1..^1]; // strip quotes
-                    byte[] escaped = StringLiteralEncoding.Bytes(raw);
-                    string globalName = NewGlobal();
-                    int len = escaped.Length + 1; // +1 for null terminator
-                    string llvmStr = StringLiteralEncoding.LlvmBytes(escaped);
-                    EmitGlobal($"{globalName} = private constant [{len} x i8] c\"{llvmStr}\\00\"");
-                    string ptr = NewTemp();
-                    Emit($"    {ptr} = getelementptr [{len} x i8], [{len} x i8]* {globalName}, i32 0, i32 0");
-                    Push(ptr);
+                    Push(CStringAddress(new ConstValue.String(node.Token.Text[1..^1])));
                     break;
                 }
             default:

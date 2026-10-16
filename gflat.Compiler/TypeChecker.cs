@@ -2835,7 +2835,7 @@ namespace gflat
         private static ConstValue NormalizeStringBufferConstant(ConstValue value, TypeExpression type)
         {
             if (value is not ConstValue.String text || type is not ArrayTypeExpression { Size: not null } array) return value;
-            byte[] bytes = StringLiteralEncoding.Bytes(text.Value);
+            byte[] bytes = text.BytesFromOffset();
             return new ConstValue.Array(Enumerable.Range(0, array.Size.Value)
                 .Select(i => (ConstValue)new ConstValue.Char((char)(i < bytes.Length ? bytes[i] : 0))).ToList());
         }

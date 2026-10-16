@@ -135,7 +135,7 @@ public partial class TypeChecker
                 value = NumericSemantics.Cast(value, named.Name, parameter.Line);
             if (value is ConstValue.String text && type is ArrayTypeExpression { Size: not null } array)
             {
-                var bytes = StringLiteralEncoding.Bytes(text.Value);
+                var bytes = text.BytesFromOffset(expression.Line);
                 value = new ConstValue.Array(Enumerable.Range(0, array.Size.Value)
                     .Select(i => (ConstValue)new ConstValue.Char((char)(i < bytes.Length ? bytes[i] : 0))).ToList());
             }

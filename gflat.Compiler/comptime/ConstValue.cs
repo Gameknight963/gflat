@@ -32,9 +32,21 @@ namespace gflat.comptime
             public override string ToString() => Value.ToString();
         }
 
-        public sealed record String(string Value) : ConstValue
+        // The source spelling describes immutable UTF-8 storage, including its
+        // final null byte. Offset is an address within that storage, in bytes.
+        public sealed record String(string Value, int Offset = 0) : ConstValue
         {
-            public override string ToString() => Value;
+            public override string ToString() => Offset == 0 ? Value : $"{Value} (byte offset {Offset})";
+
+            // Data remaining in this view, excluding the allocation's final
+            // terminator. An address one past the allocation has no byte view.
+            public byte[] BytesFromOffset(int line = 0)
+            {
+                byte[] bytes = StringLiteralEncoding.Bytes(Value, line);
+                if (Offset < 0 || Offset > bytes.Length)
+                    throw new ConstEvalException("C-string pointer is outside readable constant storage", line);
+                return bytes.AsSpan(Offset).ToArray();
+            }
         }
 
         public sealed record Struct(string StructName, Dictionary<string, ConstValue> Fields) : ConstValue
@@ -78,21 +90,6 @@ namespace gflat.comptime
             if (left is Float lf && right is Float rf)
             {
                 result = new Float(lf.Value + rf.Value);
-                return true;
-            }
-            if (left is String ls && right is String rs)
-            {
-                result = new String(ls.Value + rs.Value);
-                return true;
-            }
-            if (left is String ls2)
-            {
-                result = new String(ls2.Value + right.ToString());
-                return true;
-            }
-            if (right is String rs2)
-            {
-                result = new String(left.ToString() + rs2.Value);
                 return true;
             }
             return false;
@@ -241,11 +238,6 @@ namespace gflat.comptime
                 result = lc.Value == rc.Value;
                 return true;
             }
-            if (left is String ls && right is String rs)
-            {
-                result = ls.Value == rs.Value;
-                return true;
-            }
             result = false;
             return false;
         }
@@ -271,11 +263,6 @@ namespace gflat.comptime
             if (left is Char lc && right is Char rc)
             {
                 comparison = unchecked((sbyte)lc.Value).CompareTo(unchecked((sbyte)rc.Value));
-                return true;
-            }
-            if (left is String ls && right is String rs)
-            {
-                comparison = string.Compare(ls.Value, rs.Value, StringComparison.Ordinal);
                 return true;
             }
             return false;

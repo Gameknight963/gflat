@@ -14,7 +14,7 @@ namespace gflat.comptime
         }
     }
 
-    public class ConstEvaluator : IVisitor
+    public partial class ConstEvaluator : IVisitor
     {
         private const int MaxSteps = 100000;
         private const int MaxCallDepth = 256;
@@ -257,6 +257,8 @@ namespace gflat.comptime
             ConstValue left = EvaluateOperand(node.Left);
             ConstValue right = EvaluateOperand(node.Right);
 
+            if (EvaluateCStringBinary(node, left, right)) return;
+
             if (left is ConstValue.Float a && right is ConstValue.Float b &&
                 node.Operator is TokenKind.EqualsEquals or TokenKind.NotEquals or TokenKind.Less or TokenKind.LessEquals or TokenKind.Greater or TokenKind.GreaterEquals)
             {
@@ -433,7 +435,7 @@ namespace gflat.comptime
                 if (node.Operand is IdentifierExpression ppIdent && TryGetVariable(ppIdent.Name, out ConstValue? ppVal))
                 {
                     ConstValue one = ppVal is ConstValue.Float ? new ConstValue.Float(1) : ppVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                    if (ConstValue.TryAdd(ppVal!, one, out ConstValue? nextVal))
+                    if (StepCString(ppVal!, node.Operand, false, out ConstValue? nextVal) || ConstValue.TryAdd(ppVal!, one, out nextVal))
                     {
                         nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                         SetVariable(ppIdent.Name, nextVal!);
@@ -447,7 +449,7 @@ namespace gflat.comptime
                     if (_currentValue is ConstValue.Struct ppStruct && ppStruct.Fields.TryGetValue(ppMem.Member, out ConstValue? memVal))
                     {
                         ConstValue one = memVal is ConstValue.Float ? new ConstValue.Float(1) : memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                        if (ConstValue.TryAdd(memVal, one, out ConstValue? nextVal))
+                        if (StepCString(memVal, node.Operand, false, out ConstValue? nextVal) || ConstValue.TryAdd(memVal, one, out nextVal))
                         {
                             nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                             ppStruct.Fields[ppMem.Member] = nextVal!;
@@ -464,7 +466,7 @@ namespace gflat.comptime
                 if (node.Operand is IdentifierExpression mmIdent && TryGetVariable(mmIdent.Name, out ConstValue? mmVal))
                 {
                     ConstValue one = mmVal is ConstValue.Float ? new ConstValue.Float(1) : mmVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                    if (ConstValue.TrySubtract(mmVal!, one, out ConstValue? nextVal))
+                    if (StepCString(mmVal!, node.Operand, true, out ConstValue? nextVal) || ConstValue.TrySubtract(mmVal!, one, out nextVal))
                     {
                         nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                         SetVariable(mmIdent.Name, nextVal!);
@@ -478,7 +480,7 @@ namespace gflat.comptime
                     if (_currentValue is ConstValue.Struct mmStruct && mmStruct.Fields.TryGetValue(mmMem.Member, out ConstValue? memVal))
                     {
                         ConstValue one = memVal is ConstValue.Float ? new ConstValue.Float(1) : memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
-                        if (ConstValue.TrySubtract(memVal, one, out ConstValue? nextVal))
+                        if (StepCString(memVal, node.Operand, true, out ConstValue? nextVal) || ConstValue.TrySubtract(memVal, one, out nextVal))
                         {
                             nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                             mmStruct.Fields[mmMem.Member] = nextVal!;
@@ -515,6 +517,12 @@ namespace gflat.comptime
                     {
                         if (arrayPointer.Target.Elements.Count == 0) throw new ConstEvalException("Cannot dereference an empty constant array", node.Line);
                         _currentValue = arrayPointer.Target.Elements[0];
+                        return;
+                    }
+                    if (operand is ConstValue.String text)
+                    {
+                        RequireCStringByteView(node.Operand);
+                        _currentValue = ReadCString(text, 0, node.Line);
                         return;
                     }
                     if (operand is ConstValue.Pointer ptr)
@@ -571,14 +579,9 @@ namespace gflat.comptime
                 obj = arrayPointer.Target.Elements[0];
             }
 
-            if (obj is ConstValue.String strVal)
+            if (obj is ConstValue.String)
             {
-                if (node.Member == "length")
-                {
-                    _currentValue = new ConstValue.Integer(strVal.Value.Length);
-                    return;
-                }
-                throw new ConstEvalException($"Unknown member '{node.Member}' on string at compile time", node.Line);
+                throw new ConstEvalException("C-string pointers have no members or implicit length", node.Line);
             }
 
             if (obj is ConstValue.Array arrVal)
@@ -638,27 +641,19 @@ namespace gflat.comptime
             node.Index.Accept(this);
             ConstValue index = _currentValue!;
 
+            if (target is ConstValue.String text)
+            {
+                RequireCStringByteView(node.Target);
+                _currentValue = ReadCString(text, CStringIndex(index, node.Line), node.Line);
+                return;
+            }
+
             long idx = index switch
             {
                 ConstValue.Integer i => i.Value,
                 ConstValue.UInteger u => (long)u.Value,
                 _ => throw new ConstEvalException("Index must be an integer", node.Line)
             };
-
-            if (target is ConstValue.String str)
-            {
-                if (idx < 0 || idx > str.Value.Length)
-                {
-                    throw new ConstEvalException($"String index {idx} out of bounds (length {str.Value.Length})", node.Line);
-                }
-                if (idx == str.Value.Length)
-                {
-                    _currentValue = new ConstValue.Char('\0');
-                    return;
-                }
-                _currentValue = new ConstValue.Char(str.Value[(int)idx]);
-                return;
-            }
 
             if (target is ConstValue.Array arr)
             {
@@ -680,6 +675,12 @@ namespace gflat.comptime
             ConstValue val = _currentValue!;
 
             TypeExpression resolved = _context.ResolveAlias(node.TargetType);
+            if (val is ConstValue.String && resolved is PointerTypeExpression pointer &&
+                _context.ResolveAlias(pointer.Inner) is NamedTypeExpression { Name: "char" })
+            {
+                _currentValue = val;
+                return;
+            }
             if (resolved is not NamedTypeExpression target)
                 throw new ConstEvalException("Unsupported constant cast", node.Line);
             _currentValue = NumericSemantics.Cast(val, target.Name, node.Line);
@@ -1002,7 +1003,13 @@ namespace gflat.comptime
                 ConstValue previous = _currentValue!;
                 ConstValue? result = null;
                 string? error = null;
-                bool valid = node.Operator switch
+                bool valid;
+                if (previous is ConstValue.String text && node.Operator is TokenKind.PlusEquals or TokenKind.MinusEquals)
+                {
+                    result = OffsetCString(text, val, node.Target, node.Operator == TokenKind.MinusEquals, node.Line);
+                    valid = true;
+                }
+                else valid = node.Operator switch
                 {
                     TokenKind.PlusEquals => ConstValue.TryAdd(previous, val, out result),
                     TokenKind.MinusEquals => ConstValue.TrySubtract(previous, val, out result),

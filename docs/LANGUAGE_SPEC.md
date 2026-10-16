@@ -38,6 +38,13 @@ There is no built-in `string` type or keyword. Plain `"text"` literals have type
 `readonly(char*)`: a non-null pointer to static, null-terminated UTF-8 storage.
 Returning that pointer is valid; writing through it is rejected. Embedded nulls
 remain in the stored bytes, although C-string consumers stop at the first null.
+Within a compilation, immutable literals with identical decoded UTF-8 bytes share
+storage, including literals with different escape spellings. Pointer equality
+compares storage addresses, not C-string contents. Constant evaluation preserves
+byte offsets for pointer arithmetic, indexing, and dereferencing, including the
+terminator. One-past addresses may be formed but cannot be read. Ordering or
+subtracting pointers into different constant strings is not a constant operation;
+reinterpreted pointer views are also unsupported during constant evaluation.
 A fixed buffer declaration such as `char[6] buffer = "hello"` copies the bytes and
 terminator into writable inline storage. Larger buffers are zero-padded; smaller
 buffers are rejected. `char[] buffer = "hello"` infers the size including the

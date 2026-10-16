@@ -13,6 +13,7 @@ namespace gflat.comptime
         TypeExpression GetType(AstNode node);
         bool TryGetNativeIntegerOperands(BinaryExpression node, out TypeExpression type);
         bool TryGetIntegerComparisonOperands(BinaryExpression node, out TypeExpression type);
+        bool TryGetFloatingOperands(BinaryExpression node, out TypeExpression type);
         bool TryGetConstValue(AstNode node, out ConstValue? value);
         CallExpression? GetPropertyRead(AstNode node);
         TypeChecker.PropertyWrite? GetPropertyWrite(AstNode node);

@@ -3428,6 +3428,8 @@ namespace gflat
                 return;
             }
 
+            if (CheckFloatingBinary(node, left, right)) return;
+
             bool isComparison = node.Operator is
                 TokenKind.EqualsEquals or TokenKind.NotEquals or
                 TokenKind.Less or TokenKind.Greater or

@@ -117,6 +117,14 @@ unsigned. Shift counts remain independent of the left operand's type.
 
 Integer arithmetic without overflow flags wraps at its result width. Division by zero, signed division overflow, out-of-range shift counts, and out-of-range runtime float-to-integer conversions are not defined operations; callers must avoid them. Compile-time evaluation diagnoses operations it cannot evaluate. Wider numeric support and more complete runtime checks remain experimental.
 
+Floating arithmetic and comparisons support `float` and `double`; mixed floating
+operands widen to `double`. Literal and intermediate `float` values round to
+binary32 in constant evaluation as at runtime. Negation preserves signed zero.
+Floating division and remainder follow IEEE behavior, including infinities and
+NaNs: `NaN != x` is true, while equality and ordered comparisons with NaN are false.
+Bitwise and shift operators do not accept floating operands. Depending on the
+target, floating remainder may require the toolchain's math runtime.
+
 ```csharp
 const int answer()
 {

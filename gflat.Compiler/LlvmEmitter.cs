@@ -2617,8 +2617,14 @@ public partial class LlvmEmitter : IVisitor
             right = EmitImplicitCast(right, rightType, nativeOperands, node.Right);
             leftType = rightType = nativeOperands;
         }
+        if (_typeChecker.TryGetFloatingOperands(node, out TypeExpression floatingOperands))
+        {
+            left = EmitImplicitCast(left, leftType, floatingOperands);
+            right = EmitImplicitCast(right, rightType, floatingOperands);
+            leftType = rightType = floatingOperands;
+        }
         string llvmType = EmitType(resultType);
-        bool isFloat = leftType is NamedTypeExpression { Name: "float" };
+        bool isFloat = _typeChecker.ResolveAlias(leftType) is NamedTypeExpression { Name: "float" or "double" };
 
         bool isUnsigned = _typeChecker.IsUnsignedInteger(leftType) || _typeChecker.IsUnsignedInteger(rightType);
 
@@ -2699,14 +2705,14 @@ public partial class LlvmEmitter : IVisitor
                 string op = node.Operator switch
                 {
                     TokenKind.EqualsEquals => "oeq",
-                    TokenKind.NotEquals => "one",
+                    TokenKind.NotEquals => "une",
                     TokenKind.Less => "olt",
                     TokenKind.Greater => "ogt",
                     TokenKind.LessEquals => "ole",
                     TokenKind.GreaterEquals => "oge",
                     _ => throw new NotImplementedException()
                 };
-                Emit($"    {temp} = fcmp {op} float {left}, {right}");
+                Emit($"    {temp} = fcmp {op} {cmpLlvm} {left}, {right}");
             }
             else
             {
@@ -2843,9 +2849,10 @@ public partial class LlvmEmitter : IVisitor
                     TokenKind.Minus => "fsub",
                     TokenKind.Star => "fmul",
                     TokenKind.Slash => "fdiv",
+                    TokenKind.Percent => "frem",
                     _ => throw new NotImplementedException($"Float operator {node.Operator} not supported")
                 };
-                Emit($"    {temp} = {op} float {left}, {right}");
+                Emit($"    {temp} = {op} {llvmType} {left}, {right}");
             }
             else
             {
@@ -2984,7 +2991,9 @@ public partial class LlvmEmitter : IVisitor
             case TokenKind.Minus:
                 {
                     string temp = NewTemp();
-                    Emit($"    {temp} = sub {llvmType} 0, {operand}");
+                    if (_typeChecker.ResolveAlias(type) is NamedTypeExpression { Name: "float" or "double" })
+                        Emit($"    {temp} = fneg {llvmType} {operand}");
+                    else Emit($"    {temp} = sub {llvmType} 0, {operand}");
                     PushManaged(node, temp);
                     break;
                 }
@@ -3016,6 +3025,12 @@ public partial class LlvmEmitter : IVisitor
                         Emit($"    {gepPtr} = getelementptr i8*, i8** {castPtr}, i32 {step}");
                         temp = NewTemp();
                         Emit($"    {temp} = bitcast i8** {gepPtr} to {fnPtrTypeStr}");
+                    }
+                    else if (resType is NamedTypeExpression { Name: "float" or "double" })
+                    {
+                        string op = node.Operator == TokenKind.PlusPlus ? "fadd" : "fsub";
+                        temp = NewTemp();
+                        Emit($"    {temp} = {op} {llvmType} {operand}, 1.0");
                     }
                     else
                     {
@@ -3091,9 +3106,7 @@ public partial class LlvmEmitter : IVisitor
                     string txt = node.Token.Text.TrimEnd('f', 'F', 'd', 'D');
                     if (double.TryParse(txt, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double d))
                     {
-                        string str = d.ToString("0.0######", System.Globalization.CultureInfo.InvariantCulture);
-                        if (!str.Contains('.')) str += ".0";
-                        Push(str);
+                        Push(FloatConstant(d, _typeChecker.GetType(node)));
                     }
                     else
                     {
@@ -3844,7 +3857,7 @@ public partial class LlvmEmitter : IVisitor
 
         TypeExpression targetType = _typeChecker.GetType(node.Target);
         string llvmType = EmitType(targetType);
-        bool isFloat = targetType is NamedTypeExpression { Name: "float" };
+        bool isFloat = _typeChecker.ResolveAlias(targetType) is NamedTypeExpression { Name: "float" or "double" };
 
         TypeExpression valueType = _typeChecker.GetType(node.Value);
         string finalVal = EmitImplicitCast(val, valueType, targetType, node.Value);
@@ -3911,9 +3924,10 @@ public partial class LlvmEmitter : IVisitor
                     TokenKind.MinusEquals => "fsub",
                     TokenKind.StarEquals => "fmul",
                     TokenKind.SlashEquals => "fdiv",
+                    TokenKind.PercentEquals => "frem",
                     _ => throw new NotImplementedException($"Compound assignment {node.Operator} not supported on float")
                 };
-                Emit($"    {temp} = {op} float {currentVal}, {finalVal}");
+                Emit($"    {temp} = {op} {llvmType} {currentVal}, {finalVal}");
             }
             else
             {

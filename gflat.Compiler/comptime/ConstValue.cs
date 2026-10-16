@@ -166,11 +166,6 @@ namespace gflat.comptime
             }
             if (left is Float lf && right is Float rf)
             {
-                if (rf.Value == 0.0)
-                {
-                    error = "Division by zero";
-                    return false;
-                }
                 result = new Float(lf.Value / rf.Value);
                 return true;
             }
@@ -181,6 +176,11 @@ namespace gflat.comptime
         {
             result = null;
             error = null;
+            if (left is Float lf && right is Float rf)
+            {
+                result = new Float(lf.Value % rf.Value);
+                return true;
+            }
             if (left is Integer li && right is Integer ri)
             {
                 if (ri.Value == 0)
@@ -228,7 +228,7 @@ namespace gflat.comptime
             }
             if (left is Float lf && right is Float rf)
             {
-                result = Math.Abs(lf.Value - rf.Value) < double.Epsilon;
+                result = lf.Value == rf.Value;
                 return true;
             }
             if (left is Boolean lb && right is Boolean rb)

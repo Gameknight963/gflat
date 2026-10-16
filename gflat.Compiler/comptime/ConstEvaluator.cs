@@ -126,8 +126,8 @@ namespace gflat.comptime
             {
                 TokenKind.IntLiteral or TokenKind.UIntLiteral or TokenKind.HexInt or
                     TokenKind.LongLiteral or TokenKind.ULongLiteral => ParseIntegerLiteral(node),
-                TokenKind.FloatLiteral => new ConstValue.Float(Convert.ToDouble(node.Token.Text.TrimEnd('f', 'F'), System.Globalization.CultureInfo.InvariantCulture)),
-                TokenKind.DoubleLiteral => new ConstValue.Float(Convert.ToDouble(node.Token.Text, System.Globalization.CultureInfo.InvariantCulture)),
+                TokenKind.FloatLiteral => new ConstValue.Float((float)Convert.ToDouble(node.Token.Text.TrimEnd('f', 'F'), System.Globalization.CultureInfo.InvariantCulture)),
+                TokenKind.DoubleLiteral => new ConstValue.Float(Convert.ToDouble(node.Token.Text.TrimEnd('d', 'D'), System.Globalization.CultureInfo.InvariantCulture)),
                 TokenKind.CharLiteral => new ConstValue.Char(ParseChar(node.Token.Text)),
                 TokenKind.StringLiteral => new ConstValue.String(node.Token.Text[1..^1]),
                 TokenKind.True => new ConstValue.Boolean(true),
@@ -263,6 +263,7 @@ namespace gflat.comptime
 
             _context.TryGetNativeIntegerOperands(node, out TypeExpression nativeOperands);
             if (nativeOperands == null) _context.TryGetIntegerComparisonOperands(node, out nativeOperands);
+            if (nativeOperands == null) _context.TryGetFloatingOperands(node, out nativeOperands);
             ConstValue EvaluateOperand(AstNode operand)
             {
                 if (nativeOperands != null) return EvaluateValueForTarget(operand, nativeOperands);
@@ -271,6 +272,21 @@ namespace gflat.comptime
             }
             ConstValue left = EvaluateOperand(node.Left);
             ConstValue right = EvaluateOperand(node.Right);
+
+            if (left is ConstValue.Float a && right is ConstValue.Float b &&
+                node.Operator is TokenKind.EqualsEquals or TokenKind.NotEquals or TokenKind.Less or TokenKind.LessEquals or TokenKind.Greater or TokenKind.GreaterEquals)
+            {
+                _currentValue = new ConstValue.Boolean(node.Operator switch
+                {
+                    TokenKind.EqualsEquals => a.Value == b.Value,
+                    TokenKind.NotEquals => a.Value != b.Value,
+                    TokenKind.Less => a.Value < b.Value,
+                    TokenKind.LessEquals => a.Value <= b.Value,
+                    TokenKind.Greater => a.Value > b.Value,
+                    _ => a.Value >= b.Value
+                });
+                return;
+            }
 
             switch (node.Operator)
             {
@@ -432,9 +448,10 @@ namespace gflat.comptime
             {
                 if (node.Operand is IdentifierExpression ppIdent && TryGetVariable(ppIdent.Name, out ConstValue? ppVal))
                 {
-                    ConstValue one = ppVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                    ConstValue one = ppVal is ConstValue.Float ? new ConstValue.Float(1) : ppVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
                     if (ConstValue.TryAdd(ppVal!, one, out ConstValue? nextVal))
                     {
+                        nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                         SetVariable(ppIdent.Name, nextVal!);
                         _currentValue = node.IsPrefix ? nextVal : ppVal;
                         return;
@@ -445,9 +462,10 @@ namespace gflat.comptime
                     ppMem.Object.Accept(this);
                     if (_currentValue is ConstValue.Struct ppStruct && ppStruct.Fields.TryGetValue(ppMem.Member, out ConstValue? memVal))
                     {
-                        ConstValue one = memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                        ConstValue one = memVal is ConstValue.Float ? new ConstValue.Float(1) : memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
                         if (ConstValue.TryAdd(memVal, one, out ConstValue? nextVal))
                         {
+                            nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                             ppStruct.Fields[ppMem.Member] = nextVal!;
                             _currentValue = node.IsPrefix ? nextVal : memVal;
                             return;
@@ -461,9 +479,10 @@ namespace gflat.comptime
             {
                 if (node.Operand is IdentifierExpression mmIdent && TryGetVariable(mmIdent.Name, out ConstValue? mmVal))
                 {
-                    ConstValue one = mmVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                    ConstValue one = mmVal is ConstValue.Float ? new ConstValue.Float(1) : mmVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
                     if (ConstValue.TrySubtract(mmVal!, one, out ConstValue? nextVal))
                     {
+                        nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                         SetVariable(mmIdent.Name, nextVal!);
                         _currentValue = node.IsPrefix ? nextVal : mmVal;
                         return;
@@ -474,9 +493,10 @@ namespace gflat.comptime
                     mmMem.Object.Accept(this);
                     if (_currentValue is ConstValue.Struct mmStruct && mmStruct.Fields.TryGetValue(mmMem.Member, out ConstValue? memVal))
                     {
-                        ConstValue one = memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
+                        ConstValue one = memVal is ConstValue.Float ? new ConstValue.Float(1) : memVal is ConstValue.UInteger ? new ConstValue.UInteger(1) : new ConstValue.Integer(1);
                         if (ConstValue.TrySubtract(memVal, one, out ConstValue? nextVal))
                         {
+                            nextVal = Normalize(nextVal!, _context.GetType(node.Operand), node.Line);
                             mmStruct.Fields[mmMem.Member] = nextVal!;
                             _currentValue = node.IsPrefix ? nextVal : memVal;
                             return;

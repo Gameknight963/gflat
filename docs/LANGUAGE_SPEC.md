@@ -343,6 +343,8 @@ int main()
 
 Bare `readonly` on a method qualifies its receiver independently of its return type. For example, `public readonly readonly(char)* Data()` is a readonly method returning a pointer to readonly characters. `public readonly(char)* Data()` has a mutable receiver and the same return type. A readonly method may return a mutable pointer obtained independently of its receiver, such as a pointer parameter.
 
+Bare `readonly` requires an instance receiver. Namespace functions, static methods, and static property accessors cannot use it; their return and parameter types may still use `readonly(T)`.
+
 Fields use the same type syntax. A `readonly(T)` field can be initialized by its declaration or assigned on `this` in its declaring constructor. Other instances and nested storage do not gain a constructor exception. Normal destructor cleanup still runs for readonly values.
 
 Fields cannot declare generic parameters or be marked `virtual`, `override`, or `abstract`.

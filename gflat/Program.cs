@@ -21,6 +21,7 @@ public static class Program
             string? outputPath = null, clang = null;
             string configuration = "Debug", platform = "AnyCPU";
             bool run = false, irOnly = false, check = false, clean = false, noStdLib = false;
+            bool explicitConfiguration = false, explicitPlatform = false;
             string? projectPath = null;
             int? exceptionReserveBytes = null;
             int? optimizationLevel = null;
@@ -44,8 +45,8 @@ public static class Program
                     case "--clang": clang = Value(); break;
                     case "--exception-reserve-bytes": exceptionReserveBytes = ExceptionReserve.Parse(Value()); break;
                     case "--optimization": optimizationLevel = OptimizationLevel.Parse(Value()); break;
-                    case "--configuration": configuration = Value(); break;
-                    case "--platform": platform = Value(); break;
+                    case "--configuration": configuration = Value(); explicitConfiguration = true; break;
+                    case "--platform": platform = Value(); explicitPlatform = true; break;
                     case "--source-list": sourcePaths.AddRange(File.ReadAllLines(Value()).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath)); break;
                     case "--target": TargetInfo.Parse(Value()); break;
                     case "--run": run = true; break;
@@ -62,7 +63,12 @@ public static class Program
             {
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
                 projectPath = sourcePaths[0];
-                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null));
+                var root = ProjectModel.Load(projectPath, explicitConfiguration ? configuration : null,
+                    explicitPlatform ? platform : null, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null);
+                configuration = root.Configuration;
+                platform = root.Platform;
+                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Paths.Equals(path, root.FilePath) ? root
+                    : ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null));
                 sourcePaths = graph.Sources.ToList();
                 outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
                 if (graph.Root.Kind == ProjectKind.SourceLibrary)

@@ -148,7 +148,10 @@ dotnet msbuild examples/hello/hello.gfproj -t:Clean
 ```
 
 `Rebuild` and a no-op `Restore` target are also provided. `Configuration` defaults
-to `Debug`; use `-p:Configuration=Release` to select another configuration. This
+to `Debug` when the project/shared props do not select another value; use
+`-p:Configuration=Release` to override it. CLI `--configuration` and `--platform`
+likewise override project settings; without them, the evaluated root configuration
+is used for both the build and referenced-project source selection. This
 selects project conditions, output paths, and the default LLVM optimization level
 (Debug: 0, Release: 2). Set `GflatOptimizationLevel` to override that default.
 

@@ -7,12 +7,13 @@ namespace gflat.Projects;
 internal static class MsBuildEvaluation
 {
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static ProjectModel Load(string path, string configuration, string platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib)
+    internal static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib)
     {
         try
         {
-            var properties = new Dictionary<string, string>
-            { ["Configuration"] = configuration, ["Platform"] = platform };
+            var properties = new Dictionary<string, string>();
+            if (configuration != null) properties["Configuration"] = configuration;
+            if (platform != null) properties["Platform"] = platform;
             if (exceptionReserveBytes.HasValue) properties["GflatExceptionReserveBytes"] = exceptionReserveBytes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (optimizationLevel.HasValue) properties["GflatOptimizationLevel"] = optimizationLevel.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (noStdLib.HasValue) properties["NoStdLib"] = noStdLib.Value ? "true" : "false";
@@ -43,7 +44,7 @@ internal static class MsBuildEvaluation
                 project.Imports.Select(i => i.ImportedProject.FullPath).Distinct(ProjectModel.Paths).ToArray(),
                 file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,
                 project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null,
-                excludesStd);
+                excludesStd, project.GetPropertyValue("Configuration"), project.GetPropertyValue("Platform"));
         }
         catch (InvalidProjectFileException error)
         {

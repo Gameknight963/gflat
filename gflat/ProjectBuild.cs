@@ -19,7 +19,7 @@ internal static class ProjectBuild
         Property("GflatCompilerCommand", "dotnet \"" + assembly + "\"");
         Property("GflatCompilerPath", assembly);
         sourceGraph ??= ProjectGraph.Load(project.FilePath,
-            path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel));
+            path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null));
         Property("GflatProjectInputs", string.Join(";", sourceGraph.Projects
             .SelectMany(item => item.Imports.Prepend(item.FilePath)).Distinct(ProjectModel.Paths)
             .Select(ProjectSdk.EscapePropertyValue)));

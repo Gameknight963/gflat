@@ -16,6 +16,18 @@ public sealed class ProjectTests : IDisposable
     public void Dispose() { if (Directory.Exists(root)) Directory.Delete(root, true); }
 
     [Fact]
+    public void EditorUsesItsDocumentedDebugDefaultsEvenWhenTheProjectSelectsRelease()
+    {
+        string project = Write("app.gfproj", ProjectFileFixture.Xml(content: """
+            <PropertyGroup><Configuration>Release</Configuration><Platform>Custom</Platform></PropertyGroup>
+            """));
+        var graph = new ProjectWorkspace().Load(project).Graph!;
+        Assert.Equal("Debug", graph.Root.Configuration);
+        Assert.Equal("AnyCPU", graph.Root.Platform);
+        Assert.Equal(0, graph.Root.OptimizationLevel);
+    }
+
+    [Fact]
     public void ProjectAnalysisDoesNotInjectStdWhenItIsExcluded()
     {
         Write("app.gfproj", ProjectFileFixture.Xml());

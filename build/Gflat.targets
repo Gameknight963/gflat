@@ -1,5 +1,8 @@
 <Project DefaultTargets="Build">
   <PropertyGroup>
+    <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == '' and '$(Configuration)' == 'Release'">2</GflatOptimizationLevel>
+    <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == ''">0</GflatOptimizationLevel>
+
     <DebuggerFlavor Condition="'$(DebuggerFlavor)' == ''">GflatLocal</DebuggerFlavor>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath);$(MSBuildProjectFullPath)</MSBuildAllProjects>
     <OutputPath Condition="'$(OutputPath)' == ''">bin/$(Configuration)/</OutputPath>

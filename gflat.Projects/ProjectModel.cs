@@ -31,6 +31,8 @@ public sealed class ProjectModel
     public string DirectoryPath => Path.GetDirectoryName(FilePath)!;
     public string Name => Path.GetFileNameWithoutExtension(FilePath);
     public ProjectKind Kind { get; }
+    public string Configuration { get; }
+    public string Platform { get; }
     public string TargetPath { get; }
     public int ExceptionReserveBytes { get; }
     public int OptimizationLevel { get; }
@@ -42,8 +44,10 @@ public sealed class ProjectModel
     private readonly Func<string, bool> matchesGlob;
 
     internal ProjectModel(string path, ProjectKind kind, string targetPath, string[] sources,
-        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false)
+        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU")
     {
+        Configuration = configuration;
+        Platform = platform;
         NoStdLib = noStdLib;
         ExceptionReserveBytes = exceptionReserveBytes;
         OptimizationLevel = optimizationLevel;
@@ -51,8 +55,8 @@ public sealed class ProjectModel
         FilePath = path; Kind = kind; TargetPath = targetPath; this.sources = sources;
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
     }
-    public static ProjectModel Load(string path) => Load(path, "Debug", "AnyCPU");
-    public static ProjectModel Load(string path, string configuration, string platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null)
+    public static ProjectModel Load(string path) => Load(path, null, null);
+    public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null)
     {
         path = Path.GetFullPath(path);
         try { _ = registered.Value; }
@@ -82,7 +86,13 @@ public sealed class ProjectGraph
 
     public static ProjectGraph Load(string path, Func<string, ProjectModel>? loader = null)
     {
-        loader = loader ?? ProjectModel.Load;
+        if (loader == null)
+        {
+            ProjectModel? rootSettings = null;
+            loader = file => rootSettings == null
+                ? rootSettings = ProjectModel.Load(file)
+                : ProjectModel.Load(file, rootSettings.Configuration, rootSettings.Platform);
+        }
         var active = new HashSet<string>(ProjectModel.Paths);
         var visited = new HashSet<string>(ProjectModel.Paths);
         var projects = new List<ProjectModel>();

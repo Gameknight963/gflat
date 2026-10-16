@@ -3738,7 +3738,7 @@ namespace gflat
                 throw new TypeCheckException("Cannot take the address of a property", node.Line);
             if (node.Operator == TokenKind.Ampersand)
             {
-                if (node.Operand is IdentifierExpression identOperand)
+                if (node.Operand is IdentifierExpression identOperand && !TryLookupVariable(identOperand.Name, out _))
                 {
                     MethodDeclaration? method = ResolveFunction(identOperand.Name);
                     ExternDeclaration? ext = method == null ? ResolveExtern(identOperand.Name) : null;
@@ -4344,6 +4344,8 @@ namespace gflat
                     CheckIndirectCall(node, (FunctionPointerTypeExpression)ResolveAlias(GetType(identVar)));
                     return;
                 }
+                identVar.Accept(this);
+                throw new TypeCheckException($"Expression of type '{DisplayTypeName(GetType(identVar))}' is not callable", identVar.Span);
             }
 
             // Check if callee is an expression evaluating to a function pointer (e.g. member access, index, call)

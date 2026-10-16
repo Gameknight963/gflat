@@ -41,8 +41,8 @@ jobs:
         env:
           MSBuildSDKsPath: ${{ github.workspace }}/build/Sdks
         run: |
-          dotnet run --project gflat --no-build -- build examples/hello/hello.gfproj --run
-          dotnet run --project gflat --no-build -- build examples/interpolation/interpolation.gfproj --run
+          dotnet gflat/bin/Debug/net10.0/gflat.dll build examples/hello/hello.gfproj --run
+          dotnet gflat/bin/Debug/net10.0/gflat.dll build examples/interpolation/interpolation.gfproj --run
       - uses: actions/upload-artifact@v4
         if: always()
         with:

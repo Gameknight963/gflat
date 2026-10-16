@@ -1970,6 +1970,7 @@ namespace gflat
             ResolveDeclarationSignatures(node);
             PrepareOverloads(node);
             ValidateAllocatorPair();
+            ValidateUnhandledExceptionHook();
             RegisterStaticStorage(node);
 
             // Pass 2: Hierarchy resolution

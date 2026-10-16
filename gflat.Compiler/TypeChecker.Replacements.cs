@@ -178,5 +178,29 @@ public partial class TypeChecker
                 : ResolveAlias(method.Parameters[0].Type) is PointerTypeExpression { IsReadOnly: false, Inner: NamedTypeExpression { Name: "void" } } &&
                     ResolveAlias(method.ReturnType) is NamedTypeExpression { Name: "void" }));
     }
-    public bool HasUnhandledExceptionHook => _globalScope.Children.TryGetValue("Exceptions", out var scope) && scope.Functions.ContainsKey("Unhandled");
+    public MethodDeclaration? GetUnhandledExceptionHook()
+    {
+        if (!_globalScope.Children.TryGetValue("Exceptions", out var scope) ||
+            !scope.Functions.TryGetValue("Unhandled", out var first)) return null;
+        var family = overloadFamilies.TryGetValue(first, out var overloads) ? overloads : [first];
+        return family.FirstOrDefault(method => !method.IsGeneric && method.Body != null &&
+            method.Accessibility == TokenKind.Public && !method.IsStatic && !method.IsReadOnly && !method.IsConst &&
+            !method.IsVirtual && !method.IsOverride && !method.IsAbstract &&
+            ResolveAlias(method.ReturnType) is NamedTypeExpression { Name: "void", IsReadOnlyValue: false } &&
+            method.Parameters is [{ IsConst: false, IsExtensionReceiver: false } parameter] &&
+            ResolveAlias(parameter.Type) is PointerTypeExpression
+            {
+                IsNullable: true, IsReadOnly: false, IsReadOnlyValue: false,
+                Inner: NamedTypeExpression { Name: "Exception", IsReadOnlyValue: false }
+            });
+    }
+
+    private void ValidateUnhandledExceptionHook()
+    {
+        if (!_globalScope.Children.TryGetValue("Exceptions", out var scope)) return;
+        AstNode? declaration = (AstNode?)scope.Functions.GetValueOrDefault("Unhandled") ??
+            (AstNode?)scope.GenericFunctions.GetValueOrDefault("Unhandled") ?? scope.Externs.GetValueOrDefault("Unhandled");
+        if (declaration != null && GetUnhandledExceptionHook() == null)
+            throw new TypeCheckException("Exceptions::Unhandled must provide the public non-generic signature 'void Unhandled(Exception*? error)'", declaration.Span);
+    }
 }

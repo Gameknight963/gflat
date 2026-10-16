@@ -124,8 +124,9 @@ public partial class LlvmEmitter
 
     private void EmitTermination(string handle)
     {
-        string hook = _typeChecker.HasUnhandledExceptionHook
-            ? "bitcast (void (%Exception*)* @gflat$Exceptions$Unhandled to void (i8*)*)" : "null";
+        var declaration = _typeChecker.GetUnhandledExceptionHook();
+        string hook = declaration != null
+            ? "bitcast (void (%Exception*)* @gflat$Exceptions$Unhandled" + _typeChecker.GetOverloadSuffix(declaration) + " to void (i8*)*)" : "null";
         Raw($"    call void @__gflat_eh_terminate(i8* {handle}, void (i8*)* {hook})");
         Raw("    unreachable");
     }

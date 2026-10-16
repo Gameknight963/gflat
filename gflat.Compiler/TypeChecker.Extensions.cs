@@ -179,22 +179,22 @@ public partial class TypeChecker
         var scope = extensions.First(e => ReferenceEquals(e.Definition, method)).Scope;
         var names = method.GenericParameters.Select(p => p.Name).ToHashSet();
         var expandingAliases = new HashSet<(NamespaceScope, string)>();
-        return Qualify(type);
-        TypeExpression Qualify(TypeExpression t)
+        return Qualify(type, allowMethodParameters: true);
+        TypeExpression Qualify(TypeExpression t, bool allowMethodParameters)
         {
             TypeExpression result = t switch {
-                ReferenceTypeExpression r => new ReferenceTypeExpression(Qualify(r.Inner), r.Line),
-                PointerTypeExpression p => new PointerTypeExpression(Qualify(p.Inner), p.IsNullable, p.Line, p.IsReadOnly),
-                ManagedTypeExpression m => new ManagedTypeExpression(Qualify(m.Inner), m.IsNullable, m.Line, m.IsReadOnly, m.Collector == null ? null : Qualify(m.Collector)) { UsesDefaultCollector = m.UsesDefaultCollector },
-                ArrayTypeExpression a => new ArrayTypeExpression(Qualify(a.ElementType), a.Size, a.Line),
-                FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(Qualify(f.ReturnType),
-                    f.ParameterTypes.Select(Qualify).ToList(), f.IsManaged, f.IsNullable, f.Line),
-                NamedTypeExpression n => QualifyNamed(n), _ => t };
+                ReferenceTypeExpression r => new ReferenceTypeExpression(Qualify(r.Inner, allowMethodParameters), r.Line),
+                PointerTypeExpression p => new PointerTypeExpression(Qualify(p.Inner, allowMethodParameters), p.IsNullable, p.Line, p.IsReadOnly),
+                ManagedTypeExpression m => new ManagedTypeExpression(Qualify(m.Inner, allowMethodParameters), m.IsNullable, m.Line, m.IsReadOnly, m.Collector == null ? null : Qualify(m.Collector, allowMethodParameters)) { UsesDefaultCollector = m.UsesDefaultCollector },
+                ArrayTypeExpression a => new ArrayTypeExpression(Qualify(a.ElementType, allowMethodParameters), a.Size, a.Line),
+                FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(Qualify(f.ReturnType, allowMethodParameters),
+                    f.ParameterTypes.Select(p => Qualify(p, allowMethodParameters)).ToList(), f.IsManaged, f.IsNullable, f.Line),
+                NamedTypeExpression n => QualifyNamed(n, allowMethodParameters), _ => t };
             return result.WithReadOnlyValue(t.IsReadOnlyValue || result.IsReadOnlyValue);
         }
-        TypeExpression QualifyNamed(NamedTypeExpression n)
+        TypeExpression QualifyNamed(NamedTypeExpression n, bool allowMethodParameters)
         {
-            if (n.IsResolvedNominal || names.Contains(n.Name)) return n;
+            if (n.IsResolvedNominal || allowMethodParameters && n.Namespace == null && names.Contains(n.Name)) return n;
             string identity = n.Name;
             if (n.Namespace != null)
             {
@@ -206,12 +206,13 @@ public partial class TypeChecker
             }
             else
             {
+                bool found = false;
                 for (var current = scope; current != null; current = current.Parent)
                 {
                     if (current.Aliases.TryGetValue(n.Name, out var target)) return ExpandAlias(current, n.Name, target);
-                    if (current.TypeNames.TryGetValue(n.Name, out var qualified)) { identity = qualified; break; }
+                    if (current.TypeNames.TryGetValue(n.Name, out var qualified)) { identity = qualified; found = true; break; }
                 }
-                if (identity == n.Name && method.Span.SourceId is { } id && _compilationUnit?.FileUsings.TryGetValue(id, out var imports) == true)
+                if (!found && n.Span.SourceId is { } id && _compilationUnit?.FileUsings.TryGetValue(id, out var imports) == true)
                     foreach (string import in imports)
                         if (ExtensionNamespace(import) is { } imported)
                         {
@@ -223,14 +224,14 @@ public partial class TypeChecker
                             }
                         }
             }
-            return MarkResolvedNominal(new NamedTypeExpression(identity, null, n.Line, n.TypeArguments.Select(Qualify).ToList()));
+            return MarkResolvedNominal(new NamedTypeExpression(identity, null, n.Line, n.TypeArguments.Select(argument => Qualify(argument, allowMethodParameters)).ToList()));
         }
         TypeExpression ExpandAlias(NamespaceScope aliasScope, string name, TypeExpression target)
         {
             if (!expandingAliases.Add((aliasScope, name))) return new NamedTypeExpression(name, null, target.Line);
             var previous = scope;
             scope = aliasScope;
-            try { return Qualify(target); }
+            try { return Qualify(target, allowMethodParameters: false); }
             finally { scope = previous; expandingAliases.Remove((aliasScope, name)); }
         }
     }

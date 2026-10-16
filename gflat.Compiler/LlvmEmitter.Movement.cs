@@ -30,11 +30,21 @@ public partial class LlvmEmitter
     {
         if (_constructorLiveFlags.TryGetValue(node, out string? flag))
         {
+            if (HasManagedReferences(type))
+            {
+                string live = NewTemp(), empty = NewLabel("constructor_empty_roots"), ready = NewLabel("constructor_owned_roots");
+                Emit($"    {live} = load i1, i1* {flag}");
+                Emit($"    br i1 {live}, label %{ready}, label %{empty}");
+                Emit(empty + ":");
+                EmitManagedReferences(type, address, false);
+                Emit($"    br label %{ready}"); Emit(ready + ":");
+            }
             new ConditionalTemporaryCleanup(type, address, flag).Execute(this);
             Emit($"    store i1 true, i1* {flag}");
         }
         else if (_ownerLiveFlags.TryGetValue(address, out string? live))
         {
+            RemoveUninitializedManagedOwnerRoots(type, address);
             new ConditionalTemporaryCleanup(type, address, live).Execute(this);
             Emit($"    store i1 true, i1* {live}");
             CompleteManagedOwnerInitialization(address);
@@ -100,6 +110,7 @@ public partial class LlvmEmitter
         ProtectManagedValue(type, value);
         EmitManagedReferences(type, source, false);
         SetOwnerLive(source, false);
+        if (node.Operand is IdentifierExpression) RegisterMovedLocalStorage(type, source);
         if (destination != null)
         {
             EmitManagedStore(type, value, destination, initialize: true);

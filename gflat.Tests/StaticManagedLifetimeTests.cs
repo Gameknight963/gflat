@@ -44,6 +44,8 @@ public sealed class StaticManagedLifetimeTests
     [InlineData("Owner value;")]
     [InlineData("Owner value; value = Fail();")]
     [InlineData("Owner value; value = new Owner();")]
+    [InlineData("Owner value = new Owner(); value = new Owner();")]
+    [InlineData("Owner value = new Owner(); Owner other = move value; value = new Owner();")]
     public void UnconstructedOrFailedOwningLocalsDoNotLeaveStackSlotsRegistered(string declaration)
     {
         var result = CompilerTestHelper.Run(ProbeSource + OwnerSource + """
@@ -63,6 +65,59 @@ public sealed class StaticManagedLifetimeTests
             void Work() { Owner value = Create(); }
             int main() { Work(); return (int)Probe::Count(); }
             """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
+
+    [Fact]
+    public void ConstructorFieldAndGlobalReassignmentBalanceManagedRoots()
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + OwnerSource + """
+            struct Box {
+                private Owner item;
+                public Box() { item = new Owner(); item = new Owner(); }
+            }
+            Owner globalValue = new Owner();
+            int main() {
+                { Box value = new Box(); }
+                globalValue = new Owner();
+                return (int)Probe::Count() - 1;
+            }
+            """);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
+
+    [Theory]
+    [InlineData("managed<int, Probe>? value = null; managed<int, Probe>? other = move value;")]
+    [InlineData("managed<int, Probe>? value = null; managed<int, Probe>? other = move value; value = null;")]
+    [InlineData("Take(null);")]
+    [InlineData("Consume(new Owner());")]
+    public void ConsumedManagedLocalsAndParametersLeaveBalancedEmptyStorage(string body)
+    {
+        var result = CompilerTestHelper.Run(ProbeSource + OwnerSource + """
+            void Take(managed<int, Probe>? input) { managed<int, Probe>? other = move input; }
+            void Consume(Owner input) { Owner other = move input; }
+            void Work() { BODY }
+            int main() { Work(); return (int)Probe::Count(); }
+            """.Replace("BODY", body));
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
+
+    [Fact]
+    public void VectorManagedElementsBalanceParameterMovesAndRawStorageRelocation()
+    {
+        var sources = new[] { "core/Span.gf", "core/Vector.gf" }
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
+            .Append(new SourceFile("main.gf", "using std;\n" + ProbeSource + """
+                void Work() {
+                    Vector<managed<int, Probe>?> values = new Vector<managed<int, Probe>?>();
+                    values.Add(null); values.Add(null); values.Reserve(16);
+                }
+                int main() { Work(); return (int)Probe::Count(); }
+                """));
+        var result = CompilerTestHelper.Run(sources);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("", result.StandardOutput);
     }

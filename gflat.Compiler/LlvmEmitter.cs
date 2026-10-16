@@ -3872,7 +3872,7 @@ public partial class LlvmEmitter : IVisitor
         }
 
         if (_typeChecker.HasDestructor(targetType)) DestroyAssignmentTarget(node, targetType, ptr);
-        EmitManagedStore(targetType, finalVal, ptr);
+        EmitManagedStore(targetType, finalVal, ptr, initialize: _typeChecker.HasDestructor(targetType));
         Push(finalVal);
     }
 

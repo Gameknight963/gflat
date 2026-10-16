@@ -161,23 +161,43 @@ public partial class LlvmEmitter
         {
             // Until a value is constructed, no destructor owns these registrations.
             // Keep cleanup active through failed initialization and unused locals.
-            string pending = NewTemp();
-            EmitAlloca("i1", pending);
-            Emit($"    store i1 true, i1* {pending}");
-            _collectorFunctions.Peek().PendingOwnerRoots[address] = pending;
-            _deferScopes[scope].Add(new ManagedReferenceCleanup(type, address, pending));
+            _deferScopes[scope].Add(TrackPendingOwnerRoots(type, address, true));
         }
+    }
+    private ManagedReferenceCleanup TrackPendingOwnerRoots(TypeExpression type, string address, bool pending)
+    {
+        string flag = NewTemp();
+        EmitAlloca("i1", flag);
+        Emit($"    store i1 {(pending ? "true" : "false")}, i1* {flag}");
+        _collectorFunctions.Peek().PendingOwnerRoots[address] = flag;
+        return new ManagedReferenceCleanup(type, address, flag);
     }
     private void CompleteManagedOwnerInitialization(string address)
     {
         if (_collectorFunctions.Count != 0 && _collectorFunctions.Peek().PendingOwnerRoots.TryGetValue(address, out string? pending))
             Emit($"    store i1 false, i1* {pending}");
     }
+    private void RemoveUninitializedManagedOwnerRoots(TypeExpression type, string address)
+    {
+        if (_collectorFunctions.Count != 0 && _collectorFunctions.Peek().PendingOwnerRoots.TryGetValue(address, out string? pending))
+            new ManagedReferenceCleanup(type, address, pending).Execute(this);
+    }
+    private void RegisterMovedLocalStorage(TypeExpression type, string address)
+    {
+        if (!_typeChecker.UsesCollector || !HasManagedReferences(type)) return;
+        // The value is gone, but the local slot still exists. Its managed fields
+        // were zeroed on removal; track that empty storage until reinitialization
+        // or scope exit. Raw relocation sources do not take this path.
+        EmitManagedReferences(type, address, true);
+        if (_collectorFunctions.Peek().PendingOwnerRoots.TryGetValue(address, out string? pending))
+            Emit($"    store i1 true, i1* {pending}");
+    }
     private void RegisterManagedParameter(Parameter p, string address)
     {
         if (!_typeChecker.UsesCollector || !HasManagedReferences(p.Type)) return;
         EmitManagedReferences(p.Type, address, true);
         if (!_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(new ManagedReferenceCleanup(p.Type, address));
+        else _parameterOwners.Add(TrackPendingOwnerRoots(p.Type, address, false));
     }
     private string CollectorMethodName(TypeChecker.CollectorBinding collector, MethodDeclaration method)
     {

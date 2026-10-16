@@ -323,6 +323,8 @@ namespace gflat
             {
                 if (isReadonly || isConst || isAbstract || isInline || implementation != FunctionImplementationKind.Ordinary)
                     throw new TypeCheckException("extern declarations accept only accessibility modifiers", Current.Span);
+                if (isStatic) RejectDeclarationModifier(modifierStart, modifierEnd, TokenKind.Static,
+                    "extern declarations accept only accessibility modifiers");
                 return ParseExternDeclaration(attributes, line, accessibility);
             }
 
@@ -345,7 +347,8 @@ namespace gflat
 
             if (Check(TokenKind.OpenParen))
             {
-                if (isAbstract) RejectAbstractNamespaceFunction(modifierStart, modifierEnd);
+                if (isAbstract) RejectDeclarationModifier(modifierStart, modifierEnd, TokenKind.Abstract,
+                    "Namespace functions cannot be abstract");
                 return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, false, false, false, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect));
             }
 
@@ -419,13 +422,12 @@ namespace gflat
             }
         }
 
-        private void RejectAbstractNamespaceFunction(int start, int end)
+        private void RejectDeclarationModifier(int start, int end, TokenKind kind, string message)
         {
             for (int i = start; i < end; i++)
             {
                 Token modifier = _tokens[i];
-                if (modifier.Kind != TokenKind.Abstract) continue;
-                const string message = "Namespace functions cannot be abstract";
+                if (modifier.Kind != kind) continue;
                 if (!_recoverErrors) throw new TypeCheckException(message, modifier.Span);
                 _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, modifier.Span, message);
                 return;

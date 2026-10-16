@@ -790,7 +790,7 @@ retain their bodyless forms. Namespace extern declarations support accessibility
 modifiers: `private extern int abs(int value);` and `extern private int abs(int value);`
 are equivalent. A private extern is accessible throughout its source file, including
 from other namespaces in that file, but cannot be called or addressed from another
-file. Its native linker symbol is unchanged. Namespace externs cannot be protected.
+file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers; `static` and `protected` are not supported.
 
 ## Control flow, exceptions, and constants
 

@@ -98,7 +98,8 @@ namespace gflat
         private readonly HashSet<VariableDeclaration> precheckedForeachInitializers = new();
         private readonly HashSet<CallExpression> precheckedForeachCalls = new();
 
-        public bool CanFunctionThrow(AstNode func) => func is MethodDeclaration { IsNoThrow: false, Name: not "main" } or ConstructorDeclaration { IsNoThrow: false };
+        public bool CanFunctionThrow(AstNode func) => func is MethodDeclaration method && !method.IsNoThrow && !IsEntryPoint(method) ||
+            func is ConstructorDeclaration { IsNoThrow: false };
         public bool CanCallThrow(AstNode call) => call is CallExpression or NewExpression || _throwingCalls.Contains(call);
         public IEnumerable<ClassInfo> GetAllClasses() => _classes.Values;
 
@@ -2875,6 +2876,7 @@ namespace gflat
             if (node.Body == null)
                 throw new TypeCheckException($"Function '{node.Name}' must declare a body; use extern for a function implemented elsewhere", node.Span);
             if (node.IsGeneric) return;
+            ValidateEntryPoint(node);
             ValidateParameterDefaults(node, node.Parameters);
             if (node.Body != null) { _exceptionMethods.Add(node); _exceptionSummaries = null; }
 

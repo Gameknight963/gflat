@@ -7,6 +7,7 @@ namespace gflat;
 public partial class LlvmEmitter : IVisitor
 {
     private static string InlineHint(AstNode? node) => node?.IsInline == true ? " inlinehint" : "";
+    private bool IsEntryPoint(MethodDeclaration method) => _typeChecker.IsEntryPoint(method);
     private string RuntimeMemorySymbol(string name) => "gflat$Memory$" + name +
         (_typeChecker.GetMemoryFunction(name) is { } method ? _typeChecker.GetOverloadSuffix(method) : "");
     private readonly TypeChecker _typeChecker;
@@ -2083,7 +2084,7 @@ public partial class LlvmEmitter : IVisitor
         _ownerLiveFlags.Clear();
         _tempCounter = 0;
 
-        bool isMain = node.Name == "main" && !_typeChecker.TryGetMethodOwner(node, out _, out _);
+        bool isMain = IsEntryPoint(node);
         string baseReturnType = EmitType(node.ReturnType);
         bool isVoid = baseReturnType == "void";
         string returnType = baseReturnType;
@@ -2872,7 +2873,7 @@ public partial class LlvmEmitter : IVisitor
                 Push("@" + GetMethodMangledName(owner, method, _typeChecker.GetFunctionNamespace(method), isClass));
                 return true;
             }
-            if (method.Name == "main")
+            if (IsEntryPoint(method))
             {
                 Push("@main");
                 return true;
@@ -3618,7 +3619,7 @@ public partial class LlvmEmitter : IVisitor
                 {
                     funcName = GetMethodMangledName(owner, method, _typeChecker.GetFunctionNamespace(method), ownerIsClass);
                 }
-                else if (method.Name == "main")
+                else if (IsEntryPoint(method))
                 {
                     funcName = "main";
                 }
@@ -3630,7 +3631,7 @@ public partial class LlvmEmitter : IVisitor
             }
             else if (node.Callee is IdentifierExpression ident)
             {
-                if (ident.Name == "main")
+                if (ident.Name == "main" && _currentNamespacePath.Length == 0)
                     funcName = "main";
                 else if (IsExtern(ident.Name))
                     funcName = ident.Name;

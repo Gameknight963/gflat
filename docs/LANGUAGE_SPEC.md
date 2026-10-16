@@ -23,6 +23,10 @@ Taking an address does not initialize storage. Locals must be initialized before
 
 The native target is **x86_64-pc-windows-msvc** on Windows and **x86_64-unknown-linux-gnu** on Linux. Linux execution is covered by the Ubuntu x64 CI jobs at O0 and O2. The driver accepts only its host target; cross-compilation and other architectures are not supported. The target triple, pointer width, and LLVM data layout are recorded in `TargetInfo`. Fixed-width types are language rules.
 
+Only a non-generic global `main` is the native entry point. It must return `int`
+and cannot be overloaded. Namespace and type members named `main` are ordinary
+functions, with ordinary name mangling and exception propagation.
+
 ## Lexical and grammar rules
 
 Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. Double-underscore names are used by compiler hooks. They must not be treated as a security boundary. Comments are `//` to end of line or non-nesting `/* ... */`; unterminated comments are errors.

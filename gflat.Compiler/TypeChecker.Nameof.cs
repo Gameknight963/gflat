@@ -84,7 +84,7 @@ public partial class TypeChecker
             if (NameofMethods(str.AllMethods, str.Name, member, node) is { } result) return result;
         }
         if (ResolveInterface(owner) is { } iface && NameofMethods(iface.Methods, iface.Name, member, node) is { } interfaceMember) return interfaceMember;
-        throw new TypeCheckException($"Type '{TypeName(type)}' has no member '{member}'", node.Span);
+        throw new TypeCheckException($"Type '{DisplayTypeName(type)}' has no member '{member}'", node.Span);
     }
 
     private NameBinding? NameofNamespaceMember(NamespaceScope scope, string name, AstNode node)

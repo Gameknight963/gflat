@@ -355,7 +355,7 @@ public partial class TypeChecker
                 var argument = property.Arguments[i];
                 var parameterType = ResolveAlias(setter.Parameters[i].Type);
                 if (!IsAssignable(parameterType, GetType(argument), argument))
-                    throw new TypeCheckException($"Cannot pass '{TypeName(GetType(argument))}' as indexer argument '{TypeName(parameterType)}'", argument.Line);
+                    throw new TypeCheckException($"Cannot pass '{DisplayTypeName(GetType(argument))}' as indexer argument '{DisplayTypeName(parameterType)}'", argument.Line);
                 arguments.Add((argument, Temporary(parameterType)));
             }
             List<AstNode> indexArguments = arguments.Select(a => (AstNode)a.Temporary).ToList();
@@ -371,7 +371,7 @@ public partial class TypeChecker
             }
             value.Accept(this);
             if (!IsAssignable(type, GetType(value), value))
-                throw new TypeCheckException($"Cannot assign '{TypeName(GetType(value))}' to property '{property.Name}' of type '{TypeName(type)}'", node.Line);
+                throw new TypeCheckException($"Cannot assign '{DisplayTypeName(GetType(value))}' to property '{property.Name}' of type '{DisplayTypeName(type)}'", node.Line);
             var assigned = Temporary(type);
             if (RequiresCopy(type)) _transferredPropertyArguments.Add(assigned);
             var call = PropertyCall(property, setter, receiver, indexArguments.Append(assigned).ToList(), node);

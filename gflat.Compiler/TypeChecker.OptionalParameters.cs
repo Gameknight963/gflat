@@ -122,11 +122,11 @@ public partial class TypeChecker
             var type = ResolveAlias(parameter.Type);
             if (RequiresCopy(type)) throw new TypeCheckException("Optional parameters cannot contain values with nontrivial copying or destruction", parameter.Span);
             if (expression is DefaultExpression && !CanDefaultInitialize(type))
-                throw new TypeCheckException($"Type '{TypeName(type)}' cannot be default initialized", expression.Span);
+                throw new TypeCheckException($"Type '{DisplayTypeName(type)}' cannot be default initialized", expression.Span);
             if (expression is DefaultExpression { TargetType: null }) RecordType(expression, type);
             else expression.Accept(this);
             if (!IsAssignable(type, GetType(expression), expression))
-                throw new TypeCheckException($"Default for parameter '{parameter.Name}' cannot convert to '{TypeName(type)}'", expression.Span);
+                throw new TypeCheckException($"Default for parameter '{parameter.Name}' cannot convert to '{DisplayTypeName(type)}'", expression.Span);
             if (expression is LiteralExpression { Token.Kind: TokenKind.Null }) value = null;
             else if (!new ConstEvaluator(this).TryEvaluate(expression, type, out value, out string? error))
                 throw new TypeCheckException($"Default for parameter '{parameter.Name}' must be a compile-time constant: {error}", expression.Span);

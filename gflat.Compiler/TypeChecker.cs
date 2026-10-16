@@ -3151,7 +3151,7 @@ namespace gflat
             }
             if (targetType is not PointerTypeExpression ptr)
             {
-                throw new TypeCheckException($"Cannot delete non-pointer type '{TypeName(targetType)}'", node.Line);
+                throw new TypeCheckException($"Cannot delete non-pointer type '{DisplayTypeName(targetType)}'", node.Line);
             }
             if (ptr.IsReadOnly)
             {
@@ -3444,7 +3444,7 @@ namespace gflat
 
                 if (!IsAssignable(varType, initType, node.Initializer))
                 {
-                    _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Initializer.Span, TypeName(initType), TypeName(varType));
+                    _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Initializer.Span, DisplayTypeName(initType), DisplayTypeName(varType));
                 }
             }
             else if (node.IsConst)
@@ -3650,7 +3650,7 @@ namespace gflat
 
                     if (!TypesMatch(resolvedLeft, resolvedRight))
                     {
-                        ReportError($"Cannot subtract pointers of different types '{TypeName(left)}' and '{TypeName(right)}'", node.Line);
+                        ReportError($"Cannot subtract pointers of different types '{DisplayTypeName(left)}' and '{DisplayTypeName(right)}'", node.Line);
                         RecordType(node, Error);
                         return;
                     }
@@ -4313,7 +4313,7 @@ namespace gflat
 
             if (!IsAssignable(targetType, valueType, node.Value))
             {
-                _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Value.Span, TypeName(valueType), TypeName(targetType));
+                _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Value.Span, DisplayTypeName(valueType), DisplayTypeName(targetType));
                 RecordType(node, Error);
                 return;
             }
@@ -5405,7 +5405,7 @@ namespace gflat
             TypeExpression indexType = GetType(node.Index);
 
             if (!IsInteger(indexType))
-                throw new TypeCheckException($"Array index must be an integer, got '{TypeName(indexType)}'", node.Line);
+                throw new TypeCheckException($"Array index must be an integer, got '{DisplayTypeName(indexType)}'", node.Line);
 
             if (targetType is ArrayTypeExpression arr)
             {
@@ -5978,7 +5978,7 @@ namespace gflat
                             TypeExpression other = ResolveAlias(returns[i]);
                             if (!TypesMatch(returnType, other) && !IsAssignable(returnType, other))
                             {
-                                throw new TypeCheckException($"Inconsistent return types in lambda: '{TypeName(returnType)}' and '{TypeName(other)}'", node.Line);
+                                throw new TypeCheckException($"Inconsistent return types in lambda: '{DisplayTypeName(returnType)}' and '{DisplayTypeName(other)}'", node.Line);
                             }
                         }
                     }

@@ -128,6 +128,10 @@ public static class NativeToolchain
             if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler));
             args.AddRange(NativeRuntime.HostArguments());
         }
+        // LLVM may lower floating remainder to fmod/fmodf. A bare program uses
+        // the C driver, which doesn't add libm as the C++ driver does on Linux.
+        if (OperatingSystem.IsLinux() && System.Text.RegularExpressions.Regex.IsMatch(ir, @"(?m)^\s*%[^\r\n]*=\s*frem\b"))
+            args.Add("-lm");
         return Run(compiler, args, 60000);
     }
 }

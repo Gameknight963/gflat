@@ -22,6 +22,26 @@ public sealed class NoStdRuntimeTests
         finally { Directory.Delete(directory, true); }
     }
 
+    [Theory]
+    [InlineData("float", "float")]
+    [InlineData("double", "double")]
+    public void FloatingRemainderLinksWithoutAnImplicitCppExceptionRuntime(string type, string llvmType)
+    {
+        string ir = Compiler.Emit($$"""
+            {{type}} Rem({{type}} left, {{type}} right) nothrow => left % right;
+            int main(int argc, char** argv) {
+                {{type}} value = ({{type}})argc + ({{type}})4.5;
+                if (value % ({{type}})2.0 != ({{type}})1.5) return 1;
+                if (-value % ({{type}})2.0 != ({{type}})-1.5) return 2;
+                return 42;
+            }
+            """, options: Bare);
+        Assert.Contains("frem " + llvmType, ir);
+        Assert.DoesNotContain("__gflat_eh_", ir);
+        Assert.DoesNotContain("personality", ir);
+        Assert.Equal(42, Run(ir).ExitCode);
+    }
+
     [Fact]
     public void ScalarProgramHasNoImplicitStdOrExceptionRuntimeReferences()
     {

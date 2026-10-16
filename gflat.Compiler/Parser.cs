@@ -362,6 +362,28 @@ namespace gflat
             }
         }
 
+        private void RejectUnsupportedCallableModifier(int start, int end, bool destructor, bool copy = false)
+        {
+            // Called only after a declaration-specific flag check fails, so
+            // valid declarations do not scan or allocate modifier collections.
+            for (int i = start; i < end; i++)
+            {
+                Token modifier = _tokens[i];
+                bool invalid = modifier.Kind switch {
+                    TokenKind.Static => destructor || copy,
+                    TokenKind.Const => destructor,
+                    TokenKind.Readonly or TokenKind.Override or TokenKind.Abstract => true,
+                    TokenKind.Virtual => !destructor,
+                    _ => false
+                };
+                if (!invalid) continue;
+                string message = destructor ? "Destructors cannot be static, const, readonly, override, or abstract" :
+                    copy ? "Copy constructors cannot be static, readonly, virtual, override, or abstract" :
+                    "Constructors cannot be readonly, virtual, override, or abstract";
+                throw new TypeCheckException(message, modifier.Span);
+            }
+        }
+
         private static AstNode ApplyImplementationKind(AstNode node, FunctionImplementationKind kind)
         {
             if (kind == FunctionImplementationKind.Ordinary) return node;
@@ -608,6 +630,7 @@ namespace gflat
                 return ParseExternDeclaration(attributes, line);
             TokenKind accessibility = TokenKind.Private;
             bool isStatic = _inStaticInterface;
+            int modifierStart = _pos;
             bool isConst = false;
             bool isReadonly = false;
             bool isVirtual = false;
@@ -639,6 +662,8 @@ namespace gflat
                 else break;
             }
 
+            int modifierEnd = _pos;
+
             if (Check(TokenKind.Extern))
             {
                 if (isReadonly || isConst || isStatic || isVirtual || isOverride || isAbstract || isInline || implementation != FunctionImplementationKind.Ordinary)
@@ -655,6 +680,8 @@ namespace gflat
 
             if (Check(TokenKind.Tilde))
             {
+                if (isStatic || isConst || isReadonly || isOverride || isAbstract)
+                    RejectUnsupportedCallableModifier(modifierStart, modifierEnd, destructor: true);
                 Consume();
                 string dtorName = Expect(TokenKind.Identifier).Text;
                 Expect(TokenKind.OpenParen);
@@ -665,6 +692,8 @@ namespace gflat
 
             if (Check(TokenKind.Identifier) && Current.Text == "copy" && Peek().Kind == TokenKind.Identifier)
             {
+                if (isStatic || isReadonly || isVirtual || isOverride || isAbstract)
+                    RejectUnsupportedCallableModifier(modifierStart, modifierEnd, destructor: false, copy: true);
                 Consume();
                 string owner = Consume().Text;
                 var constructor = ParseConstructorDeclaration(owner, accessibility, line, attributes, isConst);
@@ -689,6 +718,8 @@ namespace gflat
                     throw new TypeCheckException("ref currently applies to properties and indexers", type.Span);
                 if (type is not NamedTypeExpression { Namespace: null, TypeArguments.Count: 0, IsReadOnlyValue: false } constructorName)
                     throw new TypeCheckException("A constructor declaration requires a plain, unqualified name without type arguments", type.Span);
+                if (!isStatic && (isReadonly || isVirtual || isOverride || isAbstract))
+                    RejectUnsupportedCallableModifier(modifierStart, modifierEnd, destructor: false);
                 name = constructorName.Name;
                 var ctor = ParseConstructorDeclaration(name, accessibility, line, attributes, isConst);
                 if (!isStatic) return Finish(ctor);

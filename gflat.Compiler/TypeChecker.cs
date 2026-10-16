@@ -1186,6 +1186,7 @@ namespace gflat
                 int? size = arr.Size;
                 if (!size.HasValue && arr.SizeExpression != null)
                 {
+                    if (!_types.ContainsKey(arr.SizeExpression)) arr.SizeExpression.Accept(this);
                     if (_constEvaluator.TryEvaluate(arr.SizeExpression, out ConstValue? cv, out string? err))
                     {
                         if (ConstValue.TryIntegerValue(cv!, out var arrayBound))

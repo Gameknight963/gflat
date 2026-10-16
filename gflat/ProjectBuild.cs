@@ -6,7 +6,7 @@ internal static class ProjectBuild
 {
     internal static int Run(ProjectModel project, string target, string configuration, string platform,
         bool emitIr = false, string? output = null, string? clang = null, int? exceptionReserveBytes = null, int? optimizationLevel = null,
-        ProjectGraph? sourceGraph = null)
+        ProjectGraph? sourceGraph = null, bool noStdLib = false)
     {
         // Explicit source-list invocations in the targets avoid recursively building the project.
         string assembly = typeof(Program).Assembly.Location;
@@ -14,7 +14,8 @@ internal static class ProjectBuild
         void Property(string name, string value) => arguments.Add("-p:" + name + "=" + Escape(value));
         Property("Configuration", configuration);
         Property("Platform", platform);
-        if (project.SdkRoot != null) Property("GflatDefaultSdkRoot", project.SdkRoot);
+        if (noStdLib) Property("NoStdLib", "true");
+        if (project.SdkRoot != null) Property("GflatSdkRoot", project.SdkRoot);
         Property("GflatCompilerCommand", "dotnet \"" + assembly + "\"");
         Property("GflatCompilerPath", assembly);
         sourceGraph ??= ProjectGraph.Load(project.FilePath,

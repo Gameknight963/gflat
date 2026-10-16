@@ -3,7 +3,8 @@
     <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..'))</GflatSdkRoot>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">AnyCPU</Platform>
-    <GflatProjectKind Condition="'$(GflatProjectKind)' == ''">Executable</GflatProjectKind>
+    <NoStdLib Condition="'$(NoStdLib)' == ''">false</NoStdLib>
+    <OutputType Condition="'$(OutputType)' == ''">Exe</OutputType>
     <GflatExceptionReserveBytes Condition="'$(GflatExceptionReserveBytes)' == ''">65536</GflatExceptionReserveBytes>
     <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == '' and '$(Configuration)' == 'Release'">2</GflatOptimizationLevel>
     <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == ''">0</GflatOptimizationLevel>

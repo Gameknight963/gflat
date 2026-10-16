@@ -1,4 +1,4 @@
-<Project>
+<Project DefaultTargets="Build">
   <PropertyGroup>
     <DebuggerFlavor Condition="'$(DebuggerFlavor)' == ''">GflatLocal</DebuggerFlavor>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath);$(MSBuildProjectFullPath)</MSBuildAllProjects>
@@ -7,21 +7,26 @@
     <TargetName Condition="'$(TargetName)' == ''">$(MSBuildProjectName)</TargetName>
     <TargetExt Condition="'$(TargetExt)' == ''">.exe</TargetExt>
     <TargetPath Condition="'$(TargetPath)' == ''">$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(OutputPath)', '$(TargetName)$(TargetExt)'))</TargetPath>
-    <GflatCompilerCommand Condition="'$(GflatCompilerCommand)' == '' and '$(GflatBundledCompiler)' != ''">&quot;$(GflatBundledCompiler)&quot;</GflatCompilerCommand>
-    <GflatCompilerCommand Condition="'$(GflatCompilerCommand)' == '' and Exists('$(MSBuildThisFileDirectory)../gflat/bin/Debug/net10.0/gflat.dll')">dotnet &quot;$(MSBuildThisFileDirectory)../gflat/bin/Debug/net10.0/gflat.dll&quot;</GflatCompilerCommand>
-    <GflatCompilerCommand Condition="'$(GflatCompilerCommand)' == ''">gflat</GflatCompilerCommand>
     <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and '$(GflatBundledCompiler)' != ''">$(GflatBundledCompiler)</GflatCompilerPath>
-    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(MSBuildThisFileDirectory)../gflat/bin/Debug/net10.0/gflat.dll')">$(MSBuildThisFileDirectory)../gflat/bin/Debug/net10.0/gflat.dll</GflatCompilerPath>
+    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/compiler/gflat.dll')">$(GflatSdkRoot)/compiler/gflat.dll</GflatCompilerPath>
+    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/../Compiler/gflat.exe')">$(GflatSdkRoot)/../Compiler/gflat.exe</GflatCompilerPath>
+    <GflatCompilerPath Condition="'$(GflatCompilerPath)' == '' and Exists('$(GflatSdkRoot)/gflat/bin/Debug/net10.0/gflat.dll')">$(GflatSdkRoot)/gflat/bin/Debug/net10.0/gflat.dll</GflatCompilerPath>
     <_GflatKnownCompilerCommand Condition="'$(GflatCompilerPath)' != ''">&quot;$(GflatCompilerPath)&quot;</_GflatKnownCompilerCommand>
     <_GflatCompilerExtension>$([System.IO.Path]::GetExtension('$(GflatCompilerPath)'))</_GflatCompilerExtension>
     <_GflatKnownCompilerCommand Condition="'$(_GflatCompilerExtension)' == '.dll'">dotnet &quot;$(GflatCompilerPath)&quot;</_GflatKnownCompilerCommand>
+    <GflatCompilerCommand Condition="'$(GflatCompilerCommand)' == '' and '$(_GflatKnownCompilerCommand)' != ''">$(_GflatKnownCompilerCommand)</GflatCompilerCommand>
+    <GflatCompilerCommand Condition="'$(GflatCompilerCommand)' == ''">gflat</GflatCompilerCommand>
     <_GflatSourceList>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).sources'))</_GflatSourceList>
     <_GflatBuildSettings>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).build.settings'))</_GflatBuildSettings>
     <_GflatBuildSuccess>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).build.success'))</_GflatBuildSuccess>
     <GflatIROutput Condition="'$(GflatIROutput)' == ''">$([System.IO.Path]::ChangeExtension('$(TargetPath)', '.ll'))</GflatIROutput>
+    <_GflatStdLibOption>--no-stdlib</_GflatStdLibOption>
     <_GflatClangOption Condition="'$(GflatClang)' != ''">--clang &quot;$(GflatClang)&quot;</_GflatClangOption>
     <_GflatProjectInputs>$([MSBuild]::Unescape('$(GflatProjectInputs)'))</_GflatProjectInputs>
   </PropertyGroup>
+  <ItemGroup Condition="'$(NoStdLib)' != 'true'">
+    <ProjectReference Include="$(GflatSdkRoot)/std/std.gfproj" />
+  </ItemGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|AnyCPU"><Configuration>Debug</Configuration><Platform>AnyCPU</Platform></ProjectConfiguration>
     <ProjectConfiguration Include="Release|AnyCPU"><Configuration>Release</Configuration><Platform>AnyCPU</Platform></ProjectConfiguration>
@@ -35,9 +40,9 @@
   </ItemGroup>
   <Import Project="$(MSBuildProjectFullPath).user" Condition="Exists('$(MSBuildProjectFullPath).user')" />
   <Target Name="GflatGetSources" Returns="@(_GflatSources)">
-    <Error Condition="'$(GflatProjectKind)' != 'Executable' and '$(GflatProjectKind)' != 'SourceLibrary'" Text="GflatProjectKind must be Executable or SourceLibrary." />
+    <Error Condition="'$(OutputType)' != 'Exe' and '$(OutputType)' != 'Library'" Text="OutputType must be Exe or Library." />
     <Error Condition="'$(GflatOptimizationLevel)' != '0' and '$(GflatOptimizationLevel)' != '1' and '$(GflatOptimizationLevel)' != '2' and '$(GflatOptimizationLevel)' != '3'" Text="GflatOptimizationLevel must be 0, 1, 2, or 3." />
-    <Error Condition="'$(GflatAsReference)' == 'true' and '$(GflatProjectKind)' != 'SourceLibrary'" Text="Only SourceLibrary projects can be referenced." />
+    <Error Condition="'$(GflatAsReference)' == 'true' and '$(OutputType)' != 'Library'" Text="Only Library projects can be referenced." />
     <MSBuild Projects="@(ProjectReference)" Targets="GflatGetSources" Properties="Configuration=$(Configuration);Platform=$(Platform);GflatAsReference=true">
       <Output TaskParameter="TargetOutputs" ItemName="_GflatReferenceSources" />
     </MSBuild>
@@ -55,7 +60,7 @@
     <Error Condition="'$(_GflatFullTargetPath)' == '$(_GflatSourceList)' or '$(_GflatFullTargetPath)' == '$(_GflatBuildSettings)' or '$(_GflatFullTargetPath)' == '$(_GflatBuildSuccess)' or '$(_GflatFullIRPath)' == '$(_GflatSourceList)' or '$(_GflatFullIRPath)' == '$(_GflatBuildSettings)' or '$(_GflatFullIRPath)' == '$(_GflatBuildSuccess)'" Text="Output must differ from the generated source list and incremental build stamps." />
   </Target>
   <Target Name="_GflatPrepare" DependsOnTargets="_GflatValidateOutputs">
-    <Error Condition="'$(GflatProjectKind)' == 'Executable' and '@(_GflatSources)' == ''" Text="Executable project has no Compile items." />
+    <Error Condition="'$(OutputType)' == 'Exe' and '@(_GflatSources)' == ''" Text="Exe project has no Compile items." />
     <Error Condition="'$(TargetPath)' == '$(MSBuildProjectFullPath)'" Text="Output must differ from the project file." />
     <MakeDir Directories="$(IntermediateOutputPath);$([System.IO.Path]::GetDirectoryName('$(TargetPath)'))" />
     <MakeDir Condition="'$(GflatEmitIR)' == 'true'" Directories="$([System.IO.Path]::GetDirectoryName('$(_GflatFullIRPath)'))" />
@@ -65,15 +70,15 @@
   </Target>
   <Target Name="_GflatPrepareBuild" DependsOnTargets="_GflatPrepare">
     <PropertyGroup>
-      <_GflatOptions Condition="'$(GflatProjectKind)' == 'SourceLibrary'">--check</_GflatOptions>
-      <_GflatOptions Condition="'$(GflatProjectKind)' == 'Executable'">-o &quot;$(TargetPath)&quot;</_GflatOptions>
-      <_GflatOptions Condition="'$(GflatEmitIR)' == 'true' and '$(GflatProjectKind)' == 'Executable'">--emit-ir -o &quot;$(GflatIROutput)&quot;</_GflatOptions>
+      <_GflatOptions Condition="'$(OutputType)' == 'Library'">--check</_GflatOptions>
+      <_GflatOptions Condition="'$(OutputType)' == 'Exe'">-o &quot;$(TargetPath)&quot;</_GflatOptions>
+      <_GflatOptions Condition="'$(GflatEmitIR)' == 'true' and '$(OutputType)' == 'Exe'">--emit-ir -o &quot;$(GflatIROutput)&quot;</_GflatOptions>
       <_GflatBuildOutput>$(TargetPath)</_GflatBuildOutput>
       <_GflatBuildOutput Condition="'$(GflatEmitIR)' == 'true'">$(GflatIROutput)</_GflatBuildOutput>
       <_GflatDriverInput>$(GflatClang)</_GflatDriverInput>
       <_GflatDriverInput Condition="'$(_GflatDriverInput)' == ''">$(GflatDefaultClangInput)</_GflatDriverInput>
       <!-- MSBuildAllProjects alone does not include arbitrary user imports. -->
-      <_GflatCanCache Condition="'$(GflatProjectKind)' == 'Executable' and '$(GflatProjectInputs)' != '' and ('$(GflatEmitIR)' == 'true' or Exists('$(_GflatDriverInput)')) and (('$(GflatCompilerPath)' != '' and '$(GflatCompilerCommand)' == '$(_GflatKnownCompilerCommand)') or '@(GflatCompilerInputs)' != '')">true</_GflatCanCache>
+      <_GflatCanCache Condition="'$(OutputType)' == 'Exe' and '$(GflatProjectInputs)' != '' and ('$(GflatEmitIR)' == 'true' or Exists('$(_GflatDriverInput)')) and (('$(GflatCompilerPath)' != '' and '$(GflatCompilerCommand)' == '$(_GflatKnownCompilerCommand)') or '@(GflatCompilerInputs)' != '')">true</_GflatCanCache>
     </PropertyGroup>
     <ItemGroup>
       <_GflatCompilerFiles Include="$(GflatCompilerPath)" Condition="'$(GflatCompilerPath)' != ''" />
@@ -88,6 +93,7 @@
       <_GflatSetting Include="EnvironmentClang"><Value>$(GFLAT_CLANG)</Value></_GflatSetting>
       <_GflatSetting Include="Path"><Value>$(PATH)</Value></_GflatSetting>
       <_GflatSetting Include="LibraryPath"><Value>$(LIB)</Value></_GflatSetting>
+      <_GflatSetting Include="NoStdLib"><Value>$(NoStdLib)</Value></_GflatSetting>
       <_GflatSetting Include="Reserve"><Value>$(GflatExceptionReserveBytes)</Value></_GflatSetting>
       <_GflatSetting Include="Optimization"><Value>$(GflatOptimizationLevel)</Value></_GflatSetting>
       <_GflatSetting Include="Mode"><Value>$(GflatEmitIR)</Value></_GflatSetting>
@@ -98,21 +104,21 @@
   </Target>
   <Target Name="_GflatCompile" DependsOnTargets="_GflatPrepareBuild" Inputs="@(_GflatBuildInputs);$(_GflatSourceList);$(_GflatBuildSettings)" Outputs="$(_GflatBuildOutput);$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' == 'true'">
     <Delete Files="$(_GflatBuildSuccess)" />
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot;  $(_GflatOptions) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption)  $(_GflatOptions) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
     <Touch Files="$(_GflatBuildSuccess)" AlwaysCreate="true" />
   </Target>
   <Target Name="Build" DependsOnTargets="_GflatPrepareBuild;_GflatCompile" Returns="$(TargetPath)">
     <!-- Unknown commands and source-library checks stay uncached. -->
     <Delete Files="$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' != 'true'" />
-    <Exec Condition="'$(_GflatCanCache)' != 'true' and '@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatOptions) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
+    <Exec Condition="'$(_GflatCanCache)' != 'true' and '@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) $(_GflatOptions) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
   </Target>
   <Target Name="Check" DependsOnTargets="_GflatPrepare">
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
   </Target>
   <Target Name="Clean" DependsOnTargets="_GflatValidateOutputs">
     <PropertyGroup><_GflatCleanExtension>$([System.IO.Path]::GetExtension('$(TargetPath)'))</_GflatCleanExtension></PropertyGroup>
     <Error Condition="'$(_GflatCleanExtension)' != '.exe'" Text="Clean requires an .exe TargetPath; custom output names must be cleaned explicitly." />
-    <Delete Files="$(TargetPath);$([System.IO.Path]::ChangeExtension('$(TargetPath)', '.ll'))" Condition="'$(GflatProjectKind)' == 'Executable'" />
+    <Delete Files="$(TargetPath);$([System.IO.Path]::ChangeExtension('$(TargetPath)', '.ll'))" Condition="'$(OutputType)' == 'Exe'" />
     <Delete Files="$(_GflatSourceList);$(_GflatBuildSettings);$(_GflatBuildSuccess)" />
   </Target>
   <Target Name="Rebuild" DependsOnTargets="Clean;Build" />

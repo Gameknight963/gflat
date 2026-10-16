@@ -58,7 +58,7 @@ public static class Workspace
                         result.Graph.Projects.Any(p => p.IncludesFile(path) && Paths.Equals(ProjectWorkspace.FindProject(path), p.FilePath)))).Distinct(Paths).ToArray();
                     configured.UnionWith(files);
                     watched.UnionWith(files);
-                    Check(files);
+                    Check(files, new() { NoStdLib = true });
                 }
                 else configured.Add(document.Path);
             }
@@ -96,7 +96,7 @@ public static class Workspace
             if (!configured.Contains(document.Path) && document.Path.EndsWith(".gf", StringComparison.OrdinalIgnoreCase)) Check([document.Path]);
         return new(output.ToDictionary(pair => pair.Key, pair => pair.Value.Distinct().ToArray(), Paths), watched.ToArray(), projectDirectories.ToArray(), models);
 
-        void Check(IEnumerable<string> paths)
+        void Check(IEnumerable<string> paths, CompilationOptions? options = null)
         {
             var snapshots = new List<SourceFile>();
             bool unreadable = false;
@@ -112,10 +112,10 @@ public static class Workspace
             }
             if (unreadable || snapshots.Count == 0) return;
             foreach (var open in documents.Values.Where(d => StandardLibrary.AutomaticFiles.Any(relative => StandardLibrary.IsSource(d.Path, relative))))
-                if (!snapshots.Any(s => Paths.Equals(s.Path, open.Path))) snapshots.Add(new(open.Path, open.Text));
+                if (options?.NoStdLib != true && !snapshots.Any(s => Paths.Equals(s.Path, open.Path))) snapshots.Add(new(open.Path, open.Text));
             try
             {
-                var analysis = new AnalysisSnapshot(snapshots);
+                var analysis = new AnalysisSnapshot(snapshots, options);
                 foreach (var source in analysis.Nodes.Select(n => n.Span.Source).OfType<SourceFile>().DistinctBy(s => s.Id))
                     if (StandardLibrary.AutomaticFiles.Any(relative => StandardLibrary.IsSource(source.Path, relative))) watched.Add(source.Path);
                 var model = new EditorModel(analysis, snapshots);

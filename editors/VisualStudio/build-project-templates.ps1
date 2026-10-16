@@ -12,17 +12,6 @@ try {
         & $Compiler @arguments | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Cannot generate $kind template through gflat new" }
         $projectPath = Join-Path $directory 'Template.gfproj'
-        [xml]$project = Get-Content -LiteralPath $projectPath
-        # CPS supplies the default SDK before initial project evaluation. Keep
-        # explicit SDK overrides, with no build-machine path in the template.
-        foreach ($property in @($project.SelectNodes('/Project/PropertyGroup/GflatSdkRoot'))) {
-            $property.ParentNode.RemoveChild($property) | Out-Null
-        }
-        $property = $project.CreateElement('GflatSdkRoot')
-        $property.SetAttribute('Condition', "'`$(GflatSdkRoot)' == ''")
-        $property.InnerText = '$(GflatDefaultSdkRoot)'
-        $project.SelectSingleNode('/Project/PropertyGroup').AppendChild($property) | Out-Null
-        $project.Save($projectPath)
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Templates/Projects/$kind.vstemplate") -Destination (Join-Path $directory 'Project.vstemplate')
         $archive = Join-Path $output "gflat-$($kind.ToLowerInvariant()).zip"
         if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive }

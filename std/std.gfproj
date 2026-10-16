@@ -1,8 +1,6 @@
-﻿<Project DefaultTargets="Build">
-  <Import Project="../build/Gflat.props" />
-  <!-- Portable facilities belong in core; libc wrappers belong in libc. -->
+<Project Sdk="Gflat.Sdk">
   <PropertyGroup>
-    <GflatProjectKind>SourceLibrary</GflatProjectKind>
+    <OutputType>Library</OutputType>
+    <NoStdLib>true</NoStdLib>
   </PropertyGroup>
-  <Import Project="../build/Gflat.targets" />
 </Project>

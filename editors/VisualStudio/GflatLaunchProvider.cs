@@ -26,7 +26,7 @@ internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
         if (provider == null) return false;
         var properties = provider.GetCommonProperties();
         return GflatLaunch.CanLaunch(launchOptions,
-            await properties.GetEvaluatedPropertyValueAsync("GflatProjectKind"),
+            await properties.GetEvaluatedPropertyValueAsync("OutputType"),
             await properties.GetEvaluatedPropertyValueAsync("GflatEmitIR"));
     }
 
@@ -37,7 +37,7 @@ internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
             throw new InvalidOperationException("CPS cannot read the gflat project's launch properties.");
         var properties = provider.GetCommonProperties();
         var settings = GflatLaunch.CreateSettings(launchOptions,
-            await properties.GetEvaluatedPropertyValueAsync("GflatProjectKind"),
+            await properties.GetEvaluatedPropertyValueAsync("OutputType"),
             await properties.GetEvaluatedPropertyValueAsync("GflatEmitIR"),
             await properties.GetEvaluatedPropertyValueAsync("TargetPath"),
             await properties.GetEvaluatedPropertyValueAsync("GflatRunArguments"),
@@ -53,7 +53,7 @@ internal static class GflatLaunch
 
     internal static bool CanLaunch(DebugLaunchOptions options, string kind, string emitIr) =>
         (options & DebugLaunchOptions.NoDebug) != 0 &&
-        string.Equals(kind, "Executable", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(kind, "Exe", StringComparison.OrdinalIgnoreCase) &&
         !string.Equals(emitIr, "true", StringComparison.OrdinalIgnoreCase);
 
     internal static void RequireNoDebug(DebugLaunchOptions options)

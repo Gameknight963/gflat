@@ -88,6 +88,14 @@
       <Link>Sdk/build/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="../../build/Sdks/**/*">
+      <Link>Sdk/build/Sdks/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="../../build/install-sdk.ps1">
+      <Link>Sdk/build/install-sdk.ps1</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="../../build/Rules/**/*">
       <Link>Sdk/build/Rules/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>

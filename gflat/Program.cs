@@ -11,6 +11,7 @@ public static class Program
         var diagnostics = new DiagnosticBag();
         try
         {
+            if (args.Length > 0 && args[0] == "sdk") return ProjectSdkInstallation.Run(args[1..]);
             if (args.Length > 0 && args[0] == "new") return ProjectCreation.Run(args[1..]);
             if (args.Length > 0 && args[0] == "doctor") return ToolchainDoctor.Run(args[1..]);
             int argumentSeparator = Array.IndexOf(args, "--");
@@ -19,7 +20,7 @@ public static class Program
             var sourcePaths = new List<string>();
             string? outputPath = null, clang = null;
             string configuration = "Debug", platform = "AnyCPU";
-            bool run = false, irOnly = false, check = false, clean = false;
+            bool run = false, irOnly = false, check = false, clean = false, noStdLib = false;
             string? projectPath = null;
             int? exceptionReserveBytes = null;
             int? optimizationLevel = null;
@@ -29,14 +30,16 @@ public static class Program
                 switch (args[i])
                 {
                     case "--help": case "-h":
-                        Console.WriteLine("gflat new <directory> [--name Name] [--library] [--no-std]\nOptimization: --optimization 0|1|2|3 (project defaults: Debug=0, Release=2)");
+                        Console.WriteLine("gflat new <directory> [--name Name] [--library] [--no-stdlib]\nOptimization: --optimization 0|1|2|3 (project defaults: Debug=0, Release=2)");
                         Console.WriteLine("gflat doctor [--native] [--clang path]");
-                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
+                        Console.WriteLine("gflat sdk install [--sdk-directory path]");
+                        Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N] [--no-stdlib]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
                     case "build" when i == 0: break;
                     case "check" when i == 0: check = true; break;
                     case "clean" when i == 0: clean = true; break;
                     case "--check": check = true; break;
+                    case "--no-stdlib": noStdLib = true; break;
                     case "-o": outputPath = Value(); break;
                     case "--clang": clang = Value(); break;
                     case "--exception-reserve-bytes": exceptionReserveBytes = ExceptionReserve.Parse(Value()); break;
@@ -59,7 +62,7 @@ public static class Program
             {
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
                 projectPath = sourcePaths[0];
-                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel));
+                graph = ProjectGraph.Load(projectPath, path => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null));
                 sourcePaths = graph.Sources.ToList();
                 outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
                 if (graph.Root.Kind == ProjectKind.SourceLibrary)
@@ -92,18 +95,18 @@ public static class Program
             if (graph != null)
             {
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
-                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph);
+                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph, noStdLib);
                 if (result != 0 || !run) return result;
                 return NativeToolchain.RunProgram(outputPath, programArguments);
             }
             var sources = sourcePaths.Select(path => new SourceFile(path, File.ReadAllText(path))).ToArray();
             if (check)
             {
-                Compiler.Check(sources, diagnostics);
+                Compiler.Check(sources, diagnostics, new() { NoStdLib = noStdLib });
                 if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
                 return 0;
             }
-            string ir = Compiler.Emit(sources, diagnostics);
+            string ir = Compiler.Emit(sources, diagnostics, new() { NoStdLib = noStdLib });
             if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             if (irOnly) { File.WriteAllText(outputPath, ir); return 0; }
@@ -128,7 +131,7 @@ public static class Program
             Console.Error.WriteLine(diagnostics.HasErrors ? diagnostics.FormatAll() : ex.Message);
             return 1;
         }
-        catch (Exception ex) when (ex is ArgumentException or IOException or System.ComponentModel.Win32Exception or TimeoutException)
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or TimeoutException)
         {
             Console.Error.WriteLine(ex.Message);
             return 2;

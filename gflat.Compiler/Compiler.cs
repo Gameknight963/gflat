@@ -7,26 +7,26 @@ namespace gflat;
 public static class Compiler
 {
     /// <summary>Editor analysis: expected source errors are returned as diagnostics, without invoking LLVM.</summary>
-    public static IReadOnlyList<Diagnostic> Analyze(IEnumerable<SourceFile> sources)
+    public static IReadOnlyList<Diagnostic> Analyze(IEnumerable<SourceFile> sources, CompilationOptions? options = null)
     {
         var diagnostics = new DiagnosticBag();
-        try { Check(sources, diagnostics); }
+        try { Check(sources, diagnostics, options); }
         catch (TypeCheckException) { /* Check has recorded the source error. */ }
         return diagnostics.Items.ToArray();
     }
 
-    public static (CompilationUnit Ast, TypeChecker Checker) Check(string source, DiagnosticBag? diagnostics = null)
-        => Check(new SourceFile("<input>", source), diagnostics);
+    public static (CompilationUnit Ast, TypeChecker Checker) Check(string source, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
+        => Check(new SourceFile("<input>", source), diagnostics, options);
 
-    public static (CompilationUnit Ast, TypeChecker Checker) Check(SourceFile source, DiagnosticBag? diagnostics = null)
-        => Check(new[] { source }, diagnostics);
+    public static (CompilationUnit Ast, TypeChecker Checker) Check(SourceFile source, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
+        => Check(new[] { source }, diagnostics, options);
 
-    public static (CompilationUnit Ast, TypeChecker Checker) Check(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null)
+    public static (CompilationUnit Ast, TypeChecker Checker) Check(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
     {
         diagnostics ??= new();
         try
         {
-            var compilation = new Compilation(sources, diagnostics);
+            var compilation = new Compilation(sources, diagnostics, options: options);
             Validate();
             var checker = new TypeChecker(diagnostics);
             compilation.Unit.Accept(checker);
@@ -50,12 +50,12 @@ public static class Compiler
         }
     }
 
-    public static string Emit(string source, DiagnosticBag? diagnostics = null)
-        => Emit(new[] { new SourceFile("<input>", source) }, diagnostics);
+    public static string Emit(string source, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
+        => Emit(new[] { new SourceFile("<input>", source) }, diagnostics, options);
 
-    public static string Emit(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null)
+    public static string Emit(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
     {
-        var (ast, checker) = Check(sources, diagnostics);
+        var (ast, checker) = Check(sources, diagnostics, options);
         var emitter = new LlvmEmitter(checker);
         ast.Accept(emitter);
         return emitter.GetOutput();

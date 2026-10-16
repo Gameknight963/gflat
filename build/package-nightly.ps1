@@ -18,7 +18,7 @@ foreach ($project in @('gflat', 'gflat.LanguageServer')) {
 $files = & git -C $repo ls-files -- std build examples docs editors/shared LICENSES README.md LICENSE THIRD_PARTY_NOTICES.md
 if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate distribution files' }
 foreach ($file in $files) {
-    if ($file -like 'build/*.ps1') { continue }
+    if ($file -like 'build/*.ps1' -and $file -ne 'build/install-sdk.ps1') { continue }
     $destination = Join-Path $output $file
     New-Item -ItemType Directory -Path (Split-Path $destination) -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $repo $file) -Destination $destination
@@ -32,6 +32,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot identify source commit' }
 
 # Exercise the distributed compiler and imported project files, not checkout binaries.
 $compiler = Join-Path $output 'compiler/gflat.dll'
+# Exercise supported SDK discovery in this smoke-test process only. Users install
+# the SDK explicitly with build/install-sdk.ps1 for their MSBuild host.
+$oldSdkPath = $env:MSBuildSDKsPath
+try {
+$env:MSBuildSDKsPath = Join-Path $output 'build/Sdks'
 dotnet $compiler --help
 if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler failed to start' }
 foreach ($example in @('hello', 'interpolation', 'managed')) {
@@ -45,6 +50,8 @@ foreach ($example in @('hello', 'interpolation', 'managed')) {
     dotnet $compiler clean (Join-Path $output "examples/$example/$example.gfproj")
     if ($LASTEXITCODE -ne 0) { throw "Packaged $example cleanup failed" }
 }
+}
+finally { $env:MSBuildSDKsPath = $oldSdkPath }
 if ($Runtime -eq 'linux-x64') {
     # GitHub artifact ZIPs do not preserve executable bits; tar does.
     $archive = Join-Path (Split-Path $output) 'gflat-linux-x64.tar.gz'

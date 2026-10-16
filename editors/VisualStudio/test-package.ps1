@@ -8,6 +8,8 @@ $testRoot = if ($env:GFLAT_TEST_OUTPUT_ROOT) { $env:GFLAT_TEST_OUTPUT_ROOT } els
 [IO.Directory]::CreateDirectory($testRoot) | Out-Null
 $extracted = Join-Path $testRoot ('package-test-' + [Guid]::NewGuid().ToString('N'))
 [IO.Compression.ZipFile]::ExtractToDirectory([IO.Path]::GetFullPath($Package), $extracted)
+$oldSdkPath = $env:MSBuildSDKsPath
+$env:MSBuildSDKsPath = Join-Path $extracted 'Sdk/build/Sdks'
 $oldExecutable = $env:GFLAT_LSP_EXECUTABLE
 $oldEditorAssets = $env:GFLAT_EDITOR_ASSETS
 $oldHoverCatalog = $env:GFLAT_HOVER_CATALOG
@@ -74,7 +76,7 @@ int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) 
     if ($LASTEXITCODE -ne 0) { throw 'Packaged exception/ref smoke test failed' }
     $console = Join-Path $extracted 'console.gf'
     'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
-    $std = Join-Path $repoRoot 'std'
+    $std = Join-Path $extracted 'Sdk/std'
     $managed = Join-Path $extracted 'managed.gf'
     @'
 void Drop() { int^ value = new^ int(42); }
@@ -101,7 +103,7 @@ int main() {
 }
 '@ | Set-Content -LiteralPath $collections
     $bundledStd = Join-Path $extracted 'Sdk/std/core'
-    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Vector.gf') (Join-Path $bundledStd 'String.gf') --run -o (Join-Path $extracted 'collections.exe')
+    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Vector.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'IStringConvertable.gf') --run -o (Join-Path $extracted 'collections.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
@@ -117,6 +119,7 @@ int main() {
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $extracted 'values.ll'))) { throw 'Bundled compiler owning-vector integration failed' }
 }
 finally {
+    $env:MSBuildSDKsPath = $oldSdkPath
     $env:GFLAT_LSP_EXECUTABLE = $oldExecutable
     $env:GFLAT_EDITOR_ASSETS = $oldEditorAssets
     $env:GFLAT_HOVER_CATALOG = $oldHoverCatalog

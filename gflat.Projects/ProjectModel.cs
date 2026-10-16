@@ -17,7 +17,14 @@ public sealed class ProjectModel
     public static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     private static readonly Lazy<bool> registered = new(() =>
     {
-        if (!MSBuildLocator.IsRegistered) MSBuildLocator.RegisterDefaults();
+        if (!MSBuildLocator.IsRegistered)
+        {
+            // Locator initializes the .NET SDK environment; preserve an explicitly
+            // selected MSBuild SDK search directory (also used by isolated hosts).
+            string? sdkPath = Environment.GetEnvironmentVariable("MSBuildSDKsPath");
+            MSBuildLocator.RegisterDefaults();
+            if (sdkPath != null) Environment.SetEnvironmentVariable("MSBuildSDKsPath", sdkPath);
+        }
         return true;
     });
     public string FilePath { get; }
@@ -27,6 +34,7 @@ public sealed class ProjectModel
     public string TargetPath { get; }
     public int ExceptionReserveBytes { get; }
     public int OptimizationLevel { get; }
+    public bool NoStdLib { get; }
     public string? SdkRoot { get; }
     public IReadOnlyList<string> References { get; }
     public IReadOnlyList<string> Imports { get; }
@@ -34,8 +42,9 @@ public sealed class ProjectModel
     private readonly Func<string, bool> matchesGlob;
 
     internal ProjectModel(string path, ProjectKind kind, string targetPath, string[] sources,
-        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null)
+        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false)
     {
+        NoStdLib = noStdLib;
         ExceptionReserveBytes = exceptionReserveBytes;
         OptimizationLevel = optimizationLevel;
         SdkRoot = sdkRoot;
@@ -43,14 +52,14 @@ public sealed class ProjectModel
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
     }
     public static ProjectModel Load(string path) => Load(path, "Debug", "AnyCPU");
-    public static ProjectModel Load(string path, string configuration, string platform, int? exceptionReserveBytes = null, int? optimizationLevel = null)
+    public static ProjectModel Load(string path, string configuration, string platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null)
     {
         path = Path.GetFullPath(path);
         try { _ = registered.Value; }
         catch (Exception error) { throw new ProjectException(path, "Cannot locate MSBuild. Install the .NET SDK. " + error.Message); }
         // The evaluator lives in a separate method/type: MSBuild must not be loaded
         // by the JIT until Locator has registered its assembly resolver.
-        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel);
+        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib);
     }
     public bool IncludesFile(string path)
     {

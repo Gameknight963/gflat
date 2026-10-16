@@ -3,21 +3,16 @@ using System.Xml.Linq;
 
 namespace gflat.Tests;
 
-[CollectionDefinition("Project SDK environment", DisableParallelization = true)]
-public sealed class ProjectSdkEnvironmentCollection { }
-
-[Collection("Project SDK environment")]
 public sealed class ProjectSdkTests
 {
     [Fact]
     public void ProviderPathsEscapeMsBuildExpressionsAndItemSeparators()
-    {
-        Assert.Equal("C:/sdk space %24%3B%25%40%27%28%29", ProjectSdk.EscapePropertyValue("C:/sdk space $;%@'()"));
-    }
+        => Assert.Equal("C:/sdk space %24%3B%25%40%27%28%29", ProjectSdk.EscapePropertyValue("C:/sdk space $;%@'()"));
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void DiscoversCheckoutAndVsixLayouts(bool vsix)
+    public void DiscoveryDoesNotRequireStandardLibrary(bool vsix)
     {
         string root = Temporary();
         try
@@ -31,95 +26,126 @@ public sealed class ProjectSdkTests
     }
 
     [Fact]
-    public void ProjectSdkRootOverrideWinsOverBundledFallback()
+    public void ExplicitInstallationEscapesPathsAndUsesNativeSdkEntrypoints()
     {
         string root = Temporary();
         try
         {
-            string sdk = Path.Combine(root, "custom sdk"); CreateSdk(sdk);
-            string project = Path.Combine(root, "application.gfproj");
-            File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
-            File.WriteAllText(project, new XElement("Project", new XAttribute("DefaultTargets", "Build"),
-                new XElement("PropertyGroup", new XElement("GflatSdkRoot", sdk)),
-                XElement.Parse("<PropertyGroup><GflatSdkRoot Condition=\"'$(GflatSdkRoot)' == ''\">$(GflatDefaultSdkRoot)</GflatSdkRoot></PropertyGroup>"),
-                XElement.Parse("<Import Project=\"$(GflatSdkRoot)/build/Gflat.props\" />"),
-                XElement.Parse("<Import Project=\"$(GflatSdkRoot)/build/Gflat.targets\" />")).ToString());
+            string sdk = Path.Combine(root, "tools $literal;percent%"); CreateSdk(sdk);
+            string host = Path.Combine(root, "host SDKs");
+            string installed = ProjectSdk.Install(sdk, host);
+            var props = XElement.Load(Path.Combine(installed, "Sdk.props"));
+            Assert.Equal(ProjectSdk.EscapePropertyValue(sdk.Replace('\\', '/')), props.Element("PropertyGroup")!.Element("GflatSdkRoot")!.Value);
+            Assert.True(File.Exists(Path.Combine(installed, "Sdk.targets")));
+            string app = Path.Combine(root, "app"); Directory.CreateDirectory(app);
+            string project = Path.Combine(app, "app.gfproj");
+            // Explicit imports here test installed entrypoint contents without
+            // modifying the SDK resolution settings of parallel test hosts.
+            File.WriteAllText(project, new XElement("Project",
+                new XElement("Import", new XAttribute("Project", Path.Combine(installed, "Sdk.props"))),
+                new XElement("PropertyGroup", new XElement("NoStdLib", "true")),
+                new XElement("Import", new XAttribute("Project", Path.Combine(installed, "Sdk.targets")))).ToString());
+            File.WriteAllText(Path.Combine(app, "main.gf"), "int main() => 0;");
             var model = ProjectModel.Load(project);
             Assert.Equal(sdk, model.SdkRoot);
-            Assert.Contains(Path.Combine(sdk, "build", "Gflat.props"), model.Imports);
+            Assert.Single(model.SourceFiles());
+            Assert.Empty(model.References);
             Assert.Equal(0, Program.Main(["build", project, "--emit-ir"]));
         }
         finally { Directory.Delete(root, true); }
     }
 
     [Fact]
-    public void PortableProjectUsesHostFallbackWithoutSavingInstalledPaths()
+    public void MissingSdkInstallationIsActionableAndNeverInstallsDuringBuild()
     {
         string root = Temporary(); Directory.CreateDirectory(root);
         try
         {
-            string project = Path.Combine(root, "application.gfproj");
-            string xml = """
-                <Project DefaultTargets="Build">
-                  <PropertyGroup><GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">$(GflatDefaultSdkRoot)</GflatSdkRoot></PropertyGroup>
-                  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
-                  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
-                </Project>
-                """;
+            string project = Path.Combine(root, "broken.gfproj");
+            File.WriteAllText(project, "<Project Sdk=\"Gflat.Missing.Sdk\" />");
+            Assert.Throws<ProjectException>(() => ProjectModel.Load(project));
+            Assert.Single(Directory.GetFiles(root));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void NoStdLibCanBeOverriddenForProjectEvaluation()
+    {
+        string root = Temporary(); Directory.CreateDirectory(root);
+        try
+        {
+            string project = Path.Combine(root, "app.gfproj");
+            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\" />");
+            Assert.Contains(ProjectModel.Load(project).References, path => path.EndsWith("std.gfproj"));
+            var bare = ProjectModel.Load(project, "Debug", "AnyCPU", noStdLib: true);
+            Assert.True(bare.NoStdLib);
+            Assert.Empty(bare.References);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public async Task InstalledSdkResolvesThroughStandaloneMsBuildWithoutProjectRewriting()
+    {
+        string root = Temporary();
+        try
+        {
+            string sdk = Path.Combine(root, "distribution"); CreateSdk(sdk);
+            string host = Path.Combine(root, "host SDKs");
+            ProjectSdk.Install(sdk, host);
+            string project = Path.Combine(root, "example.gfproj");
+            const string xml = "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib></PropertyGroup></Project>";
             File.WriteAllText(project, xml);
-            File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
-            Assert.Equal(ProjectCreation.FindToolchainRoot(), ProjectModel.Load(project).SdkRoot);
-            Assert.Equal(0, Program.Main(["build", project, "--emit-ir"]));
+            var start = new System.Diagnostics.ProcessStartInfo("dotnet") {
+                UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
+            };
+            foreach (string argument in new[] { "msbuild", project, "-nologo", "-getProperty:GflatSdkRoot" }) start.ArgumentList.Add(argument);
+            start.Environment["MSBuildSDKsPath"] = host;
+            using var process = System.Diagnostics.Process.Start(start)!;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await process.WaitForExitAsync(timeout.Token);
+            Assert.True(process.ExitCode == 0, await stderr);
+            Assert.Equal(sdk, Path.GetFullPath((await stdout).Trim()));
             Assert.Equal(xml, File.ReadAllText(project));
         }
         finally { Directory.Delete(root, true); }
     }
 
     [Fact]
-    public void MissingExplicitSdkGivesActionableError()
+    public async Task StandaloneMsBuildDefaultsToBuildInsteadOfOnlyEnumeratingSources()
     {
         string root = Temporary(); Directory.CreateDirectory(root);
         try
         {
-            string project = Path.Combine(root, "broken.gfproj");
-            File.WriteAllText(project, """
-                <Project><PropertyGroup><GflatSdkRoot>missing-sdk</GflatSdkRoot></PropertyGroup><Import Project="$(GflatSdkRoot)/build/Gflat.props" /></Project>
-                """);
-            var error = Assert.Throws<ProjectException>(() => ProjectModel.Load(project));
-            Assert.Contains("Set GflatSdkRoot", error.Message);
+            string project = Path.Combine(root, "app.gfproj");
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.Xml(content: """
+                <Target Name="Built" AfterTargets="Build"><WriteLinesToFile File="built.txt" Lines="done" Overwrite="true" /></Target>
+                """));
+            File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
+            var start = new System.Diagnostics.ProcessStartInfo("dotnet") {
+                UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
+            };
+            foreach (string argument in new[] { "msbuild", project, "-nologo", "-v:q", "-p:GflatEmitIR=true", "-p:GflatCompilerCommand=dotnet \"" + typeof(Program).Assembly.Location + "\"" }) start.ArgumentList.Add(argument);
+            using var process = System.Diagnostics.Process.Start(start)!;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            await process.WaitForExitAsync(timeout.Token);
+            Assert.True(process.ExitCode == 0, (await stdout) + (await stderr));
+            Assert.True(File.Exists(Path.Combine(root, "built.txt")));
+            Assert.True(File.Exists(Path.Combine(root, "bin/Debug/app.ll")));
         }
         finally { Directory.Delete(root, true); }
-    }
-
-    [Fact]
-    public void EnvironmentSdkRootWinsInCreationEvaluationAndBuild()
-    {
-        string root = Temporary();
-        string? previous = Environment.GetEnvironmentVariable("GflatSdkRoot");
-        try
-        {
-            string sdk = Path.Combine(root, "environment sdk"); CreateSdk(sdk);
-            Environment.SetEnvironmentVariable("GflatSdkRoot", sdk);
-            string project = ProjectCreation.Create(Path.Combine(root, "application"), useStd: false);
-            Assert.Equal(sdk, ProjectCreation.FindToolchainRoot());
-            Assert.Equal(sdk, ProjectModel.Load(project).SdkRoot);
-            Assert.Equal(0, Program.Main(["build", project, "--emit-ir"]));
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("GflatSdkRoot", previous);
-            Directory.Delete(root, true);
-        }
     }
 
     private static void CreateSdk(string root)
     {
         Directory.CreateDirectory(Path.Combine(root, "build"));
-        Directory.CreateDirectory(Path.Combine(root, "std"));
-        string checkout = TestSupport.ProjectFileFixture.RepositoryRoot;
         foreach (string name in new[] { "Gflat.props", "Gflat.targets" })
-            File.Copy(Path.Combine(checkout, "build", name), Path.Combine(root, "build", name));
-        File.Copy(Path.Combine(checkout, "std", "std.gfproj"), Path.Combine(root, "std", "std.gfproj"));
+            File.Copy(Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot, "build", name), Path.Combine(root, "build", name));
     }
     private static string Temporary() => Path.Combine(Path.GetTempPath(), "gflat sdk " + Guid.NewGuid().ToString("N"));
 }

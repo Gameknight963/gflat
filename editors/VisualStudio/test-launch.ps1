@@ -42,31 +42,31 @@ try {
     $noDebug = [Enum]::Parse($optionsType, 'NoDebug')
     $debug = [Enum]::ToObject($optionsType, 0)
     foreach ($case in @(
-        @{ Options=$noDebug; Kind='Executable'; IR=''; Expected=$true },
-        @{ Options=$debug; Kind='Executable'; IR=''; Expected=$false },
-        @{ Options=$noDebug; Kind='SourceLibrary'; IR=''; Expected=$false },
-        @{ Options=$noDebug; Kind='Executable'; IR='true'; Expected=$false }
+        @{ Options=$noDebug; Kind='Exe'; IR=''; Expected=$true },
+        @{ Options=$debug; Kind='Exe'; IR=''; Expected=$false },
+        @{ Options=$noDebug; Kind='Library'; IR=''; Expected=$false },
+        @{ Options=$noDebug; Kind='Exe'; IR='true'; Expected=$false }
     )) {
         if ($canLaunch.Invoke($null, [object[]]@($case.Options, $case.Kind, $case.IR)) -ne $case.Expected) { throw 'Launch availability is incorrect' }
     }
     New-Item -ItemType Directory -Path $scratch -Force | Out-Null
     [IO.File]::WriteAllBytes((Join-Path $scratch 'app.exe'), [byte[]]@(0))
     $arguments = '"a b" --option=value'
-    $settings = $create.Invoke($null, [object[]]@($noDebug, 'Executable', '', 'app.exe', $arguments, '', $scratch))
+    $settings = $create.Invoke($null, [object[]]@($noDebug, 'Exe', '', 'app.exe', $arguments, '', $scratch))
     if ($settings.Executable -ne (Join-Path $scratch 'app.exe') -or $settings.CurrentDirectory -ne $scratch -or $settings.Arguments -ne $arguments) { throw 'Launch paths or arguments are incorrect' }
     if ($settings.LaunchOperation.ToString() -ne 'CreateProcess' -or ($settings.LaunchOptions -band $noDebug) -eq 0) { throw 'Launch must preserve NoDebug and use CreateProcess' }
     $nativeEngine = $optionsType.Assembly.GetType('Microsoft.VisualStudio.ProjectSystem.Debug.DebuggerEngines', $true).GetField('NativeOnlyEngine').GetValue($null)
     if ($settings.LaunchDebugEngineGuid -ne $nativeEngine) { throw 'Launch must select the SDK native engine' }
     $workingDirectory = Join-Path $scratch 'work'
     New-Item -ItemType Directory -Path $workingDirectory | Out-Null
-    $relative = $create.Invoke($null, [object[]]@($noDebug, 'Executable', '', 'app.exe', '', 'work', $scratch))
+    $relative = $create.Invoke($null, [object[]]@($noDebug, 'Exe', '', 'app.exe', '', 'work', $scratch))
     if ($relative.CurrentDirectory -ne $workingDirectory) { throw 'Relative working directory was not resolved from the project directory' }
     foreach ($case in @(
-        @{ Options=$debug; Kind='Executable'; IR=''; Target='app.exe'; Directory=''; Error='NotSupportedException' },
-        @{ Options=$noDebug; Kind='SourceLibrary'; IR=''; Target='app.exe'; Directory=''; Error='InvalidOperationException' },
-        @{ Options=$noDebug; Kind='Executable'; IR='true'; Target='app.exe'; Directory=''; Error='InvalidOperationException' },
-        @{ Options=$noDebug; Kind='Executable'; IR=''; Target='missing.exe'; Directory=''; Error='FileNotFoundException' },
-        @{ Options=$noDebug; Kind='Executable'; IR=''; Target='app.exe'; Directory='missing'; Error='DirectoryNotFoundException' }
+        @{ Options=$debug; Kind='Exe'; IR=''; Target='app.exe'; Directory=''; Error='NotSupportedException' },
+        @{ Options=$noDebug; Kind='Library'; IR=''; Target='app.exe'; Directory=''; Error='InvalidOperationException' },
+        @{ Options=$noDebug; Kind='Exe'; IR='true'; Target='app.exe'; Directory=''; Error='InvalidOperationException' },
+        @{ Options=$noDebug; Kind='Exe'; IR=''; Target='missing.exe'; Directory=''; Error='FileNotFoundException' },
+        @{ Options=$noDebug; Kind='Exe'; IR=''; Target='app.exe'; Directory='missing'; Error='DirectoryNotFoundException' }
     )) {
         $caught = $null
         try { $create.Invoke($null, [object[]]@($case.Options, $case.Kind, $case.IR, $case.Target, '', $case.Directory, $scratch)) | Out-Null }

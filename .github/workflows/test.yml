@@ -38,6 +38,8 @@ jobs:
         if: ${{ !cancelled() }}
       - name: Build and run Linux projects
         if: runner.os == 'Linux' && !cancelled()
+        env:
+          MSBuildSDKsPath: ${{ github.workspace }}/build/Sdks
         run: |
           dotnet run --project gflat --no-build -- build examples/hello/hello.gfproj --run
           dotnet run --project gflat --no-build -- build examples/interpolation/interpolation.gfproj --run

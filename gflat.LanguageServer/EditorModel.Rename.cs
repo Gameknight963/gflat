@@ -55,7 +55,7 @@ public sealed partial class EditorModel
                 text = text.Remove(span.Start, span.Length).Insert(span.Start, newName);
             return new SourceFile(source.Path, text);
         }).ToArray();
-        var changedSnapshot = new AnalysisSnapshot(changedSources);
+        var changedSnapshot = new AnalysisSnapshot(changedSources, snapshot.Options);
         if (changedSnapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
             throw new InvalidOperationException("Rename would introduce compiler errors or conflicting declarations.");
         var changedModel = new EditorModel(changedSnapshot, changedSources);

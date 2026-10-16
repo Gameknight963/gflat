@@ -4,84 +4,132 @@ A `.gfproj` is an MSBuild XML project. Visual Studio opens that same file throug
 Microsoft's Common Project System (CPS). No companion project is generated.
 The CLI and language server evaluate it using MSBuild from the installed .NET SDK.
 
+## Install the project SDK
+
+Project files use MSBuild's native SDK mechanism:
+
+```xml
+<Project Sdk="Gflat.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+</Project>
+```
+
+There are no installation paths or explicit build-rule imports in the project.
+Install `Gflat.Sdk` once for the MSBuild host you use:
+
+```text
+gflat sdk install
+```
+
+This registers the current gflat distribution in the active .NET SDK's `Sdks`
+directory. It may require administrator permissions. It is an explicit setup
+command: ordinary project evaluation and builds never install files or elevate.
+Run it again after moving gflat or selecting a newly installed .NET SDK.
+
+Visual Studio's MSBuild has its own SDK directory. Install there too, for example
+from an elevated terminal (substitute your edition/version):
+
+```powershell
+gflat sdk install --sdk-directory "C:/Program Files/Microsoft Visual Studio/18/Community/MSBuild/Sdks"
+```
+
+Use `MSBuild/Current/Bin/Sdks` if that host's `MSBuildSDKsPath` points there instead.
+`MSBuildSDKsPath` is MSBuild's SDK search directory, visible with
+`dotnet msbuild -getProperty:MSBuildSDKsPath` on a normal .NET project, or the
+corresponding Visual Studio `MSBuild.exe` command. Pass that directory to
+`--sdk-directory`. The installer creates only its `Gflat.Sdk/Sdk` subdirectory;
+it doesn't replace other SDKs or change the global SDK search path.
+
+For the compiler bundled in a VSIX, invoke `Compiler/gflat.exe sdk install`
+from the extension installation directory. The bundled SDK remains there;
+registration points to it. The download also includes `build/install-sdk.ps1`.
+
+Compiling individual source files does not need MSBuild SDK installation.
+See Microsoft's [project SDK documentation](https://learn.microsoft.com/en-us/visualstudio/msbuild/how-to-use-project-sdk)
+for SDK resolution and implicit props/targets imports.
+
 ## Creating a project
 
 ```text
 gflat new "My Application"
 gflat build "My Application/My Application.gfproj" --run
 gflat new Utilities --library
-gflat new Minimal --no-std
+gflat new Minimal --no-stdlib
 ```
 
-To pass arguments to the application, put them after `--`:
+`new` creates the SDK-style `.gfproj`, `main.gf`, and a `.gitignore` in a new or
+empty directory. It never overwrites existing files. `--name Name` changes the
+project filename. Applications use std and print a greeting by default.
+`--library` creates a source library. `--no-stdlib` sets `NoStdLib` in the project.
+
+The default `OutputType` is `Exe`. A source library uses `Library`:
+
+```xml
+<Project Sdk="Gflat.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <NoStdLib>true</NoStdLib>
+  </PropertyGroup>
+</Project>
+```
+
+Source libraries contribute source files to consumers; they don't produce binary
+libraries. Building one checks its sources. Project references must name libraries.
+Transitive references are supported, diamond dependencies deduplicated, and cycles
+rejected.
+
+## Standard library selection
+
+The SDK references its bundled `std/std.gfproj` unless `NoStdLib` is `true`.
+With `NoStdLib`, no library reference or hidden compiler declarations are added.
+This is how std itself builds. Explicit source files and project references remain
+available, so applications can select their own runtime/library implementation.
+Excluding std does not turn a bare pointer operation into a library-independent
+operation: features that call allocation or exception services need implementations
+of those services supplied as ordinary inputs.
+
+```text
+gflat main.gf --no-stdlib --run
+gflat build app.gfproj --no-stdlib
+```
+
+The direct compiler API accepts `CompilationOptions { NoStdLib = true }` for
+checking, emission, and editor analysis. Project/editor builds use the evaluated
+source graph and never inject another copy of std. This controls source inputs;
+it is not a promise to link without the host C startup/runtime libraries.
+
+## Sources and references
+
+The SDK includes `**/*.gf`, excluding `bin`, `obj`, `.git`, `.vs`, and
+`.local-notes`. Use ordinary MSBuild items and conditions:
+
+```xml
+<Project Sdk="Gflat.Sdk">
+  <ItemGroup>
+    <Compile Remove="scratch/**/*.gf" />
+    <ProjectReference Include="../Utilities/Utilities.gfproj" />
+  </ItemGroup>
+</Project>
+```
+
+Nested project directories are not automatically excluded: remove their globs
+when needed. Set `EnableDefaultCompileItems` to `false` to list sources explicitly.
+Use one `.gfproj` per directory for editor discovery. SDK-owned props and targets
+remain implementation files; projects can still use normal imports for their own
+shared build settings. `GflatSdkRoot` can explicitly select another toolchain root
+using an environment variable or `-p:GflatSdkRoot=/path/to/gflat`.
+
+To pass program arguments, put them after `--`:
 
 ```text
 gflat build examples/search/search.gfproj --run -- "input file.txt" "search text"
 ```
 
-Everything after `--` is a program argument, including names such as `-o` or
-`--check`. The separator requires `--run`. The program runs in the caller's
-working directory and its exit code becomes the compiler command's exit code.
-
-`new` creates a real `.gfproj`, `main.gf`, and a `.gitignore` for build/editor
-outputs. It accepts a new or empty directory and never overwrites existing files.
-`--name Name` changes the project filename without changing the destination
-directory. By default, executables reference std and print a greeting through
-`Console`; `--no-std` creates an executable returning zero without a std project
-reference. `--library` creates a source library with a small example function.
-The compiler's current built-in prelude/runtime behavior is unchanged by
-`--no-std`; this option only omits the explicit library reference.
-
-The command finds build rules beside the installed distribution, in its checkout,
-or in the Visual Studio extension's bundled `Sdk/` directory. Generated imports
-and std references use `$(GflatSdkRoot)`. CLI/editor evaluation supplies the current
-installation as a fallback; checkout/nightly projects retain a relative fallback
-for direct MSBuild use. Open the generated `.gfproj` directly or add it to your
-Visual Studio solution.
-
-Set `GflatSdkRoot` in the project **before its imports**, as an environment variable,
-or with `dotnet msbuild -p:GflatSdkRoot=/path/to/gflat` to select an explicit SDK.
-It must contain `build/Gflat.props`, `build/Gflat.targets`, and `std/std.gfproj`.
-The explicit value takes precedence over automatic discovery. The CLI forwards
-its discovered default to MSBuild, including referenced projects; it does not write
-installed SDK paths back into the project. Standalone MSBuild has no gflat-specific
-discovery provider, so use a project-relative fallback or set `GflatSdkRoot`.
-
-In a checkout, use `dotnet run --project gflat -- new "My Application"`.
-
-## Project format
-
-```xml
-<Project DefaultTargets="Build">
-  <Import Project="../../build/Gflat.props" />
-  <!-- Paths are relative to this project. Adjust the imports for your directory. -->
-  <ItemGroup>
-    <Compile Remove="scratch/**/*.gf" />
-    <ProjectReference Include="../../std/std.gfproj" />
-  </ItemGroup>
-  <Import Project="../../build/Gflat.targets" />
-</Project>
-```
-
-`Gflat.props` includes `**/*.gf`, excluding `bin`, `obj`, `.git`, `.vs`, and
-`.local-notes`. MSBuild `Compile` items, conditions, imports, and `Remove` entries
-control the source list. Nested projects do not implicitly exclude their sources:
-use `Compile Remove="nested/**/*.gf"` when necessary. Set
-`EnableDefaultCompileItems` to `false` **before** importing the props file if you
-want to list sources explicitly. Use one `.gfproj` per directory for editor discovery.
-
-The default `GflatProjectKind` is `Executable`. A source library declares:
-
-```xml
-<PropertyGroup>
-  <GflatProjectKind>SourceLibrary</GflatProjectKind>
-</PropertyGroup>
-```
-
-Put this between the imports. Source libraries contribute sources to consumers;
-they do not produce binary libraries. References must point to source libraries.
-Transitive references are supported, diamond dependencies are deduplicated, and
-cycles are errors. Building a source library checks its sources.
+Everything after `--` is a program argument, including `-o` and `--check`.
+The separator requires `--run`. The program runs in the caller's working directory
+and its exit code becomes the compiler command's exit code.
 
 ## Building
 
@@ -89,6 +137,7 @@ Install the .NET 10 SDK, then build the compiler once:
 
 ```text
 dotnet build gflat
+dotnet run --project gflat -- sdk install
 dotnet msbuild examples/hello/hello.gfproj -t:Build
 dotnet msbuild examples/hello/hello.gfproj -t:Check
 dotnet msbuild examples/hello/hello.gfproj -t:Build -p:GflatEmitIR=true
@@ -116,10 +165,8 @@ its default `.ll`, the generated source list, and incremental stamps, preserving
 IR outputs are retained. Clean currently requires an `.exe` target name.
 
 The targets choose `GflatCompilerCommand` if explicitly configured, otherwise the
-VSIX's bundled compiler when building in Visual Studio, the checkout's Debug
-compiler if available, or `gflat` from PATH. Outside this checkout, distribute
-`build/Gflat.props`, `build/Gflat.targets`, and `build/Rules` with your build setup
-and adjust imports, or use the SDK included in nightly downloads and the VSIX.
+compiler shipped with the SDK distribution/VSIX, the checkout's Debug compiler
+if available, or `gflat` from PATH. Keep the installed SDK and its build/std assets together, as supplied in nightlies and the VSIX.
 
 ### Incremental CLI builds
 
@@ -167,12 +214,9 @@ Use **Add > Existing Project** for another `.gfproj`.
 Use **File > New > Project** and search for **gflat** to create a Console
 Application or Source Library directly in your solution. These are native Visual
 Studio project templates, generated from the same starting files as `gflat new`.
-They import the SDK bundled with the extension through `GflatSdkRoot`; no
-version-specific extension installation path is saved in the project.
-
-The CLI and language server discover their installed SDK too, so these projects
-also work outside VS. For direct `dotnet msbuild` invocation, set `GflatSdkRoot`
-to your compiler bundle root in the environment or pass `-p:GflatSdkRoot=...`.
+They use the same `Gflat.Sdk` as CLI and standalone MSBuild projects. Install the
+SDK for Visual Studio's MSBuild host as described above; templates do not save a
+version-specific extension path in project files.
 
 No special solution folder is required. Visual Studio's optional
 [solution folders](https://learn.microsoft.com/en-us/visualstudio/ide/solutions-and-projects-in-visual-studio#solution-folder)
@@ -229,7 +273,7 @@ Source debugging, package management,
 and binary libraries are not included.
 
 The previous `<GflatProject>` XML prototype is no longer supported. Convert it to
-`<Project>`, import the build files, and replace `Sources`/`Reference` with MSBuild
+`<Project Sdk="Gflat.Sdk">`, and replace `Sources`/`Reference` with MSBuild
 `Compile`/`ProjectReference` items as shown above.
 
 References: [Microsoft's CPS documentation](https://github.com/microsoft/VSProjectSystem)

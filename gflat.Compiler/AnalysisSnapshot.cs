@@ -11,6 +11,7 @@ namespace gflat;
 public sealed class AnalysisSnapshot
 {
     public sealed record Syntax(AstNode Node, SourceSpan Span, Syntax? Parent);
+    public CompilationOptions Options { get; }
     public IReadOnlyList<Syntax> Nodes { get; }
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
     public TypeChecker? Checker { get; }
@@ -18,8 +19,9 @@ public sealed class AnalysisSnapshot
     public IReadOnlyDictionary<AstNode, TypeExpression> DeclaredTypes { get; }
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> Children = new();
 
-    public AnalysisSnapshot(IEnumerable<SourceFile> sources)
+    public AnalysisSnapshot(IEnumerable<SourceFile> sources, CompilationOptions? options = null)
     {
+        Options = options ?? new();
         var diagnostics = new DiagnosticBag();
         var nodes = new List<Syntax>();
         var declaredTypes = new Dictionary<AstNode, TypeExpression>(ReferenceEqualityComparer.Instance);
@@ -27,7 +29,7 @@ public sealed class AnalysisSnapshot
         Imports = new Dictionary<SourceId, string[]>();
         try
         {
-            var compilation = new Compilation(sources, diagnostics, recoverErrors: true);
+            var compilation = new Compilation(sources, diagnostics, recoverErrors: true, options: options);
             Imports = new Dictionary<SourceId, string[]>(compilation.Unit.FileUsings);
             Capture(compilation.Unit, null);
             var aliases = nodes.Select(n => n.Node).OfType<AliasDeclaration>().Select(a => a.Name).ToHashSet();

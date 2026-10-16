@@ -16,6 +16,17 @@ public sealed class ProjectTests : IDisposable
     public void Dispose() { if (Directory.Exists(root)) Directory.Delete(root, true); }
 
     [Fact]
+    public void ProjectAnalysisDoesNotInjectStdWhenItIsExcluded()
+    {
+        Write("app.gfproj", ProjectFileFixture.Xml());
+        string main = Write("main.gf", "class Attribute {} int main() { Exception error; return 0; }");
+        var open = new Dictionary<string, OpenDocument>(Workspace.Paths) { [main] = new(main, File.ReadAllText(main), 1) };
+        var result = Workspace.Analyze(root, open);
+        Assert.Contains(result.Diagnostics[main], d => d.Message.Contains("Exception"));
+        Assert.DoesNotContain(result.Diagnostics[main], d => d.Message.Contains("reserved"));
+    }
+
+    [Fact]
     public void MSBuildEvaluatesCommentsImportsConditionsAndRemovesWithoutRunningTargets()
     {
         string imported = Write("shared/items.props", """

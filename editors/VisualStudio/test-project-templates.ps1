@@ -2,7 +2,7 @@ param([Parameter(Mandatory)][string]$PackageDirectory)
 $ErrorActionPreference = 'Stop'
 $compiler = Join-Path $PackageDirectory 'Compiler/gflat.exe'
 $sdk = Join-Path $PackageDirectory 'Sdk'
-foreach ($file in @('build/Gflat.props', 'build/Gflat.targets', 'build/Rules/General.xaml', 'std/std.gfproj', 'std/core/String.gf', 'std/libc/GC.gf')) {
+foreach ($file in @('build/Sdks/Gflat.Sdk/Sdk/Sdk.props', 'build/Sdks/Gflat.Sdk/Sdk/Sdk.targets', 'build/Gflat.props', 'build/Gflat.targets', 'build/Rules/General.xaml', 'std/std.gfproj', 'std/core/String.gf', 'std/libc/GC.gf')) {
     if (-not (Test-Path -LiteralPath (Join-Path $sdk $file))) { throw "Bundled SDK is missing $file" }
 }
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $PackageDirectory 'extension.vsixmanifest')
@@ -40,7 +40,7 @@ foreach ($kind in @('app', 'library')) {
         $text | Set-Content -LiteralPath (Join-Path $directory $destination) -Encoding utf8
     }
     # Simulate CPS's initial-evaluation defaults using the actual packaged SDK.
-    dotnet msbuild $project -t:Check "-p:GflatDefaultSdkRoot=$sdk" "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal
+    dotnet msbuild $project -t:Check "-p:GflatSdkRoot=$sdk" "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal
     if ($LASTEXITCODE -ne 0) { throw "CPS-style $kind template evaluation/check failed" }
     # The standalone bundled compiler must discover the same SDK without VS.
     if ($kind -eq 'app') {

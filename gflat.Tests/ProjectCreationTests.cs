@@ -105,24 +105,18 @@ public sealed class ProjectCreationTests
     }
 
     [Fact]
-    public void ImportsEscapeMsBuildCharactersInToolchainLocation()
+    public void GeneratedProjectsContainNoInstallationPathsOrExplicitImports()
     {
-        string root = TemporaryDirectory();
-        string toolchain = Path.Combine(root, "tools $literal;percent%");
-        string app = Path.Combine(root, "app");
-        Directory.CreateDirectory(Path.Combine(toolchain, "build"));
+        string directory = TemporaryDirectory();
         try
         {
-            string checkout = ProjectCreation.FindToolchainRoot();
-            foreach (string file in new[] { "Gflat.props", "Gflat.targets" })
-                File.Copy(Path.Combine(checkout, "build", file), Path.Combine(toolchain, "build", file));
-            string path = ProjectCreation.Create(app, useStd: false, toolchainRoot: toolchain);
-            var project = ProjectModel.Load(path);
-            Assert.Equal(Path.GetFullPath(toolchain), project.SdkRoot);
-            Assert.Single(project.SourceFiles());
-            Assert.Equal(Path.Combine(app, "main.gf"), project.SourceFiles()[0]);
-            Assert.Equal(0, Program.Main(["build", path, "--emit-ir"]));
+            string path = ProjectCreation.Create(directory, useStd: false);
+            var xml = System.Xml.Linq.XElement.Load(path);
+            Assert.Equal("Gflat.Sdk", (string?)xml.Attribute("Sdk"));
+            Assert.Empty(xml.Elements("Import"));
+            Assert.DoesNotContain(ProjectCreation.FindToolchainRoot(), File.ReadAllText(path));
+            Assert.True(ProjectModel.Load(path).NoStdLib);
         }
-        finally { Directory.Delete(root, true); }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }
 }

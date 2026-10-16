@@ -28,6 +28,6 @@ internal sealed class GflatBuildProperties : StaticGlobalPropertiesProviderBase
         return Task.FromResult<IImmutableDictionary<string, string>>(
             Empty.PropertiesMap.SetItem("GflatBundledCompiler", ProjectSdk.EscapePropertyValue(compiler))
                 .SetItem("GflatCompilerPath", ProjectSdk.EscapePropertyValue(compiler))
-                .SetItem("GflatDefaultSdkRoot", ProjectSdk.EscapePropertyValue(sdk)));
+                .SetItem("GflatSdkRoot", ProjectSdk.EscapePropertyValue(sdk)));
     }
 }

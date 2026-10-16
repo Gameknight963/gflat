@@ -7,27 +7,25 @@ namespace gflat.Projects;
 internal static class MsBuildEvaluation
 {
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static ProjectModel Load(string path, string configuration, string platform, int? exceptionReserveBytes, int? optimizationLevel)
+    internal static ProjectModel Load(string path, string configuration, string platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib)
     {
         try
         {
             var properties = new Dictionary<string, string>
             { ["Configuration"] = configuration, ["Platform"] = platform };
-            // Default only: environment/project GflatSdkRoot remains authoritative.
-            if (ProjectSdk.FindRoot(AppContext.BaseDirectory) is string sdk)
-                properties["GflatDefaultSdkRoot"] = ProjectCollection.Escape(sdk);
             if (exceptionReserveBytes.HasValue) properties["GflatExceptionReserveBytes"] = exceptionReserveBytes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (optimizationLevel.HasValue) properties["GflatOptimizationLevel"] = optimizationLevel.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (noStdLib.HasValue) properties["NoStdLib"] = noStdLib.Value ? "true" : "false";
             using var collection = new ProjectCollection(properties);
             var project = new Project(path, null, null, collection, ProjectLoadSettings.RecordEvaluatedItemElements);
-            var kind = project.GetPropertyValue("GflatProjectKind") switch
+            var kind = project.GetPropertyValue("OutputType") switch
             {
-                "Executable" => ProjectKind.Executable,
-                "SourceLibrary" => ProjectKind.SourceLibrary,
-                _ => throw new ProjectException(path, "GflatProjectKind must be Executable or SourceLibrary. Import Gflat.props and Gflat.targets.")
+                "Exe" => ProjectKind.Executable,
+                "Library" => ProjectKind.SourceLibrary,
+                _ => throw new ProjectException(path, "OutputType must be Exe or Library. Use <Project Sdk=\"Gflat.Sdk\">.")
             };
             string target = project.GetPropertyValue("TargetPath");
-            if (string.IsNullOrEmpty(target)) throw new ProjectException(path, "TargetPath is missing. Import Gflat.targets.");
+            if (string.IsNullOrEmpty(target)) throw new ProjectException(path, "TargetPath is missing. Use the Gflat.Sdk project SDK.");
             string[] Files(string type) => project.GetItems(type).Select(i => i.GetMetadataValue("FullPath"))
                 .Distinct(ProjectModel.Paths).ToArray();
             int reserveBytes;
@@ -42,13 +40,16 @@ internal static class MsBuildEvaluation
                 Files("Compile"), Files("ProjectReference"),
                 project.Imports.Select(i => i.ImportedProject.FullPath).Distinct(ProjectModel.Paths).ToArray(),
                 file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,
-                project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null);
+                project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null,
+                project.GetPropertyValue("NoStdLib").Equals("true", StringComparison.OrdinalIgnoreCase));
         }
         catch (InvalidProjectFileException error)
         {
             string message = error.BaseMessage;
             if (error.ErrorCode == "MSB4019" && (message.Contains("Gflat.props") || message.Contains("Gflat.targets")))
-                message += " Set GflatSdkRoot to a directory containing build/Gflat.props, build/Gflat.targets and std/std.gfproj, or use a gflat installation with bundled SDK assets.";
+                message += " Set GflatSdkRoot to a directory containing build/Gflat.props and build/Gflat.targets.";
+            if (message.Contains("Gflat.Sdk") && error.ErrorCode is "MSB4236" or "MSB4276")
+                message += " Install the project SDK for this MSBuild host using 'gflat sdk install' (or --sdk-directory for Visual Studio MSBuild). Installation is a separate setup step; builds do not modify MSBuild.";
             throw new ProjectException(string.IsNullOrEmpty(error.ProjectFile) ? path : error.ProjectFile, message, error.LineNumber, error.ColumnNumber);
         }
     }

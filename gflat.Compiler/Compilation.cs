@@ -11,7 +11,7 @@ public sealed class Compilation
     public IReadOnlyList<CompilationUnit> SyntaxTrees { get; }
     public CompilationUnit Unit { get; }
 
-    public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics, bool recoverErrors = false)
+    public Compilation(IEnumerable<SourceFile> sources, DiagnosticBag diagnostics, bool recoverErrors = false, CompilationOptions? options = null)
     {
         Sources = sources.OrderBy(s => s.Path, StringComparer.Ordinal).ToArray();
         if (Sources.Count == 0) throw new ArgumentException("Specify at least one source file.");
@@ -21,7 +21,7 @@ public sealed class Compilation
         Unit = new CompilationUnit(new(), SyntaxTrees.SelectMany(t => t.Namespaces).ToList(), SyntaxTrees.SelectMany(t => t.Members).ToList(), 0);
         foreach (var tree in SyntaxTrees)
             Unit.FileUsings[tree.Span.SourceId!.Value] = tree.Usings.Select(u => u.Name).ToArray();
-        try { AddStandardLibrary(Unit, diagnostics, Sources); }
+        try { if (options?.NoStdLib != true) AddStandardLibrary(Unit, diagnostics, Sources); }
         catch (TypeCheckException error) when (recoverErrors)
         { diagnostics.Report(DiagnosticRules.GF1000_GeneralTypeError, error.Span, error.Description); }
     }

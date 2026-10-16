@@ -1,5 +1,2 @@
-<Project DefaultTargets="Build">
-  <Import Project="../../build/Gflat.props" />
-  <ItemGroup><ProjectReference Include="../../std/std.gfproj" /></ItemGroup>
-  <Import Project="../../build/Gflat.targets" />
-</Project>
+<Project Sdk="Gflat.Sdk">
+  </Project>

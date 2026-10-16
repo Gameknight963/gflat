@@ -9,6 +9,8 @@ public sealed class LambdaRecoveryTests
     [Theory]
     [InlineData("static (Missing argument) => 1")]
     [InlineData("(Missing argument) => 1")]
+    [InlineData("static (const int argument) => argument")]
+    [InlineData("(const int argument) => argument")]
     public void InvalidLambdaDoesNotTurnLaterLocalsIntoCaptures(string expression)
     {
         string text = "int main() { int value = 42; int(int)* broken = " + expression +

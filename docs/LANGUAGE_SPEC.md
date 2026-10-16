@@ -514,6 +514,8 @@ element. If a copy fails, completed subobjects are destroyed. Nontrivial copying
 not supported during constant evaluation. `foreach` copies elements and requires
 a copyable element type.
 
+An explicit value cast follows the same copy contract: casting an existing value requires its accessible copy implementation, while a fresh or moved operand transfers without another copy. An owning cast result is destroyed when discarded or after temporary member use. `default(T)` and cast results support field, property, method, and fixed-buffer element access with the normal temporary lifetime.
+
 For a custom collection, `foreach` calls `GetEnumerator()` using ordinary method
 resolution, including visible extension methods. The returned iterator must provide
 a `bool MoveNext()` method and a readable `Current` member. `Current` may be a

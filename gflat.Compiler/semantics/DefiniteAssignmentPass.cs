@@ -908,7 +908,7 @@ namespace gflat.semantics
             }
             else if (expr is CastExpression cast)
             {
-                CheckExpression(cast.Operand);
+                CheckValue(cast.Operand);
             }
             else if (expr is IndexExpression index)
             {

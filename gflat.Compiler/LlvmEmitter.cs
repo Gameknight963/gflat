@@ -687,7 +687,7 @@ public partial class LlvmEmitter : IVisitor
             deref.Operand.Accept(this);
         }
         else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression or TypeofExpression or
-                 UnaryExpression or BinaryExpression)
+                 UnaryExpression or BinaryExpression or DefaultExpression or CastExpression)
         {
             node.Accept(this);
             string value = Pop();
@@ -728,7 +728,8 @@ public partial class LlvmEmitter : IVisitor
     {
         TypeExpression targetType = _typeChecker.ResolveAlias(_typeChecker.GetType(node.Target));
         string targetPtr;
-        if (targetType is ArrayTypeExpression { Size: not null } && node.Target is (UnaryExpression { Operator: TokenKind.Star } or ArrayLiteralExpression or CallExpression))
+        if (targetType is ArrayTypeExpression { Size: not null } && node.Target is
+            (UnaryExpression { Operator: TokenKind.Star } or ArrayLiteralExpression or CallExpression or DefaultExpression or CastExpression))
         {
             EmitAddress(node.Target);
             string arrayAddress = Pop();

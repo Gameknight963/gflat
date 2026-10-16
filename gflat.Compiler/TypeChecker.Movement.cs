@@ -19,7 +19,7 @@ public partial class TypeChecker
 
     private readonly HashSet<AstNode> _transferredPropertyArguments = new();
     public bool IsFreshValue(AstNode expression) => _transferredPropertyArguments.Contains(expression) || (_propertyReads.ContainsKey(expression) && !IsReferenceRead(expression)) || expression is
-        NewExpression or CallExpression or DefaultExpression or ArrayLiteralExpression or MoveExpression;
+        NewExpression or CallExpression or DefaultExpression or ArrayLiteralExpression or MoveExpression or CastExpression;
 
     public void Visit(MoveExpression node)
     {

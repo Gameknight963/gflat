@@ -270,6 +270,24 @@ public sealed class StaticManagedLifetimeTests
         Assert.Equal("D", result.StandardOutput);
     }
 
+    [Theory]
+    [InlineData("Owner value = new Owner(); (Owner)value;")]
+    [InlineData("Owner value = new Owner(); Owner other = (Owner)value;")]
+    [InlineData("(Owner)new Owner();")]
+    [InlineData("Owner value = new Owner(); (Owner)move value;")]
+    [InlineData("Owner value = new Owner(); try { (Owner)value; } catch {}", true)]
+    public void CastedOwningValuesBalanceManagedStorage(string body, bool throws = false)
+    {
+        string owner = OwnerSource.Replace("~Owner() {}", "public copy Owner(readonly(Owner)* source) { item = null; " +
+            (throws ? "throw new Exception();" : "") + " } ~Owner() {}");
+        var result = CompilerTestHelper.Run(ProbeSource + owner + """
+            void Work() { BODY }
+            int main() { Work(); return (int)Probe::Count(); }
+            """.Replace("BODY", body));
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("", result.StandardOutput);
+    }
+
     private const string OwnerSource = """
         struct Owner {
             private managed<int, Probe>? item;

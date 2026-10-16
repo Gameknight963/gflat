@@ -5689,6 +5689,8 @@ namespace gflat
             {
                 throw new TypeCheckException($"Cannot cast '{TypeName(sourceType)}' to '{TypeName(targetType)}'", node.Line);
             }
+            if (!ValidateCopyUse(node.Operand, targetType))
+                throw new TypeCheckException("Cast requires a copyable value, a fresh value, or 'move value'", node.Span);
 
             RecordType(node, node.TargetType);
         }

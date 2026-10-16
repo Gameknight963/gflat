@@ -27,6 +27,7 @@ namespace gflat.comptime
         private ConstValue? _currentValue = null;
         private bool _hasReturned = false;
         private ConstValue? _returnValue = null;
+        private TypeExpression? _returnTarget;
         private bool _hasBroken = false;
         private bool _hasContinued = false;
         private bool _evaluating;
@@ -37,11 +38,14 @@ namespace gflat.comptime
         }
 
         public bool TryEvaluate(AstNode node, out ConstValue? result, out string? failureReason)
+            => TryEvaluate(node, null, out result, out failureReason);
+
+        public bool TryEvaluate(AstNode node, TypeExpression? target, out ConstValue? result, out string? failureReason)
         {
             // Resolving a type during evaluation may require another constant
             // (for example an array bound). Give that query independent state.
             if (_evaluating)
-                return new ConstEvaluator(_context).TryEvaluate(node, out result, out failureReason);
+                return new ConstEvaluator(_context).TryEvaluate(node, target, out result, out failureReason);
             _evaluating = true;
             result = null;
             failureReason = null;
@@ -49,6 +53,7 @@ namespace gflat.comptime
             _callDepth = 0;
             _hasReturned = false;
             _returnValue = null;
+            _returnTarget = null;
             _hasBroken = false;
             _hasContinued = false;
             _currentValue = null;
@@ -57,7 +62,8 @@ namespace gflat.comptime
 
             try
             {
-                node.Accept(this);
+                if (target == null) node.Accept(this);
+                else _currentValue = EvaluateValueForTarget(node, target);
                 result = _currentValue;
                 return result != null;
             }
@@ -928,10 +934,12 @@ namespace gflat.comptime
             var callerScopes = _scopes.Reverse().ToArray();
             bool prevReturned = _hasReturned;
             ConstValue? prevReturnVal = _returnValue;
+            TypeExpression? prevReturnTarget = _returnTarget;
             _scopes.Clear();
             PushScope();
             _hasReturned = false;
             _returnValue = null;
+            _returnTarget = method.ReturnType;
             try
             {
                 if (thisReceiver != null) _scopes.Peek()["this"] = thisReceiver;
@@ -944,6 +952,7 @@ namespace gflat.comptime
             {
                 _hasReturned = prevReturned;
                 _returnValue = prevReturnVal;
+                _returnTarget = prevReturnTarget;
                 _scopes.Clear();
                 foreach (var scope in callerScopes) _scopes.Push(scope);
                 _callDepth--;
@@ -1142,7 +1151,8 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             if (node.Value != null)
             {
-                node.Value.Accept(this);
+                if (_returnTarget == null) node.Value.Accept(this);
+                else _currentValue = EvaluateValueForTarget(node.Value, _returnTarget);
                 _returnValue = _currentValue;
             }
             else

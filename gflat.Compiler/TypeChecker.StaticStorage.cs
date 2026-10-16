@@ -124,7 +124,7 @@ public partial class TypeChecker
     {
         if (!staticStorage.ContainsKey(field) || field.IsConst || field.Initializer == null ||
             HasDestructor(field.Type) || ContainsManagedReference(field.Type)) return;
-        if (_constEvaluator.TryEvaluate(field.Initializer, out var value, out _))
+        if (_constEvaluator.TryEvaluate(field.Initializer, field.Type, out var value, out _))
             staticStorageConstants[field] = NormalizeStringBufferConstant(value!, ResolveAlias(field.Type));
     }
 

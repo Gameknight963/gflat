@@ -48,7 +48,7 @@ public partial class TypeChecker
             using var exceptionScope = IsolateExceptionHandlers();
             using var declarationContext = IsolateDeclarationContext();
             field.Initializer.Accept(this);
-            if (!new ConstEvaluator(this).TryEvaluate(field.Initializer, out value, out _)) return false;
+            if (!new ConstEvaluator(this).TryEvaluate(field.Initializer, field.Type, out value, out _)) return false;
             _constValues[field] = value!;
             return true;
         }
@@ -128,7 +128,7 @@ public partial class TypeChecker
             if (!IsAssignable(type, GetType(expression), expression))
                 throw new TypeCheckException($"Default for parameter '{parameter.Name}' cannot convert to '{TypeName(type)}'", expression.Span);
             if (expression is LiteralExpression { Token.Kind: TokenKind.Null }) value = null;
-            else if (!new ConstEvaluator(this).TryEvaluate(expression, out value, out string? error))
+            else if (!new ConstEvaluator(this).TryEvaluate(expression, type, out value, out string? error))
                 throw new TypeCheckException($"Default for parameter '{parameter.Name}' must be a compile-time constant: {error}", expression.Span);
             if (value != null && type is NamedTypeExpression named &&
                 (NumericSemantics.IntegerType(named.Name) != null || named.Name is "float" or "double"))

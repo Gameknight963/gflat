@@ -2449,7 +2449,7 @@ namespace gflat
                             {
                                 throw new TypeCheckException($"Const variable '{field.Name}' must have an initializer", field.Line);
                             }
-                            if (!_constEvaluator.TryEvaluate(field.Initializer, out ConstValue? constVal, out string? err))
+                            if (!_constEvaluator.TryEvaluate(field.Initializer, fieldType, out ConstValue? constVal, out string? err))
                             {
                                 throw new TypeCheckException($"Const variable '{field.Name}' initializer must be a compile-time constant: {err}", field.Line);
                             }
@@ -2644,7 +2644,7 @@ namespace gflat
                             {
                                 throw new TypeCheckException($"Const variable '{field.Name}' must have an initializer", field.Line);
                             }
-                            if (!_constEvaluator.TryEvaluate(field.Initializer, out ConstValue? constVal, out string? err))
+                            if (!_constEvaluator.TryEvaluate(field.Initializer, fieldType, out ConstValue? constVal, out string? err))
                             {
                                 throw new TypeCheckException($"Const variable '{field.Name}' initializer must be a compile-time constant: {err}", field.Line);
                             }
@@ -2865,7 +2865,7 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Const variable '{node.Name}' must have an initializer", node.Line);
                 }
-                if (!_constEvaluator.TryEvaluate(node.Initializer, out ConstValue? constVal, out string? err))
+                if (!_constEvaluator.TryEvaluate(node.Initializer, fieldType, out ConstValue? constVal, out string? err))
                 {
                     throw new TypeCheckException($"Const variable '{node.Name}' initializer must be a compile-time constant: {err}", node.Line);
                 }
@@ -3431,7 +3431,7 @@ namespace gflat
                 {
                     throw new TypeCheckException($"Const variable '{node.Name}' must have an initializer", node.Line);
                 }
-                if (!_constEvaluator.TryEvaluate(node.Initializer, out ConstValue? constVal, out string? err))
+                if (!_constEvaluator.TryEvaluate(node.Initializer, varType, out ConstValue? constVal, out string? err))
                 {
                     throw new TypeCheckException($"Const variable '{node.Name}' initializer must be a compile-time constant: {err}", node.Line);
                 }

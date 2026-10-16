@@ -10,12 +10,13 @@ public partial class TypeChecker
 
     public string GetOverloadSuffix(MethodDeclaration method) =>
         overloadFamilies.TryGetValue(method, out var family) && family.Count > 1
-            ? "$overload$" + Convert.ToHexString(Encoding.UTF8.GetBytes(OverloadKey(method.Parameters))) : "";
+            ? "$overload$" + Convert.ToHexString(Encoding.UTF8.GetBytes(OverloadKey(method))) : "";
 
     public MethodDeclaration InterfaceImplementation(MethodDeclaration representative, MethodDeclaration contract)
     {
         if (!overloadFamilies.TryGetValue(representative, out var family)) return representative;
-        return family.FirstOrDefault(m => OverloadKey(m.Parameters) == OverloadKey(contract.Parameters)) ?? representative;
+        string contractKey = OverloadKey(contract);
+        return family.FirstOrDefault(m => OverloadKey(m) == contractKey) ?? representative;
     }
 
     // Readonly is not an overload discriminator, at any pointer depth.
@@ -36,17 +37,27 @@ public partial class TypeChecker
 
     private string OverloadKey(List<Parameter> parameters) => string.Join(",", parameters.Select(p => OverloadTypeKey(p.Type)));
 
+    private string OverloadKey(MethodDeclaration method)
+    {
+        using var context = EnterMethodSignatureContext(method);
+        return OverloadKey(method.Parameters);
+    }
+
     private void PrepareOverloads(CompilationUnit unit)
     {
         var groups = new Dictionary<string, List<MethodDeclaration>>();
         Walk(unit.Members, "");
         foreach (var ns in unit.Namespaces) Walk(ns.Members, ns.Name + "::");
-        foreach (var constructors in _structs.Values.Select(s => s.Constructors).Concat(_classes.Values.Select(c => c.Constructors)))
+        // Resolving a parameter alias can register another specialization.
+        // Preserve this pass's owner set while nested passes prepare new types.
+        var owners = _structs.Values.Select(s => (Owner: s.Name, IsClass: false, Constructors: s.Constructors.ToArray()))
+            .Concat(_classes.Values.Select(c => (Owner: c.Name, IsClass: true, Constructors: c.Constructors.ToArray()))).ToArray();
+        foreach (var owner in owners)
         {
             var keys = new Dictionary<string, ConstructorDeclaration>();
-            foreach (var ctor in constructors)
+            foreach (var ctor in owner.Constructors)
             {
-                using var context = SourceContext.Enter(ctor.Span);
+                using var context = EnterSignatureContext(ctor, owner.Owner, owner.IsClass);
                 string key = OverloadKey(ctor.Parameters);
                 if (keys.TryGetValue(key, out var first))
                     DuplicateDeclaration(first, ctor, "Constructors cannot differ only by readonly or parameter modifiers");
@@ -67,7 +78,7 @@ public partial class TypeChecker
             var keys = new Dictionary<string, MethodDeclaration>();
             foreach (var method in family)
             {
-                string key = OverloadKey(method.Parameters);
+                string key = OverloadKey(method);
                 if (keys.TryGetValue(key, out var first))
                     DuplicateDeclaration(first, method, $"Overloads of '{method.Name}' cannot differ only by readonly, return type, or declaration modifiers");
                 keys[key] = method;

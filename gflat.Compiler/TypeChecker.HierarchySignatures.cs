@@ -6,36 +6,50 @@ public partial class TypeChecker
 {
     private TypeExpression ResolveHierarchyMethodType(MethodDeclaration method, TypeExpression type)
     {
-        // A generic class can have its hierarchy checked synchronously while a
-        // caller instantiates it. Its cloned signatures still use source aliases.
-        using var declarations = IsolateDeclarationContext();
-        using var nullable = IsolateNullableFlow();
-        using var exceptions = IsolateExceptionHandlers();
+        using var context = EnterMethodSignatureContext(method);
         using var source = SourceContext.Enter(type.Span.Source != null ? type.Span : method.Span);
+        return ResolveAlias(type);
+    }
+
+    private IDisposable EnterMethodSignatureContext(MethodDeclaration method)
+    {
+        bool found = TryGetMethodOwner(method, out string owner, out bool isClass);
+        return EnterSignatureContext(method, found ? owner : null, isClass);
+    }
+
+    private IDisposable EnterSignatureContext(AstNode declaration, string? owner, bool isClass)
+    {
+        // Generic declarations can be inspected while a caller instantiates
+        // them, before body checking has bound their source signature aliases.
+        var declarations = IsolateDeclarationContext();
+        var nullable = IsolateNullableFlow();
+        var exceptions = IsolateExceptionHandlers();
+        var source = SourceContext.Enter(declaration.Span);
         var previousNamespace = _currentNamespace;
         var previousPath = _currentNamespacePath;
         var previousClass = _currentClass;
         var previousStruct = _currentStruct;
         try
         {
-            string ns = declarationNamespaces.GetValueOrDefault(method) ?? "";
+            string ns = declarationNamespaces.GetValueOrDefault(declaration) ?? "";
             _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
             _currentNamespacePath = ns;
-            _currentClass = null;
-            _currentStruct = null;
-            if (TryGetMethodOwner(method, out string owner, out bool isClass))
-            {
-                if (isClass) _currentClass = GetClass(owner);
-                else _currentStruct = GetStruct(owner);
-            }
-            return ResolveAlias(type);
+            _currentClass = owner != null && isClass ? _classes.GetValueOrDefault(owner) : null;
+            _currentStruct = owner != null && !isClass ? _structs.GetValueOrDefault(owner) : null;
+            return new NullableAction(Restore);
         }
-        finally
+        catch { Restore(); throw; }
+
+        void Restore()
         {
             _currentNamespace = previousNamespace;
             _currentNamespacePath = previousPath;
             _currentClass = previousClass;
             _currentStruct = previousStruct;
+            source.Dispose();
+            exceptions.Dispose();
+            nullable.Dispose();
+            declarations.Dispose();
         }
     }
 }

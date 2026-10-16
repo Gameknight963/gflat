@@ -29,6 +29,7 @@ public sealed partial class EditorModel
     private readonly Dictionary<string, Syntax[]> nodes = new(Workspace.Paths);
     private readonly List<Symbol> symbols = [];
     private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceTypeDeclarations = [];
+    private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceCallableDeclarations = [];
     private readonly Dictionary<AstNode, Symbol> declarations = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Token, Symbol?> references = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Syntax, int> scopeEnds = new(ReferenceEqualityComparer.Instance);
@@ -95,10 +96,13 @@ public sealed partial class EditorModel
             symbols.Add(symbol);
             if (IsType(entry.Node) && entry.Span.Source != null)
                 sourceTypeDeclarations.TryAdd((entry.Node.GetType(), entry.Span), symbol);
+            if (symbol.Parameters != null && entry.Span.Source != null)
+                sourceCallableDeclarations.TryAdd((entry.Node.GetType(), entry.Span), symbol);
             declarations.TryAdd(entry.Node, symbol);
         }
         RegisterTypeParameters();
         IndexSourceTypeNames();
+        IndexBoundCallables();
         // Resolve once on the analysis worker. Hover and semantic-token requests
         // must not repeatedly walk the tree on the server's message loop.
         foreach (var (path, ts) in tokens)
@@ -418,6 +422,7 @@ public sealed partial class EditorModel
             placement.PlacementKeywordSpan.Length > 0 && placement.PlacementKeywordSpan.Start == token.Start)) return null;
         var declaration = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == token.Start && s.NameSpan.Length == token.Span.Length);
         if (declaration != null) return declaration;
+        if (boundCallableReferences.TryGetValue(token, out var boundCallable)) return boundCallable;
         var call = nodes[path].Where(n => n.Node is CallExpression c && c.Callee.Span.Start <= token.Start && c.Callee.Span.Start + c.Callee.Span.Length == token.End + 1).MinBy(n => n.Span.Length);
         if (call?.Node is CallExpression expression && ExtensionCallSymbol(expression) is { } extension) return extension;
         if (call?.Node is CallExpression resolvedCall && snapshot.Checker?.GetResolvedCall(resolvedCall) is AstNode target && declarations.TryGetValue(target, out var method)) return method;
@@ -577,12 +582,12 @@ public sealed partial class EditorModel
             else if (ts[i].Kind is TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.CloseBrace) { if (stack.Count > 0) stack.Pop(); }
             else if (ts[i].Kind == TokenKind.Comma && stack.Count > 0) { var frame = stack.Pop(); stack.Push((frame.Index, frame.Commas + 1)); }
         }
-        var call = stack.FirstOrDefault(f => ts[f.Index].Kind == TokenKind.OpenParen && f.Index > 0 && ts[f.Index - 1].Kind is TokenKind.Identifier or TokenKind.Base, (Index: -1, Commas: 0));
+        var call = stack.FirstOrDefault(f => ts[f.Index].Kind == TokenKind.OpenParen && CallableNameBeforeParenthesis(ts, f.Index) >= 0, (Index: -1, Commas: 0));
         if (call.Index < 0) return null;
-        int nameIndex = call.Index - 1;
-        var candidates = ts[nameIndex].Kind == TokenKind.Base
+        int nameIndex = CallableNameBeforeParenthesis(ts, call.Index);
+        var candidates = boundCallableFamilies.GetValueOrDefault(ts[nameIndex]) ?? (ts[nameIndex].Kind == TokenKind.Base
             ? BaseConstructors(path, offset).ToArray()
-            : Candidates(path, offset, nameIndex).Where(s => s.Name == ts[nameIndex].Text && s.Parameters != null).ToArray();
+            : Candidates(path, offset, nameIndex).Where(s => s.Name == ts[nameIndex].Text && s.Parameters != null).ToArray());
         if (candidates.Length == 0) return null;
         var selected = Resolve(path, nameIndex);
         int active = Math.Max(0, Array.IndexOf(candidates, selected));

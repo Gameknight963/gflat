@@ -152,7 +152,7 @@ public sealed partial class EditorModel
         else
         {
             if (IsType(symbol.Syntax.Node) || symbol.Syntax.Node is NamespaceDeclaration) Keyword(symbol.Classification);
-            else if (symbol.Type != null) { Type(symbol.BoundExtension ? symbol.Type : snapshot.DeclaredTypes.GetValueOrDefault(symbol.Syntax.Node) ?? symbol.Type); Add(" "); }
+            else if (symbol.Type != null) { Type(symbol.BoundParameters != null ? symbol.Type : snapshot.DeclaredTypes.GetValueOrDefault(symbol.Syntax.Node) ?? symbol.Type); Add(" "); }
             Name();
         }
         if (symbol.Parameters is { } parameters)
@@ -164,7 +164,9 @@ public sealed partial class EditorModel
                 var parameter = parameters[i];
                 if (parameter.IsExtensionReceiver) Keyword("this");
                 if (parameter.IsConst) Keyword("const");
-                Type(symbol.BoundParameters != null ? parameter.Type : snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type); Add(" "); Add(parameter.Name, "parameter", navigable ? SymbolLocation(declarations.GetValueOrDefault(parameter)) : null);
+                var originalParameter = symbol.BoundParameters != null && symbol.Syntax.Node is MethodDeclaration sourceMethod
+                    ? sourceMethod.Parameters.ElementAtOrDefault(i + (symbol.BoundExtension ? 1 : 0)) : parameter;
+                Type(symbol.BoundParameters != null ? parameter.Type : snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type); Add(" "); Add(parameter.Name, "parameter", navigable ? SymbolLocation(originalParameter == null ? null : declarations.GetValueOrDefault(originalParameter)) : null);
                 if (parameter.DefaultValue != null)
                 {
                     Add(" = ", "punctuation");

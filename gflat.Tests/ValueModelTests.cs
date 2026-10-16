@@ -71,7 +71,8 @@ public class ValueModelTests
     [InlineData("struct Box<T> { public T item; public Box(T value) { item = move value; } } int main() { Box<R> b = new Box<R>(new R(6)); return 0; }", "6")]
     [InlineData("struct Box { R item; public Box(bool b) { if (b) item = new R(1); item = new R(2); } } int main() { { Box a = new Box(true); } { Box b = new Box(false); } return 0; }", "122")]
     [InlineData("class Base { R item; public Base(R value) { item = move value; } } class Derived : Base { public Derived(R value) : base(move value) {} } int main() { Derived d = new Derived(new R(6)); return 0; }", "6")]
-    [InlineData("int Fail() { throw new Exception(); } struct V { R item = new R(1); public ref R this[int i] { get { Fail(); return item; } } } int main() { V v = new V(); try { v[0] = new R(2); } catch {} return 0; }", "21")]
+    // The target getter throws before the right-hand R(2) is constructed.
+    [InlineData("int Fail() { throw new Exception(); } struct V { R item = new R(1); public ref R this[int i] { get { Fail(); return item; } } } int main() { V v = new V(); try { v[0] = new R(2); } catch {} return 0; }", "1")]
     [InlineData("void Fail(R value) { throw new Exception(); } int main() { try { Fail(new R(7)); } catch {} return 0; }", "7")]
     [InlineData("void Use(R a, R b) {} R Pass(R value) { return value; } int main() { Use(new R(1), Pass(new R(2))); return 0; }", "21")]
     [InlineData("struct F { public R Value => new R(4); } R Get() { F f = new F(); return f.Value; } int main() { R a = Get(); return 0; }", "4")]

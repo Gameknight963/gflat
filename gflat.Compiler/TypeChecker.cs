@@ -3793,6 +3793,9 @@ namespace gflat
                     RecordType(node, Error);
                     return;
                 }
+                if (ResolveAlias(operandType) is NamedTypeExpression { Name: "null" })
+                    throw new TypeCheckException("null has no value storage; cast it to a nullable pointer type before taking its address", node.Span);
+                ValidateValueType(operandType, node.Line);
                 bool isReadOnly = IsExpressionReadOnly(node.Operand);
                 RecordType(node, new PointerTypeExpression(operandType, false, node.Line, isReadOnly: isReadOnly));
                 if (_constEvaluator.TryEvaluate(node, out ConstValue? constPtr, out _))

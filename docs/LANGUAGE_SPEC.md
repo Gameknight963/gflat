@@ -1138,14 +1138,22 @@ its declared type; it does not evaluate a value expression.
 Concrete array and aggregate layouts are currently limited to 2147483647 bytes.
 `sizeof` and construction diagnose layouts exceeding this implementation
 limit, including field and tail padding; size arithmetic does not wrap. Declaring
-a raw pointer does not require calculating its pointee's complete size.
+a raw pointer does not require calculating its pointee's complete size. Inline value
+fields and base classes must form a finite layout: direct or indirect cycles are
+rejected even in unused declarations. Raw pointers and managed references do not
+embed their pointee's instance layout and may be recursive. Static fields do not
+form part of their declaring type's instance layout.
+Nested type specialization is currently limited to 64 active specializations;
+this compiler resource limit prevents unbounded generic expansion from exhausting
+the compiler stack and does not limit the total number of specialized types.
 
 For a class type these queries describe the complete object, including its vptr
 and padding. For `T*` and `T^` they describe the reference representation instead.
 An interface reference has two pointer-sized words but pointer alignment. Fixed
 arrays have their element type's alignment. `readonly(T)` preserves T's layout.
 Following the existing `sizeof(void) == 0` convention, `alignof(void)` is 1.
-Values follow the compilation target ABI, currently `x86_64-pc-windows-msvc`.
+Values follow the host target ABI: `x86_64-pc-windows-msvc` on Windows or
+`x86_64-unknown-linux-gnu` on Linux.
 
 ```csharp
 struct Packet { public char tag; public long payload; }

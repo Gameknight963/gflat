@@ -888,10 +888,12 @@ namespace gflat
             string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
             extensionGenericTypeOrigins[mangledName] = new NamedTypeExpression(genericDef.Name, null, line, typeArgs);
             _displayNames[mangledName] = DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
+            CheckFailedTypeSpecialization(mangledName, line);
             if (_structs.ContainsKey(mangledName))
             {
                 return new NamedTypeExpression(mangledName, null, line);
             }
+            using var specialization = EnterTypeSpecialization(mangledName, line);
 
             Dictionary<string, TypeExpression> typeMap = new();
             for (int i = 0; i < genericDef.GenericParameters.Count; i++)
@@ -931,10 +933,12 @@ namespace gflat
             string mangledName = $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
             extensionGenericTypeOrigins[mangledName] = new NamedTypeExpression(genericDef.Name, null, line, typeArgs);
             _displayNames[mangledName] = DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
+            CheckFailedTypeSpecialization(mangledName, line);
             if (_classes.ContainsKey(mangledName))
             {
                 return new NamedTypeExpression(mangledName, null, line);
             }
+            using var specialization = EnterTypeSpecialization(mangledName, line);
 
             Dictionary<string, TypeExpression> typeMap = new();
             for (int i = 0; i < genericDef.GenericParameters.Count; i++)
@@ -1368,6 +1372,7 @@ namespace gflat
                 }
                 if (GetClass(named.Name) is ClassInfo classInfo)
                 {
+                    using var layout = EnterLayoutQuery(classInfo.Name, named.Line);
                     return classInfo.Fields.Aggregate(TargetInfo.Default.PointerBytes,
                         (alignment, field) => Math.Max(alignment, GetTypeAlignment(field.Type)));
                 }
@@ -1388,6 +1393,7 @@ namespace gflat
 
         public int GetStructAlignment(StructInfo structInfo)
         {
+            using var layout = EnterLayoutQuery(structInfo.Name, SourceContext.Current?.Line ?? 0);
             int maxAlign = 1;
             foreach ((string Name, TypeExpression Type) field in structInfo.Fields)
             {
@@ -1402,6 +1408,7 @@ namespace gflat
 
         public int GetStructSize(StructInfo structInfo)
         {
+            using var layout = EnterLayoutQuery(structInfo.Name, SourceContext.Current?.Line ?? 0);
             long offset = 0;
             int maxAlign = 1;
             SourceSpan span = default;
@@ -1424,6 +1431,7 @@ namespace gflat
 
         public int GetClassSize(ClassInfo classInfo)
         {
+            using var layout = EnterLayoutQuery(classInfo.Name, SourceContext.Current?.Line ?? 0);
             long offset = TargetInfo.Default.PointerBytes; // vtable pointer
             int maxAlign = 8;
             SourceSpan span = classInfo.Span;
@@ -1992,6 +2000,7 @@ namespace gflat
             // Pass 2: Hierarchy resolution
             HierarchyResolutionPass hierarchyPass = new HierarchyResolutionPass(_symbols);
             hierarchyPass.Execute();
+            ValidateCollectedInlineLayouts();
             ValidateAliasContracts();
 
             // Resolve literal operators before checking uses, including forward references.
@@ -2328,6 +2337,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             ValidateStaticClass(node);
             if (node.IsGeneric) return;
+            ValidateInlineLayout(node.Name);
 
             ClassInfo? prevClass = _currentClass;
             StructInfo? prevStruct = _currentStruct;
@@ -2520,6 +2530,7 @@ namespace gflat
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             if (node.IsGeneric) return;
+            ValidateInlineLayout(node.Name);
 
             StructInfo? previousStruct = _currentStruct;
             ClassInfo? prevClass = _currentClass;

@@ -18,6 +18,8 @@ public class RecoveryTests
         "class Outer { public static class Broken { public int Inner() => 1; } }\n",
         "class Outer { public static struct Broken { public int Inner() => 1; } }\n",
         "class Outer { public static enum Broken { A } }\n",
+        "struct Recursive { Recursive child; }\n",
+        "struct ExpandA<T> { ExpandB<T*> child; } struct ExpandB<T> { ExpandA<T*> child; } int Expand() => sizeof(ExpandA<int>);\n",
         "class Broken {\n", "struct Broken {\n", "interface Broken {\n"
     ];
     public static IEnumerable<object[]> Prefixes() => BrokenPrefixes.Select(p => new object[] { p });
@@ -37,6 +39,29 @@ public class RecoveryTests
         var model = new EditorModel(snapshot, [source]);
         Assert.NotNull(model.Hover(source.Path, source.Text.IndexOf("Answer", StringComparison.Ordinal)));
     }
+    [Fact]
+    public void SpecializationLimitPreservesFreshUnrelatedGenericEditorServices()
+    {
+        var source = new SourceFile(Path.GetFullPath("specialization-recovery.gf"), """
+            struct A<T> { B<T*> child; }
+            struct B<T> { A<T*> child; }
+            int Bad() => sizeof(A<int>);
+            struct Box<T> { public T value; }
+            int Healthy() { Box<int> box = default; box.value = 42; return box.value; }
+            """);
+        var snapshot = new AnalysisSnapshot([source]);
+        Assert.Contains(snapshot.Diagnostics, d => d.Message.Contains("compiler nesting limit"));
+        Assert.DoesNotContain(snapshot.Diagnostics, d => d.Span.Start >= source.Text.IndexOf("struct Box", StringComparison.Ordinal));
+        var model = new EditorModel(snapshot, [source]);
+        Assert.NotNull(model.Hover(source.Path, source.Text.IndexOf("A<int>", StringComparison.Ordinal),
+            options: new HoverOptions(ShowTypeLayout: true)));
+        int member = source.Text.LastIndexOf("value", StringComparison.Ordinal);
+        Assert.NotNull(model.Hover(source.Path, member));
+        Assert.NotNull(model.Definition(source.Path, member));
+        var variable = snapshot.Nodes.Select(n => n.Node).OfType<VariableDeclaration>().Single(n => n.Name == "box");
+        Assert.NotEqual("<error>", TypeChecker.TypeName(snapshot.Checker!.GetType(variable)));
+    }
+
     private const string Healthy = """
         namespace Demo {
             public struct Item { public int value; public int Read() => value; }

@@ -473,6 +473,10 @@ Assignments evaluate the destination receiver and indices once, before the right
 
 `defer` executes in reverse registration order at lexical scope exit, including return, break, continue, and supported exception paths. Deferred code binds variables at its declaration site, even if a later scope shadows a name. Deferred reads are checked at cleanup; deferred writes do not take effect at registration. Nested defer is not supported.
 
+Deferred code cannot return from its enclosing function or use `break` or
+`continue` to leave the deferred body. Loops declared inside that body may use
+their own `break` and `continue` statements normally.
+
 ```csharp
 int main()
 {

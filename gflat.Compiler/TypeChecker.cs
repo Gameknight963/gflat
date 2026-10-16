@@ -3074,7 +3074,9 @@ namespace gflat
                 throw new TypeCheckException("Cannot return from within a defer statement", node.Line);
 
             bool prevInDefer = _inDefer;
+            int previousLoopDepth = _loopDepth;
             _inDefer = true;
+            _loopDepth = 0;
             try
             {
                 CheckNullableDefer(node.Statement);
@@ -3082,6 +3084,7 @@ namespace gflat
             finally
             {
                 _inDefer = prevInDefer;
+                _loopDepth = previousLoopDepth;
             }
         }
 
@@ -5362,7 +5365,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             if (_loopDepth <= 0)
             {
-                throw new TypeCheckException("Cannot break outside of a loop", node.Line);
+                throw new TypeCheckException(_inDefer ? "Cannot break out of a defer statement" : "Cannot break outside of a loop", node.Line);
             }
         }
 
@@ -5371,7 +5374,7 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             if (_loopDepth <= 0)
             {
-                throw new TypeCheckException("Cannot continue outside of a loop", node.Line);
+                throw new TypeCheckException(_inDefer ? "Cannot continue out of a defer statement" : "Cannot continue outside of a loop", node.Line);
             }
         }
 

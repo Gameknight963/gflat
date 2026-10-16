@@ -128,7 +128,7 @@ namespace gflat.semantics
 
         private void ResolveClassHierarchy(TypeChecker.ClassInfo cls, HashSet<string> visiting, HashSet<string> visited)
         {
-            if (visited.Contains(cls.Name))
+            if (cls.HierarchyResolved || visited.Contains(cls.Name))
             {
                 return;
             }
@@ -139,6 +139,43 @@ namespace gflat.semantics
 
             visiting.Add(cls.Name);
 
+            var fields = cls.Fields.ToArray();
+            var fieldDeclarations = cls.FieldDeclarationsByName.ToArray();
+            var methods = cls.Methods.ToArray();
+            var virtualMethods = cls.VirtualMethods.ToArray();
+            var slots = cls.VTableSlots.ToArray();
+            var interfaces = cls.Interfaces.ToArray();
+            int destructorSlot = cls.DestructorSlot;
+            try
+            {
+                ResolveClassMembers(cls, visiting, visited);
+                cls.HierarchyResolved = true;
+                visited.Add(cls.Name);
+            }
+            catch
+            {
+                // Editor recovery may retry an invalid hierarchy. Preserve the
+                // declarations rather than leaving a partly inherited layout.
+                Restore(cls.Fields, fields);
+                Restore(cls.FieldDeclarationsByName, fieldDeclarations);
+                Restore(cls.Methods, methods);
+                Restore(cls.VirtualMethods, virtualMethods);
+                Restore(cls.VTableSlots, slots);
+                Restore(cls.Interfaces, interfaces);
+                cls.DestructorSlot = destructorSlot;
+                throw;
+            }
+            finally { visiting.Remove(cls.Name); }
+
+            static void Restore<T>(ICollection<T> collection, T[] values)
+            {
+                collection.Clear();
+                foreach (T value in values) collection.Add(value);
+            }
+        }
+
+        private void ResolveClassMembers(TypeChecker.ClassInfo cls, HashSet<string> visiting, HashSet<string> visited)
+        {
             if (cls.BaseClass != null)
             {
                 if (!_symbols.Classes.TryGetValue(cls.BaseClass, out TypeChecker.ClassInfo? baseInfo))
@@ -286,9 +323,6 @@ namespace gflat.semantics
                     }
                 }
             }
-
-            visiting.Remove(cls.Name);
-            visited.Add(cls.Name);
         }
     }
 }

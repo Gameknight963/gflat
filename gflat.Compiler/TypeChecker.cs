@@ -241,6 +241,7 @@ namespace gflat
             public string? BaseClass = null;
             public bool IsAbstract = false;
             public bool IsStatic;
+            internal bool HierarchyResolved;
             public TokenKind Accessibility = TokenKind.Public;
             public List<string> Interfaces = new();
             public List<(string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass)> Fields = new();

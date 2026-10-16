@@ -4,6 +4,41 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class GenericBindingReentryTests
 {
+    [Theory]
+    [InlineData("struct")]
+    [InlineData("class")]
+    public void NestedMembersKeepTheirOriginalEditorDefinitions(string kind)
+    {
+        string library = $$"""
+            namespace Library {
+                public struct Owner { public Family<int>::Item value; }
+                public {{kind}} Family<T> {
+                    public struct Item { public T number; }
+                    public static Owner Make() => new Owner();
+                }
+            }
+            """;
+        const string program = """
+            using Library;
+            int main() {
+                Owner owner = Family<int>::Make();
+                owner.value.number = 42;
+                return owner.value.number;
+            }
+            """;
+        var declaration = new SourceFile(Path.GetFullPath("nested-member-library.gf"), library);
+        var caller = new SourceFile(Path.GetFullPath("nested-member-main.gf"), program);
+        var snapshot = new AnalysisSnapshot([declaration, caller]);
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [declaration, caller]);
+        int use = program.LastIndexOf("number", StringComparison.Ordinal);
+        int field = library.IndexOf("number", StringComparison.Ordinal);
+        Assert.NotNull(model.Hover(caller.Path, use));
+        Assert.Equal(model.Definition(declaration.Path, field), model.Definition(caller.Path, use));
+        Assert.NotNull(model.Definition(caller.Path, use));
+        Assert.Equal(4, snapshot.Checker!.GetStructSize(snapshot.Checker.GetStruct("Library::Owner")!));
+    }
+
     [Fact]
     public void ExpandingFunctionsLeaveUnrelatedEditorBindingsUsable()
     {

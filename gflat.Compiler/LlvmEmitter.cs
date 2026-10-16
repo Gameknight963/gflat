@@ -35,6 +35,8 @@ public partial class LlvmEmitter : IVisitor
                 return $"{typeStr} {i.Value}";
             case ConstValue.UInteger u:
                 return $"{typeStr} {u.Value}";
+            case ConstValue.WideInteger wide:
+                return $"{typeStr} {wide}";
             case ConstValue.Float f:
                 return $"{typeStr} {FloatConstant(f.Value, type)}";
             case ConstValue.Boolean b:
@@ -182,6 +184,9 @@ public partial class LlvmEmitter : IVisitor
                 return true;
             case ConstValue.Integer i:
                 Push(i.Value.ToString());
+                return true;
+            case ConstValue.WideInteger wide:
+                Push(wide.ToString());
                 return true;
             case ConstValue.UInteger u:
                 Push(u.Value.ToString());

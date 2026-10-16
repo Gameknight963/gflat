@@ -13,6 +13,7 @@ public static class NumericSemantics
         "long" => (64, true), "ulong" => (64, false),
         "nint" => (TargetInfo.Default.PointerBits, true),
         "nuint" => (TargetInfo.Default.PointerBits, false),
+        "extralong" => (128, true),
         _ => null
     };
 
@@ -24,6 +25,7 @@ public static class NumericSemantics
             {
                 ConstValue.Integer i => i.Value, ConstValue.UInteger u => u.Value,
                 ConstValue.Char c => unchecked((sbyte)c.Value), ConstValue.Float f => f.Value,
+                ConstValue.WideInteger wide => (double)wide.Value,
                 _ => throw new ConstEvalException("Expected a numeric constant", line)
             };
             return new ConstValue.Float(target == "float" ? (float)number : number);
@@ -34,6 +36,7 @@ public static class NumericSemantics
         {
             ConstValue.Integer i => i.Value, ConstValue.UInteger u => u.Value,
             ConstValue.Char c => unchecked((sbyte)c.Value),
+            ConstValue.WideInteger wide => wide.Value,
             ConstValue.Float f when double.IsFinite(f.Value) => new BigInteger(Math.Truncate(f.Value)),
             _ => throw new ConstEvalException("Expected a finite numeric constant", line)
         };
@@ -48,6 +51,7 @@ public static class NumericSemantics
         integer = ((integer % modulus) + modulus) % modulus;
         if (target == "char") return new ConstValue.Char((char)(byte)integer);
         if (type.Signed && integer >= (modulus >> 1)) integer -= modulus;
+        if (type.Bits > 64) return new ConstValue.WideInteger(integer);
         return type.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
     }
 }

@@ -5,7 +5,7 @@ using gflat.ast;
 
 namespace gflat.comptime
 {
-    public abstract record ConstValue
+    public abstract partial record ConstValue
     {
         public sealed record Integer(long Value) : ConstValue
         {
@@ -76,6 +76,7 @@ namespace gflat.comptime
 
         public static bool TryAdd(ConstValue left, ConstValue right, out ConstValue? result)
         {
+            if (TryWideArithmetic(TokenKind.Plus, left, right, out result)) return true;
             result = null;
             if (left is Integer li && right is Integer ri)
             {
@@ -97,6 +98,7 @@ namespace gflat.comptime
 
         public static bool TrySubtract(ConstValue left, ConstValue right, out ConstValue? result)
         {
+            if (TryWideArithmetic(TokenKind.Minus, left, right, out result)) return true;
             result = null;
             if (left is Integer li && right is Integer ri)
             {
@@ -118,6 +120,7 @@ namespace gflat.comptime
 
         public static bool TryMultiply(ConstValue left, ConstValue right, out ConstValue? result)
         {
+            if (TryWideArithmetic(TokenKind.Star, left, right, out result)) return true;
             result = null;
             if (left is Integer li && right is Integer ri)
             {
@@ -141,6 +144,12 @@ namespace gflat.comptime
         {
             result = null;
             error = null;
+            if (TryWideOperands(left, right, out var a, out var b))
+            {
+                if (b.IsZero) { error = "Division by zero"; return false; }
+                result = new WideInteger(a / b);
+                return true;
+            }
             if (left is Integer li && right is Integer ri)
             {
                 if (ri.Value == 0)
@@ -173,6 +182,12 @@ namespace gflat.comptime
         {
             result = null;
             error = null;
+            if (TryWideOperands(left, right, out var a, out var b))
+            {
+                if (b.IsZero) { error = "Modulo by zero"; return false; }
+                result = new WideInteger(a % b);
+                return true;
+            }
             if (left is Float lf && right is Float rf)
             {
                 result = new Float(lf.Value % rf.Value);
@@ -203,6 +218,11 @@ namespace gflat.comptime
 
         public static bool TryEqual(ConstValue left, ConstValue right, out bool result)
         {
+            if (TryWideOperands(left, right, out var wideLeft, out var wideRight))
+            {
+                result = wideLeft == wideRight;
+                return true;
+            }
             if (left is ArrayPointer a && right is ArrayPointer b)
             {
                 result = Equals(a, b);
@@ -245,6 +265,11 @@ namespace gflat.comptime
         public static bool TryCompare(ConstValue left, ConstValue right, out int comparison)
         {
             comparison = 0;
+            if (TryWideOperands(left, right, out var a, out var b))
+            {
+                comparison = a.CompareTo(b);
+                return true;
+            }
             if (left is Integer li && right is Integer ri)
             {
                 comparison = li.Value.CompareTo(ri.Value);
@@ -270,6 +295,7 @@ namespace gflat.comptime
 
         public static bool TryBitwiseAnd(ConstValue left, ConstValue right, out ConstValue? result)
         {
+            if (TryWideArithmetic(TokenKind.Ampersand, left, right, out result)) return true;
             result = null;
             if (left is Integer li && right is Integer ri)
             {
@@ -291,6 +317,7 @@ namespace gflat.comptime
 
         public static bool TryBitwiseOr(ConstValue left, ConstValue right, out ConstValue? result)
         {
+            if (TryWideArithmetic(TokenKind.Pipe, left, right, out result)) return true;
             result = null;
             if (left is Integer li && right is Integer ri)
             {
@@ -312,6 +339,7 @@ namespace gflat.comptime
 
         public static bool TryBitwiseXor(ConstValue left, ConstValue right, out ConstValue? result)
         {
+            if (TryWideArithmetic(TokenKind.Caret, left, right, out result)) return true;
             result = null;
             if (left is Integer li && right is Integer ri)
             {
@@ -366,6 +394,11 @@ namespace gflat.comptime
         public static bool TryNegate(ConstValue operand, out ConstValue? result)
         {
             result = null;
+            if (operand is WideInteger wide)
+            {
+                result = new WideInteger(-wide.Value);
+                return true;
+            }
             if (operand is Integer li)
             {
                 result = new Integer(-li.Value);

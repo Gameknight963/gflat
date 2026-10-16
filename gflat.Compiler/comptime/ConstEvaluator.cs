@@ -192,7 +192,8 @@ namespace gflat.comptime
                 NumericSemantics.IntegerType(named.Name) is { } integerType &&
                 TypeChecker.TryGetIntegerLiteralValue(expression, out var integer) &&
                 TypeChecker.FitsIntegerLiteral(named.Name, integer))
-                return integerType.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
+                return integerType.Bits > 64 ? new ConstValue.WideInteger(integer) :
+                    integerType.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
             expression.Accept(this);
             return Normalize(_currentValue!, target, expression.Line);
         }
@@ -433,7 +434,8 @@ namespace gflat.comptime
                 NumericSemantics.IntegerType(unaryType.Name) is { } integerType &&
                 TypeChecker.TryGetIntegerLiteralValue(node, out var integer) && TypeChecker.FitsIntegerLiteral(unaryType.Name, integer))
             {
-                _currentValue = integerType.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
+                _currentValue = integerType.Bits > 64 ? new ConstValue.WideInteger(integer) :
+                    integerType.Signed ? new ConstValue.Integer((long)integer) : new ConstValue.UInteger((ulong)integer);
                 return;
             }
 
@@ -660,12 +662,8 @@ namespace gflat.comptime
                 return;
             }
 
-            long idx = index switch
-            {
-                ConstValue.Integer i => i.Value,
-                ConstValue.UInteger u => (long)u.Value,
-                _ => throw new ConstEvalException("Index must be an integer", node.Line)
-            };
+            if (!ConstValue.TryIntegerValue(index, out var idx))
+                throw new ConstEvalException("Index must be an integer", node.Line);
 
             if (target is ConstValue.Array arr)
             {
@@ -1102,7 +1100,7 @@ namespace gflat.comptime
             CheckSteps(node.Line);
             if (node.Initializer != null)
             {
-                _scopes.Peek()[node.Name] = EvaluateValueForTarget(node.Initializer, node.Type);
+                _scopes.Peek()[node.Name] = EvaluateValueForTarget(node.Initializer, _context.GetType(node));
             }
             else
             {

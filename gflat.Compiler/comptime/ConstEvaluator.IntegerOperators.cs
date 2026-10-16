@@ -38,6 +38,7 @@ public partial class ConstEvaluator
         {
             ConstValue.Integer integer => integer.Value,
             ConstValue.UInteger integer => integer.Value,
+            ConstValue.WideInteger integer => integer.Value,
             _ => throw new ConstEvalException("Shift count must be an integer", expression.Line)
         };
         if (count < 0 || count >= representation.Bits)
@@ -45,6 +46,8 @@ public partial class ConstEvaluator
         int shift = (int)count;
         _currentValue = left switch
         {
+            ConstValue.WideInteger integer => new ConstValue.WideInteger(expression.Operator == TokenKind.LessLess
+                ? integer.Value << shift : integer.Value >> shift),
             ConstValue.Integer integer => new ConstValue.Integer(expression.Operator == TokenKind.LessLess
                 ? integer.Value << shift : integer.Value >> shift),
             ConstValue.UInteger integer => new ConstValue.UInteger(expression.Operator == TokenKind.LessLess
@@ -60,10 +63,10 @@ public partial class ConstEvaluator
     private void CheckIntegerDivision(TokenKind operation, TypeExpression type, ConstValue left, ConstValue right, int line)
     {
         if (operation is not (TokenKind.Slash or TokenKind.Percent or TokenKind.SlashEquals or TokenKind.PercentEquals) ||
-            left is not ConstValue.Integer dividend || right is not ConstValue.Integer { Value: -1 } ||
+            !ConstValue.TryIntegerValue(left, out var dividend) || !ConstValue.TryIntegerValue(right, out var divisor) || divisor != -1 ||
             IntegerRepresentation(type) is not { Signed: true } representation) return;
         BigInteger minimum = -(BigInteger.One << (representation.Bits - 1));
-        if (dividend.Value == minimum)
+        if (dividend == minimum)
             throw new ConstEvalException("Signed integer division or remainder overflow", line);
     }
 }

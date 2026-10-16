@@ -9,6 +9,7 @@ public partial class ConstEvaluator
     {
         ConstValue.Integer integer => integer.Value,
         ConstValue.UInteger integer => integer.Value,
+        ConstValue.WideInteger integer => integer.Value,
         ConstValue.Char character => unchecked((sbyte)character.Value),
         _ => throw new ConstEvalException("C-string pointer offsets must be integers", line)
     };

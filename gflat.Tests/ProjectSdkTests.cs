@@ -154,6 +154,69 @@ public sealed class ProjectSdkTests
         finally { Directory.Delete(root, true); }
     }
 
+    [Fact]
+    public void CliInstallationIsAnExplicitSetupCommand()
+    {
+        string root = Temporary();
+        try
+        {
+            Assert.Equal(0, Program.Main(["sdk", "install", "--help"]));
+            Assert.False(Directory.Exists(root));
+            Assert.Equal(0, Program.Main(["sdk", "install", "--sdk-directory", root]));
+            Assert.True(File.Exists(Path.Combine(root, "Gflat.Sdk/Sdk/Sdk.props")));
+            Assert.True(File.Exists(Path.Combine(root, "Gflat.Sdk/Sdk/Sdk.targets")));
+            Assert.Equal(2, Program.Main(["sdk", "install", "--sdk-directory"]));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void DefaultSourceGlobsCanBeDisabledInsideAnSdkProject()
+    {
+        string root = Temporary(); Directory.CreateDirectory(root);
+        try
+        {
+            string project = Path.Combine(root, "app.gfproj");
+            File.WriteAllText(project, """
+                <Project Sdk="Gflat.Sdk">
+                  <PropertyGroup><NoStdLib>true</NoStdLib><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+                  <ItemGroup><Compile Include="main.gf" /></ItemGroup>
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
+            File.WriteAllText(Path.Combine(root, "scratch.gf"), "invalid source");
+            Assert.Equal([Path.Combine(root, "main.gf")], ProjectModel.Load(project).SourceFiles());
+            Assert.Equal(0, Program.Main(["check", project]));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void StandardDirectoryBuildSettingsApplyToEvaluationAndBuild()
+    {
+        string root = Temporary(); Directory.CreateDirectory(Path.Combine(root, "app"));
+        try
+        {
+            string props = Path.Combine(root, "Directory.Build.props");
+            string targets = Path.Combine(root, "Directory.Build.targets");
+            File.WriteAllText(props, "<Project><PropertyGroup><NoStdLib>true</NoStdLib></PropertyGroup></Project>");
+            File.WriteAllText(targets, """
+                <Project><Target Name="SharedHook" BeforeTargets="Check"><WriteLinesToFile File="shared-hook.txt" Lines="done" Overwrite="true" /></Target></Project>
+                """);
+            string project = Path.Combine(root, "app/app.gfproj");
+            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\" />");
+            File.WriteAllText(Path.Combine(root, "app/main.gf"), "class Attribute {} int main() => 0;");
+            var model = ProjectModel.Load(project);
+            Assert.True(model.NoStdLib);
+            Assert.Empty(model.References);
+            Assert.Contains(props, model.Imports);
+            Assert.Contains(targets, model.Imports);
+            Assert.Equal(0, Program.Main(["check", project]));
+            Assert.True(File.Exists(Path.Combine(root, "app/shared-hook.txt")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     private static void CreateSdk(string root)
     {
         Directory.CreateDirectory(Path.Combine(root, "build"));

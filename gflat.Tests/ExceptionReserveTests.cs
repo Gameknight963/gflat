@@ -180,7 +180,7 @@ public class ExceptionReserveTests
             string project = Path.Combine(root, "app.gfproj");
             string source = Path.Combine(root, "main.gf");
             File.WriteAllText(project, TestSupport.ProjectFileFixture.Xml(content:
-                "<PropertyGroup><GflatExceptionReserveBytes>0</GflatExceptionReserveBytes></PropertyGroup>"));
+                "<PropertyGroup><NoStdLib>false</NoStdLib><GflatExceptionReserveBytes>0</GflatExceptionReserveBytes></PropertyGroup>"));
             File.WriteAllText(source, """
                 namespace Memory {
                     public replace void*? Allocate(nuint size) => null;
@@ -197,7 +197,7 @@ public class ExceptionReserveTests
             Assert.Equal(42, Program.Main([source, "--run", "--exception-reserve-bytes", "4096"]));
             Assert.NotEqual(42, Program.Main([source, "--run", "--exception-reserve-bytes", "0"]));
             File.WriteAllText(project, TestSupport.ProjectFileFixture.Xml(content:
-                "<PropertyGroup><GflatExceptionReserveBytes>bad</GflatExceptionReserveBytes></PropertyGroup>"));
+                "<PropertyGroup><NoStdLib>false</NoStdLib><GflatExceptionReserveBytes>bad</GflatExceptionReserveBytes></PropertyGroup>"));
             Assert.Throws<ProjectException>(() => ProjectModel.Load(project));
             Assert.Equal(42, Program.Main([project, "--run", "--exception-reserve-bytes", "4096"]));
         }

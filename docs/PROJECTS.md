@@ -116,6 +116,9 @@ The SDK includes `**/*.gf`, excluding `bin`, `obj`, `.git`, `.vs`, and
 
 Nested project directories are not automatically excluded: remove their globs
 when needed. Set `EnableDefaultCompileItems` to `false` to list sources explicitly.
+Standard `Directory.Build.props` and `Directory.Build.targets` files apply to
+projects in their directory tree, including editor evaluation. Use them for shared
+settings such as `NoStdLib` and shared build hooks.
 Use one `.gfproj` per directory for editor discovery. SDK-owned props and targets
 remain implementation files; projects can still use normal imports for their own
 shared build settings. `GflatSdkRoot` can explicitly select another toolchain root

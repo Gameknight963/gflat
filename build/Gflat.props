@@ -1,4 +1,6 @@
 <Project>
+  <!-- Let MSBuild own Directory.Build.props discovery and standard early hooks. -->
+  <Import Project="$(MSBuildExtensionsPath)/$(MSBuildToolsVersion)/Microsoft.Common.props" />
   <PropertyGroup>
     <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '..'))</GflatSdkRoot>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>

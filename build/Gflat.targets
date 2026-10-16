@@ -125,4 +125,9 @@
   <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
   <Target Name="Restore" />
   <Target Name="GetTargetPath" Returns="$(TargetPath)" />
+  <PropertyGroup>
+    <ImportDirectoryBuildTargets Condition="'$(ImportDirectoryBuildTargets)' == ''">true</ImportDirectoryBuildTargets>
+    <DirectoryBuildTargetsPath Condition="'$(DirectoryBuildTargetsPath)' == '' and '$(ImportDirectoryBuildTargets)' == 'true'">$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildProjectDirectory)'))</DirectoryBuildTargetsPath>
+  </PropertyGroup>
+  <Import Project="$(DirectoryBuildTargetsPath)" Condition="'$(ImportDirectoryBuildTargets)' == 'true' and Exists('$(DirectoryBuildTargetsPath)')" />
 </Project>

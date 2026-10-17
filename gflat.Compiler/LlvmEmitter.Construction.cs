@@ -59,7 +59,7 @@ public partial class LlvmEmitter
     private sealed class AllocationCleanup(string address) : IDeferAction
     {
         public void Execute(LlvmEmitter emitter)
-            => emitter.Emit($"    call void @{emitter.RuntimeMemorySymbol("Free")}(i8* {address})");
+            => emitter.EmitCallInstruction("void", "@" + emitter.RuntimeMemorySymbol("Free"), $"i8* {address}");
     }
 
     private sealed class ExceptionAllocationCleanup(string address) : IDeferAction
@@ -70,7 +70,7 @@ public partial class LlvmEmitter
 
     private void EmitExceptionFree(string address)
     {
-        Emit($"    call void @__gflat_eh_free_exception(i8* {address}, void (i8*)* @{RuntimeMemorySymbol("Free")})");
+        EmitCallInstruction("void", "@__gflat_eh_free_exception", $"i8* {address}, void (i8*)* @{RuntimeMemorySymbol("Free")}");
     }
 
     private void BeginConstruction(string name, ConstructorDeclaration? constructor = null)

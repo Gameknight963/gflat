@@ -36,11 +36,11 @@ public partial class LlvmEmitter
             values.Add(Pop());
         }
         string arguments = string.Join(", ", types.Zip(values, (type, value) => type + " " + value));
-        if (resultType == "void") Emit($"    call void @{name}({arguments})");
+        if (resultType == "void") EmitCallInstruction("void", "@" + name, arguments);
         else
         {
             string value = NewTemp();
-            Emit($"    {value} = call {resultType} @{name}({arguments})");
+            EmitCallInstruction(resultType, "@" + name, arguments, value);
             Push(value);
         }
         return true;

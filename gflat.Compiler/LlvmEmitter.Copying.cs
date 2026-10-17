@@ -6,7 +6,7 @@ public partial class LlvmEmitter
 {
     private void EmitConstructorCall(string name, ConstructorDeclaration? constructor, string arguments)
     {
-        Emit($"    call void @{name}({arguments})");
+        EmitCallInstruction("void", "@" + name, arguments);
     }
 
     private void EmitCopyValue(AstNode expression, TypeExpression type)
@@ -107,7 +107,7 @@ public partial class LlvmEmitter
         {
             string ns = emitter._typeChecker.GetClassByIdentity(name)!.Namespace;
             string destructor = ns.Length > 0 ? $"gflat${ns}${name}$dtor" : $"gflat${name}$dtor";
-            emitter.Emit($"    call void @{destructor}(%{name}* {address})");
+            emitter.EmitCallInstruction("void", "@" + destructor, $"%{name}* {address}");
             emitter.EmitManagedReferences(NamedTypeExpression.Resolved(name, 0), address, true);
         }
     }

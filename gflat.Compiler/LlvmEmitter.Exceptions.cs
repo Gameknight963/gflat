@@ -34,28 +34,13 @@ public partial class LlvmEmitter
         }
         if (line == "}") { EndCollectorFunction(); _ehFunction = false; Raw(line); return; }
         if (line == "entry:") { Raw(line); BeginCollectorEntry(); return; }
-        int call = line.IndexOf("call ", StringComparison.Ordinal);
-        if (!_ehFunction || call < 0 || line.Contains("@llvm.") ||
-            line.Contains("@gflat_is_instance(") || line.Contains("@gflat_get_parent_vtable(") ||
-            line.Contains("@__cxa_") ||
-            line.Contains("@__gflat_eh_") && !line.Contains("@__gflat_eh_throw(") && !line.Contains("@__gflat_eh_rethrow(")
-            && !line.Contains("@__gflat_eh_allocate_exception") && !line.Contains("@__gflat_eh_free_exception"))
-        {
-            Raw(call >= 0 ? line : line);
-            return;
-        }
-        if (!_typeChecker.UsesCollector && !_ehCleanup && !_ehBoundary && _emitterTryStack.Count == 0 && !_deferScopes.Any(s => s.Count != 0))
-        {
-            Raw(line);
-            return;
-        }
-        EmitNativeInvoke(line, call);
+        Raw(line);
     }
 
-    private void EmitNativeInvoke(string line, int call)
+    private void EmitNativeInvoke(string prefix, string invocation)
     {
         string normal = NewLabel("invoke_next"), unwind = NewLabel("invoke_unwind");
-        Raw(line[..call] + "invoke " + line[(call + 5)..] + $" to label %{normal} unwind label %{unwind}");
+        Raw(prefix + "invoke " + invocation + $" to label %{normal} unwind label %{unwind}");
         Raw(unwind + ":");
         bool savedTerminated = _hasTerminated, savedCleanup = _ehCleanup;
         int savedTryDepth = _ehCleanupTryDepth;
@@ -155,7 +140,7 @@ public partial class LlvmEmitter
             string slot = _caughtHandles.Peek(), handle = NewTemp();
             Emit($"    {handle} = load i8*, i8** {slot}");
             Emit($"    store i8* null, i8** {slot}");
-            Emit($"    call void @__gflat_eh_rethrow(i8* {handle})");
+            EmitCallInstruction("void", "@__gflat_eh_rethrow", $"i8* {handle}");
         }
         else
         {
@@ -163,7 +148,7 @@ public partial class LlvmEmitter
             string llvm = EmitType(type), size = NewTemp(), bytes = NewTemp(), storage = NewTemp(), address = NewTemp();
             Emit($"    {size} = getelementptr {llvm}, {llvm}* null, i32 1");
             Emit($"    {bytes} = ptrtoint {llvm}* {size} to i64");
-            Emit($"    {storage} = call i8* @__gflat_eh_allocate_exception(i64 {bytes}, i8* (i64)* @{RuntimeMemorySymbol("Allocate")})");
+            EmitCallInstruction("i8*", "@__gflat_eh_allocate_exception", $"i64 {bytes}, i8* (i64)* @{RuntimeMemorySymbol("Allocate")}", storage);
             GuardNonNull(storage, "i8*");
             Emit($"    {address} = bitcast i8* {storage} to {llvm}*");
             _deferScopes.Add(new() { new ExceptionOnlyCleanup(new ExceptionAllocationCleanup(storage)) });
@@ -178,7 +163,7 @@ public partial class LlvmEmitter
             Emit($"    {vtable} = getelementptr {llvm}, {llvm}* {address}, i32 0, i32 0");
             Emit($"    store i8** bitcast ([{exceptionClass.VirtualMethods.Count} x i8*]* @{exceptionClass.Name}$vtable to i8**), i8*** {vtable}");
             _deferScopes.RemoveAt(_deferScopes.Count - 1);
-            Emit($"    call void @__gflat_eh_throw(i8* {storage}, void (i8*)* bitcast (void (%Exception*)* @gflat_destroy_exception to void (i8*)*))");
+            EmitCallInstruction("void", "@__gflat_eh_throw", $"i8* {storage}, void (i8*)* bitcast (void (%Exception*)* @gflat_destroy_exception to void (i8*)*)");
         }
         Emit("    unreachable");
         _hasTerminated = true;
@@ -199,7 +184,7 @@ public partial class LlvmEmitter
         _hasTerminated = false;
         string handle = NewTemp(), rawObject = NewTemp(), error = NewTemp();
         Emit($"    {handle} = load i8*, i8** {slot}");
-        Emit($"    {rawObject} = call i8* @__gflat_eh_object(i8* {handle})");
+        EmitCallInstruction("i8*", "@__gflat_eh_object", $"i8* {handle}", rawObject, canUnwind: false);
         Emit($"    {error} = bitcast i8* {rawObject} to %Exception*");
         foreach (var clause in node.CatchClauses)
         {
@@ -217,7 +202,7 @@ public partial class LlvmEmitter
                 string vtSlot = NewTemp(), vt = NewTemp(), matches = NewTemp();
                 Emit($"    {vtSlot} = getelementptr %Exception, %Exception* {error}, i32 0, i32 0");
                 Emit($"    {vt} = load i8**, i8*** {vtSlot}");
-                Emit($"    {matches} = call zeroext i1 @gflat_is_instance(i8** {vt}, i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**))");
+                EmitCallInstruction("zeroext i1", "@gflat_is_instance", $"i8** {vt}, i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**)", matches, canUnwind: false);
                 Emit($"    br i1 {matches}, label %{body}, label %{next}");
             }
             else Emit($"    br label %{body}");
@@ -253,7 +238,7 @@ public partial class LlvmEmitter
             _hasTerminated = false;
         }
         Emit($"    store i8* null, i8** {slot}");
-        Emit($"    call void @__gflat_eh_rethrow(i8* {handle})");
+        EmitCallInstruction("void", "@__gflat_eh_rethrow", $"i8* {handle}");
         Emit("    unreachable");
         Emit(end + ":");
         _hasTerminated = false;

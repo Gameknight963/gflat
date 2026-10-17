@@ -91,7 +91,7 @@ public partial class LlvmEmitter
         Emit($"    {aligned} = icmp eq i{TargetInfo.Default.PointerBits} {remainder}, 0");
         Emit($"    br i1 {aligned}, label %{ok}, label %{fail}");
         Emit($"{fail}:");
-        Emit("    call void @llvm.trap()");
+        EmitCallInstruction("void", "@llvm.trap", "", canUnwind: false);
         Emit("    unreachable");
         Emit($"{ok}:");
     }

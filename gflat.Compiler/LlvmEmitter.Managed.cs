@@ -65,7 +65,7 @@ public partial class LlvmEmitter
             if (initialize) Raw($"    store {llvm} zeroinitializer, {llvm}* {address}");
             string raw = NewTemp();
             Raw($"    {raw} = bitcast {llvm}* {address} to i8*");
-            Raw($"    call void @{hook}(i8* {raw})");
+            EmitCallInstruction("void", "@" + hook, $"i8* {raw}", canUnwind: false);
             if (!added) Raw($"    store {llvm} zeroinitializer, {llvm}* {address}");
         }
         else if (type is ArrayTypeExpression { Size: not null } array)
@@ -214,7 +214,8 @@ public partial class LlvmEmitter
         var reference = (ManagedTypeExpression)_typeChecker.ResolveAlias(_typeChecker.GetType(node));
         var collector = _typeChecker.GetCollectorBinding(reference);
         string result = NewTemp();
-        Emit($"    {result} = call i8* @{CollectorMethodName(collector, collector.Allocate)}(i{TargetInfo.Default.PointerBits} {bytes}, i{TargetInfo.Default.PointerBits} {_typeChecker.GetTypeAlignment(node.Type)})");
+        EmitCallInstruction("i8*", "@" + CollectorMethodName(collector, collector.Allocate),
+            $"i{TargetInfo.Default.PointerBits} {bytes}, i{TargetInfo.Default.PointerBits} {_typeChecker.GetTypeAlignment(node.Type)}", result);
         return result;
     }
 }

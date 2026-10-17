@@ -35,7 +35,7 @@ public partial class LlvmEmitter
             string argument = EmitType(type) + "* " + result;
             string args = arguments.Length == 0 ? argument : arguments + ", " + argument;
             if (transferArguments) TransferArguments();
-            Emit($"    call void {callee}({args})");
+            EmitCallInstruction("void", callee, args);
             string value = NewTemp();
             Emit($"    {value} = load {EmitType(type)}, {EmitType(type)}* {result}");
             return value;
@@ -45,11 +45,11 @@ public partial class LlvmEmitter
         if (transferArguments) TransferArguments();
         if (EmitType(type) == "void")
         {
-            Emit($"    call {returnType} {callee}({arguments})");
+            EmitCallInstruction(returnType, callee, arguments);
             return null;
         }
         string temp = NewTemp();
-        Emit($"    {temp} = call {returnType} {callee}({arguments})");
+        EmitCallInstruction(returnType, callee, arguments, temp);
         return temp;
     }
 

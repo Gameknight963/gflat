@@ -44,7 +44,7 @@ public partial class LlvmEmitter
         Emit($"    {slot} = getelementptr i8*, i8** {table}, i32 {_typeChecker.GetInterface(iface)!.Methods.Count}");
         Emit($"    {raw} = load i8*, i8** {slot}");
         Emit($"    {fn} = bitcast i8* {raw} to void (i8*)*");
-        Emit($"    call void {fn}(i8* {data})");
+        EmitCallInstruction("void", fn, $"i8* {data}");
         return data;
     }
 

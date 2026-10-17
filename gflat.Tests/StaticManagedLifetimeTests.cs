@@ -125,6 +125,7 @@ public sealed class StaticManagedLifetimeTests
     [Theory]
     [InlineData("Owner value = new Owner();")]
     [InlineData("Owner* value = new* Owner();")]
+    [InlineData("void* storage = Memory::Allocate((nuint)sizeof(Owner))!; defer { Memory::Free(storage); } new* Owner() at (Owner*)storage;")]
     public void ThrowingConstructorLeavesNoManagedRoots(string declaration)
     {
         var result = CompilerTestHelper.Run(ProbeSource + """

@@ -3886,7 +3886,7 @@ public partial class LlvmEmitter : IVisitor
             string temp = NewTemp();
             EmitAlloca($"%{typeName}", temp);
             EmitManagedStore(node.Type, GetDefaultValue(node.Type), temp, initialize: true);
-            CleanupManagedStorage(node.Type, temp);
+            RegisterManagedCleanup(node.Type, temp);
 
             if (hasCtor)
             {
@@ -3962,11 +3962,10 @@ public partial class LlvmEmitter : IVisitor
                     allocationCleanup = new AllocationCleanup(rawMem);
                     _deferScopes[^1].Add(allocationCleanup);
                 }
-                var rootCleanup = new ExceptionOnlyCleanup(new ManagedReferenceCleanup(node.Type, typedPtr));
-                _deferScopes[^1].Add(rootCleanup);
+                var rootCleanup = RegisterManagedCleanup(node.Type, typedPtr, onExceptionOnly: true);
                 TransferArguments();
                 EmitConstructorCall(mangledName, ctor, string.Join(", ", callArgs));
-                _deferScopes[^1].Remove(rootCleanup);
+                if (rootCleanup != null) _deferScopes[^1].Remove(rootCleanup);
                 if (allocationCleanup != null) _deferScopes[^1].Remove(allocationCleanup);
             }
 
@@ -4099,7 +4098,7 @@ public partial class LlvmEmitter : IVisitor
         string storage = NewTemp();
         EmitAlloca($"{arrayType}", storage);
         EmitManagedReferences(type, storage, true, initialize: true);
-        CleanupManagedStorage(type, storage);
+        RegisterManagedCleanup(type, storage);
         var scope = _deferScopes[^1];
         var transferred = new List<IDeferAction>();
         for (int i = 0; i < node.Elements.Count; i++)

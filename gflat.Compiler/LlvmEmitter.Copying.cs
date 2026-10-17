@@ -15,7 +15,7 @@ public partial class LlvmEmitter
         string source = Pop(), destination = NewTemp(), llvm = EmitType(type);
         EmitAlloca(llvm, destination);
         EmitManagedReferences(type, destination, true, initialize: true);
-        CleanupManagedStorage(type, destination);
+        RegisterManagedCleanup(type, destination);
         EmitCopyInto(type, source, destination);
         string value = NewTemp();
         Emit($"    {value} = load {llvm}, {llvm}* {destination}");

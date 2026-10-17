@@ -100,8 +100,7 @@ public partial class LlvmEmitter
         EmitExpressionWithCleanup(() =>
         {
             EmitManagedReferences(field.Type, address, true);
-            if (HasManagedReferences(field.Type))
-                _deferScopes[^1].Add(new ExceptionOnlyCleanup(new ManagedReferenceCleanup(field.Type, address)));
+            RegisterManagedCleanup(field.Type, address, onExceptionOnly: true);
             if (field.Initializer != null)
             {
                 EmitValueForTarget(field.Initializer, field.Type);

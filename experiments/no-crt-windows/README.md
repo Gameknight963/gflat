@@ -48,20 +48,22 @@ its own underlying dependencies.
 
 ## Observed results
 
-Both `-O0` and `-O2` are tested. Initial measurements on this machine:
+Both `-O0` and `-O2` are tested. Measurements on this machine:
 
 | Case | `-O0` | `-O2` |
 | --- | --- | --- |
 | Basic program | Runs; 3,584-byte executable | Runs; 4,608-byte executable |
-| Placement construction with a user constructor | Exception-runtime symbols unresolved | Runs after optimization removes exception machinery |
+| Placement construction with a user constructor | Runs | Runs |
 | Ordinary allocating `new*` | Exception-runtime symbols unresolved | Exception-runtime symbols unresolved |
 | Throw/catch | Exception-runtime symbols unresolved | Exception-runtime symbols unresolved |
 | `std::String` with our Memory implementation | Exception-runtime symbols unresolved | Exception-runtime symbols and `strlen` unresolved |
 
 The constructor is deliberately trivial: it only stores an integer field.
-Its unoptimized dependency shows that the compiler currently generates exception
-handling even when this constructor's body does not need it. Optimization makes
-this particular case work, which does not establish general constructor support.
+Originally this probe required exception-runtime symbols at `-O0` because the
+compiler registered GC cleanup even for a type containing no managed references.
+Cleanup registration now checks the type before adding an action. This probe
+runs at both optimization levels and is a required success in the script.
+Constructors that actually require exception cleanup still need runtime support.
 
 `new*` must support its allocation-failure exception. String also throws for
 allocation failure, overflow, and invalid indexing. These cases need an exception
@@ -72,8 +74,9 @@ compiling already-generated IR did not prevent that transformation in this run.
 
 The probes deliberately omit the existing C++ exception bridge. An unresolved
 probe is an experiment result, and the script records its missing symbols.
-Failures in the basic program, compilation, execution, or import checks fail the
-script. A probe that becomes linkable is executed and checked as well.
+Failures in the basic program, the constructor case, compilation, execution, or
+import checks fail the script. Other probes that become linkable are executed
+and checked as well.
 
 Artifacts go into ignored `artifacts/no-crt-windows/`: `results.json`, emitted
 IR, objects, executables, link maps, linker logs, import listings, PE headers,

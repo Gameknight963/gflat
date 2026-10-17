@@ -142,10 +142,13 @@ public partial class LlvmEmitter
         if (!_typeChecker.UsesCollector || !HasManagedReferences(type)) return;
         EmitManagedStore(type, value, CreateManagedTemporary(type));
     }
-    private void CleanupManagedStorage(TypeExpression type, string address)
+    private IDeferAction? RegisterManagedCleanup(TypeExpression type, string address, bool onExceptionOnly = false)
     {
-        if (_typeChecker.UsesCollector && HasManagedReferences(type))
-            _deferScopes[^1].Add(new ManagedReferenceCleanup(type, address));
+        if (!_typeChecker.UsesCollector || !HasManagedReferences(type)) return null;
+        IDeferAction cleanup = new ManagedReferenceCleanup(type, address);
+        if (onExceptionOnly) cleanup = new ExceptionOnlyCleanup(cleanup);
+        _deferScopes[^1].Add(cleanup);
+        return cleanup;
     }
     private void PushManaged(AstNode node, string value)
     {

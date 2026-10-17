@@ -90,6 +90,23 @@ public sealed class NoStdRuntimeTests
             """, options: Bare)).ExitCode);
 
     [Theory]
+    [InlineData("struct")]
+    [InlineData("class")]
+    public void PlacementConstructorWithoutManagedFieldsNeedsNoExceptionRuntime(string kind)
+    {
+        string ir = Compiler.Emit(kind + """
+             Item { public int value; public Item(int input) { value = input; } }
+            int Construct(Item* storage) {
+                Item* result = new* Item(42) at storage;
+                return result.value;
+            }
+            """, options: Bare);
+        Assert.DoesNotContain("__gflat_eh_", ir);
+        Assert.DoesNotContain("personality", ir);
+        Assert.DoesNotContain("gflat$Memory$", ir);
+    }
+
+    [Theory]
     [InlineData("struct Item {} void Run() { Item* value = new* Item(); }", "requires Memory::Allocate")]
     [InlineData("struct Item {} void Run(Item* value) { delete value; }", "requires Memory::Free")]
     [InlineData("namespace Memory { int Allocate(int count) => count; void Free(void* storage) {} } struct Item {} void Run() { Item* value = new* Item(); }", "Allocate(nuint")]

@@ -55,8 +55,8 @@ if ((Get-Content -LiteralPath $baselineIr -Raw).Contains('@__gflat_eh_')) {
 }
 $exceptions = @('core/Exception.gf', 'core/BadAllocException.gf')
 $cases = @(
-    @{ Name = 'basic'; Project = $true },
-    @{ Name = 'constructor'; Source = 'Constructor.gf'; Library = @() },
+    @{ Name = 'basic'; Project = $true; MustLink = $true },
+    @{ Name = 'constructor'; Source = 'Constructor.gf'; Library = @(); MustLink = $true },
     @{ Name = 'heap-new'; Source = 'HeapNew.gf'; Library = $exceptions },
     @{ Name = 'throw-catch'; Source = 'ThrowCatch.gf'; Library = $exceptions },
     @{ Name = 'core-string'; Source = 'CoreString.gf'; Library = $exceptions + @('core/Text.gf', 'core/IStringConvertable.gf', 'core/String.gf') }
@@ -91,7 +91,7 @@ foreach ($case in $cases) {
         if ($linkExitCode -ne 0) {
             $result.UndefinedSymbols = @([regex]::Matches($linkOutput, 'undefined symbol: ([^\r\n]+)') |
                 ForEach-Object { $_.Groups[1].Value.Trim() } | Sort-Object -Unique)
-            if ($case.Project) { throw "The basic no-CRT link failed:`n$linkOutput" }
+            if ($case.MustLink) { throw "Required no-CRT case '$name' failed:`n$linkOutput" }
             if ($result.UndefinedSymbols.Count -eq 0) { throw "Unexpected linker failure:`n$linkOutput" }
         }
         else {

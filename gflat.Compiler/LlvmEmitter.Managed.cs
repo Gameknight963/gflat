@@ -1,41 +1,13 @@
-using System.Text;
 using gflat.ast;
 
 namespace gflat;
 
 public partial class LlvmEmitter
 {
-    private sealed class CollectorFunction(StringBuilder output)
-    {
-        public StringBuilder Output { get; } = output;
-        public StringBuilder Prologue { get; } = new();
-        public Dictionary<string, string> PendingOwnerRoots { get; } = new();
-        public int EntryPosition;
-    }
-    private readonly Stack<CollectorFunction> _collectorFunctions = new();
-
-    private void BeginCollectorFunction(string declaration)
-    {
-        if (!_typeChecker.UsesCollector) return;
-        var f = new CollectorFunction(_output);
-        _collectorFunctions.Push(f);
-    }
-    private void BeginCollectorEntry()
-    {
-        if (_collectorFunctions.Count == 0) return;
-        var f = _collectorFunctions.Peek();
-        f.EntryPosition = _output.Length;
-    }
-    private void EndCollectorFunction()
-    {
-        if (_collectorFunctions.Count == 0) return;
-        var f = _collectorFunctions.Pop();
-        f.Output.Insert(f.EntryPosition, f.Prologue);
-    }
     private void EmitAlloca(string type, string address)
     {
         string line = $"    {address} = alloca {type}";
-        if (_collectorFunctions.Count != 0) _collectorFunctions.Peek().Prologue.AppendLine(line);
+        if (_typeChecker.UsesCollector && _functions.Count != 0) CurrentFunction.ManagedPrologue.AppendLine(line);
         else Emit(line);
     }
     private bool HasManagedReferences(TypeExpression type, HashSet<string>? visited = null)
@@ -62,11 +34,11 @@ public partial class LlvmEmitter
         {
             var collector = _typeChecker.GetCollectorBinding(reference);
             string hook = CollectorMethodName(collector, added ? collector.ReferenceAdded : collector.ReferenceRemoved);
-            if (initialize) Raw($"    store {llvm} zeroinitializer, {llvm}* {address}");
+            if (initialize) Emit($"    store {llvm} zeroinitializer, {llvm}* {address}");
             string raw = NewTemp();
-            Raw($"    {raw} = bitcast {llvm}* {address} to i8*");
+            Emit($"    {raw} = bitcast {llvm}* {address} to i8*");
             EmitCallInstruction("void", "@" + hook, $"i8* {raw}", canUnwind: false);
-            if (!added) Raw($"    store {llvm} zeroinitializer, {llvm}* {address}");
+            if (!added) Emit($"    store {llvm} zeroinitializer, {llvm}* {address}");
         }
         else if (type is ArrayTypeExpression { Size: not null } array)
         {
@@ -126,7 +98,7 @@ public partial class LlvmEmitter
     {
         string address = NewTemp(), flag = NewTemp(), llvm = EmitType(type);
         EmitAlloca(llvm, address); EmitAlloca("i1", flag);
-        var prologue = _collectorFunctions.Peek().Prologue;
+        var prologue = CurrentFunction.ManagedPrologue;
         prologue.AppendLine($"    store {llvm} zeroinitializer, {llvm}* {address}");
         prologue.AppendLine($"    store i1 false, i1* {flag}");
         Emit($"    store {llvm} zeroinitializer, {llvm}* {address}");
@@ -172,17 +144,17 @@ public partial class LlvmEmitter
         string flag = NewTemp();
         EmitAlloca("i1", flag);
         Emit($"    store i1 {(pending ? "true" : "false")}, i1* {flag}");
-        _collectorFunctions.Peek().PendingOwnerRoots[address] = flag;
+        CurrentFunction.PendingOwnerRoots[address] = flag;
         return new ManagedReferenceCleanup(type, address, flag);
     }
     private void CompleteManagedOwnerInitialization(string address)
     {
-        if (_collectorFunctions.Count != 0 && _collectorFunctions.Peek().PendingOwnerRoots.TryGetValue(address, out string? pending))
+        if (_functions.Count != 0 && CurrentFunction.PendingOwnerRoots.TryGetValue(address, out string? pending))
             Emit($"    store i1 false, i1* {pending}");
     }
     private void RemoveUninitializedManagedOwnerRoots(TypeExpression type, string address)
     {
-        if (_collectorFunctions.Count != 0 && _collectorFunctions.Peek().PendingOwnerRoots.TryGetValue(address, out string? pending))
+        if (_functions.Count != 0 && CurrentFunction.PendingOwnerRoots.TryGetValue(address, out string? pending))
             new ManagedReferenceCleanup(type, address, pending).Execute(this);
     }
     private void RegisterMovedLocalStorage(TypeExpression type, string address)
@@ -192,7 +164,7 @@ public partial class LlvmEmitter
         // were zeroed on removal; track that empty storage until reinitialization
         // or scope exit. Raw relocation sources do not take this path.
         EmitManagedReferences(type, address, true);
-        if (_collectorFunctions.Peek().PendingOwnerRoots.TryGetValue(address, out string? pending))
+        if (CurrentFunction.PendingOwnerRoots.TryGetValue(address, out string? pending))
             Emit($"    store i1 true, i1* {pending}");
     }
     private void RegisterManagedParameter(Parameter p, string address)

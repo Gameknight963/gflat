@@ -25,7 +25,11 @@ public partial class LlvmEmitter
         }));
     }
 
-    private int _exceptionCleanup;
+    private int _exceptionCleanup
+    {
+        get => CurrentFunction.ExceptionCleanupDepth;
+        set => CurrentFunction.ExceptionCleanupDepth = value;
+    }
     private readonly Dictionary<string, string> _constructionFields = new();
     private sealed class ExceptionOnlyCleanup(IDeferAction action) : IDeferAction
     {

@@ -4,9 +4,7 @@ namespace gflat;
 
 public partial class LlvmEmitter
 {
-    private bool _ehFunction, _ehBoundary;
-    private bool _ehCleanup;
-    private readonly Stack<string> _caughtHandles = new();
+    private Stack<string> _caughtHandles => CurrentFunction.CaughtHandles;
     private bool WindowsEh => TargetInfo.Default.Triple.Contains("windows");
     private string NativeDeclarations => """
         declare i8* @__gflat_eh_allocate_exception(i64, i8* (i64)*)
@@ -19,44 +17,28 @@ public partial class LlvmEmitter
         declare void @__gflat_eh_terminate(i8*, void (i8*)*) noreturn nounwind
         """ + "\n" + (WindowsEh ? "declare i32 @__CxxFrameHandler3(...)\n" : "declare i32 @__gxx_personality_v0(...)\ndeclare i8* @__cxa_begin_catch(i8*) nounwind\ndeclare void @__cxa_end_catch() nounwind\n");
 
-    private void Raw(string text) => _output.AppendLine(text);
-
-    private void EmitNativeLine(string line)
-    {
-        if (line.StartsWith("define ", StringComparison.Ordinal))
-        {
-            BeginCollectorFunction(line);
-            _ehFunction = true;
-            _ehBoundary = line.Contains("@main(") || line.Contains("$dtor(") || line.Contains("@gflat_destroy_exception(");
-            string personality = WindowsEh ? "__CxxFrameHandler3" : "__gxx_personality_v0";
-            Raw(line[..^1] + $"personality i32 (...)* @{personality} {{");
-            return;
-        }
-        if (line == "}") { EndCollectorFunction(); _ehFunction = false; Raw(line); return; }
-        if (line == "entry:") { Raw(line); BeginCollectorEntry(); return; }
-        Raw(line);
-    }
-
     private void EmitNativeInvoke(string prefix, string invocation)
     {
+        var function = CurrentFunction;
+        function.NeedsPersonality = true;
         string normal = NewLabel("invoke_next"), unwind = NewLabel("invoke_unwind");
-        Raw(prefix + "invoke " + invocation + $" to label %{normal} unwind label %{unwind}");
-        Raw(unwind + ":");
-        bool savedTerminated = _hasTerminated, savedCleanup = _ehCleanup;
-        int savedTryDepth = _ehCleanupTryDepth;
+        Emit(prefix + "invoke " + invocation + $" to label %{normal} unwind label %{unwind}");
+        Emit(unwind + ":");
+        bool savedTerminated = _hasTerminated, savedCleanup = function.InCleanup;
+        int savedTryDepth = function.CleanupTryDepth;
         _hasTerminated = false;
         // Retain the native exception, then leave its catch funclet before running
         // language cleanup. This gives defer blocks ordinary control flow (including
         // their own try/catch), on both MSVC and Itanium runtimes.
         string handle = EmitCaptureOutsideFunclet();
-        TryBlockInfo? handler = _emitterTryStack.Count > (_ehCleanup ? _ehCleanupTryDepth : 0)
+        TryBlockInfo? handler = _emitterTryStack.Count > (function.InCleanup ? function.CleanupTryDepth : 0)
             ? _emitterTryStack.Peek() : null;
-        if (_ehCleanup && handler == null)
+        if (function.InCleanup && handler == null)
             EmitTermination(handle);
         else
         {
-            _ehCleanup = true;
-            _ehCleanupTryDepth = _emitterTryStack.Count;
+            function.InCleanup = true;
+            function.CleanupTryDepth = _emitterTryStack.Count;
             _exceptionCleanup++;
             try { EmitDefersDownTo(handler?.DeferDepth ?? 0); }
             finally { _exceptionCleanup--; }
@@ -64,23 +46,22 @@ public partial class LlvmEmitter
             {
                 if (handler != null)
                 {
-                    Raw($"    store i8* {handle}, i8** {handler.OwnedSlot}");
-                    Raw($"    br label %{handler.DispatchLabel}");
+                    Emit($"    store i8* {handle}, i8** {handler.OwnedSlot}");
+                    Emit($"    br label %{handler.DispatchLabel}");
                 }
-                else if (_ehBoundary) EmitTermination(handle);
+                else if (function.ExceptionBoundary) EmitTermination(handle);
                 else
                 {
-                    Raw($"    call void @__gflat_eh_rethrow(i8* {handle})");
-                    Raw("    unreachable");
+                    Emit($"    call void @__gflat_eh_rethrow(i8* {handle})");
+                    Emit("    unreachable");
                 }
             }
         }
-        _ehCleanup = savedCleanup;
-        _ehCleanupTryDepth = savedTryDepth;
+        function.InCleanup = savedCleanup;
+        function.CleanupTryDepth = savedTryDepth;
         _hasTerminated = savedTerminated;
-        Raw(normal + ":");
+        Emit(normal + ":");
     }
-    private int _ehCleanupTryDepth;
 
     private string EmitCaptureOutsideFunclet()
     {
@@ -88,21 +69,21 @@ public partial class LlvmEmitter
         if (WindowsEh)
         {
             string dispatch = NewTemp(), pad = NewTemp(), caught = NewLabel("native_catch"), continuation = NewLabel("native_caught");
-            Raw($"    {dispatch} = catchswitch within none [label %{caught}] unwind to caller");
-            Raw(caught + ":");
-            Raw($"    {pad} = catchpad within {dispatch} [i8* null, i32 64, i8* null]");
-            Raw($"    {handle} = call i8* @__gflat_eh_capture() [ \"funclet\"(token {pad}) ]");
-            Raw($"    catchret from {pad} to label %{continuation}");
-            Raw(continuation + ":");
+            Emit($"    {dispatch} = catchswitch within none [label %{caught}] unwind to caller");
+            Emit(caught + ":");
+            Emit($"    {pad} = catchpad within {dispatch} [i8* null, i32 64, i8* null]");
+            Emit($"    {handle} = call i8* @__gflat_eh_capture() [ \"funclet\"(token {pad}) ]");
+            Emit($"    catchret from {pad} to label %{continuation}");
+            Emit(continuation + ":");
         }
         else
         {
             string landing = NewTemp(), pointer = NewTemp();
-            Raw($"    {landing} = landingpad {{ i8*, i32 }} catch i8* null");
-            Raw($"    {pointer} = extractvalue {{ i8*, i32 }} {landing}, 0");
-            Raw($"    call i8* @__cxa_begin_catch(i8* {pointer})");
-            Raw($"    {handle} = call i8* @__gflat_eh_capture()");
-            Raw("    call void @__cxa_end_catch()");
+            Emit($"    {landing} = landingpad {{ i8*, i32 }} catch i8* null");
+            Emit($"    {pointer} = extractvalue {{ i8*, i32 }} {landing}, 0");
+            Emit($"    call i8* @__cxa_begin_catch(i8* {pointer})");
+            Emit($"    {handle} = call i8* @__gflat_eh_capture()");
+            Emit("    call void @__cxa_end_catch()");
         }
         return handle;
     }
@@ -112,8 +93,8 @@ public partial class LlvmEmitter
         var declaration = _typeChecker.GetUnhandledExceptionHook();
         string hook = declaration != null
             ? "bitcast (void (%Exception*)* @gflat$Exceptions$Unhandled" + _typeChecker.GetOverloadSuffix(declaration) + " to void (i8*)*)" : "null";
-        Raw($"    call void @__gflat_eh_terminate(i8* {handle}, void (i8*)* {hook})");
-        Raw("    unreachable");
+        Emit($"    call void @__gflat_eh_terminate(i8* {handle}, void (i8*)* {hook})");
+        Emit("    unreachable");
     }
 
     private void GuardAllocation(NewExpression node, string storage)

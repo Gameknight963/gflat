@@ -6,7 +6,6 @@ namespace gflat;
 
 public partial class LlvmEmitter : IVisitor
 {
-    private static string InlineHint(AstNode? node) => node?.IsInline == true ? " inlinehint" : "";
     private bool IsEntryPoint(MethodDeclaration method) => _typeChecker.IsEntryPoint(method);
     private string RuntimeMemorySymbol(string name) => "gflat$Memory$" + name +
         (_typeChecker.GetMemoryFunction(name) is { } method ? _typeChecker.GetOverloadSuffix(method) : "");
@@ -285,7 +284,7 @@ public partial class LlvmEmitter : IVisitor
     private bool _isInsideMain = false;
 
     private record TryBlockInfo(TryStatement Statement, string OwnedSlot, string DispatchLabel, int DeferDepth, string UnwindLabel);
-    private readonly Stack<TryBlockInfo> _emitterTryStack = new();
+    private Stack<TryBlockInfo> _emitterTryStack => CurrentFunction.Handlers;
 
     private interface IDeferAction
     {
@@ -563,7 +562,7 @@ public partial class LlvmEmitter : IVisitor
     private void Push(string value) => _valueStack.Push(value);
     private string Pop() => _valueStack.Pop();
 
-    private void Emit(string line) => EmitNativeLine(line);
+    private void Emit(string line) => _output.AppendLine(line);
     private void EmitGlobal(string line) => _globals.AppendLine(line);
 
     private void GuardNonNull(string value, string type)
@@ -598,8 +597,6 @@ public partial class LlvmEmitter : IVisitor
     {
         string body = OrderedGlobals() + "\n" + llvmFunctions + "\n" + _lambdaFunctions + "\n" + _output;
         bool needsExceptionRuntime = body.Contains("@__gflat_eh_", StringComparison.Ordinal);
-        if (!needsExceptionRuntime)
-            body = body.Replace("personality i32 (...)* @__CxxFrameHandler3", "").Replace("personality i32 (...)* @__gxx_personality_v0", "");
         return "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" +
             "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" +
             (needsExceptionRuntime ? NativeDeclarations : "") + body;
@@ -1297,9 +1294,8 @@ public partial class LlvmEmitter : IVisitor
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {EmitAbiFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
-        _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
-        Emit("entry:");
+        BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), mangledName, parameters,
+            exceptionBoundary: node.IsNoThrow, inline: node.IsInline);
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{className}*", thisPtr);
@@ -1336,8 +1332,7 @@ public partial class LlvmEmitter : IVisitor
                 Emit("    unreachable");
         }
 
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     private void EmitClassFieldInitializers(string className, string thisPtr)
@@ -1383,9 +1378,8 @@ public partial class LlvmEmitter : IVisitor
 
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}){InlineHint(node)} {{");
-        _ehBoundary |= node.IsNoThrow;
-        Emit("entry:");
+        BeginFunction(_currentFunctionReturnType, mangledName, parameters,
+            exceptionBoundary: node.IsNoThrow, inline: node.IsInline);
         EmitStaticLifetimePrologue();
 
         string thisPtr = NewTemp();
@@ -1477,8 +1471,7 @@ public partial class LlvmEmitter : IVisitor
         if (!_hasTerminated)
             Emit("    ret void");
 
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     private void EmitClassDefaultConstructor(string className)
@@ -1495,8 +1488,7 @@ public partial class LlvmEmitter : IVisitor
         string ns = _currentNamespacePath;
         string mangledName = GetConstructorMangledName(className, null, ns);
 
-        Emit($"define void @{mangledName}(%{className}* %this) {{");
-        Emit("entry:");
+        BeginFunction("void", mangledName, $"%{className}* %this");
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{className}*", thisPtr);
@@ -1540,8 +1532,7 @@ public partial class LlvmEmitter : IVisitor
 
         CompleteConstruction();
         Emit("    ret void");
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     private void EmitClassDestructor(string className, DestructorDeclaration? node)
@@ -1560,8 +1551,8 @@ public partial class LlvmEmitter : IVisitor
         string ns = _currentNamespacePath;
         string mangledName = ns.Length > 0 ? $"gflat${ns}${className}$dtor" : $"gflat${className}$dtor";
 
-        Emit($"define void @{mangledName}(%{className}* %this){InlineHint(node)} {{");
-        Emit("entry:");
+        BeginFunction("void", mangledName, $"%{className}* %this",
+            exceptionBoundary: true, inline: node?.IsInline == true);
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{className}*", thisPtr);
@@ -1604,8 +1595,7 @@ public partial class LlvmEmitter : IVisitor
         {
             Emit("    ret void");
         }
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     public void Visit(StructDeclaration node)
@@ -1780,9 +1770,7 @@ public partial class LlvmEmitter : IVisitor
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {EmitAbiFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
-        _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
-        Emit("entry:");
+        BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), mangledName, parameters, inline: node.IsInline);
 
         foreach (Parameter p in node.Parameters)
         {
@@ -1803,8 +1791,7 @@ public partial class LlvmEmitter : IVisitor
         if (!_hasTerminated)
             Emit(returnType == "void" ? "    ret void" : "    unreachable");
 
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     private void EmitStructMethod(string structName, MethodDeclaration node)
@@ -1833,9 +1820,8 @@ public partial class LlvmEmitter : IVisitor
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {EmitAbiFunctionReturnType(node.ReturnType)} @{mangledName}({parameters}){InlineHint(node)} {{");
-        _ehBoundary |= (AstNode)node is MethodDeclaration { IsNoThrow: true };
-        Emit("entry:");
+        BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), mangledName, parameters,
+            exceptionBoundary: node.IsNoThrow, inline: node.IsInline);
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{structName}*", thisPtr);
@@ -1867,8 +1853,7 @@ public partial class LlvmEmitter : IVisitor
                 Emit("    unreachable");
         }
 
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     private string GetConstructorMangledName(string structName, ConstructorDeclaration? node, string ns)
@@ -1929,9 +1914,8 @@ public partial class LlvmEmitter : IVisitor
 
         string parameters = string.Join(", ", paramList);
 
-        Emit($"define {_currentFunctionReturnType} @{mangledName}({parameters}){InlineHint(node)} {{");
-        _ehBoundary |= node.IsNoThrow;
-        Emit("entry:");
+        BeginFunction(_currentFunctionReturnType, mangledName, parameters,
+            exceptionBoundary: node.IsNoThrow, inline: node.IsInline);
         EmitStaticLifetimePrologue();
 
         string thisPtr = NewTemp();
@@ -1963,8 +1947,7 @@ public partial class LlvmEmitter : IVisitor
         if (!_hasTerminated)
             Emit("    ret void");
 
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     private void EmitStructDefaultConstructor(string structName)
@@ -1981,8 +1964,7 @@ public partial class LlvmEmitter : IVisitor
         string ns = _currentNamespacePath;
         string mangledName = GetConstructorMangledName(structName, null, ns);
 
-        Emit($"define void @{mangledName}(%{structName}* %this) {{");
-        Emit("entry:");
+        BeginFunction("void", mangledName, $"%{structName}* %this");
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{structName}*", thisPtr);
@@ -1994,8 +1976,7 @@ public partial class LlvmEmitter : IVisitor
 
         CompleteConstruction();
         Emit("    ret void");
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     private void EmitStructDestructor(string structName, DestructorDeclaration? node)
@@ -2014,8 +1995,8 @@ public partial class LlvmEmitter : IVisitor
         string ns = _currentNamespacePath;
         string mangledName = ns.Length > 0 ? $"gflat${ns}${structName}$dtor" : $"gflat${structName}$dtor";
 
-        Emit($"define void @{mangledName}(%{structName}* %this){InlineHint(node)} {{");
-        Emit("entry:");
+        BeginFunction("void", mangledName, $"%{structName}* %this",
+            exceptionBoundary: true, inline: node?.IsInline == true);
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{structName}*", thisPtr);
@@ -2042,8 +2023,7 @@ public partial class LlvmEmitter : IVisitor
             Emit("    ret void");
         }
 
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     public void Visit(InterfaceDeclaration node) { }
@@ -2113,9 +2093,8 @@ public partial class LlvmEmitter : IVisitor
             $"{EmitAbiParamType(p.Type)} %{p.Name}"));
         parameters = WithManagedResultParameter(node.ReturnType, parameters, named: true);
 
-        Emit($"define {EmitAbiFunctionReturnType(node.ReturnType)} @{name}({parameters}){InlineHint(node)} {{");
-        _ehBoundary |= node.IsNoThrow;
-        Emit("entry:");
+        BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), name, parameters,
+            exceptionBoundary: isMain || node.IsNoThrow, inline: node.IsInline);
         EmitStaticLifetimePrologue();
 
         foreach (Parameter p in node.Parameters)
@@ -2137,8 +2116,7 @@ public partial class LlvmEmitter : IVisitor
         if (!_hasTerminated)
             Emit(isMain ? "    ret i32 0" : isVoid ? "    ret void" : "    unreachable");
 
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     public void Visit(ConstructorDeclaration node) { }
@@ -4348,10 +4326,6 @@ public partial class LlvmEmitter : IVisitor
         string llvmReturnType = EmitType(returnType);
 
         // Save current emitter state
-        bool savedEhFunction = _ehFunction, savedEhBoundary = _ehBoundary, savedEhCleanup = _ehCleanup;
-        int savedEhCleanupTryDepth = _ehCleanupTryDepth;
-        _ehCleanup = false;
-        _ehCleanupTryDepth = 0;
         StringBuilder savedOutput = _output;
         Dictionary<string, string> savedLocals = new(_locals);
         int savedTempCounter = _tempCounter;
@@ -4362,7 +4336,6 @@ public partial class LlvmEmitter : IVisitor
         int savedExpressionDepth = _expressionDepth;
         StringBuilder? savedTemporaryPrologue = _temporaryPrologue;
         bool savedInsideMain = _isInsideMain;
-        var savedTryStack = _emitterTryStack.ToArray();
         List<List<IDeferAction>> savedDeferScopes = new(_deferScopes);
         var savedParameterOwners = _parameterOwners.ToArray();
         var savedOwnerLiveFlags = new Dictionary<string, string>(_ownerLiveFlags);
@@ -4380,13 +4353,11 @@ public partial class LlvmEmitter : IVisitor
         _expressionDepth = 0;
         _temporaryPrologue = null;
         _isInsideMain = false;
-        _emitterTryStack.Clear();
         _deferScopes.Clear();
 
         string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitAbiParamType(p.Type)} %{p.Name}"));
         parameters = WithManagedResultParameter(returnType, parameters, named: true);
-        Emit($"define {EmitAbiFunctionReturnType(returnType)} @{funcName}({parameters}){InlineHint(node)} {{");
-        Emit("entry:");
+        BeginFunction(EmitAbiFunctionReturnType(returnType), funcName, parameters, inline: node.IsInline);
 
         foreach (Parameter p in node.Parameters)
         {
@@ -4440,12 +4411,10 @@ public partial class LlvmEmitter : IVisitor
             }
         }
 
-        Emit("}");
-        Emit("");
+        EndFunction();
 
         // Restore enclosing emitter state
         _output = savedOutput;
-        _ehFunction = savedEhFunction; _ehBoundary = savedEhBoundary;
         _locals.Clear();
         foreach (KeyValuePair<string, string> kvp in savedLocals)
         {
@@ -4459,8 +4428,6 @@ public partial class LlvmEmitter : IVisitor
         _expressionDepth = savedExpressionDepth;
         _temporaryPrologue = savedTemporaryPrologue;
         _isInsideMain = savedInsideMain;
-        _emitterTryStack.Clear();
-        foreach (var handler in savedTryStack.Reverse()) _emitterTryStack.Push(handler);
         _deferScopes.Clear();
         _deferScopes.AddRange(savedDeferScopes);
         _parameterOwners.Clear();
@@ -4472,15 +4439,11 @@ public partial class LlvmEmitter : IVisitor
         Push($"@{funcName}");
     }
 
-    private string EmitCheckAndHandleCallException(string callRes, bool isVoid, string retType)
-        => throw new InvalidOperationException("Legacy exception-return lowering is disabled");
-
     private void EmitExceptionDestroyHelper()
     {
         if (_typeChecker.GetClassByIdentity("Exception") == null || _typeChecker.GetMemoryFunction("Free") == null) return;
         _tempCounter = 0;
-        Emit("define void @gflat_destroy_exception(%Exception* %exception) {");
-        Emit("entry:");
+        BeginFunction("void", "gflat_destroy_exception", "%Exception* %exception", exceptionBoundary: true);
         Emit("    %vt_slot = getelementptr %Exception, %Exception* %exception, i32 0, i32 0");
         Emit("    %vt = load i8**, i8*** %vt_slot");
         foreach (var cls in _typeChecker.GetAllClasses().Where(c => _typeChecker.HasAnyDestructor(c) ||
@@ -4505,14 +4468,13 @@ public partial class LlvmEmitter : IVisitor
         Emit("    %raw = bitcast %Exception* %exception to i8*");
         EmitExceptionFree("%raw");
         Emit("    ret void");
-        Emit("}");
+        EndFunction();
     }
 
     private void EmitIsInstanceHelper()
     {
         _tempCounter = 0;
-        Emit("define i8** @gflat_get_parent_vtable(i8** %vt) {");
-        Emit("entry:");
+        BeginFunction("i8**", "gflat_get_parent_vtable", "i8** %vt");
         int idx = 0;
         foreach (TypeChecker.ClassInfo cls in _typeChecker.GetAllClasses().Where(c => !c.IsStatic))
         {
@@ -4554,12 +4516,10 @@ public partial class LlvmEmitter : IVisitor
             Emit($"{checkNext}:");
         }
         Emit("    ret i8** null");
-        Emit("}");
-        Emit("");
+        EndFunction();
 
         _tempCounter = 0;
-        Emit("define zeroext i1 @gflat_is_instance(i8** %obj_vt, i8** %target_vt) {");
-        Emit("entry:");
+        BeginFunction("zeroext i1", "gflat_is_instance", "i8** %obj_vt, i8** %target_vt");
         Emit("    %is_target_null = icmp eq i8** %target_vt, null");
         Emit("    br i1 %is_target_null, label %found, label %loop_entry");
         Emit("loop_entry:");
@@ -4578,8 +4538,7 @@ public partial class LlvmEmitter : IVisitor
         Emit("    ret i1 1");
         Emit("not_found:");
         Emit("    ret i1 0");
-        Emit("}");
-        Emit("");
+        EndFunction();
     }
 
     public void Visit(ThrowStatement node) => EmitNativeThrow(node);

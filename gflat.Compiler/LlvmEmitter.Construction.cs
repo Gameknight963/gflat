@@ -74,7 +74,7 @@ public partial class LlvmEmitter
 
     private void EmitExceptionFree(string address)
     {
-        EmitCallInstruction("void", "@__gflat_eh_free_exception", $"i8* {address}, void (i8*)* @{RuntimeMemorySymbol("Free")}");
+        EmitRuntimeCall(ExceptionRuntime.Free, $"i8* {address}, void (i8*)* @{RuntimeMemorySymbol("Free")}");
     }
 
     private void BeginConstruction(string name, ConstructorDeclaration? constructor = null)

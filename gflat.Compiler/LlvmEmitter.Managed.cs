@@ -37,7 +37,7 @@ public partial class LlvmEmitter
             if (initialize) Emit($"    store {llvm} zeroinitializer, {llvm}* {address}");
             string raw = NewTemp();
             Emit($"    {raw} = bitcast {llvm}* {address} to i8*");
-            EmitCallInstruction("void", "@" + hook, $"i8* {raw}", canUnwind: false);
+            EmitCallInstruction("void", "@" + hook, $"i8* {raw}", handleUnwind: false);
             if (!added) Emit($"    store {llvm} zeroinitializer, {llvm}* {address}");
         }
         else if (type is ArrayTypeExpression { Size: not null } array)

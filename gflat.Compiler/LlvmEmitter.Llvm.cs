@@ -20,6 +20,7 @@ public partial class LlvmEmitter
         string[] types = info.Arguments.Select(EmitType).ToArray();
         if (info.Entry == null)
         {
+            RegisterLlvmRuntimeReferences(MaskLlvmCode(info.Ir, node, requireUnquotedSymbols: false));
             llvmFunctions.AppendLine($"define private {resultType} @{name}({string.Join(", ", types.Select((type, index) => type + " %" + index))}) alwaysinline {{");
             llvmFunctions.AppendLine(info.Ir);
             llvmFunctions.AppendLine("}");
@@ -46,7 +47,7 @@ public partial class LlvmEmitter
         return true;
     }
 
-    private string PrepareLlvmModule(string ir, string entry, string prefix, string resultType, string[] argumentTypes, AstNode node)
+    private static string MaskLlvmCode(string ir, AstNode node, bool requireUnquotedSymbols)
     {
         // Mask string data and comments without changing offsets. Rewriting only
         // symbol tokens keeps embedded strings and comments byte-for-byte intact.
@@ -57,18 +58,36 @@ public partial class LlvmEmitter
                 for (; at < ir.Length && ir[at] != '\n'; at++) mask[at] = ' ';
             else if (ir[at] == '"')
             {
-                if (at > 0 && ir[at - 1] is '@' or '%')
+                bool symbol = at > 0 && ir[at - 1] is '@' or '%';
+                if (symbol && requireUnquotedSymbols)
                     throw new TypeCheckException("LLVM module symbols must use unquoted names", node.Span);
-                mask[at] = ' ';
+                if (!symbol) mask[at] = ' ';
                 for (at++; at < ir.Length; at++)
                 {
-                    mask[at] = ' ';
-                    if (ir[at] == '\\' && at + 1 < ir.Length) { mask[++at] = ' '; continue; }
+                    if (!symbol) mask[at] = ' ';
+                    if (ir[at] == '\\' && at + 1 < ir.Length) { at++; if (!symbol) mask[at] = ' '; continue; }
                     if (ir[at] == '"') break;
                 }
             }
         }
-        string code = new(mask);
+        return new(mask);
+    }
+
+    private void RegisterLlvmRuntimeReferences(string code)
+    {
+        // Only the LLVM escape hatch needs symbol discovery. Normal code generation
+        // registers dependencies through EmitRuntimeCall, before it becomes text.
+        foreach (Match symbol in Regex.Matches(code, "@(?:\"(__gflat_eh_[A-Za-z0-9_]+)\"|(__gflat_eh_[A-Za-z0-9_]+))"))
+        {
+            string name = symbol.Groups[1].Success ? symbol.Groups[1].Value : symbol.Groups[2].Value;
+            if (ExceptionRuntime.Functions.FirstOrDefault(f => f.Name == name) is { } function)
+                _runtimeFunctions.Add(function);
+        }
+    }
+
+    private string PrepareLlvmModule(string ir, string entry, string prefix, string resultType, string[] argumentTypes, AstNode node)
+    {
+        string code = MaskLlvmCode(ir, node, requireUnquotedSymbols: true);
         if (Regex.IsMatch(code, @"(?m)^\s*(target\s|source_filename\s|attributes\s|!|\$)"))
             throw new TypeCheckException("LLVM modules cannot include target directives, attribute groups, metadata or comdat declarations; use inline function attributes", node.Span);
         const string symbol = @"[A-Za-z_$.-][A-Za-z0-9_$.-]*";
@@ -111,6 +130,7 @@ public partial class LlvmEmitter
             cursor = token.Index + token.Length;
         }
         rewritten.Append(ir, cursor, ir.Length - cursor);
+        RegisterLlvmRuntimeReferences(MaskLlvmCode(rewritten.ToString(), node, requireUnquotedSymbols: true));
         var output = new StringBuilder();
         foreach (string line in rewritten.ToString().Split('\n'))
         {

@@ -37,7 +37,7 @@ public partial class LlvmEmitter
         Emit($"    {live} = load i1, i1* {StaticLive(storage)}");
         Emit($"    br i1 {live}, label %{ready}, label %{invalid}");
         Emit(invalid + ":");
-        EmitCallInstruction("void", "@llvm.trap", "", canUnwind: false);
+        EmitCallInstruction("void", "@llvm.trap", "", handleUnwind: false);
         Emit("    unreachable");
         Emit(ready + ":");
     }
@@ -123,7 +123,7 @@ public partial class LlvmEmitter
         string failed = NewTemp(), fail = NewLabel("static_registration_failed"), ready = NewLabel("static_registration_ready");
         Emit($"    {failed} = icmp ne i32 {registered}, 0");
         Emit($"    br i1 {failed}, label %{fail}, label %{ready}");
-        Emit(fail + ":"); EmitCallInstruction("void", "@llvm.trap", "", canUnwind: false); Emit("    unreachable"); Emit(ready + ":");
+        Emit(fail + ":"); EmitCallInstruction("void", "@llvm.trap", "", handleUnwind: false); Emit("    unreachable"); Emit(ready + ":");
     }
 
     private sealed class StaticStorageCleanup(TypeChecker.StaticStorage storage) : IDeferAction

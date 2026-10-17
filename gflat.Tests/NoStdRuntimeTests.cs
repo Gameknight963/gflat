@@ -53,6 +53,38 @@ public sealed class NoStdRuntimeTests
         Assert.Equal(42, Run(ir).ExitCode);
     }
 
+    [Theory]
+    [InlineData("readonly(char*) Text() => \"@__gflat_eh_capture\";")]
+    [InlineData("int Value() => __llvm<int>(\"; @__gflat_eh_capture\\nret i32 42\");")]
+    [InlineData("int Value() => __llvm_module<int>(\"; @__gflat_eh_capture\\ndefine i32 @entry() { ret i32 42 }\", \"entry\");")]
+    public void RuntimeSymbolTextInDataAndCommentsDoesNotAddRuntimeDeclarations(string source)
+    {
+        string ir = Compiler.Emit(source, options: Bare);
+        Assert.DoesNotContain("declare i8* @__gflat_eh_capture", ir);
+        Assert.DoesNotContain("declare i32 @__CxxFrameHandler3", ir);
+        Assert.DoesNotContain("declare i32 @__gxx_personality_v0", ir);
+    }
+
+    [Theory]
+    [InlineData("call void @__gflat_eh_release(i8* null)\\nret void")]
+    [InlineData("call void @\\\"__gflat_eh_release\\\"(i8* null)\\nret void")]
+    public void InlineLlvmCanReferenceTheExceptionRuntime(string body)
+    {
+        string ir = Compiler.Emit("void Release() => __llvm<void>(\"" + body + "\");", options: Bare);
+        Assert.Contains("declare void @__gflat_eh_release(i8*) nounwind", ir);
+    }
+
+    [Fact]
+    public void InlineLlvmModuleCanDeclareItsExceptionRuntimeDependency()
+    {
+        string ir = Compiler.Emit("""
+            void Release() => __llvm_module<void>("declare void @__gflat_eh_release(i8*) nounwind\ndefine void @entry() {\ncall void @__gflat_eh_release(i8* null)\nret void\n}", "entry");
+            int main() { Release(); return 42; }
+            """, options: Bare);
+        Assert.Equal(1, ir.Split("declare void @__gflat_eh_release(i8*)").Length - 1);
+        Assert.Equal(42, Run(ir).ExitCode);
+    }
+
     [Fact]
     public void ValueConstructionAndDestructionNeedNoAllocatorOrExceptionRoot()
     {

@@ -298,7 +298,7 @@ public partial class LlvmEmitter : IVisitor
             string handle = emitter.NewTemp();
             emitter.Emit($"    {handle} = load i8*, i8** {handleSlot}");
             emitter.Emit($"    store i8* null, i8** {handleSlot}");
-            emitter.EmitCallInstruction("void", "@__gflat_eh_release", $"i8* {handle}", canUnwind: false);
+            emitter.EmitRuntimeCall(ExceptionRuntime.Release, $"i8* {handle}");
         }
     }
 
@@ -580,7 +580,7 @@ public partial class LlvmEmitter : IVisitor
         Emit($"    {test} = icmp ne {type} {value}, null");
         Emit($"    br i1 {test}, label %{ok}, label %{fail}");
         Emit($"{fail}:");
-        EmitCallInstruction("void", "@llvm.trap", "", canUnwind: false);
+        EmitCallInstruction("void", "@llvm.trap", "", handleUnwind: false);
         Emit("    unreachable");
         Emit($"{ok}:");
     }
@@ -596,10 +596,9 @@ public partial class LlvmEmitter : IVisitor
     public string GetOutput()
     {
         string body = OrderedGlobals() + "\n" + llvmFunctions + "\n" + _lambdaFunctions + "\n" + _output;
-        bool needsExceptionRuntime = body.Contains("@__gflat_eh_", StringComparison.Ordinal);
         return "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" +
             "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" +
-            (needsExceptionRuntime ? NativeDeclarations : "") + body;
+            NativeDeclarations + body;
     }
 
     private enum EmitMode { RValue, LValue }
@@ -4532,7 +4531,7 @@ public partial class LlvmEmitter : IVisitor
         Emit("    %is_match = icmp eq i8** %curr, %target_vt");
         Emit("    br i1 %is_match, label %found, label %next");
         Emit("next:");
-        EmitCallInstruction("i8**", "@gflat_get_parent_vtable", "i8** %curr", "%parent", canUnwind: false);
+        EmitCallInstruction("i8**", "@gflat_get_parent_vtable", "i8** %curr", "%parent", handleUnwind: false);
         Emit("    br label %loop");
         Emit("found:");
         Emit("    ret i1 1");

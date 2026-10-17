@@ -29,24 +29,6 @@ public static class ProjectSdk
         return null;
     }
 
-    /// <summary>Install the SDK into an MSBuild host's documented Sdks directory.
-    /// This is an explicit setup action, never performed during project evaluation.</summary>
-    public static string Install(string toolchainRoot, string sdkDirectory)
-    {
-        toolchainRoot = Path.GetFullPath(toolchainRoot);
-        if (!IsRoot(toolchainRoot)) throw new ArgumentException("The toolchain must contain build/Gflat.props and build/Gflat.targets.");
-        string destination = Path.Combine(Path.GetFullPath(sdkDirectory), "Gflat.Sdk", "Sdk");
-        Directory.CreateDirectory(destination);
-        string root = EscapePropertyValue(toolchainRoot.Replace('\\', '/'));
-        string escapedRoot = System.Security.SecurityElement.Escape(root)!;
-        File.WriteAllText(Path.Combine(destination, "Sdk.props"),
-            "<Project><PropertyGroup><GflatSdkRoot Condition=\"'$(GflatSdkRoot)' == ''\">" + escapedRoot +
-            "</GflatSdkRoot></PropertyGroup><Import Project=\"$(GflatSdkRoot)/build/Gflat.props\" /></Project>\n", new UTF8Encoding(false));
-        File.WriteAllText(Path.Combine(destination, "Sdk.targets"),
-            "<Project><Import Project=\"$(GflatSdkRoot)/build/Gflat.targets\" /></Project>\n", new UTF8Encoding(false));
-        return destination;
-    }
-
     public static string EscapePropertyValue(string value)
     {
         var escaped = new StringBuilder();

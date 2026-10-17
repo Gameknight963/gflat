@@ -26,26 +26,13 @@ public sealed class ProjectSdkTests
     }
 
     [Fact]
-    public void ExplicitInstallationEscapesPathsAndUsesNativeSdkEntrypoints()
+    public void ExplicitImportsSupportToolchainPathsWithMsBuildSpecialCharacters()
     {
         string root = Temporary();
         try
         {
-            string sdk = Path.Combine(root, "tools $literal;percent%"); CreateSdk(sdk);
-            string host = Path.Combine(root, "host SDKs");
-            string installed = ProjectSdk.Install(sdk, host);
-            var props = XElement.Load(Path.Combine(installed, "Sdk.props"));
-            Assert.Equal(ProjectSdk.EscapePropertyValue(sdk.Replace('\\', '/')), props.Element("PropertyGroup")!.Element("GflatSdkRoot")!.Value);
-            Assert.True(File.Exists(Path.Combine(installed, "Sdk.targets")));
-            string app = Path.Combine(root, "app"); Directory.CreateDirectory(app);
-            string project = Path.Combine(app, "app.gfproj");
-            // Explicit imports here test installed entrypoint contents without
-            // modifying the SDK resolution settings of parallel test hosts.
-            File.WriteAllText(project, new XElement("Project",
-                new XElement("Import", new XAttribute("Project", Path.Combine(installed, "Sdk.props"))),
-                new XElement("PropertyGroup", new XElement("NoStdLib", "true")),
-                new XElement("Import", new XAttribute("Project", Path.Combine(installed, "Sdk.targets")))).ToString());
-            File.WriteAllText(Path.Combine(app, "main.gf"), "int main() => 0;");
+            string sdk = Path.Combine(root, "tools $literal;percent% & (test)"); CreateSdk(sdk);
+            string project = ProjectCreation.Create(Path.Combine(root, "app"), useStd: false, toolchainRoot: sdk);
             var model = ProjectModel.Load(project);
             Assert.Equal(sdk, model.SdkRoot);
             Assert.Single(model.SourceFiles());
@@ -56,15 +43,18 @@ public sealed class ProjectSdkTests
     }
 
     [Fact]
-    public void MissingSdkInstallationIsActionableAndNeverInstallsDuringBuild()
+    public void MissingBuildRulesAreActionableAndNeverInstalledDuringBuild()
     {
         string root = Temporary(); Directory.CreateDirectory(root);
         try
         {
             string project = Path.Combine(root, "broken.gfproj");
-            File.WriteAllText(project, "<Project Sdk=\"Gflat.Missing.Sdk\" />");
-            Assert.Throws<ProjectException>(() => ProjectModel.Load(project));
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("<Project />", Path.Combine(root, "missing")));
+            var error = Assert.Throws<ProjectException>(() => ProjectModel.Load(project));
+            Assert.Contains("GflatSdkRoot", error.Message);
+            Assert.DoesNotContain("sdk install", error.Message);
             Assert.Single(Directory.GetFiles(root));
+            Assert.Empty(Directory.GetDirectories(root));
         }
         finally { Directory.Delete(root, true); }
     }
@@ -76,7 +66,7 @@ public sealed class ProjectSdkTests
         try
         {
             string project = Path.Combine(root, "app.gfproj");
-            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\" />");
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("<Project />"));
             Assert.Contains(ProjectModel.Load(project).References, path => path.EndsWith("std.gfproj"));
             var bare = ProjectModel.Load(project, "Debug", "AnyCPU", noStdLib: true);
             Assert.True(bare.NoStdLib);
@@ -86,22 +76,20 @@ public sealed class ProjectSdkTests
     }
 
     [Fact]
-    public async Task InstalledSdkResolvesThroughStandaloneMsBuildWithoutProjectRewriting()
+    public async Task ExplicitImportsWorkInStandaloneMsBuildWithoutRegistrationOrRewriting()
     {
         string root = Temporary();
         try
         {
             string sdk = Path.Combine(root, "distribution"); CreateSdk(sdk);
-            string host = Path.Combine(root, "host SDKs");
-            ProjectSdk.Install(sdk, host);
             string project = Path.Combine(root, "example.gfproj");
-            const string xml = "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib></PropertyGroup></Project>";
+            string xml = TestSupport.ProjectFileFixture.WithImports("<Project><PropertyGroup><NoStdLib>true</NoStdLib></PropertyGroup></Project>", sdk);
             File.WriteAllText(project, xml);
             var start = new System.Diagnostics.ProcessStartInfo("dotnet") {
                 UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
             };
             foreach (string argument in new[] { "msbuild", project, "-nologo", "-getProperty:GflatSdkRoot" }) start.ArgumentList.Add(argument);
-            start.Environment["MSBuildSDKsPath"] = host;
+            start.Environment.Remove("MSBuildSDKsPath");
             using var process = System.Diagnostics.Process.Start(start)!;
             var stdout = process.StandardOutput.ReadToEndAsync();
             var stderr = process.StandardError.ReadToEndAsync();
@@ -148,7 +136,7 @@ public sealed class ProjectSdkTests
         try
         {
             string project = Path.Combine(root, "bad.gfproj");
-            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>yes</NoStdLib></PropertyGroup></Project>");
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("<Project><PropertyGroup><NoStdLib>yes</NoStdLib></PropertyGroup></Project>"));
             Assert.Contains("NoStdLib must be true or false", Assert.Throws<ProjectException>(() => ProjectModel.Load(project)).Message);
         }
         finally { Directory.Delete(root, true); }
@@ -163,7 +151,7 @@ public sealed class ProjectSdkTests
         try
         {
             string project = Path.Combine(root, "app.gfproj");
-            File.WriteAllText(project, $"<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib><OutputType>{outputType}</OutputType></PropertyGroup></Project>");
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports($"<Project><PropertyGroup><NoStdLib>true</NoStdLib><OutputType>{outputType}</OutputType></PropertyGroup></Project>"));
             File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 42;");
             Assert.Equal(expected, ProjectModel.Load(project).Kind);
             Assert.Equal(0, Program.Main(expected == ProjectKind.Executable ? ["build", project, "--emit-ir"] : ["build", project]));
@@ -183,7 +171,7 @@ public sealed class ProjectSdkTests
         try
         {
             string project = Path.Combine(root, "bad.gfproj");
-            File.WriteAllText(project, $"<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib><OutputType>{outputType}</OutputType></PropertyGroup></Project>");
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports($"<Project><PropertyGroup><NoStdLib>true</NoStdLib><OutputType>{outputType}</OutputType></PropertyGroup></Project>"));
             Assert.Contains("OutputType must be Executable or SourceLibrary", Assert.Throws<ProjectException>(() => ProjectModel.Load(project)).Message);
             var result = NativeToolchain.Run("dotnet", ["msbuild", project, "-nologo", "-v:q", "-t:GflatGetSources"], 30000);
             Assert.NotEqual(0, result.ExitCode);
@@ -193,34 +181,26 @@ public sealed class ProjectSdkTests
     }
 
     [Fact]
-    public void CliInstallationIsAnExplicitSetupCommand()
+    public void RemovedInstallationCommandDoesNotWriteFiles()
     {
         string root = Temporary();
-        try
-        {
-            Assert.Equal(0, Program.Main(["sdk", "install", "--help"]));
-            Assert.False(Directory.Exists(root));
-            Assert.Equal(0, Program.Main(["sdk", "install", "--sdk-directory", root]));
-            Assert.True(File.Exists(Path.Combine(root, "Gflat.Sdk/Sdk/Sdk.props")));
-            Assert.True(File.Exists(Path.Combine(root, "Gflat.Sdk/Sdk/Sdk.targets")));
-            Assert.Equal(2, Program.Main(["sdk", "install", "--sdk-directory"]));
-        }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        Assert.Equal(2, Program.Main(["sdk", "install", "--sdk-directory", root]));
+        Assert.False(Directory.Exists(root));
     }
 
     [Fact]
-    public void DefaultSourceGlobsCanBeDisabledInsideAnSdkProject()
+    public void DefaultSourceGlobsCanBeDisabledInsideAnImportProject()
     {
         string root = Temporary(); Directory.CreateDirectory(root);
         try
         {
             string project = Path.Combine(root, "app.gfproj");
-            File.WriteAllText(project, """
-                <Project Sdk="Gflat.Sdk">
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("""
+                <Project>
                   <PropertyGroup><NoStdLib>true</NoStdLib><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
                   <ItemGroup><Compile Include="main.gf" /></ItemGroup>
                 </Project>
-                """);
+                """));
             File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
             File.WriteAllText(Path.Combine(root, "scratch.gf"), "invalid source");
             Assert.Equal([Path.Combine(root, "main.gf")], ProjectModel.Load(project).SourceFiles());
@@ -242,7 +222,7 @@ public sealed class ProjectSdkTests
                 <Project><Target Name="SharedHook" BeforeTargets="Check"><WriteLinesToFile File="shared-hook.txt" Lines="done" Overwrite="true" /></Target></Project>
                 """);
             string project = Path.Combine(root, "app/app.gfproj");
-            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\" />");
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("<Project />"));
             File.WriteAllText(Path.Combine(root, "app/main.gf"), "class Attribute {} int main() => 0;");
             var model = ProjectModel.Load(project);
             Assert.True(model.NoStdLib);

@@ -2,7 +2,8 @@ param([Parameter(Mandatory)][string]$PackageDirectory)
 $ErrorActionPreference = 'Stop'
 $compiler = Join-Path $PackageDirectory 'Compiler/gflat.exe'
 $sdk = Join-Path $PackageDirectory 'Sdk'
-foreach ($file in @('build/Sdks/Gflat.Sdk/Sdk/Sdk.props', 'build/Sdks/Gflat.Sdk/Sdk/Sdk.targets', 'build/Gflat.props', 'build/Gflat.targets', 'build/Rules/General.xaml', 'std/std.gfproj', 'std/core/String.gf', 'std/libc/GC.gf')) {
+if (Test-Path -LiteralPath (Join-Path $sdk 'build/Sdks/Gflat.Sdk')) { throw 'VSIX must not ship MSBuild SDK registration files' }
+foreach ($file in @('build/Gflat.props', 'build/Gflat.targets', 'build/Rules/General.xaml', 'std/std.gfproj', 'std/core/String.gf', 'std/libc/GC.gf')) {
     if (-not (Test-Path -LiteralPath (Join-Path $sdk $file))) { throw "Bundled SDK is missing $file" }
 }
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $PackageDirectory 'extension.vsixmanifest')
@@ -31,6 +32,12 @@ foreach ($kind in @('app', 'library')) {
     $project = Join-Path $directory $target
     $projectText = Get-Content -Raw -LiteralPath (Join-Path $template $projectNode.File)
     if ($projectText -match '(?i)[a-z]:[/\\]|\.\.[/\\]') { throw 'Project template contains a build-machine or relative SDK installation path' }
+    [xml]$projectDefinition = $projectText
+    if ($projectDefinition.Project.Sdk) { throw 'Project templates must not require an installed MSBuild SDK' }
+    $imports = @($projectDefinition.Project.Import | ForEach-Object { $_.Project })
+    if ($imports -notcontains '$(GflatSdkRoot)/build/Gflat.props' -or $imports -notcontains '$(GflatSdkRoot)/build/Gflat.targets') {
+        throw 'Project templates must import the bundled build rules explicitly'
+    }
     $projectText.Replace('$projectname$', $name).Replace('$safeprojectname$', $safeName) | Set-Content -LiteralPath $project -Encoding utf8
     foreach ($item in $projectNode.ProjectItem) {
         $filename = $item.InnerText

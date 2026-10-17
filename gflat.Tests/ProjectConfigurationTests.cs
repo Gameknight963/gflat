@@ -18,17 +18,17 @@ public class ProjectConfigurationTests
             if (sharedDefaults)
                 File.WriteAllText(Path.Combine(root, "Directory.Build.props"), "<Project><PropertyGroup>" + configuration + "</PropertyGroup></Project>");
             string project = Path.Combine(root, "app.gfproj");
-            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib>" +
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("<Project><PropertyGroup><NoStdLib>true</NoStdLib>" +
                 (sharedDefaults ? "" : configuration) + "</PropertyGroup><ItemGroup><Compile Remove=\"lib/**/*.gf\" />" +
-                "<ProjectReference Include=\"lib/lib.gfproj\" /></ItemGroup></Project>");
+                "<ProjectReference Include=\"lib/lib.gfproj\" /></ItemGroup></Project>"));
             File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => Answer();");
-            File.WriteAllText(Path.Combine(root, "lib/lib.gfproj"), """
-                <Project Sdk="Gflat.Sdk">
+            File.WriteAllText(Path.Combine(root, "lib/lib.gfproj"), TestSupport.ProjectFileFixture.WithImports("""
+                <Project>
                   <PropertyGroup><NoStdLib>true</NoStdLib><OutputType>SourceLibrary</OutputType><Configuration>Debug</Configuration><Platform>AnyCPU</Platform></PropertyGroup>
                   <ItemGroup Condition="'$(Configuration)' == 'Release' and '$(Platform)' == 'Custom'"><Compile Remove="debug.gf" /></ItemGroup>
                   <ItemGroup Condition="'$(Configuration)' != 'Release' or '$(Platform)' != 'Custom'"><Compile Remove="release.gf" /></ItemGroup>
                 </Project>
-                """);
+                """));
             string release = Path.GetFullPath(Path.Combine(root, "lib/release.gf"));
             string debug = Path.GetFullPath(Path.Combine(root, "lib/debug.gf"));
             File.WriteAllText(release, "int Answer() => 42;");

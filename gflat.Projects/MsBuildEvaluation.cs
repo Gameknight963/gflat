@@ -12,6 +12,10 @@ internal static class MsBuildEvaluation
         try
         {
             var properties = new Dictionary<string, string>();
+            // Supply a fallback from the running toolchain without overriding an
+            // explicit environment/project root or registering an MSBuild SDK.
+            if (ProjectSdk.FindRoot(AppContext.BaseDirectory) is string sdk)
+                properties["GflatDefaultSdkRoot"] = ProjectCollection.Escape(sdk);
             if (asReference) properties["GflatAsReference"] = "true";
             if (configuration != null) properties["Configuration"] = configuration;
             if (platform != null) properties["Platform"] = platform;
@@ -24,13 +28,13 @@ internal static class MsBuildEvaluation
             {
                 "executable" => ProjectKind.Executable,
                 "sourcelibrary" => ProjectKind.SourceLibrary,
-                _ => throw new ProjectException(path, "OutputType must be Executable or SourceLibrary. Use <Project Sdk=\"Gflat.Sdk\">.")
+                _ => throw new ProjectException(path, "OutputType must be Executable or SourceLibrary. Import Gflat.props and Gflat.targets.")
             };
             if (!bool.TryParse(project.GetPropertyValue("NoStdLib"), out bool excludesStd))
                 throw new ProjectException(path, "NoStdLib must be true or false.");
             string? target = kind == ProjectKind.Executable ? project.GetPropertyValue("TargetPath") : null;
             if (kind == ProjectKind.Executable && string.IsNullOrEmpty(target))
-                throw new ProjectException(path, "TargetPath is missing. Use the Gflat.Sdk project SDK.");
+                throw new ProjectException(path, "TargetPath is missing. Import Gflat.targets.");
             string[] Files(string type) => project.GetItems(type).Select(i => i.GetMetadataValue("FullPath"))
                 .Distinct(ProjectModel.Paths).ToArray();
             int reserveBytes;
@@ -53,8 +57,6 @@ internal static class MsBuildEvaluation
             string message = error.BaseMessage;
             if (error.ErrorCode == "MSB4019" && (message.Contains("Gflat.props") || message.Contains("Gflat.targets")))
                 message += " Set GflatSdkRoot to a directory containing build/Gflat.props and build/Gflat.targets.";
-            if (message.Contains("Gflat.Sdk") && error.ErrorCode is "MSB4236" or "MSB4276")
-                message += " Install the project SDK for this MSBuild host using 'gflat sdk install' (or --sdk-directory for Visual Studio MSBuild). Installation is a separate setup step; builds do not modify MSBuild.";
             throw new ProjectException(string.IsNullOrEmpty(error.ProjectFile) ? path : error.ProjectFile, message, error.LineNumber, error.ColumnNumber);
         }
     }

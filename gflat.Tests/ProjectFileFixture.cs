@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using System.Runtime.CompilerServices;
 
 namespace gflat.TestSupport;
 
@@ -15,17 +14,22 @@ internal static class ProjectFileFixture
         }
     }
 
-    [ModuleInitializer]
-    internal static void ConfigureSdkHost()
-    {
-        // Only this test host and its children use the checkout SDK. Nothing is
-        // installed into .NET/Visual Studio or persisted in the user's environment.
-        Environment.SetEnvironmentVariable("MSBuildSDKsPath", Path.Combine(RepositoryRoot, "build", "Sdks"));
-    }
-
     public static string Xml(string kind = "Executable", string content = "") =>
-        new XElement("Project", new XAttribute("Sdk", "Gflat.Sdk"),
+        WithImports(new XElement("Project",
             new XElement("PropertyGroup", new XElement("OutputType", kind),
                 new XElement("NoStdLib", "true")),
-            XElement.Parse("<Content>" + content + "</Content>").Elements()).ToString();
+            XElement.Parse("<Content>" + content + "</Content>").Elements()).ToString());
+
+    public static string WithImports(string xml, string? toolchainRoot = null)
+    {
+        var project = XElement.Parse(xml);
+        project.SetAttributeValue("DefaultTargets", "Build");
+        project.AddFirst(
+            new XElement("PropertyGroup", new XElement("GflatSdkRoot",
+                new XAttribute("Condition", "'$(GflatSdkRoot)' == ''"),
+                gflat.Projects.ProjectSdk.EscapePropertyValue((toolchainRoot ?? RepositoryRoot).Replace('\\', '/')))),
+            new XElement("Import", new XAttribute("Project", "$(GflatSdkRoot)/build/Gflat.props")));
+        project.Add(new XElement("Import", new XAttribute("Project", "$(GflatSdkRoot)/build/Gflat.targets")));
+        return project.ToString();
+    }
 }

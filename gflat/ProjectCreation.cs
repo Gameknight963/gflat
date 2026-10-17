@@ -53,13 +53,20 @@ public static class ProjectCreation
         if (File.Exists(directory)) throw new ArgumentException("The project directory is an existing file.");
         if (Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any())
             throw new ArgumentException("Project creation requires a new or empty directory; existing files will not be overwritten.");
-        // Project files identify the SDK; installation locates its assets.
-        // An explicit toolchain root is validated for callers preparing distributions.
-        if (toolchainRoot != null && !ProjectSdk.IsRoot(Path.GetFullPath(toolchainRoot)))
+        bool explicitRoot = toolchainRoot != null;
+        toolchainRoot = toolchainRoot == null ? FindToolchainRoot() : Path.GetFullPath(toolchainRoot);
+        if (!ProjectSdk.IsRoot(toolchainRoot))
             throw new ArgumentException("Cannot locate gflat build rules: expected build/Gflat.props and build/Gflat.targets.");
+        var roots = new XElement("PropertyGroup");
+        if (!explicitRoot)
+            roots.Add(new XElement("GflatSdkRoot", new XAttribute("Condition", "'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''"), "$(GflatDefaultSdkRoot)"));
+        roots.Add(new XElement("GflatSdkRoot", new XAttribute("Condition", "'$(GflatSdkRoot)' == ''"),
+            ProjectSdk.EscapePropertyValue(Path.GetRelativePath(directory, toolchainRoot).Replace('\\', '/'))));
         var properties = new XElement("PropertyGroup", new XElement("OutputType", library ? "SourceLibrary" : "Executable"));
         if (!useStd) properties.Add(new XElement("NoStdLib", "true"));
-        var xml = new XElement("Project", new XAttribute("Sdk", "Gflat.Sdk"), properties);
+        var xml = new XElement("Project", new XAttribute("DefaultTargets", "Build"), roots,
+            new XElement("Import", new XAttribute("Project", "$(GflatSdkRoot)/build/Gflat.props")), properties,
+            new XElement("Import", new XAttribute("Project", "$(GflatSdkRoot)/build/Gflat.targets")));
         string source = library ? "// Add reusable types and functions here.\nnamespace Library;\n\npublic int Answer() => 42;\n"
             : useStd ? "int main()\n{\n    Console::WriteLine(\"Hello from gflat!\");\n    return 0;\n}\n"
             : "int main() => 0;\n";

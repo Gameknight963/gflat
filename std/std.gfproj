@@ -1,6 +1,12 @@
-<Project Sdk="Gflat.Sdk">
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''">$(GflatDefaultSdkRoot)</GflatSdkRoot>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">..</GflatSdkRoot>
+  </PropertyGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
   <PropertyGroup>
     <OutputType>SourceLibrary</OutputType>
     <NoStdLib>true</NoStdLib>
   </PropertyGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
 </Project>

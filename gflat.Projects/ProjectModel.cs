@@ -18,13 +18,7 @@ public sealed class ProjectModel
     private static readonly Lazy<bool> registered = new(() =>
     {
         if (!MSBuildLocator.IsRegistered)
-        {
-            // Locator initializes the .NET SDK environment; preserve an explicitly
-            // selected MSBuild SDK search directory (also used by isolated hosts).
-            string? sdkPath = Environment.GetEnvironmentVariable("MSBuildSDKsPath");
             MSBuildLocator.RegisterDefaults();
-            if (sdkPath != null) Environment.SetEnvironmentVariable("MSBuildSDKsPath", sdkPath);
-        }
         return true;
     });
     public string FilePath { get; }

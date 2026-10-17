@@ -620,7 +620,7 @@ public sealed class ServerTests
     {
         await using var s = new Session();
         Directory.CreateDirectory(s.File("app"));
-        System.IO.File.WriteAllText(s.File("app/app.gfproj"), "<Project Sdk=\"Gflat.Sdk\" />");
+        System.IO.File.WriteAllText(s.File("app/app.gfproj"), gflat.TestSupport.ProjectFileFixture.WithImports("<Project />"));
         await s.Initialize();
         await s.Open("app/main.gf", "int main() { Exception*? error = null; return 0; }");
         Assert.Empty((await s.Diagnostics("app/main.gf", 1)).GetProperty("params").GetProperty("diagnostics").EnumerateArray());

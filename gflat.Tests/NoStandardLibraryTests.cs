@@ -65,7 +65,7 @@ public class NoStandardLibraryTests
         try
         {
             string project = Path.Combine(root, "app.gfproj");
-            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\" />");
+            File.WriteAllText(project, gflat.TestSupport.ProjectFileFixture.WithImports("<Project />"));
             File.WriteAllText(Path.Combine(root, "main.gf"), "class Attribute {} int main() => 42;");
             Assert.Equal(0, Program.Main(["build", project, "--no-stdlib", "--emit-ir"]));
             Assert.DoesNotContain("%Exception = type", File.ReadAllText(Path.Combine(root, "bin/Debug/app.ll")));
@@ -83,8 +83,7 @@ public class NoStandardLibraryTests
             foreach (string name in new[] { "Gflat.props", "Gflat.targets" })
                 File.Copy(Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot, "build", name), Path.Combine(toolchain, "build", name));
             string project = Path.Combine(root, "app.gfproj");
-            File.WriteAllText(project, new System.Xml.Linq.XElement("Project", new System.Xml.Linq.XAttribute("Sdk", "Gflat.Sdk"),
-                new System.Xml.Linq.XElement("PropertyGroup", new System.Xml.Linq.XElement("GflatSdkRoot", toolchain))).ToString());
+            File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("<Project />", toolchain));
             File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
             Assert.Equal(0, Program.Main(["build", project, "--no-stdlib", "--emit-ir"]));
             string output = Path.Combine(root, "bin/Debug/app.ll");

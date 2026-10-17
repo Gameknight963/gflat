@@ -1,4 +1,5 @@
 using gflat.Projects;
+using System.Xml.Linq;
 
 namespace gflat.Tests;
 
@@ -18,7 +19,7 @@ public sealed class ProjectCreationTests
             var graph = ProjectGraph.Load(path);
             Assert.Equal(library ? ProjectKind.SourceLibrary : ProjectKind.Executable, graph.Root.Kind);
             Assert.Equal(library ? "SourceLibrary" : "Executable",
-                System.Xml.Linq.XElement.Load(path).Element("PropertyGroup")!.Element("OutputType")!.Value);
+                XElement.Load(path).Elements("PropertyGroup").Elements("OutputType").Single().Value);
             var sources = graph.Sources.Select(p => new SourceFile(p, File.ReadAllText(p)));
             string ir = Compiler.Emit(sources);
             Assert.NotEmpty(ir);
@@ -107,17 +108,58 @@ public sealed class ProjectCreationTests
     }
 
     [Fact]
-    public void GeneratedProjectsContainNoInstallationPathsOrExplicitImports()
+    public void GeneratedProjectsUseExplicitImportsWithoutSdkRegistration()
     {
         string directory = TemporaryDirectory();
         try
         {
             string path = ProjectCreation.Create(directory, useStd: false);
             var xml = System.Xml.Linq.XElement.Load(path);
-            Assert.Equal("Gflat.Sdk", (string?)xml.Attribute("Sdk"));
-            Assert.Empty(xml.Elements("Import"));
+            Assert.Null(xml.Attribute("Sdk"));
+            Assert.Equal(new[] { "$(GflatSdkRoot)/build/Gflat.props", "$(GflatSdkRoot)/build/Gflat.targets" },
+                xml.Elements("Import").Select(import => (string?)import.Attribute("Project")));
             Assert.DoesNotContain(ProjectCreation.FindToolchainRoot(), File.ReadAllText(path));
             Assert.True(ProjectModel.Load(path).NoStdLib);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public void RunningCompilerLocatesBuildRulesForAMovedProject()
+    {
+        string root = TemporaryDirectory();
+        try
+        {
+            string original = Path.Combine(root, "original", "nested", "app");
+            ProjectCreation.Create(original, "App", useStd: false);
+            string moved = Path.Combine(root, "moved");
+            Directory.Move(original, moved);
+            string project = Path.Combine(moved, "App.gfproj");
+            string before = File.ReadAllText(project);
+            Assert.Equal(0, Program.Main(["build", project, "--emit-ir"]));
+            Assert.True(File.Exists(Path.Combine(moved, "bin/Debug/App.ll")));
+            Assert.Equal(before, File.ReadAllText(project));
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void VisualStudioTemplateImportsWorkWithoutAStoredInstallationPath()
+    {
+        string directory = TemporaryDirectory();
+        try
+        {
+            string path = ProjectCreation.Create(directory, "Template", useStd: false);
+            var xml = System.Xml.Linq.XElement.Load(path);
+            foreach (var property in xml.Elements("PropertyGroup").Elements("GflatSdkRoot")
+                .Where(property => property.Value != "$(GflatDefaultSdkRoot)").ToArray())
+                property.Remove();
+            xml.Save(path);
+            Assert.Equal(0, Program.Main(["check", path]));
+            var result = NativeToolchain.Run("dotnet", ["msbuild", path, "-t:Check", "-nologo", "-v:q",
+                "-p:GflatSdkRoot=" + ProjectCreation.FindToolchainRoot(),
+                "-p:GflatCompilerCommand=dotnet \"" + typeof(Program).Assembly.Location + "\""], 30000);
+            Assert.True(result.ExitCode == 0, result.StandardOutput + result.StandardError);
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
     }

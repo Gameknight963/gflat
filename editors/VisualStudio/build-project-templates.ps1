@@ -12,6 +12,13 @@ try {
         & $Compiler @arguments | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Cannot generate $kind template through gflat new" }
         $projectPath = Join-Path $directory 'Template.gfproj'
+        # CPS supplies GflatSdkRoot; the CLI supplies GflatDefaultSdkRoot.
+        # Do not bake the staging directory's relative toolchain path into templates.
+        [xml]$project = Get-Content -Raw -LiteralPath $projectPath
+        foreach ($root in @($project.SelectNodes('/Project/PropertyGroup/GflatSdkRoot'))) {
+            if ($root.InnerText -ne '$(GflatDefaultSdkRoot)') { [void]$root.ParentNode.RemoveChild($root) }
+        }
+        $project.Save($projectPath)
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Templates/Projects/$kind.vstemplate") -Destination (Join-Path $directory 'Project.vstemplate')
         $archive = Join-Path $output "gflat-$($kind.ToLowerInvariant()).zip"
         if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive }

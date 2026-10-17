@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)', '../../../..'))</GflatSdkRoot>
-  </PropertyGroup>
-  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
-</Project>

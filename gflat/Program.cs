@@ -11,7 +11,6 @@ public static class Program
         var diagnostics = new DiagnosticBag();
         try
         {
-            if (args.Length > 0 && args[0] == "sdk") return ProjectSdkInstallation.Run(args[1..]);
             if (args.Length > 0 && args[0] == "new") return ProjectCreation.Run(args[1..]);
             if (args.Length > 0 && args[0] == "doctor") return ToolchainDoctor.Run(args[1..]);
             int argumentSeparator = Array.IndexOf(args, "--");
@@ -33,7 +32,6 @@ public static class Program
                     case "--help": case "-h":
                         Console.WriteLine("gflat new <directory> [--name Name] [--library] [--no-stdlib]\nOptimization: --optimization 0|1|2|3 (project defaults: Debug=0, Release=2)");
                         Console.WriteLine("gflat doctor [--native] [--clang path]");
-                        Console.WriteLine("gflat sdk install [--sdk-directory path]");
                         Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N] [--no-stdlib]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
                     case "build" when i == 0: break;

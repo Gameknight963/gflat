@@ -56,7 +56,7 @@ public static class Compiler
     public static string Emit(IEnumerable<SourceFile> sources, DiagnosticBag? diagnostics = null, CompilationOptions? options = null)
     {
         var (ast, checker) = Check(sources, diagnostics, options);
-        var emitter = new LlvmEmitter(checker);
+        var emitter = new LlvmEmitter(checker, options?.InternalizeFunctions == true);
         ast.Accept(emitter);
         return emitter.GetOutput();
     }

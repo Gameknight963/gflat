@@ -109,7 +109,7 @@ public static class Program
                 if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
                 return 0;
             }
-            string ir = Compiler.Emit(sources, diagnostics, new() { NoStdLib = noStdLib });
+            string ir = Compiler.Emit(sources, diagnostics, new() { NoStdLib = noStdLib, InternalizeFunctions = !irOnly });
             if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             if (irOnly) { File.WriteAllText(outputPath, ir); return 0; }

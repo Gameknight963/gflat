@@ -54,7 +54,7 @@ internal static class NativeRuntime
             string directory = Path.Combine(Path.GetTempPath(), "gflat-runtime", Environment.ProcessId.ToString());
             Directory.CreateDirectory(directory);
             string output = Path.Combine(directory, name + "-" + buildId + (OperatingSystem.IsWindows() ? ".obj" : ".o"));
-            var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", "-c", source, "-o", output };
+            var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O2", "-fexceptions", "-ffunction-sections", "-fdata-sections", "-c", source, "-o", output };
             args.AddRange(options);
             args.AddRange(HostArguments());
             ProcessResult result = NativeToolchain.Run(driver, args, 60000);

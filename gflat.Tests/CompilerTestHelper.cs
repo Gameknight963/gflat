@@ -49,10 +49,11 @@ namespace gflat.Tests
 
         public static ExecutionResult Run(string code)
         {
-            return RunIr(EmitIr(code));
+            return RunIr(Compiler.Emit(code, options: new() { InternalizeFunctions = true }));
         }
 
-        public static ExecutionResult Run(IEnumerable<SourceFile> sources) => RunIr(Compiler.Emit(sources));
+        public static ExecutionResult Run(IEnumerable<SourceFile> sources)
+            => RunIr(Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));
 
         private static ExecutionResult RunIr(string ir)
         {

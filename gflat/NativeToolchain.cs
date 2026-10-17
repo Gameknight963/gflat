@@ -102,6 +102,7 @@ public static class NativeToolchain
         gflat.Projects.OptimizationLevel.Parse(optimizationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
         string compiler = FindClang(null);
         var args = new List<string> { "--driver-mode=g++", "-std=c++17", "-O" + optimizationLevel, "-fexceptions", source, "-o", output, NativeRuntime.GetObject(compiler, exceptionReserveBytes) };
+        AddUnusedCodeElimination(args);
         args.AddRange(NativeRuntime.HostArguments());
         if (objects != null) args.AddRange(objects);
         return Run(compiler, args, 60000);
@@ -112,6 +113,7 @@ public static class NativeToolchain
         string optimization = optimizationLevel?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
         gflat.Projects.OptimizationLevel.Parse(optimization);
         var args = new List<string> { irPath, "-O" + optimization, "-o", outputPath };
+        AddUnusedCodeElimination(args);
         if (OperatingSystem.IsWindows() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LIB")))
         {
             if (LibraryDirectory.Value is string lib) args.AddRange(["-Xlinker", "/libpath:" + lib]);
@@ -138,5 +140,13 @@ public static class NativeToolchain
         if (OperatingSystem.IsLinux() && System.Text.RegularExpressions.Regex.IsMatch(ir, @"(?m)^\s*%[^\r\n]*=\s*frem\b"))
             args.Add("-lm");
         return Run(compiler, args, 60000);
+    }
+
+    private static void AddUnusedCodeElimination(List<string> arguments)
+    {
+        arguments.AddRange(["-ffunction-sections", "-fdata-sections"]);
+        arguments.AddRange(OperatingSystem.IsWindows()
+            ? ["-Xlinker", "/OPT:REF"]
+            : ["-Xlinker", "--gc-sections"]);
     }
 }

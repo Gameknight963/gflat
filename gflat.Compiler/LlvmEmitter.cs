@@ -10,10 +10,12 @@ public partial class LlvmEmitter : IVisitor
     private string RuntimeMemorySymbol(string name) => "gflat$Memory$" + name +
         (_typeChecker.GetMemoryFunction(name) is { } method ? _typeChecker.GetOverloadSuffix(method) : "");
     private readonly TypeChecker _typeChecker;
+    private readonly bool _internalizeFunctions;
 
-    public LlvmEmitter(TypeChecker typeChecker)
+    public LlvmEmitter(TypeChecker typeChecker, bool internalizeFunctions = false)
     {
         _typeChecker = typeChecker;
+        _internalizeFunctions = internalizeFunctions;
     }
 
     private int _constCounter = 0;
@@ -2093,7 +2095,7 @@ public partial class LlvmEmitter : IVisitor
         parameters = WithManagedResultParameter(node.ReturnType, parameters, named: true);
 
         BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), name, parameters,
-            exceptionBoundary: isMain || node.IsNoThrow, inline: node.IsInline);
+            exceptionBoundary: isMain || node.IsNoThrow, inline: node.IsInline, isEntryPoint: isMain);
         EmitStaticLifetimePrologue();
 
         foreach (Parameter p in node.Parameters)

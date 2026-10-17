@@ -25,12 +25,13 @@ public partial class LlvmEmitter
     private FunctionEmission CurrentFunction => _functions.Peek();
 
     private void BeginFunction(string returnType, string name, string parameters,
-        bool exceptionBoundary = false, bool inline = false)
+        bool exceptionBoundary = false, bool inline = false, bool isEntryPoint = false)
     {
         var function = new FunctionEmission(_output, exceptionBoundary);
         _functions.Push(function);
         _output = function.Output;
-        string header = $"define {returnType} @{name}({parameters})" + (inline ? " inlinehint" : "");
+        string linkage = _internalizeFunctions && !isEntryPoint ? "internal " : "";
+        string header = $"define {linkage}{returnType} @{name}({parameters})" + (inline ? " inlinehint" : "");
         function.HeaderEnd = header.Length;
         Emit(header + " {");
         Emit("entry:");

@@ -312,6 +312,19 @@ option is given; otherwise the default is 0. Project builds use their evaluated
 project setting instead of that environment variable. These levels control Clang
 and LLVM optimization; they do not change language semantics.
 
+Executable builds give gflat function definitions other than `main` internal LLVM
+linkage, allowing LLVM to remove unused definitions. Native compilation also places
+functions and data in separate sections and asks the linker to discard unreferenced sections,
+including at optimization level 0. Native callbacks, virtual/interface tables,
+static initialization and cleanup retain the functions they reference.
+
+`--emit-ir` preserves externally linkable function definitions for callers in
+other native object files and custom entry points. The compiler API likewise
+preserves those definitions by default; use
+`CompilationOptions { InternalizeFunctions = true }` for a complete executable
+whose gflat functions are only called through that compilation or passed pointers.
+This controls native linkage independently of gflat `public`/`private` access.
+
 On Windows, 128-bit integer code uses the selected Clang installation's
 `compiler-rt` builtins for operations such as division and remainder. That LLVM
 installation must include its builtins library. This also applies to `NoStdLib`

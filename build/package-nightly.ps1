@@ -11,8 +11,28 @@ if (-not (Test-Path -LiteralPath (Join-Path $repo 'LICENSE'))) { throw 'Choose a
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 foreach ($project in @('gflat', 'gflat.LanguageServer')) {
     $folder = if ($project -eq 'gflat') { 'compiler' } else { 'language-server' }
-    dotnet publish (Join-Path $repo "$project/$project.csproj") -c Release -r $Runtime --self-contained false -o (Join-Path $output $folder)
+    dotnet publish (Join-Path $repo "$project/$project.csproj") -c Release -r $Runtime --self-contained true -o (Join-Path $output $folder)
     if ($LASTEXITCODE -ne 0) { throw "Publishing $project failed" }
+}
+# The task is built ahead of time for both the bundled engine and VS's engine.
+foreach ($framework in @('net472', 'net10.0')) {
+    $destination = Join-Path $output "build/tasks/$framework"
+    New-Item -ItemType Directory -Path $destination -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $repo "build/tasks/$framework/gflat.Build.Tasks.dll") -Destination $destination
+}
+# Preserve the exact .NET runtime pack's redistribution notices.
+$deps = Get-Content -Raw -LiteralPath (Join-Path $output 'compiler/gflat.deps.json') | ConvertFrom-Json
+$runtimePack = $deps.libraries.PSObject.Properties.Name | Where-Object { $_ -like 'runtimepack.Microsoft.NETCore.App.Runtime.*/*' } | Select-Object -First 1
+if (-not $runtimePack) { throw 'Cannot identify bundled .NET runtime' }
+$assets = Get-Content -Raw -LiteralPath (Join-Path $repo 'gflat/obj/project.assets.json') | ConvertFrom-Json
+$runtimePath = $assets.packageFolders.PSObject.Properties.Name | ForEach-Object {
+    Join-Path $_ ($runtimePack.Substring('runtimepack.'.Length).ToLowerInvariant())
+} | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+if (-not $runtimePath) { throw 'Cannot find runtime license files' }
+$notices = Join-Path $output 'LICENSES/dotnet'
+New-Item -ItemType Directory -Path $notices -Force | Out-Null
+foreach ($file in @('LICENSE.TXT', 'THIRD-PARTY-NOTICES.TXT')) {
+    Copy-Item -LiteralPath (Join-Path $runtimePath $file) -Destination $notices
 }
 # Copy tracked distribution files only, never local builds, editor state, or notes.
 $files = & git -C $repo ls-files -- std build examples docs editors/shared LICENSES README.md LICENSE THIRD_PARTY_NOTICES.md
@@ -31,8 +51,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot identify source commit' }
 } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'BUILD-INFO.json') -Encoding utf8
 
 # Exercise the distributed compiler and imported project files, not checkout binaries.
-$compiler = Join-Path $output 'compiler/gflat.dll'
-dotnet $compiler --help
+$compilerName = if ($Runtime -eq 'win-x64') { 'gflat.exe' } else { 'gflat' }
+$compiler = Join-Path $output "compiler/$compilerName"
+& $compiler --help
 if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler failed to start' }
 foreach ($example in @('hello', 'interpolation', 'managed')) {
     $smokeArguments = @()
@@ -40,11 +61,12 @@ foreach ($example in @('hello', 'interpolation', 'managed')) {
         [IO.Directory]::CreateDirectory($env:GFLAT_TEST_OUTPUT_ROOT) | Out-Null
         $smokeArguments = @('-o', (Join-Path $env:GFLAT_TEST_OUTPUT_ROOT ("nightly-$example-" + [Guid]::NewGuid().ToString('N') + '.exe')))
     }
-    dotnet $compiler build (Join-Path $output "examples/$example/$example.gfproj") @smokeArguments --run
+    & $compiler build (Join-Path $output "examples/$example/$example.gfproj") @smokeArguments --run
     if ($LASTEXITCODE -ne 0) { throw "Packaged $example project failed" }
-    dotnet $compiler clean (Join-Path $output "examples/$example/$example.gfproj")
+    & $compiler clean (Join-Path $output "examples/$example/$example.gfproj")
     if ($LASTEXITCODE -ne 0) { throw "Packaged $example cleanup failed" }
 }
+& (Join-Path $PSScriptRoot 'test-bundled-msbuild.ps1') -ToolchainDirectory $output
 if ($Runtime -eq 'linux-x64') {
     # GitHub artifact ZIPs do not preserve executable bits; tar does.
     $archive = Join-Path (Split-Path $output) 'gflat-linux-x64.tar.gz'

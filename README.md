@@ -68,7 +68,8 @@ These links select the latest successful `master` workflow using
 
 ### Requirements
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), including MSBuild.
+- Downloaded bundles include the .NET runtime and MSBuild. No .NET SDK or separate
+  MSBuild installation is needed to use the compiler or language server.
 - Clang and the native platform linker and C/C++ development libraries.
   - Windows: Visual Studio's **Desktop development with C++** workload and
     **C++ Clang Compiler for Windows**, or an equivalent LLVM/MSVC toolchain.
@@ -110,7 +111,7 @@ ONLY so newer builds can replace older ones; it is not a language version.
 
 ## Build from source
 
-With the requirements above installed:
+Building the tools from source also requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0):
 
 ```sh
 dotnet build gflat/gflat.csproj

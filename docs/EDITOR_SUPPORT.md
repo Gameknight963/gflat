@@ -73,7 +73,9 @@ editors/VisualStudio/bin/Release/net472/gflat.VisualStudio.vsix
 Open that VSIX to install it, follow the installer's restart instructions, and open
 a `.gf` file. Errors and warnings appear through Visual Studio's LSP support. The
 package bundles a compiler for project builds; Clang must be installed separately. Building the
-package does not install it into your IDE automatically. Project evaluation and builds also require the .NET 10 SDK, including when using the bundled server.
+package does not install it into your IDE automatically. The bundled compiler and
+server include MSBuild and the .NET runtime; installing the .NET SDK is not required
+to use them. Visual Studio's project system uses Visual Studio's own MSBuild.
 
 The installed server is the packaged copy; it does not automatically track this
 checkout. For an update, increment the VSIX manifest version,

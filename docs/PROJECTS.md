@@ -2,7 +2,8 @@
 
 A `.gfproj` is an MSBuild XML project. Visual Studio opens that same file through
 Microsoft's Common Project System (CPS). No companion project is generated.
-The CLI and language server evaluate it using MSBuild from the installed .NET SDK.
+The CLI and language server evaluate it using their bundled MSBuild engine.
+Visual Studio uses its own MSBuild engine for CPS evaluation and IDE builds.
 
 ## Build-rule imports
 
@@ -31,12 +32,15 @@ initial project evaluation. Its templates contain no installation-specific path.
 
 For standalone MSBuild, the relative fallback must locate the toolchain. Otherwise
 set `GflatSdkRoot` in the environment or pass `-p:GflatSdkRoot=/path/to/gflat`.
-The directory must contain `build/Gflat.props` and `build/Gflat.targets`; keep
+The directory must contain the complete `build/` directory, including the
+precompiled tasks under `build/tasks/`; keep
 `std/` there too when using the standard library. Builds do not install files into
 .NET or Visual Studio.
 
-MSBuild and the .NET SDK are still required for project evaluation and builds.
-Compiling individual source files does not require project evaluation.
+Downloaded compiler and language-server bundles include MSBuild and the .NET runtime.
+Using them does not require an installed .NET SDK, registering an SDK, or copying
+files into Visual Studio. Clang and the native platform toolchain are still required
+to produce native executables. The .NET SDK is required to build gflat itself from source.
 
 ## Creating a project
 
@@ -138,7 +142,9 @@ and its exit code becomes the compiler command's exit code.
 
 ## Building
 
-Install the .NET 10 SDK, then build the compiler once:
+The bundled `gflat build`, `check`, and `clean` commands run the project targets
+without an installed .NET SDK. You can also use an installed MSBuild directly.
+For example, when developing gflat with the .NET 10 SDK:
 
 ```text
 dotnet build gflat

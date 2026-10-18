@@ -41,6 +41,20 @@ jobs:
         run: |
           dotnet gflat/bin/Debug/net10.0/gflat.dll build examples/hello/hello.gfproj --run
           dotnet gflat/bin/Debug/net10.0/gflat.dll build examples/interpolation/interpolation.gfproj --run
+      - name: Test bundled tools without installed dotnet or MSBuild
+        if: matrix.optimization == '0'
+        shell: pwsh
+        run: |
+          $runtime = if ($IsWindows) { 'win-x64' } else { 'linux-x64' }
+          dotnet publish gflat/gflat.csproj -c Release -r $runtime --self-contained true -o artifacts/standalone/compiler
+          if ($LASTEXITCODE -ne 0) { throw 'Compiler publishing failed' }
+          ./build/test-bundled-msbuild.ps1 -ToolchainDirectory . -CompilerDirectory artifacts/standalone/compiler
+          dotnet publish gflat.LanguageServer/gflat.LanguageServer.csproj -c Release -r $runtime --self-contained true -o artifacts/standalone/server
+          if ($LASTEXITCODE -ne 0) { throw 'Language server publishing failed' }
+          $server = if ($IsWindows) { 'gflat.LanguageServer.exe' } else { 'gflat.LanguageServer' }
+          $env:GFLAT_LSP_EXECUTABLE = Join-Path $PWD "artifacts/standalone/server/$server"
+          dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj --no-build --filter FullyQualifiedName~ServerTests
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged language server tests failed' }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

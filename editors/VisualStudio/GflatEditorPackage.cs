@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,14 +13,23 @@ namespace gflat.VisualStudio;
 // type used by LSP/TextMate. The SDK generates the language options registration.
 [Guid("25453519-83CF-4439-B0A4-6D79CD8F267C")]
 [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
+[ProvideBindingPath]
 [ProvideLanguageEditorOptionPage(typeof(GflatOptions), "gflat", null, "IntelliSense", "IntelliSense")]
 public sealed class GflatEditorPackage : AsyncPackage
 {
+    private GflatSdkResolver? sdkResolver;
     internal GflatOptions Options => (GflatOptions)GetDialogPage(typeof(GflatOptions));
     protected override Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
+        sdkResolver = new GflatSdkResolver(Path.Combine(Path.GetDirectoryName(typeof(GflatEditorPackage).Assembly.Location)!, "Sdk"));
         AddService(typeof(GflatLanguageInfo), (_, __, ___) => Task.FromResult<object?>(new GflatLanguageInfo()), promote: true);
         return Task.CompletedTask;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) sdkResolver?.Dispose();
+        base.Dispose(disposing);
     }
 }
 

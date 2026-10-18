@@ -77,6 +77,16 @@ package does not install it into your IDE automatically. The bundled compiler an
 server include MSBuild and the .NET runtime; installing the .NET SDK is not required
 to use them. Visual Studio's project system uses Visual Studio's own MSBuild.
 
+The editor package also owns an experimental resolver for the `Gflat.Sdk` bundled
+inside the VSIX. It uses MonoMod to intercept that SDK's lookup in the IDE process;
+other SDKs retain normal resolution. There is no separate extension or global SDK
+installation. SDK-style projects are not ready for general use: the package must
+load before project evaluation, and the build task's separate evaluation process
+does not have the hook. Existing projects and templates still use explicit imports.
+`test-sdk-resolver.ps1` tests the actual packaged extension DLL against installed
+Visual Studio MSBuild engines, including concurrent evaluation, worker requests,
+unrelated SDK resolution, and removal of the hook.
+
 The installed server is the packaged copy; it does not automatically track this
 checkout. For an update, increment the VSIX manifest version,
 then rebuild and install the VSIX. For a development rebuild with the same version,

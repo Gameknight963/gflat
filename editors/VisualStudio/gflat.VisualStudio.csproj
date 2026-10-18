@@ -23,6 +23,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.ProjectSystem.SDK" Version="17.9.380" ExcludeAssets="runtime" />
+    <PackageReference Include="MonoMod.RuntimeDetour" Version="25.3.5" />
     <PackageReference Include="Microsoft.VisualStudio.ImageCatalog" Version="17.14.40260" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.Shell.15.0" Version="17.14.40264" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.LanguageServer.Client" Version="17.14.60" ExcludeAssets="runtime" />
@@ -42,6 +43,7 @@
     <Reference Include="WindowsBase" />
     <Compile Include="GflatLanguageClient.cs" />
     <Compile Include="GflatEditorPackage.cs" />
+    <Compile Include="GflatSdkResolver.cs" />
     <Compile Include="GflatOptions.cs" />
     <Compile Include="HoverIcons.cs" />
     <Compile Include="HoverConnection.cs" />
@@ -55,6 +57,7 @@
     <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/MSBuild.txt"><Link>Licenses/MSBuild.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/Roslyn.txt"><Link>Licenses/Roslyn.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
+    <Content Include="../../LICENSES/MonoMod.txt;../../LICENSES/Mono.Cecil.txt;../../LICENSES/Iced.txt"><Link>Licenses/%(Filename)%(Extension)</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../THIRD_PARTY_NOTICES.md"><Link>THIRD_PARTY_NOTICES.md</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="obj/notices/*"><Link>Licenses/dotnet/%(Filename)%(Extension)</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="obj/BUILD-INFO.json"><Link>BUILD-INFO.json</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
@@ -86,6 +89,9 @@
     </Content>
     <Content Include="../../build/Gflat.props;../../build/Gflat.targets">
       <Link>Sdk/build/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="Sdk/Sdk.props;Sdk/Sdk.targets">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="../../build/Rules/**/*">

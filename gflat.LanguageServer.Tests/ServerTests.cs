@@ -296,6 +296,16 @@ public sealed class ServerTests
             string? packaged = Environment.GetEnvironmentVariable("GFLAT_LSP_EXECUTABLE");
             var info = new ProcessStartInfo(packaged ?? "dotnet") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
             if (packaged == null) info.ArgumentList.Add(typeof(global::gflat.LanguageServer.Program).Assembly.Location);
+            else
+            {
+                // Packaged tools must analyze projects without installed dotnet/MSBuild.
+                info.Environment["PATH"] = Root;
+                info.Environment["DOTNET_ROOT"] = Root;
+                info.Environment["DOTNET_ROOT_X64"] = Root;
+                info.Environment["MSBUILD_EXE_PATH"] = File("missing/MSBuild.dll");
+                info.Environment["MSBuildExtensionsPath"] = File("missing");
+                info.Environment["MSBuildSDKsPath"] = File("missing-sdks");
+            }
             Process = Process.Start(info)!;
             stderr = Process.StandardError.ReadToEndAsync();
         }

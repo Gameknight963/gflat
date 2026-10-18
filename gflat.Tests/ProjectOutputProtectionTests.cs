@@ -145,7 +145,7 @@ public sealed class ProjectOutputProtectionTests : IDisposable
         var info = new System.Diagnostics.ProcessStartInfo(host.Driver) {
             UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true,
         };
-        // Locator configures this .NET test host. Native VS MSBuild must use its
+        // The bundled engine configures this .NET test host. Native VS MSBuild must use its
         // own framework assemblies/resolvers, retaining the isolated SDK search path.
         foreach (string property in new[] { "MSBUILD_EXE_PATH", "MSBuildExtensionsPath", "MSBUILDADDITIONALSDKRESOLVERSFOLDER" })
             info.Environment.Remove(property);

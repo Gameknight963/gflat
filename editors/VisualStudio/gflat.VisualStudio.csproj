@@ -53,7 +53,7 @@
     <Compile Include="GflatLaunchProvider.cs" />
     <Compile Include="../../gflat.Projects/ProjectSdk.cs"><Link>ProjectSdk.cs</Link></Compile>
     <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
-    <Content Include="../../LICENSES/MSBuild.Locator.txt"><Link>Licenses/MSBuild.Locator.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
+    <Content Include="../../LICENSES/MSBuild.txt"><Link>Licenses/MSBuild.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/Roslyn.txt"><Link>Licenses/Roslyn.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../THIRD_PARTY_NOTICES.md"><Link>THIRD_PARTY_NOTICES.md</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="obj/notices/*"><Link>Licenses/dotnet/%(Filename)%(Extension)</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
@@ -90,6 +90,10 @@
     </Content>
     <Content Include="../../build/Rules/**/*">
       <Link>Sdk/build/Rules/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="../../build/tasks/**/gflat.Build.Tasks.dll">
+      <Link>Sdk/build/tasks/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="../../std/std.gfproj">

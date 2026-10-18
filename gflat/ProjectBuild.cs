@@ -10,14 +10,15 @@ internal static class ProjectBuild
     {
         // Explicit source-list invocations in the targets avoid recursively building the project.
         string assembly = typeof(Program).Assembly.Location;
-        var arguments = new List<string> { "msbuild", project.FilePath, "-nologo", "-v:minimal", "-t:" + target };
-        void Property(string name, string value) => arguments.Add("-p:" + name + "=" + Escape(value));
+        var properties = new Dictionary<string, string>();
+        void Property(string name, string value) => properties[name] = ProjectSdk.EscapePropertyValue(value);
         Property("Configuration", configuration);
         Property("Platform", platform);
         if (noStdLib) Property("NoStdLib", "true");
         if (project.SdkRoot != null) Property("GflatSdkRoot", project.SdkRoot);
-        Property("GflatCompilerCommand", "dotnet \"" + assembly + "\"");
-        Property("GflatCompilerPath", assembly);
+        string appHost = Path.Combine(Path.GetDirectoryName(assembly)!, OperatingSystem.IsWindows() ? "gflat.exe" : "gflat");
+        string compiler = File.Exists(appHost) ? appHost : assembly;
+        Property("GflatCompilerPath", compiler);
         sourceGraph ??= ProjectGraph.Load(project.FilePath,
             (path, asReference) => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, asReference));
         Property("GflatProjectInputs", string.Join(";", sourceGraph.Projects
@@ -33,12 +34,28 @@ internal static class ProjectBuild
         if (clang != null) Property("GflatClang", clang);
         if (exceptionReserveBytes.HasValue) Property("GflatExceptionReserveBytes", exceptionReserveBytes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
         if (optimizationLevel.HasValue) Property("GflatOptimizationLevel", optimizationLevel.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        var result = NativeToolchain.Run("dotnet", arguments, 120000);
+        // Isolate MSBuild's working-directory/environment changes from embedding
+        // hosts. The same apphost runs our bundled engine; no dotnet/MSBuild installation.
+        var arguments = new List<string> { "--msbuild", project.FilePath, target };
+        foreach (var property in properties) { arguments.Add(property.Key); arguments.Add(property.Value); }
+        string driver = appHost;
+        if (!File.Exists(driver))
+        {
+            driver = "dotnet"; // Framework-dependent developer builds without an apphost.
+            arguments.Insert(0, assembly);
+        }
+        var result = NativeToolchain.Run(driver, arguments, 120000);
         Console.Write(result.StandardOutput);
         Console.Error.Write(result.StandardError);
         return result.ExitCode;
     }
 
-    private static string Escape(string value) => value.Replace("%", "%25").Replace(";", "%3B")
-        .Replace(",", "%2C").Replace("$", "%24").Replace("@", "%40").Replace("'", "%27").Replace("\"", "%22");
+    // Private worker entry point, invoked by Run.
+    internal static int RunEngine(string[] args)
+    {
+        if (args.Length < 2 || args.Length % 2 != 0) throw new ArgumentException("Invalid MSBuild worker arguments.");
+        var properties = new Dictionary<string, string>();
+        for (int i = 2; i < args.Length; i += 2) properties.Add(args[i], args[i + 1]);
+        return MsBuildHost.Build(args[0], args[1], properties);
+    }
 }

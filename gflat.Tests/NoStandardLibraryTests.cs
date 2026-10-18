@@ -80,8 +80,7 @@ public class NoStandardLibraryTests
         try
         {
             string toolchain = Path.Combine(root, "toolchain");
-            foreach (string name in new[] { "Gflat.props", "Gflat.targets" })
-                File.Copy(Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot, "build", name), Path.Combine(toolchain, "build", name));
+            TestSupport.ProjectFileFixture.CopyBuildRules(toolchain);
             string project = Path.Combine(root, "app.gfproj");
             File.WriteAllText(project, TestSupport.ProjectFileFixture.WithImports("<Project />", toolchain));
             File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");

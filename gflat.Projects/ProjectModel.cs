@@ -1,4 +1,3 @@
-using Microsoft.Build.Locator;
 namespace gflat.Projects;
 
 public enum ProjectKind { Executable, SourceLibrary }
@@ -15,12 +14,6 @@ public sealed class ProjectException(string path, string message, int line = 1, 
 public sealed class ProjectModel
 {
     public static readonly StringComparer Paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-    private static readonly Lazy<bool> registered = new(() =>
-    {
-        if (!MSBuildLocator.IsRegistered)
-            MSBuildLocator.RegisterDefaults();
-        return true;
-    });
     public string FilePath { get; }
     public string DirectoryPath => Path.GetDirectoryName(FilePath)!;
     public string Name => Path.GetFileNameWithoutExtension(FilePath);
@@ -54,10 +47,8 @@ public sealed class ProjectModel
     public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false)
     {
         path = Path.GetFullPath(path);
-        try { _ = registered.Value; }
-        catch (Exception error) { throw new ProjectException(path, "Cannot locate MSBuild. Install the .NET SDK. " + error.Message); }
-        // The evaluator lives in a separate method/type: MSBuild must not be loaded
-        // by the JIT until Locator has registered its assembly resolver.
+        try { MsBuildHost.Initialize(); }
+        catch (IOException error) { throw new ProjectException(path, error.Message); }
         return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib, asReference);
     }
     public bool IncludesFile(string path)

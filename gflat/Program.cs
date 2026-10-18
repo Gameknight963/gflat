@@ -11,6 +11,7 @@ public static class Program
         var diagnostics = new DiagnosticBag();
         try
         {
+            if (args.Length > 0 && args[0] == "--msbuild") return ProjectBuild.RunEngine(args[1..]);
             if (args.Length > 0 && args[0] == "new") return ProjectCreation.Run(args[1..]);
             if (args.Length > 0 && args[0] == "doctor") return ToolchainDoctor.Run(args[1..]);
             int argumentSeparator = Array.IndexOf(args, "--");

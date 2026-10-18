@@ -38,6 +38,10 @@ public sealed class ProjectSdkTests
             Assert.Single(model.SourceFiles());
             Assert.Empty(model.References);
             Assert.Equal(0, Program.Main(["build", project, "--emit-ir"]));
+            string output = Path.ChangeExtension(model.TargetPath!, ".ll");
+            DateTime timestamp = File.GetLastWriteTimeUtc(output);
+            Assert.Equal(0, Program.Main(["build", project, "--emit-ir"]));
+            Assert.Equal(timestamp, File.GetLastWriteTimeUtc(output));
         }
         finally { Directory.Delete(root, true); }
     }
@@ -252,10 +256,6 @@ public sealed class ProjectSdkTests
     }
 
     private static void CreateSdk(string root)
-    {
-        Directory.CreateDirectory(Path.Combine(root, "build"));
-        foreach (string name in new[] { "Gflat.props", "Gflat.targets" })
-            File.Copy(Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot, "build", name), Path.Combine(root, "build", name));
-    }
+        => TestSupport.ProjectFileFixture.CopyBuildRules(root);
     private static string Temporary() => Path.Combine(Path.GetTempPath(), "gflat sdk " + Guid.NewGuid().ToString("N"));
 }

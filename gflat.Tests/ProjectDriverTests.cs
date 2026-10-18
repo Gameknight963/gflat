@@ -64,7 +64,9 @@ public sealed class ProjectDriverTests
             Assert.NotEqual(0, Program.Main(["check", project]));
             Assert.False(File.Exists(Path.Combine(root, "built.txt")));
             string output = Path.Combine(root, "new output directory", "custom output.ll");
+            string workingDirectory = Directory.GetCurrentDirectory();
             Assert.Equal(0, Program.Main(["build", project, "--configuration", "Release", "--emit-ir", "-o", output]));
+            Assert.Equal(workingDirectory, Directory.GetCurrentDirectory());
             Assert.True(File.Exists(output));
             Assert.Equal("Release", File.ReadAllText(Path.Combine(root, "built.txt")).Trim());
             Assert.Equal(0, Program.Main(["clean", project]));

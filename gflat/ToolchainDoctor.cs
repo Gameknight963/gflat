@@ -48,7 +48,7 @@ public static class ToolchainDoctor
             {
                 string path = ProjectCreation.Create(Path.Combine(scratch, "project"), "Probe", library: true, useStd: false);
                 ProjectModel.Load(path);
-                return "OK";
+                return "OK (bundled engine: " + Path.Combine(AppContext.BaseDirectory, "MSBuild.dll") + ")";
             });
             Check("Clang", () =>
             {

@@ -11,6 +11,7 @@
   <Project Path="gflat.LanguageServer/gflat.LanguageServer.csproj" />
   <Project Path="gflat.Tests/gflat.Tests.csproj" />
   <Project Path="gflat.Projects/gflat.Projects.csproj" />
+  <Project Path="gflat.Build.Tasks/gflat.Build.Tasks.csproj" />
   <Project Path="std/std.gfproj">
     <Build Project="false" />
   </Project>

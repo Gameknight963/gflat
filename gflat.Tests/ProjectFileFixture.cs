@@ -20,6 +20,16 @@ internal static class ProjectFileFixture
                 new XElement("NoStdLib", "true")),
             XElement.Parse("<Content>" + content + "</Content>").Elements()).ToString());
 
+    public static void CopyBuildRules(string toolchainRoot)
+    {
+        foreach (string file in new[] { "Gflat.props", "Gflat.targets", "tasks/net472/gflat.Build.Tasks.dll", "tasks/net10.0/gflat.Build.Tasks.dll" })
+        {
+            string destination = Path.Combine(toolchainRoot, "build", file);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(Path.Combine(RepositoryRoot, "build", file), destination);
+        }
+    }
+
     public static string WithImports(string xml, string? toolchainRoot = null)
     {
         var project = XElement.Parse(xml);

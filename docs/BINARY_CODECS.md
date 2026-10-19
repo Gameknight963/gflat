@@ -27,3 +27,23 @@ result once and process small stack chunks without allocating an intermediate
 whole-size buffer. Decoded strings may contain embedded zeros; use `Length`
 rather than a C-string scan. Malformed input, length overflow, and allocation
 failure throw. Include the usual core String dependencies for these conveniences.
+
+# Hexadecimal
+
+`std/core/Hex.gf` defines `std::Hex`, with the same counted-buffer conventions:
+
+- `TryGetEncodedLength(count, ref length)` checks multiplication by two for
+  pointer-sized overflow.
+- `TryEncode(data, count, output, capacity, ref written, uppercase = true)`
+  writes two ASCII digits per byte. Pass false for lowercase output.
+- `TryGetDecodedLength(text, count, ref length)` validates every digit and
+  requires an even input length.
+- `TryDecode(text, count, output, capacity, ref written)` accepts mixed letter
+  case. Prefixes such as `0x`, whitespace, and separators are rejected.
+
+Failures set the output count to zero and leave the output buffer untouched.
+Results have no null terminator. Input/output must be disjoint for encoding;
+decoding additionally supports the exact same starting address. Empty input
+succeeds. `std/core/HexText.gf` adds owning `std::HexText::Encode(data, count,
+uppercase = true)` and `Decode(text, count)` conveniences. Decoded strings retain
+embedded zeros and report malformed input through an exception.

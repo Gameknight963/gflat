@@ -33,6 +33,7 @@ implementation lives in `libc`.
 | UTF-16 and conversion | `Utf16`, incremental `Utf16Decoder`, borrowed `Utf16Scalars`, `UnicodeTranscoding` | [Code units and chunked decoding](../docs/UTF16.md), [scalar iteration](../docs/UTF16_SCALARS.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
+| JSON quoting | `JsonString` | [Strict UTF-8 string literals in caller buffers](../docs/JSON_STRING.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |
@@ -54,7 +55,7 @@ their sources. Do not retain them across operations that invalidate storage.
 | Area | APIs |
 | --- | --- |
 | Console | `Console::Write`, `WriteLine`, `Read`, `ReadByte`, `ReadExactly`, `ReadLine`, `TryReadLine`, `Out`, `Error`, flush operations |
-| Files | `File`, `FileText`, `FileBytes`, `FileLines`, `FileBinary` |
+| Files | `File`, `FileText`, `FileBytes`, `FileLines`, `FileLineSequence`, `FileBinary` |
 | Allocation | Default replaceable `Memory::Allocate` and `Memory::Free` |
 | Managed storage | Replaceable collector selection and `TracingCollector` |
 | Exceptions | Default unhandled exception termination |

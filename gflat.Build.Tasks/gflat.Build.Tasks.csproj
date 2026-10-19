@@ -3,7 +3,10 @@
     <TargetFrameworks>net472;net10.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <!-- Artifacts output skips the SDK's usual framework suffix. Keep these
+         runtime-specific SDK assets distinct under either output convention. -->
     <OutputPath>../build/tasks/</OutputPath>
+    <OutputPath Condition="'$(UseArtifactsOutput)' == 'true'">../build/tasks/$(TargetFramework)/</OutputPath>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>

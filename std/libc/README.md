@@ -157,6 +157,28 @@ storage. `WriteAll` truncates and `AppendAll` appends; both accept a C string,
 counted bytes, or `ref readonly(String)`. These helpers explicitly close the
 file so final flush/close failures are reported. They are not atomic updates.
 
+### Reading lines
+
+`File/FileLines.gf` provides `std::FileLines`, borrowing a `File*` without closing
+it. Include `core/EndOfStreamException.gf` and `core/BufferTooSmallException.gf`.
+`TryReadLine(input, data, capacity, ref length)` reads into caller storage and
+returns false only at EOF before any input. Capacity includes the null
+terminator. LF and CRLF end a line; a bare CR and embedded zero bytes remain
+part of its counted contents. A final unterminated line is returned normally.
+An empty terminated line returns true with length zero.
+
+On overflow the entire line is consumed, the terminated prefix and its length
+are retained, then `BufferTooSmallException` is thrown. Zero capacity throws
+before reading. `ReadLine(input, data, capacity)` returns the length and throws
+`EndOfStreamException` when no line remains.
+
+`TryReadLine(input, ITextWriter* output)` appends a line to any writer. For
+example, pass the address of an owning `String` and call `Clear()` between lines
+to reuse its allocation. This overload does not clear the output. Errors from
+the source or output can leave a partially consumed line; no rollback is
+promised. Reading uses libc's existing stream buffering, with a 256-byte stack
+chunk for batched writer calls and no additional gflat heap allocation.
+
 ## Managed memory
 
 `GC.gf` defines `std::TracingCollector`, a single-threaded, non-moving collector

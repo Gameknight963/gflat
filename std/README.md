@@ -49,6 +49,7 @@ their sources. Do not retain them across operations that invalidate storage.
 | Managed storage | Replaceable collector selection and `TracingCollector` |
 | Exceptions | Default unhandled exception termination |
 | Floating text | Floating-point formatting overloads |
+| Environment | Borrowed `Environment::GetVariable` and owning `EnvironmentText` conveniences |
 
 See [host APIs](libc/README.md). File and console operations accept caller-owned
 character buffers; `String` methods are conveniences rather than a requirement.

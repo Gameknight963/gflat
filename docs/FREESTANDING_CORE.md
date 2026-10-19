@@ -2,7 +2,7 @@
 
 `Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`,
-`BinaryBufferWriter`, `IntegerFormatting`, `ByteSearch`, `CString`, and the raw
+`BinaryBufferWriter`, `IntegerFormatting`, `ByteSearch`, `CString`, `JsonString`, and the raw
 byte operations in `Memory/Bytes.gf` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
@@ -55,6 +55,10 @@ fill guarded buffers, compare unsigned bytes, and verify zero-count operations.
 Their bytes and move count also originate outside LLVM's module. `NoBuiltins`
 keeps the fill loop from introducing an external `memset` dependency in this
 test; the final executable import checks remain in force.
+JSON string checks quote runtime-populated control bytes, verifying each escape
+and both surrounding quotes without a null terminator. They also exercise
+quotation-mark, backslash, and newline mutations, insufficient capacity, and a
+malformed UTF-8 suffix, with unchanged output on both failures.
 The test also inspects the final executable:
 
 - Windows x64 imports exactly `KERNEL32.dll!ExitProcess`, with no CLR header.

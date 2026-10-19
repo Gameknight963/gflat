@@ -51,3 +51,10 @@ Zero-length input requires no input read, but pointer arguments remain
 nonnullable under the normal language rules. `nothrow` does not validate raw
 pointers or make undersized backing allocations safe. Time is linear in input
 length and extra storage is constant.
+
+The [freestanding executable test](FREESTANDING_CORE.md) selects these sources
+with `NoStdLib` and the explicit `NoBuiltins` optimizer policy. Both Windows x64
+O0/O2 builds quote runtime-populated bytes and check escapes and atomic failures;
+their only import is `KERNEL32.dll!ExitProcess`. The same test retains a Linux
+x64 syscall-startup branch for CI. This is evidence for that tested configuration,
+not a blanket guarantee about backend ABI helpers on every target.

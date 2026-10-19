@@ -143,6 +143,31 @@ public class FreestandingCoreUtilitiesTests
             Memory::Move((void*)1,(readonly(void)*)1,0);
             Memory::Fill((void*)1,(byte)0,0);
             if(Memory::Compare((readonly(void)*)1,(readonly(void)*)1,0)!=0 || !Memory::Equal((readonly(void)*)1,(readonly(void)*)1,0)) return 86;
+            byte_search_input((byte*)searchInput);
+            char[388] jsonOutput;
+            for(nuint i=0;i<388;i++)jsonOutput[i]='Z';
+            nuint jsonNeeded=0; nuint jsonWritten=0;
+            if(!std::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=386) return 87;
+            if(!std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=386) return 88;
+            if(jsonOutput[0]!='Z'||jsonOutput[387]!='Z'||jsonOutput[1]!='"'||jsonOutput[386]!='"') return 89;
+            for(nuint i=0;i<64;i++) {
+                nuint at=2+i*6;
+                if(jsonOutput[at]!='\\'||jsonOutput[at+1]!='u'||jsonOutput[at+2]!='0'||jsonOutput[at+3]!='0'||jsonOutput[at+4]!='0') return 90;
+                char digit='0';if(i%2==0)digit='1';
+                if(jsonOutput[at+5]!=digit) return 91;
+            }
+            searchInput[0]=(byte)'"';searchInput[1]=(byte)'\\';searchInput[2]=(byte)'\n';
+            if(!std::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=374) return 92;
+            if(!std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=374) return 93;
+            readonly(char)* jsonPrefix="\\\"\\\\\\n\\u0000";
+            for(nuint i=0;i<12;i++)if(jsonOutput[i+2]!=jsonPrefix[i]) return 94;
+            for(nuint i=0;i<388;i++)jsonOutput[i]='Z';
+            if(std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded-1,ref jsonWritten)||jsonWritten!=0) return 95;
+            for(nuint i=0;i<388;i++)if(jsonOutput[i]!='Z') return 96;
+            searchInput[63]=(byte)255;
+            if(std::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=0) return 97;
+            if(std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],386,ref jsonWritten)||jsonWritten!=0) return 98;
+            for(nuint i=0;i<388;i++)if(jsonOutput[i]!='Z') return 99;
             return 42;
         }
         """;
@@ -158,7 +183,7 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
-            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf" }
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

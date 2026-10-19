@@ -4,6 +4,55 @@ namespace gflat.Tests;
 
 public sealed class PrimitiveInterfaceImplementationTests
 {
+    [Fact]
+    public void PrimitiveContractsPreserveMutableAndReadonlyReferenceGetterSelection()
+    {
+        var result = CompilerTestHelper.Run(Contract + """
+            struct Cell<T> {
+                private T value;
+                public Cell(T item) { value=item; }
+                public ref T Item { get => value; }
+                public ref T this[int i] { get => value; }
+            }
+            int main() {
+                Cell<int> cell=new(4);
+                cell.Item=20;
+                cell[0]+=22;
+                readonly(Cell<int>)* view=&cell;
+                return view.Item+(*view)[0]-42;
+            }
+            """);
+        Assert.Equal(42, result.ExitCode);
+        Assert.Throws<TypeCheckException>(() => Compiler.Emit(Contract + """
+            struct Cell<T> { public T value; public ref T Item { get => value; } }
+            int main() { Cell<int> cell=new(); readonly(Cell<int>)* view=&cell; view.Item=5; return 0; }
+            """));
+    }
+
+    [Fact]
+    public void NestedGenericStorageLayoutsRetainTheirDeclarationNamespace()
+    {
+        var result = CompilerTestHelper.Run(Contract + """
+            namespace Library {
+                struct Buffer<T> { public T value; public Buffer(T item) { value=item; } }
+                struct Owner<T> {
+                    public struct Iterator {
+                        private Buffer<T> buffer;
+                        public Iterator(T item) { buffer=new Buffer<T>(item); }
+                        public T Read()=>buffer.value;
+                    }
+                    public Iterator Create(T item)=>new Iterator(item);
+                }
+            }
+            int main() {
+                Library::Owner<int> owner=new();
+                Library::Owner<int>::Iterator iterator=owner.Create(42);
+                return iterator.Read();
+            }
+            """);
+        Assert.Equal(42, result.ExitCode);
+    }
+
     private const string Contract = """
         interface IHash {
             readonly int Hash();

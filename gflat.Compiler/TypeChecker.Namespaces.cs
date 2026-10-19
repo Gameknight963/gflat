@@ -309,7 +309,11 @@ public partial class TypeChecker
                         break;
                     case FieldDeclaration field:
                         PrepareArrayFieldShape(field);
-                        defaultConstantContexts[field] = new(scope, declarationNamespaces.GetValueOrDefault(field) ?? "", _currentClass, _currentStruct);
+                        string fieldNamespace = declarationNamespaces.GetValueOrDefault(field) ?? "";
+                        // Specializations are stored in the compilation unit, but their
+                        // nested fields still bind names in the source namespace.
+                        var fieldScope = fieldNamespace.Length == 0 ? scope : ResolveNamespaceByName(fieldNamespace) ?? scope;
+                        defaultConstantContexts[field] = new(fieldScope, fieldNamespace, _currentClass, _currentStruct);
                         break;
                 }
             }

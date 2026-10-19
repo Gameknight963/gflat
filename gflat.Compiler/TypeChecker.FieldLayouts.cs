@@ -27,6 +27,7 @@ public partial class TypeChecker
                 AstNode? definition = _genericStructs.GetValueOrDefault(origin.Name) ?? (AstNode?)_genericClasses.GetValueOrDefault(origin.Name);
                 if (definition != null) ns = declarationNamespaces.GetValueOrDefault(definition) ?? ns;
             }
+            if (declaration != null) ns = declarationNamespaces.GetValueOrDefault(declaration) ?? ns;
             _currentNamespacePath = ns.Replace("$", "::");
             _currentNamespace = _currentNamespacePath.Length == 0 ? _globalScope : ResolveNamespaceByName(_currentNamespacePath) ?? _globalScope;
             _currentClass = cls; _currentStruct = str;

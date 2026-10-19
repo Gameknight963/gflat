@@ -181,7 +181,7 @@ public partial class TypeChecker
     {
         if (primitiveImplementationSources.Count == 0) return method.ReturnType;
         if (call.Callee is MemberAccessExpression member && PrimitiveGenericMembers(GetType(member.Object)) is { } generic &&
-            generic.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Span == method.Span) is { } definition)
+            generic.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Span == method.Span && m.Name == method.Name) is { } definition)
         {
             if (primitiveCallArguments.TryGetValue(call, out var methodArguments))
                 foreach (var pair in methodArguments) generic.Bindings[pair.Key] = pair.Value;

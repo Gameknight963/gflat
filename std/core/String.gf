@@ -26,6 +26,8 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
 
     public nuint Length { readonly get => length; }
     public nuint Capacity { readonly get => capacity; }
+    public bool IsEmpty { readonly get => length == 0; }
+    public const nuint NotFound = (nuint)0 - (nuint)1;
     public readonly(char)* Data { readonly get => data; }
 
     // Null-terminated input. Use the count overload for buffers or embedded nulls.
@@ -102,6 +104,119 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     public void Append(readonly(char)* text, nuint count) { this.AppendLiteral(text, count); }
+
+    public void Append(readonly(char)* text)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        this.AppendLiteral(text, count);
+    }
+
+    public void Append(readonly(String)* text) { this.AppendLiteral(text.Data, text.Length); }
+    public void Append(char value) { this.AppendLiteral(&value, 1); }
+
+    // Byte offsets, as with the indexer. The result owns an independent buffer.
+    public readonly String Substring(nuint start, nuint count)
+    {
+        if (start > length || count > length - start) throw new Exception("String substring out of range");
+        return String::From(data + start, count);
+    }
+
+    public readonly String Substring(nuint start)
+    {
+        if (start > length) throw new Exception("String substring out of range");
+        return this.Substring(start, length - start);
+    }
+
+    public readonly nuint IndexOf(char value, nuint start = 0)
+    {
+        if (start > length) throw new Exception("String search start out of range");
+        for (nuint i = start; i < length; i++) if (data[i] == value) return i;
+        return NotFound;
+    }
+
+    public readonly nuint IndexOf(readonly(char)* text, nuint count, nuint start = 0)
+    {
+        if (start > length) throw new Exception("String search start out of range");
+        if (count == 0) return start;
+        if (count > length - start) return NotFound;
+        nuint last = length - count;
+        for (nuint i = start; i <= last; i++)
+        {
+            nuint matched = 0;
+            while (matched < count && data[i + matched] == text[matched]) matched++;
+            if (matched == count) return i;
+        }
+        return NotFound;
+    }
+
+    public readonly nuint IndexOf(readonly(char)* text)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return this.IndexOf(text, count, 0);
+    }
+
+    public readonly bool Contains(char value) => this.IndexOf(value) != NotFound;
+    public readonly bool Contains(readonly(char)* text) => this.IndexOf(text) != NotFound;
+    public readonly bool Contains(readonly(char)* text, nuint count) => this.IndexOf(text, count, 0) != NotFound;
+
+    public readonly bool StartsWith(readonly(char)* text, nuint count)
+    {
+        if (count > length) return false;
+        for (nuint i = 0; i < count; i++) if (data[i] != text[i]) return false;
+        return true;
+    }
+
+    public readonly bool StartsWith(readonly(char)* text)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return this.StartsWith(text, count);
+    }
+
+    public readonly bool EndsWith(readonly(char)* text, nuint count)
+    {
+        if (count > length) return false;
+        nuint start = length - count;
+        for (nuint i = 0; i < count; i++) if (data[start + i] != text[i]) return false;
+        return true;
+    }
+
+    public readonly bool EndsWith(readonly(char)* text)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return this.EndsWith(text, count);
+    }
+
+    public void Remove(nuint start, nuint count)
+    {
+        if (start > length || count > length - start) throw new Exception("String removal out of range");
+        if (count == 0) return;
+        for (nuint i = start; i < length - count; i++) data[i] = data[i + count];
+        length -= count;
+        data[length] = '\0';
+    }
+
+    public void Replace(char oldValue, char newValue)
+    {
+        for (nuint i = 0; i < length; i++) if (data[i] == oldValue) data[i] = newValue;
+    }
+
+    private static bool IsAsciiWhitespace(char value)
+        => value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == (char)11 || value == (char)12;
+
+    // Trims ASCII whitespace only; no locale or Unicode category assumptions.
+    public void Trim()
+    {
+        nuint start = 0;
+        while (start < length && IsAsciiWhitespace(data[start])) start++;
+        nuint end = length;
+        while (end > start && IsAsciiWhitespace(data[end - 1])) end--;
+        if (start != 0) this.Remove(0, start);
+        if (length != end - start) this.Remove(end - start, length - (end - start));
+    }
 
     public void Clear()
     {

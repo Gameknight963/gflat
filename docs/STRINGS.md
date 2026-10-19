@@ -1,0 +1,36 @@
+# Strings
+
+`std::String` owns a null-terminated byte buffer. `Length` excludes the terminator;
+embedded zero bytes count toward its length. A copy owns independent storage,
+and `move` transfers storage. `Data` and `ToCString()` borrow storage until the
+string is mutated, moved, or destroyed. `String::From(text)` reads a C string;
+`String::From(text, count)` preserves every counted byte.
+
+```csharp
+using std;
+String text = s" hello ";
+text.Trim();
+text.Append('!');
+String greeting = text.Substring(0, 5);
+bool found = text.Contains("ell");
+nuint offset = text.IndexOf('!');
+```
+
+Search, indexing, slicing, and removal use byte offsets. They do not split on
+Unicode character boundaries automatically. UTF-8 validation and scalar decoding
+are available separately through `std::Utf8`.
+
+`IndexOf` returns `String::NotFound` (the largest `nuint`) when no match exists.
+An empty needle matches at the search start, including the end of the string.
+`StartsWith`, `EndsWith`, `Contains`, and `IndexOf` accept C strings or counted
+byte sequences. Character search also accepts a start offset. Invalid start and
+substring/removal ranges throw instead of wrapping pointer-sized arithmetic.
+
+`Substring` allocates an independent string. `Remove`, character `Replace`, and
+ASCII-whitespace `Trim` modify the existing buffer without allocation. `Append`
+accepts a character, C string, counted bytes, or borrowed String pointer; appending
+from the string's own buffer is supported with or without growth.
+
+Equality, comparison, and hashing use complete byte contents, including embedded
+zero bytes. Ordering is unsigned byte order, independent of locale. String does
+not require valid UTF-8; binary callers may store arbitrary bytes.

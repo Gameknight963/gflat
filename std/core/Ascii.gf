@@ -41,3 +41,30 @@ bool TryHexValue(char value, byte* result) nothrow
     { *result = (byte)((uint)(byte)value - 87u); return true; }
     return false;
 }
+
+// Counted byte comparison, including embedded nulls. Only ASCII letters fold;
+// all other bytes compare unchanged and unsigned. Results are -1, 0, or 1.
+// A pointer need not designate storage when its corresponding length is zero.
+int CompareIgnoreCase(readonly(char)* left, nuint leftLength,
+    readonly(char)* right, nuint rightLength) nothrow
+{
+    nuint common = leftLength;
+    if (rightLength < common) common = rightLength;
+    for (nuint i = 0; i < common; i++)
+    {
+        byte a = (byte)ToUpper(left[i]);
+        byte b = (byte)ToUpper(right[i]);
+        if (a < b) return -1;
+        if (a > b) return 1;
+    }
+    if (leftLength < rightLength) return -1;
+    if (leftLength > rightLength) return 1;
+    return 0;
+}
+
+bool EqualsIgnoreCase(readonly(char)* left, nuint leftLength,
+    readonly(char)* right, nuint rightLength) nothrow
+{
+    if (leftLength != rightLength) return false;
+    return CompareIgnoreCase(left, leftLength, right, rightLength) == 0;
+}

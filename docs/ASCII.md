@@ -24,3 +24,27 @@ machine's signed `char` conventions.
 writes its numerical value from 0 through 15. Invalid input returns false and
 writes zero. Use `std::Utf8` to decode Unicode scalar values before applying
 any future Unicode character operations.
+
+## Counted case-insensitive comparison
+
+These counted operations are also `nothrow` and allocation-free:
+
+```csharp
+bool command = std::Ascii::EqualsIgnoreCase(input, inputLength, "help", 4);
+int order = std::Ascii::CompareIgnoreCase(left, leftLength, right, rightLength);
+```
+
+Lengths count bytes, including embedded nulls. Buffers are borrowed and are never
+modified. Each pointer must designate at least its supplied length of readable
+storage; a zero length performs no reads through that pointer.
+
+`CompareIgnoreCase` returns exactly -1, 0, or 1. It folds ASCII `a`-`z` to
+uppercase, then compares unsigned bytes lexicographically. If the common prefix
+is equal, the shorter input sorts first. Uppercase folding also determines
+punctuation ordering: `z` sorts before `[`. For ASCII inputs, this agrees with
+.NET's `StringComparison.OrdinalIgnoreCase` ordering.
+
+Bytes 128-255 remain unchanged. This is not Unicode case folding, UTF-8 decoding,
+or a locale-sensitive comparison. For example, differently cased accented letters
+encoded in UTF-8 do not become equal. `EqualsIgnoreCase` returns false immediately
+when lengths differ and otherwise applies the same ASCII-only rules.

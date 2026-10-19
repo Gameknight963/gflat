@@ -1,7 +1,8 @@
 # Core utilities without a runtime
 
-`Ascii`, `Utf8`, `Base64`, `Hex`, `Hashing`, and `BitOperations` can operate on caller-owned
-buffers without libc, allocation, or the gflat exception runtime. Their buffer
+`Ascii`, `Utf8`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
+`BitOperations`, `CRC32`, and `Adler32` can operate on caller-owned buffers
+without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
 reported through their return values. Caller pointers must still designate valid
 memory for the specified counts.
@@ -28,14 +29,15 @@ dotnet test gflat.Tests/gflat.Tests.csproj --filter FullyQualifiedName~Freestand
 ```
 
 The test runs at both `-O0` and `-O2`, checks UTF-8 scalar and binary-text round
-trips, and inspects the final executable:
+trips, unaligned integer byte order, streaming checksums, and the final executable:
 
 - Windows x64 imports exactly `KERNEL32.dll!ExitProcess`, with no CLR header.
 - Linux x64 uses a syscall exit stub and checks that the ELF has no dynamic
   interpreter or dynamic section. The same test is included in the Linux CI job.
 
-One Windows measurement was 10,752 bytes at `-O0` and 6,144 bytes at `-O2`.
-These are measurements of this demo, not size guarantees for other programs.
+An earlier version of the demo, before the byte-order, percent-encoding, and
+checksum checks were added, measured 10,752 bytes at `-O0` and 6,144 bytes at
+`-O2` on Windows. These are illustrative measurements, not size guarantees.
 
 ## Limits
 

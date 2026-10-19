@@ -31,6 +31,16 @@ public class FreestandingCoreUtilitiesTests
             if (std::BitOperations::PopCount(0xffu) != 8) return 16;
             if (std::BitOperations::RotateRight(1ul, 64) != 1ul) return 17;
             if (std::Hashing::Bytes("hello", 5) != (nuint)1335831723u) return 18;
+            if (!std::PercentEncoding::TryEncode("a +", 3, encoded, 32, ref encodedLength) || encodedLength != (nuint)7) return 19;
+            if (!std::PercentEncoding::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength) || decodedLength != (nuint)3) return 20;
+            if (decoded[0] != 'a' || decoded[1] != ' ' || decoded[2] != '+') return 21;
+            byte[9] binary; ulong integer = 0ul;
+            if (!std::BinaryPrimitives::TryWriteUInt64BigEndian(&binary[1], 8, 0xfedcba9876543210ul)) return 22;
+            if (!std::BinaryPrimitives::TryReadUInt64BigEndian(&binary[1], 8, ref integer) || integer != 0xfedcba9876543210ul) return 23;
+            std::CRC32 crc = new(); crc.Append("123456789", 9);
+            if (crc.GetValue() != 0xcbf43926u) return 24;
+            std::Adler32 adler = new(); adler.Append("Wikipedia", 9);
+            if (adler.GetValue() != 0x11e60398u) return 25;
             return 42;
         }
         """;
@@ -44,7 +54,8 @@ public class FreestandingCoreUtilitiesTests
         if (RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
-        var sources = new[] { "Ascii.gf", "Utf8.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf" }
+        var sources = new[] { "Ascii.gf", "Utf8.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
+            "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });

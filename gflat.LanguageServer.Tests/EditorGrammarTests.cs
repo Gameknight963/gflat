@@ -71,6 +71,16 @@ public class EditorGrammarTests
     public void AccessorsDoNotRequireABraceOnTheSameLine(string line, string word)
         => AssertScope(Grammar().TokenizeLine(line), line.IndexOf(word, StringComparison.Ordinal), "keyword.other.accessor");
 
+    [Theory]
+    [InlineData("public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, count);")]
+    [InlineData("new Library::Span<Vector<int>>::Enumerator(data, count);")]
+    public void NestedGenericConstructionIsATypeBeforeSemanticAnalysis(string line)
+        => AssertScope(Grammar().TokenizeLine(line), line.LastIndexOf("Enumerator(", StringComparison.Ordinal), "entity.name.type");
+
+    [Fact]
+    public void IndexerThisIsAKeywordBeforeSemanticAnalysis()
+        => AssertScope(Grammar().TokenizeLine("public ref T this[nuint index]"), "public ref T ".Length, "constant.language");
+
     [Fact]
     public void StringIsNotHighlightedAsABuiltInType()
     {

@@ -327,7 +327,9 @@ public sealed partial class EditorModel
                 type = type switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, ReferenceTypeExpression r => r.Inner, _ => type };
             if (type is NestedTypeExpression nested)
             {
-                string qualified = TemplateName(DisplayType(nested.WithReadOnlyValue(false)));
+                string? parent = TypeOwner(nested.Parent, path, offset);
+                if (parent == null) return null;
+                string qualified = Join(parent, nested.Member);
                 var target = symbols.FirstOrDefault(s => s.Qualified == qualified);
                 if (target?.Syntax.Node is AliasDeclaration)
                 {
@@ -403,6 +405,8 @@ public sealed partial class EditorModel
             if (token.Text == "var" && syntax.Node is VariableDeclaration { IsTypeInferred: true } &&
                 tokens[path].FirstOrDefault(t => t.Start >= syntax.Span.Start && t.Text == "var")?.Start == token.Start) return true;
             if (token.Text == "this" && syntax.Node is Parameter { IsExtensionReceiver: true } && token.Start == syntax.Span.Start) return true;
+            if (token.Text == "this" && syntax.Node is PropertyDeclaration { Name: "$index" } indexer &&
+                tokens[path].FirstOrDefault(t => t.Start >= indexer.Type.Span.Start + indexer.Type.Span.Length)?.Start == token.Start) return true;
             if (token.Start < syntax.Span.Start || token.End >= syntax.Span.Start + syntax.Span.Length) continue;
             if (token.Text == "with" && syntax.Node is NewExpression { Collector: not null } creation &&
                 tokens[path].LastOrDefault(t => t.End < creation.Collector.Span.Start)?.Start == token.Start) return true;

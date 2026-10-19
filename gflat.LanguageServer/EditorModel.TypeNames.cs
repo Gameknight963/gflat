@@ -32,6 +32,11 @@ public sealed partial class EditorModel
             snapshot.Checker.GetTypeDeclaration(bound.Name) is { } declaration &&
             sourceTypeDeclarations.TryGetValue((declaration.GetType(), declaration.Span), out var symbol))
             return symbol;
-        return null;
+        // Generic bodies need not have been specialized. Resolve the source
+        // type's containing scope instead of treating the token after `>::`
+        // as an unqualified name (or a constructor call).
+        if (source is not NestedTypeExpression) return null;
+        string? owner = TypeOwner(source, token.Span.Source!.Path, token.Start);
+        return owner == null ? null : symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && s.Qualified == owner);
     }
 }

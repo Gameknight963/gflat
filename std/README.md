@@ -23,7 +23,7 @@ implementation lives in `libc`.
 | Algorithms | `Sort`, `Reverse`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, aggregates | [Lazy queries](core/Collections/README.md) |
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
-| Unicode | `Utf8` strict scalar decoding, encoding, validation, counting | [UTF-8](../docs/UTF8.md) |
+| Unicode | `Utf8`, incremental `Utf8Decoder` | [UTF-8 buffers](../docs/UTF8.md), [chunked decoding](../docs/UTF8_DECODER.md) |
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |

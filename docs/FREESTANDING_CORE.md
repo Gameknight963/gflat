@@ -1,7 +1,7 @@
 # Core utilities without a runtime
 
 `Ascii`, `Utf8`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
-`BitOperations`, `CRC32`, and `Adler32` can operate on caller-owned buffers
+`BitOperations`, `CRC32`, `Adler32`, and `Utf8Decoder` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
 reported through their return values. Caller pointers must still designate valid

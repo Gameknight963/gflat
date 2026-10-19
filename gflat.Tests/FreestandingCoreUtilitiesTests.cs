@@ -41,6 +41,10 @@ public class FreestandingCoreUtilitiesTests
             if (crc.GetValue() != 0xcbf43926u) return 24;
             std::Adler32 adler = new(); adler.Append("Wikipedia", 9);
             if (adler.GetValue() != 0x11e60398u) return 25;
+            std::Utf8Decoder decoder = new();
+            if (decoder.Read(input, 2, false, &scalar, &consumed) != std::Utf8Decoder::Status::NeedMore || consumed != 2) return 26;
+            if (decoder.Read(&input[2], 2, true, &scalar, &consumed) != std::Utf8Decoder::Status::Scalar || scalar != 0x1f600u) return 27;
+            if (decoder.Read(input, 0, true, &scalar, &consumed) != std::Utf8Decoder::Status::End) return 28;
             return 42;
         }
         """;
@@ -55,7 +59,7 @@ public class FreestandingCoreUtilitiesTests
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
-            "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf" }
+            "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });

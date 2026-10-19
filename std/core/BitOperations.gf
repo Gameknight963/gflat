@@ -3,6 +3,31 @@ namespace std;
 // Integer bit utilities with defined zero and masked-rotation behavior.
 public static class BitOperations
 {
+    public static ushort ReverseEndianness(ushort value) nothrow
+        => (ushort)(((uint)value >> 8) | ((uint)value << 8));
+
+    public static short ReverseEndianness(short value) nothrow
+        => (short)ReverseEndianness((ushort)value);
+
+    public static uint ReverseEndianness(uint value) nothrow
+    {
+        uint bytes = ((value & 0x00ff00ffu) << 8) | ((value >> 8) & 0x00ff00ffu);
+        return (bytes << 16) | (bytes >> 16);
+    }
+
+    public static int ReverseEndianness(int value) nothrow
+        => (int)ReverseEndianness((uint)value);
+
+    public static ulong ReverseEndianness(ulong value) nothrow
+    {
+        ulong bytes = ((value & 0x00ff00ff00ff00fful) << 8) | ((value >> 8) & 0x00ff00ff00ff00fful);
+        ulong halves = ((bytes & 0x0000ffff0000fffful) << 16) | ((bytes >> 16) & 0x0000ffff0000fffful);
+        return (halves << 32) | (halves >> 32);
+    }
+
+    public static long ReverseEndianness(long value) nothrow
+        => (long)ReverseEndianness((ulong)value);
+
     public static int PopCount(uint value) nothrow
     {
         int count = 0;

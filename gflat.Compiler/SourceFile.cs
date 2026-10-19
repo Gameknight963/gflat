@@ -45,11 +45,14 @@ internal static class SourceContext
     public static SourceSpan ForLine(int line) => current.Value is { Source: not null } span
         ? (span.Line == line || line == 0 ? span : span.Source.LineSpan(line))
         : new(0, 0, line, 0);
-    public static IDisposable Enter(SourceSpan span)
+    public static Scope Enter(SourceSpan span)
     {
         var previous = current.Value;
         if (span.Source != null) current.Value = span;
-        return new Scope(() => current.Value = previous);
+        return new Scope(previous);
     }
-    private sealed class Scope(Action restore) : IDisposable { public void Dispose() => restore(); }
+    public readonly struct Scope(SourceSpan? previous) : IDisposable
+    {
+        public void Dispose() => current.Value = previous;
+    }
 }

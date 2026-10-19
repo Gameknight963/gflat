@@ -70,6 +70,11 @@ public class WholeStandardLibraryEditorTests
                 uint reversed=BitOperations::ReverseEndianness(42u);
                 bool absolute=Paths::IsFullyQualified("/tmp/file",PathStyle::Unix);
                 bool localResult=Contains(42);
+                Deque<int> ends=new(); ends.AddFirst(1); ends.AddLast(2); int removed=ends.RemoveLast();
+                TextLines lines=new(new Span<readonly(char)>("a\r\nb",4));
+                TextLines::Enumerator lineIterator=lines.GetEnumerator();
+                nuint cLength=0; CString::TryGetLength("text",5,ref cLength);
+                byte[2] pattern=[(byte)0,(byte)0]; ByteSearch::LastIndexOf(bytes,4,pattern,2);
                 nuint unitCount=0; UnicodeTranscoding::TryGetUtf16Length(text.Data,text.Length,ref unitCount);
                 char[21] digits; nuint digitsWritten=0;
                 IntegerFormatting::TryFormat(42,digits,21,ref digitsWritten);
@@ -85,7 +90,7 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(string member in new[]{"AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

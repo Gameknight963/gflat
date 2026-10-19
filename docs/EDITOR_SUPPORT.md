@@ -80,11 +80,15 @@ to use them. Visual Studio's project system uses Visual Studio's own MSBuild.
 ### Optional SDK-style project setup
 
 For `<Project Sdk="Gflat.Sdk">`, install the VSIX first, then run the accompanying
-script from an **elevated PowerShell** window with Visual Studio closed:
+script with Visual Studio closed. Right-click **Run with PowerShell**, or run:
 
 ```powershell
 .\install-sdk.ps1
 ```
+
+If Windows denies write access, the script relaunches itself with a UAC prompt.
+Accept it to continue. The elevated window stays open until you press Enter, so
+you can read success or error messages. `-WhatIf` does not request elevation.
 
 It selects the newest installed Visual Studio and finds its installed gflat VSIX.
 To select another installation or supply the SDK directory explicitly:

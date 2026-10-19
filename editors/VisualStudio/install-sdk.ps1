@@ -3,8 +3,8 @@
 .SYNOPSIS
 Registers the installed gflat VSIX's SDK with one Visual Studio installation.
 .DESCRIPTION
-Run in elevated PowerShell after installing or updating the VSIX. Defaults to the
-newest installed Visual Studio. No environment variables or compiler files change.
+Run after installing or updating the VSIX. Requests UAC elevation if needed.
+Defaults to the newest installed Visual Studio. No compiler files change.
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param([string]$VisualStudioPath, [string]$SdkRoot)
@@ -27,7 +27,8 @@ if ($PSCmdlet.ShouldProcess($target, "Install gflat SDK imports pointing to $Sdk
             "<Project><Import Project=`"$import`" /></Project>" | Set-Content -LiteralPath (Join-Path $target "Sdk/Sdk.$kind") -Encoding UTF8
         }
     } catch [UnauthorizedAccessException] {
-        throw 'Cannot write to the Visual Studio installation. Run this script from an elevated PowerShell window.'
+        if (Start-GflatSdkElevated -ScriptPath $PSCommandPath -VisualStudioPath $instance.installationPath -SdkRoot $SdkRoot) { return }
+        throw 'Cannot write to the Visual Studio installation with administrator privileges. Check its directory permissions.'
     }
     Write-Output "Installed $target -> $SdkRoot. Restart Visual Studio."
 }

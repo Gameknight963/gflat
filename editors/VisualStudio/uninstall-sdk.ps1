@@ -31,7 +31,8 @@ if ($PSCmdlet.ShouldProcess($target, 'Remove script-installed gflat SDK imports'
         Remove-Item -LiteralPath (Join-Path $target '.gflat-sdk-install.json') -Force
         [IO.Directory]::Delete($target)
     } catch [UnauthorizedAccessException] {
-        throw 'Cannot write to the Visual Studio installation. Run this script from an elevated PowerShell window.'
+        if (Start-GflatSdkElevated -ScriptPath $PSCommandPath -VisualStudioPath $instance.installationPath) { return }
+        throw 'Cannot write to the Visual Studio installation with administrator privileges. Check its directory permissions.'
     }
     Write-Output "Removed $target. Restart Visual Studio."
 }

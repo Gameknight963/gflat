@@ -1,4 +1,43 @@
 # Shared by the Windows Visual Studio SDK setup scripts, not the compiler.
+function Test-GflatAdministrator {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    try {
+        return ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    } finally { $identity.Dispose() }
+}
+
+function Start-GflatSdkElevated([string]$ScriptPath, [string]$VisualStudioPath, [string]$SdkRoot) {
+    if (Test-GflatAdministrator) { return $false }
+    # Pass resolved paths, including the original user's VSIX location, so an
+    # elevation using a different administrator account selects the same SDK.
+    $command = "& '$($ScriptPath.Replace("'", "''"))' -VisualStudioPath '$($VisualStudioPath.Replace("'", "''"))'"
+    if ($SdkRoot) { $command += " -SdkRoot '$($SdkRoot.Replace("'", "''"))'" }
+    $command += ' -Confirm:$false'
+    $command = @"
+`$ErrorActionPreference = 'Stop'
+try {
+    $command
+    `$result = 0
+} catch {
+    Write-Error -ErrorRecord `$_ -ErrorAction Continue
+    `$result = 1
+}
+Read-Host 'Press Enter to close this window' | Out-Null
+exit `$result
+"@
+    # Encoding avoids a second round of command-line quoting for paths containing
+    # spaces, quotes, dollar signs, or other PowerShell syntax.
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
+    $powershell = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
+    try {
+        $process = Start-Process -FilePath $powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded" -WindowStyle Normal -Wait -PassThru
+    } catch {
+        throw "Could not start elevated SDK setup (the UAC prompt may have been cancelled): $($_.Exception.Message)"
+    }
+    if ($process.ExitCode -ne 0) { throw "Elevated SDK setup failed (exit code $($process.ExitCode)). See the elevated window's error message." }
+    return $true
+}
+
 function Get-GflatVisualStudio([string]$VisualStudioPath) {
     if ($env:OS -ne 'Windows_NT') { throw 'These scripts require Windows Visual Studio.' }
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'

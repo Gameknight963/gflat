@@ -8,8 +8,7 @@ public class ChecksumExampleTests
     [Fact]
     public void ActualToolChecksMultipleBinaryFilesAcrossChunksAndContinuesAfterFailure()
     {
-        string root=Path.GetFullPath(Path.Combine(AppContext.BaseDirectory,"../../../../"));
-        string source=Path.Combine(root,"examples/checksum/main.gf");
+        string source=Path.Combine(AppContext.BaseDirectory,"Examples/checksum.gf");
         string directory=Path.Combine(Path.GetTempPath(),"gflat-checksums-"+Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try

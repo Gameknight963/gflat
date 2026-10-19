@@ -5,8 +5,7 @@ public class WordCountExampleTests
     [Fact]
     public void ActualExampleCountsAcrossChunksAndReleasesTheInputFile()
     {
-        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
-        string path = Path.Combine(root, "examples/word-count/main.gf");
+        string path = Path.Combine(AppContext.BaseDirectory, "Examples/word-count.gf");
         string directory = Path.Combine(Path.GetTempPath(), "gflat_words_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try

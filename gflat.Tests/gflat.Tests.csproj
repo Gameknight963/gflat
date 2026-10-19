@@ -26,6 +26,7 @@
     <None Include="..\examples\seq\main.gf" Link="Examples\seq.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\hexdump\main.gf" Link="Examples\hexdump.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\transcode\main.gf" Link="Examples\transcode.gf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\examples\quote-lines\main.gf" Link="Examples\quote-lines.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\checksum\main.gf" Link="Examples\checksum.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\word-count\main.gf" Link="Examples\word-count.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\providers\*.gf" Link="Examples\providers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

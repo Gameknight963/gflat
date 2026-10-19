@@ -26,6 +26,33 @@ void Flush()
         throw new std::IOException("Console flush failed");
 }
 
+// Counted input from the current stdin mode; no terminator or line processing.
+nuint Read(char* data, nuint count)
+{
+    if (count == 0) return 0;
+    void* stream = __gflat_stdio_stdin();
+    nuint read = fread(data, 1, count, stream);
+    if (read < count && ferror(stream) != 0)
+        throw new std::IOException("Console read failed");
+    return read;
+}
+
+// Returns 0..255, or -1 at EOF. IO errors remain distinct from end of input.
+int ReadByte()
+{
+    void* stream = __gflat_stdio_stdin();
+    int value = fgetc(stream);
+    if (value == -1 && ferror(stream) != 0)
+        throw new std::IOException("Console read failed");
+    return value;
+}
+
+// Consumes an available prefix before reporting unexpected EOF.
+void ReadExactly(char* data, nuint count)
+{
+    if (Read(data, count) != count) throw new std::EndOfStreamException();
+}
+
 // capacity includes the terminator. No String or application buffer allocation is needed.
 // On overflow the whole line is consumed and a terminated prefix remains.
 bool TryReadLine(char* data, nuint capacity, ref nuint length)
@@ -116,6 +143,7 @@ namespace detail
 private extern void* __gflat_stdio_stdin();
 private extern void* __gflat_stdio_stdout();
 private extern nuint fwrite(readonly(void)* data, nuint size, nuint count, void* stream);
+private extern nuint fread(char* data, nuint size, nuint count, void* stream);
 private extern int fflush(void* stream);
 private extern int fgetc(void* stream);
 private extern int ferror(void* stream);

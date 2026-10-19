@@ -95,6 +95,19 @@ int main()
 - `Write(data, length)` writes counted bytes, including embedded nulls.
 - `WriteLine()` writes a newline. Its C-string and counted overloads write text first.
 - `Flush()` flushes stdout and throws `std::IOException` on failure.
+- `Read(data, count)` reads up to the requested count into caller storage and
+  returns the number of bytes obtained. It may block until the count is filled
+  or EOF/error occurs. Zero count performs no input access or consumption.
+- `ReadByte()` returns the next value in 0-255, or -1 at EOF. Input errors throw
+  `std::IOException` rather than being mistaken for EOF.
+- `ReadExactly(data, count)` throws `std::EndOfStreamException` if EOF arrives
+  before the count is satisfied; the available prefix has already been consumed
+  and written. Other input errors remain `std::IOException`.
+- Counted and byte reads do not append a terminator, perform line processing,
+  allocate a String, close stdin, or change its mode. They share the current
+  stdin position with line readers. The host CRT's existing mode still applies:
+  Windows normally translates CRLF to LF and treats Ctrl+Z as EOF in text mode,
+  even for redirected stdin. These are not a promise of binary-mode input.
 - `TryReadLine(data, capacity, ref length)` uses caller-owned storage without
   calling `Memory::Allocate` on the normal path. Capacity includes room for the null terminator;
   zero capacity throws `BufferTooSmallException` before reading or touching the

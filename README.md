@@ -42,8 +42,8 @@ This example uses std; see the runnable
 - Compile-time `typeof(T)` metadata for names, layout, and recursive type structure.
 - A language server and Visual Studio integration with diagnostics, completion,
   syntax highlighting, reference and symbol searches, document outlines, and rich hovers.
-- A small standard library with owning strings, vectors, console/file IO,
-  and allocation-free integer queries. See the [sequence tool](examples/seq/README.md).
+- A growing source standard library with owning strings and containers, borrowed
+  spans, lazy queries, binary codecs, and console/file IO. See the [library index](std/README.md).
 - Native Windows x64 and Linux x64 builds
 
 
@@ -102,6 +102,8 @@ See [project setup](docs/PROJECTS.md) for toolchain paths and `NoStdLib`.
 Create a project with `gflat new MyApp`, then run
 `gflat build MyApp/MyApp.gfproj --run`. See [project setup](docs/PROJECTS.md) for
 library projects and optimization settings, or try the [line-search utility](examples/search/README.md).
+The [word-count tool](examples/word-count/README.md) and
+[weighted pathfinding example](examples/pathfinding/README.md) exercise the newer collections.
 
 If setup fails, run `gflat doctor --native` to check SDK discovery, MSBuild,
 Clang, and native exception runtime linking.

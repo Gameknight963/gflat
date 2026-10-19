@@ -14,6 +14,7 @@ implementation lives in `libc`.
 | --- | --- | --- |
 | Text | `String`, `ITextWriter`, `IFormattable`, `IStringConvertable` | [Strings](../docs/STRINGS.md), [formatting](core/README.md#strings-and-formatting) |
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
+| Borrowed text parts | `TextParts`, String/Span `Split` | [Allocation-free splitting](../docs/TEXT_PARTS.md) |
 | Contiguous storage | `Vector<T>`, `Span<T>` | [Ownership and views](core/README.md#vectors) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |
@@ -26,6 +27,8 @@ implementation lives in `libc`.
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |
+| Bits | `BitOperations` | [Counts and rotations](../docs/BIT_OPERATIONS.md) |
+| Temporary storage | `Arena` | [Independent raw-storage arenas](../docs/ARENA.md) |
 
 Containers own stored values. Raw pointers stored as elements borrow their
 pointees; they do not cause automatic deletion. Views and enumerators borrow

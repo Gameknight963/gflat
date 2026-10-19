@@ -3507,6 +3507,26 @@ public partial class LlvmEmitter : IVisitor
             string ns = _typeChecker.GetFunctionNamespace(structMethod);
             funcName = GetMethodMangledName(typeName, structMethod, ns, isClass: _typeChecker.IsClassByIdentity(rawName));
         }
+        else if (node.Callee is IdentifierExpression && target is MethodDeclaration implicitStructMethod &&
+            !implicitStructMethod.IsStatic && _currentStruct != null &&
+            _typeChecker.TryGetMethodOwner(implicitStructMethod, out string structOwner, out bool structOwnerIsClass) &&
+            !structOwnerIsClass && structOwner == _currentStruct.Name)
+        {
+            string loadedThis = NewTemp();
+            Emit($"    {loadedThis} = load %{structOwner}*, %{structOwner}** {_locals["this"]}");
+            argValues.Add(loadedThis);
+            argTypes.Add($"%{structOwner}*");
+            for (int i = 0; i < node.Arguments.Count; i++)
+            {
+                var argument = node.Arguments[i];
+                var parameter = implicitStructMethod.Parameters[i].Type;
+                EmitArgument(argument, parameter);
+                argValues.Add(EmitImplicitCast(Pop(), _typeChecker.GetType(argument), parameter, argument));
+                argTypes.Add(EmitAbiParamType(parameter));
+            }
+            funcName = GetMethodMangledName(structOwner, implicitStructMethod,
+                _typeChecker.GetFunctionNamespace(implicitStructMethod), isClass: false);
+        }
         else if (node.Callee is IdentifierExpression idMethod && target is MethodDeclaration methodMember && _currentClass != null && !methodMember.IsStatic && _currentClass.Methods.ContainsKey(idMethod.Name))
         {
             string declaringClass = _currentClass.Methods[idMethod.Name].DeclaringClass;

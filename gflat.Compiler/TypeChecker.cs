@@ -1042,6 +1042,10 @@ namespace gflat
             if (paramType is NamedTypeExpression namedParam && !namedParam.IsResolvedNominal && genericParamNames.Contains(namedParam.Name) && namedParam.TypeArguments.Count == 0)
             {
                 TypeExpression resolvedArg = ResolveAlias(argType);
+                // readonly(T) supplies this qualification itself. It is not part
+                // of the type substituted for T (unqualified T still preserves it).
+                if (namedParam.IsReadOnlyValue)
+                    resolvedArg = resolvedArg.WithReadOnlyValue(false);
                 if (inferred.TryGetValue(namedParam.Name, out TypeExpression? existing))
                 {
                     return TypesMatch(existing, resolvedArg);

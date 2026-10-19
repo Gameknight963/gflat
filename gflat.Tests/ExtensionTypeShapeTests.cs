@@ -3,6 +3,49 @@ namespace gflat.Tests;
 public sealed class ExtensionTypeShapeTests
 {
     [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ExplicitReadonlyTypeParameterQualificationIsNotInferredIntoTheSubstitution(int optimization)
+        => Assert.Equal(42, CompilerTestHelper.Run("""
+            struct View<T> {
+                public T* data;
+                public View(T* storage) { data = storage; }
+            }
+            void Copy<T>(this View<readonly(T)> source, View<T> destination) {
+                T* output = destination.data;
+                output[0] = source.data[0];
+            }
+            void CopyScalar<T>(readonly(T)* source, T* destination) { *destination = *source; }
+            int main() {
+                readonly(int) source = 42;
+                int destination = 0;
+                View<readonly(int)> input = new(&source);
+                View<int> output = new(&destination);
+                input.Copy(output);
+                if (destination != 42) return 1;
+                destination = 0;
+                CopyScalar(&source, &destination);
+                return destination;
+            }
+            """, optimization).ExitCode);
+
+    [Fact]
+    public void UnqualifiedTypeParameterStillPreservesReadonlyTypeArgument()
+        => Assert.Equal(42, CompilerTestHelper.Run("""
+            struct View<T> {
+                public T* data;
+                public View(T* storage) { data = storage; }
+            }
+            View<T> Identity<T>(this View<T> source) => source;
+            int main() {
+                readonly(int) value = 42;
+                View<readonly(int)> input = new(&value);
+                View<readonly(int)> output = input.Identity();
+                return *output.data;
+            }
+            """).ExitCode);
+
+    [Theory]
     [InlineData("int(int)", false)]
     [InlineData("int(int)", true)]
     [InlineData("readonly(int(int))", false)]

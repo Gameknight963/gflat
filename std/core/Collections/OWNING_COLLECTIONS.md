@@ -30,6 +30,29 @@ It is instantiated only when called; merely including it does not prevent using
 `Vector<T>` with noncopyable owning elements. The vector's instance operations
 continue to support those elements through explicit movement.
 
+## Copying borrowed spans
+
+With `using std;`, `source.AsReadOnly().CopyTo(destination)` assigns copies into
+an existing `Span<T>`. The destination must contain initialized elements and
+have room for every source element. Its unused tail stays unchanged. This is
+typed copying: normal copy constructors run and replaced destination values are
+destroyed. It is not construction into raw storage or byte copying.
+
+The implementation handles overlapping spans in either direction. Exact self-copy
+does nothing. Capacity is checked before invoking any copy constructor; a short
+destination is unchanged. If a copy throws, earlier completed assignments remain
+and other elements stay valid. Copying proceeds backward when the destination
+starts at a higher address, so partial progress may be a suffix rather than a
+prefix. Copy constructors must not mutate either collection through another alias.
+
+`CopyTo` allocates no container storage, although individual copy constructors may
+allocate. The views keep borrowing the same storage. Like `AddRange`, this copying
+extension is checked only when called; spans of noncopyable values remain usable
+without calling it. For source-library selection its file is
+`Collections/SpanCopy.gf`.
+
+## Queue and stack
+
 `Stack<T>` owns a last-in, first-out sequence backed by a `Vector<T>`.
 `Queue<T>` owns a first-in, first-out sequence backed by a ring buffer.
 Both start empty without allocating. `Count`, `Capacity`, and `IsEmpty`

@@ -25,6 +25,22 @@ public class IndexedEditorLookupTests
     }
 
     [Fact]
+    public void CachedMemberFamiliesStillCheckAccessibilityAtEachUseSite()
+    {
+        const string text = "class Box { private int Hidden; public int Visible; public int Read()=>Hidden; } void Outside(Box* box){ box.Visible; }";
+        var source = new SourceFile(Path.GetFullPath("indexed/access.gf"), text);
+        var model = new EditorModel(new AnalysisSnapshot([source]), [source]);
+        int inside = text.IndexOf("=>Hidden", StringComparison.Ordinal) + 2;
+        Assert.NotNull(model.Hover(source.Path, inside));
+        int outside = text.IndexOf("box.Visible", StringComparison.Ordinal) + 4;
+        var labels = JsonSerializer.SerializeToElement(model.Completion(source.Path, outside), Protocol.JsonOptions)
+            .GetProperty("items").EnumerateArray().Select(item => item.GetProperty("label").GetString()).ToArray();
+        Assert.Contains("Visible", labels);
+        Assert.Contains("Read", labels);
+        Assert.DoesNotContain("Hidden", labels);
+    }
+
+    [Fact]
     public void NameFilteredReferencesPreserveParameterMemberAndInheritedPriorityWhileCompletionKeepsAllNames()
     {
         const string text = """

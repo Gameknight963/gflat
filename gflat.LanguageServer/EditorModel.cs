@@ -1,4 +1,5 @@
 using gflat.ast;
+using System.Collections.Concurrent;
 using gflat.diagnostics;
 using gflat.CompileExceptions;
 using Syntax = gflat.AnalysisSnapshot.Syntax;
@@ -31,6 +32,7 @@ public sealed partial class EditorModel
     private readonly List<Symbol> symbols = [];
     private readonly Dictionary<string, Symbol[]> symbolsByName = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Path, int Start, int Length), Symbol> declarationsBySpan = [];
+    private readonly ConcurrentDictionary<string, Symbol[]> typeMemberFamilies = new(StringComparer.Ordinal);
     private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceTypeDeclarations = [];
     private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceCallableDeclarations = [];
     private readonly Dictionary<AstNode, Symbol> declarations = new(ReferenceEqualityComparer.Instance);
@@ -385,7 +387,12 @@ public sealed partial class EditorModel
                 ?? Visible(path, offset, name).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == name)?.Qualified;
         }
     }
-    private IEnumerable<Symbol> TypeMembers(string owner)
+    private IEnumerable<Symbol> TypeMembers(string owner) => typeMemberFamilies.GetOrAdd(owner,
+        static (name, model) => model.EnumerateTypeMembers(name).ToArray(), this);
+
+    // Declaration order and inheritance are fixed for the snapshot. Accessibility
+    // remains a use-site check, so cached members do not leak private/protected names.
+    private IEnumerable<Symbol> EnumerateTypeMembers(string owner)
     {
         var visited = new HashSet<string>();
         while (visited.Add(owner))

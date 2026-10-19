@@ -20,7 +20,7 @@ public class StandardHashingTests
     [InlineData("ulong", "0", "18446744073709551615ul")]
     [InlineData("nint", "-123", "123")]
     [InlineData("nuint", "0", "123")]
-    [InlineData("char", "0", "127")]
+    [InlineData("char", "0", "255")]
     [InlineData("bool", "false", "true")]
     [InlineData("float", "-1.25f", "1.25f")]
     [InlineData("double", "-1.25d", "1.25d")]
@@ -77,6 +77,49 @@ public class StandardHashingTests
                 if (compare.CompareTo(&b) != 0 || compare.CompareTo(&number) >= 0) return 2;
                 IEquatable<{{type}}>* zeros = &zero; IHashable* zh = &zero; IHashable* nh = &negativeZero;
                 if (!zeros.Equals(&negativeZero) || zh.GetHashCode() != nh.GetHashCode()) return 3;
+                return 0;
+            }
+            """);
+
+    [Fact]
+    public void StringContractCallsBorrowStorageAndNeverAllocate()
+        => Run("""
+            using std;
+            extern void* malloc(nuint count);
+            extern void free(void* data);
+            int allocations = 0; int releases = 0;
+            namespace Memory {
+                public replace void*? Allocate(nuint count) { allocations++; return malloc(count); }
+                public replace void Free(void* data) { releases++; free(data); }
+            }
+            nuint Hash<T : IHashable>(ref readonly(T) value) => value.GetHashCode();
+            bool Equal<T : IEquatable<T>>(ref readonly(T) a, ref readonly(T) b) => a.Equals(&b);
+            int Compare<T : IComparable<T>>(ref readonly(T) a, ref readonly(T) b) => a.CompareTo(&b);
+            int main() {
+                {
+                    String a = s"borrowed"; String b = s"borrowed"; b.Reserve(100);
+                    int before = allocations;
+                    for (int i = 0; i < 100; i++) {
+                        if (!Equal(ref a, ref b) || Compare(ref a, ref b) != 0 || Hash(ref a) != Hash(ref b)) return 1;
+                    }
+                    if (allocations != before || a.Capacity == b.Capacity) return 2;
+                }
+                if (allocations != releases) return 3;
+                return 0;
+            }
+            """);
+
+    [Fact]
+    public void StringComparisonUsesUnsignedBytesAndFullLengths()
+        => Run("""
+            using std;
+            int main() {
+                char[2] highBytes = [(char)255, '\0'];
+                char[2] lowBytes = [(char)127, '\0'];
+                String high = String::From(highBytes, 1); String low = String::From(lowBytes, 1);
+                String longer = String::From(highBytes, 2); String empty = new();
+                if (high.CompareTo(&low) <= 0 || low.CompareTo(&high) >= 0) return 1;
+                if (high.CompareTo(&longer) >= 0 || empty.CompareTo(&high) >= 0) return 2;
                 return 0;
             }
             """);

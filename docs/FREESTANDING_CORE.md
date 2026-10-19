@@ -1,8 +1,8 @@
 # Core utilities without a runtime
 
 `Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
-`BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`, and
-`BinaryBufferWriter`, and `IntegerFormatting` can operate on caller-owned buffers
+`BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`,
+`BinaryBufferWriter`, `IntegerFormatting`, and `ByteSearch` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
 reported through their return values. Caller pointers must still designate valid
@@ -42,6 +42,10 @@ Decimal integer checks format signed 64-bit minimum and unsigned 64-bit maximum
 into guarded caller buffers. Their values come from a separate assembly object
 so LLVM cannot replace formatting with constant output and hide dependencies.
 Both optimization levels link successfully without a libc `memcpy` helper.
+Counted byte searches check first and last overlapping matches, embedded zero
+bytes, empty patterns, and missing patterns in periodic data. A separate assembly
+routine populates the search input so LLVM cannot replace the searches with
+constant answers at O2.
 The test also inspects the final executable:
 
 - Windows x64 imports exactly `KERNEL32.dll!ExitProcess`, with no CLR header.

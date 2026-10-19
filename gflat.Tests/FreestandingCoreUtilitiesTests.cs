@@ -9,6 +9,7 @@ public class FreestandingCoreUtilitiesTests
 {
     private const string ProgramSource = """
         extern ulong formatter_input() nothrow;
+        extern void byte_search_input(byte* data) nothrow;
         int main() {
             if (!std::Ascii::IsHexDigit('f')) return 1;
             if (std::Ascii::IsAscii((char)255)) return 2;
@@ -98,6 +99,17 @@ public class FreestandingCoreUtilitiesTests
             if (decimalText[0] != 'Z' || decimalText[21] != 'Z') return 60;
             if (std::IntegerFormatting::TryFormat(unsignedMaximum, &decimalText[1], 19, ref length) || length != 0) return 61;
             for (nuint i = 0; i < 20; i++) if (decimalText[i + 1] != expected[i]) return 62;
+            byte[64] searchInput; byte[5] searchPattern;
+            byte_search_input((byte*)searchInput);
+            searchPattern[0]=(byte)1;searchPattern[1]=(byte)0;searchPattern[2]=(byte)1;
+            searchPattern[3]=(byte)0;searchPattern[4]=(byte)1;
+            if(std::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=0) return 63;
+            if(std::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=58) return 64;
+            searchPattern[2]=(byte)2;
+            if(std::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=64) return 65;
+            if(std::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=64) return 66;
+            if(std::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=0) return 67;
+            if(std::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=64) return 68;
             return 42;
         }
         """;
@@ -113,7 +125,7 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
-            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf" }
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
@@ -135,6 +147,24 @@ public class FreestandingCoreUtilitiesTests
                 .global formatter_input
                 formatter_input:
                     movabs $0x8000000000000000, %rax
+                    ret
+                """);
+            // Populate search bytes outside LLVM's module, retaining real search
+            // loops at O2 instead of merely checking constant-folded answers.
+            string inputRegister = OperatingSystem.IsWindows() ? "%rcx" : "%rdi";
+            File.AppendAllText(formatterInput, $$"""
+
+                .global byte_search_input
+                byte_search_input:
+                    mov {{inputRegister}}, %r10
+                    xor %eax, %eax
+                .Lsearch_fill:
+                    movb $1, (%r10,%rax)
+                    inc %rax
+                    movb $0, (%r10,%rax)
+                    inc %rax
+                    cmp $64, %rax
+                    jne .Lsearch_fill
                     ret
                 """);
             if (OperatingSystem.IsLinux()) File.AppendAllText(formatterInput, "\n.section .note.GNU-stack,\"\",@progbits\n");

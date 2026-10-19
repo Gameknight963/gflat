@@ -29,6 +29,10 @@ public class WholeStandardLibraryEditorTests
                 ITextWriter* output=Console::Out;
                 readonly(char)*? setting=Environment::GetVariable("GFLAT_TEST_UNSET");
                 byte[4] bytes; BinaryPrimitives::TryWriteUInt32BigEndian(bytes,4,42u);
+                BitSet flags=new(65); flags.SetRange(1,63,true);
+                uint bits=BitConverter::FloatToUInt32Bits(1.0f);
+                int[3] numbers=[1,2,3]; Span<int> values=new(numbers,3);
+                PseudoRandom random=new(42ul); Shuffle<int>(values,ref random);
                 File temporary=File::OpenTemporary(); temporary.Close();
                 return node.Value-42;
             }
@@ -40,7 +44,7 @@ public class WholeStandardLibraryEditorTests
         if(brokenFile) Assert.Contains(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
-        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","OpenTemporary","Value"})
+        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","OpenTemporary","Value"})
         {
             int offset=text.LastIndexOf(member,StringComparison.Ordinal);
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

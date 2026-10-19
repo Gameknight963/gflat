@@ -5,38 +5,32 @@ public static class BinaryPrimitives
 {
     public static bool TryReadUInt16LittleEndian(readonly(byte)* data, nuint count, ref ushort value) nothrow
     {
-        value = 0;
-        if (count < 2) return false;
+        if (count < 2) { value = 0; return false; }
         value = (ushort)Read(data, 2, true); return true;
     }
     public static bool TryReadUInt16BigEndian(readonly(byte)* data, nuint count, ref ushort value) nothrow
     {
-        value = 0;
-        if (count < 2) return false;
+        if (count < 2) { value = 0; return false; }
         value = (ushort)Read(data, 2, false); return true;
     }
     public static bool TryReadUInt32LittleEndian(readonly(byte)* data, nuint count, ref uint value) nothrow
     {
-        value = 0;
-        if (count < 4) return false;
+        if (count < 4) { value = 0; return false; }
         value = (uint)Read(data, 4, true); return true;
     }
     public static bool TryReadUInt32BigEndian(readonly(byte)* data, nuint count, ref uint value) nothrow
     {
-        value = 0;
-        if (count < 4) return false;
+        if (count < 4) { value = 0; return false; }
         value = (uint)Read(data, 4, false); return true;
     }
     public static bool TryReadUInt64LittleEndian(readonly(byte)* data, nuint count, ref ulong value) nothrow
     {
-        value = 0;
-        if (count < 8) return false;
+        if (count < 8) { value = 0; return false; }
         value = Read(data, 8, true); return true;
     }
     public static bool TryReadUInt64BigEndian(readonly(byte)* data, nuint count, ref ulong value) nothrow
     {
-        value = 0;
-        if (count < 8) return false;
+        if (count < 8) { value = 0; return false; }
         value = Read(data, 8, false); return true;
     }
 

@@ -178,8 +178,11 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (count == 0) return start;
         if (count > length - start) return NotFound;
         nuint last = length - count;
+        char tail = text[count - 1];
         for (nuint i = start; i <= last; i++)
         {
+            // Reject a mismatching tail before scanning a long repeated prefix.
+            if (data[i + count - 1] != tail) continue;
             nuint matched = 0;
             while (matched < count && data[i + matched] == text[matched]) matched++;
             if (matched == count) return i;

@@ -44,6 +44,40 @@ public class StandardStringOperationsTests
             }
             """);
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void CountedSearchMatchesOrdinalSearchAcrossRandomBytesAndRepeatedPrefixes(int optimization)
+    {
+        var random=new Random(403);
+        const string alphabet="abc\0";
+        string MakeText(int count)=>new(Enumerable.Range(0,count).Select(_=>alphabet[random.Next(alphabet.Length)]).ToArray());
+        string Literal(string value)=>"\""+value.Replace("\0","\\0")+"\"";
+        var body=new System.Text.StringBuilder("using std; int main(){");
+        for(int sample=0;sample<96;sample++)
+        {
+            string text=MakeText(random.Next(81)), needle=MakeText(random.Next(21));
+            int start=random.Next(text.Length+1);
+            int expected=text.IndexOf(needle,start,StringComparison.Ordinal);
+            body.Append($$"""
+                {String text=String::From({{Literal(text)}},{{text.Length}});
+                 if(text.IndexOf({{Literal(needle)}},{{needle.Length}},{{start}})!={{(expected<0 ? "String::NotFound" : expected.ToString())}}) return {{sample+1}};}
+                """);
+        }
+        body.Append("""
+            char[2001] bytes; char[512] needle;
+            for(nuint i=0;i<2001;i++) bytes[i]='a';
+            for(nuint i=0;i<512;i++) needle[i]='a';
+            needle[511]='b';
+            String repeated=String::From(bytes,2001);
+            if(repeated.IndexOf(needle,512)!=String::NotFound) return 100;
+            repeated[2000]='b';
+            if(repeated.IndexOf(needle,512)!=1489) return 101;
+            return 0;}
+            """);
+        Assert.Equal(0,CompilerTestHelper.Run(Sources(body.ToString()),optimization).ExitCode);
+    }
+
     [Fact]
     public void AppendingBorrowedSelfWorksWithAndWithoutGrowth()
         => Run("""

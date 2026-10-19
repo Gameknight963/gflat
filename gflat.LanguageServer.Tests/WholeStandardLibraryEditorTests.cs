@@ -42,6 +42,7 @@ public class WholeStandardLibraryEditorTests
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         const string text="""
             using std;
+            bool Contains(int value) => value == 42;
             int main() {
                 LinkedList<int> list=new();
                 LinkedList<int>::Node* node=list.AddLast(42);
@@ -68,6 +69,7 @@ public class WholeStandardLibraryEditorTests
                 Utf16Decoder wideDecoder=new(); wideDecoder.Read(units,1,true,&scalar,&consumed); wideDecoder.Reset();
                 uint reversed=BitOperations::ReverseEndianness(42u);
                 bool absolute=Paths::IsFullyQualified("/tmp/file",PathStyle::Unix);
+                bool localResult=Contains(42);
                 nuint unitCount=0; UnicodeTranscoding::TryGetUtf16Length(text.Data,text.Length,ref unitCount);
                 char[21] digits; nuint digitsWritten=0;
                 IntegerFormatting::TryFormat(42,digits,21,ref digitsWritten);
@@ -93,5 +95,8 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
+        int localCall=sourceTokens.Last(token=>token.Text=="Contains").Start;
+        var localHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,localCall),Protocol.JsonOptions);
+        Assert.Contains("Contains(int value)",localHover.GetProperty("contents").GetProperty("value").GetString());
     }
 }

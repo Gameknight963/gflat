@@ -1,7 +1,8 @@
 # Core utilities without a runtime
 
 `Ascii`, `Utf8`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
-`BitOperations`, `CRC32`, `Adler32`, and `Utf8Decoder` can operate on caller-owned buffers
+`BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`, and
+`BinaryBufferWriter` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
 reported through their return values. Caller pointers must still designate valid
@@ -29,7 +30,10 @@ dotnet test gflat.Tests/gflat.Tests.csproj --filter FullyQualifiedName~Freestand
 ```
 
 The test runs at both `-O0` and `-O2`, checks UTF-8 scalar and binary-text round
-trips, unaligned integer byte order, streaming checksums, and the final executable:
+trips, unaligned integer byte order, streaming checksums, and a length-delimited
+binary packet with bounded child cursors. Packet checks include explicit mixed
+byte order, signed payloads, guard bytes, and unchanged positions on failure.
+The test also inspects the final executable:
 
 - Windows x64 imports exactly `KERNEL32.dll!ExitProcess`, with no CLR header.
 - Linux x64 uses a syscall exit stub and checks that the ELF has no dynamic
@@ -38,6 +42,12 @@ trips, unaligned integer byte order, streaming checksums, and the final executab
 An earlier version of the demo, before the byte-order, percent-encoding, and
 checksum checks were added, measured 10,752 bytes at `-O0` and 6,144 bytes at
 `-O2` on Windows. These are illustrative measurements, not size guarantees.
+
+`BitConverter` remains separately tested rather than included in this integer
+and text executable. Its source has no std dependency, but actual Clang22
+Windows x64 objects at both O0 and O2 reference the `_fltused` ABI marker.
+This test deliberately supplies only process startup and the operating-system
+exit call; it does not add floating-point ABI definitions.
 
 ## Limits
 

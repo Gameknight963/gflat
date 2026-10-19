@@ -45,6 +45,20 @@ public class FreestandingCoreUtilitiesTests
             if (decoder.Read(input, 2, false, &scalar, &consumed) != std::Utf8Decoder::Status::NeedMore || consumed != 2) return 26;
             if (decoder.Read(&input[2], 2, true, &scalar, &consumed) != std::Utf8Decoder::Status::Scalar || scalar != 0x1f600u) return 27;
             if (decoder.Read(input, 0, true, &scalar, &consumed) != std::Utf8Decoder::Status::End) return 28;
+            byte[10] packet; packet[0]=(byte)165; packet[9]=(byte)90;
+            std::BinaryBufferWriter writer = new(&packet[1],8);
+            std::BinaryBufferWriter payload = new();
+            if (!writer.TryWriteUInt16BigEndian((ushort)4) || !writer.TryWriteSlice(4,ref payload)) return 29;
+            if (!payload.TryWriteInt32LittleEndian(-42) || payload.TryWriteByte((byte)0)) return 30;
+            if (!writer.TryWriteUInt16BigEndian((ushort)48879) || writer.Position!=8 || writer.Remaining!=0) return 31;
+            if (packet[0]!=(byte)165 || packet[9]!=(byte)90 || packet[1]!=(byte)0 || packet[2]!=(byte)4 || packet[3]!=(byte)214 || packet[4]!=(byte)255 || packet[7]!=(byte)190 || packet[8]!=(byte)239) return 32;
+            std::BinaryBufferReader reader = new(&packet[1],8);
+            std::BinaryBufferReader part = new(); ushort field=0; int signedValue=0; byte extra=(byte)99;
+            if (!reader.TryReadUInt16BigEndian(ref field) || field!=(ushort)4 || !reader.TryReadSlice((nuint)field,ref part)) return 33;
+            if (!part.TryReadInt32LittleEndian(ref signedValue) || signedValue!=-42 || part.TryReadByte(ref extra) || extra!=(byte)0) return 34;
+            if (!reader.TryReadUInt16BigEndian(ref field) || field!=(ushort)48879 || reader.Position!=8 || reader.Remaining!=0) return 35;
+            if (reader.TryReadUInt16BigEndian(ref field) || field!=(ushort)0 || reader.Position!=8) return 36;
+            if (packet[0]!=(byte)165 || packet[9]!=(byte)90) return 37;
             return 42;
         }
         """;
@@ -59,7 +73,8 @@ public class FreestandingCoreUtilitiesTests
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
-            "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf" }
+            "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });

@@ -4,7 +4,7 @@ namespace std;
 public alias FileHandle = void*?;
 
 // Binary byte stream. 
-public struct File
+public struct File : ITextWriter
 {
     private FileHandle handle;
 
@@ -94,7 +94,18 @@ public struct File
     public nuint CopyTo(File* destination, char* buffer, nuint capacity)
     {
         if (handle == null || !destination.IsOpen) throw new IOException("File is closed");
-        if (destination == this) throw new IOException("Cannot copy a file to itself");
+        return this.CopyToWriter(destination, buffer, capacity);
+    }
+
+    // Streams counted bytes to any borrowed writer without an intermediate String.
+    public nuint CopyTo(ITextWriter* destination, char* buffer, nuint capacity)
+        => this.CopyToWriter(destination, buffer, capacity);
+
+    private nuint CopyToWriter(ITextWriter* destination, char* buffer, nuint capacity)
+    {
+        if (handle == null) throw new IOException("File is closed");
+        ITextWriter* self = this;
+        if (destination == self) throw new IOException("Cannot copy a file to itself");
         if (capacity == 0) throw new IOException("Copy buffer must not be empty");
         nuint total = 0;
         while (true)
@@ -114,7 +125,13 @@ public struct File
         return this.CopyTo(destination, buffer, 4096);
     }
 
-    public void Write(readonly(char*) data, nuint count)
+    public nuint CopyTo(ITextWriter* destination)
+    {
+        char[4096] buffer;
+        return this.CopyToWriter(destination, buffer, 4096);
+    }
+
+    public void Write(readonly(char)* data, nuint count)
     {
         if (handle == null) throw new IOException("File is closed");
         if (count == 0) return;

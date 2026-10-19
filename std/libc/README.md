@@ -136,6 +136,11 @@ The compiler links the small native standard-stream accessor only when reference
 `File.gf` provides a move-only owning `std::File` for binary byte IO. It needs
 `core/IOException.gf` and `core/EndOfStreamException.gf`; it does not depend on
 `String` or allocate a gflat buffer.
+`File` implements the automatically available `ITextWriter` contract, so
+primitive and user formatting can write directly through a borrowed `File*`.
+This adds no fields or ownership transfer; a File remains one native stream
+pointer in size. With `NoStdLib`, supply `core/Text.gf` explicitly alongside
+the other selected sources.
 The nullable `std::FileHandle` alias represents libc's opaque `FILE*` internally.
 It is not a Windows kernel handle, and callers must not free it through `Memory`.
 
@@ -181,6 +186,16 @@ int main()
   `CopyTo(destination)` uses a 4096-byte stack buffer. Callers must not modify
   either stream concurrently. Copying is not transactional: failures can leave a
   partial destination, and the source may have advanced.
+- `CopyTo(ITextWriter*, buffer, capacity)` and its stack-buffer overload stream
+  to other writers, including `Console::Out`, `String`, and `BufferWriter`.
+  No intermediate owning value is created. Both source and destination remain
+  borrowed; empty input performs no writes. Passing this same File through an
+  interface view is rejected before reading. Wrappers that write back into the
+  source file cannot be detected and must be avoided. Sink exceptions propagate
+  unchanged after the current source chunk has been consumed; already written
+  output remains. The typed `File*` overload additionally validates a closed
+  destination before consuming input; a generic interface sink is validated
+  when its `Write` method runs.
 - `Write(data, count)` preserves embedded zero bytes; `Write(text)` stops at
   the first zero. Partial IO may already have occurred when an error is thrown.
 - `WriteLine()` writes one LF byte on every platform. C-string and counted

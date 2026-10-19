@@ -13,18 +13,20 @@ implementation lives in `libc`.
 | Area | APIs | Details |
 | --- | --- | --- |
 | Text | `String`, `ITextWriter`, `IFormattable`, `IStringConvertable` | [Strings](../docs/STRINGS.md), [formatting](core/README.md#strings-and-formatting) |
+| C strings | `CString` | [Borrowed null-terminated byte utilities](../docs/CSTRING.md) |
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
 | Writer line helpers | `ITextWriter*` `WriteLine` overloads | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split` | [Allocation-free splitting](../docs/TEXT_PARTS.md) |
 | Borrowed text lines | `TextLines` | [Counted LF and CRLF line views](../docs/TEXT_LINES.md) |
 | Contiguous storage | `Vector<T>`, `Span<T>`, typed span `CopyTo` | [Ownership and views](core/README.md#vectors), [copying initialized elements](core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
+| Double-ended storage | `Deque<T>` | [Owning ring buffer](../docs/DEQUE.md) |
 | Stable node storage | `LinkedList<T>` | [Owning linked lists and node handles](../docs/LINKED_LIST.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |
 | Ordered maps | `SortedMap<K,V>` | [Sorted contiguous entries and explicit comparison](../docs/SORTED_MAP.md) |
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
 | Algorithms | `Sort`, `Reverse`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
-| Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates | [Lazy queries](core/Collections/README.md) |
+| Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
 | Caller-buffer numbers | `IntegerFormatting::TryFormat` | [Decimal formatting without a writer or allocation](../docs/INTEGER_FORMATTING.md) |
 | Unicode | `Utf8`, incremental `Utf8Decoder`, borrowed `Utf8Scalars` | [UTF-8 buffers](../docs/UTF8.md), [chunked decoding](../docs/UTF8_DECODER.md), [scalar iteration](../docs/UTF8_SCALARS.md) |
@@ -51,7 +53,7 @@ their sources. Do not retain them across operations that invalidate storage.
 
 | Area | APIs |
 | --- | --- |
-| Console | `Console::Write`, `WriteLine`, `ReadLine`, `TryReadLine`, `Out`, `Error`, flush operations |
+| Console | `Console::Write`, `WriteLine`, `Read`, `ReadByte`, `ReadExactly`, `ReadLine`, `TryReadLine`, `Out`, `Error`, flush operations |
 | Files | `File`, `FileText`, `FileBytes`, `FileLines`, `FileBinary` |
 | Allocation | Default replaceable `Memory::Allocate` and `Memory::Free` |
 | Managed storage | Replaceable collector selection and `TracingCollector` |

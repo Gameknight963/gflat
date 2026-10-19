@@ -24,6 +24,10 @@ public class WholeStandardLibraryEditorTests
                 CRC32 checksum=new(); checksum.Append("123456789",9);
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
                 decoder.Read("a",1,true,&scalar,&consumed);
+                Utf8Scalars characters=new(text.Data,text.Length);
+                Utf8Scalars::Enumerator iterator=characters.GetEnumerator();
+                ITextWriter* output=Console::Out;
+                readonly(char)*? setting=Environment::GetVariable("GFLAT_TEST_UNSET");
                 byte[4] bytes; BinaryPrimitives::TryWriteUInt32BigEndian(bytes,4,42u);
                 File temporary=File::OpenTemporary(); temporary.Close();
                 return node.Value-42;
@@ -36,7 +40,7 @@ public class WholeStandardLibraryEditorTests
         if(brokenFile) Assert.Contains(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
-        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","TryWriteUInt32BigEndian","OpenTemporary","Value"})
+        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","OpenTemporary","Value"})
         {
             int offset=text.LastIndexOf(member,StringComparison.Ordinal);
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

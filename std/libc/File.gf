@@ -19,6 +19,15 @@ public struct File
     public static File OpenRead(readonly(char*) path) => new File(path, "rb");
     public static File OpenWrite(readonly(char*) path) => new File(path, "wb");
     public static File OpenAppend(readonly(char*) path) => new File(path, "ab");
+
+    // libc owns temporary naming/location; fclose removes the temporary file.
+    public static File OpenTemporary()
+    {
+        File result = new File();
+        result.handle = file_detail::tmpfile();
+        if (result.handle == null) throw new IOException("Temporary file creation failed");
+        return move result;
+    }
     public static void Remove(readonly(char*) path)
     {
         if (file_detail::remove(path) != 0) throw new IOException("File removal failed");
@@ -29,6 +38,21 @@ public struct File
         if (file_detail::rename(source, destination) != 0) throw new IOException("File rename failed");
     }
     public bool IsOpen { readonly get => handle != null; }
+    // Observed stream status, not a prediction: only a read attempt detects EOF.
+    public bool EndOfFile
+    {
+        readonly get
+        {
+            if (handle == null) throw new IOException("File is closed");
+            return file_detail::feof(handle!) != 0;
+        }
+    }
+
+    public void ClearError()
+    {
+        if (handle == null) throw new IOException("File is closed");
+        file_detail::clearerr(handle!);
+    }
 
     public nuint Read(char* data, nuint count)
     {
@@ -47,6 +71,15 @@ public struct File
         int value = file_detail::fgetc(handle!);
         if (value == -1 && file_detail::ferror(handle!) != 0)
             throw new IOException("File read failed");
+        return value;
+    }
+
+    // One-byte lookahead without consuming input. EOF is still observed.
+    public int PeekByte()
+    {
+        int value = this.ReadByte();
+        if (value == -1) return -1;
+        if (file_detail::ungetc(value, handle!) == -1) throw new IOException("File lookahead failed");
         return value;
     }
 
@@ -132,7 +165,11 @@ namespace file_detail
     private extern nuint fwrite(readonly(char*) data, nuint size, nuint count, FileHandle stream);
     private extern int fflush(FileHandle stream);
     private extern int ferror(FileHandle stream);
+    private extern int feof(readonly(void)* stream);
+    private extern void clearerr(FileHandle stream);
     private extern int fgetc(FileHandle stream);
+    private extern int ungetc(int value, FileHandle stream);
+    private extern FileHandle tmpfile();
     private extern int remove(readonly(char*) path);
     private extern int rename(readonly(char*) source, readonly(char*) destination);
 }

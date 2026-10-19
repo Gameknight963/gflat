@@ -118,6 +118,13 @@ int main()
 
 - `OpenRead`, `OpenWrite`, and `OpenAppend` use binary libc modes. `OpenWrite`
   truncates an existing file; append creates a file when needed.
+- `OpenTemporary()` owns a libc `tmpfile` binary read/write stream. The runtime
+  selects its location; no filename is exposed. Explicit `Close` and scope
+  destruction release it and remove its temporary backing file. Normal process
+  exit also invokes libc's cleanup, but abrupt termination is runtime/platform
+  dependent. Creation can fail due to permissions, runtime limits, or storage.
+  The current File API does not expose seeking/rewinding, including on temporary
+  streams; writing advances the position as usual.
 - `Read(data, capacity)` returns the bytes read. Zero at EOF is normal; IO
   failures throw `IOException`. Reads do not add a null terminator.
 - `ReadExactly(data, count)` fills the requested region or throws
@@ -125,6 +132,13 @@ int main()
   On a truncated file the available prefix has already been consumed and stored.
 - `ReadByte()` returns an integer from 0 through 255, or -1 at EOF; read errors
   throw. `WriteByte(char)` writes exactly one byte, including zero.
+- `PeekByte()` has the same result/error convention without consuming the byte.
+  Repeated lookahead sees the same next byte. Looking ahead at EOF observes EOF.
+- `EndOfFile` reports libc's observed EOF indicator, not whether a future read
+  will reach the end. Reading exactly the remaining bytes need not set it;
+  a subsequent failed read does. `ClearError()` resets EOF and error indicators
+  without changing the position or fixing the underlying IO problem. These
+  operations throw `IOException` on closed files.
 - `CopyTo(destination, buffer, capacity)` borrows a `File*` and caller-owned
   buffer, returning the copied byte count. It starts at the current position,
   leaves both streams open, and rejects zero capacity and the same `File`

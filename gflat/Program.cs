@@ -25,6 +25,7 @@ public static class Program
             string? projectPath = null;
             int? exceptionReserveBytes = null;
             int? optimizationLevel = null;
+            bool? debugSymbols = null;
             for (int i = 0; i < args.Length; i++)
             {
                 string Value() => ++i < args.Length ? args[i] : throw new ArgumentException($"Missing value for {args[i - 1]}");
@@ -33,6 +34,7 @@ public static class Program
                     case "--help": case "-h":
                         Console.WriteLine("gflat new <directory> [--name Name] [--library] [--no-stdlib]\nOptimization: --optimization 0|1|2|3 (project defaults: Debug=0, Release=2)");
                         Console.WriteLine("gflat doctor [--native] [--clang path]");
+                        Console.WriteLine("Debug symbols: -g or --debug; --no-debug disables the project's DebugSymbols setting.");
                         Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N] [--no-stdlib]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
                     case "build" when i == 0: break;
@@ -40,6 +42,8 @@ public static class Program
                     case "clean" when i == 0: clean = true; break;
                     case "--check": check = true; break;
                     case "--no-stdlib": noStdLib = true; break;
+                    case "-g": case "--debug": debugSymbols = true; break;
+                    case "--no-debug": debugSymbols = false; break;
                     case "-o": outputPath = Value(); break;
                     case "--clang": clang = Value(); break;
                     case "--exception-reserve-bytes": exceptionReserveBytes = ExceptionReserve.Parse(Value()); break;
@@ -63,11 +67,11 @@ public static class Program
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
                 projectPath = sourcePaths[0];
                 var root = ProjectModel.Load(projectPath, explicitConfiguration ? configuration : null,
-                    explicitPlatform ? platform : null, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null);
+                    explicitPlatform ? platform : null, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, debugSymbols: debugSymbols);
                 configuration = root.Configuration;
                 platform = root.Platform;
                 graph = ProjectGraph.Load(projectPath, (path, asReference) => !asReference ? root
-                    : ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, asReference: true));
+                    : ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, asReference: true, debugSymbols: debugSymbols));
                 sourcePaths = graph.Sources.ToList();
                 if (graph.Root.Kind == ProjectKind.Executable)
                     outputPath ??= irOnly ? Path.ChangeExtension(graph.Root.TargetPath, ".ll") : graph.Root.TargetPath;
@@ -99,7 +103,7 @@ public static class Program
             if (graph != null)
             {
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
-                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph, noStdLib);
+                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph, noStdLib, debugSymbols);
                 if (result != 0 || !run) return result;
                 return NativeToolchain.RunProgram(outputPath, programArguments);
             }
@@ -110,7 +114,7 @@ public static class Program
                 if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
                 return 0;
             }
-            string ir = Compiler.Emit(sources, diagnostics, new() { NoStdLib = noStdLib, InternalizeFunctions = !irOnly });
+            string ir = Compiler.Emit(sources, diagnostics, new() { NoStdLib = noStdLib, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true });
             if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             if (irOnly) { File.WriteAllText(outputPath, ir); return 0; }

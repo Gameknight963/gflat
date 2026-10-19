@@ -44,12 +44,12 @@ public sealed class ProjectModel
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
     }
     public static ProjectModel Load(string path) => Load(path, null, null);
-    public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false)
+    public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false, bool? debugSymbols = null)
     {
         path = Path.GetFullPath(path);
         try { MsBuildHost.Initialize(); }
         catch (IOException error) { throw new ProjectException(path, error.Message); }
-        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib, asReference);
+        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib, asReference, debugSymbols);
     }
     public bool IncludesFile(string path)
     {

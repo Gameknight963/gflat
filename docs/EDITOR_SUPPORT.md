@@ -32,8 +32,10 @@ In Visual Studio, source-backed types in signatures and exception lists can be c
 open their declarations. A small native Quick Info source attaches navigation callbacks
 to VS classified text runs; LSP still supplies the content and locations. Other clients
 continue to use standard LSP hover. Parameter icons use VS's shared Parameter moniker.
-Executable projects support **Start Without Debugging** (**Ctrl+F5**). Source
-debugging is not implemented yet. [MSBuild projects and CPS](PROJECTS.md) provide
+Executable projects support native **Start Debugging** (**F5**) and **Start Without
+Debugging** (**Ctrl+F5**). Debug builds include source locations and variable/type
+information for breakpoints, stepping, Locals, and native Watch expressions.
+[MSBuild projects and CPS](PROJECTS.md) provide
 integration into an existing solution, including native project templates.
 
 ## Project layout

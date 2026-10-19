@@ -21,7 +21,6 @@ internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
 
     public override async Task<bool> CanLaunchAsync(DebugLaunchOptions launchOptions)
     {
-        if ((launchOptions & DebugLaunchOptions.NoDebug) == 0) return false;
         var provider = project.Services.ProjectPropertiesProvider;
         if (provider == null) return false;
         var properties = provider.GetCommonProperties();
@@ -32,7 +31,6 @@ internal sealed class GflatLaunchProvider : DebugLaunchProviderBase
 
     public override async Task<IReadOnlyList<IDebugLaunchSettings>> QueryDebugTargetsAsync(DebugLaunchOptions launchOptions)
     {
-        GflatLaunch.RequireNoDebug(launchOptions);
         var provider = project.Services.ProjectPropertiesProvider ??
             throw new InvalidOperationException("CPS cannot read the gflat project's launch properties.");
         var properties = provider.GetCommonProperties();
@@ -52,20 +50,12 @@ internal static class GflatLaunch
     internal const string SchemaName = "GflatLocal";
 
     internal static bool CanLaunch(DebugLaunchOptions options, string kind, string emitIr) =>
-        (options & DebugLaunchOptions.NoDebug) != 0 &&
         string.Equals(kind, "Executable", StringComparison.OrdinalIgnoreCase) &&
         !string.Equals(emitIr, "true", StringComparison.OrdinalIgnoreCase);
-
-    internal static void RequireNoDebug(DebugLaunchOptions options)
-    {
-        if ((options & DebugLaunchOptions.NoDebug) == 0)
-            throw new NotSupportedException("gflat source debugging is not available yet. Use Start Without Debugging (Ctrl+F5).");
-    }
 
     internal static DebugLaunchSettings CreateSettings(DebugLaunchOptions options, string kind, string emitIr,
         string targetPath, string arguments, string workingDirectory, string projectDirectory)
     {
-        RequireNoDebug(options);
         if (!CanLaunch(options, kind, emitIr))
             throw new InvalidOperationException("Only executable gflat projects with native output can run.");
         if (string.IsNullOrWhiteSpace(targetPath))

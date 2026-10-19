@@ -289,8 +289,8 @@ an MSBuild configuration label, not a native ABI selection.
 
 ### Running in Visual Studio
 
-Set an executable `.gfproj` as the startup project and use **Debug > Start
-Without Debugging** (**Ctrl+F5**). CPS uses the active configuration's `TargetPath`
+Set an executable `.gfproj` as the startup project and use **F5** to debug or
+**Ctrl+F5** to run without debugging. CPS uses the active configuration's `TargetPath`
 and Visual Studio's normal build and launch services. Source libraries and LLVM
 IR output configurations cannot launch.
 
@@ -299,8 +299,14 @@ directory, which defaults to the project directory. Relative working directories
 are resolved from that directory. These settings are stored per configuration in
 `.gfproj.user`, which generated projects ignore in Git.
 
-F5 source debugging is not available yet: the compiler does not emit source debug
-metadata. The launch provider accepts Start Without Debugging only.
+`DebugSymbols` defaults to `true` for Debug and `false` for other configurations.
+It emits LLVM source locations and descriptions of parameters, locals, pointers,
+buffers, and aggregate fields. Windows builds write a PDB beside the executable;
+Linux builds embed DWARF. Standalone compilation uses `--debug` (or `-g`).
+Use `--no-debug` to override the project setting. Optimization is independent;
+start with optimization level 0 for predictable stepping and variable inspection.
+Watch initially uses the native debugger's expression evaluator, so gflat-specific
+expressions and property evaluation are not fully supported.
 
 The language server discovers the nearest project and includes referenced sources
 and unsaved buffers. Evaluation is cached between edits; source and imported
@@ -325,8 +331,7 @@ that native linking works; use `--native` for that.
 
 ## Remaining work
 
-Source debugging, package management,
-and binary libraries are not included.
+Package management and binary libraries are not included.
 
 The previous `<GflatProject>` XML prototype is no longer supported. Convert it to
 an MSBuild `<Project>` with the explicit imports shown above, and replace

@@ -19,13 +19,17 @@ public partial class LlvmEmitter
         public int ExceptionCleanupDepth;
         public int HeaderEnd;
         public int EntryPosition;
+        public string? DebugScope;
+        public string? DebugLocation;
+        public gflat.ast.AstNode? DebugSource;
+        public string? DebugThisType;
     }
 
     private readonly Stack<FunctionEmission> _functions = new();
     private FunctionEmission CurrentFunction => _functions.Peek();
 
     private void BeginFunction(string returnType, string name, string parameters,
-        bool exceptionBoundary = false, bool inline = false, bool isEntryPoint = false)
+        bool exceptionBoundary = false, bool inline = false, bool isEntryPoint = false, gflat.ast.AstNode? source = null)
     {
         var function = new FunctionEmission(_output, exceptionBoundary);
         _functions.Push(function);
@@ -33,9 +37,18 @@ public partial class LlvmEmitter
         string linkage = _internalizeFunctions && !isEntryPoint ? "internal " : "";
         string header = $"define {linkage}{returnType} @{name}({parameters})" + (inline ? " inlinehint" : "");
         function.HeaderEnd = header.Length;
+        if (source != null && _debugSymbols)
+        {
+            function.DebugSource = source;
+            if (parameters.StartsWith('%') && parameters.IndexOf("* %this", StringComparison.Ordinal) is int end && end > 0)
+                function.DebugThisType = parameters[1..end];
+            function.DebugScope = DebugFunction(name, source);
+            header += " !dbg " + function.DebugScope;
+        }
         Emit(header + " {");
         Emit("entry:");
         function.EntryPosition = _output.Length;
+        if (source != null) SetDebugLocation(source);
     }
 
     private void EndFunction()

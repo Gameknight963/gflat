@@ -12,10 +12,11 @@ public partial class LlvmEmitter : IVisitor
     private readonly TypeChecker _typeChecker;
     private readonly bool _internalizeFunctions;
 
-    public LlvmEmitter(TypeChecker typeChecker, bool internalizeFunctions = false)
+    public LlvmEmitter(TypeChecker typeChecker, bool internalizeFunctions = false, bool debugSymbols = false)
     {
         _typeChecker = typeChecker;
         _internalizeFunctions = internalizeFunctions;
+        _debugSymbols = debugSymbols;
     }
 
     private int _constCounter = 0;
@@ -564,7 +565,12 @@ public partial class LlvmEmitter : IVisitor
     private void Push(string value) => _valueStack.Push(value);
     private string Pop() => _valueStack.Pop();
 
-    private void Emit(string line) => _output.AppendLine(line);
+    private void Emit(string line)
+    {
+        if (_debugSymbols && _functions.TryPeek(out var function) && function.DebugLocation != null && line.StartsWith("    "))
+            line += ", !dbg " + function.DebugLocation;
+        _output.AppendLine(line);
+    }
     private void EmitGlobal(string line) => _globals.AppendLine(line);
 
     private void GuardNonNull(string value, string type)
@@ -600,7 +606,7 @@ public partial class LlvmEmitter : IVisitor
         string body = OrderedGlobals() + "\n" + llvmFunctions + "\n" + _lambdaFunctions + "\n" + _output;
         return "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" +
             "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" +
-            NativeDeclarations + body;
+            NativeDeclarations + body + DebugMetadata();
     }
 
     private enum EmitMode { RValue, LValue }
@@ -1296,22 +1302,24 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), mangledName, parameters,
-            exceptionBoundary: node.IsNoThrow, inline: node.IsInline);
+            exceptionBoundary: node.IsNoThrow, inline: node.IsInline, source: node);
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{className}*", thisPtr);
         Emit($"    store %{className}* %this, %{className}** {thisPtr}");
         _locals["this"] = thisPtr;
+        EmitDebugThis(thisPtr);
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
+            EmitDebugVariable(p.Name, p.Type, ptr, p);
             if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(RegisterOwner(p.Type, ptr, true));
         }
 
@@ -1380,23 +1388,25 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         BeginFunction(_currentFunctionReturnType, mangledName, parameters,
-            exceptionBoundary: node.IsNoThrow, inline: node.IsInline);
+            exceptionBoundary: node.IsNoThrow, inline: node.IsInline, source: node);
         EmitStaticLifetimePrologue();
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{className}*", thisPtr);
         Emit($"    store %{className}* %this, %{className}** {thisPtr}");
         _locals["this"] = thisPtr;
+        EmitDebugThis(thisPtr);
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
+            EmitDebugVariable(p.Name, p.Type, ptr, p);
             if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(RegisterOwner(p.Type, ptr, true));
         }
 
@@ -1495,6 +1505,7 @@ public partial class LlvmEmitter : IVisitor
         EmitAlloca($"%{className}*", thisPtr);
         Emit($"    store %{className}* %this, %{className}** {thisPtr}");
         _locals["this"] = thisPtr;
+        EmitDebugThis(thisPtr);
 
         BeginConstruction(className);
 
@@ -1553,12 +1564,13 @@ public partial class LlvmEmitter : IVisitor
         string mangledName = ns.Length > 0 ? $"gflat${ns}${className}$dtor" : $"gflat${className}$dtor";
 
         BeginFunction("void", mangledName, $"%{className}* %this",
-            exceptionBoundary: true, inline: node?.IsInline == true);
+            exceptionBoundary: true, inline: node?.IsInline == true, source: node);
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{className}*", thisPtr);
         Emit($"    store %{className}* %this, %{className}** {thisPtr}");
         _locals["this"] = thisPtr;
+        EmitDebugThis(thisPtr);
 
         TypeChecker.ClassInfo? prevClass = _currentClass;
         _currentClass = _typeChecker.GetClassByIdentity(className);
@@ -1771,17 +1783,18 @@ public partial class LlvmEmitter : IVisitor
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
 
-        BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), mangledName, parameters, inline: node.IsInline);
+        BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), mangledName, parameters, inline: node.IsInline, source: node);
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
+            EmitDebugVariable(p.Name, p.Type, ptr, p);
             if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(RegisterOwner(p.Type, ptr, true));
         }
 
@@ -1822,22 +1835,24 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), mangledName, parameters,
-            exceptionBoundary: node.IsNoThrow, inline: node.IsInline);
+            exceptionBoundary: node.IsNoThrow, inline: node.IsInline, source: node);
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{structName}*", thisPtr);
         Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
         _locals["this"] = thisPtr;
+        EmitDebugThis(thisPtr);
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
+            EmitDebugVariable(p.Name, p.Type, ptr, p);
             if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(RegisterOwner(p.Type, ptr, true));
         }
 
@@ -1916,23 +1931,25 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", paramList);
 
         BeginFunction(_currentFunctionReturnType, mangledName, parameters,
-            exceptionBoundary: node.IsNoThrow, inline: node.IsInline);
+            exceptionBoundary: node.IsNoThrow, inline: node.IsInline, source: node);
         EmitStaticLifetimePrologue();
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{structName}*", thisPtr);
         Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
         _locals["this"] = thisPtr;
+        EmitDebugThis(thisPtr);
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
+            EmitDebugVariable(p.Name, p.Type, ptr, p);
             if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(RegisterOwner(p.Type, ptr, true));
         }
 
@@ -1971,6 +1988,7 @@ public partial class LlvmEmitter : IVisitor
         EmitAlloca($"%{structName}*", thisPtr);
         Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
         _locals["this"] = thisPtr;
+        EmitDebugThis(thisPtr);
 
         BeginConstruction(structName);
         EmitFieldInitializers(structName, thisPtr);
@@ -1997,12 +2015,13 @@ public partial class LlvmEmitter : IVisitor
         string mangledName = ns.Length > 0 ? $"gflat${ns}${structName}$dtor" : $"gflat${structName}$dtor";
 
         BeginFunction("void", mangledName, $"%{structName}* %this",
-            exceptionBoundary: true, inline: node?.IsInline == true);
+            exceptionBoundary: true, inline: node?.IsInline == true, source: node);
 
         string thisPtr = NewTemp();
         EmitAlloca($"%{structName}*", thisPtr);
         Emit($"    store %{structName}* %this, %{structName}** {thisPtr}");
         _locals["this"] = thisPtr;
+        EmitDebugThis(thisPtr);
 
         TypeChecker.StructInfo? prevStruct = _currentStruct;
         _currentStruct = _typeChecker.GetStructByIdentity(structName);
@@ -2095,18 +2114,19 @@ public partial class LlvmEmitter : IVisitor
         parameters = WithManagedResultParameter(node.ReturnType, parameters, named: true);
 
         BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), name, parameters,
-            exceptionBoundary: isMain || node.IsNoThrow, inline: node.IsInline, isEntryPoint: isMain);
+            exceptionBoundary: isMain || node.IsNoThrow, inline: node.IsInline, isEntryPoint: isMain, source: node);
         EmitStaticLifetimePrologue();
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
             Emit($"    store {type} %{p.Name}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
+            EmitDebugVariable(p.Name, p.Type, ptr, p);
             if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(RegisterOwner(p.Type, ptr, true));
         }
 
@@ -2126,6 +2146,7 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(BlockStatement node)
     {
+        using var debugScope = EnterDebugBlock(node);
         var outerLocals = new Dictionary<string, string>(_locals);
         _deferScopes.Add(new List<IDeferAction>());
         _deferScopes[^1].AddRange(_parameterOwners);
@@ -2137,7 +2158,7 @@ public partial class LlvmEmitter : IVisitor
             if (terminated)
                 break;
 
-            statement.Accept(this);
+            EmitDebugStatement(statement, () => statement.Accept(this));
 
             if (_hasTerminated)
                 terminated = true;
@@ -2497,6 +2518,7 @@ public partial class LlvmEmitter : IVisitor
         string ptr = NewTemp();
         EmitAlloca($"{type}", ptr);
         _locals[node.Name] = ptr;
+        EmitDebugVariable(node.Name, resolvedVarType, ptr, node);
         InitializeManagedLocal(resolvedVarType, ptr, scope);
 
         if (node.Initializer != null)
@@ -4358,16 +4380,17 @@ public partial class LlvmEmitter : IVisitor
 
         string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitAbiParamType(p.Type)} %{p.Name}"));
         parameters = WithManagedResultParameter(returnType, parameters, named: true);
-        BeginFunction(EmitAbiFunctionReturnType(returnType), funcName, parameters, inline: node.IsInline);
+        BeginFunction(EmitAbiFunctionReturnType(returnType), funcName, parameters, inline: node.IsInline, source: node);
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
             string pType = EmitType(p.Type);
             string allocaPtr = NewTemp();
             EmitAlloca($"{pType}", allocaPtr);
             Emit($"    store {pType} %{p.Name}, {pType}* {allocaPtr}");
             RegisterManagedParameter(p, allocaPtr);
+            EmitDebugVariable(p.Name, p.Type, allocaPtr, p);
             _locals[p.Name] = allocaPtr;
             if (_typeChecker.HasDestructor(p.Type)) _parameterOwners.Add(RegisterOwner(p.Type, allocaPtr, true));
         }

@@ -120,6 +120,11 @@ public static class NativeToolchain
         }
         string compiler = FindClang(clang);
         string ir = File.ReadAllText(irPath);
+        if (ir.Contains("!llvm.dbg.cu", StringComparison.Ordinal))
+        {
+            args.Add("-g");
+            if (OperatingSystem.IsWindows()) args.AddRange(["-gcodeview", "-Xlinker", "/DEBUG:FULL", "-Xlinker", "/PDB:" + Path.ChangeExtension(Path.GetFullPath(outputPath), ".pdb")]);
+        }
         // MSVC's runtime lacks helpers such as __divti3/__modti3 used for
         // 128-bit operations. Let this Clang installation select its matching
         // compiler-rt builtins; ordinary-width programs keep the default runtime.

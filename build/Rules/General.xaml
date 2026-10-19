@@ -6,6 +6,7 @@
   <BoolProperty Name="NoStdLib" DisplayName="Exclude standard library" Description="Compile only the explicitly selected sources and project references. No bundled std declarations are added." />
   <StringProperty Name="OutputPath" DisplayName="Output directory" />
   <StringProperty Name="GflatCompilerCommand" DisplayName="Compiler command" />
+  <BoolProperty Name="DebugSymbols" DisplayName="Generate debug symbols" Description="Debug defaults to true. Emit source locations and native variable/type descriptions (PDB on Windows, DWARF on Linux)." />
   <EnumProperty Name="GflatOptimizationLevel" DisplayName="Optimization level" Description="Debug defaults to 0; Release defaults to 2.">
     <EnumValue Name="0" DisplayName="0 — No optimization" />
     <EnumValue Name="1" DisplayName="1 — Basic optimization" />

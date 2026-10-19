@@ -43,7 +43,7 @@ try {
     $debug = [Enum]::ToObject($optionsType, 0)
     foreach ($case in @(
         @{ Options=$noDebug; Kind='Executable'; IR=''; Expected=$true },
-        @{ Options=$debug; Kind='Executable'; IR=''; Expected=$false },
+        @{ Options=$debug; Kind='Executable'; IR=''; Expected=$true },
         @{ Options=$noDebug; Kind='SourceLibrary'; IR=''; Expected=$false },
         @{ Options=$noDebug; Kind='Exe'; IR=''; Expected=$false },
         @{ Options=$noDebug; Kind='Library'; IR=''; Expected=$false },
@@ -61,12 +61,13 @@ try {
     if ($settings.LaunchOperation.ToString() -ne 'CreateProcess' -or ($settings.LaunchOptions -band $noDebug) -eq 0) { throw 'Launch must preserve NoDebug and use CreateProcess' }
     $nativeEngine = $optionsType.Assembly.GetType('Microsoft.VisualStudio.ProjectSystem.Debug.DebuggerEngines', $true).GetField('NativeOnlyEngine').GetValue($null)
     if ($settings.LaunchDebugEngineGuid -ne $nativeEngine) { throw 'Launch must select the SDK native engine' }
+    $debugSettings = $create.Invoke($null, [object[]]@($debug, 'Executable', '', 'app.exe', '', '', $scratch))
+    if (($debugSettings.LaunchOptions -band $noDebug) -ne 0 -or $debugSettings.LaunchDebugEngineGuid -ne $nativeEngine) { throw 'F5 must launch the native debugger' }
     $workingDirectory = Join-Path $scratch 'work'
     New-Item -ItemType Directory -Path $workingDirectory | Out-Null
     $relative = $create.Invoke($null, [object[]]@($noDebug, 'Executable', '', 'app.exe', '', 'work', $scratch))
     if ($relative.CurrentDirectory -ne $workingDirectory) { throw 'Relative working directory was not resolved from the project directory' }
     foreach ($case in @(
-        @{ Options=$debug; Kind='Executable'; IR=''; Target='app.exe'; Directory=''; Error='NotSupportedException' },
         @{ Options=$noDebug; Kind='SourceLibrary'; IR=''; Target='app.exe'; Directory=''; Error='InvalidOperationException' },
         @{ Options=$noDebug; Kind='Exe'; IR=''; Target='app.exe'; Directory=''; Error='InvalidOperationException' },
         @{ Options=$noDebug; Kind='Library'; IR=''; Target='app.exe'; Directory=''; Error='InvalidOperationException' },
@@ -82,7 +83,7 @@ try {
     foreach ($rule in @('GflatLocal.xaml', 'DebuggerGeneral.xaml')) {
         if (-not (Test-Path -LiteralPath (Join-Path $PackageDirectory "Sdk/build/Rules/$rule"))) { throw "VSIX is missing launch rule $rule" }
     }
-    Write-Host 'Packaged CPS Ctrl+F5 provider metadata, native launch settings and diagnostics passed.'
+    Write-Host 'Packaged CPS F5/Ctrl+F5 provider metadata, native launch settings and diagnostics passed.'
 } finally {
     [AppDomain]::CurrentDomain.remove_AssemblyResolve($resolver)
     if (Test-Path -LiteralPath $scratch) { Remove-Item -LiteralPath $scratch -Recurse -Force }

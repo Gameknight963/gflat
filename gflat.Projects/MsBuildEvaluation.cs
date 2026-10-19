@@ -7,7 +7,7 @@ namespace gflat.Projects;
 internal static class MsBuildEvaluation
 {
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib, bool asReference)
+    internal static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib, bool asReference, bool? debugSymbols)
     {
         try
         {
@@ -18,6 +18,7 @@ internal static class MsBuildEvaluation
             if (exceptionReserveBytes.HasValue) properties["GflatExceptionReserveBytes"] = exceptionReserveBytes.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (optimizationLevel.HasValue) properties["GflatOptimizationLevel"] = optimizationLevel.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (noStdLib.HasValue) properties["NoStdLib"] = noStdLib.Value ? "true" : "false";
+            if (debugSymbols.HasValue) properties["DebugSymbols"] = debugSymbols.Value ? "true" : "false";
             using var collection = new ProjectCollection(properties);
             var project = new Project(path, null, null, collection, ProjectLoadSettings.RecordEvaluatedItemElements);
             var kind = project.GetPropertyValue("OutputType").ToLowerInvariant() switch

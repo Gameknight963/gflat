@@ -4,6 +4,7 @@ namespace gflat;
 public sealed record CompilationOptions
 {
     public bool NoStdLib { get; init; }
+    public bool DebugSymbols { get; init; }
 
     /// <summary>
     /// Give definitions other than main internal linkage when building a complete executable.

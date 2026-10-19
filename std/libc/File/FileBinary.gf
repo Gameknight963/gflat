@@ -1,6 +1,6 @@
 namespace std;
 
-// Fixed-width unsigned integers with explicit byte order. Borrows the stream.
+// Fixed-width integers with explicit byte order. Borrows the stream.
 // These operations never depend on host endianness, alignment, or C long width.
 public static class FileBinary
 {
@@ -17,6 +17,19 @@ public static class FileBinary
     public static void WriteUInt16BigEndian(File* output, ushort value) { FileBinary::Write(output, (ulong)value, 2, false); }
     public static void WriteUInt32BigEndian(File* output, uint value) { FileBinary::Write(output, (ulong)value, 4, false); }
     public static void WriteUInt64BigEndian(File* output, ulong value) { FileBinary::Write(output, value, 8, false); }
+
+    public static short ReadInt16LittleEndian(File* input) => (short)ReadUInt16LittleEndian(input);
+    public static void WriteInt16LittleEndian(File* output, short value) { WriteUInt16LittleEndian(output, (ushort)value); }
+    public static short ReadInt16BigEndian(File* input) => (short)ReadUInt16BigEndian(input);
+    public static void WriteInt16BigEndian(File* output, short value) { WriteUInt16BigEndian(output, (ushort)value); }
+    public static int ReadInt32LittleEndian(File* input) => (int)ReadUInt32LittleEndian(input);
+    public static void WriteInt32LittleEndian(File* output, int value) { WriteUInt32LittleEndian(output, (uint)value); }
+    public static int ReadInt32BigEndian(File* input) => (int)ReadUInt32BigEndian(input);
+    public static void WriteInt32BigEndian(File* output, int value) { WriteUInt32BigEndian(output, (uint)value); }
+    public static long ReadInt64LittleEndian(File* input) => (long)ReadUInt64LittleEndian(input);
+    public static void WriteInt64LittleEndian(File* output, long value) { WriteUInt64LittleEndian(output, (ulong)value); }
+    public static long ReadInt64BigEndian(File* input) => (long)ReadUInt64BigEndian(input);
+    public static void WriteInt64BigEndian(File* output, long value) { WriteUInt64BigEndian(output, (ulong)value); }
 
     private static ulong Read(File* input, nuint count, bool littleEndian)
     {

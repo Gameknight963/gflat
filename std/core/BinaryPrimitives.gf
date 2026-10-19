@@ -47,6 +47,60 @@ public static class BinaryPrimitives
     public static bool TryWriteUInt64BigEndian(byte* data, nuint count, ulong value) nothrow
         => Write(data, count, value, 8, false);
 
+    public static bool TryReadInt16LittleEndian(readonly(byte)* data, nuint count, ref short value) nothrow
+    {
+        ushort bits = (ushort)0;
+        bool success = TryReadUInt16LittleEndian(data, count, ref bits);
+        value = (short)bits; return success;
+    }
+    public static bool TryWriteInt16LittleEndian(byte* data, nuint count, short value) nothrow
+        => TryWriteUInt16LittleEndian(data, count, (ushort)value);
+
+    public static bool TryReadInt16BigEndian(readonly(byte)* data, nuint count, ref short value) nothrow
+    {
+        ushort bits = (ushort)0;
+        bool success = TryReadUInt16BigEndian(data, count, ref bits);
+        value = (short)bits; return success;
+    }
+    public static bool TryWriteInt16BigEndian(byte* data, nuint count, short value) nothrow
+        => TryWriteUInt16BigEndian(data, count, (ushort)value);
+
+    public static bool TryReadInt32LittleEndian(readonly(byte)* data, nuint count, ref int value) nothrow
+    {
+        uint bits = (uint)0;
+        bool success = TryReadUInt32LittleEndian(data, count, ref bits);
+        value = (int)bits; return success;
+    }
+    public static bool TryWriteInt32LittleEndian(byte* data, nuint count, int value) nothrow
+        => TryWriteUInt32LittleEndian(data, count, (uint)value);
+
+    public static bool TryReadInt32BigEndian(readonly(byte)* data, nuint count, ref int value) nothrow
+    {
+        uint bits = (uint)0;
+        bool success = TryReadUInt32BigEndian(data, count, ref bits);
+        value = (int)bits; return success;
+    }
+    public static bool TryWriteInt32BigEndian(byte* data, nuint count, int value) nothrow
+        => TryWriteUInt32BigEndian(data, count, (uint)value);
+
+    public static bool TryReadInt64LittleEndian(readonly(byte)* data, nuint count, ref long value) nothrow
+    {
+        ulong bits = (ulong)0;
+        bool success = TryReadUInt64LittleEndian(data, count, ref bits);
+        value = (long)bits; return success;
+    }
+    public static bool TryWriteInt64LittleEndian(byte* data, nuint count, long value) nothrow
+        => TryWriteUInt64LittleEndian(data, count, (ulong)value);
+
+    public static bool TryReadInt64BigEndian(readonly(byte)* data, nuint count, ref long value) nothrow
+    {
+        ulong bits = (ulong)0;
+        bool success = TryReadUInt64BigEndian(data, count, ref bits);
+        value = (long)bits; return success;
+    }
+    public static bool TryWriteInt64BigEndian(byte* data, nuint count, long value) nothrow
+        => TryWriteUInt64BigEndian(data, count, (ulong)value);
+
     private static ulong Read(readonly(byte)* data, nuint width, bool littleEndian) nothrow
     {
         ulong value = 0ul;

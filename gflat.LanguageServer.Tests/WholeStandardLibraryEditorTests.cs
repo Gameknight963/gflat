@@ -5,6 +5,33 @@ namespace gflat.LanguageServer.Tests;
 
 public class WholeStandardLibraryEditorTests
 {
+    [Fact]
+    public void BuildingTheLibraryEditorIndexStaysWithinAnAllocationBudget()
+    {
+        string directory = Path.Combine(AppContext.BaseDirectory, "StandardLibrary");
+        var sources = Directory.GetFiles(directory, "*.gf", SearchOption.AllDirectories)
+            .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
+        sources.Add(new SourceFile(Path.GetFullPath("std-editor/allocation.gf"), """
+            using std;
+            int main() {
+                Vector<int> values = new(); values.Add(42);
+                HashMap<String,int> map = new(); map.Add(s"key",42);
+                String key = s"key"; map.Find(&key);
+                return values[0] - 42;
+            }
+            """));
+        var snapshot = new AnalysisSnapshot(sources, new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        var model = new EditorModel(snapshot, sources);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        GC.KeepAlive(model);
+        // The previous index allocated almost 900 MB through repeated symbol
+        // sorting and qualified-name construction. Leave ample room for runtime
+        // differences and library growth without using a wall-clock assertion.
+        Assert.InRange(allocated, 0L, 512L * 1024 * 1024);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

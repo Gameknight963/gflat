@@ -26,6 +26,37 @@ the abstracted memory hooks; libc remains an unconditional dependency for now.
 `Console/ConsoleString.gf` adds the optional owning-string conveniences. Referencing
 `std/std.gfproj` includes both.
 
+`Console/StandardWriters.gf` adds the read-only `Console::Out` and
+`Console::Error` namespace properties, exposing borrowed process-lifetime
+`ITextWriter*` values. Their getters are `nothrow`. They accept counted writes,
+including embedded zeros, and can be passed directly to formatting APIs without
+constructing an intermediate String:
+
+```csharp
+using std;
+int main()
+{
+    int value = 42;
+    value.Format(Console::Out);
+    Console::Error.Write("warning", 7);
+    Console::Flush();
+    Console::FlushError();
+    return 0;
+}
+```
+
+These pointers borrow private static writer values; never delete or explicitly
+destroy them. No caller-managed lifetime or heap allocation is involved.
+Each write resolves the current standard stream, so existing CRT redirection is
+respected. `Flush()` flushes stdout and `FlushError()` flushes stderr; write and
+flush failures throw `std::IOException`. A multi-write formatting operation may
+already have produced partial output before a failure. Separate formatting calls
+can interleave across threads according to libc's stream synchronization.
+
+The standard-stream accessor bridge in `Runtime/Stdio.cpp` exposes stdin, stdout,
+and stderr because these are C macros rather than portable external variables.
+The actual writer behavior remains gflat code.
+
 `Console/Writer.gf` adds `Console::Writer`, an `ITextWriter` adapter borrowing
 stdout. Pass its address to formatting functions to stream bytes without an
 intermediate string. It does not own or close stdout; call `Console::Flush()`

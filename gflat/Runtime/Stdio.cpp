@@ -3,4 +3,5 @@
 extern "C" {
 void* __gflat_stdio_stdin() noexcept { return stdin; }
 void* __gflat_stdio_stdout() noexcept { return stdout; }
+void* __gflat_stdio_stderr() noexcept { return stderr; }
 }

@@ -179,6 +179,18 @@ the source or output can leave a partially consumed line; no rollback is
 promised. Reading uses libc's existing stream buffering, with a 256-byte stack
 chunk for batched writer calls and no additional gflat heap allocation.
 
+### Binary integers
+
+`File/FileBinary.gf` supplies `std::FileBinary`, borrowing `File*` streams. Its
+`ReadUInt16LittleEndian`, `ReadUInt32LittleEndian`, and `ReadUInt64LittleEndian`
+methods read fixed-width unsigned values; the corresponding `BigEndian` methods
+use network byte order. Matching `WriteUInt16/32/64LittleEndian` and
+`WriteUInt16/32/64BigEndian` methods write these representations. Each operation
+uses an eight-byte stack buffer and works independently of host byte order,
+alignment, pointer width, and the C runtime's `long` size. Truncation and IO
+errors throw `IOException`, with the same partial-progress behavior as
+`ReadExactly` and `Write`. Writes do not flush or close the stream.
+
 ## Managed memory
 
 `GC.gf` defines `std::TracingCollector`, a single-threaded, non-moving collector

@@ -214,7 +214,22 @@ int main()
 
 `examples/search` is a small command-line line-search tool using this API.
 
-### Owning text conveniences
+### Owning binary and text conveniences
+
+`File/FileBytes.gf` adds `std::FileBytes` for owning binary data, requiring core
+`Vector`, `Span`, and their enumerable contracts, but no String or GC sources.
+`ReadAll(path)` returns a `Vector<byte>` owned by the caller. Reads use a stack
+chunk and geometric vector growth; an empty file returns an empty vector without
+allocating. Embedded zeros and all byte values are preserved, with no terminator,
+encoding conversion, or BOM handling. Allocation/read failures release the partial
+vector and close the file before propagating.
+
+`WriteAll(path, data, count)` replaces a file and
+`AppendAll(path, data, count)` appends, taking counted `readonly(byte)*` data.
+Zero count still creates/opens the file. Both close explicitly to report delayed
+write errors. A write failure can leave partial output; these are not atomic
+file-replacement operations. Caller-buffer code can continue using `File::Read`
+and `File::Write` directly without the owning convenience source.
 
 `File/FileText.gf` adds `std::FileText`, requiring the core `String` facilities.
 `FileText::ReadAll(path)` returns an owning `String`; embedded zeros are retained.

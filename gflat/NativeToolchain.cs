@@ -125,10 +125,10 @@ public static class NativeToolchain
             args.Add("-g");
             if (OperatingSystem.IsWindows()) args.AddRange(["-gcodeview", "-Xlinker", "/DEBUG:FULL", "-Xlinker", "/PDB:" + Path.ChangeExtension(Path.GetFullPath(outputPath), ".pdb")]);
         }
-        // MSVC's runtime lacks helpers such as __divti3/__modti3 used for
-        // 128-bit operations. Let this Clang installation select its matching
-        // compiler-rt builtins; ordinary-width programs keep the default runtime.
-        if (OperatingSystem.IsWindows() && System.Text.RegularExpressions.Regex.IsMatch(ir, @"\bi128\b"))
+        // MSVC lacks the helpers for wide division and float conversions.
+        // Wide comparisons, bit operations, and unused interface implementations
+        // do not by themselves require Clang's compiler-rt library.
+        if (OperatingSystem.IsWindows() && RequiresWideIntegerRuntime(ir))
             args.Add("--rtlib=compiler-rt");
         bool exceptions = ir.Contains("@__gflat_eh_", StringComparison.Ordinal);
         bool stdio = ir.Contains("@__gflat_stdio_", StringComparison.Ordinal);
@@ -145,6 +145,15 @@ public static class NativeToolchain
         if (OperatingSystem.IsLinux() && System.Text.RegularExpressions.Regex.IsMatch(ir, @"(?m)^\s*%[^\r\n]*=\s*frem\b"))
             args.Add("-lm");
         return Run(compiler, args, 60000);
+    }
+
+    internal static bool RequiresWideIntegerRuntime(string ir)
+    {
+        if (!ir.Contains("i128", StringComparison.Ordinal)) return false;
+        const string instruction = @"(?m)^\s*%[^=\r\n]+\s*=\s*";
+        return System.Text.RegularExpressions.Regex.IsMatch(ir, instruction + @"(?:sdiv|udiv|srem|urem)\s+(?:exact\s+)?i128\b") ||
+            System.Text.RegularExpressions.Regex.IsMatch(ir, instruction + @"(?:sitofp|uitofp)\s+i128\b") ||
+            System.Text.RegularExpressions.Regex.IsMatch(ir, instruction + @"(?:fptosi|fptoui)\s+[^\r\n;]*\bto\s+i128\b");
     }
 
     private static void AddUnusedCodeElimination(List<string> arguments)

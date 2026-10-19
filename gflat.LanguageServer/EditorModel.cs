@@ -397,9 +397,11 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
-        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with")) return false;
+        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with" or "var")) return false;
         foreach (var syntax in nodes[path])
         {
+            if (token.Text == "var" && syntax.Node is VariableDeclaration { IsTypeInferred: true } &&
+                tokens[path].FirstOrDefault(t => t.Start >= syntax.Span.Start && t.Text == "var")?.Start == token.Start) return true;
             if (token.Text == "this" && syntax.Node is Parameter { IsExtensionReceiver: true } && token.Start == syntax.Span.Start) return true;
             if (token.Start < syntax.Span.Start || token.End >= syntax.Span.Start + syntax.Span.Length) continue;
             if (token.Text == "with" && syntax.Node is NewExpression { Collector: not null } creation &&
@@ -472,7 +474,7 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "ref", "copy", "const", "expect", "weak", "replace"];
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof", "var"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "ref", "copy", "const", "expect", "weak", "replace"];
             foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly", "managed" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
             if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)

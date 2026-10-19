@@ -3430,6 +3430,17 @@ namespace gflat
         public void Visit(VariableDeclaration node)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
+            bool inferredInitializer = node.IsTypeInferred;
+            if (inferredInitializer)
+            {
+                if (node.Initializer == null)
+                    throw new TypeCheckException("An inferred local requires an initializer", node.Span);
+                node.Initializer.Accept(this);
+                var inferred = ResolveAlias(GetType(node.Initializer));
+                if (inferred is NamedTypeExpression { Name: "void" or "null" or "<null>" })
+                    throw new TypeCheckException("An inferred local requires an initializer with a concrete value type", node.Initializer.Span);
+                node.Type = inferred;
+            }
             TypeExpression varType = ResolveAlias(node.Type);
             if (node.IsConst && RequiresCopy(varType))
                 throw new TypeCheckException("Constants cannot contain values with nontrivial copying or destruction", node.Line);
@@ -3444,7 +3455,7 @@ namespace gflat
                 throw new TypeCheckException("An array with destructor-bearing elements requires an initializer; use default(Type) for zero-initialized elements", node.Line);
             if (node.Initializer != null)
             {
-                if (!precheckedForeachInitializers.Remove(node)) node.Initializer.Accept(this);
+                if (!inferredInitializer && !precheckedForeachInitializers.Remove(node)) node.Initializer.Accept(this);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
 
                 varType = InferArrayStorageType(varType, node.Initializer, initType);

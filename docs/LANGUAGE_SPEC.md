@@ -176,6 +176,24 @@ Enums are distinct integral types, optionally with an underlying type such as `u
 
 Enum storage currently supports integer underlying types up to 64 bits; `extralong` enum storage is not yet supported. Each member value, including an automatically incremented value, must fit the selected underlying type. Different member names may share the same numeric value.
 
+## Inferred locals
+
+`var name = expression;` infers a local's concrete type from its initializer.
+The initializer is evaluated once and ordinary copy, move, readonly, nullability,
+and destructor rules apply. This does not introduce a dynamic type. `var` is
+contextual in a local declaration; fields, parameters, and return types still
+require explicit types. Missing initializers, bare null, and void expressions
+are rejected.
+
+```csharp
+int main() {
+    var value = 40;
+    var pointer = &value;
+    *pointer += 2;
+    return value;
+}
+```
+
 ## Generic interfaces
 
 Interfaces can declare type parameters using the same syntax as classes and

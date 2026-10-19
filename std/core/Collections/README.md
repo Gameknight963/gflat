@@ -64,7 +64,9 @@ allocation. Put effects in `ForEach`, rather than relying on a selector running.
 The built-in source views and operators do not allocate. A callback, a custom
 source or element's copy constructor, or materializing a vector can allocate.
 Callback signatures use ordinary
-function pointers; capturing closures are not implemented.
+function pointers; capturing closures are not implemented. For owning value
+parameters such as `String`, use a named function: lambda parameters currently
+must borrow those values through pointers.
 
 ## Ownership
 

@@ -98,6 +98,7 @@ int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new^ 
     $collections = Join-Path $extracted 'collections.gf'
     @'
 using std;
+int WordLength(String word) => (int)word.Length;
 int main() {
     Vector<String> words = new Vector<String>();
     words.Add(s"abc");
@@ -108,11 +109,14 @@ int main() {
     foreach (readonly(String) word in words.AsReadOnly()) {
         if (word.Data[0] != 'a') return 2;
     }
+    var lengths = words.AsEnumerable().Select(WordLength).Take(1).ToVector();
+    if (lengths.Count != 1 || lengths[0] != 3) return 3;
     return 0;
 }
 '@ | Set-Content -LiteralPath $collections
     $bundledStd = Join-Path $extracted 'Sdk/std/core'
-    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Vector.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'IStringConvertable.gf') --run -o (Join-Path $extracted 'collections.exe')
+    $querySources = @(Get-ChildItem -LiteralPath (Join-Path $bundledStd 'Collections') -Filter '*.gf' -File | ForEach-Object FullName)
+    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Vector.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @querySources --run -o (Join-Path $extracted 'collections.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }

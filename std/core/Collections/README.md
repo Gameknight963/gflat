@@ -55,6 +55,10 @@ Each enumeration starts a fresh iterator. Operator order matters:
 `Take(3).Where(test)` examines at most three input elements;
 `Where(test).Take(3)` looks for three matches.
 `Take(0)` never advances its input.
+Starting that enumeration still constructs the input iterator, so a custom
+`GetEnumerator()` or iterator constructor can allocate or throw even for
+`Take(0)`. Any successfully constructed iterator is destroyed when enumeration
+ends, including before the first element.
 
 `Select` does not cache projected values. Reading its `Current` twice invokes
 the selector twice. `Any` and `Count` need not invoke a selector at all. This

@@ -57,6 +57,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 ## Runnable examples
 
 - [Word count](../examples/word-count/README.md): streamed input and owning hash keys.
+- [File checksums](../examples/checksum/README.md): streaming CRC32 and Adler32 over binary files.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

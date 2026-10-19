@@ -109,6 +109,57 @@ public sealed class ConsoleStandardWriterTests
         finally { Directory.Delete(directory, true); }
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void WindowsTemporaryStderrBufferFlushFailureIsNotReportedAsSuccessfulWrite(int optimization)
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        var result = CompilerTestHelper.Run(Sources("""
+            extern void* __gflat_stdio_stderr();
+            extern int _fileno(void* stream);
+            extern nint _get_osfhandle(int descriptor);
+            extern int CloseHandle(void* handle);
+            extern int ferror(void* stream);
+            int main() {
+                void* stream = __gflat_stdio_stderr();
+                // Keep the CRT descriptor valid but make its underlying OS handle
+                // unwritable. UCRT's temporary stderr buffer flush then fails.
+                if (CloseHandle((void*)_get_osfhandle(_fileno(stream))) == 0) return 1;
+                try { Console::Error.Write("not delivered", 13); return 2; }
+                catch (std::IOException* failure) { }
+                if (ferror(stream) == 0) return 3;
+                return 0;
+            }
+            """), optimization);
+        Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
+    }
+
+    [Fact]
+    public void LinuxLineBufferedWritersReportFailureEvenWhenFwriteReturnsFullCount()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        var result = CompilerTestHelper.Run(Sources("""
+            extern void* __gflat_stdio_stdout();
+            extern void* __gflat_stdio_stderr();
+            extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+            extern int setvbuf(void* stream, char* buffer, int mode, nuint size);
+            extern int fclose(void* stream);
+            int main() {
+                void* output = __gflat_stdio_stdout(); void* error = __gflat_stdio_stderr();
+                if (freopen("/dev/full", "wb", output) == null || freopen("/dev/full", "wb", error) == null) return 1;
+                char[128] outputBuffer; char[128] errorBuffer;
+                // _IOLBF is 1 on the Linux libc targets exercised by CI.
+                if (setvbuf(output, outputBuffer, 1, 128) != 0 || setvbuf(error, errorBuffer, 1, 128) != 0) return 2;
+                try { Console::Write("x\n", 2); return 3; } catch (std::IOException* failure) { }
+                try { Console::Error.Write("y\n", 2); return 4; } catch (std::IOException* failure) { }
+                fclose(output); fclose(error);
+                return 0;
+            }
+            """));
+        Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
+    }
+
     [Fact]
     public void LinuxBufferedErrorFlushReportsDelayedWriteFailure()
     {

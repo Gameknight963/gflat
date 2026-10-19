@@ -135,7 +135,8 @@ public struct File : ITextWriter
     {
         if (handle == null) throw new IOException("File is closed");
         if (count == 0) return;
-        if (file_detail::fwrite(data, 1, count, handle!) != count)
+        // Buffered libc implementations may return count despite a flush error.
+        if (file_detail::fwrite(data, 1, count, handle!) != count || file_detail::ferror(handle!) != 0)
             throw new IOException("File write failed");
     }
 

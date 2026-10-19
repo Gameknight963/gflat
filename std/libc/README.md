@@ -52,6 +52,10 @@ respected. `Flush()` flushes stdout and `FlushError()` flushes stderr; write and
 flush failures throw `std::IOException`. A multi-write formatting operation may
 already have produced partial output before a failure. Separate formatting calls
 can interleave across threads according to libc's stream synchronization.
+Nonempty writes check both the returned byte count and the stream error indicator:
+some libc buffering paths report a full byte count despite an internal flush
+failure. This does not force a flush; buffered failures can still appear only at
+an explicit flush or close.
 
 The standard-stream accessor bridge in `Runtime/Stdio.cpp` exposes stdin, stdout,
 and stderr because these are C macros rather than portable external variables.
@@ -198,6 +202,10 @@ int main()
   when its `Write` method runs.
 - `Write(data, count)` preserves embedded zero bytes; `Write(text)` stops at
   the first zero. Partial IO may already have occurred when an error is thrown.
+  Nonempty writes also reject a set libc stream error indicator, even if libc
+  reports the full count. After handling an IO error, use `ClearError` only when
+  intentionally retrying after correcting the underlying problem; writes do not
+  automatically clear errors or retry partially written data.
 - `WriteLine()` writes one LF byte on every platform. C-string and counted
   overloads write their contents followed by LF, with no implicit flush.
 - `File::Remove(path)` and `File::Rename(source, destination)` throw `IOException`

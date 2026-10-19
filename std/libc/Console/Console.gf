@@ -11,7 +11,8 @@ void Write(readonly(char*) message)
 void Write(readonly(char*) data, nuint length)
 {
     if (length == 0) return;
-    if (fwrite((readonly(void)*)data, 1, length, __gflat_stdio_stdout()) != length)
+    void* stream = __gflat_stdio_stdout();
+    if (fwrite((readonly(void)*)data, 1, length, stream) != length || ferror(stream) != 0)
         throw new std::IOException("Console write failed");
 }
 

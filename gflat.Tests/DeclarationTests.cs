@@ -17,6 +17,11 @@ public class DeclarationTests
         => Assert.Contains("incompatible native signatures", Assert.Throws<TypeCheckException>(() => Compiler.Emit(
             "namespace A { extern int abs(int value); } namespace B { extern long abs(long value); } int main() => 0;")).Message);
 
+    [Fact]
+    public void ErasedCallbackStorageDoesNotHideConflictingForeignSignatures()
+        => Assert.Contains("incompatible native signatures", Assert.Throws<TypeCheckException>(() => Compiler.Emit(
+            "namespace A { extern void Run(int(int)* callback); } namespace B { extern void Run(int(long)* callback); } int main() => 0;")).Message);
+
     [Theory]
     [InlineData("int Missing();")]
     [InlineData("int Missing<T>();")]

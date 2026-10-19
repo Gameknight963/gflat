@@ -52,8 +52,8 @@ public sealed class AbiScalarInteropTests
         Assert.Contains($"define {result} @gflat$Identity({parameter} %value)", ir);
         Assert.Contains($"call {result} @Native({parameter} ", ir);
         Assert.Matches(@"call " + Regex.Escape(result) + @" %[^\s(]+\(" + Regex.Escape(parameter) + " ", ir);
-        // Extension attributes describe call boundaries, not function-pointer types.
-        Assert.Contains($"{llvm} ({llvm})*", ir);
+        // Pointer storage is erased; call sites retain scalar ABI attributes.
+        Assert.Contains($"@gflat$Invoke(i8* %callback, {parameter} %value)", ir);
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public sealed class AbiScalarInteropTests
             int^ Invoke(int^(int^,bool)* callback,int^ item,bool flag)=>callback(item,flag);
             """);
         Assert.Contains("define void @gflat$Forward(i32* %item, i1 zeroext %flag, i32** %gc.result)", ir);
-        Assert.Contains("void (i32*, i1, i32**)* %callback", ir);
+        Assert.Contains("@gflat$Invoke(i8* %callback, i32* %item, i1 zeroext %flag, i32** %gc.result)", ir);
         Assert.Matches(@"(?:call|invoke) void %[^\s(]+\(i32\* %[^,]+, i1 zeroext %[^,]+, i32\*\* %", ir);
     }
 }

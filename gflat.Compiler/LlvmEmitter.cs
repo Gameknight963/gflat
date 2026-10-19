@@ -881,12 +881,13 @@ public partial class LlvmEmitter : IVisitor
                 return $"[{arr.Size.Value} x {elemType}]";
             return elemType + "*";
         }
-        if (type is FunctionPointerTypeExpression fnPtr)
+        if (type is FunctionPointerTypeExpression)
         {
-            string ret = EmitFunctionReturnType(fnPtr.ReturnType);
-            string paramTypes = string.Join(", ", fnPtr.ParameterTypes.Select(EmitParamType));
-            paramTypes = WithManagedResultParameter(fnPtr.ReturnType, paramTypes);
-            return $"{ret} ({paramTypes})*";
+            // Erase the signature in function-pointer storage. Embedding a typed
+            // signature here rejects callbacks taking an enclosing or later
+            // declared aggregate by value, even when its final layout is valid.
+            // Call emission still uses the checked signature and return ABI.
+            return "i8*";
         }
 
         throw new NotImplementedException($"Type {type.GetType().Name} not yet supported");
@@ -2060,6 +2061,27 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(OperatorDeclaration node) => throw new NotImplementedException();
 
     private readonly Dictionary<string, string> _nativeExternDeclarations = new();
+    private readonly Dictionary<string, ExternDeclaration> _nativeExternDefinitions = new();
+
+    private string NativeSignatureKey(TypeExpression type)
+    {
+        type = _typeChecker.ResolveAlias(type);
+        return type switch {
+            FunctionPointerTypeExpression function => "fn(" + string.Join(",", function.ParameterTypes.Select(NativeSignatureKey)) + ")->" + NativeSignatureKey(function.ReturnType),
+            PointerTypeExpression pointer when HasCallbackSignature(pointer.Inner) => NativeSignatureKey(pointer.Inner) + "*",
+            ReferenceTypeExpression reference when HasCallbackSignature(reference.Inner) => NativeSignatureKey(reference.Inner) + "*",
+            ArrayTypeExpression array when HasCallbackSignature(array.ElementType) => "[" + array.Size + "x" + NativeSignatureKey(array.ElementType) + "]",
+            _ => EmitType(type)
+        };
+    }
+
+    private bool HasCallbackSignature(TypeExpression type) => _typeChecker.ResolveAlias(type) switch {
+        FunctionPointerTypeExpression => true,
+        PointerTypeExpression pointer => HasCallbackSignature(pointer.Inner),
+        ReferenceTypeExpression reference => HasCallbackSignature(reference.Inner),
+        ArrayTypeExpression array => HasCallbackSignature(array.ElementType),
+        _ => false
+    };
 
     public void Visit(ExternDeclaration node)
     {
@@ -2071,11 +2093,15 @@ public partial class LlvmEmitter : IVisitor
         string declaration = $"declare {returnType} @{node.Name}({parameters})";
         if (_nativeExternDeclarations.TryGetValue(node.Name, out string? existing))
         {
-            if (existing != declaration)
+            var previous = _nativeExternDefinitions.GetValueOrDefault(node.Name);
+            if (existing != declaration || previous != null &&
+                (NativeSignatureKey(previous.ReturnType) != NativeSignatureKey(node.ReturnType) ||
+                 !previous.Parameters.Select(p => NativeSignatureKey(p.Type)).SequenceEqual(node.Parameters.Select(p => NativeSignatureKey(p.Type)))))
                 throw new gflat.CompileExceptions.TypeCheckException($"External symbol '{node.Name}' has incompatible native signatures", node.Span);
             return;
         }
         _nativeExternDeclarations[node.Name] = declaration;
+        _nativeExternDefinitions[node.Name] = node;
         EmitGlobal(declaration);
     }
 

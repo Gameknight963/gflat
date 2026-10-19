@@ -57,6 +57,18 @@ public sealed class StaticCallbackTests
     }
 
     [Fact]
+    public void NativeShutdownCallbackSignatureIsCheckedBeforePointerErasure()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit("""
+            extern int atexit(int(int)* callback);
+            struct Owner { public Owner() {} ~Owner() {} }
+            Owner owner = new Owner();
+            int main() => 0;
+            """));
+        Assert.Contains("atexit signature", error.Message);
+    }
+
+    [Fact]
     public void CompatibleNativeShutdownDeclarationIsSharedWithStaticCleanup()
     {
         var result = CompilerTestHelper.Run("""

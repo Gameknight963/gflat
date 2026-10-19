@@ -4,7 +4,7 @@ namespace gflat.Tests;
 
 public class StandardSpanTests
 {
-    private static SourceFile[] Sources(string program) => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Span.gf" }
+    private static SourceFile[] Sources(string program) => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Span.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf" }
         .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
         .Append(new SourceFile("main.gf", program)).ToArray();
     private static void Run(string program) => Assert.Equal(0, CompilerTestHelper.Run(Sources(program)).ExitCode);

@@ -1,7 +1,7 @@
 namespace std;
 
 // Owns UTF-8 bytes. Length and Capacity exclude the trailing null byte.
-struct String : ITextWriter, IFormattable, IStringConvertable
+struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquatable<String>, IComparable<String>
 {
     private char* data;
     private nuint length;
@@ -124,6 +124,23 @@ struct String : ITextWriter, IFormattable, IStringConvertable
         if (length != other.Length) return false;
         for (nuint i = 0; i < length; i++) if (data[i] != other.Data[i]) return false;
         return true;
+    }
+
+    public readonly nuint GetHashCode() => Hashing::Bytes(data, length);
+
+    // Ordinal UTF-8 byte order, independent of locale and null termination.
+    public readonly int CompareTo(readonly(String)* other)
+    {
+        nuint limit = length;
+        if (other.Length < limit) limit = other.Length;
+        for (nuint i = 0; i < limit; i++)
+        {
+            if ((byte)data[i] < (byte)other.Data[i]) return -1;
+            if ((byte)data[i] > (byte)other.Data[i]) return 1;
+        }
+        if (length < other.Length) return -1;
+        if (length > other.Length) return 1;
+        return 0;
     }
 
     public char this[nuint index]

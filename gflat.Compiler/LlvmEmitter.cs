@@ -4377,6 +4377,13 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(CastExpression node)
     {
+        if (TryContextualIntegerLiteral(node.Operand, node.TargetType, out string integerLiteral))
+        {
+            // The literal already has the destination representation. Converting
+            // again through its default integer type would truncate wide values.
+            Push(integerLiteral);
+            return;
+        }
         EmitValueForTarget(node.Operand, node.TargetType);
         string val = Pop();
         TypeExpression srcType = _typeChecker.GetType(node.Operand);

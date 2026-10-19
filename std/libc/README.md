@@ -125,7 +125,9 @@ int main()
   throw. `WriteByte(char)` writes exactly one byte, including zero.
 - `CopyTo(destination, buffer, capacity)` borrows a `File*` and caller-owned
   buffer, returning the copied byte count. It starts at the current position,
-  leaves both streams open, and rejects zero capacity and copying to itself.
+  leaves both streams open, and rejects zero capacity and the same `File`
+  instance as both source and destination. Separate handles to the same
+  underlying file are not detected; callers must avoid that combination.
   `CopyTo(destination)` uses a 4096-byte stack buffer. Callers must not modify
   either stream concurrently. Copying is not transactional: failures can leave a
   partial destination, and the source may have advanced.

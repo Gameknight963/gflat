@@ -61,6 +61,29 @@ public bool TryFirst<T, S, E>(this Enumerable<T, S, E> source, ref T result)
     return true;
 }
 
+// Do not replace result until every element and the final MoveNext succeeded.
+public bool TryLast<T, S, E>(this Enumerable<T, S, E> source, ref T result)
+{
+    E iterator = source.GetEnumerator();
+    if (!iterator.MoveNext()) return false;
+    while (true)
+    {
+        T last = iterator.Current;
+        if (!iterator.MoveNext()) { result = move last; return true; }
+    }
+}
+
+// Empty and multiple-element sequences both leave result unchanged.
+public bool TrySingle<T, S, E>(this Enumerable<T, S, E> source, ref T result)
+{
+    E iterator = source.GetEnumerator();
+    if (!iterator.MoveNext()) return false;
+    T single = iterator.Current;
+    if (iterator.MoveNext()) return false;
+    result = move single;
+    return true;
+}
+
 public void ForEach<T, S, E>(this Enumerable<T, S, E> source, void(T)* action)
 {
     E iterator = source.GetEnumerator();

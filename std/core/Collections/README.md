@@ -48,6 +48,8 @@ Its callback parameter types retain that qualification, for example
 | `Count()` | Count elements without reading `Current`; throw on count overflow. |
 | `First()` / `Last()` / `Single()` | Return a value; throw if empty. `Single` also rejects multiple elements. |
 | `TryFirst(ref result)` | Return false without changing `result` if empty. |
+| `TryLast(ref result)` | Return the last value, or false without changing `result` if empty. |
+| `TrySingle(ref result)` | Return the only value, or false without changing `result` if empty or multiple. |
 | `Aggregate(seed, function)` | Fold values into an accumulator, returning the seed if empty. |
 | `ForEach(action)` | Visit every element. |
 | `ToVector()` | Copy values into a new owning vector. |
@@ -87,6 +89,13 @@ Elements follow ordinary value semantics. Reading a `String` element copies it;
 `ToVector()` creates independent owning strings. Reading a pointer copies its
 address. The query and the resulting vector do **not** delete its pointee.
 Managed pointer elements keep their normal collector behavior.
+
+`TryLast` and `TrySingle` assign their output only after iteration establishes
+the answer. A throwing iterator, callback, or element copy leaves that output
+unchanged; these errors still propagate normally. `TrySingle` stops after finding
+a second element and does not read its `Current` value. Successful outputs follow
+ordinary copying rules and own their independent resources, as with `Last` and
+`Single`.
 
 Iterators are values. Their destructors and owned fields are cleaned up on
 completion, early return, `break`, and exceptions. A custom iterator returned as

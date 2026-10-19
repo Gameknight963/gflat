@@ -241,6 +241,54 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         for (nuint i = 0; i < length; i++) if (data[i] == oldValue) data[i] = newValue;
     }
 
+    // Replace left-to-right nonoverlapping byte sequences. Build the result
+    // before modifying this string, so both inputs may borrow its storage.
+    public void Replace(readonly(char)* oldText, nuint oldCount, readonly(char)* newText, nuint newCount)
+    {
+        if (oldCount == 0) throw new Exception("String replacement pattern is empty");
+        nuint matches = 0;
+        nuint position = 0;
+        nuint found = this.IndexOf(oldText, oldCount, position);
+        while (found != NotFound)
+        {
+            matches++;
+            position = found + oldCount;
+            found = this.IndexOf(oldText, oldCount, position);
+        }
+        if (matches == 0) return;
+        nuint required = length;
+        if (newCount > oldCount)
+        {
+            nuint increase = newCount - oldCount;
+            nuint maximum = (nuint)0 - (nuint)1;
+            if (matches > (maximum - 1 - length) / increase) throw new Exception("String length overflow");
+            required += matches * increase;
+        }
+        else required -= matches * (oldCount - newCount);
+        String result = new();
+        result.Reserve(required);
+        position = 0;
+        found = this.IndexOf(oldText, oldCount, position);
+        while (found != NotFound)
+        {
+            result.AppendLiteral(data + position, found - position);
+            result.AppendLiteral(newText, newCount);
+            position = found + oldCount;
+            found = this.IndexOf(oldText, oldCount, position);
+        }
+        result.AppendLiteral(data + position, length - position);
+        *this = move result;
+    }
+
+    public void Replace(readonly(char)* oldText, readonly(char)* newText)
+    {
+        nuint oldCount = 0;
+        while (oldText[oldCount] != '\0') oldCount++;
+        nuint newCount = 0;
+        while (newText[newCount] != '\0') newCount++;
+        this.Replace(oldText, oldCount, newText, newCount);
+    }
+
     private static bool IsAsciiWhitespace(char value)
         => value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == (char)11 || value == (char)12;
 

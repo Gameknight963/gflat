@@ -144,4 +144,61 @@ public class StandardStringOperationsTests
         // Original string, snapshot, and exception storage are each released.
         Assert.Equal("AAAFFF",result.StandardOutput);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void CountedReplacementMatchesDotNetEvenWhenBothPatternsBorrowSelf(int optimization)
+    {
+        const string original="ab\0aba";
+        var random=new Random(173);
+        var body=new System.Text.StringBuilder("using std; int main(){");
+        for(int test=0;test<48;test++)
+        {
+            int oldStart=random.Next(original.Length), oldCount=random.Next(1,original.Length-oldStart+1);
+            int newStart=random.Next(original.Length+1), newCount=random.Next(original.Length-newStart+1);
+            string expected=original.Replace(original.Substring(oldStart,oldCount),original.Substring(newStart,newCount),StringComparison.Ordinal);
+            string literal="\""+expected.Replace("\0","\\0")+"\"";
+            body.Append($$"""
+                { String text=String::From("ab\0aba",6);
+                  text.Replace(text.Data+{{oldStart}},{{oldCount}},text.Data+{{newStart}},{{newCount}});
+                  if(text.Length!={{expected.Length}} || text.Data[text.Length]!='\0') return 1;
+                  for(nuint i=0;i<text.Length;i++) if(text[i]!={{literal}}[i]) return 2; }
+                """);
+        }
+        body.Append("""
+            String repeated=s"aaaaa"; repeated.Replace("aa","b");
+            if(repeated.Length!=3 || !repeated.StartsWith("bba")) return 3;
+            repeated.Replace("bba",""); if(!repeated.IsEmpty || repeated.Data[0]!='\0') return 4;
+            String unchanged=s"unchanged"; readonly(char)* old=unchanged.Data;
+            unchanged.Replace("not present","x");
+            if(unchanged.Data!=old) return 5;
+            int caught=0; try { unchanged.Replace("","x"); } catch { caught++; }
+            try { unchanged.Replace("u",1,"x",(nuint)0-(nuint)1); } catch { caught++; }
+            if(caught!=2 || !unchanged.StartsWith("unchanged")) return 6;
+            return 0;}
+            """);
+        Assert.Equal(0,CompilerTestHelper.Run(Sources(body.ToString()),optimization).ExitCode);
+    }
+
+    [Fact]
+    public void FailedTextReplacementPreservesOriginalStorage()
+        => Run("""
+            using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
+            namespace Memory {
+                public replace void*? Allocate(nuint size) {
+                    if(size==9) return null;
+                    return malloc(size);
+                }
+                public replace void Free(void* storage) { free(storage); }
+            }
+            int main() {
+                String text=s"abcabc"; readonly(char)* old=text.Data;
+                try { text.Replace("bc","XYZ"); return 1; } catch (BadAllocException* error) { }
+                if(text.Data!=old || text.Length!=6 || text.Capacity!=6 || !text.StartsWith("abcabc") || text.Data[6]!='\0') return 2;
+                return 0;
+            }
+            """);
 }

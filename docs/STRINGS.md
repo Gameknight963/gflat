@@ -38,6 +38,14 @@ sufficient. Other input needs no temporary allocation. Invalid indices, length
 overflow, and allocation failure leave the original contents unchanged. As with
 all counted APIs, the input must cover the requested readable bytes.
 
+`Replace(oldText, newText)` and the counted overload
+`Replace(oldText, oldCount, newText, newCount)` replace nonoverlapping matches
+from left to right. The old pattern must be nonempty; an empty replacement
+removes matches. Inputs can borrow the original string's storage. A matching
+replacement builds a separate buffer and commits it only after success, so
+allocation failure preserves the original. If no match exists, no allocation
+or mutation occurs. Matching replacements invalidate previous storage views.
+
 Equality, comparison, and hashing use complete byte contents, including embedded
 zero bytes. Ordering is unsigned byte order, independent of locale. String does
 not require valid UTF-8; binary callers may store arbitrary bytes.

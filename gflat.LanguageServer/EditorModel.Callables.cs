@@ -20,7 +20,7 @@ public sealed partial class EditorModel
                 else if (tokens[index].Kind == TokenKind.Less && --depth == 0) { index--; break; }
             }
         }
-        return index >= 0 && tokens[index].Kind is TokenKind.Identifier or TokenKind.Base ? index : -1;
+        return index >= 0 && tokens[index].Kind is TokenKind.Identifier or TokenKind.Base or TokenKind.New ? index : -1;
     }
 
     private Symbol? SourceCallable(AstNode target) => declarations.GetValueOrDefault(target) ??
@@ -32,6 +32,26 @@ public sealed partial class EditorModel
         var bound = new Dictionary<MethodDeclaration, Symbol>(ReferenceEqualityComparer.Instance);
         foreach (var syntax in snapshot.Nodes)
         {
+            if (syntax.Node is NewExpression { IsTargetTyped: true } creation && syntax.Span.Source?.Path is { } creationPath)
+            {
+                var creationToken = tokens[creationPath].FirstOrDefault(t => t.Start == syntax.Span.Start && t.Kind == TokenKind.New);
+                string? creationOwner = TypeOwner(creation.Type, creationPath, syntax.Span.Start);
+                var creationFamily = symbols.Where(s => s.Syntax.Node is ConstructorDeclaration && s.Owner == creationOwner && Accessible(s, creationPath, syntax.Span.Start)).ToArray();
+                if (creation.Type is NamedTypeExpression creationType)
+                {
+                    var constructors = checker.GetClassByIdentity(creationType.Name)?.Constructors ?? checker.GetStructByIdentity(creationType.Name)?.Constructors;
+                    if (constructors != null)
+                        creationFamily = constructors.Select(ctor => SourceCallable(ctor) is { } sourceCtor
+                            ? sourceCtor with { BoundParameters = ctor.Parameters } : null)
+                            .OfType<Symbol>().Where(s => Accessible(s, creationPath, syntax.Span.Start)).ToArray();
+                }
+                if (creationToken != null && creationFamily.Length > 0)
+                {
+                    boundCallableFamilies[creationToken] = creationFamily;
+                    if (checker.GetResolvedConstructor(creation) is { } creationConstructor && SourceCallable(creationConstructor) is { } creationSource)
+                        boundCallableReferences[creationToken] = creationSource with { BoundParameters = creationConstructor.Parameters };
+                }
+            }
             CallExpression? call = syntax.Node as CallExpression;
             AstNode expression = call?.Callee ?? (syntax.Node is UnaryExpression { Operator: TokenKind.Ampersand } address ? address.Operand : syntax.Node);
             if (call != null && checker.GetExtensionDefinition(call) != null) continue;

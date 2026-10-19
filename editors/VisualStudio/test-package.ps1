@@ -88,8 +88,8 @@ int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) 
     $std = Join-Path $extracted 'Sdk/std'
     $managed = Join-Path $extracted 'managed.gf'
     @'
-void Drop() { int^ value = new^ int(42); }
-int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new^ int(7); GC::Collect(); return *value - 7; }
+void Drop() { int^ value = new(42); }
+int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new(7); GC::Collect(); return *value - 7; }
 '@ | Set-Content -LiteralPath $managed
     & $compiler $managed (Join-Path $std 'libc/GC.gf') (Join-Path $std 'libc/TracingCollector.gf') --optimization 2 --run -o (Join-Path $extracted 'managed.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged managed allocation/root/collector smoke test failed' }
@@ -100,7 +100,7 @@ int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new^ 
 using std;
 int WordLength(String word) => (int)word.Length;
 int main() {
-    Vector<String> words = new Vector<String>();
+    Vector<String> words = new();
     words.Add(s"abc");
     foreach (String word in words) {
         if (word.Data == words[(nuint)0].Data) return 1;

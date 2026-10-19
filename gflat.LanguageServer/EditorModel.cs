@@ -110,7 +110,7 @@ public sealed partial class EditorModel
         // must not repeatedly walk the tree on the server's message loop.
         foreach (var (path, ts) in tokens)
             for (int i = 0; i < ts.Length; i++)
-                if (ts[i].Kind == TokenKind.Identifier) references[ts[i]] = ResolveCore(path, i);
+                if (ts[i].Kind is TokenKind.Identifier or TokenKind.New) references[ts[i]] = ResolveCore(path, i);
     }
 
     private string ParameterText(Parameter p) => $"{(p.IsExtensionReceiver ? "this " : "")}{(p.IsConst ? "const " : "")}{DisplayType(p.Type)} {p.Name}" +
@@ -601,7 +601,7 @@ public sealed partial class EditorModel
             : Candidates(path, offset, nameIndex).Where(s => s.Name == ts[nameIndex].Text && s.Parameters != null).ToArray());
         if (candidates.Length == 0) return null;
         var selected = Resolve(path, nameIndex);
-        int active = Math.Max(0, Array.IndexOf(candidates, selected));
+        int active = Math.Max(0, Array.FindIndex(candidates, candidate => selected != null && candidate.Syntax == selected.Syntax));
         return new { signatures = candidates.Select(s => new {
             label = Detail(s),
             parameters = s.Parameters!.Select(p => new { label = ParameterText(p) }).ToArray(),

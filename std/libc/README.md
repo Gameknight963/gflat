@@ -16,8 +16,9 @@ currently includes both directories.
 
 `Memory/Memory.gf` supplies the automatically included weak `Memory::Allocate` and
 `Memory::Free` implementations using libc. Replace both functions to provide a
-custom allocator. This default is kept in libc even though the core library calls
-the abstracted memory hooks; libc remains an unconditional dependency for now.
+custom allocator. This default requires libc. A `NoStdLib` program can select
+individual core sources and supply its own memory hooks and native startup;
+see [the freestanding example](../../docs/FREESTANDING_CORE.md).
 
 ## Console
 
@@ -283,6 +284,14 @@ promised. Reading uses libc's existing stream buffering, with a 256-byte stack
 chunk for batched writer calls and no additional gflat heap allocation.
 
 ### Binary integers
+
+`File/FileLineSequence.gf` adds `FileLineSequence` and `.Lines()` on `File*` for
+lazy enumeration and existing query operators. Its iterator owns and reuses one
+String buffer, while the file stays borrowed and open. Each enumeration consumes
+the shared current file position; it does not reopen or rewind the file.
+`Current` borrows the current String through a readonly reference; copying a line
+or calling `ToVector()` creates independent owning values. See
+[borrowed file lines](../../docs/FILE_LINE_SEQUENCE.md).
 
 `File/FileBinary.gf` supplies `std::FileBinary`, borrowing `File*` streams. Its
 `ReadUInt16LittleEndian`, `ReadUInt32LittleEndian`, and `ReadUInt64LittleEndian`

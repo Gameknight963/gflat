@@ -6,7 +6,7 @@ public sealed class StandardFileOperationsTests
 
     private static void Run(string directory, string program, bool text = false)
     {
-        var names = new List<string> { "core/IOException.gf", "libc/File.gf" };
+        var names = new List<string> { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/File.gf" };
         if (text) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/Formatting.gf", "libc/File/FileText.gf"]);
         var files = names
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
@@ -89,11 +89,14 @@ public sealed class StandardFileOperationsTests
                     File input = File::OpenRead({{Literal(source)}});
                     char[8] buffer;
                     input.ReadExactly(buffer, 0);
-                    try { input.ReadExactly(buffer, 8); return 1; } catch (IOException* error) { }
+                    try { input.ReadExactly(buffer, 8); return 1; } catch (EndOfStreamException* error) { }
                     if (buffer[0] != 'A' || buffer[1] != '\0' || buffer[2] != 'B') return 2;
                     if (input.Read(buffer, 1) != (nuint)0) return 3;
+                    try { input.ReadExactly(buffer, 1); return 5; } catch (IOException* error) { }
                     input.Close();
-                    try { input.ReadExactly(buffer, 0); return 4; } catch (IOException* error) { }
+                    try { input.ReadExactly(buffer, 0); return 4; }
+                    catch (EndOfStreamException* error) { return 6; }
+                    catch (IOException* error) { }
                     return 0;
                 }
                 """);

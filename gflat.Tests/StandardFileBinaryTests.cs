@@ -14,7 +14,7 @@ public sealed class StandardFileBinaryTests
         {
             string source = Path.Combine(directory, "input.bin"), target = Path.Combine(directory, "output.bin");
             File.WriteAllBytes(source, input);
-            var files = new[] { "core/IOException.gf", "libc/File.gf", "libc/File/FileBinary.gf" }
+            var files = new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/File.gf", "libc/File/FileBinary.gf" }
                 .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                 .Append(new SourceFile("main.gf", program(Literal(source), Literal(target))));
             string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
@@ -78,10 +78,13 @@ public sealed class StandardFileBinaryTests
             using std;
             int main() {
                 File input = File::OpenRead({{source}});
-                try { FileBinary::ReadUInt32LittleEndian(&input); return 1; } catch (IOException* error) { }
+                try { FileBinary::ReadUInt32LittleEndian(&input); return 1; } catch (EndOfStreamException* error) { }
                 if (input.ReadByte() != -1) return 2;
+                try { FileBinary::ReadUInt16BigEndian(&input); return 5; } catch (IOException* error) { }
                 input.Close();
-                try { FileBinary::ReadUInt16BigEndian(&input); return 3; } catch (IOException* error) { }
+                try { FileBinary::ReadUInt16BigEndian(&input); return 3; }
+                catch (EndOfStreamException* error) { return 6; }
+                catch (IOException* error) { }
                 try { FileBinary::WriteUInt64BigEndian(&input, 1ul); return 4; } catch (IOException* error) { }
                 File output = File::OpenWrite({{target}}); output.Close();
                 return 0;

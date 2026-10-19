@@ -54,7 +54,7 @@ public struct File
     public void ReadExactly(char* data, nuint count)
     {
         if (this.Read(data, count) != count)
-            throw new IOException("Unexpected end of file");
+            throw new EndOfStreamException();
     }
 
     // Both files are borrowed. Copy begins at the current source position.

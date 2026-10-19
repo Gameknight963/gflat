@@ -100,7 +100,8 @@ The compiler links the small native standard-stream accessor only when reference
 ## Files
 
 `File.gf` provides a move-only owning `std::File` for binary byte IO. It needs
-`core/IOException.gf`; it does not depend on `String` or allocate a gflat buffer.
+`core/IOException.gf` and `core/EndOfStreamException.gf`; it does not depend on
+`String` or allocate a gflat buffer.
 The nullable `std::FileHandle` alias represents libc's opaque `FILE*` internally.
 It is not a Windows kernel handle, and callers must not free it through `Memory`.
 
@@ -119,7 +120,8 @@ int main()
   truncates an existing file; append creates a file when needed.
 - `Read(data, capacity)` returns the bytes read. Zero at EOF is normal; IO
   failures throw `IOException`. Reads do not add a null terminator.
-- `ReadExactly(data, count)` fills the requested region or throws `IOException`.
+- `ReadExactly(data, count)` fills the requested region or throws
+  `EndOfStreamException` on unexpected EOF. Actual read errors throw `IOException`.
   On a truncated file the available prefix has already been consumed and stored.
 - `ReadByte()` returns an integer from 0 through 255, or -1 at EOF; read errors
   throw. `WriteByte(char)` writes exactly one byte, including zero.
@@ -189,8 +191,9 @@ methods read fixed-width unsigned values; the corresponding `BigEndian` methods
 use network byte order. Matching `WriteUInt16/32/64LittleEndian` and
 `WriteUInt16/32/64BigEndian` methods write these representations. Each operation
 uses an eight-byte stack buffer and works independently of host byte order,
-alignment, pointer width, and the C runtime's `long` size. Truncation and IO
-errors throw `IOException`, with the same partial-progress behavior as
+alignment, pointer width, and the C runtime's `long` size. Truncation throws
+`EndOfStreamException`; actual IO errors throw `IOException` (the base type of
+`EndOfStreamException`), with the same partial-progress behavior as
 `ReadExactly` and `Write`. Writes do not flush or close the stream.
 
 ## Managed memory

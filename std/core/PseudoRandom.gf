@@ -1,0 +1,68 @@
+namespace std;
+
+// SplitMix64, deterministic and explicitly seeded. Not a cryptographic generator.
+// Algorithm: Sebastiano Vigna's public-domain reference, https://prng.di.unimi.it/splitmix64.c
+struct PseudoRandom
+{
+    private ulong state;
+
+    public PseudoRandom(ulong seed) { state = seed; }
+
+    public ulong NextULong()
+    {
+        state += 0x9e3779b97f4a7c15ul;
+        ulong value = state;
+        value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ul;
+        value = (value ^ (value >> 27)) * 0x94d049bb133111ebul;
+        return value ^ (value >> 31);
+    }
+
+    public uint NextUInt() => (uint)(this.NextULong() >> 32);
+
+    // Rejection removes the modulo bias when the range does not divide 2^64.
+    public ulong NextULong(ulong exclusiveMax)
+    {
+        if (exclusiveMax == 0ul) throw new Exception("Random upper bound must be positive");
+        ulong threshold = (0ul - exclusiveMax) % exclusiveMax;
+        ulong value = this.NextULong();
+        while (value < threshold) value = this.NextULong();
+        return value % exclusiveMax;
+    }
+
+    public uint NextUInt(uint exclusiveMax)
+    {
+        if (exclusiveMax == 0u) throw new Exception("Random upper bound must be positive");
+        return (uint)this.NextULong((ulong)exclusiveMax);
+    }
+
+    public int NextInt(int exclusiveMax) => this.NextInt(0, exclusiveMax);
+
+    // The interval includes inclusiveMin and excludes exclusiveMax.
+    public int NextInt(int inclusiveMin, int exclusiveMax)
+    {
+        if (inclusiveMin >= exclusiveMax) throw new Exception("Random range must not be empty");
+        ulong width = (ulong)((long)exclusiveMax - (long)inclusiveMin);
+        return (int)((long)inclusiveMin + (long)this.NextULong(width));
+    }
+
+    // 53 random bits, producing a finite value in [0, 1).
+    public double NextDouble()
+        => (double)(this.NextULong() >> 11) * (1.0d / 9007199254740992.0d);
+
+    // Writes little-endian bytes from each generated word. No allocation or terminator.
+    // A partial final word is consumed in full; separate Fill calls need not concatenate.
+    public void Fill(char* output, nuint count)
+    {
+        nuint index = 0;
+        ulong value = 0ul;
+        while (index < count)
+        {
+            value = this.NextULong();
+            for (int shift = 0; shift < 64 && index < count; shift += 8)
+            {
+                output[index] = (char)(value >> shift);
+                index++;
+            }
+        }
+    }
+}

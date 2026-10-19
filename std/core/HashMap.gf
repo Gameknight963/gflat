@@ -172,19 +172,19 @@ struct HashMap<K : IHashable, V>
         count = 0; used = 0;
     }
 
-    public Enumerator GetEnumerator() => new Enumerator(entries, states, capacity);
+    public readonly Enumerator GetEnumerator() => new Enumerator(entries, states, capacity);
 
     ~HashMap() { this.Clear(); if (entries != null) Memory::Free((void*)entries); }
 
     // Enumeration borrows the map; do not mutate or destroy it while enumerating.
     public struct Enumerator
     {
-        private Entry*? entries;
-        private byte*? states;
+        private readonly(Entry)*? entries;
+        private readonly(byte)*? states;
         private nuint capacity;
         private nuint position;
         private bool valid;
-        public Enumerator(Entry*? storage, byte*? flags, nuint size)
+        public Enumerator(readonly(Entry)*? storage, readonly(byte)*? flags, nuint size)
         { entries = storage; states = flags; capacity = size; position = 0; valid = false; }
         public bool MoveNext()
         {

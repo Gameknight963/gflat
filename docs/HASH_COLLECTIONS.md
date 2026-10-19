@@ -49,3 +49,18 @@ while enumerating. Insertion and `Reserve` may invalidate all borrowed pointers,
 including when tombstone compaction keeps capacity unchanged; removal invalidates
 pointers into the removed entry. Collections do not own objects pointed to by
 pointer-valued elements.
+
+## Readonly set relations
+
+`HashSet<T>` provides `SetEquals`, `IsSubsetOf`, `IsSupersetOf`,
+`IsProperSubsetOf`, `IsProperSupersetOf`, and `Overlaps`. Each takes a
+`readonly(HashSet<T>)*` and works on a readonly receiver. They borrow keys rather
+than copying them, and perform no allocations, so noncopyable owning keys work
+as well. Both empty sets are equal and subsets of each other; proper relations
+require different counts, and an empty set never overlaps another set.
+
+Relations use the same hashing and equality rules as lookups. They short-circuit
+when counts or an early matching/missing element determine the answer. A throwing
+hash/equality callback leaves both sets unchanged. As with individual lookups,
+callbacks must not mutate either set through another alias. Readonly map and set
+enumeration also borrows existing entries; its invalidation rules are unchanged.

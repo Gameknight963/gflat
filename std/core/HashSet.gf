@@ -13,7 +13,47 @@ struct HashSet<T : IHashable>
     public readonly bool Contains(readonly(T)* value) => storage.ContainsKey(value);
     public bool Remove(readonly(T)* value) => storage.Remove(value);
     public void Clear() { storage.Clear(); }
-    public Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
+    public readonly Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
+
+    public readonly bool SetEquals(readonly(HashSet<T>)* other)
+    {
+        return this.Count == other.Count && this.IsSubsetOf(other);
+    }
+
+    public readonly bool IsSubsetOf(readonly(HashSet<T>)* other)
+    {
+        if (this.Count > other.Count) return false;
+        Enumerator iterator = this.GetEnumerator();
+        while (iterator.MoveNext())
+            if (!other.Contains(iterator.Current)) return false;
+        return true;
+    }
+
+    public readonly bool IsSupersetOf(readonly(HashSet<T>)* other)
+    {
+        return other.IsSubsetOf(this);
+    }
+
+    public readonly bool IsProperSubsetOf(readonly(HashSet<T>)* other)
+    {
+        return this.Count < other.Count && this.IsSubsetOf(other);
+    }
+
+    public readonly bool IsProperSupersetOf(readonly(HashSet<T>)* other)
+    {
+        return this.Count > other.Count && this.IsSupersetOf(other);
+    }
+
+    public readonly bool Overlaps(readonly(HashSet<T>)* other)
+    {
+        if (this.Count == 0 || other.Count == 0) return false;
+        // Probe the larger set while visiting only the smaller set's elements.
+        if (this.Count > other.Count) return other.Overlaps(this);
+        Enumerator iterator = this.GetEnumerator();
+        while (iterator.MoveNext())
+            if (other.Contains(iterator.Current)) return true;
+        return false;
+    }
 
     public struct Enumerator
     {

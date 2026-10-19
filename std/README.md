@@ -17,6 +17,7 @@ implementation lives in `libc`.
 | Borrowed text parts | `TextParts`, String/Span `Split` | [Allocation-free splitting](../docs/TEXT_PARTS.md) |
 | Contiguous storage | `Vector<T>`, `Span<T>` | [Ownership and views](core/README.md#vectors) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
+| Stable node storage | `LinkedList<T>` | [Owning linked lists and node handles](../docs/LINKED_LIST.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
 | Algorithms | `Sort`, `Reverse`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |

@@ -1,0 +1,48 @@
+using System.Text.Json;
+using gflat.diagnostics;
+
+namespace gflat.LanguageServer.Tests;
+
+public class WholeStandardLibraryEditorTests
+{
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActualLibrarySymbolsRemainNavigableEvenWithAnErrorInAnotherFile(bool brokenFile)
+    {
+        string directory=Path.Combine(AppContext.BaseDirectory,"StandardLibrary");
+        var sources=Directory.GetFiles(directory,"*.gf",SearchOption.AllDirectories)
+            .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
+        const string text="""
+            using std;
+            int main() {
+                LinkedList<int> list=new();
+                LinkedList<int>::Node* node=list.AddLast(42);
+                String text=s"ad"; text.Insert(1,"bc");
+                HashMap<String,int> map=new(); map.Add(s"key",42);
+                String key=s"key"; map.Find(&key);
+                CRC32 checksum=new(); checksum.Append("123456789",9);
+                byte[4] bytes; BinaryPrimitives::TryWriteUInt32BigEndian(bytes,4,42u);
+                File temporary=File::OpenTemporary(); temporary.Close();
+                return node.Value-42;
+            }
+            """;
+        var source=new SourceFile(Path.GetFullPath("std-editor/complete.gf"),text);
+        sources.Add(source);
+        if(brokenFile) sources.Add(new SourceFile(Path.GetFullPath("std-editor/broken.gf"),"void Broken(){does_not_exist();}"));
+        var snapshot=new AnalysisSnapshot(sources,new(){NoStdLib=true});
+        if(brokenFile) Assert.Contains(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
+        else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
+        var model=new EditorModel(snapshot,sources);
+        foreach(string member in new[]{"AddLast","Insert","Find","Append","TryWriteUInt32BigEndian","OpenTemporary","Value"})
+        {
+            int offset=text.LastIndexOf(member,StringComparison.Ordinal);
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.NotEqual(JsonValueKind.Null,hover.ValueKind);
+            string signature=hover.GetProperty("contents").GetProperty("value").GetString()!;
+            Assert.Contains(member,signature);
+            Assert.DoesNotContain('$',signature);
+            Assert.NotNull(model.Definition(source.Path,offset));
+        }
+    }
+}

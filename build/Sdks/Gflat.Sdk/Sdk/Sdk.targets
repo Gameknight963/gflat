@@ -1,0 +1,3 @@
+<Project>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
+</Project>

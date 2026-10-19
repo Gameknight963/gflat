@@ -14,15 +14,30 @@ public static class MsBuildHost
         string engine = Path.Combine(AppContext.BaseDirectory, "MSBuild.dll");
         if (!File.Exists(engine))
             throw new IOException("The bundled MSBuild engine is missing. Reinstall the gflat toolchain.");
+        string sdks = Path.Combine(AppContext.BaseDirectory, "Sdks");
+        foreach (string file in new[] { "Sdk.props", "Sdk.targets" })
+            if (!File.Exists(Path.Combine(sdks, "Gflat.Sdk", "Sdk", file)))
+                throw new IOException("The bundled Gflat.Sdk is missing. Reinstall the gflat toolchain.");
         // Process-local only. In particular, don't inherit Visual Studio's engine
         // paths when it starts the compiler or language server.
         Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", engine);
         Environment.SetEnvironmentVariable("MSBuildExtensionsPath", AppContext.BaseDirectory);
+        Environment.SetEnvironmentVariable("MSBuildSDKsPath", sdks);
         return true;
     });
     private static readonly object buildLock = new();
 
     public static void Initialize() => _ = initialized.Value;
+
+    internal static Dictionary<string, string> CreateGlobalProperties()
+    {
+        // Both SDK entry files and explicit imports use the running toolchain as
+        // a fallback; environment/project selections keep their normal priority.
+        var properties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (ProjectSdk.FindRoot(AppContext.BaseDirectory) is string sdk)
+            properties["GflatDefaultSdkRoot"] = ProjectCollection.Escape(sdk);
+        return properties;
+    }
 
     public static int Build(string projectPath, string target, IDictionary<string, string> properties)
     {
@@ -33,7 +48,9 @@ public static class MsBuildHost
         {
             try
             {
-                using var collection = new ProjectCollection(properties);
+                var globals = CreateGlobalProperties();
+                foreach (var property in properties) globals[property.Key] = property.Value;
+                using var collection = new ProjectCollection(globals);
                 using var manager = new BuildManager();
                 var parameters = new BuildParameters(collection)
                 {

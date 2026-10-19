@@ -93,8 +93,10 @@ GFLAT_CLANG=clang-18 ./compiler/gflat build examples/interpolation/interpolation
 
 You can also compile individual files: `gflat main.gf helper.gf --run`.
 Add the bundle's `compiler` directory to PATH to use `gflat` anywhere.
-Keep std and the `build` directory together. Projects import `Gflat.props` and
-`Gflat.targets` directly; no MSBuild SDK registration is needed.
+Keep std and the `build` directory together. The CLI and language server support
+both `<Project Sdk="Gflat.Sdk">` and explicit imports of `Gflat.props` and
+`Gflat.targets`, without SDK registration. SDK-style projects in Visual Studio
+use the extension's Windows setup scripts.
 See [project setup](docs/PROJECTS.md) for toolchain paths and `NoStdLib`.
 
 Create a project with `gflat new MyApp`, then run

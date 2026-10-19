@@ -7,6 +7,22 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class ServerTests
 {
+    [Fact]
+    public async Task SdkStyleProjectLoadsReferencesAndHonorsExcludedSources()
+    {
+        await using var session = new Session();
+        Directory.CreateDirectory(session.File("library"));
+        File.WriteAllText(session.File("app.gfproj"), "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup><ItemGroup><Compile Include=\"main.gf\" /><ProjectReference Include=\"library/Library.gfproj\" /></ItemGroup></Project>");
+        File.WriteAllText(session.File("library/Library.gfproj"), "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><OutputType>SourceLibrary</OutputType><NoStdLib>true</NoStdLib></PropertyGroup></Project>");
+        File.WriteAllText(session.File("library/library.gf"), "namespace Library; public int Answer() => 42;");
+        File.WriteAllText(session.File("excluded.gf"), "this file must not be parsed");
+        await session.Initialize();
+        await session.Open("main.gf", "int main() => Library::Answer();");
+        var diagnostics = (await session.Diagnostics("main.gf", 1)).GetProperty("params").GetProperty("diagnostics");
+        Assert.DoesNotContain(diagnostics.EnumerateArray(), item => item.GetProperty("severity").GetInt32() == 1);
+        await session.Stop();
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData(1)]

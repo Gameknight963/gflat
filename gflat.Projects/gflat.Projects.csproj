@@ -11,6 +11,8 @@
     <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.13" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="../build/Sdks/Gflat.Sdk/Sdk/Sdk.props;../build/Sdks/Gflat.Sdk/Sdk/Sdk.targets"
+          Link="Sdks/Gflat.Sdk/Sdk/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../LICENSES/MSBuild.txt" Link="Licenses/MSBuild/LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="$(PkgMicrosoft_Build_Runtime)/notices/THIRDPARTYNOTICES.txt" Link="Licenses/MSBuild/THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Build both task variants; don't load either into the application itself. -->

@@ -8,7 +8,7 @@ if (-not $CompilerDirectory) { $CompilerDirectory = Join-Path $toolchain 'compil
 $compilerDirectory = [IO.Path]::GetFullPath($CompilerDirectory)
 $compilerName = if ([IO.Path]::DirectorySeparatorChar -eq '\') { 'gflat.exe' } else { 'gflat' }
 $compiler = Join-Path $compilerDirectory $compilerName
-foreach ($file in @($compiler, (Join-Path $compilerDirectory 'MSBuild.dll'), (Join-Path $toolchain 'build/tasks/net10.0/gflat.Build.Tasks.dll'))) {
+foreach ($file in @($compiler, (Join-Path $compilerDirectory 'MSBuild.dll'), (Join-Path $compilerDirectory 'Sdks/Gflat.Sdk/Sdk/Sdk.props'), (Join-Path $compilerDirectory 'Sdks/Gflat.Sdk/Sdk/Sdk.targets'), (Join-Path $toolchain 'build/tasks/net10.0/gflat.Build.Tasks.dll'))) {
     if (-not (Test-Path -LiteralPath $file)) { throw "Bundle is missing $file" }
 }
 $testBase = if ($env:GFLAT_TEST_OUTPUT_ROOT) { $env:GFLAT_TEST_OUTPUT_ROOT } else { [IO.Path]::GetTempPath() }
@@ -59,6 +59,17 @@ try {
 '@ | Set-Content -LiteralPath (Join-Path $scratch 'custom.targets')
 
     Invoke-Compiler check $project
+    # Both formats use the same private engine and build rules. SDK-style roots
+    # and references must work even with an inherited, invalid SDK search path.
+    foreach ($file in @($project, (Join-Path $library 'Library.gfproj'))) {
+        [xml]$sdkProject = Get-Content -LiteralPath $file
+        $sdkProject.Project.SetAttribute('Sdk', 'Gflat.Sdk')
+        foreach ($rule in @($sdkProject.Project.Import)) {
+            if ($rule.Project -like '*/build/Gflat.props' -or $rule.Project -like '*/build/Gflat.targets') { $sdkProject.Project.RemoveChild($rule) | Out-Null }
+        }
+        $sdkProject.Save($file)
+    }
+    Invoke-Compiler check $project
     Invoke-Compiler build $project --configuration Release --emit-ir
     $output = Join-Path $app 'bin/Release/App.ll'
     if (-not (Test-Path -LiteralPath $output)) { throw 'Bundled build produced no IR' }
@@ -77,7 +88,7 @@ try {
     if ($LASTEXITCODE -eq 0) { throw 'Bundled check did not propagate a compiler failure' }
     Invoke-Compiler clean $project --configuration Release
     if (Test-Path -LiteralPath $output) { throw 'Bundled clean did not remove IR' }
-    Write-Host 'Bundled MSBuild passed with dotnet unavailable: references, imports, configurations, incremental builds, errors, and clean.'
+    Write-Host 'Bundled MSBuild passed with dotnet unavailable: explicit imports, SDK-style projects, references, configurations, incremental builds, errors, and clean.'
 }
 finally {
     foreach ($name in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name]) }

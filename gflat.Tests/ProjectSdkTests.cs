@@ -5,6 +5,97 @@ namespace gflat.Tests;
 
 public sealed class ProjectSdkTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SdkStyleAndExplicitImportsEvaluateTheSameBuildRules(bool noStdLib)
+    {
+        string root = Temporary(); Directory.CreateDirectory(root);
+        try
+        {
+            string body = $"<PropertyGroup><NoStdLib>{noStdLib.ToString().ToLowerInvariant()}</NoStdLib><Configuration>Release</Configuration><GflatOptimizationLevel>3</GflatOptimizationLevel></PropertyGroup>";
+            string sdkProject = Path.Combine(root, "sdk.gfproj");
+            string explicitProject = Path.Combine(root, "explicit.gfproj");
+            File.WriteAllText(sdkProject, "<Project Sdk=\"Gflat.Sdk\">" + body + "</Project>");
+            File.WriteAllText(explicitProject, TestSupport.ProjectFileFixture.WithImports("<Project>" + body + "</Project>"));
+            File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 42;");
+            var sdk = ProjectModel.Load(sdkProject);
+            var explicitModel = ProjectModel.Load(explicitProject);
+            Assert.Equal(explicitModel.SdkRoot, sdk.SdkRoot);
+            Assert.Equal(explicitModel.Configuration, sdk.Configuration);
+            Assert.Equal(explicitModel.OptimizationLevel, sdk.OptimizationLevel);
+            Assert.Equal(explicitModel.NoStdLib, sdk.NoStdLib);
+            Assert.Equal(explicitModel.SourceFiles(), sdk.SourceFiles());
+            Assert.Equal(explicitModel.References, sdk.References);
+            Assert.Contains(Path.Combine(sdk.SdkRoot!, "build", "Gflat.props"), sdk.Imports);
+            Assert.Contains(Path.Combine(sdk.SdkRoot!, "build", "Gflat.targets"), sdk.Imports);
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
+    public void SdkStyleBuildChecksReferencesRebuildsAndCleansWithoutRewritingProjects()
+    {
+        string root = Temporary(); Directory.CreateDirectory(root);
+        try
+        {
+            string app = Path.Combine(root, "app"); Directory.CreateDirectory(app);
+            string library = Path.Combine(root, "library"); Directory.CreateDirectory(library);
+            string project = Path.Combine(app, "App.gfproj");
+            const string xml = "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib></PropertyGroup><ItemGroup><ProjectReference Include=\"../library/Library.gfproj\" /></ItemGroup></Project>";
+            File.WriteAllText(project, xml);
+            File.WriteAllText(Path.Combine(library, "Library.gfproj"), "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><OutputType>SourceLibrary</OutputType><NoStdLib>true</NoStdLib></PropertyGroup></Project>");
+            File.WriteAllText(Path.Combine(app, "main.gf"), "int main() => Library::Answer();");
+            string source = Path.Combine(library, "library.gf");
+            File.WriteAllText(source, "namespace Library; public int Answer() => 42;");
+            Assert.Equal(0, Program.Main(["check", project]));
+            Assert.Equal(0, Program.Main(["build", project, "--configuration", "Release", "--emit-ir"]));
+            string output = Path.Combine(app, "bin", "Release", "App.ll");
+            Assert.Contains("ret i32 42", File.ReadAllText(output));
+            DateTime timestamp = File.GetLastWriteTimeUtc(output);
+            Assert.Equal(0, Program.Main(["build", project, "--configuration", "Release", "--emit-ir"]));
+            Assert.Equal(timestamp, File.GetLastWriteTimeUtc(output));
+            File.WriteAllText(source, "namespace Library; public int Answer() => 7;");
+            Assert.Equal(0, Program.Main(["build", project, "--configuration", "Release", "--emit-ir"]));
+            Assert.Contains("ret i32 7", File.ReadAllText(output));
+            Assert.Equal(xml, File.ReadAllText(project));
+            Assert.Equal(0, Program.Main(["clean", project, "--configuration", "Release"]));
+            Assert.False(File.Exists(output));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SdkStyleBuildUsesSelectedToolchainAndIgnoresInheritedEnginePaths(bool relativeRoot)
+    {
+        string root = Temporary(); Directory.CreateDirectory(root);
+        try
+        {
+            string sdk = Path.Combine(root, "sdk $literal;percent% & (selected)'s"); CreateSdk(sdk);
+            var props = XElement.Load(Path.Combine(sdk, "build", "Gflat.props"));
+            props.Add(new XElement("PropertyGroup", new XElement("SelectedToolchain", "selected")));
+            props.Save(Path.Combine(sdk, "build", "Gflat.props"));
+            string project = Path.Combine(root, "app.gfproj");
+            File.WriteAllText(project, "<Project Sdk=\"Gflat.Sdk\"><PropertyGroup><NoStdLib>true</NoStdLib></PropertyGroup><Target Name=\"CheckToolchain\" AfterTargets=\"Build\"><Error Condition=\"'$(SelectedToolchain)' != 'selected'\" Text=\"Selected toolchain was ignored\" /></Target></Project>");
+            File.WriteAllText(Path.Combine(root, "main.gf"), "int main() => 0;");
+            var start = new System.Diagnostics.ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (string argument in new[] { typeof(Program).Assembly.Location, "build", project, "--emit-ir" }) start.ArgumentList.Add(argument);
+            start.Environment["GflatSdkRoot"] = relativeRoot ? Path.GetRelativePath(root, sdk) : sdk;
+            start.Environment["MSBuildSDKsPath"] = Path.Combine(root, "absent-sdks");
+            start.Environment["MSBUILD_EXE_PATH"] = Path.Combine(root, "absent-engine", "MSBuild.dll");
+            using var process = System.Diagnostics.Process.Start(start)!;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await process.WaitForExitAsync(timeout.Token);
+            Assert.True(process.ExitCode == 0, (await stdout) + (await stderr));
+            Assert.True(File.Exists(Path.Combine(root, "bin", "Debug", "app.ll")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
     [Fact]
     public void ProviderPathsEscapeMsBuildExpressionsAndItemSeparators()
         => Assert.Equal("C:/sdk space %24%3B%25%40%27%28%29", ProjectSdk.EscapePropertyValue("C:/sdk space $;%@'()"));

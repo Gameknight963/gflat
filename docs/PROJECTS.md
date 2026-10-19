@@ -5,6 +5,33 @@ Microsoft's Common Project System (CPS). No companion project is generated.
 The CLI and language server evaluate it using their bundled MSBuild engine.
 Visual Studio uses its own MSBuild engine for CPS evaluation and IDE builds.
 
+## SDK-style projects
+
+The CLI and language server bundle `Gflat.Sdk` alongside their private MSBuild:
+
+```xml
+<Project Sdk="Gflat.Sdk">
+  <PropertyGroup>
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+</Project>
+```
+
+Use the same `build`, `check`, and `clean` commands for this format. Project
+references may use either SDK-style or explicit-import projects. Source selection,
+standard-library selection, configurations, and incremental builds use the same
+build rules. The CLI and language server resolve the SDK from their own package
+and require no registration, NuGet download, or setup command. Their SDK search
+directory is private to those processes; an inherited Visual Studio or .NET SDK
+search path does not select their engine or SDK.
+
+For Visual Studio and its standalone MSBuild, run the Windows extension's
+[SDK setup script](EDITOR_SUPPORT.md#optional-sdk-style-project-setup). This is
+separate from CLI setup. To select another toolchain for SDK-style projects,
+set `GflatSdkRoot` in the environment before evaluation; SDK props are imported
+before the project body. It must name a directory containing `build/Gflat.props`
+and `build/Gflat.targets`.
+
 ## Build-rule imports
 
 The Windows Visual Studio extension also provides optional

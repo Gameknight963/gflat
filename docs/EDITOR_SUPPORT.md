@@ -106,10 +106,11 @@ uninstall before removing the VSIX. Both scripts support `-WhatIf`, and uninstal
 refuses to delete an unrecognized SDK directory or unexpected files. Restart
 Visual Studio after setup. `sdk-paths.ps1` must remain beside the two scripts.
 
-This registration applies to the selected Visual Studio and its MSBuild, not the
-CLI's private MSBuild. Existing CLI projects and templates continue to use explicit
-imports and do not require this setup. No runtime patching or CLI setup command is
-involved. `test-sdk-installation.ps1` tests installation, repeated installation,
+This registration applies to the selected Visual Studio and its MSBuild. The CLI
+and language server bundle their own SDK entry files, so they can use the same
+SDK-style project without this setup. Explicit-import projects also remain
+supported. No runtime patching or CLI setup command is involved.
+`test-sdk-installation.ps1` tests installation, repeated installation,
 updates, uninstall, and SDK-style builds in a temporary fake VS installation.
 
 The installed server is the packaged copy; it does not automatically track this

@@ -11,11 +11,7 @@ internal static class MsBuildEvaluation
     {
         try
         {
-            var properties = new Dictionary<string, string>();
-            // Supply a fallback from the running toolchain without overriding an
-            // explicit environment/project root or registering an MSBuild SDK.
-            if (ProjectSdk.FindRoot(AppContext.BaseDirectory) is string sdk)
-                properties["GflatDefaultSdkRoot"] = ProjectCollection.Escape(sdk);
+            var properties = MsBuildHost.CreateGlobalProperties();
             if (asReference) properties["GflatAsReference"] = "true";
             if (configuration != null) properties["Configuration"] = configuration;
             if (platform != null) properties["Platform"] = platform;

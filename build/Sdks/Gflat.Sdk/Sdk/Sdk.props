@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!-- Environment properties are literal paths; escape MSBuild item separators.
+         Explicit global properties already use the host's escaped representation. -->
+    <GflatSdkRoot>$([MSBuild]::Escape('$(GflatSdkRoot)'))</GflatSdkRoot>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">$(GflatDefaultSdkRoot)</GflatSdkRoot>
+    <GflatSdkRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(GflatSdkRoot)'))</GflatSdkRoot>
+  </PropertyGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
+</Project>

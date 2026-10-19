@@ -33,6 +33,9 @@ int main()
 | `IsSorted<T>(Span<readonly(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length readonly spans element by element, stopping at the first difference. |
 | `FindIndex<T>(Span<readonly(T)>, predicate)` | First matching index, or span length when no element matches. |
+| `IndexOf<T>(Span<readonly(T)>, key, equal)` | First equal element's index, or span length when absent. |
+| `LastIndexOf<T>(Span<readonly(T)>, key, equal)` | Last equal element's index, or span length when absent. |
+| `Contains<T>(Span<readonly(T)>, key, equal)` | Whether any element equals the borrowed key. |
 | `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
 | `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
 
@@ -50,6 +53,25 @@ comparison callback, for example `Sort<int>(span, Comparer<int>::Compare)`.
 `EqualityComparer<T>::Equals` similarly adapts `IEquatable<T>` for
 `SequenceEqual`. These are static bridges and allocate no comparer objects.
 Explicit custom callbacks remain available for other orderings or equality rules.
+
+Equality searches borrow the key through `readonly(T)*`, so noncopyable owning
+elements are supported without constructing or copying a search value. Mutable
+spans can be searched through `AsReadOnly()`. For example:
+
+```csharp
+int key = 5;
+nuint first = IndexOf<int>(values.AsReadOnly(), &key, EqualityComparer<int>::Equals);
+nuint last = LastIndexOf<int>(values.AsReadOnly(), &key, EqualityComparer<int>::Equals);
+bool found = Contains<int>(values.AsReadOnly(), &key, EqualityComparer<int>::Equals);
+```
+
+`IndexOf` and `Contains` compare from the beginning; `LastIndexOf` compares from
+the end. They stop at the first match in that direction. Empty spans never call
+the callback, and both index searches return zero for an empty span. All three
+take O(n) comparisons and constant extra storage without allocating or modifying
+elements. Callbacks may throw; the exception propagates without changing the
+source. Callbacks must keep the span and key alive and must not mutate them
+through another alias. These searches do not require sorted input.
 
 Sorting and reversing relocate values rather than copying them. Owning values
 without copy constructors are supported; every value remains responsible for

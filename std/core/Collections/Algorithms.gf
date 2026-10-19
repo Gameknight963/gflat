@@ -125,6 +125,33 @@ public nuint FindIndex<T>(Span<readonly(T)> values, bool(readonly(T)*)* predicat
     return values.Length;
 }
 
+// Search callbacks borrow both values; elements and keys are never copied.
+public nuint IndexOf<T>(Span<readonly(T)> values, readonly(T)* key,
+    bool(readonly(T)*, readonly(T)*)* equal)
+{
+    for (nuint i = 0; i < values.Length; i++)
+        if (equal(&values[i], key)) return i;
+    return values.Length;
+}
+
+public nuint LastIndexOf<T>(Span<readonly(T)> values, readonly(T)* key,
+    bool(readonly(T)*, readonly(T)*)* equal)
+{
+    nuint i = values.Length;
+    while (i != 0)
+    {
+        i--;
+        if (equal(&values[i], key)) return i;
+    }
+    return values.Length;
+}
+
+public bool Contains<T>(Span<readonly(T)> values, readonly(T)* key,
+    bool(readonly(T)*, readonly(T)*)* equal)
+{
+    return IndexOf<T>(values, key, equal) != values.Length;
+}
+
 // Move matching elements to the prefix and return its length. Not stable.
 public nuint Partition<T>(Span<T> values, bool(readonly(T)*)* predicate)
 {

@@ -4,12 +4,12 @@ public sealed class StandardPathTests
 {
     private static string Literal(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
-    private static void Run(string program)
+    private static void Run(string program, int optimization = 0)
     {
         var files = new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/Formatting.gf", "core/Paths/PathStyle.gf", "core/Paths/Paths.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
-        var result = CompilerTestHelper.Run(files);
+        var result = CompilerTestHelper.Run(files, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
     }
 
@@ -24,6 +24,37 @@ public sealed class StandardPathTests
             return i == value.Length;
         }
         """;
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void RootClassificationDistinguishesWindowsDriveRelativePathsWithoutAllocating(int optimization)
+    {
+        string[] paths = ["", "a", "C", ":", "1:", "C:", "c:child", "Z:..", "C:/", @"C:\child", "/", @"\", "/child", @"\child", "//", @"\\", @"\\server", @"\\server\share", @"\\?\C:\file", "a/b", "a\\b", "../a", "./", "C::", "C:/../x"];
+        var program = new System.Text.StringBuilder("using std; namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* address) {} } int main(){");
+        foreach (string path in paths)
+        {
+            bool drive = path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':';
+            bool Separator(char value) => value is '/' or '\\';
+            bool windowsRooted = drive || (path.Length != 0 && Separator(path[0]));
+            bool windowsFully = (path.Length >= 2 && Separator(path[0]) && Separator(path[1])) ||
+                (drive && path.Length >= 3 && Separator(path[2]));
+            bool unix = path.StartsWith('/');
+            if (OperatingSystem.IsWindows())
+            {
+                Assert.Equal(Path.IsPathRooted(path), windowsRooted);
+                Assert.Equal(Path.IsPathFullyQualified(path), windowsFully);
+            }
+            program.AppendLine($$"""
+                if(Paths::IsRooted({{Literal(path)}},PathStyle::Unix)!={{unix.ToString().ToLowerInvariant()}})return 1;
+                if(Paths::IsFullyQualified({{Literal(path)}},PathStyle::Unix)!={{unix.ToString().ToLowerInvariant()}})return 2;
+                if(Paths::IsRooted({{Literal(path)}},PathStyle::Windows)!={{windowsRooted.ToString().ToLowerInvariant()}})return 3;
+                if(Paths::IsFullyQualified({{Literal(path)}},PathStyle::Windows)!={{windowsFully.ToString().ToLowerInvariant()}})return 4;
+                """);
+        }
+        program.Append("return 0;}");
+        Run(program.ToString(), optimization);
+    }
 
     [Fact]
     public void UnixPathsRemainPurelyLexicalAndIgnoreWindowsSeparators()

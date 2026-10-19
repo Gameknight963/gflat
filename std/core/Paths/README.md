@@ -29,6 +29,15 @@ validation, existence check, or resolution of `.` and `..`.
   component does **not** discard the left component.
 - `IsSeparator(character, style)` recognizes `/` for Unix; Windows additionally
   recognizes `\`.
+- `IsRooted(path, style)` recognizes a leading separator or a Windows drive
+  prefix. `C:child` and `\child` are rooted but still depend on the current
+  directory of a drive or the current drive, respectively.
+- `IsFullyQualified(path, style)` distinguishes paths independent of those
+  defaults: a leading `/` for Unix; two leading separators or a drive prefix
+  followed by a separator for Windows. These are lexical root checks, not name
+  validation: `\\` alone qualifies even though it is not a complete UNC share.
+  Both classification helpers and `IsSeparator` are `nothrow` and allocate
+  nothing. They inspect null-terminated input without copying it.
 
 Windows device paths (`\\?\` and `\\.\`) and alternate data streams are not
 parsed specially. These helpers are not a security boundary: lexical joining

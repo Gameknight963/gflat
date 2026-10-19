@@ -3,8 +3,26 @@ namespace std;
 // Lexical paths, independent of the host OS. No filesystem access or normalization.
 public static class Paths
 {
-    public static bool IsSeparator(char value, PathStyle style)
+    public static bool IsSeparator(char value, PathStyle style) nothrow
         => value == '/' || (style == PathStyle::Windows && value == '\\');
+
+    // A rooted Windows path can still depend on the current drive or its directory.
+    public static bool IsRooted(readonly(char*) path, PathStyle style) nothrow
+    {
+        if (Paths::IsSeparator(path[0], style)) return true;
+        if (style == PathStyle::Unix) return false;
+        bool letter = (path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z');
+        return letter && path[1] == ':';
+    }
+
+    // Classifies the root spelling only; this does not validate a UNC share or name.
+    public static bool IsFullyQualified(readonly(char*) path, PathStyle style) nothrow
+    {
+        if (style == PathStyle::Unix) return path[0] == '/';
+        if (Paths::IsSeparator(path[0], style)) return Paths::IsSeparator(path[1], style);
+        bool letter = (path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z');
+        return letter && path[1] == ':' && Paths::IsSeparator(path[2], style);
+    }
 
     public static String GetFileName(readonly(char*) path, PathStyle style)
     {

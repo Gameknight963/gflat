@@ -13,6 +13,8 @@ namespace std
         {
             public void* address;
             public Slot*? next;
+            public Slot*? previous;
+            public Slot*? hashNext;
         }
 
         private struct Allocation
@@ -27,6 +29,11 @@ namespace std
         private struct State
         {
             public Slot*? slots;
+            public Slot*? freeSlots;
+            public nuint cachedSlots;
+            public Slot*?* buckets;
+            public nuint bucketCount;
+            public nuint slotCount;
             public Allocation*? allocations;
             public nuint bytesSinceCollection;
             public bool collecting;
@@ -44,6 +51,12 @@ namespace std
             {
                 State* state = (State*)RequiredAllocate((nuint)sizeof(State));
                 state.slots = null;
+                state.freeSlots = null;
+                state.cachedSlots = 0;
+                state.bucketCount = 64;
+                state.slotCount = 0;
+                state.buckets = (Slot*?*)RequiredAllocate(state.bucketCount * (nuint)sizeof(Slot*));
+                for (nuint i = 0; i < state.bucketCount; i++) state.buckets[i] = null;
                 state.allocations = null;
                 state.bytesSinceCollection = 0;
                 state.collecting = false;
@@ -147,38 +160,101 @@ namespace std
             return (managed<T, TracingCollector>)storage;
         }
 
+        private static nuint SlotBucket(void* address, nuint capacity) nothrow
+        {
+            nuint hash = (nuint)address;
+            hash = hash ^ (hash >> 7);
+            hash = hash ^ (hash >> 17);
+            return (hash >> 3) & (capacity - (nuint)1);
+        }
+
+        private static void GrowSlots(State* state) nothrow
+        {
+            nuint maximum = (nuint)0 - (nuint)1;
+            if (state.bucketCount > maximum / (nuint)2 / (nuint)sizeof(Slot*)) return;
+            nuint capacity = state.bucketCount * (nuint)2;
+            Slot*?* buckets = (Slot*?*)RequiredAllocate(capacity * (nuint)sizeof(Slot*));
+            for (nuint i = 0; i < capacity; i++) buckets[i] = null;
+            Slot*? slot = state.slots;
+            while (slot != null)
+            {
+                nuint bucket = SlotBucket(slot!.address, capacity);
+                slot!.hashNext = buckets[bucket];
+                buckets[bucket] = slot;
+                slot = slot!.next;
+            }
+            Memory::Free((void*)state.buckets);
+            state.buckets = buckets;
+            state.bucketCount = capacity;
+        }
+
         public static void ReferenceAdded(void* address) nothrow
         {
             State* state = GetState();
             if (!ValidRange(address, (nuint)sizeof(void*))) collector_detail::abort();
-            Slot*? slot = state.slots;
+            nuint bucket = SlotBucket(address, state.bucketCount);
+            Slot*? slot = state.buckets[bucket];
             while (slot != null)
             {
                 if (slot!.address == address) return;
-                slot = slot!.next;
+                slot = slot!.hashNext;
             }
-            Slot* added = (Slot*)RequiredAllocate((nuint)sizeof(Slot));
+            if (state.slotCount >= state.bucketCount)
+            {
+                GrowSlots(state);
+                bucket = SlotBucket(address, state.bucketCount);
+            }
+            Slot* added;
+            if (state.freeSlots == null) added = (Slot*)RequiredAllocate((nuint)sizeof(Slot));
+            else
+            {
+                added = state.freeSlots!;
+                state.freeSlots = added.next;
+                state.cachedSlots--;
+            }
             added.address = address;
+            added.previous = null;
             added.next = state.slots;
+            if (state.slots != null) state.slots!.previous = added;
             state.slots = added;
+            added.hashNext = state.buckets[bucket];
+            state.buckets[bucket] = added;
+            state.slotCount++;
         }
 
         public static void ReferenceRemoved(void* address) nothrow
+            => RemoveReference(GetState(), address);
+
+        private static void RemoveReference(State* state, void* address) nothrow
         {
-            State* state = GetState();
+            nuint bucket = SlotBucket(address, state.bucketCount);
             Slot*? previous = null;
-            Slot*? slot = state.slots;
+            Slot*? slot = state.buckets[bucket];
             while (slot != null)
             {
                 if (slot!.address == address)
                 {
-                    if (previous == null) state.slots = slot!.next;
-                    else previous!.next = slot!.next;
-                    Memory::Free((void*)slot);
+                    if (previous == null) state.buckets[bucket] = slot!.hashNext;
+                    else previous!.hashNext = slot!.hashNext;
+                    if (slot!.previous == null) state.slots = slot!.next;
+                    else slot!.previous!.next = slot!.next;
+                    if (slot!.next != null) slot!.next!.previous = slot!.previous;
+                    state.slotCount--;
+                    // Keep a bounded cache for short-lived compiler roots. A
+                    // temporary reference should not require malloc/free.
+                    if (state.cachedSlots < (nuint)256)
+                    {
+                        slot!.previous = null;
+                        slot!.hashNext = null;
+                        slot!.next = state.freeSlots;
+                        state.freeSlots = slot;
+                        state.cachedSlots++;
+                    }
+                    else Memory::Free((void*)slot);
                     return;
                 }
                 previous = slot;
-                slot = slot!.next;
+                slot = slot!.hashNext;
             }
         }
 
@@ -192,18 +268,12 @@ namespace std
 
         private static void RemoveOwnedSlots(State* state, Allocation* allocation) nothrow
         {
-            Slot*? previous = null;
             Slot*? slot = state.slots;
             while (slot != null)
             {
                 Slot*? next = slot!.next;
                 if (Contains(allocation, slot!.address))
-                {
-                    if (previous == null) state.slots = next;
-                    else previous!.next = next;
-                    Memory::Free((void*)slot);
-                }
-                else previous = slot;
+                    RemoveReference(state, slot!.address);
                 slot = next;
             }
         }

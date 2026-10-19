@@ -188,15 +188,24 @@ public sealed class GarbageCollectionTests
         int main() {
             Allocate();
             if (GC::Collect() != (nuint)1 || std::TracingCollector::ManagedCount != (nuint)0) return 1;
+            printf("|");
+            for (int i = 0; i < 8; i++) {
+                Allocate();
+                if (GC::Collect() != (nuint)1 || std::TracingCollector::ManagedCount != (nuint)0) return 2;
+            }
             return 0;
         }
         """);
         Assert.Equal(0, result.ExitCode);
-        // The collector keeps one process-lifetime State allocation. Object and
-        // root bookkeeping allocations must all be freed through the same hooks.
-        Assert.True(result.StandardOutput.Count(c => c == 'F') > 0);
-        Assert.Equal(result.StandardOutput.Count(c => c == 'A') - 1,
-            result.StandardOutput.Count(c => c == 'F'));
+        // State, the address index, and a bounded root cache survive collection.
+        // After warming those up, repeated object lifetimes must not grow the
+        // retained storage; allocation and release still use the replaced hooks.
+        string[] phases = result.StandardOutput.Split('|');
+        Assert.Equal(2, phases.Length);
+        Assert.Contains('A', phases[0]);
+        Assert.Contains('F', phases[0]);
+        Assert.True(phases[1].Count(c => c == 'F') >= 8);
+        Assert.Equal(phases[1].Count(c => c == 'A'), phases[1].Count(c => c == 'F'));
     }
 
     [Fact]

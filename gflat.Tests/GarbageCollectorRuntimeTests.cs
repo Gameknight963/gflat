@@ -4,13 +4,13 @@ namespace gflat.Tests;
 // Compiler lifetime tests separately cover the same provider through new^.
 public sealed class GarbageCollectorRuntimeTests
 {
-    private static void Succeeds(string body)
+    private static void Succeeds(string body, string declarations = "")
     {
         var result = CompilerTestHelper.Run([
             new SourceFile("std/core/IGarbageCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "IGarbageCollector.gf"))),
             new SourceFile("std/libc/TracingCollector.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "TracingCollector.gf"))),
             new SourceFile("std/libc/GC.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "GC.gf"))),
-            new SourceFile("main.gf", "alias Collector = std::TracingCollector; int main() { " + body + " }")
+            new SourceFile("main.gf", declarations + "alias Collector = std::TracingCollector; int main() { " + body + " }")
         ]);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
     }
@@ -88,4 +88,83 @@ public sealed class GarbageCollectorRuntimeTests
         if (Collector::Collect() != (nuint)1) return 2;
         return 0;
         """);
+
+    [Fact]
+    public void ResizedRegistryPreservesRootsThroughRemovalAndAddressReuse() => Succeeds("""
+        void** roots = (void**)Memory::Allocate((nuint)160 * (nuint)sizeof(void*))!;
+        for (int i = 0; i < 160; i++) {
+            roots[i] = Collector::Allocate(8, 8);
+            *(int*)roots[i] = i;
+            Collector::ReferenceAdded(&roots[i]);
+        }
+        for (int i = 0; i < 160; i++) Collector::ReferenceAdded(&roots[i]);
+        if (Collector::Collect() != 0) return 1;
+        for (int i = 0; i < 160; i += 2) {
+            Collector::ReferenceRemoved(&roots[i]);
+            Collector::ReferenceRemoved(&roots[i]);
+        }
+        if (Collector::Collect() != 80) return 2;
+        for (int i = 1; i < 160; i += 2) if (*(int*)roots[i] != i) return 3;
+        for (int i = 0; i < 160; i += 2) {
+            roots[i] = Collector::Allocate(8, 8);
+            Collector::ReferenceAdded(&roots[i]);
+        }
+        if (Collector::Collect() != 0 || Collector::ManagedCount != 160) return 4;
+        for (int i = 159; i >= 0; i--) Collector::ReferenceRemoved(&roots[i]);
+        if (Collector::Collect() != 160 || Collector::ManagedCount != 0) return 5;
+        Memory::Free(roots);
+        return 0;
+        """);
+
+    private const string AllocationProbe = """
+        namespace probe_native {
+            extern void*? malloc(nuint size);
+            extern void free(void* address);
+        }
+        static class AllocationProbe {
+            public static nuint Allocations;
+            public static nuint Frees;
+        }
+        namespace Memory {
+            public replace void*? Allocate(nuint size) {
+                AllocationProbe::Allocations++;
+                return probe_native::malloc(size);
+            }
+            public replace void Free(void* address) {
+                AllocationProbe::Frees++;
+                probe_native::free(address);
+            }
+        }
+        """;
+
+    [Fact]
+    public void RepeatedRegistrationReusesBookkeepingWithoutAllocating() => Succeeds("""
+        void* root = Collector::Allocate(32, 8);
+        Collector::ReferenceAdded(&root);
+        Collector::ReferenceRemoved(&root);
+        nuint before = AllocationProbe::Allocations;
+        nuint freed = AllocationProbe::Frees;
+        for (int i = 0; i < 1000; i++) {
+            Collector::ReferenceAdded(&root);
+            if (i % 100 == 0 && Collector::Collect() != 0) return 1;
+            Collector::ReferenceRemoved(&root);
+        }
+        if (AllocationProbe::Allocations != before || AllocationProbe::Frees != freed) return 2;
+        if (Collector::Collect() != 1) return 3;
+        return 0;
+        """, AllocationProbe);
+
+    [Fact]
+    public void BookkeepingCacheDoesNotRetainAnUnboundedRegistrationBurst() => Succeeds("""
+        void** roots = (void**)Memory::Allocate((nuint)512 * (nuint)sizeof(void*))!;
+        for (int i = 0; i < 512; i++) {
+            roots[i] = (void*)1;
+            Collector::ReferenceAdded(&roots[i]);
+        }
+        nuint before = AllocationProbe::Frees;
+        for (int i = 0; i < 512; i++) Collector::ReferenceRemoved(&roots[i]);
+        if (AllocationProbe::Frees - before < 256) return 1;
+        Memory::Free(roots);
+        return 0;
+        """, AllocationProbe);
 }

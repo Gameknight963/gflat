@@ -306,9 +306,10 @@ alignment, pointer width, and the C runtime's `long` size. Truncation throws
 
 ## Managed memory
 
-`GC.gf` defines `std::TracingCollector`, a single-threaded, non-moving collector
-written in gflat. Include that source or reference `std/std.gfproj`. The global
-binding is a constrained, replaceable alias:
+`TracingCollector.gf` defines `std::TracingCollector`, a single-threaded,
+non-moving collector written in gflat. `GC.gf` supplies the default global
+binding as a constrained, replaceable alias; reference `std/std.gfproj` or include
+these sources and their dependencies explicitly:
 
 ```csharp
 public weak alias GC : std::IGarbageCollector = std::TracingCollector;
@@ -364,13 +365,14 @@ inside reclaimed managed objects itself. `Memory::Allocate` and `Memory::Free`
 perform no hidden collector tracking. Manually freeing an owned managed object
 through a raw alias is invalid; there is no runtime interception protecting it.
 
-All lists, ownership checks, marking, and sweeping live in `GC.gf`. Private inline
-LLVM supplies a mutable global state slot until the language has static storage,
-a thread-local identity with an atomic owner check, and an unaligned pointer
-load. Metadata uses the host allocator directly so it cannot recursively invoke
-managed allocation. Payload reclamation calls the selected `Memory::Free`;
-a deallocator failure terminates through the normal nothrow boundary. Metadata
-bytes are excluded from `ManagedBytes`.
+All lists, ownership checks, marking, and sweeping live in `TracingCollector.gf`.
+Collector state uses an ordinary private static nullable pointer field. Private
+inline LLVM supplies thread-local identity, an atomic owner check, and an
+unaligned pointer load. Metadata and payload allocation use the selected
+`Memory::Allocate` and `Memory::Free` hooks. These hooks must not reenter this
+collector, including through managed allocation; recursive entry is not prevented
+by a separate allocator. A deallocator failure terminates through the normal
+nothrow boundary. Metadata bytes are excluded from `ManagedBytes`.
 
 The default provider has no compaction, finalization, pinning, or cross-thread
 collection. Access from a second thread terminates. Pointees cannot contain

@@ -16,6 +16,22 @@ public class NothrowCallEmissionTests
     }
 
     [Fact]
+    public void ExplicitNothrowConstructionAndCopyingNeedNoExceptionRuntime()
+    {
+        string ir=Compiler.Emit("""
+            struct Counter {
+                public int Value;
+                public Counter(int value) nothrow { Value=value; }
+                public copy Counter(readonly(Counter)* source) nothrow { Value=source.Value; }
+            }
+            int main(){Counter first=new(21); Counter second=first; return first.Value+second.Value;}
+            """,options:new(){NoStdLib=true});
+        Assert.DoesNotContain("invoke",ir);
+        Assert.DoesNotContain("personality",ir);
+        Assert.DoesNotContain("@__gflat_eh_",ir);
+    }
+
+    [Fact]
     public void VirtualAndInterfaceContractsUseCallsWhileUntypedPointersRemainConservative()
     {
         string ir=Compiler.Emit("""

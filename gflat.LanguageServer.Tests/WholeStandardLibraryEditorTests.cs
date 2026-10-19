@@ -65,6 +65,9 @@ public class WholeStandardLibraryEditorTests
                 SortedMap<int,String>::Enumerator orderedItems=ordered.GetEnumerator();
                 ushort[2] units=[(ushort)65,(ushort)0];
                 std::Utf16::TryDecode(units,1,&scalar,&consumed);
+                Utf16Decoder wideDecoder=new(); wideDecoder.Read(units,1,true,&scalar,&consumed); wideDecoder.Reset();
+                uint reversed=BitOperations::ReverseEndianness(42u);
+                bool absolute=Paths::IsFullyQualified("/tmp/file",PathStyle::Unix);
                 nuint unitCount=0; UnicodeTranscoding::TryGetUtf16Length(text.Data,text.Length,ref unitCount);
                 char[21] digits; nuint digitsWritten=0;
                 IntegerFormatting::TryFormat(42,digits,21,ref digitsWritten);
@@ -80,7 +83,7 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

@@ -30,7 +30,7 @@ public partial class LlvmEmitter
         string thunk = $"gflat${owner}$interface_destroy";
         if (_interfaceDestructors.Add(owner))
         {
-            EmitGlobal($"define internal void @{thunk}(i8* %data) {{");
+            EmitGlobal($"define internal void @{thunk}(i8* %data){NoBuiltinsAttribute} {{");
             EmitGlobal("entry:");
             if (_typeChecker.IsClassByIdentity(owner) || NeedsCleanup(NamedTypeExpression.Resolved(owner, 0)))
             {
@@ -77,7 +77,7 @@ public partial class LlvmEmitter
             $"{(i > 0 && i <= method.Parameters.Count ? EmitAbiParamType(method.Parameters[i - 1].Type) : t)} %arg{i}").ToList();
         string signature = $"{returnType} ({string.Join(", ", parameterTypes)})*";
         string abiReturn = EmitAbiFunctionReturnType(method.ReturnType);
-        EmitGlobal($"define internal {abiReturn} @{name}({string.Join(", ", parameters)}) {{");
+        EmitGlobal($"define internal {abiReturn} @{name}({string.Join(", ", parameters)}){NoBuiltinsAttribute} {{");
         EmitGlobal("entry:");
         EmitGlobal($"    %object = bitcast {parameterTypes[0]} %arg0 to %{owner.Name}*");
         EmitGlobal($"    %vptr = getelementptr %{owner.Name}, %{owner.Name}* %object, i32 0, i32 0");

@@ -21,7 +21,7 @@ public partial class LlvmEmitter
         if (info.Entry == null)
         {
             RegisterLlvmRuntimeReferences(MaskLlvmCode(info.Ir, node, requireUnquotedSymbols: false));
-            llvmFunctions.AppendLine($"define private {resultType} @{name}({string.Join(", ", types.Select((type, index) => type + " %" + index))}) alwaysinline {{");
+            llvmFunctions.AppendLine($"define private {resultType} @{name}({string.Join(", ", types.Select((type, index) => type + " %" + index))}) alwaysinline{NoBuiltinsAttribute} {{");
             llvmFunctions.AppendLine(info.Ir);
             llvmFunctions.AppendLine("}");
         }

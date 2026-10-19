@@ -37,6 +37,7 @@ public partial class LlvmEmitter
         string linkage = _internalizeFunctions && !isEntryPoint ? "internal " : "";
         string header = $"define {linkage}{returnType} @{name}({parameters})" + (inline ? " inlinehint" : "");
         if (exceptionBoundary) header += " nounwind";
+        header += NoBuiltinsAttribute;
         function.HeaderEnd = header.Length;
         if (source != null && _debugSymbols)
         {

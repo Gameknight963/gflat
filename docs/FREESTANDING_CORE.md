@@ -2,7 +2,7 @@
 
 `Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`,
-`BinaryBufferWriter`, `IntegerFormatting`, and `ByteSearch` can operate on caller-owned buffers
+`BinaryBufferWriter`, `IntegerFormatting`, `ByteSearch`, and `CString` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
 reported through their return values. Caller pointers must still designate valid
@@ -19,7 +19,7 @@ silently turn exceptions into return values.
 The native test
 [`FreestandingCoreUtilitiesTests`](../gflat.Tests/FreestandingCoreUtilitiesTests.cs)
 compiles an ordinary gflat `main` with explicitly selected utility sources,
-`NoStdLib`, and internal function linkage. A minimal platform startup calls it
+`NoStdLib`, `NoBuiltins`, and internal function linkage. A minimal platform startup calls it
 and exits through the operating system. It links with `-nostdlib`, without the
 gflat native runtime objects or default C/C++ libraries.
 
@@ -46,6 +46,9 @@ Counted byte searches check first and last overlapping matches, embedded zero
 bytes, empty patterns, and missing patterns in periodic data. A separate assembly
 routine populates the search input so LLVM cannot replace the searches with
 constant answers at O2.
+The same runtime-populated bytes exercise all six C-string helpers, including a
+bounded scan whose terminator lies outside its capacity. `NoBuiltins` prevents
+LLVM from replacing the unbounded length loops with external `strlen` calls.
 The test also inspects the final executable:
 
 - Windows x64 imports exactly `KERNEL32.dll!ExitProcess`, with no CLR header.
@@ -66,6 +69,20 @@ exit call; it does not add floating-point ABI definitions.
 
 `NoStdLib` selects sources; it does not itself replace platform startup or disable
 all default native linker libraries. The test supplies those details explicitly.
+`CompilationOptions.NoBuiltins` separately disables LLVM's recognition and
+introduction of known libc/libm builtins in compiler-generated functions. It is
+false by default, independent of `NoStdLib`. Generated methods, helpers, lambdas,
+interface thunks, and inline LLVM body wrappers receive the `"no-builtins"`
+function attribute; arbitrary `__llvm_module` definitions retain the attributes
+their author supplied. No general optimization pass is disabled.
+
+This optimizer policy does not prohibit explicit libc calls, nor does it prevent
+existing memory intrinsics from lowering to external `memcpy` or `memset` calls.
+Platform ABI helpers, stack probes, and arithmetic support are also separate.
+Final executable inspection remains the evidence for the particular tested
+program's runtime independence. LLVM's
+[TargetLibraryInfo implementation](https://llvm.org/doxygen/TargetLibraryInfo_8h_source.html)
+defines the attribute's library-availability behavior.
 The compiler still needs its existing build tools; runtime independence does not
 remove compiler installation requirements.
 

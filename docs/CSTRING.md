@@ -6,8 +6,10 @@ exception-runtime calls. Every operation is `nothrow`.
 
 Native optimization can introduce a libc call even when the source contains
 none: LLVM recognizes the unbounded length scan as `strlen`. A native build
-without libc therefore also needs optimizer settings that disable introducing
-such library calls. Explicit memory intrinsics and other platform ABI helpers
+without libc therefore also needs `CompilationOptions.NoBuiltins = true` to
+disable introducing such library calls. The
+[freestanding executable test](FREESTANDING_CORE.md) verifies all six helpers at
+O0 and O2 with that policy. Explicit memory intrinsics and other platform ABI helpers
 have separate lowering rules; source independence alone is not a proof that a
 final binary has no runtime imports.
 

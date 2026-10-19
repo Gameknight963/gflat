@@ -11,12 +11,16 @@ public partial class LlvmEmitter : IVisitor
         (_typeChecker.GetMemoryFunction(name) is { } method ? _typeChecker.GetOverloadSuffix(method) : "");
     private readonly TypeChecker _typeChecker;
     private readonly bool _internalizeFunctions;
+    private readonly bool _noBuiltins;
+    private string NoBuiltinsAttribute => _noBuiltins ? " \"no-builtins\"" : "";
 
-    public LlvmEmitter(TypeChecker typeChecker, bool internalizeFunctions = false, bool debugSymbols = false)
+    public LlvmEmitter(TypeChecker typeChecker, bool internalizeFunctions = false, bool debugSymbols = false,
+        bool noBuiltins = false)
     {
         _typeChecker = typeChecker;
         _internalizeFunctions = internalizeFunctions;
         _debugSymbols = debugSymbols;
+        _noBuiltins = noBuiltins;
     }
 
     private int _constCounter = 0;

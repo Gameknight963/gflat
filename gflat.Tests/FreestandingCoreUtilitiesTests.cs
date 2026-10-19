@@ -110,6 +110,17 @@ public class FreestandingCoreUtilitiesTests
             if(std::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=64) return 66;
             if(std::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=0) return 67;
             if(std::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=64) return 68;
+            char* cText=(char*)searchInput;
+            if(std::CString::Length(cText)!=1) return 69;
+            if(std::CString::Compare(cText,&cText[2])!=0 || !std::CString::Equals(cText,&cText[2])) return 70;
+            if(!std::CString::StartsWith(cText,&cText[2]) || !std::CString::EndsWith(cText,&cText[2])) return 71;
+            length=99;
+            if(std::CString::TryGetLength(cText,1,ref length) || length!=0) return 72;
+            if(!std::CString::TryGetLength(cText,2,ref length) || length!=1) return 73;
+            searchInput[1]=(byte)2;searchInput[2]=(byte)0;
+            if(std::CString::Length(cText)!=2 || std::CString::Compare(cText,&cText[2])!=1) return 74;
+            if(std::CString::Equals(cText,&cText[2]) || std::CString::EndsWith(cText,"x")) return 75;
+            if(!std::CString::EndsWith(cText,&cText[1]) || !std::CString::StartsWith(cText,&cText[2])) return 76;
             return 42;
         }
         """;
@@ -125,10 +136,10 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
-            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf" }
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf", "CString.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
-        string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
+        string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "%Exception", "@__gflat_eh_", "personality", "gflat$Memory$", "@malloc", "@free", "@__gflat_stdio_" })
             Assert.DoesNotContain(forbidden, ir);
 

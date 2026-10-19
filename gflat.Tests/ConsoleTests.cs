@@ -109,6 +109,54 @@ public class ConsoleTests
     }
 
     [Fact]
+    public void ZeroCapacityThrowsTypedErrorWithoutTouchingStorageOrConsumingInput()
+    {
+        var result = Run("""
+            int main() {
+                char sentinel = '?'; nuint length = 99;
+                try { Console::TryReadLine(&sentinel, 0, ref length); return 1; }
+                catch (ref std::BufferTooSmallException error) { }
+                if (sentinel != '?' || length != (nuint)0) return 2;
+                char[8] buffer;
+                if (Console::ReadLine(buffer, 8) != (nuint)3 || buffer[0] != 'a' || buffer[2] != 'c') return 3;
+                return 42;
+            }
+            """, "abc\n");
+        Assert.Equal(42, result.ExitCode);
+    }
+
+    [Fact]
+    public void StringAllocationFailurePreservesValueAndAllowsReadingRemainingInput()
+    {
+        var result = Run("""
+            using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* data);
+            static class State { public static bool Fail; }
+            namespace Memory {
+                public replace void*? Allocate(nuint size) {
+                    if (State::Fail && size == (nuint)257) return null;
+                    return malloc(size);
+                }
+                public replace void Free(void* data) { free(data); }
+            }
+            int main() {
+                String line = new String();
+                State::Fail = true;
+                try { Console::TryReadLine(ref line); return 1; } catch (ref BadAllocException error) { }
+                if (line.Length != (nuint)0 || line.Data[0] != '\0') return 2;
+                State::Fail = false;
+                if (!Console::TryReadLine(ref line) || line.Length != (nuint)44) return 3;
+                if (line.Data[0] != 'x' || line.Data[43] != 'x' || line.Data[44] != '\0') return 4;
+                String next = Console::ReadLine();
+                if (next.Length != (nuint)4 || next.Data[0] != 'n' || next.Data[3] != 't') return 5;
+                return 42;
+            }
+            """, new string('x', 300) + "\nnext\n", strings: true);
+        Assert.Equal(42, result.ExitCode);
+    }
+
+    [Fact]
     public void CapacityIncludesTerminatorAndCrLfDoesNotOverflowExactFit()
     {
         Assert.Equal(42, Run("""

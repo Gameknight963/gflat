@@ -30,7 +30,7 @@ void Flush()
 bool TryReadLine(char* data, nuint capacity, ref nuint length)
 {
     length = 0;
-    if (capacity == 0) throw new Exception("Console buffer capacity must include a terminator");
+    if (capacity == 0) throw new std::BufferTooSmallException();
     detail::BufferWriter writer = new detail::BufferWriter(data, capacity);
     defer { length = writer.Length; }
     bool read = detail::ReadLine(&writer);

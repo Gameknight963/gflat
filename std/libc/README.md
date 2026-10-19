@@ -62,7 +62,8 @@ int main()
 - `Flush()` flushes stdout and throws `std::IOException` on failure.
 - `TryReadLine(data, capacity, ref length)` uses caller-owned storage without
   calling `Memory::Allocate` on the normal path. Capacity includes room for the null terminator;
-  zero capacity is rejected before reading. The caller provides valid writable storage.
+  zero capacity throws `BufferTooSmallException` before reading or touching the
+  buffer. The caller provides valid writable storage.
 - `ReadLine(data, capacity)` returns the byte count and throws
   `std::EndOfStreamException` when no line remains. It also leaves a trailing null.
 - EOF before any bytes returns `false` from `TryReadLine`, with an empty buffer and
@@ -88,8 +89,10 @@ int main()
 `ReadLine()` returns an owning `std::String` and throws at EOF. `TryReadLine(ref line)`
 clears and reuses the existing string's capacity. The `Write(ref readonly(String))`
 and `WriteLine(ref readonly(String))` overloads borrow its counted buffer; they do
-not copy the string or allocate. On read errors the reused String can contain a
-partial line.
+not copy the string or allocate. On read or allocation errors the reused String
+remains valid and can contain a partial line. Input may stop partway through
+that line; the next read resumes at its remaining suffix. Unlike bounded-buffer
+overflow, these failures do not promise to consume the rest of the line.
 
 These APIs operate on bytes through libc's standard text streams, including its
 platform newline translation. They do not select the Windows console code page.

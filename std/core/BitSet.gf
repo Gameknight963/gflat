@@ -76,6 +76,44 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         data![index / 32] = data![index / 32] ^ ((uint)1 << (int)(index % 32));
     }
 
+    // Validate before changing any word; an empty range may start at Length.
+    public void SetRange(nuint start, nuint count, bool value)
+    {
+        if (start > length || count > length - start) throw new Exception("BitSet range out of bounds");
+        nuint end = start + count;
+        while (start < end)
+        {
+            nuint first = start % 32;
+            nuint take = 32 - first;
+            if (take > end - start) take = end - start;
+            uint mask = BitSet::RangeMask(first, take);
+            if (value) data![start / 32] = data![start / 32] | mask;
+            else data![start / 32] = data![start / 32] & (mask ^ (uint)4294967295);
+            start += take;
+        }
+    }
+
+    public void FlipRange(nuint start, nuint count)
+    {
+        if (start > length || count > length - start) throw new Exception("BitSet range out of bounds");
+        nuint end = start + count;
+        while (start < end)
+        {
+            nuint first = start % 32;
+            nuint take = 32 - first;
+            if (take > end - start) take = end - start;
+            data![start / 32] = data![start / 32] ^ BitSet::RangeMask(first, take);
+            start += take;
+        }
+    }
+
+    private static uint RangeMask(nuint first, nuint count) nothrow
+    {
+        // Shifting a uint by 32 is not a way to build a complete word mask.
+        if (count == 32) return (uint)4294967295;
+        return (((uint)1 << (int)count) - (uint)1) << (int)first;
+    }
+
     public readonly nuint CountSetBits()
     {
         nuint total = 0;

@@ -104,6 +104,12 @@ length. `Clone()` explicitly makes an independent owned copy. `UnionWith`,
 `IntersectWith`, `ExceptWith`, and `SymmetricExceptWith` modify this set and
 require matching logical lengths; their argument is a borrowed readonly pointer.
 
+`SetRange(start, count, value)` sets or clears a consecutive range;
+`FlipRange(start, count)` toggles it. They process affected words without
+allocating. Both validate the complete range before writing, so an invalid range
+leaves all bits unchanged. A zero-length range is valid anywhere up to `Length`,
+including on an empty set. Neither operation changes the logical length.
+
 Enumeration yields **indices of set bits**, in ascending order, and borrows
 storage. Mutation invalidates the iterator. Failed allocation during `Resize`
 preserves both the original bits and length. Padding bits outside the logical

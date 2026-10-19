@@ -1,0 +1,11 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>f21e8da2-501e-4af9-a03f-8155d6f90548</ProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''">$(GflatDefaultSdkRoot)</GflatSdkRoot>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">../..</GflatSdkRoot>
+  </PropertyGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
+  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
+</Project>

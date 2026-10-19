@@ -24,6 +24,14 @@ The constructor takes `Span<readonly(char)>`. Build that span from a live
 counted buffer, or from `String.Data` and `String.Length`. The input does not
 need a null terminator, and no encoding conversion or validation is performed.
 
+The optional `TextLinesSpan.gf` provides `.Lines()` for mutable and readonly
+character spans. `StringLines.gf` provides `.Lines()` for a named `String`,
+borrowing it through a readonly reference without copying its allocation.
+Temporary owning strings cannot be receivers of this convenience: retain the
+owner in a variable for as long as the line views are used. These optional
+files keep the owning string and general span implementations independent of
+line enumeration.
+
 `GetEnumerator()` returns a fresh independent nested `Enumerator`.
 `MoveNext()` remains false after completion. `Current` throws before the first
 successful advance and after completion. Copying a view or iterator copies its

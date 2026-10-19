@@ -80,12 +80,66 @@ public sealed class StandardTextLinesTests
             }
             """, optimization);
 
-    private static void Run(string program, int optimization)
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NamedStringAndSpanConveniencesBorrowAndSupportLazyQueries(int optimization)
+        => Run("""
+            using std;
+            static class Calls { public static int Allocations; }
+            namespace detail {
+                extern void*? malloc(nuint size); extern void free(void* data);
+            }
+            namespace Memory {
+                replace void*? Allocate(nuint size) { Calls::Allocations++; return detail::malloc(size); }
+                replace void Free(void* data) { detail::free(data); }
+            }
+            bool Nonempty(Span<readonly(char)> line) => !line.IsEmpty;
+            int main(){
+                String text=s"a\r\n\nb\0c\n";
+                int baseline=Calls::Allocations;
+                TextLines lines=text.Lines();
+                TextLines::Enumerator iterator=lines.GetEnumerator();
+                if(!iterator.MoveNext()||iterator.Current.Data!=text.Data)return 1;
+                var selected=lines.AsEnumerable().Where(Nonempty);
+                if(selected.Count()!=2)return 2;
+                Span<readonly(char)> last=new();
+                if(!selected.TryLast(ref last)||last.Length!=3||last[1]!='\0')return 3;
+                if(last.Data!=text.Data+4)return 4;
+                char[2] bytes=['x','\n'];
+                Span<char> writable=new(bytes,2);
+                TextLines mutableLines=writable.Lines();
+                TextLines readonlyLines=writable.AsReadOnly().Lines();
+                if(mutableLines.AsEnumerable().Count()!=1||readonlyLines.AsEnumerable().Count()!=1)return 5;
+                String empty=new();
+                if(empty.Lines().AsEnumerable().Any())return 6;
+                if(Calls::Allocations!=baseline)return 7;
+                return 0;
+            }
+            """, optimization, conveniences: true);
+
+    [Fact]
+    public void StringConvenienceRejectsTemporaryOwners()
     {
-        var names = new[] { "Span.gf", "TextLines.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf" };
-        var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+        var error = Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => Compiler.Check(Sources("""
+            using std;
+            int main(){ TextLines lines=s"a\n".Lines(); return 0; }
+            """, conveniences: true)));
+        Assert.Contains("Lines", error.Message);
+    }
+
+    private static SourceFile[] Sources(string program, bool conveniences = false)
+    {
+        var names = new List<string> { "Span.gf", "TextLines.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf" };
+        if(conveniences) names.AddRange(["TextLinesSpan.gf","StringLines.gf","Vector.gf","String.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","Formatting.gf",
+            "Collections/EnumerableExtensions.gf","Collections/WhereSource.gf","Collections/SelectSource.gf","Collections/SliceSource.gf","Collections/TakeWhileSource.gf","Collections/SkipWhileSource.gf"]);
+        return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
-        var result = CompilerTestHelper.Run(sources, optimization);
+    }
+
+    private static void Run(string program, int optimization, bool conveniences = false)
+    {
+        var result = CompilerTestHelper.Run(Sources(program, conveniences), optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
     }
 }

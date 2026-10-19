@@ -23,8 +23,9 @@ implementation lives in `libc`.
 | Ordered maps | `SortedMap<K,V>` | [Sorted contiguous entries and explicit comparison](../docs/SORTED_MAP.md) |
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
 | Algorithms | `Sort`, `Reverse`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
-| Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, aggregates | [Lazy queries](core/Collections/README.md) |
+| Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates | [Lazy queries](core/Collections/README.md) |
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
+| Caller-buffer numbers | `IntegerFormatting::TryFormat` | [Decimal formatting without a writer or allocation](../docs/INTEGER_FORMATTING.md) |
 | Unicode | `Utf8`, incremental `Utf8Decoder`, borrowed `Utf8Scalars` | [UTF-8 buffers](../docs/UTF8.md), [chunked decoding](../docs/UTF8_DECODER.md), [scalar iteration](../docs/UTF8_SCALARS.md) |
 | UTF-16 and conversion | `Utf16`, `UnicodeTranscoding` | [Code units](../docs/UTF16.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
@@ -65,6 +66,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Word count](../examples/word-count/README.md): streamed input and owning hash keys.
 - [File checksums](../examples/checksum/README.md): streaming CRC32 and Adler32 over binary files.
 - [Hex dump](../examples/hexdump/README.md): byte offsets, hex columns, and printable ASCII with stack-backed formatting.
+- [Unicode conversion](../examples/transcode/README.md): strict UTF-8/UTF-16LE conversion with validation before output-file creation.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

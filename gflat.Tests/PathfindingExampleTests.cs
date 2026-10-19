@@ -39,6 +39,78 @@ public sealed class PathfindingExampleTests
     }
 
     [Fact]
+    public void RandomWeightedGridsMatchIndependentBellmanFordCosts()
+    {
+        var program = new System.Text.StringBuilder("""
+            using std;
+            using Pathfinding;
+            bool Verify(readonly(char*) text, int expected) {
+                Span<readonly(char)> cells = new(text, 42);
+                Vector<nuint> path = Grid::FindPath(cells, 7, 0, 41);
+                if (expected < 0) return path.Count == 0;
+                if (path.Count == 0 || path[0] != 0 || path[path.Count - 1] != 41) return false;
+                int cost = 0;
+                for (nuint i = 1; i < path.Count; i++) {
+                    nuint previous = path[i - 1]; nuint current = path[i];
+                    if (current >= 42 || cells[current] == '#') return false;
+                    nuint difference = 0;
+                    if (current > previous) difference = current - previous;
+                    else difference = previous - current;
+                    if (difference != 7 && (difference != 1 || current / 7 != previous / 7)) return false;
+                    if (cells[current] >= '1' && cells[current] <= '9') cost += (int)cells[current] - (int)'0';
+                    else cost++;
+                }
+                return cost == expected;
+            }
+            int main() {
+            """);
+        var random = new Random(17897);
+        for (int trial = 0; trial < 40; trial++)
+        {
+            var cells = new char[42];
+            for (int i = 0; i < cells.Length; i++)
+            {
+                int choice = random.Next(100);
+                cells[i] = choice < 25 ? '#' : choice < 60 ? (char)('0' + random.Next(1, 10)) : '.';
+            }
+            cells[0] = 'S'; cells[^1] = 'G';
+            int expected = ReferenceCost(cells, 7);
+            program.AppendLine($"if (!Verify(\"{new string(cells)}\", {expected})) return {trial + 100};");
+        }
+        program.AppendLine("return 0; }");
+        Assert.Equal(0, CompilerTestHelper.Run(Sources(program.ToString())).ExitCode);
+    }
+
+    private static int ReferenceCost(char[] cells, int width)
+    {
+        const int unreachable = 1_000_000;
+        int[] costs = Enumerable.Repeat(unreachable, cells.Length).ToArray();
+        costs[0] = 0;
+        for (int pass = 0; pass < cells.Length; pass++)
+        {
+            bool changed = false;
+            for (int cell = 0; cell < cells.Length; cell++)
+            {
+                if (costs[cell] == unreachable || cells[cell] == '#') continue;
+                if (cell % width != 0) Relax(cell, cell - 1);
+                if (cell % width != width - 1) Relax(cell, cell + 1);
+                if (cell >= width) Relax(cell, cell - width);
+                if (cell < cells.Length - width) Relax(cell, cell + width);
+            }
+            if (!changed) break;
+
+            void Relax(int from, int to)
+            {
+                if (cells[to] == '#') return;
+                int step = cells[to] is >= '1' and <= '9' ? cells[to] - '0' : 1;
+                int next = costs[from] + step;
+                if (next < costs[to]) { costs[to] = next; changed = true; }
+            }
+        }
+        return costs[^1] == unreachable ? -1 : costs[^1];
+    }
+
+    [Fact]
     public void InvalidDimensionsAndEndpointsHaveUsefulErrors()
     {
         var result = CompilerTestHelper.Run(Sources("""

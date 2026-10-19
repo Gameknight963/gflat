@@ -6,7 +6,7 @@ public partial class LlvmEmitter
 {
     private void EmitConstructorCall(string name, ConstructorDeclaration? constructor, string arguments)
     {
-        EmitCallInstruction("void", "@" + name, arguments);
+        EmitCallInstruction("void", "@" + name, arguments, handleUnwind: constructor?.IsNoThrow != true);
     }
 
     private void EmitCopyValue(AstNode expression, TypeExpression type)

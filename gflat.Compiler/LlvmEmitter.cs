@@ -702,8 +702,7 @@ public partial class LlvmEmitter : IVisitor
             string llvmType = EmitType(type);
             if (_typeChecker.UsesCollector && HasManagedReferences(type) && !_typeChecker.HasDestructor(type))
             {
-                string managedAddress = CreateManagedTemporary(type);
-                EmitManagedStore(type, value, managedAddress);
+                string managedAddress = CreateManagedTemporary(type, value);
                 Push(managedAddress);
                 return;
             }

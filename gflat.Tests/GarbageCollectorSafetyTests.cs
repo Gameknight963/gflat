@@ -2,6 +2,69 @@ namespace gflat.Tests;
 
 public sealed class GarbageCollectorSafetyTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ManagedReceiverTemporaryIsRegisteredOnceWithItsValue(int optimization) => Succeeds("""
+        replace alias GC = Probe;
+        static class Probe : std::IGarbageCollector {
+            public static int Added;
+            public static int Removed;
+            public static void* Allocate(nuint bytes, nuint alignment) => std::TracingCollector::Allocate(bytes, alignment);
+            public static void ReferenceAdded(void* slot) nothrow {
+                Added++;
+                std::TracingCollector::ReferenceAdded(slot);
+            }
+            public static void ReferenceRemoved(void* slot) nothrow {
+                Removed++;
+                std::TracingCollector::ReferenceRemoved(slot);
+            }
+            public static nuint Collect() => std::TracingCollector::Collect();
+        }
+        struct Box {
+            public int number;
+            public Box(int value) { number = value; }
+            public int Read() { GC::Collect(); return number; }
+        }
+        void Check(Box^ value) {
+            Probe::Added = 0;
+            Probe::Removed = 0;
+            int number = value.Read();
+            if (number != 42 || Probe::Added != 1 || Probe::Removed != 1)
+                throw new Exception("Unexpected receiver tracking");
+        }
+        int main() {
+            { Box^ value = new^ Box(42); Check(value); }
+            if (GC::Collect() != 1) return 1;
+            return 0;
+        }
+        """, optimization);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ReceiverSurvivesCallbackClearingItsOriginalRoot(int optimization) => Succeeds("""
+        struct Box {
+            public int number;
+            public Box(int value) { number = value; }
+            public int Read(int extra) { GC::Collect(); return number + extra; }
+        }
+        static class App {
+            public static Box^? current;
+            public static int Clear() { current = null; GC::Collect(); return 2; }
+            public static void Check() {
+                current = new^ Box(40);
+                if (current!.Read(Clear()) != 42) throw new Exception("Lost receiver");
+            }
+        }
+        int main() {
+            App::Check();
+            GC::Collect();
+            if (std::TracingCollector::ManagedCount != 0) return 1;
+            return 0;
+        }
+        """, optimization);
+
     private static void Succeeds(string source, int optimization, bool vector = false)
     {
         string[] files = vector ? ["core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "libc/GC.gf", "libc/TracingCollector.gf", "core/Vector.gf", "core/Span.gf"] : ["libc/GC.gf", "libc/TracingCollector.gf"];

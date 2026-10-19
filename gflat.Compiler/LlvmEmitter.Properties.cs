@@ -31,8 +31,7 @@ public partial class LlvmEmitter
                 string slot = NewTemp();
                 if (_typeChecker.UsesCollector && HasManagedReferences(_typeChecker.GetType(temporary)))
                 {
-                    slot = CreateManagedTemporary(_typeChecker.GetType(temporary));
-                    EmitManagedStore(_typeChecker.GetType(temporary), value, slot);
+                    slot = CreateManagedTemporary(_typeChecker.GetType(temporary), value);
                 }
                 else
                 {

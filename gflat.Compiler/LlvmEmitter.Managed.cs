@@ -94,14 +94,16 @@ public partial class LlvmEmitter
             if (done != null) { e.Emit($"    br label %{done}"); e.Emit(done + ":"); }
         }
     }
-    private string CreateManagedTemporary(TypeExpression type)
+    private string CreateManagedTemporary(TypeExpression type, string? initialValue = null)
     {
         string address = NewTemp(), flag = NewTemp(), llvm = EmitType(type);
         EmitAlloca(llvm, address); EmitAlloca("i1", flag);
         var prologue = CurrentFunction.ManagedPrologue;
         prologue.AppendLine($"    store {llvm} zeroinitializer, {llvm}* {address}");
         prologue.AppendLine($"    store i1 false, i1* {flag}");
-        Emit($"    store {llvm} zeroinitializer, {llvm}* {address}");
+        // Register the initial contents once. An already evaluated value can
+        // be published directly instead of registering null and removing it again.
+        Emit($"    store {llvm} {initialValue ?? "zeroinitializer"}, {llvm}* {address}");
         EmitManagedReferences(type, address, true);
         Emit($"    store i1 true, i1* {flag}");
         var cleanup = new ManagedReferenceCleanup(type, address, flag);
@@ -112,7 +114,7 @@ public partial class LlvmEmitter
     private void ProtectManagedValue(TypeExpression type, string value)
     {
         if (!_typeChecker.UsesCollector || !HasManagedReferences(type)) return;
-        EmitManagedStore(type, value, CreateManagedTemporary(type));
+        CreateManagedTemporary(type, value);
     }
     private IDeferAction? RegisterManagedCleanup(TypeExpression type, string address, bool onExceptionOnly = false)
     {

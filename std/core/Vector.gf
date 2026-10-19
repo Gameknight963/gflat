@@ -55,7 +55,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         capacity = requested;
     }
 
-    public void Add(T value)
+    private void EnsureCapacityForOne()
     {
         if (count == capacity)
         {
@@ -72,8 +72,38 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
             if (grown > maximum) grown = maximum;
             this.Reserve(grown);
         }
+    }
+
+    public void Add(T value)
+    {
+        this.EnsureCapacityForOne();
         move value at data! + count;
         count++;
+    }
+
+    public void Insert(nuint index, T value)
+    {
+        if (index > count) throw new Exception("Vector insertion index out of range");
+        this.EnsureCapacityForOne();
+        nuint hole = count;
+        while (hole != index)
+        {
+            move *(data! + hole - 1) at data! + hole;
+            hole--;
+        }
+        move value at data! + index;
+        count++;
+    }
+
+    // Transfer the removed element to the caller, like Pop at an arbitrary index.
+    public T RemoveAt(nuint index)
+    {
+        if (index >= count) throw new Exception("Vector removal index out of range");
+        T result = move *(data! + index);
+        for (nuint source = index + 1; source < count; source++)
+            move *(data! + source) at data! + source - 1;
+        count--;
+        return result;
     }
 
     public T Pop()
@@ -85,14 +115,17 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return result;
     }
 
-    public void Clear()
+    public void Truncate(nuint length)
     {
-        while (count != 0)
+        if (length > count) throw new Exception("Vector truncation length out of range");
+        while (count > length)
         {
             count--;
             (data! + count).~T();
         }
     }
+
+    public void Clear() { this.Truncate(0); }
 
     ~Vector()
     {

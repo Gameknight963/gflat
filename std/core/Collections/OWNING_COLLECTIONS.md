@@ -1,5 +1,19 @@
 # Owning collections
 
+`Vector<T>` owns contiguous elements. `Add(value)` appends, `Insert(index, value)`
+inserts before an existing element (or appends at `Count`), and `RemoveAt(index)`
+transfers the removed value to the caller while preserving the order of survivors.
+Ignoring that return value destroys it normally. `Truncate(length)` destroys the
+tail and keeps capacity; it rejects lengths greater than the current count.
+Middle insertion and removal relocate elements instead of invoking copy
+constructors. The insertion argument follows ordinary value semantics and is
+prepared before the vector changes, so inserting a copy of an existing element
+works even when insertion grows the buffer. An explicit move source must not
+refer to an element still owned by that vector.
+
+All middle mutations invalidate iterators and views of the vector. Allocation
+failure, invalid indices, and a failing argument copy preserve existing contents.
+
 `Stack<T>` owns a last-in, first-out sequence backed by a `Vector<T>`.
 `Queue<T>` owns a first-in, first-out sequence backed by a ring buffer.
 Both start empty without allocating. `Count`, `Capacity`, and `IsEmpty`

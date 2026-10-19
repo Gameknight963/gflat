@@ -201,4 +201,27 @@ public class StandardStringOperationsTests
                 return 0;
             }
             """);
+
+    [Fact]
+    public void SuccessfulReplacementReleasesOldAndReplacementBuffersExactlyOnce()
+    {
+        var result=CompilerTestHelper.Run(Sources("""
+            using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
+            extern int printf(readonly(char)* text,...);
+            namespace Memory {
+                public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
+                public replace void Free(void* storage) { printf("F"); free(storage); }
+            }
+            int main() {
+                String text=s"ababa";
+                text.Replace(text.Data,3,text.Data+4,1);
+                if(text.Length!=3 || !text.StartsWith("aba")) return 1;
+                return 0;
+            }
+            """),2);
+        Assert.Equal(0,result.ExitCode);
+        Assert.Equal("AAFF",result.StandardOutput);
+    }
 }

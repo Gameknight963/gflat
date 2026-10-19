@@ -18,7 +18,8 @@ bool present = names.Contains(&key);
 take values, so use `move` when transferring an existing noncopyable object.
 `TryAdd`/set `Add` return false for duplicates and destroy the unused arguments.
 Map `Add` throws on duplicates; `Set` inserts or replaces the value while keeping
-an existing key. `Reserve(n)` reserves room for at least `n` entries.
+an existing key. `Reserve(n)` reserves room for at least `n` entries; `Capacity`
+reports that usable entry count, matching the other containers.
 
 Keys implement both `IHashable` and `IEquatable<K>`. The current generic syntax
 allows one explicit constraint, so equality is checked through a constrained

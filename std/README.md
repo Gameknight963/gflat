@@ -13,6 +13,7 @@ implementation lives in `libc`.
 | Area | APIs | Details |
 | --- | --- | --- |
 | Text | `String`, `ITextWriter`, `IFormattable`, `IStringConvertable` | [Strings](../docs/STRINGS.md), [formatting](core/README.md#strings-and-formatting) |
+| Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
 | Contiguous storage | `Vector<T>`, `Span<T>` | [Ownership and views](core/README.md#vectors) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |
@@ -21,6 +22,7 @@ implementation lives in `libc`.
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, aggregates | [Lazy queries](core/Collections/README.md) |
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
 | Unicode | `Utf8` strict scalar decoding, encoding, validation, counting | [UTF-8](../docs/UTF8.md) |
+| ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |

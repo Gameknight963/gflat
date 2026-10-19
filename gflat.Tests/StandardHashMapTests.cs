@@ -102,7 +102,7 @@ public class StandardHashMapTests
             int main() {
                 HashMap<int,int> map = new();
                 for(int i=0;i<300;i++) map.Add(i,i*3);
-                if(map.Count!=300 || map.Capacity<600) return 1;
+                if(map.Count!=300 || map.Capacity<300) return 1;
                 for(int i=0;i<300;i++) if(map[&i]!=i*3) return 2;
                 for(int i=0;i<300;i+=2) if(!map.Remove(&i)) return 3;
                 for(int i=0;i<300;i++) {

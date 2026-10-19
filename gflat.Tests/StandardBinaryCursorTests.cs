@@ -22,9 +22,11 @@ public class StandardBinaryCursorTests
                 byte[20] data;
                 for (int i=0;i<20;i++)data[i]=(byte)165;
                 BinaryBufferWriter packet=new(&data[1],18);
+                if(packet.Data!=&data[1])return 18;
                 if(!packet.TryWriteByte((byte)1)||!packet.TryWriteUInt16BigEndian((ushort)10)||!packet.TryWriteInt32LittleEndian(-123456789))return 1;
                 BinaryBufferWriter payload=new();
                 if(!packet.TryWriteSlice(10,ref payload)||packet.Position!=17||packet.Remaining!=1||payload.Capacity!=10)return 2;
+                if(payload.Data!=&data[8])return 19;
                 if(!payload.TryWriteUInt64BigEndian(18364758544493064720ul)||!payload.TryWriteInt16LittleEndian((short)-7))return 3;
                 if(payload.TryWriteByte((byte)0)||payload.Position!=10||payload.Remaining!=0)return 4;
                 if(!packet.TryWriteByte((byte)126)||packet.Position!=18||packet.TryWriteByte((byte)0))return 5;
@@ -36,6 +38,7 @@ public class StandardBinaryCursorTests
                 if(!reader.TryReadInt32LittleEndian(ref sequence)||sequence!=-123456789)return 12;
                 BinaryBufferReader part=new();
                 if(!reader.TryReadSlice((nuint)size,ref part)||part.Length!=10||part.Position!=0||reader.Position!=17)return 13;
+                if(reader.Data!=&data[1]||part.Data!=&data[8])return 20;
                 if(!part.TryReadUInt64BigEndian(ref wide)||wide!=18364758544493064720ul||!part.TryReadInt16LittleEndian(ref tail)||tail!=(short)-7)return 14;
                 if(part.TryReadByte(ref version)||version!=(byte)0||part.Position!=10)return 15;
                 if(!reader.TryReadByte(ref version)||version!=(byte)126||reader.Remaining!=0)return 16;
@@ -85,6 +88,7 @@ public class StandardBinaryCursorTests
             using std;
             int main() {
                 BinaryBufferReader emptyRead=new(); BinaryBufferWriter emptyWrite=new();
+                if(emptyRead.Data!=null||emptyWrite.Data!=null)return 15;
                 BinaryBufferReader readPart=new(); BinaryBufferWriter writePart=new();
                 byte value=(byte)99;
                 if(emptyRead.Length!=0||emptyRead.Position!=0||emptyRead.Remaining!=0||emptyRead.TryReadByte(ref value)||value!=(byte)0)return 1;
@@ -102,6 +106,7 @@ public class StandardBinaryCursorTests
                 if(!reader.TryReadSlice(2,ref readPart)||!writer.TryWriteSlice(2,ref writePart)||reader.Position!=3||writer.Position!=3)return 9;
                 if(!writePart.TryWriteByte((byte)8)||!readPart.TryReadByte(ref value)||value!=(byte)8)return 10;
                 if(reader.TryReadSlice(2,ref readPart)||writer.TryWriteSlice(2,ref writePart)||readPart.Length!=0||writePart.Capacity!=0||reader.Position!=3||writer.Position!=3)return 11;
+                if(readPart.Data!=null||writePart.Data!=null)return 16;
                 reader.Reset(); writer.Reset();
                 if(reader.Position!=0||writer.Position!=0||reader.Remaining!=4||writer.Remaining!=4||bytes[1]!=(byte)8)return 12;
                 if(!reader.TryReadByte(ref value)||value!=(byte)1)return 13;

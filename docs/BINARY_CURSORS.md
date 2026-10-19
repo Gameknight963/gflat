@@ -26,6 +26,13 @@ extent. Both have `Position` and `Remaining` getters. `Reset()` sets position to
 zero without modifying storage. `TrySkip(count)` advances only if enough bytes
 remain; a writer skip does not initialize the skipped bytes.
 
+`Data` exposes the start of the captured region, independently of the current
+position: a reader returns `readonly(byte)*?`, and a mutable writer returns
+`byte*?`. A default cursor has null data. This lets a bounded child feed another
+counted API, such as UTF-8 decoding, without copying the payload or adding a Span
+dependency. Direct pointer use requires the caller to respect `Length` or
+`Capacity`; it does not advance the cursor or perform bounds checks.
+
 `TryReadByte` / `TryWriteByte` handle one byte. Fixed-width methods use
 `TryRead` / `TryWrite` followed by `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`,
 or `UInt64`, and `LittleEndian` or `BigEndian`, matching `BinaryPrimitives`.

@@ -14,6 +14,7 @@ public struct BinaryBufferReader
     }
 
     public nuint Length { readonly get nothrow => length; }
+    public readonly(byte)*? Data { readonly get nothrow => data; }
     public nuint Position { readonly get nothrow => position; }
     public nuint Remaining { readonly get nothrow => length - position; }
     public void Reset() nothrow { position = 0; }

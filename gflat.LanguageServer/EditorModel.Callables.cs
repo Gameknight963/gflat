@@ -23,7 +23,8 @@ public sealed partial class EditorModel
         return index >= 0 && tokens[index].Kind is TokenKind.Identifier or TokenKind.Base or TokenKind.New ? index : -1;
     }
 
-    private Symbol? SourceCallable(AstNode target) => declarations.GetValueOrDefault(target) ??
+    private Symbol? SourceCallable(AstNode target) => target is MethodDeclaration method && snapshot.Checker?.GetPrimitiveMethodSource(method) is { } original
+        ? declarations.GetValueOrDefault(original) : declarations.GetValueOrDefault(target) ??
         sourceCallableDeclarations.GetValueOrDefault((target.GetType(), target.Span));
 
     private void IndexBoundCallables()
@@ -79,6 +80,8 @@ public sealed partial class EditorModel
     private Symbol BindCallable(Symbol source, MethodDeclaration target)
     {
         if (ReferenceEquals(source.Syntax.Node, target) || snapshot.Checker is not { } checker) return source;
+        if (checker.GetPrimitiveMethodSource(target) != null)
+            return source with { Type = target.ReturnType, BoundParameters = target.Parameters.Skip(1).ToArray(), BoundMethod = target };
         var definition = (MethodDeclaration)source.Syntax.Node;
         var genericNames = DisplayGenericNames(source);
         var bindings = new Dictionary<string, TypeExpression>();

@@ -16,6 +16,7 @@ public class EditorGrammarTests
     [InlineData("if (ready) return;", "if", "keyword - control")]
     [InlineData("managed<int, Collector> item;", "managed", "keyword")]
     [InlineData("public expect alias GC : ICollector;", "expect", "keyword")]
+    [InlineData("implementation int {", "implementation", "keyword")]
     public void KeywordScopesSelectTheCorrectVisualStudioClassification(string line, string word, string expected)
     {
         int offset = line.IndexOf(word, StringComparison.Ordinal);

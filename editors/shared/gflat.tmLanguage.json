@@ -6,6 +6,10 @@
   ],
   "patterns": [
     {
+      "name": "storage.modifier.gflat",
+      "match": "\\bimplementation\\b(?=\\s+[A-Za-z_][A-Za-z0-9_:]*\\s*[:{])"
+    },
+    {
       "name": "keyword.other.accessor.gflat",
       "match": "\\b(get|set)\\b(?=\\s*(?:\\{|=>|;|nothrow\\b|$))"
     },

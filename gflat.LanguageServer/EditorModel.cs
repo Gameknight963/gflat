@@ -341,6 +341,13 @@ public sealed partial class EditorModel
             }
             if (type is not NamedTypeExpression named) return null;
             string name = named.Namespace == null ? named.Name : Join(named.Namespace, named.Name);
+            var parameter = Visible(path, offset).FirstOrDefault(s => s.IsTypeParameter && s.Name == name);
+            if (parameter?.TypeConstraint != null)
+            {
+                if (!aliases.Add(parameter)) return null;
+                type = parameter.TypeConstraint;
+                continue;
+            }
             var alias = symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == name)
                 ?? Visible(path, offset).FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Name == name);
             if (alias != null)
@@ -373,7 +380,9 @@ public sealed partial class EditorModel
         var visited = new HashSet<string>();
         while (visited.Add(owner))
         {
-            foreach (var symbol in symbols.Where(s => s.Owner == owner && s.Scope == null && s.Syntax.Node is not ConstructorDeclaration and not MethodDeclaration { StaticConstructorName: not null })) yield return symbol;
+            foreach (var symbol in symbols.Where(s => s.Owner == owner && s.Scope == null &&
+                !Parents(s.Syntax).Any(p => p.Node is PrimitiveImplementationDeclaration) &&
+                s.Syntax.Node is not ConstructorDeclaration and not MethodDeclaration { StaticConstructorName: not null })) yield return symbol;
             var type = symbols.FirstOrDefault(s => s.Qualified == owner && s.Syntax.Node is ClassDeclaration);
             if (type?.Syntax.Node is not ClassDeclaration c) yield break;
             // The parser records the colon list in Interfaces; checking separates
@@ -399,9 +408,10 @@ public sealed partial class EditorModel
 
     private bool IsValueModelKeyword(string path, Token token)
     {
-        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with" or "var")) return false;
+        if (token.Text is not ("move" or "copy" or "at" or "ref" or "this" or "with" or "var" or "implementation")) return false;
         foreach (var syntax in nodes[path])
         {
+            if (token.Text == "implementation" && syntax.Node is PrimitiveImplementationDeclaration && token.Start == syntax.Span.Start) return true;
             if (token.Text == "var" && syntax.Node is VariableDeclaration { IsTypeInferred: true } &&
                 tokens[path].FirstOrDefault(t => t.Start >= syntax.Span.Start && t.Text == "var")?.Start == token.Start) return true;
             if (token.Text == "this" && syntax.Node is Parameter { IsExtensionReceiver: true } && token.Start == syntax.Span.Start) return true;

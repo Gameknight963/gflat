@@ -83,6 +83,17 @@ int main() { int value = 0; try { Set(ref value); } catch (ref Exception error) 
 '@ | Set-Content -LiteralPath $smoke
     & $compiler $smoke --run -o (Join-Path $extracted 'unwinding-ref.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged exception/ref smoke test failed' }
+    $primitive = Join-Path $extracted 'primitive-interface.gf'
+    @'
+interface IHash {
+    readonly int Hash();
+    implementation int { public readonly int Hash() => *this; }
+}
+int Hash<T : IHash>(ref readonly(T) value) => value.Hash();
+int main() { int value = 21; IHash* view = &value; return Hash(ref value) + view.Hash() - 42; }
+'@ | Set-Content -LiteralPath $primitive
+    & $compiler $primitive --optimization 2 --run -o (Join-Path $extracted 'primitive-interface.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged primitive interface smoke test failed' }
     $console = Join-Path $extracted 'console.gf'
     'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
     $std = Join-Path $extracted 'Sdk/std'

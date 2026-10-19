@@ -11,6 +11,7 @@
     <DebugSymbols Condition="'$(DebugSymbols)' == '' and '$(Configuration)' == 'Debug'">true</DebugSymbols>
     <DebugSymbols Condition="'$(DebugSymbols)' == ''">false</DebugSymbols>
     <_GflatDebugOption Condition="'$(DebugSymbols)' == 'true'">--debug</_GflatDebugOption>
+    <_GflatBuiltinsOption Condition="'$(NoBuiltins)' == 'true'">--no-builtins</_GflatBuiltinsOption>
 
     <DebuggerFlavor Condition="'$(DebuggerFlavor)' == ''">GflatLocal</DebuggerFlavor>
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath);$(MSBuildProjectFullPath)</MSBuildAllProjects>
@@ -54,6 +55,7 @@
   <Import Project="$(MSBuildProjectFullPath).user" Condition="Exists('$(MSBuildProjectFullPath).user')" />
   <Target Name="GflatGetSources" Returns="@(_GflatSources)">
     <Error Condition="'$(NoStdLib)' != 'true' and '$(NoStdLib)' != 'false'" Text="NoStdLib must be true or false." />
+    <Error Condition="'$(NoBuiltins)' != 'true' and '$(NoBuiltins)' != 'false'" Text="NoBuiltins must be true or false." />
     <Error Condition="'$(OutputType)' != 'Executable' and '$(OutputType)' != 'SourceLibrary'" Text="OutputType must be Executable or SourceLibrary." />
     <Error Condition="'$(DebugSymbols)' != 'true' and '$(DebugSymbols)' != 'false'" Text="DebugSymbols must be true or false." />
     <Error Condition="'$(OutputType)' == 'SourceLibrary' and '$(GflatAsReference)' != 'true' and '$(GflatEmitIR)' == 'true'" Text="SourceLibrary projects have no standalone output; build an executable referencing them." />
@@ -120,6 +122,7 @@
       <_GflatSetting Include="Path"><Value>$(PATH)</Value></_GflatSetting>
       <_GflatSetting Include="LibraryPath"><Value>$(LIB)</Value></_GflatSetting>
       <_GflatSetting Include="NoStdLib"><Value>$(NoStdLib)</Value></_GflatSetting>
+      <_GflatSetting Include="NoBuiltins"><Value>$(NoBuiltins)</Value></_GflatSetting>
       <_GflatSetting Include="Reserve"><Value>$(GflatExceptionReserveBytes)</Value></_GflatSetting>
       <_GflatSetting Include="Optimization"><Value>$(GflatOptimizationLevel)</Value></_GflatSetting>
       <_GflatSetting Include="DebugSymbols"><Value>$(DebugSymbols)</Value></_GflatSetting>
@@ -136,16 +139,16 @@
   </Target>
   <Target Name="_GflatCompile" DependsOnTargets="_GflatPrepareBuild;_GflatCheckOutputProvenance" Inputs="@(_GflatBuildInputs);$(_GflatSourceList);$(_GflatBuildSettings)" Outputs="@(_GflatNativeOutputs);$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' == 'true'">
     <Delete Files="$(_GflatBuildSuccess)" />
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption)  $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
     <Touch Files="$(_GflatBuildSuccess)" AlwaysCreate="true" />
   </Target>
   <Target Name="Build" DependsOnTargets="_GflatPrepareBuild;_GflatCompile" Returns="$(_GflatBuildOutput)">
     <!-- Unknown commands and source-library checks stay uncached. -->
     <Delete Files="$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' != 'true'" />
-    <Exec Condition="'$(_GflatCanCache)' != 'true' and '@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
+    <Exec Condition="'$(_GflatCanCache)' != 'true' and '@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
   </Target>
   <Target Name="Check" DependsOnTargets="_GflatPrepare">
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
   </Target>
   <Target Name="Clean" DependsOnTargets="_GflatValidateOutputs">
     <PropertyGroup Condition="'$(OutputType)' == 'Executable'"><_GflatCleanExtension>$([System.IO.Path]::GetExtension('$(TargetPath)'))</_GflatCleanExtension></PropertyGroup>

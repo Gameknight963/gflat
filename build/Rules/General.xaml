@@ -4,6 +4,7 @@
     <EnumValue Name="Executable" DisplayName="Executable" /><EnumValue Name="SourceLibrary" DisplayName="Source library" />
   </EnumProperty>
   <BoolProperty Name="NoStdLib" DisplayName="Exclude standard library" Description="Compile only the explicitly selected sources and project references. No bundled std declarations are added." />
+  <BoolProperty Name="NoBuiltins" DisplayName="Disable libc builtin recognition" Description="Prevent LLVM recognizing libc builtin patterns. Defaults to false, independently of NoStdLib. Explicit calls and intrinsics may still require runtime helpers." />
   <StringProperty Name="OutputPath" DisplayName="Output directory" />
   <StringProperty Name="GflatCompilerCommand" DisplayName="Compiler command" />
   <BoolProperty Name="DebugSymbols" DisplayName="Generate debug symbols" Description="Debug defaults to true. Emit source locations and native variable/type descriptions (PDB on Windows, DWARF on Linux)." />

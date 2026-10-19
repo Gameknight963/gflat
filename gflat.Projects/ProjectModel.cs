@@ -25,6 +25,7 @@ public sealed class ProjectModel
     public int ExceptionReserveBytes { get; }
     public int OptimizationLevel { get; }
     public bool NoStdLib { get; }
+    public bool NoBuiltins { get; }
     public string? SdkRoot { get; }
     public IReadOnlyList<string> References { get; }
     public IReadOnlyList<string> Imports { get; }
@@ -32,11 +33,12 @@ public sealed class ProjectModel
     private readonly Func<string, bool> matchesGlob;
 
     internal ProjectModel(string path, ProjectKind kind, string? targetPath, string[] sources,
-        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU")
+        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU", bool noBuiltins = false)
     {
         Configuration = configuration;
         Platform = platform;
         NoStdLib = noStdLib;
+        NoBuiltins = noBuiltins;
         ExceptionReserveBytes = exceptionReserveBytes;
         OptimizationLevel = optimizationLevel;
         SdkRoot = sdkRoot;
@@ -44,12 +46,12 @@ public sealed class ProjectModel
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
     }
     public static ProjectModel Load(string path) => Load(path, null, null);
-    public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false, bool? debugSymbols = null)
+    public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false, bool? debugSymbols = null, bool? noBuiltins = null)
     {
         path = Path.GetFullPath(path);
         try { MsBuildHost.Initialize(); }
         catch (IOException error) { throw new ProjectException(path, error.Message); }
-        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib, asReference, debugSymbols);
+        return MsBuildEvaluation.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib, asReference, debugSymbols, noBuiltins);
     }
     public bool IncludesFile(string path)
     {

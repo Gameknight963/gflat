@@ -366,6 +366,25 @@ and [MSBuild project files](https://learn.microsoft.com/en-us/visualstudio/msbui
 
 ## Native optimization
 
+`NoBuiltins` defaults to `false`, independently of `NoStdLib`. Set
+`<NoBuiltins>true</NoBuiltins>` in a property group, or use `--no-builtins` with
+standalone or project builds, to disable LLVM's recognition of libc builtin
+patterns in generated functions. For example, an ordinary C-string scan can
+otherwise be optimized into a `strlen` call even though the source called no
+external function. Visual Studio exposes the same setting as **Disable libc
+builtin recognition** on the project's General page.
+
+`--builtins` explicitly restores the default behavior and overrides a project's
+`NoBuiltins=true`. If both switches are supplied, the last one wins. Changing this
+setting invalidates incremental compilation; `check` and source-library builds
+accept the same override. The compiler API uses `CompilationOptions.NoBuiltins`.
+
+This is not a guarantee of runtime-independent output. Explicit external calls,
+explicit LLVM intrinsics, and other target lowering requirements can still need
+libc or compiler runtime helpers. It neither excludes std sources nor changes
+startup/linker settings; use `NoStdLib` and an appropriate native link setup
+separately when building freestanding code.
+
 Use `--optimization 0|1|2|3` with standalone compilation or project builds.
 Projects default to 0 in Debug and 2 in Release. Set `GflatOptimizationLevel` in a
 project property group, or use the optimization field in Visual Studio's project

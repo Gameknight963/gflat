@@ -6,7 +6,7 @@ internal static class ProjectBuild
 {
     internal static int Run(ProjectModel project, string target, string configuration, string platform,
         bool emitIr = false, string? output = null, string? clang = null, int? exceptionReserveBytes = null, int? optimizationLevel = null,
-        ProjectGraph? sourceGraph = null, bool noStdLib = false, bool? debugSymbols = null)
+        ProjectGraph? sourceGraph = null, bool noStdLib = false, bool? debugSymbols = null, bool? noBuiltins = null)
     {
         // Explicit source-list invocations in the targets avoid recursively building the project.
         string assembly = typeof(Program).Assembly.Location;
@@ -16,12 +16,13 @@ internal static class ProjectBuild
         Property("Platform", platform);
         if (noStdLib) Property("NoStdLib", "true");
         if (debugSymbols.HasValue) Property("DebugSymbols", debugSymbols.Value ? "true" : "false");
+        if (noBuiltins.HasValue) Property("NoBuiltins", noBuiltins.Value ? "true" : "false");
         if (project.SdkRoot != null) Property("GflatSdkRoot", project.SdkRoot);
         string appHost = Path.Combine(Path.GetDirectoryName(assembly)!, OperatingSystem.IsWindows() ? "gflat.exe" : "gflat");
         string compiler = File.Exists(appHost) ? appHost : assembly;
         Property("GflatCompilerPath", compiler);
         sourceGraph ??= ProjectGraph.Load(project.FilePath,
-            (path, asReference) => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, asReference, debugSymbols));
+            (path, asReference) => ProjectModel.Load(path, configuration, platform, exceptionReserveBytes, optimizationLevel, noStdLib ? true : null, asReference, debugSymbols, noBuiltins));
         Property("GflatProjectInputs", string.Join(";", sourceGraph.Projects
             .SelectMany(item => item.Imports.Prepend(item.FilePath)).Distinct(ProjectModel.Paths)
             .Select(ProjectSdk.EscapePropertyValue)));

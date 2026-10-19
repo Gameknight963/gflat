@@ -7,7 +7,7 @@ namespace gflat.Projects;
 internal static class MsBuildEvaluation
 {
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib, bool asReference, bool? debugSymbols)
+    internal static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes, int? optimizationLevel, bool? noStdLib, bool asReference, bool? debugSymbols, bool? noBuiltins)
     {
         try
         {
@@ -19,6 +19,7 @@ internal static class MsBuildEvaluation
             if (optimizationLevel.HasValue) properties["GflatOptimizationLevel"] = optimizationLevel.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (noStdLib.HasValue) properties["NoStdLib"] = noStdLib.Value ? "true" : "false";
             if (debugSymbols.HasValue) properties["DebugSymbols"] = debugSymbols.Value ? "true" : "false";
+            if (noBuiltins.HasValue) properties["NoBuiltins"] = noBuiltins.Value ? "true" : "false";
             using var collection = new ProjectCollection(properties);
             var project = new Project(path, null, null, collection, ProjectLoadSettings.RecordEvaluatedItemElements);
             var kind = project.GetPropertyValue("OutputType").ToLowerInvariant() switch
@@ -29,6 +30,8 @@ internal static class MsBuildEvaluation
             };
             if (!bool.TryParse(project.GetPropertyValue("NoStdLib"), out bool excludesStd))
                 throw new ProjectException(path, "NoStdLib must be true or false.");
+            if (!bool.TryParse(project.GetPropertyValue("NoBuiltins"), out bool disablesBuiltins))
+                throw new ProjectException(path, "NoBuiltins must be true or false.");
             string? target = kind == ProjectKind.Executable ? project.GetPropertyValue("TargetPath") : null;
             if (kind == ProjectKind.Executable && string.IsNullOrEmpty(target))
                 throw new ProjectException(path, "TargetPath is missing. Import Gflat.targets.");
@@ -47,7 +50,7 @@ internal static class MsBuildEvaluation
                 project.Imports.Select(i => i.ImportedProject.FullPath).Distinct(ProjectModel.Paths).ToArray(),
                 file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,
                 project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null,
-                excludesStd, project.GetPropertyValue("Configuration"), project.GetPropertyValue("Platform"));
+                excludesStd, project.GetPropertyValue("Configuration"), project.GetPropertyValue("Platform"), disablesBuiltins);
         }
         catch (InvalidProjectFileException error)
         {

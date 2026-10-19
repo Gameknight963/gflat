@@ -976,6 +976,13 @@ Scope destructors and deferred actions run during unwinding. Failed construction
 
 `void Boundary() nothrow { ... }` permits local handlers but terminates if an exception escapes. Destructors and `main` are also termination boundaries. Cleanup runs up to the boundary; outer callers cannot catch past it. An exception escaping cleanup while another exception is unwinding terminates; cleanup may catch its own failures locally.
 
+An implementation or override may strengthen a potentially throwing interface or
+base method by declaring `nothrow`. It cannot weaken an existing `nothrow`
+contract. This includes static interface implementations, primitive
+implementations, and property accessors. Calls use the guarantee visible through
+their receiver's declared type; a stronger concrete implementation does not make
+all calls through a potentially throwing interface nonthrowing.
+
 Before termination, `Exceptions::Unhandled(Exception*? error)` receives a borrowed pointer, or null for a foreign exception. When declared, this runtime entry point must provide a public, non-generic namespace function returning `void` and taking exactly one mutable nullable `Exception` pointer. Other overloads may coexist; termination selects the canonical signature, including its overload symbol. This weak `void` function lives in `std/libc/Exceptions/ExceptionHandling.gf`. Its default implementation calls libc `exit` with `error.GetCode()`, or 1 for a foreign exception, without printing. Exception constructors default the code to 1. A replacement hook should terminate explicitly; if it returns or throws, the runtime exits with status 1. A custom root `Exception` class must supply `GetCode()`. To use allocating `new*`, it must also support the standard `(message, code)` constructor used by the automatically included `std::BadAllocException`, or supply its own `std::BadAllocException` with a public constructor callable without arguments. Process termination does not unwind the remaining stack.
 
 The compiler driver links a small C++ runtime, requiring Clang's C++ driver and the platform C++ development libraries in addition to LLVM.

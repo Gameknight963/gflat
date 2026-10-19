@@ -213,7 +213,7 @@ namespace gflat.semantics
                         throw new TypeCheckException($"Method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' is marked override but does not override any virtual or abstract method in a base class", method.Span);
                     }
                     MethodDeclaration baseMethod = cls.VirtualMethods[slot];
-                    if (baseMethod.IsNoThrow != method.IsNoThrow)
+                    if (baseMethod.IsNoThrow && !method.IsNoThrow)
                     {
                         throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' must match nothrow specification of base method", method.Span);
                     }

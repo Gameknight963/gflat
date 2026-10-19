@@ -2412,7 +2412,7 @@ namespace gflat
                         ValidateStaticContractImplementation(ifaceMethod, classMethod);
                         if (classMethod.PropertyName != null && classMethod.Accessibility != TokenKind.Public)
                             throw new TypeCheckException($"Property accessor '{classMethod.PropertyName}' must be public to implement an interface", classMethod.Span);
-                        if (ifaceMethod.IsNoThrow != classMethod.IsNoThrow)
+                        if (ifaceMethod.IsNoThrow && !classMethod.IsNoThrow)
                         {
                             throw new TypeCheckException(
                                 $"{DescribeSourceCallable(classMethod, capitalized: true)} in class '{DisplayName(node.Name)}' must match nothrow specification of interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",
@@ -2607,7 +2607,7 @@ namespace gflat
                         ValidateStaticContractImplementation(ifaceMethod, structMethod);
                         if (structMethod.PropertyName != null && structMethod.Accessibility != TokenKind.Public)
                             throw new TypeCheckException($"Property accessor '{structMethod.PropertyName}' must be public to implement an interface", structMethod.Span);
-                        if (ifaceMethod.IsNoThrow != structMethod.IsNoThrow)
+                        if (ifaceMethod.IsNoThrow && !structMethod.IsNoThrow)
                         {
                             throw new TypeCheckException(
                                 $"{DescribeSourceCallable(structMethod, capitalized: true)} in struct '{DisplayName(node.Name)}' must match nothrow specification of interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",

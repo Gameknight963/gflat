@@ -178,12 +178,30 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
             valid = false;
             while (position < length)
             {
-                nuint index = position;
-                position++;
-                if ((data![index / 32] & ((uint)1 << (int)(index % 32))) != (uint)0)
+                nuint offset = position % 32;
+                uint bits = data![position / 32] >> (int)offset;
+                // Keep consecutive set bits cheap, and reload the word on every
+                // call so edits ahead of this position remain observable.
+                if ((bits & 1u) != 0u)
                 {
-                    current = index; valid = true; return true;
+                    current = position; position++; valid = true; return true;
                 }
+                nuint skip = 32 - offset;
+                if (bits != 0u)
+                {
+                    skip = 0;
+                    if ((bits & 0xffffu) == 0u) { bits = bits >> 16; skip += 16; }
+                    if ((bits & 0xffu) == 0u) { bits = bits >> 8; skip += 8; }
+                    if ((bits & 0xfu) == 0u) { bits = bits >> 4; skip += 4; }
+                    if ((bits & 3u) == 0u) { bits = bits >> 2; skip += 2; }
+                    if ((bits & 1u) == 0u) skip++;
+                    // A public enumerator may borrow words with dirty padding.
+                    if (skip >= length - position) { position = length; return false; }
+                    current = position + skip; position = current + 1;
+                    valid = true; return true;
+                }
+                if (skip >= length - position) { position = length; return false; }
+                position += skip;
             }
             return false;
         }

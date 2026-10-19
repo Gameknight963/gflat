@@ -58,3 +58,43 @@ O0/O2 builds quote runtime-populated bytes and check escapes and atomic failures
 their only import is `KERNEL32.dll!ExitProcess`. The same test retains a Linux
 x64 syscall-startup branch for CI. This is evidence for that tested configuration,
 not a blanket guarantee about backend ABI helpers on every target.
+
+## Writing through ITextWriter
+
+The optional `std/core/JsonStringWriter.gf` adapter adds:
+
+```csharp
+void WriteJsonString(this ITextWriter* output, readonly(char)* input, nuint length);
+```
+
+Include it alongside `JsonString.gf` and `Utf8.gf`. For example:
+
+```csharp
+char[128] storage;
+std::BufferWriter buffer = new(storage, 128);
+ITextWriter* output = &buffer;
+output.WriteJsonString("hello", 5);
+```
+
+The adapter validates the entire input and quoted length before its first writer
+call. Invalid UTF-8 or size overflow throws `Exception` without writing. After
+successful validation, it writes the opening quote, maximal spans requiring no
+escaping, individual escapes, and the closing quote. Each escape uses the core
+`JsonString` encoder with an eight-byte stack buffer; no second escape policy or
+intermediate owning String is involved. Empty input makes two quote writes.
+
+The adapter itself allocates no heap storage during successful writing. An
+underlying String or other writer may allocate as part of its own behavior.
+Writer failures propagate, and **may leave partial output**: this adapter does
+not promise the counted-buffer API's atomicity across multiple `Write` calls.
+For all-or-nothing destination updates, quote into a sufficiently large caller
+buffer first, then use a writer with the required commit behavior.
+
+Input must remain valid and unchanged throughout the call, separate from writer
+state and destination storage. A writer consumes each supplied span during
+`Write` and must not retain its pointer; escape bytes live in temporary stack
+storage. The adapter borrows the writer and never destroys or closes it.
+BufferWriter, String, File, and custom `ITextWriter` implementations can all be
+used through the same interface pointer. The adapter depends on the normal
+writer/exception contracts; adding it does not add those dependencies to the
+standalone counted-buffer quoting source.

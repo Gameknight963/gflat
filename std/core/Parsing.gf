@@ -5,13 +5,12 @@ namespace std;
 // text must point to count readable bytes; result must point to writable storage.
 bool TryParseInt(readonly(char)* text, nuint count, int* result) nothrow
 {
-    *result = 0;
-    if (count == 0) return false;
+    if (count == 0) { *result = 0; return false; }
 
     nuint index = 0;
     bool negative = text[0] == '-';
     if (negative || text[0] == '+') index++;
-    if (index == count) return false;
+    if (index == count) { *result = 0; return false; }
 
     long limit = 2147483647l;
     if (negative) limit = 2147483648l;
@@ -19,9 +18,9 @@ bool TryParseInt(readonly(char)* text, nuint count, int* result) nothrow
     for (; index < count; index++)
     {
         char character = text[index];
-        if (character < '0' || character > '9') return false;
+        if (character < '0' || character > '9') { *result = 0; return false; }
         long digit = (long)(character - '0');
-        if (magnitude > (limit - digit) / 10l) return false;
+        if (magnitude > (limit - digit) / 10l) { *result = 0; return false; }
         magnitude = magnitude * 10l + digit;
     }
 

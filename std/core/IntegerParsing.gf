@@ -42,10 +42,9 @@ namespace integer_parsing_detail
 // Unsigned parsers reject a minus sign, including -0. Every failure writes zero.
 bool TryParseByte(readonly(char)* text, nuint count, byte* result) nothrow
 {
-    *result = (byte)0;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, 255ul, 0ul, false, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, 255ul, 0ul, false, &magnitude, &negative)) { *result = (byte)0; return false; }
     *result = (byte)magnitude;
     return true;
 }
@@ -66,10 +65,9 @@ byte ParseByte(readonly(char)* text)
 
 bool TryParseSByte(readonly(char)* text, nuint count, sbyte* result) nothrow
 {
-    *result = (sbyte)0;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, 127ul, 128ul, true, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, 127ul, 128ul, true, &magnitude, &negative)) { *result = (sbyte)0; return false; }
     if (negative) *result = (sbyte)(0ul - magnitude);
     else *result = (sbyte)magnitude;
     return true;
@@ -91,10 +89,9 @@ sbyte ParseSByte(readonly(char)* text)
 
 bool TryParseShort(readonly(char)* text, nuint count, short* result) nothrow
 {
-    *result = (short)0;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, 32767ul, 32768ul, true, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, 32767ul, 32768ul, true, &magnitude, &negative)) { *result = (short)0; return false; }
     if (negative) *result = (short)(0ul - magnitude);
     else *result = (short)magnitude;
     return true;
@@ -116,10 +113,9 @@ short ParseShort(readonly(char)* text)
 
 bool TryParseUShort(readonly(char)* text, nuint count, ushort* result) nothrow
 {
-    *result = (ushort)0;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, 65535ul, 0ul, false, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, 65535ul, 0ul, false, &magnitude, &negative)) { *result = (ushort)0; return false; }
     *result = (ushort)magnitude;
     return true;
 }
@@ -140,10 +136,9 @@ ushort ParseUShort(readonly(char)* text)
 
 bool TryParseUInt(readonly(char)* text, nuint count, uint* result) nothrow
 {
-    *result = (uint)0;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, 4294967295ul, 0ul, false, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, 4294967295ul, 0ul, false, &magnitude, &negative)) { *result = (uint)0; return false; }
     *result = (uint)magnitude;
     return true;
 }
@@ -164,10 +159,9 @@ uint ParseUInt(readonly(char)* text)
 
 bool TryParseLong(readonly(char)* text, nuint count, long* result) nothrow
 {
-    *result = (long)0;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, 9223372036854775807ul, 9223372036854775808ul, true, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, 9223372036854775807ul, 9223372036854775808ul, true, &magnitude, &negative)) { *result = (long)0; return false; }
     if (negative) *result = (long)(0ul - magnitude);
     else *result = (long)magnitude;
     return true;
@@ -189,10 +183,9 @@ long ParseLong(readonly(char)* text)
 
 bool TryParseULong(readonly(char)* text, nuint count, ulong* result) nothrow
 {
-    *result = (ulong)0;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, 18446744073709551615ul, 0ul, false, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, 18446744073709551615ul, 0ul, false, &magnitude, &negative)) { *result = (ulong)0; return false; }
     *result = (ulong)magnitude;
     return true;
 }
@@ -213,12 +206,11 @@ ulong ParseULong(readonly(char)* text)
 
 bool TryParseNInt(readonly(char)* text, nuint count, nint* result) nothrow
 {
-    *result = (nint)0;
     ulong negativeLimit = 1ul << (sizeof(nint) * 8 - 1);
     ulong positiveLimit = negativeLimit - 1ul;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, positiveLimit, negativeLimit, true, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, positiveLimit, negativeLimit, true, &magnitude, &negative)) { *result = (nint)0; return false; }
     if (negative) *result = (nint)(0ul - magnitude);
     else *result = (nint)magnitude;
     return true;
@@ -240,10 +232,9 @@ nint ParseNInt(readonly(char)* text)
 
 bool TryParseNUInt(readonly(char)* text, nuint count, nuint* result) nothrow
 {
-    *result = (nuint)0;
     ulong magnitude = 0ul;
     bool negative = false;
-    if (!integer_parsing_detail::Magnitude(text, count, (ulong)((nuint)0 - (nuint)1), 0ul, false, &magnitude, &negative)) return false;
+    if (!integer_parsing_detail::Magnitude(text, count, (ulong)((nuint)0 - (nuint)1), 0ul, false, &magnitude, &negative)) { *result = (nuint)0; return false; }
     *result = (nuint)magnitude;
     return true;
 }

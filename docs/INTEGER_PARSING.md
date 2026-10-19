@@ -24,6 +24,11 @@ prefixes, trailing characters, and values outside the result type's range fail.
 addition, including at the unsigned 64-bit boundary and the signed minimum.
 Pointer-sized parsers use the target's pointer-sized integer limits.
 
+Parsing finishes reading its input before committing a successful output, so
+the output may overlap input storage when that storage is valid and suitably
+aligned for the result type. On failure, writing the documented zero output
+also changes any overlapping input bytes.
+
 The pointer-based `TryParse...` overloads explicitly guarantee `nothrow` and
 allocate nothing under their memory preconditions. Their shared magnitude and
 length helpers are also `nothrow`. The source files also contain the throwing

@@ -87,6 +87,8 @@ negative result when the left element should be removed first, zero for equal
 priority, and a positive result otherwise. Equal-priority removal order is not
 stable. Comparator state and stored priorities must remain consistent while
 elements are in the heap.
+Types implementing `IComparable<T>` can use `Comparer<T>::Compare` directly,
+such as `PriorityQueue<int> pending = new(Comparer<int>::Compare);`.
 
 ```csharp
 using std;

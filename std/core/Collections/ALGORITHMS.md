@@ -44,6 +44,12 @@ Comparators borrow two elements through readonly pointers and return a negative,
 zero, or positive `int`. They must provide a consistent ordering and must not
 mutate the elements or collection through other aliases.
 
+For types implementing `IComparable<T>`, `Comparer<T>::Compare` supplies the
+comparison callback, for example `Sort<int>(span, Comparer<int>::Compare)`.
+`EqualityComparer<T>::Equals` similarly adapts `IEquatable<T>` for
+`SequenceEqual`. These are static bridges and allocate no comparer objects.
+Explicit custom callbacks remain available for other orderings or equality rules.
+
 Sorting and reversing relocate values rather than copying them. Owning values
 without copy constructors are supported; every value remains responsible for
 its resources in its final slot. These operations do not allocate or free

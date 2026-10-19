@@ -39,3 +39,33 @@ Encoding invalid scalars or with insufficient capacity returns false, sets
 written to zero, and leaves encoded output untouched. The written-count storage
 must be disjoint from encoded output. A successful supplementary scalar writes
 its complete surrogate pair; failures never leave a partially encoded pair.
+
+## Incremental decoding
+
+`std/core/Utf16Decoder.gf` independently supplies the value type
+`std::Utf16Decoder`, mirroring `Utf8Decoder` with `ushort` input. Its constructor,
+`Reset`, and `Read` are `nothrow`; no other library source is required.
+
+`Read(input, count, final, scalar, consumed)` produces at most one scalar.
+`consumed` counts units examined from this call's chunk, including an offending
+unit on failure. No input address is retained: a high surrogate at a chunk's end
+is saved as a value and completed from a later chunk. Non-scalar statuses clear
+the scalar output to zero. Metadata outputs must be disjoint from each other,
+the current input, and decoder state.
+
+| Status | Meaning |
+| --- | --- |
+| `Scalar` | One scalar produced, including possibly U+0000. Call again on any remaining units. |
+| `NeedMore` | Current non-final input exhausted. Supply another chunk, possibly empty. |
+| `End` | Final input exhausted with no incomplete pair. |
+| `Invalid` | An isolated/incorrect surrogate or an incomplete final pair was observed. |
+
+`final` means no input follows the supplied chunk. A `Scalar` result still takes
+priority: process it and call again with the remaining chunk, or zero units at
+its end, to receive `End` or discover a malformed suffix. Do not treat a final
+`Scalar` as implicit successful completion of all input.
+
+`End` and `Invalid` persist until `Reset`; subsequent calls consume zero units.
+Empty non-final calls preserve partial state and return `NeedMore`. An empty
+final call reports `Invalid` for a pending high surrogate and `End` otherwise.
+Copying the decoder copies its complete state; copies progress independently.

@@ -41,6 +41,8 @@ Its callback parameter types retain that qualification, for example
 | `Where(predicate)` | Yield elements passing the predicate. |
 | `Select(selector)` | Project elements when their `Current` value is read. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements; counts are `nuint`. |
+| `TakeWhile(predicate)` | Yield the initial matching prefix; stop permanently at the first false result. |
+| `SkipWhile(predicate)` | Skip the initial matching prefix, then yield every remaining element without testing again. |
 | `Any()` | Test for at least one element, stopping immediately. |
 | `All(predicate)` | Stop at the first failure; true for an empty sequence. |
 | `Count()` | Count elements without reading `Current`; throw on count overflow. |
@@ -59,6 +61,13 @@ Starting that enumeration still constructs the input iterator, so a custom
 `GetEnumerator()` or iterator constructor can allocate or throw even for
 `Take(0)`. Any successfully constructed iterator is destroyed when enumeration
 ends, including before the first element.
+
+`TakeWhile` examines but does not yield the first element rejected by its
+predicate. `SkipWhile` yields that first rejected element. Both start fresh on
+each enumeration and never advance their input again after they finish. Their
+`Current` getters delegate to the input without caching: when used after
+`Select`, testing a predicate and then reading the accepted value can invoke
+the selector separately, as with `Where`.
 
 `Select` does not cache projected values. Reading its `Current` twice invokes
 the selector twice. `Any` and `Count` need not invoke a selector at all. This

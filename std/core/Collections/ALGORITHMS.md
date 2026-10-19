@@ -34,6 +34,7 @@ int main()
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length readonly spans element by element, stopping at the first difference. |
 | `FindIndex<T>(Span<readonly(T)>, predicate)` | First matching index, or span length when no element matches. |
 | `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
+| `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
 
 Both bounds return the span length if no such element exists, including zero
 for an empty span. Input must already be sorted under the same comparator.
@@ -62,3 +63,22 @@ predicate borrows an element through `readonly(T)*` and runs once per element
 unless an earlier invocation throws. `FindIndex` stops at the first match;
 `IsSorted` stops at the first out-of-order adjacent pair. Empty spans are sorted
 and compare equal to other empty spans without invoking callbacks.
+
+## Shuffling
+
+`Collections/Shuffle.gf` supplies `Shuffle` separately from the comparison
+algorithms. It uses a Fisher–Yates shuffle with unbiased bounded draws from
+`PseudoRandom`. It takes linear time and constant extra storage, performs no
+allocations, and relocates elements without copying them or running destructors.
+Noncopyable owning values are supported.
+
+```csharp
+PseudoRandom random = new(42ul);
+Shuffle<int>(values.AsSpan(), ref random);
+```
+
+The generator belongs to the caller and advances as the shuffle runs. Empty and
+single-element spans do not advance it. The same starting elements and generator
+state produce the same permutation. This is suitable for reproducible simulations
+and games, not security-sensitive randomization. The borrowed span must remain
+valid for the entire call; storage outside it is untouched.

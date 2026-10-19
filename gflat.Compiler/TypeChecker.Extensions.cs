@@ -137,7 +137,8 @@ public partial class TypeChecker
             }
             formal = KnownExtensionType(formal);
             if (formal == null) return;
-            if (IsAssignable(formal, source)) result.Add(new(method, adaptation, reference, bindings));
+            var knownSource = KnownExtensionType(source);
+            if (knownSource != null && IsAssignable(formal, knownSource)) result.Add(new(method, adaptation, reference, bindings));
         }
     }
 

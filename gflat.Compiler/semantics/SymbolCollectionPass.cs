@@ -59,6 +59,7 @@ namespace gflat.semantics
             else if (member is InterfaceDeclaration iface)
             {
                 if (namespaceVisible) scope.TypeNames[iface.SourceName] = iface.Name;
+                if (iface.IsGeneric) { _symbols.GenericInterfaces[iface.Name] = iface; return; }
                 TypeChecker.InterfaceInfo info = new TypeChecker.InterfaceInfo
                 {
                     Name = iface.Name,
@@ -121,6 +122,7 @@ namespace gflat.semantics
                             nestedCls.GenericParameters
                         );
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
+                        qualifiedCls.BaseTypes = nestedCls.BaseTypes;
                         qualifiedCls.Span = nestedCls.Span;
                         str.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath, namespaceVisible: false);
@@ -137,6 +139,7 @@ namespace gflat.semantics
                             nestedStruct.GenericParameters
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
+                        qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
                         str.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -225,6 +228,7 @@ namespace gflat.semantics
                             nestedCls.GenericParameters
                         );
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
+                        qualifiedCls.BaseTypes = nestedCls.BaseTypes;
                         qualifiedCls.Span = nestedCls.Span;
                         cls.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath, namespaceVisible: false);
@@ -241,6 +245,7 @@ namespace gflat.semantics
                             nestedStruct.GenericParameters
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
+                        qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
                         cls.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }

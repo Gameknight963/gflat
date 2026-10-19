@@ -63,6 +63,7 @@ public sealed class GenericTypeParameterEditorTests
     [Theory]
     [InlineData("struct Box<T> { public T* field; public T Read(T item) => item; }")]
     [InlineData("class Box<T> { public T* field; public T Read(T item) => item; }")]
+    [InlineData("interface Box<T> { T Read(T item); }")]
     public void GenericOwnersAndInterfaceMethodsBindAllTypeOccurrences(string text)
     {
         var (model, source) = Analyze(text);

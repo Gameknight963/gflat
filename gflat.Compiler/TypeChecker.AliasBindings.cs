@@ -32,6 +32,7 @@ public partial class TypeChecker
                 MethodDeclaration method => method.Name,
                 ClassDeclaration cls => cls.Name,
                 StructDeclaration str => str.Name,
+                InterfaceDeclaration iface => iface.Name,
                 _ => throw new InvalidOperationException("A provider specialization requires a generic declaration")
             };
             var clone = new AstCloner(map, name).CloneNode(definition);

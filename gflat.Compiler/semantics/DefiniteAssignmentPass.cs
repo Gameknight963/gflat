@@ -533,22 +533,22 @@ namespace gflat.semantics
             }
             else if (stmt is VariableDeclaration varDecl)
             {
-                TypeExpression resolved = _typeChecker.ResolveAlias(varDecl.Type);
+                TypeExpression resolved = _typeChecker.GetType(varDecl);
                 if (varDecl.Initializer != null)
                 {
                     // Declare as unassigned first to catch self-referential reads
-                    DeclareLocal(varDecl.Name, varDecl.Type, isAssigned: false);
+                    DeclareLocal(varDecl.Name, resolved, isAssigned: false);
                     CheckValue(varDecl.Initializer);
                     MarkFullyAssigned(varDecl.Name);
                 }
                 else if (resolved is ArrayTypeExpression)
                 {
                     // Fixed-size stack array buffer is allocated
-                    DeclareLocal(varDecl.Name, varDecl.Type, isAssigned: true);
+                    DeclareLocal(varDecl.Name, resolved, isAssigned: true);
                 }
                 else
                 {
-                    DeclareLocal(varDecl.Name, varDecl.Type, isAssigned: false);
+                    DeclareLocal(varDecl.Name, resolved, isAssigned: false);
                 }
             }
             else if (stmt is ExpressionStatement exprStmt)

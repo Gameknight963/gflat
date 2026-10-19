@@ -13,6 +13,7 @@ public sealed partial class EditorModel
             MethodDeclaration m => m.GenericParameters.Any(p => p.Name == name),
             ClassDeclaration c => c.GenericParameters.Any(p => p.Name == name),
             StructDeclaration s => s.GenericParameters.Any(p => p.Name == name),
+            InterfaceDeclaration i => i.GenericParameters.Any(p => p.Name == name),
             _ => false
         })) return symbols.FirstOrDefault(s => s.IsTypeParameter && s.Name == name &&
             s.Scope != null && (s.Scope == context.Syntax || Parents(context.Syntax).Contains(s.Scope)));
@@ -91,7 +92,7 @@ public sealed partial class EditorModel
                     Add(names[i], i == names.Length - 1 ? symbol.Classification : target?.Classification ?? "namespace", SymbolLocation(target));
                 }
             }
-            var generics = symbol.Syntax.Node switch { MethodDeclaration m => m.GenericParameters, ClassDeclaration c => c.GenericParameters, StructDeclaration s => s.GenericParameters, _ => null };
+            var generics = symbol.Syntax.Node switch { MethodDeclaration m => m.GenericParameters, ClassDeclaration c => c.GenericParameters, StructDeclaration s => s.GenericParameters, InterfaceDeclaration i => i.GenericParameters, _ => null };
             if (generics?.Count > 0)
             {
                 Add("<", "punctuation");
@@ -278,6 +279,7 @@ public sealed partial class EditorModel
             MethodDeclaration m => m.GenericParameters.Select(p => p.Name),
             ClassDeclaration c => c.GenericParameters.Select(p => p.Name),
             StructDeclaration st => st.GenericParameters.Select(p => p.Name),
+            InterfaceDeclaration i => i.GenericParameters.Select(p => p.Name),
             _ => Enumerable.Empty<string>()
         }).ToHashSet();
         return System.Text.RegularExpressions.Regex.Replace(text, @"\b[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)+", match =>

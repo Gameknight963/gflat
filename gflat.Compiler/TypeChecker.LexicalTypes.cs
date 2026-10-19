@@ -13,7 +13,7 @@ public partial class TypeChecker
             string candidate = owner + "." + name;
             if (_classes.ContainsKey(candidate) || _structs.ContainsKey(candidate) ||
                 _interfaces.ContainsKey(candidate) || _enums.ContainsKey(candidate) ||
-                _genericClasses.ContainsKey(candidate) || _genericStructs.ContainsKey(candidate)) return candidate;
+                _genericClasses.ContainsKey(candidate) || _genericStructs.ContainsKey(candidate) || _symbols.GenericInterfaces.ContainsKey(candidate)) return candidate;
             int separator = owner.LastIndexOf('.');
             owner = separator < 0 ? null : owner[..separator];
         }

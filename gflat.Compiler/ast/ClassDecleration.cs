@@ -6,6 +6,7 @@ namespace gflat.ast
         public string SourceName { get; }
         public string? BaseClass { get; }
         public List<string> Interfaces { get; }
+        public List<TypeExpression> BaseTypes { get; internal set; } = new();
         public List<AstNode> Members { get; }
         public TokenKind Accessibility { get; }
         public bool IsAbstract { get; }

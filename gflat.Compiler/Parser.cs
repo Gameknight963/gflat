@@ -577,33 +577,21 @@ namespace gflat
             return new StructDeclaration("<error>", new List<AstNode>(), TokenKind.Private, line);
         }
 
-        private string ParseTypeNameString()
-        {
-            if (Check(TokenKind.Dot))
-            {
-                throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
-            }
-            string tname = Expect(TokenKind.Identifier).Text;
-            if (Check(TokenKind.Dot))
-            {
-                throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
-            }
-            while (Match(TokenKind.DoubleColon))
-            {
-                if (Check(TokenKind.Dot))
-                {
-                    throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
-                }
-                tname = $"{tname}::{Expect(TokenKind.Identifier).Text}";
-                if (Check(TokenKind.Dot))
-                {
-                    throw new TypeCheckException($"Type names must use '::' for scoping and nested types, not '.' on line {Current.Line}", Current.Line);
-                }
-            }
-            return tname;
-        }
-
         private ClassDeclaration ParseClassDeclaration(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null, bool isStatic = false) => Located(() => ParseClassDeclarationCoreLocated(accessibility, isAbstract, line, attributes, isStatic));
+
+        private List<TypeExpression> ParseBaseTypes()
+        {
+            List<TypeExpression> types = new();
+            if (!Match(TokenKind.Colon)) return types;
+            do
+            {
+                var type = ParseTypeExpression();
+                if (type is not NamedTypeExpression and not NestedTypeExpression || type.IsReadOnlyValue)
+                    throw new TypeCheckException("A base type must name a class or interface", type.Span);
+                types.Add(type);
+            } while (Match(TokenKind.Comma));
+            return types;
+        }
 
         private ClassDeclaration ParseClassDeclarationCoreLocated(TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null, bool isStatic = false)
         {
@@ -614,14 +602,8 @@ namespace gflat
             string? baseClass = null;
             List<string> interfaces = new();
 
-            if (Match(TokenKind.Colon))
-            {
-                // first name after : could be base class or interface
-                // we'll treat all as interfaces for now, type checker resolves which is which
-                interfaces.Add(ParseTypeNameString());
-                while (Match(TokenKind.Comma))
-                    interfaces.Add(ParseTypeNameString());
-            }
+            var baseTypes = ParseBaseTypes();
+            interfaces.AddRange(baseTypes.Select(TypeChecker.TypeNamePublic));
 
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
@@ -631,7 +613,7 @@ namespace gflat
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
 
-            return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line, attributes, genericParams) { IsStatic = isStatic };
+            return new ClassDeclaration(name, baseClass, interfaces, members, accessibility, isAbstract, line, attributes, genericParams) { IsStatic = isStatic, BaseTypes = baseTypes };
         }
 
         private StructDeclaration ParseStructDeclaration(TokenKind accessibility, int line, List<AttributeNode>? attributes = null) => Located(() => ParseStructDeclarationCoreLocated(accessibility, line, attributes));
@@ -643,19 +625,15 @@ namespace gflat
             List<GenericParameter> genericParams = ParseGenericParameters();
 
             List<string> interfaces = new();
-            if (Match(TokenKind.Colon))
-            {
-                interfaces.Add(ParseTypeNameString());
-                while (Match(TokenKind.Comma))
-                    interfaces.Add(ParseTypeNameString());
-            }
+            var baseTypes = ParseBaseTypes();
+            interfaces.AddRange(baseTypes.Select(TypeChecker.TypeNamePublic));
 
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
             while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
                 members.Add(ParseMember());
             Expect(TokenKind.CloseBrace);
-            return new StructDeclaration(name, interfaces, members, accessibility, line, attributes, genericParams);
+            return new StructDeclaration(name, interfaces, members, accessibility, line, attributes, genericParams) { BaseTypes = baseTypes };
         }
 
 
@@ -666,6 +644,7 @@ namespace gflat
         {
             Expect(TokenKind.Interface);
             string name = Expect(TokenKind.Identifier).Text;
+            var genericParams = ParseGenericParameters();
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
             _interfaceDepth++;
@@ -677,7 +656,7 @@ namespace gflat
                 Expect(TokenKind.CloseBrace);
             }
             finally { _interfaceDepth--; _inStaticInterface = previousStaticInterface; }
-            return new InterfaceDeclaration(name, members, accessibility, line, isStatic);
+            return new InterfaceDeclaration(name, members, accessibility, line, isStatic, genericParams);
         }
 
         private AstNode ParseMember() => ParseDeclaration(() => ParseMemberCoreLocated());

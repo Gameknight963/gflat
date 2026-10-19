@@ -15,6 +15,7 @@ public sealed partial class EditorModel
                 MethodDeclaration method => method.GenericParameters,
                 ClassDeclaration type => type.GenericParameters,
                 StructDeclaration type => type.GenericParameters,
+                InterfaceDeclaration type => type.GenericParameters,
                 _ => null
             };
             if (parameters == null || parameters.Count == 0 || owner.NameSpan.Source is not { } source) continue;

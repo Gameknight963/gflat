@@ -13,6 +13,7 @@ namespace gflat.symbols
         public Dictionary<string, TypeChecker.EnumInfo> Enums { get; } = new();
 
         public Dictionary<string, ClassDeclaration> GenericClasses { get; } = new();
+        public Dictionary<string, InterfaceDeclaration> GenericInterfaces { get; } = new();
         public Dictionary<string, StructDeclaration> GenericStructs { get; } = new();
         public Dictionary<string, MethodDeclaration> GenericMethods { get; } = new();
 
@@ -79,6 +80,7 @@ namespace gflat.symbols
             Interfaces.Clear();
             Enums.Clear();
             GenericClasses.Clear();
+            GenericInterfaces.Clear();
             GenericStructs.Clear();
             GenericMethods.Clear();
             NamespaceScopes.Clear();

@@ -8,6 +8,7 @@ public sealed partial class EditorModel
         MethodDeclaration method => method.GenericParameters,
         ClassDeclaration type => type.GenericParameters,
         StructDeclaration type => type.GenericParameters,
+        InterfaceDeclaration type => type.GenericParameters,
         _ => []
     }).Select(parameter => parameter.Name).ToHashSet();
 
@@ -17,6 +18,7 @@ public sealed partial class EditorModel
         var parameters = Parents(source.Syntax).Select(syntax => syntax.Node switch {
             ClassDeclaration type => type.GenericParameters,
             StructDeclaration type => type.GenericParameters,
+            InterfaceDeclaration type => type.GenericParameters,
             _ => null
         }).FirstOrDefault(parameters => parameters?.Count > 0);
         if (parameters?.Count != origin.TypeArguments.Count) return;

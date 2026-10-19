@@ -891,6 +891,8 @@ namespace gflat
             {
                 return MonomorphizeClass(genericClass, typeArgs, line, publish);
             }
+            if (_symbols.GenericInterfaces.TryGetValue(name, out var genericInterface))
+                return MonomorphizeInterface(genericInterface, typeArgs, line, publish);
             throw new TypeCheckException($"Unknown generic type '{DisplayName(name)}'", line);
         }
 
@@ -906,7 +908,8 @@ namespace gflat
             {
                 GenericParameter param = genericDef.GenericParameters[i];
                 TypeExpression arg = typeArgs[i];
-                if (param.Constraint != null && !TypeSatisfiesDeclaredConstraint(genericDef, arg, param.Constraint))
+                if (param.Constraint != null && !TypeSatisfiesDeclaredConstraint(genericDef, arg,
+                    BindGenericConstraint(genericDef.GenericParameters, typeArgs, param.Constraint)))
                 {
                     throw new TypeCheckException($"Type '{DisplayTypeName(arg)}' does not satisfy constraint '{DisplayTypeName(param.Constraint)}' for type parameter '{param.Name}' on struct '{DisplayName(genericDef.Name)}'", line);
                 }
@@ -955,7 +958,8 @@ namespace gflat
             {
                 GenericParameter param = genericDef.GenericParameters[i];
                 TypeExpression arg = typeArgs[i];
-                if (param.Constraint != null && !TypeSatisfiesDeclaredConstraint(genericDef, arg, param.Constraint))
+                if (param.Constraint != null && !TypeSatisfiesDeclaredConstraint(genericDef, arg,
+                    BindGenericConstraint(genericDef.GenericParameters, typeArgs, param.Constraint)))
                 {
                     throw new TypeCheckException($"Type '{DisplayTypeName(arg)}' does not satisfy constraint '{DisplayTypeName(param.Constraint)}' for type parameter '{param.Name}' on class '{DisplayName(genericDef.Name)}'", line);
                 }
@@ -1004,7 +1008,8 @@ namespace gflat
             {
                 GenericParameter param = genericDef.GenericParameters[i];
                 TypeExpression arg = typeArgs[i];
-                if (param.Constraint != null && !FunctionConstraintSatisfied(genericDef, arg, param.Constraint))
+                if (param.Constraint != null && !FunctionConstraintSatisfied(genericDef, arg,
+                    BindGenericConstraint(genericDef.GenericParameters, typeArgs, param.Constraint)))
                 {
                     throw new TypeCheckException($"Type '{DisplayTypeName(arg)}' does not satisfy constraint '{DisplayTypeName(param.Constraint)}' for type parameter '{param.Name}' on function '{DisplayName(genericDef.Name)}'", line);
                 }
@@ -2090,6 +2095,7 @@ namespace gflat
             else if (member is InterfaceDeclaration iface)
             {
                 if (namespaceVisible) scope.TypeNames[iface.SourceName] = iface.Name;
+                if (iface.IsGeneric) { _symbols.GenericInterfaces[iface.Name] = iface; return; }
                 InterfaceInfo info = new InterfaceInfo
                 {
                     Name = iface.Name,
@@ -2101,6 +2107,7 @@ namespace gflat
                 int slotIndex = 0;
                 foreach (AstNode m in iface.Members)
                 {
+                    if (m is PropertyDeclaration) continue;
                     if (m is MethodDeclaration sm)
                     {
                         if (info.MethodsByName.ContainsKey(sm.Name))
@@ -2149,6 +2156,7 @@ namespace gflat
                             nestedCls.GenericParameters
                         );
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
+                        qualifiedCls.BaseTypes = nestedCls.BaseTypes;
                         qualifiedCls.Span = nestedCls.Span;
                         str.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath, namespaceVisible: false);
@@ -2165,6 +2173,7 @@ namespace gflat
                             nestedStruct.GenericParameters
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
+                        qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
                         str.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -2249,6 +2258,7 @@ namespace gflat
                             nestedCls.GenericParameters
                         );
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
+                        qualifiedCls.BaseTypes = nestedCls.BaseTypes;
                         qualifiedCls.Span = nestedCls.Span;
                         cls.Members[i] = qualifiedCls;
                         RegisterMemberInScope(qualifiedCls, scope, nsPath, namespaceVisible: false);
@@ -2265,6 +2275,7 @@ namespace gflat
                             nestedStruct.GenericParameters
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
+                        qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
                         cls.Members[i] = qualifiedStruct;
                         RegisterMemberInScope(qualifiedStruct, scope, nsPath, namespaceVisible: false);
                     }
@@ -2823,6 +2834,7 @@ namespace gflat
 
         public void Visit(InterfaceDeclaration node)
         {
+            if (node.IsGeneric) return;
             using var sourceContext = SourceContext.Enter(node.Span);
             var methods = node.Members.OfType<MethodDeclaration>().ToArray();
             if (methods.Any(m => m.IsStatic) && methods.Any(m => !m.IsStatic))

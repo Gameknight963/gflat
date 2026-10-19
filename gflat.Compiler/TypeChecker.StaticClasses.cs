@@ -10,8 +10,10 @@ public partial class TypeChecker
         if (!node.IsStatic) return;
         if (node.IsAbstract)
             throw new TypeCheckException("A static class cannot be abstract", node.Span);
-        if (node.BaseClass != null || node.Interfaces.Any(name =>
-            GetInterface(ResolveTypeIdentity(name, null) ?? name) is not { IsStaticContract: true }))
+        var info = _classes.GetValueOrDefault(node.Name);
+        var interfaces = info?.Interfaces ?? node.Interfaces;
+        if (!node.IsGeneric && (info?.BaseClass != null || node.BaseClass != null || interfaces.Any(name =>
+            GetInterface(ResolveTypeIdentity(name, null) ?? name) is not { IsStaticContract: true })))
             throw new TypeCheckException("Static classes cannot have base types or instance interfaces", node.Span);
         foreach (var member in node.Members)
         {

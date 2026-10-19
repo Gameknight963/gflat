@@ -11,14 +11,17 @@ namespace gflat.ast
         public List<AstNode> Members { get; }
         public TokenKind Accessibility { get; }
         public bool IsStatic { get; }
+        public List<GenericParameter> GenericParameters { get; }
+        public bool IsGeneric => GenericParameters.Count > 0;
 
-        public InterfaceDeclaration(string name, List<AstNode> members, TokenKind accessibility, int line, bool isStatic = false) : base(line)
+        public InterfaceDeclaration(string name, List<AstNode> members, TokenKind accessibility, int line, bool isStatic = false, List<GenericParameter>? genericParameters = null) : base(line)
         {
             Name = name;
             SourceName = name;
             Members = members;
             Accessibility = accessibility;
             IsStatic = isStatic;
+            GenericParameters = genericParameters ?? new();
         }
 
         public override void Accept(IVisitor visitor) => visitor.Visit(this);

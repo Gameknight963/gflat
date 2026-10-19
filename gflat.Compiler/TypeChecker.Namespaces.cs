@@ -106,14 +106,18 @@ public partial class TypeChecker
             if (_currentClass is { HierarchyResolved: false } cls)
             {
                 string? parent = cls.BaseClass == null ? null : ResolveDeclaredBaseName(cls.BaseClass);
-                var interfaces = cls.Interfaces.Select(ResolveDeclaredBaseName).ToList();
+                var interfaces = declaration is ClassDeclaration { BaseTypes.Count: > 0 } syntax
+                    ? syntax.BaseTypes.Select(ResolveBaseType).ToList()
+                    : cls.Interfaces.Select(ResolveDeclaredBaseName).ToList();
                 ValidateDistinctBaseTypes(parent == null ? interfaces : interfaces.Prepend(parent), declaration);
                 cls.BaseClass = parent;
                 cls.Interfaces = interfaces;
             }
             if (_currentStruct is { } str)
             {
-                var interfaces = str.Interfaces.Select(ResolveDeclaredBaseName).ToList();
+                var interfaces = declaration is StructDeclaration { BaseTypes.Count: > 0 } syntax
+                    ? syntax.BaseTypes.Select(ResolveBaseType).ToList()
+                    : str.Interfaces.Select(ResolveDeclaredBaseName).ToList();
                 ValidateDistinctBaseTypes(interfaces, declaration);
                 str.Interfaces = interfaces;
             }
@@ -123,6 +127,13 @@ public partial class TypeChecker
             _currentNamespace = previousNamespace; _currentNamespacePath = previousPath;
             _currentClass = previousClass; _currentStruct = previousStruct;
         }
+    }
+
+    private string ResolveBaseType(TypeExpression type)
+    {
+        if (ResolveAlias(type) is not NamedTypeExpression named)
+            throw new TypeCheckException("A base type must name a class or interface", type.Span);
+        return named.Name;
     }
 
     private void ValidateDistinctBaseTypes(IEnumerable<string> types, AstNode declaration)
@@ -275,7 +286,7 @@ public partial class TypeChecker
                         finally { _currentClass = previousClass; _currentStruct = previousStruct; }
                         break;
                     }
-                    case InterfaceDeclaration iface: Walk(iface.Members, scope); break;
+                    case InterfaceDeclaration iface when !iface.IsGeneric: Walk(iface.Members, scope); break;
                     case MethodDeclaration method when !method.IsGeneric:
                         method.ReturnType = ResolveAlias(method.ReturnType);
                         foreach (var p in method.Parameters) p.Type = ResolveAlias(p.Type);

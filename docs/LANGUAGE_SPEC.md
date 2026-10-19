@@ -176,6 +176,34 @@ Enums are distinct integral types, optionally with an underlying type such as `u
 
 Enum storage currently supports integer underlying types up to 64 bits; `extralong` enum storage is not yet supported. Each member value, including an automatically incremented value, must fit the selected underlying type. Different member names may share the same numeric value.
 
+## Generic interfaces
+
+Interfaces can declare type parameters using the same syntax as classes and
+structs. Implementations name the constructed interface in their base list.
+Specializations are invariant: `IValue<int>` and `IValue<long>` are distinct
+contracts. Member types and properties are checked after substituting arguments.
+Static interfaces support the same type parameters and remain provider contracts.
+Constraints can refer to earlier or later parameters in the same parameter list.
+Generic interface **methods** are still unsupported; this feature concerns
+generic interface types.
+
+```csharp
+interface IValue<T> { T Read(); }
+struct Number : IValue<int> { public int Read() => 42; }
+T Read<T, V : IValue<T>>(V value) => value.Read();
+int main() {
+    Number number = new Number();
+    IValue<int>* view = &number;
+    return Read<int, Number>(number);
+}
+```
+
+`IEnumerable<T, Iterator>` in the library names a concrete iterator return type;
+neither this contract nor generic interfaces generally require heap allocation.
+Ordinary interface pointer calls retain the existing interface representation
+and dispatch rules. `foreach` still accepts the enumeration pattern without an
+interface declaration.
+
 ## Optional parameters
 
 Functions, methods, extern declarations, and constructors can declare trailing

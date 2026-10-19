@@ -1,5 +1,8 @@
 # Core library
 
+See the [standard library index](../README.md) for collections, hashing, parsing,
+UTF-8, binary codecs, paths, math, and runnable examples.
+
 Lazy collection queries and their ownership rules are documented in
 [Collections](Collections/README.md). The runnable example is
 [`examples/queries`](../../examples/queries/main.gf).

@@ -2090,10 +2090,12 @@ public partial class LlvmEmitter : IVisitor
         string parameters = string.Join(", ", node.Parameters.Select(p => EmitAbiParamType(p.Type)));
         if (node.IsVariadic)
             parameters = parameters.Length > 0 ? parameters + ", ..." : "...";
-        string declaration = $"declare {returnType} @{node.Name}({parameters})";
+        string declaration = $"declare {returnType} @{node.Name}({parameters})" + (node.IsNoThrow ? " nounwind" : "");
         if (_nativeExternDeclarations.TryGetValue(node.Name, out string? existing))
         {
             var previous = _nativeExternDefinitions.GetValueOrDefault(node.Name);
+            if (previous != null && previous.IsNoThrow != node.IsNoThrow)
+                throw new gflat.CompileExceptions.TypeCheckException($"External symbol '{node.Name}' has conflicting nothrow contracts", node.Span);
             if (existing != declaration || previous != null &&
                 (NativeSignatureKey(previous.ReturnType) != NativeSignatureKey(node.ReturnType) ||
                  !previous.Parameters.Select(p => NativeSignatureKey(p.Type)).SequenceEqual(node.Parameters.Select(p => NativeSignatureKey(p.Type)))))
@@ -3665,7 +3667,7 @@ public partial class LlvmEmitter : IVisitor
         TypeExpression callType = _typeChecker.GetType(node);
         string retType = EmitType(callType);
         string args = string.Join(", ", argValues.Zip(argTypes, (v, t) => $"{t} {v}"));
-        bool handleUnwind = target is not MethodDeclaration { IsNoThrow: true };
+        bool handleUnwind = target is not (MethodDeclaration { IsNoThrow: true } or ExternDeclaration { IsNoThrow: true });
 
         if (target is not ExternDeclaration && UsesManagedResultStorage(callType))
         {

@@ -925,7 +925,17 @@ retain their bodyless forms. Namespace extern declarations support accessibility
 modifiers: `private extern int abs(int value);` and `extern private int abs(int value);`
 are equivalent. A private extern is accessible throughout its source file, including
 from other namespaces in that file, but cannot be called or addressed from another
-file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers; `static` and `protected` are not supported.
+file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers before the return type; `static` and `protected` are not supported.
+
+An extern may declare a trailing `nothrow` contract, for example
+`private extern int abs(int value) nothrow;`. This promises that the foreign
+implementation never unwinds through the call. The compiler emits an LLVM
+`nounwind` declaration and omits exception handling for direct calls. It cannot
+enforce this promise inside foreign code; violating it is invalid native
+behavior. Ordinary gflat `nothrow` bodies still enforce their termination
+boundary. Repeated declarations of one native symbol must agree on `nothrow`.
+Converting the function to an ordinary function pointer does not preserve this
+contract: calls through that pointer remain potentially throwing.
 
 Private namespace functions are also accessible only within their declaring source file.
 

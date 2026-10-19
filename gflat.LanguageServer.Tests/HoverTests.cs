@@ -5,6 +5,10 @@ namespace gflat.LanguageServer.Tests;
 
 public class HoverTests
 {
+    [Fact]
+    public void ForeignNothrowAppearsInTheSignature()
+        => Assert.Contains("nothrow",Hover("extern int ab|s(int value) nothrow;").GetProperty("contents").GetProperty("value").GetString());
+
     private static readonly Guid Catalog = Guid.Parse("ae27a6b0-e345-4288-96df-5eaf394ee369");
     private static JsonElement Hover(string marked, bool rich = false, HoverOptions? options = null)
     {

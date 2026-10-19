@@ -176,7 +176,7 @@ public sealed partial class EditorModel
             }
             if (symbol.Syntax.Node is ExternDeclaration { IsVariadic: true }) Add(parameters.Count == 0 ? "..." : ", ...", "punctuation");
             Add(")", "punctuation");
-            if (symbol.Syntax.Node is MethodDeclaration { IsNoThrow: true } or ConstructorDeclaration { IsNoThrow: true }) { Add(" "); Add("nothrow", "keyword"); }
+            if (symbol.Syntax.Node is MethodDeclaration { IsNoThrow: true } or ConstructorDeclaration { IsNoThrow: true } or ExternDeclaration { IsNoThrow: true }) { Add(" "); Add("nothrow", "keyword"); }
         }
         if (symbol.Syntax.Node is PropertyDeclaration property)
         {

@@ -13,6 +13,16 @@ public class DeclarationTests
     }
 
     [Fact]
+    public void RepeatedForeignNothrowDeclarationsMustAgreeOnTheirContract()
+    {
+        string ir=Compiler.Emit("namespace A { private extern int abs(int value) nothrow; } namespace B { extern int abs(int value) nothrow; } int main()=>B::abs(-42);");
+        Assert.Equal(1,ir.Split("declare i32 @abs(").Length-1);
+        Assert.Contains("declare i32 @abs(i32) nounwind",ir);
+        Assert.Contains("conflicting nothrow contracts",Assert.Throws<TypeCheckException>(()=>Compiler.Emit(
+            "namespace A { extern int abs(int value) nothrow; } namespace B { extern int abs(int value); } int main()=>0;")).Message);
+    }
+
+    [Fact]
     public void ConflictingForeignSignaturesHaveASourceError()
         => Assert.Contains("incompatible native signatures", Assert.Throws<TypeCheckException>(() => Compiler.Emit(
             "namespace A { extern int abs(int value); } namespace B { extern long abs(long value); } int main() => 0;")).Message);

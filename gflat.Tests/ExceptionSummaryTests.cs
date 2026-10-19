@@ -24,6 +24,10 @@ public class ExceptionSummaryTests
         => Assert.Empty(Summary("void Test() nothrow { throw new Exception(); }"));
 
     [Fact]
+    public void ForeignNothrowContractSuppressesUnknownOutgoingExceptions()
+        => Assert.Empty(Summary("extern int abs(int value) nothrow; void Test(){abs(-42);}"));
+
+    [Fact]
     public void CollectsDistinctDirectThrows()
         => Assert.Equal(new[] { "First", "Second" }, Summary(Types + "void Test(bool b) { if (b) throw new First(); throw new Second(); }"));
 

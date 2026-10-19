@@ -1026,8 +1026,9 @@ namespace gflat
             }
 
             Expect(TokenKind.CloseParen);
+            bool isNoThrow = Match(TokenKind.NoThrow);
             Expect(TokenKind.Semicolon);
-            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line, accessibility);
+            return new ExternDeclaration(name, returnType, parameters, isVariadic, attributes, line, accessibility, isNoThrow);
         }
 
         private ConstructorDeclaration ParseConstructorDeclaration(string name, TokenKind accessibility, int line, List<AttributeNode>? attributes = null, bool isConst = false) => Located(() => ParseConstructorDeclarationCoreLocated(name, accessibility, line, attributes, isConst));

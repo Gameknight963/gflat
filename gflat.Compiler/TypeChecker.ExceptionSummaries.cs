@@ -51,8 +51,9 @@ public partial class TypeChecker
                 foreach (var (caller, call, catches) in _exceptionEdges)
                 {
                     if (caller.IsNoThrow || !summaries.TryGetValue(caller, out var result)) continue;
-                    var target = GetResolvedCall(call) as MethodDeclaration;
-                    if (target?.IsNoThrow == true) continue;
+                    var declaration = GetResolvedCall(call);
+                    if (declaration is MethodDeclaration { IsNoThrow: true } or ExternDeclaration { IsNoThrow: true }) continue;
+                    var target = declaration as MethodDeclaration;
                     IEnumerable<string> types = target is { IsVirtual: false, IsOverride: false, IsAbstract: false } && summaries.TryGetValue(target, out var known)
                         ? known.ToArray() : new[] { UnknownExceptionType };
                     foreach (string type in types)

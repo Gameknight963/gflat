@@ -6,9 +6,9 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
     private Vector<T> storage;
 
     public Stack() { storage = new Vector<T>(); }
-    public nuint Count { readonly get => storage.Count; }
-    public nuint Capacity { readonly get => storage.Capacity; }
-    public bool IsEmpty { readonly get => storage.Count == 0; }
+    public nuint Count { readonly get nothrow => storage.Count; }
+    public nuint Capacity { readonly get nothrow => storage.Capacity; }
+    public bool IsEmpty { readonly get nothrow => storage.Count == 0; }
 
     public void Reserve(nuint capacity) { storage.Reserve(capacity); }
     public void Push(T value) { storage.Add(move value); }

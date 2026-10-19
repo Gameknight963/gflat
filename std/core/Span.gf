@@ -9,12 +9,12 @@ struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
     public Span() { data = null; length = 0; }
     public Span(T* buffer, nuint count) { data = buffer; length = count; }
 
-    public nuint Length { readonly get => length; }
-    public bool IsEmpty { readonly get => length == 0; }
+    public nuint Length { readonly get nothrow => length; }
+    public bool IsEmpty { readonly get nothrow => length == 0; }
     public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, length);
     public Enumerable<T, Span<T>, Span<T>::Enumerator> AsEnumerable()
         => new Enumerable<T, Span<T>, Span<T>::Enumerator>(*this);
-    public T*? Data { get => data; }
+    public T*? Data { get nothrow => data; }
 
     public ref T this[nuint index]
     {

@@ -39,13 +39,13 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
     public LinkedList() { state = null; }
     public nuint Count
     {
-        readonly get
+        readonly get nothrow
         {
             if (state == null) return 0;
             return state!.Count;
         }
     }
-    public bool IsEmpty { readonly get => this.Count == 0; }
+    public bool IsEmpty { readonly get nothrow => this.Count == 0; }
     public Node*? First
     {
         get

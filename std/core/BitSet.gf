@@ -9,7 +9,7 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
 
     public BitSet() { data = null; length = 0; words = 0; }
     public BitSet(nuint size) { data = null; length = 0; words = 0; this.Resize(size); }
-    public nuint Length { readonly get => length; }
+    public nuint Length { readonly get nothrow => length; }
 
     public bool this[nuint index]
     {

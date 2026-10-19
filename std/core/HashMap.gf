@@ -18,9 +18,9 @@ struct HashMap<K : IHashable, V>
     private nuint used;
 
     public HashMap() { entries = null; states = null; capacity = 0; count = 0; used = 0; }
-    public nuint Count { readonly get => count; }
-    public nuint Capacity { readonly get => capacity / 2; }
-    public bool IsEmpty { readonly get => count == 0; }
+    public nuint Count { readonly get nothrow => count; }
+    public nuint Capacity { readonly get nothrow => capacity / 2; }
+    public bool IsEmpty { readonly get nothrow => count == 0; }
 
     // Keys are exposed through a readonly view so their hash cannot be changed.
     public struct Entry

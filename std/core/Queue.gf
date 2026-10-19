@@ -9,9 +9,9 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     private nuint head;
 
     public Queue() { data = null; capacity = 0; count = 0; head = 0; }
-    public nuint Count { readonly get => count; }
-    public nuint Capacity { readonly get => capacity; }
-    public bool IsEmpty { readonly get => count == 0; }
+    public nuint Count { readonly get nothrow => count; }
+    public nuint Capacity { readonly get nothrow => capacity; }
+    public bool IsEmpty { readonly get nothrow => count == 0; }
 
     public void Reserve(nuint requested)
     {

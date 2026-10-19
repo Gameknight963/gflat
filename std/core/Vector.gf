@@ -9,8 +9,8 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
 
     public Vector() { data = null; count = 0; capacity = 0; }
 
-    public nuint Count { readonly get => count; }
-    public nuint Capacity { readonly get => capacity; }
+    public nuint Count { readonly get nothrow => count; }
+    public nuint Capacity { readonly get nothrow => capacity; }
     public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, count);
     public Enumerable<T, Span<T>, Span<T>::Enumerator> AsEnumerable()
         => new Enumerable<T, Span<T>, Span<T>::Enumerator>(this.AsSpan());

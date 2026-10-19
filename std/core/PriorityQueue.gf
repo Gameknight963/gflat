@@ -13,9 +13,9 @@ struct PriorityQueue<T>
         compare = comparison;
     }
 
-    public nuint Count { readonly get => storage.Count; }
-    public nuint Capacity { readonly get => storage.Capacity; }
-    public bool IsEmpty { readonly get => storage.Count == 0; }
+    public nuint Count { readonly get nothrow => storage.Count; }
+    public nuint Capacity { readonly get nothrow => storage.Capacity; }
+    public bool IsEmpty { readonly get nothrow => storage.Count == 0; }
     public void Reserve(nuint capacity) { storage.Reserve(capacity); }
     public void Clear() { storage.Clear(); }
 

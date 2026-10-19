@@ -29,6 +29,8 @@ public sealed partial class EditorModel
     private readonly Dictionary<string, Token[]> tokens = new(Workspace.Paths);
     private readonly Dictionary<string, Syntax[]> nodes = new(Workspace.Paths);
     private readonly List<Symbol> symbols = [];
+    private readonly Dictionary<string, Symbol[]> symbolsByName = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Path, int Start, int Length), Symbol> declarationsBySpan = [];
     private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceTypeDeclarations = [];
     private readonly Dictionary<(Type Kind, SourceSpan Span), Symbol> sourceCallableDeclarations = [];
     private readonly Dictionary<AstNode, Symbol> declarations = new(ReferenceEqualityComparer.Instance);
@@ -102,6 +104,10 @@ public sealed partial class EditorModel
             declarations.TryAdd(entry.Node, symbol);
         }
         RegisterTypeParameters();
+        foreach (var group in symbols.GroupBy(symbol => symbol.Name)) symbolsByName.Add(group.Key, group.ToArray());
+        foreach (var symbol in symbols)
+            if (symbol.NameSpan.Source?.Path is { } path)
+                declarationsBySpan.TryAdd((path, symbol.NameSpan.Start, symbol.NameSpan.Length), symbol);
         IndexSourceTypeNames();
         IndexBoundCallables();
         IndexBoundProperties();
@@ -170,7 +176,7 @@ public sealed partial class EditorModel
 
     private bool Contains(Syntax node, int offset) => offset >= node.Span.Start && offset < scopeEnds.GetValueOrDefault(node, node.Span.Start + node.Span.Length);
     private Syntax? Context(string path, int offset) => nodes.GetValueOrDefault(path)?.Where(n => Contains(n, offset)).MinBy(n => scopeEnds.GetValueOrDefault(n, n.Span.Start + n.Span.Length) - n.Span.Start);
-    private IEnumerable<Symbol> Visible(string path, int offset)
+    private IEnumerable<Symbol> Visible(string path, int offset, string? name = null)
     {
         var context = Context(path, offset);
         var parents = context == null ? [] : new[] { context }.Concat(Parents(context)).ToArray();
@@ -179,9 +185,9 @@ public sealed partial class EditorModel
         bool isStatic = parents.Select(p => p.Node).OfType<MethodDeclaration>().FirstOrDefault()?.IsStatic == true;
         var imports = snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? [];
         var inheritedOrder = owner == null ? Array.Empty<Symbol>() : TypeMembers(owner)
-            .Where(s => Accessible(s, path, offset)).ToArray();
+            .Where(s => (name == null || s.Name == name) && Accessible(s, path, offset)).ToArray();
         var inherited = inheritedOrder.ToHashSet();
-        return symbols.Where(s => s.Scope != null
+        return SymbolsNamed(name).Where(s => s.Scope != null
             ? s.NameSpan.Source?.Path == path && Contains(s.Scope, offset) && (s.IsTypeParameter || s.Syntax.Node is Parameter || s.NameSpan.Start <= offset)
             : s.Owner != null ? inherited.Contains(s) && (!isStatic || s.Static || IsType(s.Syntax.Node))
             : s.Namespace.Length == 0 || ns == s.Namespace || ns.StartsWith(s.Namespace + "::", StringComparison.Ordinal) || imports.Contains(s.Namespace))
@@ -191,7 +197,9 @@ public sealed partial class EditorModel
             .ThenByDescending(s => s.NameSpan.Start);
     }
 
-    private IEnumerable<Symbol> Members(string path, int offset, int separatorIndex)
+    private IEnumerable<Symbol> SymbolsNamed(string? name) => name == null ? symbols : symbolsByName.GetValueOrDefault(name) ?? [];
+
+    private IEnumerable<Symbol> Members(string path, int offset, int separatorIndex, string? name = null)
     {
         var ts = tokens[path];
         if (separatorIndex < 1) return [];
@@ -204,29 +212,30 @@ public sealed partial class EditorModel
             string qualifier = string.Concat(ts[start..separatorIndex].Select(t => t.Text));
             if (qualifier.StartsWith("global::")) qualifier = qualifier[8..];
             if (qualifier == "global") qualifier = "";
-            var resolved = Visible(path, offset).FirstOrDefault(s => s.Name == qualifier && (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || s.Classification == "namespace"))
-                ?? symbols.FirstOrDefault(s => s.Qualified == qualifier && s.Syntax.Node is AliasDeclaration);
+            var resolved = Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier && (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || s.Classification == "namespace"))
+                ?? symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == qualifier);
             if (resolved != null && ContractOwners(resolved, path, offset) is { } owners)
             {
-                return symbols.Where(s => owners.Contains(s.Owner) && s.Static && Accessible(s, path, offset));
+                return SymbolsNamed(name).Where(s => owners.Contains(s.Owner) && s.Static && Accessible(s, path, offset));
             }
             qualifier = resolved is { IsTypeParameter: true }
                 ? TypeOwner(resolved.TypeConstraint, path, offset) ?? qualifier
                 : resolved?.Syntax.Node is AliasDeclaration
                     ? TypeOwner(resolved.Type, path, offset) ?? qualifier
                     : resolved?.Qualified ?? qualifier;
-            return symbols.Where(s => s.Scope == null &&
+            return SymbolsNamed(name).Where(s => s.Scope == null &&
                 (s.Namespace == qualifier && s.Owner == null || s.Owner == qualifier && (s.Static || IsType(s.Syntax.Node))) && Accessible(s, path, offset));
         }
         var expression = nodes[path].Where(n => n.Node is IdentifierExpression or CallExpression or MemberAccessExpression or NewExpression or IndexExpression or UnaryExpression or CastExpression or TypeofExpression or LiteralExpression or PrefixedStringLiteralExpression or InterpolatedStringExpression && n.Span.Start + n.Span.Length == left.End + 1)
             .OrderByDescending(n => n.Span.Length).FirstOrDefault();
         TypeExpression? type = expression == null ? null : ExpressionType(expression.Node, path, offset);
         if (type == null)
-            type = Visible(path, offset).FirstOrDefault(s => s.Name == left.Text)?.Type;
+            type = Visible(path, offset, left.Text).FirstOrDefault(s => s.Name == left.Text)?.Type;
         string? owner = TypeOwner(type, path, offset);
         if (left.Text == "this") owner = Owner(ContextParents(path, offset));
-        var members = owner == null ? [] : TypeMembers(owner).Where(s => !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset)).ToArray();
+        var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset)).ToArray();
         return members.Concat(ExtensionMembers(path, offset, expression?.Node, type)
+            .Where(extension => name == null || extension.Name == name)
             .Where(extension => !members.Any(member => member.Name == extension.Name && IsCallableMember(member))));
     }
 
@@ -236,8 +245,8 @@ public sealed partial class EditorModel
         while (alias.Syntax.Node is AliasDeclaration declaration && seen.Add(alias))
         {
             if (declaration.ImplementationKind == FunctionImplementationKind.Replace &&
-                symbols.FirstOrDefault(s => s.Qualified == alias.Qualified &&
-                    s.Syntax.Node is AliasDeclaration { ImplementationKind: not FunctionImplementationKind.Replace }) is { } original)
+                symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration { ImplementationKind: not FunctionImplementationKind.Replace } &&
+                    s.Qualified == alias.Qualified) is { } original)
             {
                 alias = original;
                 continue;
@@ -251,8 +260,8 @@ public sealed partial class EditorModel
                 NestedTypeExpression n => DisplayType(n), _ => null
             };
             if (targetName == null) break;
-            var next = Visible(declaringPath, declaringOffset).FirstOrDefault(s => s.Name == targetName && s.Syntax.Node is AliasDeclaration)
-                ?? symbols.FirstOrDefault(s => s.Qualified == targetName && s.Syntax.Node is AliasDeclaration);
+            var next = Visible(declaringPath, declaringOffset, targetName).FirstOrDefault(s => s.Name == targetName && s.Syntax.Node is AliasDeclaration)
+                ?? symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == targetName);
             if (next == null) break;
             alias = next;
         }
@@ -302,8 +311,9 @@ public sealed partial class EditorModel
     {
         if ((s.Syntax.Node is ExternDeclaration || s.Syntax.Node is PropertyDeclaration or FieldDeclaration && s.Owner == null) && s.Access == TokenKind.Private)
             return Workspace.Paths.Equals(s.Syntax.Span.Source?.Path, path);
+        if (s.Access is TokenKind.Public or TokenKind.Internal || s.Owner == null) return true;
         string? owner = Owner(ContextParents(path, offset));
-        return s.Access is TokenKind.Public or TokenKind.Internal || s.Owner == null || s.Owner == owner ||
+        return s.Owner == owner ||
             s.Access == TokenKind.Protected && owner != null && TypeMembers(owner).Any(m => m.Owner == s.Owner);
     }
     private static string TemplateName(string name)
@@ -341,7 +351,7 @@ public sealed partial class EditorModel
             }
             if (type is not NamedTypeExpression named) return null;
             string name = named.Namespace == null ? named.Name : Join(named.Namespace, named.Name);
-            var parameter = Visible(path, offset).FirstOrDefault(s => s.IsTypeParameter && s.Name == name);
+            var parameter = Visible(path, offset, name).FirstOrDefault(s => s.IsTypeParameter && s.Name == name);
             if (parameter?.TypeConstraint != null)
             {
                 if (!aliases.Add(parameter)) return null;
@@ -349,7 +359,7 @@ public sealed partial class EditorModel
                 continue;
             }
             var alias = symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == name)
-                ?? Visible(path, offset).FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Name == name);
+                ?? Visible(path, offset, name).FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Name == name);
             if (alias != null)
             {
                 if (!aliases.Add(alias)) return null;
@@ -372,7 +382,7 @@ public sealed partial class EditorModel
             if (internalMatch.Symbol != null && (named.Namespace == null || named.Namespace == internalMatch.Symbol.Namespace)) return internalMatch.Symbol.Qualified;
             string display = TemplateName(DisplayType(named.WithReadOnlyValue(false)));
             return symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && (s.Qualified == name || s.Qualified == display))?.Qualified
-                ?? Visible(path, offset).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == name)?.Qualified;
+                ?? Visible(path, offset, name).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == name)?.Qualified;
         }
     }
     private IEnumerable<Symbol> TypeMembers(string owner)
@@ -383,7 +393,7 @@ public sealed partial class EditorModel
             foreach (var symbol in symbols.Where(s => s.Owner == owner && s.Scope == null &&
                 !Parents(s.Syntax).Any(p => p.Node is PrimitiveImplementationDeclaration) &&
                 s.Syntax.Node is not ConstructorDeclaration and not MethodDeclaration { StaticConstructorName: not null })) yield return symbol;
-            var type = symbols.FirstOrDefault(s => s.Qualified == owner && s.Syntax.Node is ClassDeclaration);
+            var type = symbols.FirstOrDefault(s => s.Syntax.Node is ClassDeclaration && s.Qualified == owner);
             if (type?.Syntax.Node is not ClassDeclaration c) yield break;
             // The parser records the colon list in Interfaces; checking separates
             // its base class into ClassInfo without rewriting the declaration.
@@ -395,13 +405,13 @@ public sealed partial class EditorModel
                  s.Qualified == baseClass || s.Qualified == Join(type.Namespace, baseClass)))?.Qualified ?? baseClass;
         }
     }
-    private IEnumerable<Symbol> Candidates(string path, int offset, int tokenIndex)
+    private IEnumerable<Symbol> Candidates(string path, int offset, int tokenIndex, string? name = null)
     {
         var ts = tokens[path];
         int previous = tokenIndex - 1;
         if (previous >= 0 && ts[previous].Kind is TokenKind.Dot or TokenKind.DoubleColon)
-            return Members(path, offset, previous);
-        return Visible(path, offset);
+            return Members(path, offset, previous, name);
+        return Visible(path, offset, name);
     }
     private Symbol? Resolve(string path, int index)
         => references.GetValueOrDefault(tokens[path][index]);
@@ -439,7 +449,7 @@ public sealed partial class EditorModel
         if (IsValueModelKeyword(path, token)) return null;
         if (token.Text == "at" && nodes[path].Any(n => n.Node is NewExpression placement &&
             placement.PlacementKeywordSpan.Length > 0 && placement.PlacementKeywordSpan.Start == token.Start)) return null;
-        var declaration = symbols.FirstOrDefault(s => s.NameSpan.Source?.Path == path && s.NameSpan.Start == token.Start && s.NameSpan.Length == token.Span.Length);
+        var declaration = declarationsBySpan.GetValueOrDefault((path, token.Start, token.Span.Length));
         if (declaration != null) return declaration;
         if (boundPropertyReferences.TryGetValue(token, out var boundProperty)) return boundProperty;
         if (boundFieldReferences.TryGetValue(token, out var boundField)) return boundField;
@@ -459,7 +469,7 @@ public sealed partial class EditorModel
                 (s.Qualified == qualified || s.Name == qualified && s.Namespace.Length == 0));
             if (qualifier != null) return qualifier;
         }
-        var candidates = Candidates(path, token.Start, index);
+        var candidates = Candidates(path, token.Start, index, token.Text);
         if (BoundTypeName(token, candidates) is { } boundType) return boundType;
         // A local named `String` must not recolor a `String` type annotation.
         bool typePosition = sourceTypeNames.ContainsKey(token.Span) || nodes[path].Any(n => n.Node is NamedTypeExpression && n.Span.Length > 0 && token.Start >= n.Span.Start && token.End < n.Span.Start + n.Span.Length);

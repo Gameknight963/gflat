@@ -47,3 +47,30 @@ decoding additionally supports the exact same starting address. Empty input
 succeeds. `std/core/HexText.gf` adds owning `std::HexText::Encode(data, count,
 uppercase = true)` and `Decode(text, count)` conveniences. Decoded strings retain
 embedded zeros and report malformed input through an exception.
+
+# Component percent encoding
+
+`std/core/PercentEncoding.gf` defines `std::PercentEncoding`. This encodes
+component **data**, not an entire URI: only unreserved ASCII letters, digits,
+`-`, `.`, `_`, and `~` pass through. Other bytes become uppercase `%HH` escapes,
+following [RFC 3986 sections 2.1–2.4](https://www.rfc-editor.org/rfc/rfc3986.html#section-2.1).
+Existing percent escapes are treated as data and encoded again.
+
+- `TryGetEncodedLength(data, count, ref length)` checks the accumulated length
+  for overflow.
+- `TryEncode(data, count, output, capacity, ref written)` requires disjoint
+  buffers and writes no terminator.
+- `TryGetDecodedLength(text, count, ref length)` validates all percent escapes.
+- `TryDecode(text, count, output, capacity, ref written)` accepts either hex
+  letter case. It decodes exactly once and preserves literal `+`; it is not an
+  HTML form decoder.
+
+All four methods are `nothrow` and allocation-free. A failure sets the returned
+count to zero; encoding/decoding failures leave output untouched. Decoding
+supports disjoint or exact same-address buffers. Raw and decoded bytes may
+include zeros; no UTF-8 validation or URI parsing occurs. Supply UTF-8 bytes
+explicitly when encoding Unicode text.
+
+`PercentEncodingText.gf` separately adds owning `PercentEncodingText::Encode`
+and `Decode` conveniences. These reserve the output String once, preserve
+binary zeros, and throw on invalid percent syntax or allocation failure.

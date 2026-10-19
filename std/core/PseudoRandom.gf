@@ -6,9 +6,9 @@ struct PseudoRandom
 {
     private ulong state;
 
-    public PseudoRandom(ulong seed) { state = seed; }
+    public PseudoRandom(ulong seed) nothrow { state = seed; }
 
-    public ulong NextULong()
+    public ulong NextULong() nothrow
     {
         state += 0x9e3779b97f4a7c15ul;
         ulong value = state;
@@ -17,7 +17,7 @@ struct PseudoRandom
         return value ^ (value >> 31);
     }
 
-    public uint NextUInt() => (uint)(this.NextULong() >> 32);
+    public uint NextUInt() nothrow => (uint)(this.NextULong() >> 32);
 
     // Rejection removes the modulo bias when the range does not divide 2^64.
     public ulong NextULong(ulong exclusiveMax)
@@ -46,12 +46,12 @@ struct PseudoRandom
     }
 
     // 53 random bits, producing a finite value in [0, 1).
-    public double NextDouble()
+    public double NextDouble() nothrow
         => (double)(this.NextULong() >> 11) * (1.0d / 9007199254740992.0d);
 
     // Writes little-endian bytes from each generated word. No allocation or terminator.
     // A partial final word is consumed in full; separate Fill calls need not concatenate.
-    public void Fill(char* output, nuint count)
+    public void Fill(char* output, nuint count) nothrow
     {
         nuint index = 0;
         ulong value = 0ul;

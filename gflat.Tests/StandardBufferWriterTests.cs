@@ -2,6 +2,32 @@ namespace gflat.Tests;
 
 public sealed class StandardBufferWriterTests
 {
+    [Fact]
+    public void BufferMetadataAndUnboundedRandomDrawsDoNotIntroduceExceptionBoundaries()
+    {
+        var files = new[] { "BufferTooSmallException.gf", "BufferWriter.gf", "PseudoRandom.gf" }
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Append(new SourceFile("main.gf", """
+                using std;
+                bool Inspect(char* buffer) nothrow {
+                    BufferWriter writer = new(buffer, 16);
+                    PseudoRandom random = new(42ul);
+                    random.NextUInt(); random.NextULong(); random.NextDouble();
+                    random.Fill(buffer, 16);
+                    writer.Clear();
+                    return writer.Length == 0 && writer.Capacity == 15 && writer.Remaining == 15 && writer.Data[0] == '\0';
+                }
+                int main() => 0;
+                """));
+        string ir = Compiler.Emit(files);
+        var function = System.Text.RegularExpressions.Regex.Match(ir,
+            @"(?ms)^define [^\n]*@gflat\$Inspect\([^\n]*\{\r?\n(?<body>.*?)^\}");
+        Assert.True(function.Success);
+        Assert.DoesNotContain("invoke", function.Value);
+        Assert.DoesNotContain("personality", function.Value);
+        Assert.DoesNotContain("__gflat_eh_", function.Value);
+    }
+
     private static void Run(string program)
     {
         var files = new[] { "core/BufferTooSmallException.gf", "core/BufferWriter.gf", "core/Formatting.gf" }

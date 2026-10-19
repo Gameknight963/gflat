@@ -8,7 +8,7 @@ public struct BufferWriter : ITextWriter
     private nuint storageCapacity;
     private nuint length;
 
-    public BufferWriter(char* storage, nuint capacity)
+    public BufferWriter(char* storage, nuint capacity) nothrow
     {
         data = storage;
         storageCapacity = capacity;
@@ -16,19 +16,19 @@ public struct BufferWriter : ITextWriter
         if (storageCapacity != 0) data[0] = '\0';
     }
 
-    public nuint Length { readonly get => length; }
+    public nuint Length { readonly get nothrow => length; }
     public nuint Capacity
     {
-        readonly get
+        readonly get nothrow
         {
             if (storageCapacity == 0) return 0;
             return storageCapacity - 1;
         }
     }
-    public nuint Remaining { readonly get => this.Capacity - length; }
-    public readonly(char)* Data { readonly get => data; }
+    public nuint Remaining { readonly get nothrow => this.Capacity - length; }
+    public readonly(char)* Data { readonly get nothrow => data; }
 
-    public void Clear()
+    public void Clear() nothrow
     {
         length = 0;
         if (storageCapacity != 0) data[0] = '\0';

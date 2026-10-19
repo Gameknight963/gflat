@@ -15,7 +15,7 @@ implementation lives in `libc`.
 | Text | `String`, `ITextWriter`, `IFormattable`, `IStringConvertable` | [Strings](../docs/STRINGS.md), [formatting](core/README.md#strings-and-formatting) |
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split` | [Allocation-free splitting](../docs/TEXT_PARTS.md) |
-| Contiguous storage | `Vector<T>`, `Span<T>` | [Ownership and views](core/README.md#vectors) |
+| Contiguous storage | `Vector<T>`, `Span<T>`, typed span `CopyTo` | [Ownership and views](core/README.md#vectors), [copying initialized elements](core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
 | Stable node storage | `LinkedList<T>` | [Owning linked lists and node handles](../docs/LINKED_LIST.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |
@@ -32,6 +32,7 @@ implementation lives in `libc`.
 | Bits | `BitOperations` | [Counts and rotations](../docs/BIT_OPERATIONS.md) |
 | Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |
 | Binary integers | `BinaryPrimitives` | [Checked byte-order reads and writes](../docs/BINARY_PRIMITIVES.md) |
+| Binary buffers | `BinaryBufferReader`, `BinaryBufferWriter` | [Borrowed cursors and bounded payloads](../docs/BINARY_CURSORS.md) |
 | Streaming checksums | `CRC32`, `Adler32` | [Incremental byte checksums](../docs/CHECKSUMS.md) |
 | Temporary storage | `Arena` | [Independent raw-storage arenas](../docs/ARENA.md) |
 | Raw memory | `Memory::Copy`, `Move`, `Fill`, `Compare`, `Equal` | [Byte operations and linking](../docs/MEMORY.md) |
@@ -45,7 +46,7 @@ their sources. Do not retain them across operations that invalidate storage.
 | Area | APIs |
 | --- | --- |
 | Console | `Console::Write`, `WriteLine`, `ReadLine`, `TryReadLine`, `Out`, `Error`, flush operations |
-| Files | `File`, `FileText`, `FileLines`, `FileBinary` |
+| Files | `File`, `FileText`, `FileBytes`, `FileLines`, `FileBinary` |
 | Allocation | Default replaceable `Memory::Allocate` and `Memory::Free` |
 | Managed storage | Replaceable collector selection and `TracingCollector` |
 | Exceptions | Default unhandled exception termination |
@@ -60,6 +61,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 
 - [Word count](../examples/word-count/README.md): streamed input and owning hash keys.
 - [File checksums](../examples/checksum/README.md): streaming CRC32 and Adler32 over binary files.
+- [Hex dump](../examples/hexdump/README.md): byte offsets, hex columns, and printable ASCII with stack-backed formatting.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

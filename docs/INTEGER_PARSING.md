@@ -4,8 +4,8 @@
 `Int`, `UInt`, `Long`, `ULong`, `NInt`, and `NUInt`. Each name has four forms:
 
 ```cpp
-bool TryParseLong(readonly(char)* text, long* result);
-bool TryParseLong(readonly(char)* text, nuint count, long* result);
+bool TryParseLong(readonly(char)* text, long* result) nothrow;
+bool TryParseLong(readonly(char)* text, nuint count, long* result) nothrow;
 long ParseLong(readonly(char)* text);
 long ParseLong(readonly(char)* text, nuint count);
 ```
@@ -23,6 +23,12 @@ prefixes, trailing characters, and values outside the result type's range fail.
 `Exception` on the same inputs. Overflow is checked before multiplication and
 addition, including at the unsigned 64-bit boundary and the signed minimum.
 Pointer-sized parsers use the target's pointer-sized integer limits.
+
+The pointer-based `TryParse...` overloads explicitly guarantee `nothrow` and
+allocate nothing under their memory preconditions. Their shared magnitude and
+length helpers are also `nothrow`. The source files also contain the throwing
+`Parse...` variants; including either complete file still requires the normal
+exception definitions and runtime.
 
 `core/Parsing.gf` supplies the existing `Int` functions. The other widths live
 in `core/IntegerParsing.gf`; neither file depends on libc. Optional

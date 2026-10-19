@@ -11,6 +11,9 @@ overloads for `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`
 Use matching argument types; these APIs do not define mixed signed/unsigned
 comparison rules of their own.
 
+Every `Min` and `Max` overload is `nothrow`. `Clamp` retains its throwing
+contract for inverted bounds.
+
 `Abs(value)` has overloads for the signed types. The most negative value has no
 positive counterpart in the same type, so it throws `Exception` rather than
 wrapping or invoking signed overflow. This check also applies to pointer-sized
@@ -21,6 +24,8 @@ wrapping or invoking signed overflow. This check also applies to pointer-sized
 `float` and `double` each have `IsNaN`, `IsFinite`, `Abs`, `Min`, and `Max`
 overloads. `IsFinite` excludes both infinities and all NaNs, and includes zeros
 and subnormals. `Abs` clears the sign bit, including for negative zero and NaNs.
+All floating-point helpers are `nothrow`; the signed-integer `Abs` overloads
+retain their overflow exceptions.
 
 `Min` and `Max` propagate a NaN input rather than silently selecting the numeric
 input. When both inputs are NaN the first is returned. When comparing positive

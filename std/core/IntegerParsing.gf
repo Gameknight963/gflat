@@ -4,7 +4,7 @@ namespace integer_parsing_detail
 {
     // Check the bound before multiplication, so even ULong overflow is defined.
     bool Magnitude(readonly(char)* text, nuint count, ulong positiveLimit,
-        ulong negativeLimit, bool signedInput, ulong* magnitude, bool* negative)
+        ulong negativeLimit, bool signedInput, ulong* magnitude, bool* negative) nothrow
     {
         *magnitude = 0ul;
         *negative = false;
@@ -30,7 +30,7 @@ namespace integer_parsing_detail
         return true;
     }
 
-    nuint Length(readonly(char)* text)
+    nuint Length(readonly(char)* text) nothrow
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
@@ -40,7 +40,7 @@ namespace integer_parsing_detail
 
 // Strict decimal parsing: no whitespace, separators, radix prefixes, or trailing bytes.
 // Unsigned parsers reject a minus sign, including -0. Every failure writes zero.
-bool TryParseByte(readonly(char)* text, nuint count, byte* result)
+bool TryParseByte(readonly(char)* text, nuint count, byte* result) nothrow
 {
     *result = (byte)0;
     ulong magnitude = 0ul;
@@ -50,7 +50,7 @@ bool TryParseByte(readonly(char)* text, nuint count, byte* result)
     return true;
 }
 
-bool TryParseByte(readonly(char)* text, byte* result)
+bool TryParseByte(readonly(char)* text, byte* result) nothrow
     => TryParseByte(text, integer_parsing_detail::Length(text), result);
 
 byte ParseByte(readonly(char)* text, nuint count)
@@ -64,7 +64,7 @@ byte ParseByte(readonly(char)* text, nuint count)
 byte ParseByte(readonly(char)* text)
     => ParseByte(text, integer_parsing_detail::Length(text));
 
-bool TryParseSByte(readonly(char)* text, nuint count, sbyte* result)
+bool TryParseSByte(readonly(char)* text, nuint count, sbyte* result) nothrow
 {
     *result = (sbyte)0;
     ulong magnitude = 0ul;
@@ -75,7 +75,7 @@ bool TryParseSByte(readonly(char)* text, nuint count, sbyte* result)
     return true;
 }
 
-bool TryParseSByte(readonly(char)* text, sbyte* result)
+bool TryParseSByte(readonly(char)* text, sbyte* result) nothrow
     => TryParseSByte(text, integer_parsing_detail::Length(text), result);
 
 sbyte ParseSByte(readonly(char)* text, nuint count)
@@ -89,7 +89,7 @@ sbyte ParseSByte(readonly(char)* text, nuint count)
 sbyte ParseSByte(readonly(char)* text)
     => ParseSByte(text, integer_parsing_detail::Length(text));
 
-bool TryParseShort(readonly(char)* text, nuint count, short* result)
+bool TryParseShort(readonly(char)* text, nuint count, short* result) nothrow
 {
     *result = (short)0;
     ulong magnitude = 0ul;
@@ -100,7 +100,7 @@ bool TryParseShort(readonly(char)* text, nuint count, short* result)
     return true;
 }
 
-bool TryParseShort(readonly(char)* text, short* result)
+bool TryParseShort(readonly(char)* text, short* result) nothrow
     => TryParseShort(text, integer_parsing_detail::Length(text), result);
 
 short ParseShort(readonly(char)* text, nuint count)
@@ -114,7 +114,7 @@ short ParseShort(readonly(char)* text, nuint count)
 short ParseShort(readonly(char)* text)
     => ParseShort(text, integer_parsing_detail::Length(text));
 
-bool TryParseUShort(readonly(char)* text, nuint count, ushort* result)
+bool TryParseUShort(readonly(char)* text, nuint count, ushort* result) nothrow
 {
     *result = (ushort)0;
     ulong magnitude = 0ul;
@@ -124,7 +124,7 @@ bool TryParseUShort(readonly(char)* text, nuint count, ushort* result)
     return true;
 }
 
-bool TryParseUShort(readonly(char)* text, ushort* result)
+bool TryParseUShort(readonly(char)* text, ushort* result) nothrow
     => TryParseUShort(text, integer_parsing_detail::Length(text), result);
 
 ushort ParseUShort(readonly(char)* text, nuint count)
@@ -138,7 +138,7 @@ ushort ParseUShort(readonly(char)* text, nuint count)
 ushort ParseUShort(readonly(char)* text)
     => ParseUShort(text, integer_parsing_detail::Length(text));
 
-bool TryParseUInt(readonly(char)* text, nuint count, uint* result)
+bool TryParseUInt(readonly(char)* text, nuint count, uint* result) nothrow
 {
     *result = (uint)0;
     ulong magnitude = 0ul;
@@ -148,7 +148,7 @@ bool TryParseUInt(readonly(char)* text, nuint count, uint* result)
     return true;
 }
 
-bool TryParseUInt(readonly(char)* text, uint* result)
+bool TryParseUInt(readonly(char)* text, uint* result) nothrow
     => TryParseUInt(text, integer_parsing_detail::Length(text), result);
 
 uint ParseUInt(readonly(char)* text, nuint count)
@@ -162,7 +162,7 @@ uint ParseUInt(readonly(char)* text, nuint count)
 uint ParseUInt(readonly(char)* text)
     => ParseUInt(text, integer_parsing_detail::Length(text));
 
-bool TryParseLong(readonly(char)* text, nuint count, long* result)
+bool TryParseLong(readonly(char)* text, nuint count, long* result) nothrow
 {
     *result = (long)0;
     ulong magnitude = 0ul;
@@ -173,7 +173,7 @@ bool TryParseLong(readonly(char)* text, nuint count, long* result)
     return true;
 }
 
-bool TryParseLong(readonly(char)* text, long* result)
+bool TryParseLong(readonly(char)* text, long* result) nothrow
     => TryParseLong(text, integer_parsing_detail::Length(text), result);
 
 long ParseLong(readonly(char)* text, nuint count)
@@ -187,7 +187,7 @@ long ParseLong(readonly(char)* text, nuint count)
 long ParseLong(readonly(char)* text)
     => ParseLong(text, integer_parsing_detail::Length(text));
 
-bool TryParseULong(readonly(char)* text, nuint count, ulong* result)
+bool TryParseULong(readonly(char)* text, nuint count, ulong* result) nothrow
 {
     *result = (ulong)0;
     ulong magnitude = 0ul;
@@ -197,7 +197,7 @@ bool TryParseULong(readonly(char)* text, nuint count, ulong* result)
     return true;
 }
 
-bool TryParseULong(readonly(char)* text, ulong* result)
+bool TryParseULong(readonly(char)* text, ulong* result) nothrow
     => TryParseULong(text, integer_parsing_detail::Length(text), result);
 
 ulong ParseULong(readonly(char)* text, nuint count)
@@ -211,7 +211,7 @@ ulong ParseULong(readonly(char)* text, nuint count)
 ulong ParseULong(readonly(char)* text)
     => ParseULong(text, integer_parsing_detail::Length(text));
 
-bool TryParseNInt(readonly(char)* text, nuint count, nint* result)
+bool TryParseNInt(readonly(char)* text, nuint count, nint* result) nothrow
 {
     *result = (nint)0;
     ulong negativeLimit = 1ul << (sizeof(nint) * 8 - 1);
@@ -224,7 +224,7 @@ bool TryParseNInt(readonly(char)* text, nuint count, nint* result)
     return true;
 }
 
-bool TryParseNInt(readonly(char)* text, nint* result)
+bool TryParseNInt(readonly(char)* text, nint* result) nothrow
     => TryParseNInt(text, integer_parsing_detail::Length(text), result);
 
 nint ParseNInt(readonly(char)* text, nuint count)
@@ -238,7 +238,7 @@ nint ParseNInt(readonly(char)* text, nuint count)
 nint ParseNInt(readonly(char)* text)
     => ParseNInt(text, integer_parsing_detail::Length(text));
 
-bool TryParseNUInt(readonly(char)* text, nuint count, nuint* result)
+bool TryParseNUInt(readonly(char)* text, nuint count, nuint* result) nothrow
 {
     *result = (nuint)0;
     ulong magnitude = 0ul;
@@ -248,7 +248,7 @@ bool TryParseNUInt(readonly(char)* text, nuint count, nuint* result)
     return true;
 }
 
-bool TryParseNUInt(readonly(char)* text, nuint* result)
+bool TryParseNUInt(readonly(char)* text, nuint* result) nothrow
     => TryParseNUInt(text, integer_parsing_detail::Length(text), result);
 
 nuint ParseNUInt(readonly(char)* text, nuint count)

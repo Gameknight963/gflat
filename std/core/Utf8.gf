@@ -15,11 +15,10 @@ nuint EncodedLength(uint scalar) nothrow
 
 // Decode one complete scalar. On failure both outputs are zero; no bytes consumed.
 // The input is counted and may contain U+0000. No replacement characters are emitted.
+// Outputs must not overlap each other; either may overlap input storage.
 bool TryDecode(readonly(char)* input, nuint count, uint* scalar, nuint* consumed) nothrow
 {
-    *scalar = 0u;
-    *consumed = 0;
-    if (count == 0) return false;
+    if (count == 0) return DecodeFailure(scalar, consumed);
     uint first = (uint)(byte)input[0];
     if (first < 0x80u) { *scalar = first; *consumed = 1; return true; }
     nuint required = 0;
@@ -37,18 +36,26 @@ bool TryDecode(readonly(char)* input, nuint count, uint* scalar, nuint* consumed
     {
         required = 4; value = first & 0x07u; minimum = 0x10000u;
     }
-    else return false;
-    if (count < required) return false;
+    else return DecodeFailure(scalar, consumed);
+    if (count < required) return DecodeFailure(scalar, consumed);
     for (nuint i = 1; i < required; i++)
     {
         uint next = (uint)(byte)input[i];
-        if (next < 0x80u || next > 0xbfu) return false;
+        if (next < 0x80u || next > 0xbfu) return DecodeFailure(scalar, consumed);
         value = (value << 6) | (next & 0x3fu);
     }
-    if (value < minimum || !IsValidScalar(value)) return false;
+    if (value < minimum || !IsValidScalar(value)) return DecodeFailure(scalar, consumed);
     *scalar = value;
     *consumed = required;
     return true;
+}
+
+// Delay every output store until the bytes needed for the result were examined.
+// Scalar/count outputs may borrow input storage, but must not overlap each other.
+private bool DecodeFailure(uint* scalar, nuint* consumed) nothrow
+{
+    *scalar = 0u; *consumed = 0;
+    return false;
 }
 
 // Preflight before writing: invalid scalars and insufficient capacity leave output untouched.
@@ -82,16 +89,19 @@ bool TryEncode(uint scalar, char* output, nuint capacity, nuint* written) nothro
 }
 
 // Count Unicode scalar values, not bytes or grapheme clusters. Failure writes zero.
+// The count output may overlap input; bytes are examined before storing its result.
 bool TryCount(readonly(char)* input, nuint count, nuint* scalarCount) nothrow
 {
-    *scalarCount = 0;
     nuint offset = 0;
     nuint result = 0;
     while (offset < count)
     {
         uint scalar = 0u;
         nuint consumed = 0;
-        if (!TryDecode(input + offset, count - offset, &scalar, &consumed)) return false;
+        if (!TryDecode(input + offset, count - offset, &scalar, &consumed))
+        {
+            *scalarCount = 0; return false;
+        }
         offset += consumed;
         result++;
     }

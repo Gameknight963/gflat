@@ -17,6 +17,15 @@ Input pointers have type `readonly(char)*`; output storage has type `char*`.
 The scalar output is `uint`; byte lengths, capacities, and scalar counts are
 `nuint`. Output parameters are pointers to writable caller storage.
 
+`TryDecode`'s scalar and consumed outputs must not overlap each other. Either
+may overlap the input: the bytes needed for the scalar are examined before
+either output is stored. Result stores can overwrite input bytes, including an
+unconsumed suffix, so preserve that suffix separately if it is needed later.
+`TryCount` likewise reads the entire input before storing a successful count.
+Failure still writes zero to the outputs, even when that changes overlapping
+input. Output storage must have its normal scalar alignment and writable size.
+For encoding, the `written` variable must not overlap the destination buffer.
+
 All input is counted. U+0000 is an ordinary scalar and does not terminate input.
 Encoding does not append a null terminator. Counts describe scalar values,
 not grapheme clusters or user-perceived characters.

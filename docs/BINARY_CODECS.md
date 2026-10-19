@@ -21,6 +21,11 @@ Encoding requires disjoint buffers. Decoding supports disjoint buffers or the
 exact same starting address for an in-place operation; other overlapping
 regions are unsupported.
 
+For Base64, Hex, and PercentEncoding, the scalar `length` and `written`
+variables must occupy separate storage from the input and output byte buffers.
+In-place decoding support applies to the byte buffers, not these count outputs:
+storing a count into encoded or decoded bytes would overwrite their contents.
+
 `std/core/Base64Text.gf` adds `std::Base64Text::Encode(data, count)` and
 `Decode(text, count)`, returning owning `std::String` values. They reserve the
 result once and process small stack chunks without allocating an intermediate

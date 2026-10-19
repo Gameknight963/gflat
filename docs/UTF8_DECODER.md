@@ -50,6 +50,10 @@ Truncation consumes all available bytes. Both `Invalid` and `End` persist until
 input and starts a new stream. Copying a decoder copies its independent state.
 
 The caller supplies readable counted input and writable output variables.
+The scalar and consumed outputs must be separate from each other, the input
+buffer, and the decoder's own storage. The decoder's state must also be separate
+from input. Unlike a completed stateless decode, incremental reads update their
+consumed counter while processing bytes and may leave a suffix for a later call.
 No input memory is read when `count` is zero. The decoder rejects overlong
 encodings, surrogate values, and values beyond U+10FFFF; it performs no
 replacement, normalization, or grapheme processing.

@@ -1,0 +1,5 @@
+namespace std;
+
+// Borrow an owning String without copying it or accepting a temporary receiver.
+TextParts Split(this ref readonly(String) text, char delimiter, bool removeEmpty = false)
+    => new TextParts(new Span<readonly(char)>(text.Data, text.Length), delimiter, removeEmpty);

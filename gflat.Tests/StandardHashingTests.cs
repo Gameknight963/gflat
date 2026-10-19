@@ -2,8 +2,9 @@ namespace gflat.Tests;
 
 public class StandardHashingTests
 {
-    private static IEnumerable<SourceFile> Sources(string code) =>
+    private static IEnumerable<SourceFile> Sources(string code, bool maps = false) =>
         new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "IStringConvertable.gf", "String.gf" }
+            .Concat(maps ? ["HashMap.gf"] : [])
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
 
@@ -123,5 +124,36 @@ public class StandardHashingTests
                 return 0;
             }
             """);
+
+    [Theory]
+    [InlineData("float", "uint", "0x7fc00001u", "0xffc00002u", "0x7f800000u")]
+    [InlineData("double", "ulong", "0x7ff8000000000001ul", "0xfff8000000000002ul", "0x7ff0000000000000ul")]
+    public void HashMapSeparatesNaNsFromZeroDespiteSharedHashes(string type, string bits, string firstNaN, string secondNaN, string infinity)
+    {
+        string code = $$"""
+            using std;
+            int main() {
+                {{bits}} firstBits = {{firstNaN}}; {{bits}} secondBits = {{secondNaN}}; {{bits}} infiniteBits = {{infinity}};
+                {{type}} nan = *(({{type}}*)&firstBits); {{type}} otherNaN = *(({{type}}*)&secondBits);
+                {{type}} positiveInfinity = *(({{type}}*)&infiniteBits); {{type}} negativeInfinity = -positiveInfinity;
+                {{type}} zero = ({{type}})0; {{type}} negativeZero = -zero;
+                HashMap<{{type}}, int> map = new();
+                if (!map.TryAdd(nan, 1)) return 1;
+                if (map.TryAdd(otherNaN, 2)) return 2;
+                if (!map.TryAdd(zero, 3)) return 3;
+                if (map.TryAdd(negativeZero, 4)) return 4;
+                map.Add(positiveInfinity, 5); map.Add(negativeInfinity, 6);
+                map.Reserve(1000);
+                if (map.Count != (nuint)4) return 5;
+                if (map[&otherNaN] != 1 || map[&negativeZero] != 3) return 6;
+                if (map[&positiveInfinity] != 5 || map[&negativeInfinity] != 6) return 7;
+                map.Set(otherNaN, 7); if (map[&nan] != 7) return 8;
+                if (!map.Remove(&nan) || map.ContainsKey(&otherNaN)) return 9;
+                if (!map.ContainsKey(&zero) || map[&negativeZero] != 3) return 10;
+                return 0;
+            }
+            """;
+        Assert.Equal(0, CompilerTestHelper.Run(Sources(code, maps: true)).ExitCode);
+    }
 }
 

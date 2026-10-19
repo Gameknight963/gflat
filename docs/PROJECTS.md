@@ -308,6 +308,27 @@ start with optimization level 0 for predictable stepping and variable inspection
 Watch initially uses the native debugger's expression evaluator, so gflat-specific
 expressions and property evaluation are not fully supported.
 
+#### Exception debugging in Visual Studio
+
+Debug builds report gflat exception type names, messages, and codes through the
+native debugger. Use **Debug > Windows > Exception Settings > C++ Exceptions**
+and add a gflat type name (for example `App::Problem`) to break when it is thrown.
+gflat does not enable first-chance breaking by default or override your settings.
+Explicit `throw;` reports a rethrow; internal cleanup propagation does not.
+
+An exception reaching a termination boundary reports an unhandled event before
+calling `Exceptions::Unhandled`. Continue execution to run the hook and terminate.
+The preview reads the stored `Exception.message` and `Exception.code` fields;
+it does not execute overridden getters. C++ transport events can still appear in
+the Debug output and when breaking on all C++ exceptions.
+
+The implementation uses [LLVM debug metadata](https://llvm.org/docs/SourceLevelDebugging.html)
+and [Visual Studio's native debugger extension API](https://github.com/microsoft/ConcordExtensibilitySamples).
+On Windows with Visual Studio and its extensibility tools installed, run
+`editors/VisualStudio/test-debugger.ps1` after building the VSIX for a live
+breakpoint, Watch, exception-settings, rethrow, and continuation test. It installs
+only into a disposable experimental profile and cleans that profile afterward.
+
 The language server discovers the nearest project and includes referenced sources
 and unsaved buffers. Evaluation is cached between edits; source and imported
 project-file changes invalidate it. Creating a nearer project or shared

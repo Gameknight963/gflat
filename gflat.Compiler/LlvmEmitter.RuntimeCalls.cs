@@ -14,12 +14,14 @@ public partial class LlvmEmitter
         public static readonly RuntimeFunction Allocate = new("__gflat_eh_allocate_exception", "i8*", "i64, i8* (i64)*");
         public static readonly RuntimeFunction Free = new("__gflat_eh_free_exception", "void", "i8*, void (i8*)*");
         public static readonly RuntimeFunction Throw = new("__gflat_eh_throw", "void", "i8*, void (i8*)*", NoReturn: true);
+        public static readonly RuntimeFunction ThrowDebug = new("__gflat_eh_throw_debug", "void", "i8*, void (i8*)*, i8*, i64, i64", NoReturn: true);
         public static readonly RuntimeFunction Capture = new("__gflat_eh_capture", "i8*", "", CanUnwind: false);
         public static readonly RuntimeFunction Object = new("__gflat_eh_object", "i8*", "i8*", CanUnwind: false);
         public static readonly RuntimeFunction Release = new("__gflat_eh_release", "void", "i8*", CanUnwind: false);
         public static readonly RuntimeFunction Rethrow = new("__gflat_eh_rethrow", "void", "i8*", NoReturn: true);
+        public static readonly RuntimeFunction RethrowDebug = new("__gflat_eh_rethrow_debug", "void", "i8*", NoReturn: true);
         public static readonly RuntimeFunction Terminate = new("__gflat_eh_terminate", "void", "i8*, void (i8*)*", CanUnwind: false, NoReturn: true);
-        public static readonly RuntimeFunction[] Functions = [Allocate, Free, Throw, Capture, Object, Release, Rethrow, Terminate];
+        public static readonly RuntimeFunction[] Functions = [Allocate, Free, Throw, ThrowDebug, Capture, Object, Release, Rethrow, RethrowDebug, Terminate];
     }
 
     private readonly HashSet<RuntimeFunction> _runtimeFunctions = new();

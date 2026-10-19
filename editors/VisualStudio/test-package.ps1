@@ -17,7 +17,7 @@ try {
     if (-not (Test-Path -LiteralPath $env:GFLAT_LSP_EXECUTABLE)) { throw 'VSIX is missing the server executable' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'gflat.VisualStudio.dll'))) { throw 'VSIX is missing the language client' }
     if (Get-ChildItem -LiteralPath $extracted -Filter 'MonoMod*.dll' -File) { throw 'VSIX still contains the removed runtime patching dependency' }
-    foreach ($asset in @('gflat.pkgdef', 'gflat.VisualStudio.pkgdef', 'gflat-language-configuration.json', 'Grammars/gflat.tmLanguage.json', 'Grammars/gflat.tmLanguage.tmTheme')) {
+    foreach ($asset in @('gflat.pkgdef', 'gflat.VisualStudio.pkgdef', 'gflat.VisualStudio.vsdconfig', 'gflat-language-configuration.json', 'Grammars/gflat.tmLanguage.json', 'Grammars/gflat.tmLanguage.tmTheme')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted $asset))) { throw "VSIX is missing $asset" }
     }
     foreach ($asset in @('BUILD-INFO.json', 'Licenses/LICENSE', 'Licenses/MSBuild.txt', 'Licenses/dotnet/LICENSE.TXT', 'Licenses/dotnet/THIRD-PARTY-NOTICES.TXT', 'Sdk/build/tasks/net472/gflat.Build.Tasks.dll', 'Sdk/build/tasks/net10.0/gflat.Build.Tasks.dll', 'Compiler/MSBuild.dll', 'Server/MSBuild.dll')) {
@@ -37,6 +37,10 @@ try {
     Copy-Item -LiteralPath (Join-Path $extracted 'gflat-language-configuration.json') -Destination (Join-Path $extracted 'Grammars')
     $env:GFLAT_EDITOR_ASSETS = Join-Path $extracted 'Grammars'
     [xml]$manifest = Get-Content -LiteralPath (Join-Path $extracted 'extension.vsixmanifest')
+    if (-not ($manifest.PackageManifest.Assets.Asset | Where-Object { $_.Type -eq 'DebuggerEngineExtension' -and $_.Path -eq 'gflat.VisualStudio.vsdconfig' })) {
+        throw 'VSIX does not register the native debugger component'
+    }
+    if (Test-Path (Join-Path $extracted 'Microsoft.VisualStudio.Debugger.Engine.dll')) { throw 'The VS debugger implementation must be supplied by Visual Studio.' }
     [xml]$sourceManifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'source.extension.vsixmanifest')
     if ($manifest.PackageManifest.Metadata.Identity.Version -ne $sourceManifest.PackageManifest.Metadata.Identity.Version) {
         throw 'Packaged manifest is stale. Rebuild the VSIX.'

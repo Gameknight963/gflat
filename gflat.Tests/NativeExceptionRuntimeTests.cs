@@ -2,21 +2,26 @@ namespace gflat.Tests;
 
 public class NativeExceptionRuntimeTests
 {
-    [Fact]
-    public void RuntimeOwnsNativeObjectsAndPreservesForeignExceptions()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void RuntimeOwnsNativeObjectsAndPreservesForeignExceptions(bool debugging)
     {
         string directory = Path.Combine(Path.GetTempPath(), "gflat-native-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         string source = Path.Combine(directory, "runtime.cpp"), executable = Path.Combine(directory, "runtime.exe");
         try
         {
-            File.WriteAllText(source, """
+            string code = """
+                #include <cstdint>
                 extern "C" {
                     void __gflat_eh_throw(void*, void(*)(void*));
+                    void __gflat_eh_throw_debug(void*, void(*)(void*), const char*, std::int64_t, std::int64_t);
                     void* __gflat_eh_capture();
                     void* __gflat_eh_object(void*);
                     void __gflat_eh_release(void*);
                     void __gflat_eh_rethrow(void*);
+                    void __gflat_eh_rethrow_debug(void*);
                 }
                 int destroyed = 0;
                 void destroy(void* value) { if (*(int*)value == 42) ++destroyed; }
@@ -40,7 +45,10 @@ public class NativeExceptionRuntimeTests
                     catch (int original) { return original == 17 ? 0 : 5; }
                     return 6;
                 }
-                """);
+                """;
+            if (debugging) code = code.Replace("__gflat_eh_throw(&value, destroy)", "__gflat_eh_throw_debug(&value, destroy, \"Problem\", -1, -1)")
+                .Replace("__gflat_eh_rethrow(handle)", "__gflat_eh_rethrow_debug(handle)");
+            File.WriteAllText(source, code);
             var compiled = NativeToolchain.CompileCpp(source, executable);
             Assert.True(compiled.ExitCode == 0, compiled.StandardError);
             Assert.Equal(0, NativeToolchain.Run(executable, []).ExitCode);

@@ -6,6 +6,12 @@
 #include <cstddef>
 #include <limits>
 #include <memory>
+#include <cstdint>
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 #ifndef GFLAT_EXCEPTION_RESERVE_BYTES
 #define GFLAT_EXCEPTION_RESERVE_BYTES 65536
@@ -91,11 +97,32 @@ template<class T> struct RuntimeAllocator {
     template<class U> bool operator==(const RuntimeAllocator<U>&) const noexcept { return true; }
     template<class U> bool operator!=(const RuntimeAllocator<U>&) const noexcept { return false; }
 };
+struct DebugException {
+    const char* type = nullptr;
+    std::int64_t message_offset = -1;
+    std::int64_t code_offset = -1;
+};
+void notify_debugger(void* object, const DebugException& info, unsigned stage) noexcept {
+#if defined(_WIN32)
+    if (!IsDebuggerPresent()) return;
+    // Versioned, fixed-width packet. The debugger reads strings/fields while
+    // stopped; reporting needs no allocation and invokes no gflat methods.
+    const std::uint64_t packet[] = {1, stage, reinterpret_cast<std::uintptr_t>(object),
+        reinterpret_cast<std::uintptr_t>(info.type), static_cast<std::uint64_t>(info.message_offset),
+        static_cast<std::uint64_t>(info.code_offset)};
+    const ULONG_PTR arguments[] = {reinterpret_cast<ULONG_PTR>(packet)};
+    __try { RaiseException(0xE047464C, 0, 1, arguments); }
+    __except (GetExceptionCode() == 0xE047464C ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {}
+#else
+    (void)object; (void)info; (void)stage;
+#endif
+}
 struct Exception final {
     // MSVC may copy the native exception. Copies share the gflat payload.
     std::shared_ptr<void> object;
-    Exception(void* value, void (*cleanup)(void*))
-        : object(value, cleanup, RuntimeAllocator<unsigned char>{}) {}
+    DebugException debug;
+    Exception(void* value, void (*cleanup)(void*), DebugException info = {})
+        : object(value, cleanup, RuntimeAllocator<unsigned char>{}), debug(info) {}
 };
 struct Handle { std::exception_ptr exception; };
 thread_local bool invoking_payload_allocator = false;
@@ -128,6 +155,14 @@ void __gflat_eh_free_exception(void* value, void (*deallocator)(void*)) {
 [[noreturn]] void __gflat_eh_throw(void* object, void (*destroy)(void*)) {
     throw Exception(object, destroy);
 }
+[[noreturn]] void __gflat_eh_throw_debug(void* object, void (*destroy)(void*), const char* type,
+    std::int64_t message_offset, std::int64_t code_offset) {
+    DebugException info{type, message_offset, code_offset};
+    // Keep ownership established if construction of the C++ transport fails.
+    Exception error(object, destroy, info);
+    notify_debugger(object, info, 1);
+    throw error;
+}
 // Called inside a native catch; retain the exception beyond the native catch block.
 void* __gflat_eh_capture() noexcept {
     auto* handle = new (allocate(sizeof(Handle))) Handle{std::current_exception()};
@@ -147,8 +182,23 @@ void __gflat_eh_release(void* value) noexcept {
     release_handle(static_cast<Handle*>(value));
     std::rethrow_exception(exception);
 }
+// Only explicit source `throw;` uses this entry. Cleanup propagation does not
+// represent a new source throw and must not keep triggering first-chance breaks.
+[[noreturn]] void __gflat_eh_rethrow_debug(void* value) {
+    try { std::rethrow_exception(static_cast<Handle*>(value)->exception); }
+    catch (const Exception& error) { notify_debugger(error.object.get(), error.debug, 1); }
+    catch (...) {}
+    __gflat_eh_rethrow(value);
+}
 [[noreturn]] void __gflat_eh_terminate(void* value, void (*hook)(void*)) noexcept {
     void* object = value ? __gflat_eh_object(value) : nullptr;
+    DebugException info;
+    if (value) {
+        try { std::rethrow_exception(static_cast<Handle*>(value)->exception); }
+        catch (const Exception& error) { info = error.debug; }
+        catch (...) {}
+    }
+    notify_debugger(object, info, 2);
     try { if (hook) hook(object); } catch (...) {}
     std::exit(1);
 }

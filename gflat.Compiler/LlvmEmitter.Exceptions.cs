@@ -1,4 +1,5 @@
 using gflat.ast;
+using gflat.comptime;
 
 namespace gflat;
 
@@ -112,7 +113,7 @@ public partial class LlvmEmitter
             string slot = _caughtHandles.Peek(), handle = NewTemp();
             Emit($"    {handle} = load i8*, i8** {slot}");
             Emit($"    store i8* null, i8** {slot}");
-            EmitRuntimeCall(ExceptionRuntime.Rethrow, $"i8* {handle}");
+            EmitRuntimeCall(_debugSymbols ? ExceptionRuntime.RethrowDebug : ExceptionRuntime.Rethrow, $"i8* {handle}");
         }
         else
         {
@@ -135,7 +136,27 @@ public partial class LlvmEmitter
             Emit($"    {vtable} = getelementptr {llvm}, {llvm}* {address}, i32 0, i32 0");
             Emit($"    store i8** bitcast ([{exceptionClass.VirtualMethods.Count} x i8*]* @{exceptionClass.Name}$vtable to i8**), i8*** {vtable}");
             _deferScopes.RemoveAt(_deferScopes.Count - 1);
-            EmitRuntimeCall(ExceptionRuntime.Throw, $"i8* {storage}, void (i8*)* bitcast (void (%Exception*)* @gflat_destroy_exception to void (i8*)*)");
+            string arguments = $"i8* {storage}, void (i8*)* bitcast (void (%Exception*)* @gflat_destroy_exception to void (i8*)*)";
+            if (_debugSymbols)
+            {
+                long offset = TargetInfo.Default.PointerBytes, messageOffset = -1, codeOffset = -1;
+                foreach (var field in exceptionClass.Fields)
+                {
+                    int alignment = _typeChecker.GetTypeAlignment(field.Type);
+                    offset = (offset + alignment - 1) & -alignment;
+                    if (field.DeclaringClass == "Exception")
+                    {
+                        var fieldType = _typeChecker.ResolveAlias(field.Type);
+                        if (field.Name == "message" && fieldType is PointerTypeExpression pointer &&
+                            _typeChecker.ResolveAlias(pointer.Inner) is NamedTypeExpression { Name: "char" }) messageOffset = offset;
+                        if (field.Name == "code" && fieldType is NamedTypeExpression { Name: "int" }) codeOffset = offset;
+                    }
+                    offset += _typeChecker.GetTypeSize(field.Type);
+                }
+                string name = CStringAddress(new ConstValue.String(_typeChecker.DisplayTypeName(type)));
+                EmitRuntimeCall(ExceptionRuntime.ThrowDebug, arguments + $", i8* {name}, i64 {messageOffset}, i64 {codeOffset}");
+            }
+            else EmitRuntimeCall(ExceptionRuntime.Throw, arguments);
         }
         Emit("    unreachable");
         _hasTerminated = true;
@@ -180,6 +201,7 @@ public partial class LlvmEmitter
             else Emit($"    br label %{body}");
             Emit(body + ":");
             _hasTerminated = false;
+            using var debugCatchScope = EnterDebugBlock(clause.Body);
             string? previous = null;
             if (clause.VariableName != null)
             {
@@ -193,6 +215,7 @@ public partial class LlvmEmitter
                     Emit($"    store {llvm} {typed}, {llvm}* {variable}");
                     _locals[clause.VariableName] = variable;
                 }
+                EmitDebugVariable(clause.VariableName, clause.ExceptionType!, _locals[clause.VariableName], clause);
             }
             var cleanup = new CatchCleanupAction(slot);
             _deferScopes.Add(new() { cleanup });

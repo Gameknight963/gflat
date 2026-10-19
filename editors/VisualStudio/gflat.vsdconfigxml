@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration xmlns="http://schemas.microsoft.com/vstudio/vsdconfig/2008">
+  <ManagedComponent ComponentId="BC410849-F98D-4333-9835-C3F7DCD54C41" ComponentLevel="40501" AssemblyName="gflat.VisualStudio">
+    <Class Name="gflat.VisualStudio.GflatExceptionDebugging">
+      <Implements>
+        <InterfaceGroup>
+          <NoFilter />
+          <Interface Name="IDkmDebugMonitorExceptionNotification" />
+        </InterfaceGroup>
+        <InterfaceGroup>
+          <Filter><ExceptionCategory RequiredValue="3A12D0B7-C26C-11D0-B442-00A0244A1DD2" /></Filter>
+          <Interface Name="IDkmExceptionFormatter" />
+          <Interface Name="IDkmExceptionDetailsProvider" />
+        </InterfaceGroup>
+      </Implements>
+    </Class>
+  </ManagedComponent>
+</Configuration>

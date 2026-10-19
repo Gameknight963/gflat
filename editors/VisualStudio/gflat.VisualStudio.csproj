@@ -21,7 +21,16 @@
     <!-- Bundled .NET runtime DLLs are content, never references for the .NET Framework VS client. -->
     <AssemblySearchPaths>{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName}</AssemblySearchPaths>
   </PropertyGroup>
+  <Target Name="ResolveConcordRegistrationAssembly" BeforeTargets="GeneratePkgDef">
+    <!-- Registration reflects public types; the SDK package contains reference
+         assemblies. Use the installed debugger for this build step only. -->
+    <ItemGroup>
+      <CreatePkgDefReferencedAssemblies Include="$(VSInstallRoot)/Common7/IDE/Microsoft.VisualStudio.Debugger.Engine.dll" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Debugger.Engine" Version="17.14.1051801" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.VSSDK.Debugger.VSDConfigTool" Version="17.14.1051801" PrivateAssets="all" />
     <PackageReference Include="Microsoft.VisualStudio.ProjectSystem.SDK" Version="17.9.380" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.ImageCatalog" Version="17.14.40260" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VisualStudio.Shell.15.0" Version="17.14.40264" ExcludeAssets="runtime" />
@@ -51,6 +60,10 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="GflatBuildProperties.cs" />
     <Compile Include="GflatLaunchProvider.cs" />
+    <Compile Include="GflatExceptionDebugging.cs" />
+    <Compile Include="GflatExceptionReport.cs" />
+    <VsdConfigXmlFiles Include="gflat.vsdconfigxml" />
+    <Content Include="$(OutputPath)gflat.VisualStudio.vsdconfig"><Link>gflat.VisualStudio.vsdconfig</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Compile Include="../../gflat.Projects/ProjectSdk.cs"><Link>ProjectSdk.cs</Link></Compile>
     <Content Include="../../LICENSE"><Link>Licenses/LICENSE</Link><IncludeInVSIX>true</IncludeInVSIX></Content>
     <Content Include="../../LICENSES/MSBuild.txt"><Link>Licenses/MSBuild.txt</Link><IncludeInVSIX>true</IncludeInVSIX></Content>

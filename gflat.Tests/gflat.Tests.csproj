@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Compile Include="../editors/VisualStudio/GflatExceptionReport.cs" Link="Editor/GflatExceptionReport.cs" />
   </ItemGroup>
 
   <ItemGroup>

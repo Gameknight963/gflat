@@ -27,13 +27,13 @@ implementation lives in `libc`.
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
 | Caller-buffer numbers | `IntegerFormatting::TryFormat` | [Decimal formatting without a writer or allocation](../docs/INTEGER_FORMATTING.md) |
 | Unicode | `Utf8`, incremental `Utf8Decoder`, borrowed `Utf8Scalars` | [UTF-8 buffers](../docs/UTF8.md), [chunked decoding](../docs/UTF8_DECODER.md), [scalar iteration](../docs/UTF8_SCALARS.md) |
-| UTF-16 and conversion | `Utf16`, `UnicodeTranscoding` | [Code units](../docs/UTF16.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
+| UTF-16 and conversion | `Utf16`, incremental `Utf16Decoder`, `UnicodeTranscoding` | [Code units and chunked decoding](../docs/UTF16.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |
-| Bits | `BitOperations` | [Counts and rotations](../docs/BIT_OPERATIONS.md) |
+| Bits | `BitOperations` | [Counts, rotations, and byte reversal](../docs/BIT_OPERATIONS.md) |
 | Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |
 | Binary integers | `BinaryPrimitives` | [Checked byte-order reads and writes](../docs/BINARY_PRIMITIVES.md) |
 | Binary buffers | `BinaryBufferReader`, `BinaryBufferWriter` | [Borrowed cursors and bounded payloads](../docs/BINARY_CURSORS.md) |

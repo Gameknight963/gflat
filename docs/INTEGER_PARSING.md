@@ -43,4 +43,5 @@ bool valid = text.TryParseULong(&attempted);
 ```
 
 These methods use `String.Length`, preserve embedded nulls for validation, and
-do not copy or allocate string storage.
+do not copy or allocate string storage. The String `TryParse...` wrappers are
+also explicitly `nothrow`; the `Parse...` wrappers retain their exceptions.

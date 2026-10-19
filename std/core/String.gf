@@ -7,7 +7,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     private nuint length;
     private nuint capacity;
 
-    public String()
+    public String() nothrow
     {
         // Empty storage is never written or freed; the first append allocates.
         data = (char*)"";
@@ -24,11 +24,11 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         this.AppendLiteral(source.data, source.length);
     }
 
-    public nuint Length { readonly get => length; }
-    public nuint Capacity { readonly get => capacity; }
-    public bool IsEmpty { readonly get => length == 0; }
+    public nuint Length { readonly get nothrow => length; }
+    public nuint Capacity { readonly get nothrow => capacity; }
+    public bool IsEmpty { readonly get nothrow => length == 0; }
     public const nuint NotFound = (nuint)0 - (nuint)1;
-    public readonly(char)* Data { readonly get => data; }
+    public readonly(char)* Data { readonly get nothrow => data; }
 
     // Null-terminated input. Use the count overload for buffers or embedded nulls.
     public static String From(readonly(char)* text)
@@ -198,21 +198,21 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     public readonly bool Contains(readonly(char)* text) => this.IndexOf(text) != NotFound;
     public readonly bool Contains(readonly(char)* text, nuint count) => this.IndexOf(text, count, 0) != NotFound;
 
-    public readonly bool StartsWith(readonly(char)* text, nuint count)
+    public readonly bool StartsWith(readonly(char)* text, nuint count) nothrow
     {
         if (count > length) return false;
         for (nuint i = 0; i < count; i++) if (data[i] != text[i]) return false;
         return true;
     }
 
-    public readonly bool StartsWith(readonly(char)* text)
+    public readonly bool StartsWith(readonly(char)* text) nothrow
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
         return this.StartsWith(text, count);
     }
 
-    public readonly bool EndsWith(readonly(char)* text, nuint count)
+    public readonly bool EndsWith(readonly(char)* text, nuint count) nothrow
     {
         if (count > length) return false;
         nuint start = length - count;
@@ -220,7 +220,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return true;
     }
 
-    public readonly bool EndsWith(readonly(char)* text)
+    public readonly bool EndsWith(readonly(char)* text) nothrow
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
@@ -236,7 +236,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         data[length] = '\0';
     }
 
-    public void Replace(char oldValue, char newValue)
+    public void Replace(char oldValue, char newValue) nothrow
     {
         for (nuint i = 0; i < length; i++) if (data[i] == oldValue) data[i] = newValue;
     }
@@ -289,7 +289,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         this.Replace(oldText, oldCount, newText, newCount);
     }
 
-    private static bool IsAsciiWhitespace(char value)
+    private static bool IsAsciiWhitespace(char value) nothrow
         => value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == (char)11 || value == (char)12;
 
     // Trims ASCII whitespace only; no locale or Unicode category assumptions.
@@ -303,7 +303,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (length != end - start) this.Remove(end - start, length - (end - start));
     }
 
-    public void Clear()
+    public void Clear() nothrow
     {
         length = 0;
         if (capacity != 0) data[0] = '\0';
@@ -312,24 +312,24 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     public readonly String ToString() => String::From(data, length);
 
     // Borrowed text: valid until mutation, movement, or destruction of this string.
-    public readonly readonly(char)* ToCString() => data;
+    public readonly readonly(char)* ToCString() nothrow => data;
 
     public void Write(readonly(char)* text, nuint count) { this.AppendLiteral(text, count); }
     public readonly void Format(ITextWriter* output) { output.Write(data, length); }
 
     public readonly String Clone() { return String::From(data, length); }
 
-    public readonly bool Equals(readonly(String)* other)
+    public readonly bool Equals(readonly(String)* other) nothrow
     {
         if (length != other.Length) return false;
         for (nuint i = 0; i < length; i++) if (data[i] != other.Data[i]) return false;
         return true;
     }
 
-    public readonly nuint GetHashCode() => Hashing::Bytes(data, length);
+    public readonly nuint GetHashCode() nothrow => Hashing::Bytes(data, length);
 
     // Ordinal UTF-8 byte order, independent of locale and null termination.
-    public readonly int CompareTo(readonly(String)* other)
+    public readonly int CompareTo(readonly(String)* other) nothrow
     {
         nuint limit = length;
         if (other.Length < limit) limit = other.Length;

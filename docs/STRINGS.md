@@ -49,3 +49,10 @@ or mutation occurs. Matching replacements invalidate previous storage views.
 Equality, comparison, and hashing use complete byte contents, including embedded
 zero bytes. Ordering is unsigned byte order, independent of locale. String does
 not require valid UTF-8; binary callers may store arbitrary bytes.
+
+Empty construction and the `Length`, `Capacity`, `IsEmpty`, and `Data` getters
+are explicitly `nothrow`. So are `ToCString()`, `Equals`, `CompareTo`,
+`GetHashCode`, `StartsWith`, `EndsWith`, `Clear()`, and character-to-character
+`Replace`. These operations allocate
+nothing under their input memory preconditions. Allocating operations, indexed
+access, ranges, and searches retain their existing exception contracts.

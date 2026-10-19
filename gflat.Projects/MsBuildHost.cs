@@ -9,6 +9,7 @@ namespace gflat.Projects;
 /// <summary>The private MSBuild shipped with the CLI and language server, independent of installed SDKs.</summary>
 public static class MsBuildHost
 {
+    private static IReadOnlyDictionary<string, (string? Original, string Bundled)>? buildEnvironment;
     private static readonly Lazy<bool> initialized = new(() =>
     {
         string engine = Path.Combine(AppContext.BaseDirectory, "MSBuild.dll");
@@ -20,14 +21,35 @@ public static class MsBuildHost
                 throw new IOException("The bundled Gflat.Sdk is missing. Reinstall the gflat toolchain.");
         // Process-local only. In particular, don't inherit Visual Studio's engine
         // paths when it starts the compiler or language server.
-        Environment.SetEnvironmentVariable("MSBUILD_EXE_PATH", engine);
-        Environment.SetEnvironmentVariable("MSBuildExtensionsPath", AppContext.BaseDirectory);
-        Environment.SetEnvironmentVariable("MSBuildSDKsPath", sdks);
+        var overrides = new Dictionary<string, (string? Original, string Bundled)> {
+            ["MSBUILD_EXE_PATH"] = (Environment.GetEnvironmentVariable("MSBUILD_EXE_PATH"), engine),
+            ["MSBuildExtensionsPath"] = (Environment.GetEnvironmentVariable("MSBuildExtensionsPath"), AppContext.BaseDirectory),
+            ["MSBuildSDKsPath"] = (Environment.GetEnvironmentVariable("MSBuildSDKsPath"), sdks)
+        };
+        // Publish before mutating the environment so user launches can restore
+        // their own environment even while another thread initializes the host.
+        Volatile.Write(ref buildEnvironment, overrides);
+        foreach (var (name, value) in overrides) Environment.SetEnvironmentVariable(name, value.Bundled);
         return true;
     });
     private static readonly object buildLock = new();
 
     public static void Initialize() => _ = initialized.Value;
+
+    /// <summary>Removes our private engine overrides from a user's child process only.
+    /// Does not initialize MSBuild or change the current process environment.</summary>
+    public static void RestoreUserProcessEnvironment(IDictionary<string, string?> environment)
+    {
+        var snapshot = Volatile.Read(ref buildEnvironment);
+        if (snapshot == null) return;
+        foreach (var (name, value) in snapshot)
+        {
+            // Preserve deliberate changes made by an embedding host after initialization.
+            if (!environment.TryGetValue(name, out string? current) || current != value.Bundled) continue;
+            if (value.Original == null) environment.Remove(name);
+            else environment[name] = value.Original;
+        }
+    }
 
     internal static Dictionary<string, string> CreateGlobalProperties()
     {

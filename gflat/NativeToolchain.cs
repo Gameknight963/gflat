@@ -91,6 +91,7 @@ public static class NativeToolchain
     public static int RunProgram(string executable, IEnumerable<string> arguments)
     {
         using var process = new Process { StartInfo = new ProcessStartInfo(executable) { UseShellExecute = false } };
+        gflat.Projects.MsBuildHost.RestoreUserProcessEnvironment(process.StartInfo.Environment);
         foreach (string argument in arguments) process.StartInfo.ArgumentList.Add(argument);
         process.Start();
         process.WaitForExit();

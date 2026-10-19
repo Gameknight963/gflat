@@ -52,6 +52,10 @@ public partial class TypeChecker
         if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression) return true;
         if (type is ArrayTypeExpression a) return CanCopyReadOnlyElement(a.ElementType, visiting);
         if (type is not NamedTypeExpression n) return true;
+        // An explicit copy constructor reads the readonly source and defines
+        // the new value's resources. Its fields are not copied as raw aliases.
+        // ValidateCopyUse separately checks accessibility and throwing behavior.
+        if (CopyConstructor(type) != null) return true;
         visiting ??= new();
         if (!visiting.Add(n.Name)) return true;
         IEnumerable<TypeExpression> fields = _structs.TryGetValue(n.Name, out var s) ? s.Fields.Select(f => f.Type) :

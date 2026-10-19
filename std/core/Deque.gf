@@ -1,0 +1,160 @@
+namespace std;
+
+// Owns a ring buffer. Structural mutation invalidates borrowed values/iterators.
+struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
+{
+    private T*? data;
+    private nuint count;
+    private nuint capacity;
+    private nuint head;
+
+    public Deque() { data = null; count = 0; capacity = 0; head = 0; }
+    public nuint Count { readonly get nothrow => count; }
+    public nuint Capacity { readonly get nothrow => capacity; }
+    public bool IsEmpty { readonly get nothrow => count == 0; }
+
+    private readonly nuint Physical(nuint offset) nothrow
+    {
+        nuint remaining = capacity - head;
+        if (offset < remaining) return head + offset;
+        return offset - remaining;
+    }
+
+    public void Reserve(nuint requested)
+    {
+        if (requested <= capacity) return;
+        nuint maximum = (nuint)0 - (nuint)1;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        if (requested > maximum / stride) throw new Exception("Deque capacity overflow");
+        void*? allocation = Memory::Allocate(requested * stride);
+        if (allocation == null) throw new BadAllocException("Deque allocation failed");
+        T* replacement = (T*)allocation;
+        for (nuint i = 0; i < count; i++) move *(data! + this.Physical(i)) at replacement + i;
+        if (data != null) Memory::Free((void*)data);
+        data = replacement; capacity = requested; head = 0;
+    }
+
+    private void EnsureCapacity()
+    {
+        if (count < capacity) return;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        nuint maximum = ((nuint)0 - (nuint)1) / stride;
+        if (count == maximum) throw new Exception("Deque capacity overflow");
+        nuint grown = 4;
+        if (capacity != 0)
+        {
+            grown = maximum;
+            if (capacity <= maximum / 2) grown = capacity * 2;
+        }
+        if (grown > maximum) grown = maximum;
+        this.Reserve(grown);
+    }
+
+    public void AddFirst(T value)
+    {
+        this.EnsureCapacity();
+        if (count == 0) head = 0;
+        else if (head == 0) head = capacity - 1;
+        else head--;
+        move value at data! + head;
+        count++;
+    }
+
+    public void AddLast(T value)
+    {
+        this.EnsureCapacity();
+        move value at data! + this.Physical(count);
+        count++;
+    }
+
+    public T RemoveFirst()
+    {
+        if (count == 0) throw new Exception("Cannot remove from an empty deque");
+        T result = move *(data! + head);
+        count--; head++;
+        if (head == capacity || count == 0) head = 0;
+        return result;
+    }
+
+    public T RemoveLast()
+    {
+        if (count == 0) throw new Exception("Cannot remove from an empty deque");
+        T result = move *(data! + this.Physical(count - 1));
+        count--;
+        if (count == 0) head = 0;
+        return result;
+    }
+
+    public ref T this[nuint index]
+    {
+        get
+        {
+            if (index >= count) throw new Exception("Deque index out of range");
+            return data![this.Physical(index)];
+        }
+    }
+
+    public ref T Front
+    {
+        get
+        {
+            if (count == 0) throw new Exception("Cannot peek an empty deque");
+            return data![head];
+        }
+    }
+
+    public ref T Back
+    {
+        get
+        {
+            if (count == 0) throw new Exception("Cannot peek an empty deque");
+            return data![this.Physical(count - 1)];
+        }
+    }
+
+    public void Clear()
+    {
+        while (count != 0)
+        {
+            (data! + head).~T();
+            count--; head++;
+            if (head == capacity) head = 0;
+        }
+        head = 0;
+    }
+
+    public Enumerator GetEnumerator() => new Enumerator(data, capacity, head, count);
+    ~Deque() { this.Clear(); if (data != null) Memory::Free((void*)data); }
+
+    public struct Enumerator
+    {
+        private T*? data;
+        private nuint capacity;
+        private nuint position;
+        private nuint remaining;
+        private bool valid;
+        public Enumerator(T*? storage, nuint size, nuint start, nuint length)
+        {
+            if (length > size || (length != 0 && (storage == null || start >= size)))
+                throw new Exception("Invalid deque enumerator storage");
+            data = storage; capacity = size; position = start; remaining = length; valid = false;
+        }
+        public bool MoveNext()
+        {
+            if (remaining == 0) { valid = false; return false; }
+            if (valid) { position++; if (position == capacity) position = 0; }
+            remaining--; valid = true;
+            return true;
+        }
+        public ref T Current
+        {
+            get
+            {
+                if (!valid) throw new Exception("Enumerator has no current element");
+                return data![position];
+            }
+        }
+    }
+}

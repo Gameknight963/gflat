@@ -117,6 +117,41 @@ public bool SequenceEqual<T>(Span<readonly(T)> first, Span<readonly(T)> second,
     return true;
 }
 
+// Return Length for an empty span; strict comparisons keep the first equal item.
+public nuint MinIndex<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)*)* compare)
+{
+    if (values.Length == 0) return values.Length;
+    nuint best = 0;
+    for (nuint i = 1; i < values.Length; i++)
+        if (compare(&values[i], &values[best]) < 0) best = i;
+    return best;
+}
+
+public nuint MaxIndex<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)*)* compare)
+{
+    if (values.Length == 0) return values.Length;
+    nuint best = 0;
+    for (nuint i = 1; i < values.Length; i++)
+        if (compare(&values[i], &values[best]) > 0) best = i;
+    return best;
+}
+
+// Preserve the first nonzero comparison; otherwise order by prefix length.
+public int SequenceCompare<T>(Span<readonly(T)> first, Span<readonly(T)> second,
+    int(readonly(T)*, readonly(T)*)* compare)
+{
+    nuint count = first.Length;
+    if (second.Length < count) count = second.Length;
+    for (nuint i = 0; i < count; i++)
+    {
+        int order = compare(&first[i], &second[i]);
+        if (order != 0) return order;
+    }
+    if (first.Length < second.Length) return -1;
+    if (first.Length > second.Length) return 1;
+    return 0;
+}
+
 // Returns Length when no element matches, including for an empty span.
 public nuint FindIndex<T>(Span<readonly(T)> values, bool(readonly(T)*)* predicate)
 {

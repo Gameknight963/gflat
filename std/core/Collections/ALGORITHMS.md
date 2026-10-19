@@ -32,6 +32,9 @@ int main()
 | `UpperBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
 | `IsSorted<T>(Span<readonly(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length readonly spans element by element, stopping at the first difference. |
+| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare readonly spans, preserving the first nonzero comparator result; an equal prefix sorts by length. |
+| `MinIndex<T>(Span<readonly(T)>, compare)` | Index of the first least element, or span length when empty. |
+| `MaxIndex<T>(Span<readonly(T)>, compare)` | Index of the first greatest element, or span length when empty. |
 | `FindIndex<T>(Span<readonly(T)>, predicate)` | First matching index, or span length when no element matches. |
 | `IndexOf<T>(Span<readonly(T)>, key, equal)` | First equal element's index, or span length when absent. |
 | `LastIndexOf<T>(Span<readonly(T)>, key, equal)` | Last equal element's index, or span length when absent. |
@@ -47,6 +50,16 @@ For duplicate keys, `[LowerBound, UpperBound)` describes the matching range.
 Comparators borrow two elements through readonly pointers and return a negative,
 zero, or positive `int`. They must provide a consistent ordering and must not
 mutate the elements or collection through other aliases.
+
+`MinIndex` and `MaxIndex` scan once and use exactly `Length - 1` comparisons for
+nonempty input, keeping the first element when comparisons are equal. Empty
+spans return zero without calling the comparator. Their indices borrow no value
+ownership: the caller can inspect or explicitly copy the selected source element.
+`SequenceCompare` stops at the first unequal pair, or after the shorter span's
+length when one is an equal prefix. Its length-only results are -1, 0, or 1.
+These three algorithms allocate nothing, copy no elements, and support readonly
+spans of noncopyable owning types. Comparator failures leave their sources
+unchanged, provided the callback does not modify them through another alias.
 
 For types implementing `IComparable<T>`, `Comparer<T>::Compare` supplies the
 comparison callback, for example `Sort<int>(span, Comparer<int>::Compare)`.

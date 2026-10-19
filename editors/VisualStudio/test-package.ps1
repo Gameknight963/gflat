@@ -144,7 +144,7 @@ int main() {
     BufferWriter writer = new(storage, 32);
     map[&key].Format(&writer);
     if (writer.Length != 2 || writer.Data[0] != '4' || writer.Data[1] != '2') return 3;
-    if (!Utf8::IsValid(writer.Data, writer.Length)) return 4;
+    if (!std::Utf8::IsValid(writer.Data, writer.Length)) return 4;
     String hex = HexText::Encode(writer.Data, writer.Length);
     if (!hex.StartsWith("3432") || hex.Length != 4) return 5;
     return 0;

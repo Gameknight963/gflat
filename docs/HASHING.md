@@ -14,6 +14,8 @@ Each primitive scalar participates through an implementation declared inside
 the corresponding interface. This includes booleans, characters, signed and
 unsigned integers, pointer-sized integers, and floating-point values. The
 primitive type remains built in and does not depend on these interfaces existing.
+Character ordering uses unsigned byte values (0 through 255); boolean ordering
+puts false before true.
 
 Equal keys must produce equal hashes. Hash collisions are permitted. A key's
 equality and hash must remain stable while it belongs to a hash collection.

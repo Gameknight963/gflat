@@ -109,8 +109,8 @@ interface IComparable<T>
     {
         public readonly int CompareTo(readonly(char)* other)
         {
-            if (*this < *other) return -1;
-            if (*this > *other) return 1;
+            if ((byte)*this < (byte)*other) return -1;
+            if ((byte)*this > (byte)*other) return 1;
             return 0;
         }
     }

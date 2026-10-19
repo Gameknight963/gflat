@@ -197,6 +197,41 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return this.IndexOf(text, count, 0);
     }
 
+    public readonly nuint LastIndexOf(char value) nothrow
+    {
+        nuint i = length;
+        while (i != 0)
+        {
+            i--;
+            if (data[i] == value) return i;
+        }
+        return NotFound;
+    }
+
+    public readonly nuint LastIndexOf(readonly(char)* text, nuint count) nothrow
+    {
+        if (count == 0) return length;
+        if (count > length) return NotFound;
+        nuint i = length - count + 1;
+        char first = text[0];
+        while (i != 0)
+        {
+            i--;
+            if (data[i] != first) continue;
+            nuint matched = 1;
+            while (matched < count && data[i + matched] == text[matched]) matched++;
+            if (matched == count) return i;
+        }
+        return NotFound;
+    }
+
+    public readonly nuint LastIndexOf(readonly(char)* text) nothrow
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return this.LastIndexOf(text, count);
+    }
+
     public readonly bool Contains(char value) => this.IndexOf(value) != NotFound;
     public readonly bool Contains(readonly(char)* text) => this.IndexOf(text) != NotFound;
     public readonly bool Contains(readonly(char)* text, nuint count) => this.IndexOf(text, count, 0) != NotFound;

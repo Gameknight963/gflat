@@ -20,11 +20,20 @@ Search, indexing, slicing, and removal use byte offsets. They do not split on
 Unicode character boundaries automatically. UTF-8 validation and scalar decoding
 are available separately through `std::Utf8`.
 
-`IndexOf` returns `String::NotFound` (the largest `nuint`) when no match exists.
-An empty needle matches at the search start, including the end of the string.
-`StartsWith`, `EndsWith`, `Contains`, and `IndexOf` accept C strings or counted
-byte sequences. Character search also accepts a start offset. Invalid start and
+`IndexOf` and `LastIndexOf` return `String::NotFound` (the largest `nuint`) when
+no match exists. An empty needle matches at the search start for `IndexOf`,
+and at `Length` for `LastIndexOf`.
+`StartsWith`, `EndsWith`, `Contains`, `IndexOf`, and `LastIndexOf` accept C strings
+or counted byte sequences. `LastIndexOf` also accepts a single `char`, searches
+the entire string backwards, and includes overlapping occurrences. Counted
+patterns preserve embedded zero bytes; C-string patterns stop at their first
+zero. Search patterns may borrow the string's own storage. Forward character
+search also accepts a start offset. Invalid start and
 substring/removal ranges throw instead of wrapping pointer-sized arithmetic.
+
+Substring searches use simple byte comparisons with constant extra storage and
+no allocation. Their worst-case comparison count is O(string length times
+pattern length), including repeated-prefix patterns. Character search is linear.
 
 `Substring` allocates an independent string. `Remove`, character `Replace`, and
 ASCII-whitespace `Trim` modify the existing buffer without allocation. `Append`
@@ -52,7 +61,7 @@ not require valid UTF-8; binary callers may store arbitrary bytes.
 
 Empty construction and the `Length`, `Capacity`, `IsEmpty`, and `Data` getters
 are explicitly `nothrow`. So are `ToCString()`, `Equals`, `CompareTo`,
-`GetHashCode`, `StartsWith`, `EndsWith`, `Clear()`, and character-to-character
+`GetHashCode`, `StartsWith`, `EndsWith`, `LastIndexOf`, `Clear()`, and character-to-character
 `Replace`. These operations allocate
 nothing under their input memory preconditions. Allocating operations, indexed
-access, ranges, and searches retain their existing exception contracts.
+access, ranges, and forward searches retain their existing exception contracts.

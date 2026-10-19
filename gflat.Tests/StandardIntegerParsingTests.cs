@@ -65,6 +65,8 @@ public class StandardIntegerParsingTests
                 {{type}} result = ({{type}})0;
                 if (!text.TryParse{{name}}(&result) || result != ({{type}}){{maximum}}ul) return 1;
                 if (text.Parse{{name}}() != result) return 2;
+                String smallest = s"{{minimum}}";
+                if (!smallest.TryParse{{name}}(&result) || smallest.Parse{{name}}() != result) return 5;
                 String bad = String::From("12\0", 3);
                 if (bad.TryParse{{name}}(&result) || result != ({{type}})0) return 3;
                 try { bad.Parse{{name}}(); return 4; } catch (ref Exception error) {}

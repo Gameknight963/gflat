@@ -7,7 +7,9 @@ public partial class LlvmEmitter
     private void EmitAlloca(string type, string address)
     {
         string line = $"    {address} = alloca {type}";
-        if (_typeChecker.UsesCollector && _functions.Count != 0) CurrentFunction.ManagedPrologue.AppendLine(line);
+        // Fixed-size storage belongs to the function frame. Emitting an alloca
+        // in a loop accumulates stack space on every iteration at -O0.
+        if (_functions.Count != 0) CurrentFunction.ManagedPrologue.AppendLine(line);
         else Emit(line);
     }
     private bool HasManagedReferences(TypeExpression type, HashSet<string>? visited = null)

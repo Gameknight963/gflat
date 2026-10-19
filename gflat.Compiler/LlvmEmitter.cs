@@ -712,8 +712,8 @@ public partial class LlvmEmitter : IVisitor
             if (needsCleanup && _temporaryPrologue != null)
             {
                 liveSlot = NewTemp();
-                _temporaryPrologue.AppendLine($"    {address} = alloca {llvmType}");
-                _temporaryPrologue.AppendLine($"    {liveSlot} = alloca i1");
+                EmitAlloca(llvmType, address);
+                EmitAlloca("i1", liveSlot);
                 _temporaryPrologue.AppendLine($"    store i1 false, i1* {liveSlot}");
             }
             else EmitAlloca($"{llvmType}", address);

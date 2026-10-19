@@ -50,7 +50,7 @@ public partial class LlvmEmitter
             {
                 // Fixed buffers use a loop so large buffers do not inflate generated code.
                 string index = NewTemp();
-                Emit($"    {index} = alloca i32");
+                EmitAlloca("i32", index);
                 Emit($"    store i32 0, i32* {index}");
                 _deferScopes[^1].Add(new CopiedArrayCleanup(array, destination, index));
                 string test = NewLabel("copy_test"), body = NewLabel("copy_element"), done = NewLabel("copy_done");

@@ -93,7 +93,7 @@ public partial class LlvmEmitter
             string flag = NewTemp(), address = NewTemp();
             int index = str != null ? str.FieldIndex(field.Name) : cls!.FieldIndex(field.Name) + 1;
             Emit($"    {address} = getelementptr %{name}, %{name}* %this, i32 0, i32 {index}");
-            Emit($"    {flag} = alloca i1");
+            EmitAlloca("i1", flag);
             bool live = _typeChecker.CanDefaultInitialize(field.Type);
             Emit($"    store i1 {(live ? "true" : "false")}, i1* {flag}");
             _constructionFields[field.Name] = flag;
@@ -105,7 +105,7 @@ public partial class LlvmEmitter
             if (!_constructionFields.TryGetValue(group.Key, out string? flag))
             {
                 flag = NewTemp();
-                Emit($"    {flag} = alloca i1");
+                EmitAlloca("i1", flag);
                 Emit($"    store i1 {(group.First().Value.Live ? "true" : "false")}, i1* {flag}");
             }
             foreach (var write in group) _constructorLiveFlags[write.Key] = flag;

@@ -9,7 +9,7 @@ public partial class LlvmEmitter
     private IDeferAction RegisterOwner(TypeExpression type, string address, bool live)
     {
         string flag = NewTemp();
-        Emit($"    {flag} = alloca i1");
+        EmitAlloca("i1", flag);
         Emit($"    store i1 {(live ? "true" : "false")}, i1* {flag}");
         _ownerLiveFlags[address] = flag;
         if (live) CompleteManagedOwnerInitialization(address);
@@ -74,7 +74,7 @@ public partial class LlvmEmitter
     private void ProtectArgument(TypeExpression type, string value)
     {
         string address = NewTemp(), llvmType = EmitType(type);
-        Emit($"    {address} = alloca {llvmType}");
+        EmitAlloca(llvmType, address);
         EmitManagedStore(type, value, address, initialize: true);
         var cleanup = new TemporaryCleanup(type, address);
         _deferScopes[^1].Add(cleanup);

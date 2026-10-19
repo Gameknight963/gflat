@@ -165,7 +165,7 @@ public partial class LlvmEmitter
     private void EmitNativeTry(TryStatement node)
     {
         string slot = NewTemp();
-        Emit($"    {slot} = alloca i8*");
+        EmitAlloca("i8*", slot);
         Emit($"    store i8* null, i8** {slot}");
         string dispatch = NewLabel("catch_dispatch"), unwind = NewLabel("catch_unwind"), end = NewLabel("try_end");
         var info = new TryBlockInfo(node, slot, dispatch, _deferScopes.Count, unwind);
@@ -211,7 +211,7 @@ public partial class LlvmEmitter
                 if (clause.ExceptionType is ReferenceTypeExpression) _locals[clause.VariableName] = typed;
                 else
                 {
-                    Emit($"    {variable} = alloca {llvm}");
+                    EmitAlloca(llvm, variable);
                     Emit($"    store {llvm} {typed}, {llvm}* {variable}");
                     _locals[clause.VariableName] = variable;
                 }

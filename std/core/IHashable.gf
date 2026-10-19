@@ -93,6 +93,12 @@ interface IHashable
         }
     }
 
+    implementation extralong
+    {
+        public readonly nuint GetHashCode()
+            => Hashing::Integer((ulong)*this ^ (ulong)(*this >> 64));
+    }
+
     implementation bool
     {
         public readonly nuint GetHashCode()

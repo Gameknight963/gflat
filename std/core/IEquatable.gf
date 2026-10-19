@@ -93,6 +93,11 @@ interface IEquatable<T>
         }
     }
 
+    implementation extralong : IEquatable<extralong>
+    {
+        public readonly bool Equals(readonly(extralong)* other) => *this == *other;
+    }
+
     implementation bool : IEquatable<bool>
     {
         public readonly bool Equals(readonly(bool)* other)

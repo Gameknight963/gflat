@@ -14,6 +14,8 @@ Each primitive scalar participates through an implementation declared inside
 the corresponding interface. This includes booleans, characters, signed and
 unsigned integers, pointer-sized integers, and floating-point values. The
 primitive type remains built in and does not depend on these interfaces existing.
+Signed 128-bit `extralong` participates as well; its hash folds the high and low
+64-bit halves before applying the ordinary integer mixer.
 Character ordering uses unsigned byte values (0 through 255); boolean ordering
 puts false before true.
 

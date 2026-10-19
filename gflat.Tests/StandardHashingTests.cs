@@ -19,6 +19,7 @@ public class StandardHashingTests
     [InlineData("uint", "0", "4294967295u")]
     [InlineData("long", "-9223372036854775807l - 1l", "9223372036854775807l")]
     [InlineData("ulong", "0", "18446744073709551615ul")]
+    [InlineData("extralong", "-170141183460469231731687303715884105728", "170141183460469231731687303715884105727")]
     [InlineData("nint", "-123", "123")]
     [InlineData("nuint", "0", "123")]
     [InlineData("char", "0", "255")]
@@ -174,6 +175,33 @@ public class StandardHashingTests
         var sources = Sources(code).Concat(new[] { "GC.gf", "TracingCollector.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc", name)))));
         Assert.Equal(0, CompilerTestHelper.Run(sources).ExitCode);
+    }
+
+    [Fact]
+    public void ExtraLongMapKeysUseBothHalvesAndSeparateCollidingValues()
+    {
+        string code = """
+            using std;
+            int main() {
+                extralong minimum = -170141183460469231731687303715884105728;
+                extralong maximum = 170141183460469231731687303715884105727;
+                extralong zero = 0; extralong one = 1; extralong high = (extralong)1 << 64;
+                IHashable* lowHash = &one; IHashable* highHash = &high; IHashable* zeroHash = &zero;
+                // Folding is intentional: these distinct values share a hash.
+                if (lowHash.GetHashCode() != highHash.GetHashCode()) return 1;
+                if (highHash.GetHashCode() == zeroHash.GetHashCode()) return 2;
+                HashMap<extralong, int> map = new();
+                map.Add(minimum, 1); map.Add(maximum, 2); map.Add(zero, 3); map.Add(one, 4); map.Add(high, 5);
+                map.Reserve(1000);
+                if (map[&minimum] != 1 || map[&maximum] != 2 || map[&zero] != 3) return 3;
+                if (map[&one] != 4 || map[&high] != 5) return 4;
+                if (map.TryAdd(high, 6) || map.Count != (nuint)5) return 5;
+                if (!map.Remove(&high) || map.ContainsKey(&high)) return 6;
+                if (map[&one] != 4 || map.Count != (nuint)4) return 7;
+                return 0;
+            }
+            """;
+        Assert.Equal(0, CompilerTestHelper.Run(Sources(code, maps: true)).ExitCode);
     }
 }
 

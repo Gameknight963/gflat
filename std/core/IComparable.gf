@@ -115,6 +115,16 @@ interface IComparable<T>
         }
     }
 
+    implementation extralong : IComparable<extralong>
+    {
+        public readonly int CompareTo(readonly(extralong)* other)
+        {
+            if (*this < *other) return -1;
+            if (*this > *other) return 1;
+            return 0;
+        }
+    }
+
     implementation bool : IComparable<bool>
     {
         public readonly int CompareTo(readonly(bool)* other)

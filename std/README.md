@@ -30,6 +30,7 @@ implementation lives in `libc`.
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |
 | Bits | `BitOperations` | [Counts and rotations](../docs/BIT_OPERATIONS.md) |
+| Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |
 | Binary integers | `BinaryPrimitives` | [Checked byte-order reads and writes](../docs/BINARY_PRIMITIVES.md) |
 | Streaming checksums | `CRC32`, `Adler32` | [Incremental byte checksums](../docs/CHECKSUMS.md) |
 | Temporary storage | `Arena` | [Independent raw-storage arenas](../docs/ARENA.md) |

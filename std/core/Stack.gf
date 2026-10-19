@@ -1,0 +1,67 @@
+namespace std;
+
+// Owns its elements. Views and iterators borrow storage; mutation invalidates them.
+struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
+{
+    private Vector<T> storage;
+
+    public Stack() { storage = new Vector<T>(); }
+    public nuint Count { readonly get => storage.Count; }
+    public nuint Capacity { readonly get => storage.Capacity; }
+    public bool IsEmpty { readonly get => storage.Count == 0; }
+
+    public void Reserve(nuint capacity) { storage.Reserve(capacity); }
+    public void Push(T value) { storage.Add(move value); }
+    public T Pop() => storage.Pop();
+    public bool TryPop(ref T result)
+    {
+        if (storage.Count == 0) return false;
+        result = storage.Pop();
+        return true;
+    }
+    public void Clear() { storage.Clear(); }
+
+    // Borrows the top element instead of copying an owning value.
+    public ref T Top
+    {
+        get
+        {
+            if (storage.Count == 0) throw new Exception("Cannot peek an empty stack");
+            return storage[storage.Count - 1];
+        }
+    }
+
+    public Enumerator GetEnumerator() => new Enumerator(storage.AsSpan());
+
+    // Enumeration proceeds from the top toward the bottom.
+    public struct Enumerator
+    {
+        private Span<T> storage;
+        private nuint position;
+        private bool valid;
+        public Enumerator(Span<T> elements)
+        {
+            storage = elements;
+            position = elements.Length;
+            valid = false;
+        }
+
+        public bool MoveNext()
+        {
+            valid = false;
+            if (position == 0) return false;
+            position--;
+            valid = true;
+            return true;
+        }
+
+        public ref T Current
+        {
+            get
+            {
+                if (!valid) throw new Exception("Enumerator has no current element");
+                return storage[position];
+            }
+        }
+    }
+}

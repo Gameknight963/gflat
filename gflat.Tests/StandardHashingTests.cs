@@ -155,5 +155,25 @@ public class StandardHashingTests
             """;
         Assert.Equal(0, CompilerTestHelper.Run(Sources(code, maps: true)).ExitCode);
     }
+
+    [Fact]
+    public void ManagedPrimitiveInterfaceReferenceKeepsItsReceiverAlive()
+    {
+        string code = """
+            using std;
+            IHashable^ Make() { int^ value = new(42); return value; }
+            int main() {
+                IHashable^ hash = Make();
+                GC::Collect();
+                int value = 42; IHashable* expected = &value;
+                if (hash.GetHashCode() != expected.GetHashCode()) return 1;
+                if (std::TracingCollector::ManagedCount != (nuint)1) return 2;
+                return 0;
+            }
+            """;
+        var sources = Sources(code).Concat(new[] { "GC.gf", "TracingCollector.gf" }
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc", name)))));
+        Assert.Equal(0, CompilerTestHelper.Run(sources).ExitCode);
+    }
 }
 

@@ -100,3 +100,42 @@ public nuint UpperBound<T>(Span<readonly(T)> values, readonly(T)* key,
     }
     return first;
 }
+
+public bool IsSorted<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)*)* compare)
+{
+    for (nuint i = 1; i < values.Length; i++)
+        if (compare(&values[i - 1], &values[i]) > 0) return false;
+    return true;
+}
+
+public bool SequenceEqual<T>(Span<readonly(T)> first, Span<readonly(T)> second,
+    bool(readonly(T)*, readonly(T)*)* equal)
+{
+    if (first.Length != second.Length) return false;
+    for (nuint i = 0; i < first.Length; i++)
+        if (!equal(&first[i], &second[i])) return false;
+    return true;
+}
+
+// Returns Length when no element matches, including for an empty span.
+public nuint FindIndex<T>(Span<readonly(T)> values, bool(readonly(T)*)* predicate)
+{
+    for (nuint i = 0; i < values.Length; i++)
+        if (predicate(&values[i])) return i;
+    return values.Length;
+}
+
+// Move matching elements to the prefix and return its length. Not stable.
+public nuint Partition<T>(Span<T> values, bool(readonly(T)*)* predicate)
+{
+    nuint boundary = 0;
+    for (nuint i = 0; i < values.Length; i++)
+    {
+        if (predicate(&values[i]))
+        {
+            std::detail::SwapElements<T>(&values[i], &values[boundary]);
+            boundary++;
+        }
+    }
+    return boundary;
+}

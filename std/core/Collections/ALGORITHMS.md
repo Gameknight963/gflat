@@ -30,6 +30,10 @@ int main()
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
 | `LowerBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
 | `UpperBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
+| `IsSorted<T>(Span<readonly(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
+| `SequenceEqual<T>(first, second, equal)` | Compare equal-length readonly spans element by element, stopping at the first difference. |
+| `FindIndex<T>(Span<readonly(T)>, predicate)` | First matching index, or span length when no element matches. |
+| `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
 
 Both bounds return the span length if no such element exists, including zero
 for an empty span. Input must already be sorted under the same comparator.
@@ -46,3 +50,9 @@ its resources in its final slot. These operations do not allocate or free
 storage and do not run element destructors. A comparator may allocate or throw.
 If it throws during sorting, ordering may be partial but every element remains
 alive and owned by the source collection.
+
+`Partition` has the same ownership guarantee if its predicate throws. The
+predicate borrows an element through `readonly(T)*` and runs once per element
+unless an earlier invocation throws. `FindIndex` stops at the first match;
+`IsSorted` stops at the first out-of-order adjacent pair. Empty spans are sorted
+and compare equal to other empty spans without invoking callbacks.

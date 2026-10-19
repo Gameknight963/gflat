@@ -31,6 +31,7 @@ it does not copy its resources. Empty removal or peeking throws `Exception`.
 `TryDequeue(ref result)` and `TryPop(ref result)` return false for an empty
 collection and leave the initialized result unchanged. On success they replace
 it with the removed element, cleaning up its previous value normally.
+The output must not refer to an element inside the collection being modified.
 
 `Clear` destroys every remaining element but retains allocated capacity.
 Destruction destroys remaining elements and releases storage. Pointer elements

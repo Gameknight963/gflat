@@ -32,6 +32,14 @@ public sealed class StandardQueueStackTests
                     items.Enqueue(i);
                     if (items.Dequeue() != i) return 7;
                 }
+                expected = 0;
+                for (int i = 0; i < 2000; i++) {
+                    items.Enqueue(i);
+                    if (items.Count > 17 && items.Dequeue() != expected++) return 8;
+                    if (i % 57 == 0) items.Reserve(items.Capacity + 1);
+                }
+                while (!items.IsEmpty) if (items.Dequeue() != expected++) return 9;
+                if (expected != 2000) return 10;
                 items.Clear(); items.Enqueue(42);
                 return items.Dequeue() - 42;
             }
@@ -112,6 +120,28 @@ public sealed class StandardQueueStackTests
                     queue.Enqueue(new Item(&destroyed));
                 }
                 return destroyed - 41;
+            }
+            """));
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
+    public void ZeroSizedElementsAndCapacityOverflowRemainWellDefined()
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            struct Empty {}
+            int main() {
+                Queue<Empty> queue = new(); Stack<Empty> stack = new();
+                for (int i = 0; i < 30; i++) { queue.Enqueue(new Empty()); stack.Push(new Empty()); }
+                for (int i = 0; i < 15; i++) { queue.Dequeue(); stack.Pop(); }
+                for (int i = 0; i < 30; i++) { queue.Enqueue(new Empty()); stack.Push(new Empty()); }
+                if (queue.Count != 45 || stack.Count != 45) return 1;
+                queue.Clear(); stack.Clear();
+                Queue<int> ints = new(); ints.Enqueue(42);
+                try { ints.Reserve((nuint)0 - (nuint)1); return 2; } catch (ref Exception error) {}
+                if (ints.Count != 1 || ints.Dequeue() != 42) return 3;
+                return 0;
             }
             """));
         Assert.Equal(0, result.ExitCode);

@@ -83,6 +83,47 @@ public sealed class StandardCollectionAlgorithmsTests
     }
 
     [Fact]
+    public void BorrowedSearchEqualityAndPartitionDoNotCopyOwningElements()
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            struct Item {
+                private int* destroyed;
+                public int Key;
+                public Item(int* counter, int key) { destroyed = counter; Key = key; }
+                ~Item() { (*destroyed)++; }
+            }
+            int Compare(readonly(Item)* a, readonly(Item)* b) => a.Key - b.Key;
+            bool Equal(readonly(Item)* a, readonly(Item)* b) => a.Key == b.Key;
+            bool Even(readonly(Item)* item) => item.Key % 2 == 0;
+            int main() {
+                int destroyed = 0;
+                {
+                    Vector<Item> values = new(); Vector<Item> other = new();
+                    if (!IsSorted<Item>(values.AsReadOnly(), Compare)) return 1;
+                    if (!SequenceEqual<Item>(values.AsReadOnly(), other.AsReadOnly(), Equal)) return 2;
+                    if (FindIndex<Item>(values.AsReadOnly(), Even) != 0) return 3;
+                    for (int i = 0; i < 20; i++) { values.Add(new Item(&destroyed, i)); other.Add(new Item(&destroyed, i)); }
+                    if (!IsSorted<Item>(values.AsReadOnly(), Compare)) return 4;
+                    if (!SequenceEqual<Item>(values.AsReadOnly(), other.AsReadOnly(), Equal)) return 5;
+                    if (FindIndex<Item>(values.AsReadOnly().Slice(1), Even) != 1) return 6;
+                    nuint boundary = Partition<Item>(values.AsSpan(), Even);
+                    if (boundary != 10 || destroyed != 0) return 7;
+                    for (nuint i = 0; i < boundary; i++) if (values[i].Key % 2 != 0) return 8;
+                    for (nuint i = boundary; i < values.Count; i++) if (values[i].Key % 2 == 0) return 9;
+                    if (SequenceEqual<Item>(values.AsReadOnly(), other.AsReadOnly(), Equal)) return 10;
+                    Reverse<Item>(other.AsSpan());
+                    if (IsSorted<Item>(other.AsReadOnly(), Compare)) return 11;
+                    other.Clear();
+                    if (SequenceEqual<Item>(values.AsReadOnly(), other.AsReadOnly(), Equal)) return 12;
+                }
+                return destroyed - 40;
+            }
+            """));
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public void ThrowingComparisonLeavesEveryElementAliveAndOwned()
     {
         var result = CompilerTestHelper.Run(Sources("""

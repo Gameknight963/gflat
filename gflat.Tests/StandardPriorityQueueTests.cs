@@ -77,6 +77,40 @@ public sealed class StandardPriorityQueueTests
     }
 
     [Fact]
+    public void FailedComparisonDestroysAnOwningInsertionArgumentOnce()
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            bool fail = false;
+            struct Item {
+                private int* destroyed;
+                public int Priority;
+                public Item(int* counter, int priority) { destroyed = counter; Priority = priority; }
+                ~Item() { (*destroyed)++; }
+            }
+            int Compare(readonly(Item)* left, readonly(Item)* right) {
+                if (fail) throw new Exception("comparison failed");
+                return left.Priority - right.Priority;
+            }
+            int main() {
+                int destroyed = 0;
+                {
+                    PriorityQueue<Item> items = new(Compare);
+                    items.Enqueue(new Item(&destroyed, 4)); items.Enqueue(new Item(&destroyed, 9));
+                    fail = true;
+                    try { items.Enqueue(new Item(&destroyed, 1)); return 1; } catch (ref Exception error) {}
+                    if (destroyed != 1 || items.Count != 2 || items.Top.Priority != 4) return 2;
+                    fail = false;
+                    { Item first = items.Dequeue(); if (first.Priority != 4) return 3; }
+                    { Item last = items.Dequeue(); if (last.Priority != 9) return 4; }
+                }
+                return destroyed - 3;
+            }
+            """));
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public void ThrowingComparisonPreservesBothInsertionAndRemovalState()
     {
         var result = CompilerTestHelper.Run(Sources("""

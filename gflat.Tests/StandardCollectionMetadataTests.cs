@@ -19,7 +19,7 @@ public sealed class StandardCollectionMetadataTests
             bool ReadMetadata(readonly(Vector<int>)* vector, Span<int>* span, readonly(Queue<int>)* queue,
                 readonly(Stack<int>)* stack, readonly(PriorityQueue<int>)* priority, readonly(BitSet)* bits,
                 readonly(HashMap<int,int>)* map, readonly(HashSet<int>)* set, readonly(LinkedList<int>)* list) nothrow {
-                return vector.Count == 0 && vector.Capacity == 0 && span.Length == 0 && span.IsEmpty && span.Data == null
+                return vector.Count == 0 && vector.Capacity == 0 && vector.IsEmpty && span.Length == 0 && span.IsEmpty && span.Data == null
                     && queue.Count == 0 && queue.Capacity == 0 && queue.IsEmpty
                     && stack.Count == 0 && stack.Capacity == 0 && stack.IsEmpty
                     && priority.Count == 0 && priority.Capacity == 0 && priority.IsEmpty && bits.Length == 0
@@ -33,7 +33,7 @@ public sealed class StandardCollectionMetadataTests
         Assert.NotEmpty(body);
         Assert.DoesNotContain("invoke", body);
         var calls = Regex.Matches(body, @"call [^\n]*@(?<name>[^\s(]*\$get\$[^\s(]*)\(");
-        Assert.Equal(23, calls.Count);
+        Assert.Equal(24, calls.Count);
         foreach (Match call in calls)
         {
             string name = call.Groups["name"].Value;
@@ -52,7 +52,7 @@ public sealed class StandardCollectionMetadataTests
                 Vector<int> vector = new(); Span<int> span = new(); Queue<int> queue = new(); Stack<int> stack = new();
                 PriorityQueue<int> priority = new(Compare); BitSet bits = new(); HashMap<int,int> map = new();
                 HashSet<int> set = new(); LinkedList<int> list = new();
-                if (vector.Count != 0 || vector.Capacity != 0 || span.Length != 0 || !span.IsEmpty || span.Data != null) return 1;
+                if (vector.Count != 0 || vector.Capacity != 0 || !vector.IsEmpty || span.Length != 0 || !span.IsEmpty || span.Data != null) return 1;
                 if (queue.Count != 0 || queue.Capacity != 0 || !queue.IsEmpty || stack.Count != 0 || stack.Capacity != 0 || !stack.IsEmpty) return 2;
                 if (priority.Count != 0 || priority.Capacity != 0 || !priority.IsEmpty || bits.Length != 0) return 3;
                 if (map.Count != 0 || map.Capacity != 0 || !map.IsEmpty || set.Count != 0 || set.Capacity != 0 || !set.IsEmpty) return 4;
@@ -69,7 +69,7 @@ public sealed class StandardCollectionMetadataTests
                 if (caught != 8) return 6;
                 vector.Add(1); span = vector.AsSpan(); queue.Enqueue(2); stack.Push(3); priority.Enqueue(4);
                 bits.Resize(65); map.Add(1,5); set.Add(6); list.AddLast(7);
-                if (vector.Count != 1 || vector.Capacity < 1 || span.Length != 1 || span.IsEmpty || span.Data == null) return 7;
+                if (vector.Count != 1 || vector.Capacity < 1 || vector.IsEmpty || span.Length != 1 || span.IsEmpty || span.Data == null) return 7;
                 if (queue.Count != 1 || queue.Capacity < 1 || queue.IsEmpty || stack.Count != 1 || stack.Capacity < 1 || stack.IsEmpty) return 8;
                 if (priority.Count != 1 || priority.Capacity < 1 || priority.IsEmpty || bits.Length != 65) return 9;
                 if (map.Count != 1 || map.Capacity < 1 || map.IsEmpty || set.Count != 1 || set.Capacity < 1 || set.IsEmpty) return 10;

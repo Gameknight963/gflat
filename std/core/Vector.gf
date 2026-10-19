@@ -11,6 +11,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
 
     public nuint Count { readonly get nothrow => count; }
     public nuint Capacity { readonly get nothrow => capacity; }
+    public bool IsEmpty { readonly get nothrow => count == 0; }
     public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, count);
     public Enumerable<T, Span<T>, Span<T>::Enumerator> AsEnumerable()
         => new Enumerable<T, Span<T>, Span<T>::Enumerator>(this.AsSpan());

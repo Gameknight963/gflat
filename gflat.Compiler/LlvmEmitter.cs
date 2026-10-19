@@ -3310,7 +3310,7 @@ public partial class LlvmEmitter : IVisitor
             }
 
             string argsStr = string.Join(", ", callArgs);
-            EmitCallAndPush(ifaceCall.Method.ReturnType, typedFn, argsStr);
+            EmitCallAndPush(ifaceCall.Method.ReturnType, typedFn, argsStr, handleUnwind: !ifaceCall.Method.IsNoThrow);
             return;
         }
 
@@ -3399,7 +3399,7 @@ public partial class LlvmEmitter : IVisitor
             }
 
             string argsStr = string.Join(", ", callArgs);
-            EmitCallAndPush(vcall.Method.ReturnType, typedFn, argsStr);
+            EmitCallAndPush(vcall.Method.ReturnType, typedFn, argsStr, handleUnwind: !vcall.Method.IsNoThrow);
             return;
         }
 
@@ -3665,10 +3665,11 @@ public partial class LlvmEmitter : IVisitor
         TypeExpression callType = _typeChecker.GetType(node);
         string retType = EmitType(callType);
         string args = string.Join(", ", argValues.Zip(argTypes, (v, t) => $"{t} {v}"));
+        bool handleUnwind = target is not MethodDeclaration { IsNoThrow: true };
 
         if (target is not ExternDeclaration && UsesManagedResultStorage(callType))
         {
-            EmitCallAndPush(callType, "@" + funcName, args);
+            EmitCallAndPush(callType, "@" + funcName, args, handleUnwind: handleUnwind);
             return;
         }
 
@@ -3679,13 +3680,13 @@ public partial class LlvmEmitter : IVisitor
             if (retType == "void")
             {
                 TransferArguments();
-                EmitCallInstruction(callSignature, "@" + funcName, args);
+                EmitCallInstruction(callSignature, "@" + funcName, args, handleUnwind: handleUnwind);
             }
             else
             {
                 string temp = NewTemp();
                 TransferArguments();
-                EmitCallInstruction(callSignature, "@" + funcName, args, temp);
+                EmitCallInstruction(callSignature, "@" + funcName, args, temp, handleUnwind: handleUnwind);
                 Push(temp);
             }
         }

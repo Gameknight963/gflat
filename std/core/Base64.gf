@@ -4,7 +4,7 @@ namespace std;
 // Counted buffers include embedded zeros; output is not null-terminated.
 public static class Base64
 {
-    public static bool TryGetEncodedLength(nuint count, ref nuint length)
+    public static bool TryGetEncodedLength(nuint count, ref nuint length) nothrow
     {
         length = 0;
         nuint maximum = (nuint)0 - 1;
@@ -21,7 +21,7 @@ public static class Base64
     }
 
     // Input/output must not overlap. Failure leaves output untouched and written=0.
-    public static bool TryEncode(readonly(char*) data, nuint count, char* output, nuint capacity, ref nuint written)
+    public static bool TryEncode(readonly(char*) data, nuint count, char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         nuint required = 0;
@@ -56,7 +56,7 @@ public static class Base64
     }
 
     // Validates every byte, including canonical zero padding bits.
-    public static bool TryGetDecodedLength(readonly(char*) text, nuint count, ref nuint length)
+    public static bool TryGetDecodedLength(readonly(char*) text, nuint count, ref nuint length) nothrow
     {
         length = 0;
         if (count % 4 != 0) return false;
@@ -91,7 +91,7 @@ public static class Base64
 
     // Disjoint buffers or exact same start address are supported. Input is
     // validated before writing, so malformed input/capacity failure changes nothing.
-    public static bool TryDecode(readonly(char*) text, nuint count, char* output, nuint capacity, ref nuint written)
+    public static bool TryDecode(readonly(char*) text, nuint count, char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         nuint required = 0;
@@ -113,7 +113,7 @@ public static class Base64
         return true;
     }
 
-    private static int Digit(char value)
+    private static int Digit(char value) nothrow
     {
         if (value >= 'A' && value <= 'Z') return (int)value - 65;
         if (value >= 'a' && value <= 'z') return (int)value - 97 + 26;

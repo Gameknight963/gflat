@@ -3,7 +3,7 @@ namespace std;
 // Counted hexadecimal bytes. No separators, whitespace, prefix, or terminator.
 public static class Hex
 {
-    public static bool TryGetEncodedLength(nuint count, ref nuint length)
+    public static bool TryGetEncodedLength(nuint count, ref nuint length) nothrow
     {
         length = 0;
         if (count > ((nuint)0 - 1) / 2) return false;
@@ -12,7 +12,7 @@ public static class Hex
     }
 
     // Input and output must not overlap. Failure leaves output untouched.
-    public static bool TryEncode(readonly(char*) data, nuint count, char* output, nuint capacity, ref nuint written, bool uppercase = true)
+    public static bool TryEncode(readonly(char*) data, nuint count, char* output, nuint capacity, ref nuint written, bool uppercase = true) nothrow
     {
         written = 0;
         nuint required = 0;
@@ -29,7 +29,7 @@ public static class Hex
         return true;
     }
 
-    public static bool TryGetDecodedLength(readonly(char*) text, nuint count, ref nuint length)
+    public static bool TryGetDecodedLength(readonly(char*) text, nuint count, ref nuint length) nothrow
     {
         length = 0;
         if (count % 2 != 0) return false;
@@ -40,7 +40,7 @@ public static class Hex
 
     // Accepts either letter case. Supports disjoint buffers or exact same start.
     // All input is validated first; failure leaves output untouched and written=0.
-    public static bool TryDecode(readonly(char*) text, nuint count, char* output, nuint capacity, ref nuint written)
+    public static bool TryDecode(readonly(char*) text, nuint count, char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         nuint required = 0;
@@ -55,7 +55,7 @@ public static class Hex
         return true;
     }
 
-    private static int Digit(char value)
+    private static int Digit(char value) nothrow
     {
         if (value >= '0' && value <= '9') return (int)value - 48;
         if (value >= 'A' && value <= 'F') return (int)value - 65 + 10;

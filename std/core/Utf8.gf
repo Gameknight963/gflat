@@ -1,10 +1,10 @@
 namespace std::Utf8;
 
-bool IsValidScalar(uint scalar)
+bool IsValidScalar(uint scalar) nothrow
     => scalar <= 0x10ffffu && !(scalar >= 0xd800u && scalar <= 0xdfffu);
 
 // Zero means the input is not a Unicode scalar value.
-nuint EncodedLength(uint scalar)
+nuint EncodedLength(uint scalar) nothrow
 {
     if (!IsValidScalar(scalar)) return 0;
     if (scalar < 0x80u) return 1;
@@ -15,7 +15,7 @@ nuint EncodedLength(uint scalar)
 
 // Decode one complete scalar. On failure both outputs are zero; no bytes consumed.
 // The input is counted and may contain U+0000. No replacement characters are emitted.
-bool TryDecode(readonly(char)* input, nuint count, uint* scalar, nuint* consumed)
+bool TryDecode(readonly(char)* input, nuint count, uint* scalar, nuint* consumed) nothrow
 {
     *scalar = 0u;
     *consumed = 0;
@@ -53,7 +53,7 @@ bool TryDecode(readonly(char)* input, nuint count, uint* scalar, nuint* consumed
 
 // Preflight before writing: invalid scalars and insufficient capacity leave output untouched.
 // The result is counted bytes, without a null terminator.
-bool TryEncode(uint scalar, char* output, nuint capacity, nuint* written)
+bool TryEncode(uint scalar, char* output, nuint capacity, nuint* written) nothrow
 {
     *written = 0;
     nuint required = EncodedLength(scalar);
@@ -82,7 +82,7 @@ bool TryEncode(uint scalar, char* output, nuint capacity, nuint* written)
 }
 
 // Count Unicode scalar values, not bytes or grapheme clusters. Failure writes zero.
-bool TryCount(readonly(char)* input, nuint count, nuint* scalarCount)
+bool TryCount(readonly(char)* input, nuint count, nuint* scalarCount) nothrow
 {
     *scalarCount = 0;
     nuint offset = 0;
@@ -99,7 +99,7 @@ bool TryCount(readonly(char)* input, nuint count, nuint* scalarCount)
     return true;
 }
 
-bool IsValid(readonly(char)* input, nuint count)
+bool IsValid(readonly(char)* input, nuint count) nothrow
 {
     nuint scalars = 0;
     return TryCount(input, count, &scalars);

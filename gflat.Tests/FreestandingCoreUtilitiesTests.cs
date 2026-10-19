@@ -30,6 +30,7 @@ public class FreestandingCoreUtilitiesTests
             if (!std::Utf8::IsValid(decoded, decodedLength)) return 15;
             if (std::BitOperations::PopCount(0xffu) != 8) return 16;
             if (std::BitOperations::RotateRight(1ul, 64) != 1ul) return 17;
+            if (std::Hashing::Bytes("hello", 5) != (nuint)1335831723u) return 18;
             return 42;
         }
         """;
@@ -43,7 +44,7 @@ public class FreestandingCoreUtilitiesTests
         if (RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
-        var sources = new[] { "Ascii.gf", "Utf8.gf", "Hex.gf", "Base64.gf", "BitOperations.gf" }
+        var sources = new[] { "Ascii.gf", "Utf8.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
@@ -87,7 +88,7 @@ public class FreestandingCoreUtilitiesTests
                         syscall
                     .section .note.GNU-stack,"",@progbits
                     """);
-                arguments.AddRange([startup, "-static", "-Wl,-e,bare_entry", "-Wl,--gc-sections"]);
+                arguments.AddRange([startup, "-static", "-no-pie", "-Wl,-e,bare_entry", "-Wl,--gc-sections"]);
             }
             File.WriteAllText(input, ir);
             var compiled = NativeToolchain.Run(NativeToolchain.FindClang(), arguments, 60000);

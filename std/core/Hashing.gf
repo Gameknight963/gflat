@@ -2,7 +2,7 @@ namespace std::Hashing;
 
 // Deterministic FNV-1a over counted bytes, including embedded nulls.
 // Not suitable for cryptography or keys supplied by hostile users.
-nuint Bytes(readonly(char)* data, nuint count)
+nuint Bytes(readonly(char)* data, nuint count) nothrow
 {
     uint hash = (uint)2166136261;
     for (nuint i = 0; i < count; i++)
@@ -11,7 +11,7 @@ nuint Bytes(readonly(char)* data, nuint count)
 }
 
 // Fold all 64 input bits into a hash representable on 32- and 64-bit targets.
-nuint Integer(ulong value)
+nuint Integer(ulong value) nothrow
 {
     uint hash = (uint)value ^ (uint)(value >> 32);
     hash = (hash ^ (hash >> 16)) * (uint)2246822519;

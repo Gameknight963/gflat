@@ -54,20 +54,14 @@ void DumpFile(readonly(char)* path)
     Console::Flush();
 }
 
-void Error(readonly(char)* message)
-{
-    nuint length = 0;
-    while (message[length] != '\0') length++;
-    Console::Error.Write(message, length);
-}
-
 int main(int argc, char** argv)
 {
-    if (argc != 2) { Error("Usage: hexdump <file>\n"); return 2; }
+    if (argc != 2) { Console::Error.WriteLine("Usage: hexdump <file>"); return 2; }
     try { DumpFile(argv[1]); }
     catch (IOException* error)
     {
-        Error("Unable to dump: "); Error(argv[1]); Error("\n");
+        Console::Error.Write("Unable to dump: ", 16);
+        Console::Error.WriteLine(argv[1]);
         return 1;
     }
     return 0;

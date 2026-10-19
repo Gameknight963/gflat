@@ -14,6 +14,7 @@ implementation lives in `libc`.
 | --- | --- | --- |
 | Text | `String`, `ITextWriter`, `IFormattable`, `IStringConvertable` | [Strings](../docs/STRINGS.md), [formatting](core/README.md#strings-and-formatting) |
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
+| Writer line helpers | `ITextWriter*` `WriteLine` overloads | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split` | [Allocation-free splitting](../docs/TEXT_PARTS.md) |
 | Contiguous storage | `Vector<T>`, `Span<T>`, typed span `CopyTo` | [Ownership and views](core/README.md#vectors), [copying initialized elements](core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |

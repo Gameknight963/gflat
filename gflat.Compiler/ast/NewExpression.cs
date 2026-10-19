@@ -15,7 +15,8 @@ namespace gflat.ast
     {
         public TypeExpression Type { get; set; }
         public List<AstNode> Arguments { get; }
-        public AllocationKind Kind { get; }
+        public AllocationKind Kind { get; internal set; }
+        public bool IsTargetTyped { get; init; }
         public AstNode? Destination { get; }
         public TypeExpression? Collector { get; set; }
         public SourceSpan PlacementKeywordSpan { get; set; }

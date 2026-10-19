@@ -121,9 +121,9 @@ public partial class TypeChecker
         foreach (var arg in arguments) if (!_types.ContainsKey(arg)) arg.Accept(this);
         TypeExpression ArgumentType(AstNode arg) => arg is DefaultExpression { TargetType: null }
             ? new NamedTypeExpression("default", null, arg.Line) : GetType(arg);
-        bool ArgumentMatches(TypeExpression expected, AstNode argument) => IsOverloadedFunctionValue(argument)
+        bool ArgumentMatches(TypeExpression expected, AstNode argument) => NeedsCreationTarget(argument) || (IsOverloadedFunctionValue(argument)
             ? CanSelectFunctionValue(argument, expected)
-            : IsAssignable(expected, ArgumentType(argument), argument is DefaultExpression { TargetType: null } ? null : argument);
+            : IsAssignable(expected, ArgumentType(argument), argument is DefaultExpression { TargetType: null } ? null : argument));
         var viable = candidates.Where(c => AcceptsArgumentCount(parameters(c), arguments.Count) &&
             parameters(c).Take(arguments.Count).Select((p, i) => ArgumentMatches(p.Type, arguments[i])).All(v => v)).ToList();
         bool Better(T first, T second)
@@ -136,7 +136,7 @@ public partial class TypeChecker
                 // A method group has no independently selected function type.
                 // Both viable target signatures are equally good conversions;
                 // ranking must not use a declaration-order representative.
-                if (IsOverloadedFunctionValue(arguments[i])) continue;
+                if (IsOverloadedFunctionValue(arguments[i]) || NeedsCreationTarget(arguments[i])) continue;
                 var source = ArgumentType(arguments[i]);
                 bool exactA = TypesMatch(a, source), exactB = TypesMatch(b, source);
                 if (exactA != exactB)
@@ -159,7 +159,7 @@ public partial class TypeChecker
         if (best.Count == 0) throw new TypeCheckException($"No matching overload for '{name}'", line);
         if (best.Count > 1) throw new TypeCheckException($"Call to '{name}' is ambiguous", line);
         for (int i = 0; i < arguments.Count; i++)
-            if (IsOverloadedFunctionValue(arguments[i]))
+            if (IsOverloadedFunctionValue(arguments[i]) || NeedsCreationTarget(arguments[i]))
                 IsAssignable(parameters(best[0])[i].Type, ArgumentType(arguments[i]), arguments[i]);
         return best[0];
     }

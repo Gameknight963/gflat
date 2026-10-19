@@ -1046,6 +1046,7 @@ namespace gflat
 
         private bool InferTypeParameter(TypeExpression paramType, TypeExpression argType, ISet<string> genericParamNames, Dictionary<string, TypeExpression> inferred)
         {
+            if (IsCreationPlaceholder(argType)) return false;
             if (paramType is ReferenceTypeExpression rp && argType is ReferenceTypeExpression ra)
                 return InferTypeParameter(rp.Inner, ra.Inner, genericParamNames, inferred);
 
@@ -1704,6 +1705,19 @@ namespace gflat
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
+            if (valueNode is ArrayLiteralExpression array && NeedsCreationTarget(array) && ResolveAlias(target) is ArrayTypeExpression expectedArray)
+            {
+                if (expectedArray.Size != null && expectedArray.Size != array.Elements.Count) return false;
+                foreach (var element in array.Elements)
+                    if (!IsAssignable(expectedArray.ElementType, GetType(element), element)) return false;
+                RecordType(array, new ArrayTypeExpression(expectedArray.ElementType, array.Elements.Count, array.Line));
+                source = GetType(array);
+            }
+            if (valueNode is NewExpression creation && IsUnboundCreation(creation))
+            {
+                BindTargetTypedCreation(creation, target);
+                source = GetType(creation);
+            }
             if (ResolveAlias(target) is ReferenceTypeExpression targetRef)
             {
                 if (ResolveAlias(source) is not ReferenceTypeExpression sourceRef) return false;
@@ -2050,6 +2064,7 @@ namespace gflat
             // diagnostics before reporting unavailable runtime storage forms.
             ValidateStaticStorage();
             AnalyzeSafely(ValidateFunctionValueSelections);
+            ValidateTargetTypedCreations();
 
             if (_recoverErrors && _diagnostics.HasErrors) return;
 
@@ -3031,7 +3046,7 @@ namespace gflat
                         {
                             TypeExpression paramType = ResolveAlias(baseCtor.Parameters[i].Type);
                             TypeExpression argType = GetType(node.BaseArguments[i]);
-                            if (!IsAssignable(paramType, argType, node.BaseArguments[i]))
+                            if (!NeedsCreationTarget(node.BaseArguments[i]) && !IsAssignable(paramType, argType, node.BaseArguments[i]))
                             {
                                 matchesParams = false;
                                 break;
@@ -3436,6 +3451,8 @@ namespace gflat
                 if (node.Initializer == null)
                     throw new TypeCheckException("An inferred local requires an initializer", node.Span);
                 node.Initializer.Accept(this);
+                if (NeedsCreationTarget(node.Initializer))
+                    throw new TypeCheckException("There is no target type for 'new(...)'", node.Initializer.Span);
                 var inferred = ResolveAlias(GetType(node.Initializer));
                 if (inferred is NamedTypeExpression { Name: "void" or "null" or "<null>" })
                     throw new TypeCheckException("An inferred local requires an initializer with a concrete value type", node.Initializer.Span);
@@ -5109,6 +5126,16 @@ namespace gflat
         {
             using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
+            if (IsUnboundCreation(node))
+            {
+                pendingCreations.Add(node);
+                RecordType(node, node.Type);
+                // Check effects in source order while postponing constructor
+                // selection until the surrounding context supplies a target.
+                foreach (var argument in node.Arguments)
+                    if (!_types.ContainsKey(argument)) CheckNullableArgument(argument);
+                return;
+            }
             TypeExpression resolvedType = ResolveAlias(node.Type);
             ValidateArrayValueShape(resolvedType, node.Line);
             node.Type = resolvedType;
@@ -5123,7 +5150,7 @@ namespace gflat
                     throw new TypeCheckException("Scalar construction accepts zero or one initializer", node.Line);
                 if (node.Arguments.Count == 1)
                 {
-                    CheckNullableArgument(node.Arguments[0]);
+                    if (!_types.ContainsKey(node.Arguments[0])) CheckNullableArgument(node.Arguments[0]);
                     if (!IsAssignable(resolvedType, GetType(node.Arguments[0]), node.Arguments[0]))
                         throw new TypeCheckException("Invalid scalar initializer", node.Line);
                 }
@@ -5191,7 +5218,7 @@ namespace gflat
 
                                 argType = GetType(arg);
                             }
-                            if (!IsAssignable(paramType, argType, arg))
+                            if (!NeedsCreationTarget(arg) && !IsAssignable(paramType, argType, arg))
                             {
                                 matchesParams = false;
                                 break;
@@ -5287,7 +5314,7 @@ namespace gflat
 
                             argType = GetType(arg);
                         }
-                        if (!IsAssignable(paramType, argType, arg))
+                        if (!NeedsCreationTarget(arg) && !IsAssignable(paramType, argType, arg))
                         {
                             matchesParams = false;
                             break;
@@ -5418,7 +5445,7 @@ namespace gflat
                 if (type is NamedTypeExpression { Name: "void" })
                     throw new TypeCheckException("Array elements cannot have type void", element.Line);
                 elementType ??= type;
-                if (TypeName(elementType) != TypeName(type))
+                if (!NeedsCreationTarget(node) && TypeName(elementType) != TypeName(type))
                     throw new TypeCheckException("Array literal elements must have matching types and dimensions", element.Line);
                 if (!ValidateCopyUse(element, type))
                     throw new TypeCheckException("Array literals cannot copy destructor-bearing elements; use fresh values", element.Line);
@@ -5776,6 +5803,11 @@ namespace gflat
             node.Operand.Accept(this);
             TypeExpression sourceType = ResolveAlias(GetType(node.Operand));
             TypeExpression targetType = ResolveAlias(node.TargetType);
+            if (node.Operand is NewExpression creation && IsUnboundCreation(creation))
+            {
+                BindTargetTypedCreation(creation, targetType);
+                sourceType = ResolveAlias(GetType(creation));
+            }
             ValidateTypeUsage(targetType, node.Line);
             ValidateArrayValueShape(targetType, node.Line);
 

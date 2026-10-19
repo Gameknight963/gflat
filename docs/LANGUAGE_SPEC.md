@@ -323,6 +323,35 @@ Free functions and concrete class/struct methods support these modifiers. Static
 
 `new Type(...)` constructs an inline value. `new* Type(...)` allocates storage, checks for allocation failure, initializes it, and invokes its constructor. If allocation returns null, it throws `std::BadAllocException` before any store or constructor call. Its exception storage uses the normal allocator first, then the exception reserve. `delete p` destroys and frees an allocated object; it does not make aliases safe or permit repeated deletion.
 
+`new(...)` infers both the constructed type and allocation kind from its target:
+
+```csharp
+struct Widget { public Widget(int value) {} }
+void Example() {
+    Widget value = new(42);   // Inline value: new Widget(42).
+    Widget* owned = new(42);  // Raw allocation: new* Widget(42).
+    delete owned;
+}
+```
+
+With a collector selected, `Widget^ managed = new(42);` is equivalent to
+`Widget^ managed = new^ Widget(42);`.
+
+Typed initializers, assignment destinations, return types, cast types, and selected
+function or constructor parameters supply targets. Fixed-size array literals pass
+their element target to each creation. Nullable and readonly targets construct a
+non-null, mutable object and apply the ordinary conversion. A managed target selects
+its collector, including `managed<T, Collector>`. Placement uses `new(args) at storage`
+with a raw pointer target. Abstract classes, interfaces, void, and other types that
+cannot be constructed remain invalid.
+
+An inferred local such as `var value = new()` has no target and is rejected. Creation
+arguments do not determine an enclosing overload: `Use(new())` is ambiguous when both
+`Use(Widget)` and `Use(Widget*)` are viable. Other arguments may select a unique
+overload, after which its parameter supplies the target. Generic inference does not
+infer a type from `new(...)` alone. Inferred `new*(...)` and `new^(...)` are rejected;
+use `new(...)` or an explicitly typed creation expression.
+
 Primitive scalar types use the same construction forms. Zero arguments produce
 the default value; one argument must be implicitly assignable to the scalar type.
 For example, `new int(42)` produces an `int`, `new* int(42)` produces an allocated

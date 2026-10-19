@@ -2009,7 +2009,11 @@ namespace gflat
                 else if (Match(TokenKind.Caret))
                     kind = AllocationKind.Managed;
 
-                TypeExpression type = ParseTypeExpression(allowSignature: false);
+                bool targetTyped = Check(TokenKind.OpenParen);
+                if (targetTyped && kind != AllocationKind.Value)
+                    throw new TypeCheckException("Target-typed creation uses 'new(...)' without '*' or '^'", Current.Span);
+                TypeExpression type = targetTyped ? new NamedTypeExpression("<target-typed-new>", null, line)
+                    : ParseTypeExpression(allowSignature: false);
                 Expect(TokenKind.OpenParen);
                 List<AstNode> args = new();
                 while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
@@ -2024,7 +2028,7 @@ namespace gflat
                 if (Check(TokenKind.Identifier) && Current.Text == "at")
                 {
                     placementSpan = Consume().Span;
-                    if (kind != AllocationKind.Pointer)
+                    if (!targetTyped && kind != AllocationKind.Pointer)
                         throw new TypeCheckException("Placement construction requires 'new*'", placementSpan);
                     // Pointer arithmetic and postfix operations belong to the destination.
                     // Comparisons/assignment apply to the completed placement expression.
@@ -2034,10 +2038,10 @@ namespace gflat
                 if (Check(TokenKind.Identifier) && Current.Text == "with")
                 {
                     Token keyword = Consume();
-                    if (kind != AllocationKind.Managed) throw new TypeCheckException("A collector can only be selected for new^", keyword.Span);
+                    if (!targetTyped && kind != AllocationKind.Managed) throw new TypeCheckException("A collector can only be selected for new^", keyword.Span);
                     collector = ParseTypeExpression(allowSignature: false);
                 }
-                return new NewExpression(type, args, kind, line, destination) { PlacementKeywordSpan = placementSpan, Collector = collector };
+                return new NewExpression(type, args, kind, line, destination) { IsTargetTyped = targetTyped, PlacementKeywordSpan = placementSpan, Collector = collector };
             }
 
             // identifier

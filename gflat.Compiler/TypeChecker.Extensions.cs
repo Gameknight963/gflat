@@ -286,6 +286,7 @@ public partial class TypeChecker
     private void InferExtensionBindings(TypeExpression formal, TypeExpression source, HashSet<string> names,
         Dictionary<string, TypeExpression> bindings)
     {
+        if (IsCreationPlaceholder(source)) return;
         switch (formal, source)
         {
             case (ReferenceTypeExpression f, ReferenceTypeExpression s): InferExtensionBindings(f.Inner, s.Inner, names, bindings); return;

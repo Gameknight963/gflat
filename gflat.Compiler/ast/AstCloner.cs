@@ -406,9 +406,9 @@ namespace gflat.ast
             }
             if (node is NewExpression newExpr)
             {
-                TypeExpression newType = CloneType(newExpr.Type);
+                TypeExpression newType = newExpr.IsTargetTyped ? new NamedTypeExpression("<target-typed-new>", null, newExpr.Line) : CloneType(newExpr.Type);
                 List<AstNode> args = newExpr.Arguments.Select(CloneNode).ToList();
-                return new NewExpression(newType, args, newExpr.Kind, newExpr.Line, newExpr.Destination == null ? null : CloneNode(newExpr.Destination)) { PlacementKeywordSpan = newExpr.PlacementKeywordSpan, Collector = newExpr.Collector == null ? null : CloneType(newExpr.Collector) };
+                return new NewExpression(newType, args, newExpr.IsTargetTyped ? AllocationKind.Value : newExpr.Kind, newExpr.Line, newExpr.Destination == null ? null : CloneNode(newExpr.Destination)) { IsTargetTyped = newExpr.IsTargetTyped, PlacementKeywordSpan = newExpr.PlacementKeywordSpan, Collector = newExpr.Collector == null ? null : CloneType(newExpr.Collector) };
             }
             if (node is DefaultExpression defExpr)
             {

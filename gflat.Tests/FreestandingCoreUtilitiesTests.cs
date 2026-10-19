@@ -8,6 +8,7 @@ namespace gflat.Tests;
 public class FreestandingCoreUtilitiesTests
 {
     private const string ProgramSource = """
+        extern ulong formatter_input() nothrow;
         int main() {
             if (!std::Ascii::IsHexDigit('f')) return 1;
             if (std::Ascii::IsAscii((char)255)) return 2;
@@ -83,6 +84,20 @@ public class FreestandingCoreUtilitiesTests
             input[length] = (char)255;
             if (std::UnicodeTranscoding::TryUtf8ToUtf16(input, length + 1, &converted[1], 7, ref unicodeUnits) || unicodeUnits != 0) return 53;
             for (nuint i = 0; i < 9; i++) if (converted[i] != (ushort)123) return 54;
+            char[22] decimalText;
+            for (nuint i = 0; i < 22; i++) decimalText[i] = 'Z';
+            ulong runtimeInput = formatter_input();
+            if (!std::IntegerFormatting::TryFormat((long)runtimeInput, &decimalText[1], 20, ref length) || length != 20) return 55;
+            expected = "-9223372036854775808";
+            for (nuint i = 0; i < length; i++) if (decimalText[i + 1] != expected[i]) return 56;
+            if (decimalText[0] != 'Z' || decimalText[21] != 'Z') return 57;
+            ulong unsignedMaximum = runtimeInput + runtimeInput - 1ul;
+            if (!std::IntegerFormatting::TryFormat(unsignedMaximum, &decimalText[1], 20, ref length) || length != 20) return 58;
+            expected = "18446744073709551615";
+            for (nuint i = 0; i < length; i++) if (decimalText[i + 1] != expected[i]) return 59;
+            if (decimalText[0] != 'Z' || decimalText[21] != 'Z') return 60;
+            if (std::IntegerFormatting::TryFormat(unsignedMaximum, &decimalText[1], 19, ref length) || length != 0) return 61;
+            for (nuint i = 0; i < 20; i++) if (decimalText[i + 1] != expected[i]) return 62;
             return 42;
         }
         """;
@@ -98,7 +113,7 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
-            "BinaryBufferReader.gf", "BinaryBufferWriter.gf" }
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
@@ -112,6 +127,18 @@ public class FreestandingCoreUtilitiesTests
             string input = Path.Combine(directory, "core.ll");
             string output = Path.Combine(directory, "core.exe");
             var arguments = new List<string> { input, "-O" + optimization, "-nostdlib", "-fno-stack-protector", "-o", output };
+            // Keep actual formatter inputs opaque to LLVM. A separate assembly
+            // object prevents constant propagation from erasing the digit/copy loops.
+            string formatterInput = Path.Combine(directory, "formatter-input.S");
+            File.WriteAllText(formatterInput, """
+                .text
+                .global formatter_input
+                formatter_input:
+                    movabs $0x8000000000000000, %rax
+                    ret
+                """);
+            if (OperatingSystem.IsLinux()) File.AppendAllText(formatterInput, "\n.section .note.GNU-stack,\"\",@progbits\n");
+            arguments.Add(formatterInput);
             if (OperatingSystem.IsWindows())
             {
                 ir += """

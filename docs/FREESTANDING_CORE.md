@@ -2,7 +2,7 @@
 
 `Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`, and
-`BinaryBufferWriter` can operate on caller-owned buffers
+`BinaryBufferWriter`, and `IntegerFormatting` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
 reported through their return values. Caller pointers must still designate valid
@@ -38,6 +38,10 @@ supplementary scalars, embedded U+0000, U+FEFF, and a valid noncharacter. Both
 conversion directions check capacity failures and malformed suffixes after valid
 prefixes, verifying that output remains completely unchanged. UTF-16 counts are
 host `ushort` units; no endian-byte-stream or BOM conversion is implied.
+Decimal integer checks format signed 64-bit minimum and unsigned 64-bit maximum
+into guarded caller buffers. Their values come from a separate assembly object
+so LLVM cannot replace formatting with constant output and hide dependencies.
+Both optimization levels link successfully without a libc `memcpy` helper.
 The test also inspects the final executable:
 
 - Windows x64 imports exactly `KERNEL32.dll!ExitProcess`, with no CLR header.

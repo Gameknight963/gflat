@@ -21,7 +21,8 @@ The result is counted bytes with **no null terminator**. A 20-byte buffer is
 sufficient for any supported integer. Callers needing a C string must reserve
 another byte and append the terminator themselves after success.
 
-Each call first forms its complete representation in a small stack buffer.
+Each call first counts decimal digits, then writes directly backwards into the
+output after checking capacity. No temporary-buffer copy or libc helper is needed.
 Insufficient capacity returns false, sets `written` to zero, and leaves every
 output byte untouched. A zero capacity does not access output storage. On success
 exactly `written` bytes change; bytes outside that range remain unchanged.

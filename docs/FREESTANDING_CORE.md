@@ -2,7 +2,8 @@
 
 `Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`,
-`BinaryBufferWriter`, `IntegerFormatting`, `ByteSearch`, and `CString` can operate on caller-owned buffers
+`BinaryBufferWriter`, `IntegerFormatting`, `ByteSearch`, `CString`, and the raw
+byte operations in `Memory/Bytes.gf` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
 reported through their return values. Caller pointers must still designate valid
@@ -49,6 +50,11 @@ constant answers at O2.
 The same runtime-populated bytes exercise all six C-string helpers, including a
 bounded scan whose terminator lies outside its capacity. `NoBuiltins` prevents
 LLVM from replacing the unbounded length loops with external `strlen` calls.
+Raw memory checks copy counted data, move overlapping regions in both directions,
+fill guarded buffers, compare unsigned bytes, and verify zero-count operations.
+Their bytes and move count also originate outside LLVM's module. `NoBuiltins`
+keeps the fill loop from introducing an external `memset` dependency in this
+test; the final executable import checks remain in force.
 The test also inspects the final executable:
 
 - Windows x64 imports exactly `KERNEL32.dll!ExitProcess`, with no CLR header.

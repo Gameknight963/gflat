@@ -121,6 +121,28 @@ public class FreestandingCoreUtilitiesTests
             if(std::CString::Length(cText)!=2 || std::CString::Compare(cText,&cText[2])!=1) return 74;
             if(std::CString::Equals(cText,&cText[2]) || std::CString::EndsWith(cText,"x")) return 75;
             if(!std::CString::EndsWith(cText,&cText[1]) || !std::CString::StartsWith(cText,&cText[2])) return 76;
+            byte[66] memoryOutput;
+            nuint moveCount=(nuint)(runtimeInput>>63)+62;
+            Memory::Fill((void*)&memoryOutput[0],(byte)165,66);
+            Memory::Copy((void*)&memoryOutput[1],(readonly(void)*)&searchInput[0],64);
+            if(memoryOutput[0]!=(byte)165 || memoryOutput[65]!=(byte)165) return 77;
+            if(Memory::Compare((readonly(void)*)&memoryOutput[1],(readonly(void)*)&searchInput[0],64)!=0) return 78;
+            if(!Memory::Equal((readonly(void)*)&memoryOutput[1],(readonly(void)*)&searchInput[0],64)) return 79;
+            // Higher destination requires backwards copying; lower requires forwards.
+            Memory::Move((void*)&memoryOutput[2],(readonly(void)*)&memoryOutput[1],moveCount);
+            if(!Memory::Equal((readonly(void)*)&memoryOutput[2],(readonly(void)*)&searchInput[0],moveCount)) return 80;
+            Memory::Move((void*)&memoryOutput[1],(readonly(void)*)&memoryOutput[2],moveCount);
+            if(!Memory::Equal((readonly(void)*)&memoryOutput[1],(readonly(void)*)&searchInput[0],moveCount)) return 81;
+            Memory::Move((void*)&memoryOutput[1],(readonly(void)*)&memoryOutput[1],moveCount);
+            if(memoryOutput[0]!=(byte)165 || memoryOutput[65]!=(byte)165) return 82;
+            memoryOutput[1]=(byte)255;
+            if(Memory::Compare((readonly(void)*)&memoryOutput[1],(readonly(void)*)&searchInput[0],1)!=255-(int)searchInput[0]) return 83;
+            if(Memory::Compare((readonly(void)*)&searchInput[0],(readonly(void)*)&memoryOutput[1],1)!=(int)searchInput[0]-255) return 84;
+            if(Memory::Equal((readonly(void)*)&memoryOutput[1],(readonly(void)*)&searchInput[0],moveCount)) return 85;
+            Memory::Copy((void*)1,(readonly(void)*)1,0);
+            Memory::Move((void*)1,(readonly(void)*)1,0);
+            Memory::Fill((void*)1,(byte)0,0);
+            if(Memory::Compare((readonly(void)*)1,(readonly(void)*)1,0)!=0 || !Memory::Equal((readonly(void)*)1,(readonly(void)*)1,0)) return 86;
             return 42;
         }
         """;
@@ -136,11 +158,11 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
-            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf", "CString.gf" }
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
-        foreach (string forbidden in new[] { "%Exception", "@__gflat_eh_", "personality", "gflat$Memory$", "@malloc", "@free", "@__gflat_stdio_" })
+        foreach (string forbidden in new[] { "%Exception", "@__gflat_eh_", "personality", "gflat$Memory$Allocate", "gflat$Memory$Free", "@malloc", "@free", "@__gflat_stdio_" })
             Assert.DoesNotContain(forbidden, ir);
 
         string directory = Path.Combine(Path.GetTempPath(), "gflat-core-bare-" + Guid.NewGuid().ToString("N"));
@@ -268,3 +290,4 @@ public class FreestandingCoreUtilitiesTests
         }
     }
 }
+

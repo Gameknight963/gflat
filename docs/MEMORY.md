@@ -45,8 +45,22 @@ prevent that transformation. At the same setting, the inspected standalone
 `Copy`, `Move`, `Compare`, and `Equal` definitions needed no external symbols;
 this is an observation of that build, not a portability guarantee.
 
-Hosted applications can use the functions normally. A freestanding target must
-provide any memory runtime symbols selected by its backend, or omit these
-utilities until the runtime integration supplies them. Selecting this source
-without the allocator source avoids direct allocator dependencies, but does not
-by itself solve that backend linking requirement.
+Hosted applications can use the functions normally. For a freestanding build,
+`CompilationOptions.NoBuiltins = true` prevents LLVM from recognizing these byte
+loops as known libc operations. This is an explicit optimizer policy, independent
+of `NoStdLib` and disabled by default. It does not disable general optimization.
+
+The [freestanding executable test](FREESTANDING_CORE.md) selects
+`Memory/Bytes.gf` without the allocator source and enables `NoBuiltins`. It
+exercises all five operations at O0 and O2 on runtime-populated bytes, including
+overlapping moves in both directions, identical regions, guard bytes,
+unsigned comparison, and zero counts. Both Windows x64 builds link with
+`-nostdlib` and `/NODEFAULTLIB`, and import exactly `KERNEL32.dll!ExitProcess`.
+The same test has a Linux x64 syscall-startup branch for CI.
+
+This verifies those particular programs, not all possible uses or targets.
+Explicit memory intrinsics can still lower to runtime symbols even with
+`NoBuiltins`; stack probes, arithmetic helpers, and platform ABI support are
+separate requirements. A freestanding target must provide any such symbols
+selected by its backend. Inspect the final executable when validating a new
+configuration.

@@ -7,6 +7,11 @@ Visual Studio uses its own MSBuild engine for CPS evaluation and IDE builds.
 
 ## Build-rule imports
 
+The Windows Visual Studio extension also provides optional
+[SDK install/uninstall scripts](EDITOR_SUPPORT.md#optional-sdk-style-project-setup)
+for SDK-style projects opened by Visual Studio's MSBuild. The explicit-import
+format below works with the CLI's private engine without installing anything.
+
 Projects import the toolchain's build rules explicitly. No MSBuild SDK registration
 or administrator setup command is required:
 

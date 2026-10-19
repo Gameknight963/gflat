@@ -8,13 +8,6 @@ The Visual Studio extension adapts Roslyn's `HACK_ThemeColorFixer.cs` to keep
 tooltip syntax colors in sync with the editor theme. Roslyn's MIT copyright and
 license are in [LICENSES/Roslyn.txt](LICENSES/Roslyn.txt).
 
-The Visual Studio extension uses MonoMod.RuntimeDetour to resolve its bundled
-project SDK inside Visual Studio's MSBuild. MonoMod, Mono.Cecil, and the Iced
-disassembler it bundles are covered by the notices in
-[LICENSES/MonoMod.txt](LICENSES/MonoMod.txt),
-[LICENSES/Mono.Cecil.txt](LICENSES/Mono.Cecil.txt), and
-[LICENSES/Iced.txt](LICENSES/Iced.txt), also included in the VSIX.
-
 The compiler bundles and Visual Studio extension also bundle the .NET runtime.
 Their packages include the runtime's `LICENSE.TXT` and
 `THIRD-PARTY-NOTICES.TXT` under `LICENSES/dotnet` (`Licenses/dotnet` in the VSIX).

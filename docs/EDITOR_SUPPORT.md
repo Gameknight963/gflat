@@ -77,15 +77,36 @@ package does not install it into your IDE automatically. The bundled compiler an
 server include MSBuild and the .NET runtime; installing the .NET SDK is not required
 to use them. Visual Studio's project system uses Visual Studio's own MSBuild.
 
-The editor package also owns an experimental resolver for the `Gflat.Sdk` bundled
-inside the VSIX. It uses MonoMod to intercept that SDK's lookup in the IDE process;
-other SDKs retain normal resolution. There is no separate extension or global SDK
-installation. SDK-style projects are not ready for general use: the package must
-load before project evaluation, and the build task's separate evaluation process
-does not have the hook. Existing projects and templates still use explicit imports.
-`test-sdk-resolver.ps1` tests the actual packaged extension DLL against installed
-Visual Studio MSBuild engines, including concurrent evaluation, worker requests,
-unrelated SDK resolution, and removal of the hook.
+### Optional SDK-style project setup
+
+For `<Project Sdk="Gflat.Sdk">`, install the VSIX first, then run the accompanying
+script from an **elevated PowerShell** window with Visual Studio closed:
+
+```powershell
+.\install-sdk.ps1
+```
+
+It selects the newest installed Visual Studio and finds its installed gflat VSIX.
+To select another installation or supply the SDK directory explicitly:
+
+```powershell
+.\install-sdk.ps1 -VisualStudioPath 'C:\Program Files\Microsoft Visual Studio\18\Community' -SdkRoot 'C:\path\to\extension\Sdk'
+.\uninstall-sdk.ps1 -VisualStudioPath 'C:\Program Files\Microsoft Visual Studio\18\Community'
+```
+
+`-SdkRoot` must contain `build/Gflat.props` and `build/Gflat.targets`. The scripts
+create only two forwarding imports and an ownership marker under
+`<Visual Studio>/MSBuild/Sdks/Gflat.Sdk`; the SDK and compiler stay in the VSIX.
+Run install again after updating the VSIX to refresh the forwarding paths. Run
+uninstall before removing the VSIX. Both scripts support `-WhatIf`, and uninstall
+refuses to delete an unrecognized SDK directory or unexpected files. Restart
+Visual Studio after setup. `sdk-paths.ps1` must remain beside the two scripts.
+
+This registration applies to the selected Visual Studio and its MSBuild, not the
+CLI's private MSBuild. Existing CLI projects and templates continue to use explicit
+imports and do not require this setup. No runtime patching or CLI setup command is
+involved. `test-sdk-installation.ps1` tests installation, repeated installation,
+updates, uninstall, and SDK-style builds in a temporary fake VS installation.
 
 The installed server is the packaged copy; it does not automatically track this
 checkout. For an update, increment the VSIX manifest version,

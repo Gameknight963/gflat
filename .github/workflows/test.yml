@@ -83,7 +83,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: gflat-visual-studio
-          path: editors/VisualStudio/bin/Release/net472/*.vsix
+          path: |
+            editors/VisualStudio/bin/Release/net472/*.vsix
+            editors/VisualStudio/bin/Release/net472/install-sdk.ps1
+            editors/VisualStudio/bin/Release/net472/uninstall-sdk.ps1
+            editors/VisualStudio/bin/Release/net472/sdk-paths.ps1
           retention-days: 90
           if-no-files-found: error
   nightly-bundles:

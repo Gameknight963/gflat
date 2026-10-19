@@ -16,6 +16,7 @@ try {
     $env:GFLAT_LSP_EXECUTABLE = Join-Path $extracted 'Server/gflat.LanguageServer.exe'
     if (-not (Test-Path -LiteralPath $env:GFLAT_LSP_EXECUTABLE)) { throw 'VSIX is missing the server executable' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'gflat.VisualStudio.dll'))) { throw 'VSIX is missing the language client' }
+    if (Get-ChildItem -LiteralPath $extracted -Filter 'MonoMod*.dll' -File) { throw 'VSIX still contains the removed runtime patching dependency' }
     foreach ($asset in @('gflat.pkgdef', 'gflat.VisualStudio.pkgdef', 'gflat-language-configuration.json', 'Grammars/gflat.tmLanguage.json', 'Grammars/gflat.tmLanguage.tmTheme')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted $asset))) { throw "VSIX is missing $asset" }
     }
@@ -59,7 +60,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged server tests failed' }
     if ($nativeHoverCheck) { & (Join-Path $PSScriptRoot 'test-hover.ps1') -Mode Validate -PackageDirectory $extracted -CatalogPath $catalog -CapturePath $capture }
     $compiler = Join-Path $extracted 'Compiler/gflat.exe'
-    & (Join-Path $PSScriptRoot 'test-sdk-resolver.ps1') -PackageDirectory $extracted
+    & (Join-Path $PSScriptRoot 'test-sdk-installation.ps1') -PackageDirectory $extracted
     if (-not (Test-Path -LiteralPath $compiler)) { throw 'VSIX is missing the project build compiler' }
     & (Join-Path $repoRoot 'build/test-bundled-msbuild.ps1') -ToolchainDirectory (Join-Path $extracted 'Sdk') -CompilerDirectory (Join-Path $extracted 'Compiler')
     & (Join-Path $PSScriptRoot 'test-project-templates.ps1') -PackageDirectory $extracted

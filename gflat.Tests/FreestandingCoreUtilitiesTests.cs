@@ -59,6 +59,30 @@ public class FreestandingCoreUtilitiesTests
             if (!reader.TryReadUInt16BigEndian(ref field) || field!=(ushort)48879 || reader.Position!=8 || reader.Remaining!=0) return 35;
             if (reader.TryReadUInt16BigEndian(ref field) || field!=(ushort)0 || reader.Position!=8) return 36;
             if (packet[0]!=(byte)165 || packet[9]!=(byte)90) return 37;
+            ushort[7] unicode = [(ushort)65, (ushort)0, (ushort)0x20ac, (ushort)0xd83d, (ushort)0xde00, (ushort)0xfeff, (ushort)0xffff];
+            nuint unicodeBytes = 0; nuint unicodeUnits = 0; nuint unicodeScalars = 0;
+            if (!std::Utf16::TryCount(unicode, 7, &unicodeScalars) || unicodeScalars != 6) return 38;
+            if (!std::UnicodeTranscoding::TryGetUtf8Length(unicode, 7, ref unicodeBytes) || unicodeBytes != 15) return 39;
+            if (!std::UnicodeTranscoding::TryUtf16ToUtf8(unicode, 7, input, 64, ref length) || length != 15) return 40;
+            if (input[0] != 'A' || input[1] != '\0' || (byte)input[2] != (byte)0xe2 || (byte)input[5] != (byte)0xf0) return 41;
+            if (!std::UnicodeTranscoding::TryGetUtf16Length(input, length, ref unicodeUnits) || unicodeUnits != 7) return 43;
+            ushort[9] converted;
+            for (nuint i = 0; i < 9; i++) converted[i] = (ushort)123;
+            if (!std::UnicodeTranscoding::TryUtf8ToUtf16(input, length, &converted[1], 7, ref unicodeUnits) || unicodeUnits != 7) return 44;
+            if (converted[0] != (ushort)123 || converted[8] != (ushort)123) return 45;
+            for (nuint i = 0; i < 7; i++) if (unicode[i] != converted[i + 1]) return 46;
+            for (nuint i = 0; i < 64; i++) decoded[i] = 'Z';
+            if (std::UnicodeTranscoding::TryUtf16ToUtf8(unicode, 7, decoded, 14, ref decodedLength) || decodedLength != 0) return 47;
+            for (nuint i = 0; i < 64; i++) if (decoded[i] != 'Z') return 48;
+            unicode[6] = (ushort)0xd800;
+            if (std::UnicodeTranscoding::TryUtf16ToUtf8(unicode, 7, decoded, 64, ref decodedLength) || decodedLength != 0) return 49;
+            for (nuint i = 0; i < 64; i++) if (decoded[i] != 'Z') return 50;
+            for (nuint i = 0; i < 9; i++) converted[i] = (ushort)123;
+            if (std::UnicodeTranscoding::TryUtf8ToUtf16(input, length, &converted[1], 6, ref unicodeUnits) || unicodeUnits != 0) return 51;
+            for (nuint i = 0; i < 9; i++) if (converted[i] != (ushort)123) return 52;
+            input[length] = (char)255;
+            if (std::UnicodeTranscoding::TryUtf8ToUtf16(input, length + 1, &converted[1], 7, ref unicodeUnits) || unicodeUnits != 0) return 53;
+            for (nuint i = 0; i < 9; i++) if (converted[i] != (ushort)123) return 54;
             return 42;
         }
         """;
@@ -72,7 +96,7 @@ public class FreestandingCoreUtilitiesTests
         if (RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
-        var sources = new[] { "Ascii.gf", "Utf8.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
+        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
             "BinaryBufferReader.gf", "BinaryBufferWriter.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

@@ -1,6 +1,6 @@
 # Core utilities without a runtime
 
-`Ascii`, `Utf8`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
+`Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`, and
 `BinaryBufferWriter` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
@@ -33,6 +33,11 @@ The test runs at both `-O0` and `-O2`, checks UTF-8 scalar and binary-text round
 trips, unaligned integer byte order, streaming checksums, and a length-delimited
 binary packet with bounded child cursors. Packet checks include explicit mixed
 byte order, signed payloads, guard bytes, and unchanged positions on failure.
+It also round-trips counted UTF-16 code units through UTF-8, preserving BMP and
+supplementary scalars, embedded U+0000, U+FEFF, and a valid noncharacter. Both
+conversion directions check capacity failures and malformed suffixes after valid
+prefixes, verifying that output remains completely unchanged. UTF-16 counts are
+host `ushort` units; no endian-byte-stream or BOM conversion is implied.
 The test also inspects the final executable:
 
 - Windows x64 imports exactly `KERNEL32.dll!ExitProcess`, with no CLR header.

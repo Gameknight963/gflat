@@ -32,6 +32,11 @@ public sealed class StandardCollectionManagedLifetimeTests
                 }
                 GC::Collect();
                 Sort<Node^>(values.AsSpan(), Compare);
+                values.Insert(16, new^ Node(99));
+                values[16].Next = values[16];
+                GC::Collect();
+                values.RemoveAt(16);
+                if (GC::Collect() != 1) throw new Exception("removed reference survived");
                 for (int i = 0; i < 16; i++) {
                     if (queue.Dequeue().Value != 31 - i) throw new Exception("queue order");
                     if (stack.Pop().Value != i) throw new Exception("stack order");
@@ -42,8 +47,10 @@ public sealed class StandardCollectionManagedLifetimeTests
                 queue.Clear(); stack.Clear(); heap.Clear();
                 GC::Collect();
                 if (TracingCollector::ManagedCount != 32) throw new Exception("premature collection");
+                values.Truncate(16);
+                if (GC::Collect() != 16) throw new Exception("truncated references survived");
                 values.Clear();
-                if (GC::Collect() != 32) throw new Exception("leaked references");
+                if (GC::Collect() != 16) throw new Exception("leaked references");
             }
             int main() { Check(); GC::Collect(); return (int)TracingCollector::ManagedCount; }
             """)));

@@ -173,6 +173,11 @@ public sealed class StandardFileFailureTests
                 output.Close();
                 { File scoped = File::OpenWrite("/dev/full"); try { scoped.Write("buffered"); } catch (IOException* error) { } }
                 try { FileText::WriteAll("/dev/full", "buffered"); return 3; } catch (IOException* error) { }
+                try { FileText::AppendAll("/dev/full", "buffered"); return 4; } catch (IOException* error) { }
+                String owned = s"body";
+                try { FileText::WriteAll("/dev/full", ref owned); return 5; } catch (IOException* error) { }
+                try { FileText::AppendAll("/dev/full", ref owned); return 6; } catch (IOException* error) { }
+                if (owned.Length != 4 || owned.Data[0] != 'b') return 7;
                 return 0;
             }
             """, strings: true));

@@ -72,6 +72,28 @@ public sealed class StandardFileBinaryTests
     }
 
     [Fact]
+    public void EmptyInputIsEndOfStreamAndReadModeFailureIsIOExceptionWithoutClosingBorrow()
+    {
+        Run([], (source, target) => $$"""
+            using std;
+            int main() {
+                File empty = File::OpenRead({{source}});
+                try { FileBinary::ReadUInt64BigEndian(&empty); return 1; }
+                catch (EndOfStreamException* error) { }
+                if (!empty.IsOpen || !empty.EndOfFile) return 2;
+                File output = File::OpenWrite({{target}});
+                try { FileBinary::ReadUInt16LittleEndian(&output); return 3; }
+                catch (EndOfStreamException* error) { return 4; }
+                catch (IOException* error) { }
+                if (!output.IsOpen || output.EndOfFile) return 5;
+                output.ClearError(); FileBinary::WriteUInt16LittleEndian(&output, (ushort)513);
+                output.Close();
+                return 0;
+            }
+            """, bytes => Assert.Equal(new byte[] { 1, 2 }, bytes));
+    }
+
+    [Fact]
     public void TruncatedReadsAndClosedStreamsThrow()
     {
         Run([1, 2, 3], (source, target) => $$"""

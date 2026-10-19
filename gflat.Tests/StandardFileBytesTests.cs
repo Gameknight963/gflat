@@ -121,6 +121,23 @@ public sealed class StandardFileBytesTests
     }
 
     [Fact]
+    public void LinuxOwningBinaryWritesAndAppendsPropagateDeferredCloseFailure()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        WithDirectory(directory => Run(directory, """
+            using std;
+            int main() {
+                byte value = (byte)42;
+                try { FileBytes::WriteAll("/dev/full", &value, 1); return 1; }
+                catch (IOException* error) { }
+                try { FileBytes::AppendAll("/dev/full", &value, 1); return 2; }
+                catch (IOException* error) { }
+                return 0;
+            }
+            """));
+    }
+
+    [Fact]
     public void EmptyInputDoesNotAllocateAndMissingFileReportsIOException()
     {
         WithDirectory(directory =>

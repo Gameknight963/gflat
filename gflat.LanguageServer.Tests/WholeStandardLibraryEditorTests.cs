@@ -60,6 +60,14 @@ public class WholeStandardLibraryEditorTests
                 uint bits=BitConverter::FloatToUInt32Bits(1.0f);
                 int[3] numbers=[1,2,3]; Span<int> values=new(numbers,3);
                 PseudoRandom random=new(42ul); Shuffle<int>(values,ref random);
+                SortedMap<int,String> ordered=new(Comparer<int>::Compare);
+                ordered.Add(3,s"three"); int lookup=3; ordered.FindReadOnly(&lookup);
+                SortedMap<int,String>::Enumerator orderedItems=ordered.GetEnumerator();
+                ushort[2] units=[(ushort)65,(ushort)0];
+                std::Utf16::TryDecode(units,1,&scalar,&consumed);
+                nuint unitCount=0; UnicodeTranscoding::TryGetUtf16Length(text.Data,text.Length,ref unitCount);
+                char[21] digits; nuint digitsWritten=0;
+                IntegerFormatting::TryFormat(42,digits,21,ref digitsWritten);
                 File temporary=File::OpenTemporary(); temporary.Close();
                 return node.Value-42;
             }
@@ -71,9 +79,10 @@ public class WholeStandardLibraryEditorTests
         if(brokenFile) Assert.Contains(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
-        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","OpenTemporary","Value"})
+        var sourceTokens=Lexer.Tokenize(source);
+        foreach(string member in new[]{"AddLast","Insert","Find","Append","Read","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         {
-            int offset=text.LastIndexOf(member,StringComparison.Ordinal);
+            int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
             Assert.NotEqual(JsonValueKind.Null,hover.ValueKind);
             string signature=hover.GetProperty("contents").GetProperty("value").GetString()!;

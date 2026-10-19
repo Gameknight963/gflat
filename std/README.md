@@ -25,10 +25,12 @@ implementation lives in `libc`.
 | Unicode | `Utf8` strict scalar decoding, encoding, validation, counting | [UTF-8](../docs/UTF8.md) |
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
+| URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |
 | Bits | `BitOperations` | [Counts and rotations](../docs/BIT_OPERATIONS.md) |
 | Temporary storage | `Arena` | [Independent raw-storage arenas](../docs/ARENA.md) |
+| Raw memory | `Memory::Copy`, `Move`, `Fill`, `Compare`, `Equal` | [Byte operations and linking](../docs/MEMORY.md) |
 
 Containers own stored values. Raw pointers stored as elements borrow their
 pointees; they do not cause automatic deletion. Views and enumerators borrow

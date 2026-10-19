@@ -13,6 +13,7 @@ public class StandardCollectionEditorTests
     [InlineData("Queue<String> queue=new(); queue.Enqueue(s\"item\"); queue.Dequeue();", "Dequeue(", "Dequeue")]
     [InlineData("Stack<String> stack=new(); stack.Push(s\"item\"); stack.Pop();", "Pop(", "Pop")]
     [InlineData("HashSet<String> set=new(); String key=s\"item\"; set.Add(key); set.Contains(&key);", "Contains(", "Contains")]
+    [InlineData("String text=s\"ad\"; text.Insert(1,\"bc\");", "Insert(", "Insert")]
     public void ActualStandardCollectionCallsHaveReadableHoversAndDefinitions(string body, string target, string member)
     {
         var (model, source, text)=Analyze("using std; int main(){"+body+"return 0;}");

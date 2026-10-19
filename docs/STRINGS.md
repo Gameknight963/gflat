@@ -31,6 +31,13 @@ ASCII-whitespace `Trim` modify the existing buffer without allocation. `Append`
 accepts a character, C string, counted bytes, or borrowed String pointer; appending
 from the string's own buffer is supported with or without growth.
 
+`Insert(index, text)` accepts a C string, counted byte sequence, character, or
+borrowed String pointer. Inserting at `Length` appends. Input borrowed from the
+same string is snapshotted before mutation, including when existing capacity is
+sufficient. Other input needs no temporary allocation. Invalid indices, length
+overflow, and allocation failure leave the original contents unchanged. As with
+all counted APIs, the input must cover the requested readable bytes.
+
 Equality, comparison, and hashing use complete byte contents, including embedded
 zero bytes. Ordering is unsigned byte order, independent of locale. String does
 not require valid UTF-8; binary callers may store arbitrary bytes.

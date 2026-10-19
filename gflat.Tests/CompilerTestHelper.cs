@@ -55,6 +55,9 @@ namespace gflat.Tests
         public static ExecutionResult Run(IEnumerable<SourceFile> sources)
             => RunIr(Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));
 
+        public static ExecutionResult Run(IEnumerable<SourceFile> sources, int optimizationLevel)
+            => RunIr(Compiler.Emit(sources, options: new() { InternalizeFunctions = true }), optimizationLevel);
+
         public static ExecutionResult Run(string code, int optimizationLevel)
             => RunIr(Compiler.Emit(code, options: new() { InternalizeFunctions = true }), optimizationLevel);
 

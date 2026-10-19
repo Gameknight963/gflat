@@ -80,4 +80,68 @@ public class StandardStringOperationsTests
                 return 0;
             }
             """);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void InsertHandlesAllSelfSlicesBeforeAndAfterGrowth(int optimization)
+    {
+        var result=CompilerTestHelper.Run(Sources("""
+            using std;
+            int main() {
+                for (int reserved=0; reserved<2; reserved++) {
+                    for (nuint at=0; at<=5; at++) {
+                        for (nuint start=0; start<=5; start++) {
+                            for (nuint count=0; count<=6-start; count++) {
+                                String text=String::From("ab\0cd",5);
+                                String original=text;
+                                if(reserved!=0) text.Reserve(50);
+                                // Includes slices containing the original terminator.
+                                text.Insert(at,text.Data+start,count);
+                                if(text.Length!=5+count || text.Data[text.Length]!='\0') return 1;
+                                for(nuint i=0;i<at;i++) if(text[i]!=original[i]) return 2;
+                                for(nuint i=0;i<count;i++) if(text[at+i]!=original.Data[start+i]) return 3;
+                                for(nuint i=at;i<5;i++) if(text[i+count]!=original[i]) return 4;
+                            }
+                        }
+                    }
+                }
+                String text=s"ad"; text.Insert(1,"bc"); text.Insert(4,'!');
+                String prefix=s"start:"; text.Insert(0,&prefix);
+                if(text.Length!=11 || !text.StartsWith("start:abcd!")) return 5;
+                int caught=0;
+                try { text.Insert(12,"",0); } catch { caught++; }
+                try { text.Insert(0,"x",(nuint)0-(nuint)1); } catch { caught++; }
+                return caught-2;
+            }
+            """),optimization);
+        Assert.Equal(0,result.ExitCode);
+    }
+
+    [Fact]
+    public void FailedSelfInsertionLeavesOriginalBufferUnchangedAndReleasesSnapshot()
+    {
+        var result=CompilerTestHelper.Run(Sources("""
+            using std;
+            extern void*? malloc(nuint size);
+            extern void free(void* storage);
+            extern int printf(readonly(char)* text,...);
+            namespace Memory {
+                public replace void*? Allocate(nuint size) {
+                    if(size==7) return null;
+                    printf("A"); return malloc(size);
+                }
+                public replace void Free(void* p) { printf("F"); free(p); }
+            }
+            int main() {
+                String text=s"abc"; readonly(char)* old=text.Data;
+                try { text.Insert(1,text.Data,2); return 1; } catch { }
+                if(text.Data!=old || text.Length!=3 || text.Capacity!=3 || !text.StartsWith("abc") || text.Data[3]!='\0') return 2;
+                return 0;
+            }
+            """));
+        Assert.Equal(0,result.ExitCode);
+        // Original string, snapshot, and exception storage are each released.
+        Assert.Equal("AAAFFF",result.StandardOutput);
+    }
 }

@@ -115,6 +115,43 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     public void Append(readonly(String)* text) { this.AppendLiteral(text.Data, text.Length); }
     public void Append(char value) { this.AppendLiteral(&value, 1); }
 
+    // Self-insertion snapshots the input before either shifting or reallocating.
+    public void Insert(nuint index, readonly(char)* text, nuint count)
+    {
+        if (index > length) throw new Exception("String insertion out of range");
+        if (count == 0) return;
+        nuint maximum = (nuint)0 - (nuint)1;
+        if (count > maximum - 1 - length) throw new Exception("String length overflow");
+        if (text >= (readonly(char)*)data && text <= (readonly(char)*)(data + length))
+        {
+            String snapshot = String::From(text, count);
+            this.Insert(index, snapshot.Data, snapshot.Length);
+            return;
+        }
+        nuint required = length + count;
+        if (required > capacity)
+        {
+            nuint grown = required;
+            if (capacity <= (maximum - 1) / 2 && capacity * 2 > grown) grown = capacity * 2;
+            this.Reserve(grown);
+        }
+        // Backwards shifting includes the existing terminator.
+        nuint remaining = length - index + 1;
+        while (remaining != 0) { remaining--; data[index + count + remaining] = data[index + remaining]; }
+        for (nuint i = 0; i < count; i++) data[index + i] = text[i];
+        length = required;
+    }
+
+    public void Insert(nuint index, readonly(char)* text)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        this.Insert(index, text, count);
+    }
+
+    public void Insert(nuint index, char value) { this.Insert(index, &value, 1); }
+    public void Insert(nuint index, readonly(String)* text) { this.Insert(index, text.Data, text.Length); }
+
     // Byte offsets, as with the indexer. The result owns an independent buffer.
     public readonly String Substring(nuint start, nuint count)
     {

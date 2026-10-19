@@ -289,3 +289,36 @@ rendezvous are not yet implemented by the compiler.
 
 `examples/managed` demonstrates a managed cyclic graph retained by a native Vector
 and reclaimed after its elements are cleared.
+
+## Environment variables
+
+`Environment/Environment.gf` provides `std::Environment::GetVariable(name)`,
+returning a nullable pointer to read-only C-string bytes from libc `getenv`.
+Null means missing. A nonnull pointer whose first byte is zero means the variable
+exists with an empty value. Names are null-terminated too: bytes after a zero in
+the supplied name do not participate in lookup.
+
+The C runtime owns this storage. Never free or modify it. The pointer can become
+invalid after subsequent environment operations, and the exact invalidation
+rules depend on the runtime. Copy values that need to outlive such operations.
+Names, values, case sensitivity, encoding, and backend limits follow libc; this
+is not a portable Unicode environment API on Windows.
+
+The borrowed source does not require String or gflat's memory/exception runtime.
+Its wrapper performs no allocation through `Memory`; libc itself may lazily
+initialize environment storage. Both its wrapper and private native declaration
+are explicitly `nothrow`.
+
+`Environment/EnvironmentText.gf` separately provides owning conveniences:
+
+- `EnvironmentText::GetVariable(name)` returns a copied `String`; a missing
+  variable throws `Exception`, while an existing empty value returns an empty
+  String.
+- `EnvironmentText::TryGetVariable(name, ref output)` returns false and clears
+  output when missing. On success it replaces output with an independent owning
+  copy. If allocating that copy fails, the previous output remains unchanged.
+
+Owning copies can be freely modified without altering the process environment.
+Neither API synchronizes with external code modifying the environment; callers
+must coordinate concurrent changes, including during copying. There is no
+setter or process-spawning API in this layer.

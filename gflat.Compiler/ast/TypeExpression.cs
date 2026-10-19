@@ -8,6 +8,21 @@ namespace gflat.ast
     {
         // Qualification of this value's storage, distinct from a pointer's pointee.
         public bool IsReadOnlyValue { get; private set; }
+        // Per-use constraints survive monomorphization; they are not part of type identity.
+        internal IReadOnlyList<TypeExpression> InterfaceConstraints { get; private set; } = Array.Empty<TypeExpression>();
+        internal NamedTypeExpression? GenericUse { get; private set; }
+        internal TypeExpression WithGenericUse(NamedTypeExpression use)
+        {
+            var copy = (TypeExpression)MemberwiseClone();
+            copy.GenericUse = use;
+            return copy;
+        }
+        internal TypeExpression WithInterfaceConstraints(IReadOnlyList<TypeExpression> constraints)
+        {
+            var copy = (TypeExpression)MemberwiseClone();
+            copy.InterfaceConstraints = constraints;
+            return copy;
+        }
         public TypeExpression WithReadOnlyValue(bool value)
         {
             var copy = (TypeExpression)MemberwiseClone();

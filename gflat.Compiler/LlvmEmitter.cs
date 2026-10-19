@@ -1082,6 +1082,7 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(CompilationUnit node)
     {
+        EmitPrimitiveInterfaceTables();
         _currentNamespacePath = "";
         foreach (AstNode member in node.Members)
             member.Accept(this);

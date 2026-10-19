@@ -58,7 +58,13 @@ namespace gflat
         public void Visit(InterfaceDeclaration node)
         {
             Print($"Interface: {node.Accessibility} {(node.IsStatic ? "static " : "")}{node.Name}");
-            Indented(() => { foreach (AstNode m in node.Members) m.Accept(this); });
+            Indented(() => { foreach (AstNode m in node.Members) m.Accept(this); foreach (var implementation in node.PrimitiveImplementations) implementation.Accept(this); });
+        }
+
+        public void Visit(PrimitiveImplementationDeclaration node)
+        {
+            Print("Primitive implementation");
+            Indented(() => { node.Target.Accept(this); node.Contract?.Accept(this); foreach (var member in node.Members) member.Accept(this); });
         }
 
         public void Visit(FieldDeclaration node)

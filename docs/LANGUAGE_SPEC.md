@@ -222,6 +222,62 @@ Ordinary interface pointer calls retain the existing interface representation
 and dispatch rules. `foreach` still accepts the enumeration pattern without an
 interface declaration.
 
+## Primitive interface implementations
+
+An instance interface at namespace scope can supply implementations for built-in primitive value
+types inside its own definition. `implementation` is contextual in this position:
+
+```csharp
+interface IHashable {
+    readonly nuint GetHashCode();
+
+    implementation int {
+        public readonly nuint GetHashCode() => (nuint)*this;
+    }
+}
+
+nuint Hash<T : IHashable>(ref readonly(T) value) => value.GetHashCode();
+
+int main() {
+    int value = 42;
+    IHashable* view = &value;
+    return (int)(Hash(ref value) + view.GetHashCode()) - 84;
+}
+```
+
+An implementation belongs to that single interface definition. It cannot be
+declared in a namespace or attached by reopening the interface. Each primitive
+and interface specialization has at most one implementation. Different
+interfaces can independently implement the same primitive.
+
+In a generic interface, the block must name the exact enclosing interface
+specialization, for example `implementation int : IEquatable<int>`. The block
+does not inherit the enclosing interface's open type parameters. Generic or
+conditional implementation blocks are unsupported.
+
+Targets are the built-in numeric, boolean, and character value types, including
+pointer-sized integers; an alias to such a type is also accepted. Void, enums,
+classes, structs, pointers, managed references, and function signatures are not
+implementation targets. User-defined classes and structs declare interfaces in
+their own base lists as usual.
+
+Blocks contain complete method implementations matching the interface's return
+types, parameter types and modifiers, and `nothrow` requirements. A readonly
+contract requires a readonly implementation. There are no fields, constructors,
+destructors, extra methods, static contracts, or property implementations. `this`
+is a pointer to the original primitive storage, with the normal readonly rules.
+
+These methods are available through interface views and the corresponding
+generic constraints. They do not add ordinary primitive members; ordinary
+extension methods remain available for direct convenience calls. Constraints
+are scoped to their generic declaration and do not leak into a caller or a
+different generic function. `using` directives do not select implementations.
+
+Primitive storage and arithmetic stay built in and remain usable with
+`NoStdLib`. Implementing an interface adds neither object headers nor heap
+allocation. Interface pointers retain their existing two-word representation;
+constrained calls to a known primitive bind directly to its implementation.
+
 ## Optional parameters
 
 Functions, methods, extern declarations, and constructors can declare trailing

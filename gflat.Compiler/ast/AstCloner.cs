@@ -145,6 +145,8 @@ namespace gflat.ast
             using var context = SourceContext.Enter(type.Span);
             var result = CloneTypeLocated(type);
             if (type.IsReadOnlyValue) result = TypeQualifiers.ReadOnly(result);
+            if (type.InterfaceConstraints.Count > 0) result = result.WithInterfaceConstraints(type.InterfaceConstraints);
+            if (type.GenericUse != null) result = result.WithGenericUse((NamedTypeExpression)CloneType(type.GenericUse));
             result.Span = type.Span;
             return result;
         }

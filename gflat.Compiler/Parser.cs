@@ -648,16 +648,44 @@ namespace gflat
             Expect(TokenKind.OpenBrace);
             List<AstNode> members = new();
             _interfaceDepth++;
+            List<PrimitiveImplementationDeclaration> implementations = new();
             bool previousStaticInterface = _inStaticInterface;
             _inStaticInterface = isStatic;
             try
             {
-                while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace))) members.Add(ParseMember());
+                while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.Namespace)))
+                {
+                    if (Check(TokenKind.Identifier) && Current.Text == "implementation" && Peek(2).Kind != TokenKind.OpenParen && Peek(2).Kind != TokenKind.Semicolon)
+                        implementations.Add(ParsePrimitiveImplementation());
+                    else members.Add(ParseMember());
+                }
                 Expect(TokenKind.CloseBrace);
             }
             finally { _interfaceDepth--; _inStaticInterface = previousStaticInterface; }
-            return new InterfaceDeclaration(name, members, accessibility, line, isStatic, genericParams);
+            var declaration = new InterfaceDeclaration(name, members, accessibility, line, isStatic, genericParams);
+            declaration.PrimitiveImplementations.AddRange(implementations);
+            return declaration;
         }
+
+        private PrimitiveImplementationDeclaration ParsePrimitiveImplementation() => Located(() =>
+        {
+            int line = Consume().Line;
+            TypeExpression target = ParseTypeExpression();
+            TypeExpression? contract = Match(TokenKind.Colon) ? ParseTypeExpression() : null;
+            Expect(TokenKind.OpenBrace);
+            var members = new List<AstNode>();
+            bool previousStatic = _inStaticInterface;
+            int previousDepth = _interfaceDepth;
+            _inStaticInterface = false;
+            _interfaceDepth = 0;
+            try
+            {
+                while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile)) members.Add(ParseMember());
+                Expect(TokenKind.CloseBrace);
+            }
+            finally { _inStaticInterface = previousStatic; _interfaceDepth = previousDepth; }
+            return new PrimitiveImplementationDeclaration(target, contract, members, line);
+        });
 
         private AstNode ParseMember() => ParseDeclaration(() => ParseMemberCoreLocated());
 

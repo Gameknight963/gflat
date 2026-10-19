@@ -344,7 +344,7 @@ public partial class TypeChecker
         if (ResolveNamespace(member.Object) != null || ResolveEnum(member.Object) != null) return false;
         if (member.Object is IdentifierExpression id && !TryLookupVariable(id.Name, out _) &&
             (GetClass(id.Name) != null || GetStruct(id.Name) != null || IsInterface(id.Name))) return false;
-        member.Object.Accept(this);
+        if (!checkedPrimitiveReceivers.Contains(member.Object)) member.Object.Accept(this);
         var receiverType = ResolveAlias(GetType(member.Object));
         if (HasCallableMember(receiverType, member.Member)) return false;
         var candidates = GetVisibleExtensions(_currentNamespacePath, CurrentUsings, receiverType,

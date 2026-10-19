@@ -4,6 +4,25 @@ namespace gflat;
 
 public partial class LlvmEmitter
 {
+    private void EmitPrimitiveInterfaceTables()
+    {
+        foreach (var implementation in _typeChecker.GetPrimitiveImplementations())
+        {
+            var entries = new List<string>();
+            foreach (var contract in implementation.Interface.Methods)
+            {
+                var method = implementation.Methods[contract.Name];
+                string ns = _typeChecker.GetFunctionNamespace(method);
+                string name = (ns.Length == 0 ? "gflat$" : "gflat$" + ns + "$") + method.Name + _typeChecker.GetOverloadSuffix(method);
+                var parameters = method.Parameters.Select(p => EmitParamType(p.Type)).ToList();
+                AddManagedResultParameter(method.ReturnType, parameters);
+                entries.Add($"i8* bitcast ({EmitFunctionReturnType(method.ReturnType)} ({string.Join(", ", parameters)})* @{name} to i8*)");
+            }
+            entries.Add(EmitInterfaceDestructorEntry(implementation.Primitive));
+            EmitGlobal($"@{implementation.Primitive}${implementation.Interface.Name}$vtable = internal constant [{entries.Count} x i8*] [ {string.Join(", ", entries)} ]");
+        }
+    }
+
     private readonly HashSet<string> _interfaceDestructors = new();
 
     private string EmitInterfaceDestructorEntry(string owner)

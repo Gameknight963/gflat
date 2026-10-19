@@ -39,6 +39,7 @@ public partial class TypeChecker
                 {
                     iface.Name = Identity(iface.Name);
                     _displayNames[iface.Name] = SourceIdentity(iface.SourceName);
+                    foreach (var member in iface.Members) declarationNamespaces[member] = ns;
                 }
                 else if (node is EnumDeclaration enumeration)
                 {

@@ -55,7 +55,10 @@ namespace gflat.Tests
         public static ExecutionResult Run(IEnumerable<SourceFile> sources)
             => RunIr(Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));
 
-        private static ExecutionResult RunIr(string ir)
+        public static ExecutionResult Run(string code, int optimizationLevel)
+            => RunIr(Compiler.Emit(code, options: new() { InternalizeFunctions = true }), optimizationLevel);
+
+        private static ExecutionResult RunIr(string ir, int? optimizationLevel = null)
         {
             string testId = Guid.NewGuid().ToString("N");
             string tempDir = Path.Combine(Path.GetTempPath(), $"gflat_test_{testId}");
@@ -68,7 +71,7 @@ namespace gflat.Tests
             {
                 File.WriteAllText(llPath, ir);
 
-                ProcessResult compilation = NativeToolchain.Compile(llPath, exePath);
+                ProcessResult compilation = NativeToolchain.Compile(llPath, exePath, optimizationLevel: optimizationLevel);
                 if (compilation.ExitCode != 0)
                     throw new Exception($"clang compilation failed: {compilation.StandardError}\nIR:\n{ir}");
                 ProcessResult execution = NativeToolchain.Run(exePath, []);

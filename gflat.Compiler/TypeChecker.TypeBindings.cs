@@ -52,6 +52,8 @@ public partial class TypeChecker
             identity = MarkResolvedNominal(identity);
             CheckPublishedTypeBinding(identity, source.Line);
             TypeExpression qualified = source.IsReadOnlyValue ? TypeQualifiers.ReadOnly(identity) : identity;
+            if (source.InterfaceConstraints.Count > 0) qualified = qualified.WithInterfaceConstraints(source.InterfaceConstraints);
+            if (source.GenericUse != null) qualified = qualified.WithGenericUse(source.GenericUse);
             if (aliasContracts.TryGetValue(identity, out var contract)) aliasContracts[qualified] = contract;
             binding.Publish(qualified);
         }

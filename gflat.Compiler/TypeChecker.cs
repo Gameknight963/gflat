@@ -834,6 +834,7 @@ namespace gflat
 
             if (type is NamedTypeExpression named)
             {
+                if (IsPrimitive(named.Name)) return PrimitiveImplementation(named.Name, ifaceName) != null;
                 if (_structs.TryGetValue(named.Name, out StructInfo? strInfo))
                 {
                     return strInfo.Interfaces.Contains(ifaceName);
@@ -927,11 +928,7 @@ namespace gflat
             }
             using var specialization = EnterTypeSpecialization(mangledName, line);
 
-            Dictionary<string, TypeExpression> typeMap = new();
-            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
-            {
-                typeMap[genericDef.GenericParameters[i].Name] = typeArgs[i];
-            }
+            Dictionary<string, TypeExpression> typeMap = ConstrainedTypeArguments(genericDef, genericDef.GenericParameters, typeArgs);
 
             AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
             StructDeclaration specialized = cloner.CloneStruct(genericDef);
@@ -977,11 +974,7 @@ namespace gflat
             }
             using var specialization = EnterTypeSpecialization(mangledName, line);
 
-            Dictionary<string, TypeExpression> typeMap = new();
-            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
-            {
-                typeMap[genericDef.GenericParameters[i].Name] = typeArgs[i];
-            }
+            Dictionary<string, TypeExpression> typeMap = ConstrainedTypeArguments(genericDef, genericDef.GenericParameters, typeArgs);
 
             AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
             ClassDeclaration specialized = cloner.CloneClass(genericDef);
@@ -1027,11 +1020,7 @@ namespace gflat
             }
             using var specialization = EnterFunctionSpecialization(mangledName, line);
 
-            Dictionary<string, TypeExpression> typeMap = new();
-            for (int i = 0; i < genericDef.GenericParameters.Count; i++)
-            {
-                typeMap[genericDef.GenericParameters[i].Name] = typeArgs[i];
-            }
+            Dictionary<string, TypeExpression> typeMap = ConstrainedTypeArguments(genericDef, genericDef.GenericParameters, typeArgs);
 
             AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
             MethodDeclaration specialized = cloner.CloneMethod(genericDef);
@@ -1152,8 +1141,9 @@ namespace gflat
                 if (named.TypeArguments.Count > 0)
                 {
                     List<TypeExpression> resolvedArgs = named.TypeArguments.Select(ResolveAlias).ToList();
-                    return identity != null ? ResolveGenericTypeByIdentity(identity, resolvedArgs, named.Line, publish)
+                    var result = identity != null ? ResolveGenericTypeByIdentity(identity, resolvedArgs, named.Line, publish)
                         : ResolveGenericType(named.Name, named.Namespace, resolvedArgs, named.Line, publish);
+                    return BindPrimitiveGenericUse(result, resolvedArgs);
                 }
                 if (identity != null && (identity != named.Name || named.Namespace != null))
                     return resolvedSourceTypes[type] = MarkResolvedNominal(new NamedTypeExpression(identity, null, named.Line) { Span = named.Span, NameSpan = named.NameSpan });
@@ -1830,6 +1820,8 @@ namespace gflat
                 TypeExpression sourceInner = ResolveAlias(psStruct.Inner);
                 if (targetInner is NamedTypeExpression targetIfaceNamed && ResolveInterface(targetIfaceNamed) is InterfaceInfo targetIface)
                 {
+                    if (sourceInner is NamedTypeExpression p && IsPrimitive(p.Name) && PrimitiveImplementation(p.Name, targetIface.Name) != null)
+                        return !psStruct.IsNullable || ptIface.IsNullable;
                     if (sourceInner is NamedTypeExpression sourceNamed && _structs.TryGetValue(sourceNamed.Name, out StructInfo? sInfo))
                     {
                         if (sInfo.Interfaces.Contains(targetIface.Name))
@@ -1860,6 +1852,8 @@ namespace gflat
                 TypeExpression sourceInner = ResolveAlias(msStruct.Inner);
                 if (targetInner is NamedTypeExpression targetIfaceNamed && ResolveInterface(targetIfaceNamed) is InterfaceInfo targetIface)
                 {
+                    if (sourceInner is NamedTypeExpression p && IsPrimitive(p.Name) && PrimitiveImplementation(p.Name, targetIface.Name) != null)
+                        return !msStruct.IsNullable || mtIface.IsNullable;
                     if (sourceInner is NamedTypeExpression sourceNamed && _structs.TryGetValue(sourceNamed.Name, out StructInfo? sInfo))
                     {
                         if (sInfo.Interfaces.Contains(targetIface.Name))
@@ -2018,6 +2012,7 @@ namespace gflat
 
             CheckDeclarationConflicts(node);
             QualifyTypeDeclarations(node);
+            ExpandPrimitiveImplementations(node);
 
             // Pass 1: Symbol collection
             SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration);
@@ -2029,6 +2024,7 @@ namespace gflat
             // Signature resolution can specialize generic bodies. Their exception
             // and constraint checks need the class inheritance edges already bound.
             new HierarchyResolutionPass(_symbols).ResolveBaseTypes();
+            RegisterPrimitiveImplementations();
             ResolveDeclarationSignatures(node);
             PrepareOverloads(node);
             ValidateAllocatorPair();
@@ -4387,6 +4383,7 @@ namespace gflat
             using var nullableCall = NullableCall();
             using var sourceContext = SourceContext.Enter(node.Span);
             if (TryCheckLlvmCall(node)) return;
+            if (TryCheckPrimitiveInterfaceCall(node)) return;
             if (TryCheckExtensionCall(node)) return;
             RecordExceptionCall(node);
             bool argumentsChecked = checkedExtensionArguments.Contains(node);
@@ -4663,6 +4660,7 @@ namespace gflat
                         }
                         typeArgs = genericMethod.GenericParameters.Select(p => inferred.TryGetValue(p.Name, out TypeExpression? t) ? t : throw new TypeCheckException($"Could not infer type parameter '{p.Name}' for generic function '{funcName}'", node.Line)).ToList();
                     }
+                    BindPrimitiveCallResult(node, genericMethod, typeArgs);
                     method = MonomorphizeFunction(genericMethod, typeArgs, node.Line);
                 }
                 else
@@ -4754,6 +4752,7 @@ namespace gflat
                         InferTypeParameter(method.Parameters[i].Type, GetType(node.Arguments[i]), names, inferred);
                     arguments = method.GenericParameters.Select(p => inferred.TryGetValue(p.Name, out var type) ? type : throw new TypeCheckException($"Could not infer type parameter '{p.Name}'", node.Line)).ToList();
                 }
+                BindPrimitiveCallResult(node, method, arguments);
                 method = MonomorphizeFunction(method, arguments, node.Line);
             }
             ValidateNamespaceFunctionAccess(method, node.Callee.Span);
@@ -4803,7 +4802,7 @@ namespace gflat
                 }
             }
 
-            RecordType(node, method.ReturnType);
+            RecordType(node, PrimitiveCallResult(node, method));
         }
 
         private void CheckIndirectCall(CallExpression node, FunctionPointerTypeExpression fnPtr)
@@ -5009,7 +5008,7 @@ namespace gflat
                 }
             }
 
-            node.Object.Accept(this);
+            if (!checkedPrimitiveReceivers.Remove(node.Object)) node.Object.Accept(this);
             TypeExpression objType = GetType(node.Object);
             if (IsNullable(ResolveAlias(objType)))
                 throw new TypeCheckException("Cast a nullable pointer to non-null before accessing members", node.Line);
@@ -5054,7 +5053,7 @@ namespace gflat
                     {
                         throw new TypeCheckException($"Cannot access protected field '{node.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
                     }
-                    RecordType(node, field.Type);
+                    RecordType(node, PrimitiveFieldType(node, field.Type));
                     return;
                 }
 
@@ -5085,7 +5084,7 @@ namespace gflat
             {
                 if (info.FieldDeclarationsByName.TryGetValue(node.Member, out var field))
                     ValidateStructMemberAccess(info, field.Name, field.Accessibility, false, node.Span);
-                RecordType(node, info.Fields[idx].Type);
+                RecordType(node, PrimitiveFieldType(node, info.Fields[idx].Type));
                 return;
             }
 
@@ -5882,6 +5881,7 @@ namespace gflat
             {
                 if (src is PointerTypeExpression pSrc && ResolveAlias(pSrc.Inner) is NamedTypeExpression srcNamed)
                 {
+                    if (IsPrimitive(srcNamed.Name) && PrimitiveImplementation(srcNamed.Name, dstIface.Name) != null) return true;
                     if (srcNamed.Name == dstIface.Name)
                     {
                         return true;
@@ -5907,6 +5907,7 @@ namespace gflat
             {
                 if (src is ManagedTypeExpression mSrc && ResolveAlias(mSrc.Inner) is NamedTypeExpression srcMngNamed)
                 {
+                    if (IsPrimitive(srcMngNamed.Name) && PrimitiveImplementation(srcMngNamed.Name, dstMngIface.Name) != null) return true;
                     if (srcMngNamed.Name == dstMngIface.Name)
                     {
                         return true;

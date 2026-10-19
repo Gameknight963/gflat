@@ -108,7 +108,7 @@ public sealed class StaticManagedLifetimeTests
     [Fact]
     public void VectorManagedElementsBalanceParameterMovesAndRawStorageRelocation()
     {
-        var sources = new[] { "core/Span.gf", "core/Vector.gf" }
+        var sources = new[] { "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/Span.gf", "core/Vector.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", "using std;\n" + ProbeSource + """
                 void Work() {

@@ -4,7 +4,7 @@ public sealed class GarbageCollectorSafetyTests
 {
     private static void Succeeds(string source, int optimization, bool vector = false)
     {
-        string[] files = vector ? ["libc/GC.gf", "libc/TracingCollector.gf", "core/Vector.gf", "core/Span.gf"] : ["libc/GC.gf", "libc/TracingCollector.gf"];
+        string[] files = vector ? ["core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "libc/GC.gf", "libc/TracingCollector.gf", "core/Vector.gf", "core/Span.gf"] : ["libc/GC.gf", "libc/TracingCollector.gf"];
         string ir = Compiler.Emit(files.Select(name => new SourceFile("std/" + name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", source)));

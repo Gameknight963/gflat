@@ -1,6 +1,6 @@
 namespace std;
 
-struct FilteredIntRange
+struct FilteredIntRange : IEnumerable<int, FilteredIntRange::Enumerator>
 {
     private IntRange source;
     private bool(int)* predicate;

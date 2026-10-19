@@ -8,7 +8,7 @@ private inline void ValidateIntRange(int start, int count)
 }
 
 // Integer sequences are values. Enumerating them allocates no storage.
-struct IntRange
+struct IntRange : IEnumerable<int, IntRange::Enumerator>
 {
     private int first;
     private int count;
@@ -60,6 +60,8 @@ struct IntRange
     public int Start { readonly get => first; }
     public int Count { readonly get => count; }
     public inline readonly IntRange::Enumerator GetEnumerator() => new IntRange::Enumerator(first, count);
+    public Enumerable<int, IntRange, IntRange::Enumerator> AsEnumerable()
+        => new Enumerable<int, IntRange, IntRange::Enumerator>(*this);
 
     public readonly FilteredIntRange Where(bool(int)* predicate)
         => new FilteredIntRange(*this, predicate, 0, this.Count, false);

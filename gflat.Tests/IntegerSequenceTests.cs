@@ -4,6 +4,8 @@ public sealed class IntegerSequenceTests
 {
     private static ExecutionResult Run(string program) => CompilerTestHelper.Run([
         new SourceFile("main.gf", program),
+        new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/IEnumerable.gf"))),
+        new SourceFile("core/Collections/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/Enumerable.gf"))),
         new SourceFile("core/IntRange.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "IntRange.gf"))),
         new SourceFile("core/FilteredIntRange.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "FilteredIntRange.gf")))
     ]);

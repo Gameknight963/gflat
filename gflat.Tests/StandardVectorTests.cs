@@ -28,7 +28,7 @@ public class StandardVectorTests
         Assert.Equal(0, result.ExitCode);
     }
 
-    private static IEnumerable<SourceFile> Sources(string program) => new[] { "IStringConvertable.gf", "String.gf", "Vector.gf", "Span.gf" }
+    private static IEnumerable<SourceFile> Sources(string program) => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "IStringConvertable.gf", "String.gf", "Vector.gf", "Span.gf" }
         .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
         .Append(new SourceFile("main.gf", program));
 

@@ -1,7 +1,7 @@
 namespace std;
 
 // Borrows storage; the caller keeps the buffer alive for every use of this view.
-struct Span<T>
+struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
 {
     private T*? data;
     private nuint length;
@@ -12,6 +12,8 @@ struct Span<T>
     public nuint Length { readonly get => length; }
     public bool IsEmpty { readonly get => length == 0; }
     public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, length);
+    public Enumerable<T, Span<T>, Span<T>::Enumerator> AsEnumerable()
+        => new Enumerable<T, Span<T>, Span<T>::Enumerator>(*this);
     public T*? Data { get => data; }
 
     public ref T this[nuint index]

@@ -1,5 +1,9 @@
 # Core library
 
+Lazy collection queries and their ownership rules are documented in
+[Collections](Collections/README.md). The runnable example is
+[`examples/queries`](../../examples/queries/main.gf).
+
 Portable facilities use the replaceable `Memory` API. The default
 allocator delegates to libc; replacing it does not require changing these sources.
 SDK projects reference `std/std.gfproj` by default. Set `NoStdLib` to `true`

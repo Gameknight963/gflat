@@ -21,6 +21,8 @@ public sealed class FunctionPointerInferenceTests
     public void ExtensionInfersResultFromTypedSpanCallback()
     {
         var result = CompilerTestHelper.Run([
+            new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/IEnumerable.gf"))),
+            new SourceFile("core/Collections/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/Enumerable.gf"))),
             new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Span.gf"))),
             new SourceFile("main.gf", """
                 using std;

@@ -18,7 +18,7 @@ public sealed class SequenceExampleTests
         try
         {
             var sources = ConsoleWriterTests.Sources(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples", "seq.gf")))
-                .Concat(new[] { "core/Parsing.gf", "core/IntRange.gf", "core/FilteredIntRange.gf" }.Select(name =>
+                .Concat(new[] { "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/Parsing.gf", "core/IntRange.gf", "core/FilteredIntRange.gf" }.Select(name =>
                     new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name)))));
             string ir = Path.Combine(directory, "seq.ll"), executable = Path.Combine(directory, "seq.exe");
             File.WriteAllText(ir, Compiler.Emit(sources));

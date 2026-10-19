@@ -1,7 +1,7 @@
 namespace std;
 
 // Owns contiguous elements. Growth invalidates pointers and spans into the buffer.
-struct Vector<T>
+struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
 {
     private T*? data;
     private nuint count;
@@ -12,6 +12,8 @@ struct Vector<T>
     public nuint Count { readonly get => count; }
     public nuint Capacity { readonly get => capacity; }
     public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, count);
+    public Enumerable<T, Span<T>, Span<T>::Enumerator> AsEnumerable()
+        => new Enumerable<T, Span<T>, Span<T>::Enumerator>(this.AsSpan());
 
     public Span<T> AsSpan()
     {

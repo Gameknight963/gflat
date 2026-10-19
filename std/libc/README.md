@@ -119,8 +119,23 @@ int main()
   truncates an existing file; append creates a file when needed.
 - `Read(data, capacity)` returns the bytes read. Zero at EOF is normal; IO
   failures throw `IOException`. Reads do not add a null terminator.
+- `ReadExactly(data, count)` fills the requested region or throws `IOException`.
+  On a truncated file the available prefix has already been consumed and stored.
+- `ReadByte()` returns an integer from 0 through 255, or -1 at EOF; read errors
+  throw. `WriteByte(char)` writes exactly one byte, including zero.
+- `CopyTo(destination, buffer, capacity)` borrows a `File*` and caller-owned
+  buffer, returning the copied byte count. It starts at the current position,
+  leaves both streams open, and rejects zero capacity and copying to itself.
+  `CopyTo(destination)` uses a 4096-byte stack buffer. Callers must not modify
+  either stream concurrently. Copying is not transactional: failures can leave a
+  partial destination, and the source may have advanced.
 - `Write(data, count)` preserves embedded zero bytes; `Write(text)` stops at
   the first zero. Partial IO may already have occurred when an error is thrown.
+- `WriteLine()` writes one LF byte on every platform. C-string and counted
+  overloads write their contents followed by LF, with no implicit flush.
+- `File::Remove(path)` and `File::Rename(source, destination)` throw `IOException`
+  on failure. Rename follows the host C runtime's rules, including whether an
+  existing destination can be replaced; it does not promise cross-volume moves.
 - `Flush` and `Close` report failures. `Close` is idempotent and leaves the
   object closed even if libc reports a close failure.
 - Scope destruction closes without throwing. Call `Close` explicitly when
@@ -131,6 +146,16 @@ int main()
   full Unicode filename support on Windows, seeking, async IO, or directory APIs.
 
 `examples/search` is a small command-line line-search tool using this API.
+
+### Owning text conveniences
+
+`File/FileText.gf` adds `std::FileText`, requiring the core `String` facilities.
+`FileText::ReadAll(path)` returns an owning `String`; embedded zeros are retained.
+It reads raw bytes without validating UTF-8, removing a BOM, or translating
+newlines. Memory grows with the file; use `File::Read` or `CopyTo` for bounded
+storage. `WriteAll` truncates and `AppendAll` appends; both accept a C string,
+counted bytes, or `ref readonly(String)`. These helpers explicitly close the
+file so final flush/close failures are reported. They are not atomic updates.
 
 ## Managed memory
 

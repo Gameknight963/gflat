@@ -19,6 +19,15 @@ public struct File
     public static File OpenRead(readonly(char*) path) => new File(path, "rb");
     public static File OpenWrite(readonly(char*) path) => new File(path, "wb");
     public static File OpenAppend(readonly(char*) path) => new File(path, "ab");
+    public static void Remove(readonly(char*) path)
+    {
+        if (file_detail::remove(path) != 0) throw new IOException("File removal failed");
+    }
+
+    public static void Rename(readonly(char*) source, readonly(char*) destination)
+    {
+        if (file_detail::rename(source, destination) != 0) throw new IOException("File rename failed");
+    }
     public bool IsOpen { readonly get => handle != null; }
 
     public nuint Read(char* data, nuint count)
@@ -29,6 +38,47 @@ public struct File
         if (read < count && file_detail::ferror(handle!) != 0)
             throw new IOException("File read failed");
         return read;
+    }
+
+    // Returns 0..255, or -1 at end of file. IO failures still throw.
+    public int ReadByte()
+    {
+        if (handle == null) throw new IOException("File is closed");
+        int value = file_detail::fgetc(handle!);
+        if (value == -1 && file_detail::ferror(handle!) != 0)
+            throw new IOException("File read failed");
+        return value;
+    }
+
+    // A short read consumes the available prefix before reporting end of stream.
+    public void ReadExactly(char* data, nuint count)
+    {
+        if (this.Read(data, count) != count)
+            throw new IOException("Unexpected end of file");
+    }
+
+    // Both files are borrowed. Copy begins at the current source position.
+    public nuint CopyTo(File* destination, char* buffer, nuint capacity)
+    {
+        if (handle == null || !destination.IsOpen) throw new IOException("File is closed");
+        if (destination == this) throw new IOException("Cannot copy a file to itself");
+        if (capacity == 0) throw new IOException("Copy buffer must not be empty");
+        nuint total = 0;
+        while (true)
+        {
+            nuint count = this.Read(buffer, capacity);
+            if (count == 0) return total;
+            if (count > ((nuint)0 - (nuint)1) - total)
+                throw new IOException("File copy length overflow");
+            destination.Write(buffer, count);
+            total += count;
+        }
+    }
+
+    public nuint CopyTo(File* destination)
+    {
+        char[4096] buffer;
+        return this.CopyTo(destination, buffer, 4096);
     }
 
     public void Write(readonly(char*) data, nuint count)
@@ -46,11 +96,18 @@ public struct File
         this.Write(text, count);
     }
 
+    public void WriteByte(char value) { this.Write(&value, 1); }
+
     public void Flush()
     {
         if (handle == null) throw new IOException("File is closed");
         if (file_detail::fflush(handle!) != 0) throw new IOException("File flush failed");
     }
+
+    // File streams are binary: the newline is one LF byte on every platform.
+    public void WriteLine() { this.Write("\n", 1); }
+    public void WriteLine(readonly(char*) text) { this.Write(text); this.WriteLine(); }
+    public void WriteLine(readonly(char*) data, nuint count) { this.Write(data, count); this.WriteLine(); }
 
     // fclose consumes the stream even when it reports failure. Never retry it.
     public void Close()
@@ -75,4 +132,7 @@ namespace file_detail
     private extern nuint fwrite(readonly(char*) data, nuint size, nuint count, FileHandle stream);
     private extern int fflush(FileHandle stream);
     private extern int ferror(FileHandle stream);
+    private extern int fgetc(FileHandle stream);
+    private extern int remove(readonly(char*) path);
+    private extern int rename(readonly(char*) source, readonly(char*) destination);
 }

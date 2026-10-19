@@ -130,4 +130,17 @@ public class StandardUtf8Tests
                 return 0;
             }
             """);
+
+    [Fact]
+    public void LongAsciiInputValidatesWithoutAccumulatingStackStorage()
+        => Run("""
+            int main() {
+                char[131072] text;
+                for (nuint i = 0; i < (nuint)131072; i++) text[i] = 'a';
+                nuint count = 0;
+                if (!std::Utf8::TryCount(text, 131072, &count)) return 1;
+                if (count != (nuint)131072) return 2;
+                return 0;
+            }
+            """);
 }

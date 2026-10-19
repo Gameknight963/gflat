@@ -4,6 +4,51 @@ namespace gflat.Tests;
 
 public sealed class PrimitiveInterfaceImplementationTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ConstrainedExtensionsRecognizePrimitiveImplementations(int optimization)
+    {
+        var result = CompilerTestHelper.Run(Contract + """
+            interface IEqual<T> {
+                readonly bool Equal(T other);
+                implementation int : IEqual<int> { public readonly bool Equal(int other) => *this == other; }
+            }
+            int Read<T : IHash>(this ref readonly(T) value) => value.Hash();
+            struct Box<T> { public T value; public Box(T item) { value=item; } }
+            bool Same<T : IEqual<T>>(this ref Box<T> box, T other) => box.value.Equal(other);
+            int main() {
+                int value=42;
+                Box<int> box=new(value);
+                if (!box.Same(42)) return 1;
+                return value.Read();
+            }
+            """, optimizationLevel: optimization);
+        Assert.Equal(42, result.ExitCode);
+    }
+
+    [Fact]
+    public void PrimitiveExtensionPreviewUsesExactContractsWithoutSpecializing()
+    {
+        var (ast, checker) = Compiler.Check(Contract + """
+            interface IEqual<T> {
+                readonly bool Equal(T other);
+                implementation int : IEqual<int> { public readonly bool Equal(int other) => *this == other; }
+            }
+            int Read<T : IHash>(this T value) => value.Hash();
+            bool Same<T : IEqual<T>>(this T value, T other) => value.Equal(other);
+            int main() => 0;
+            """, options: new() { NoStdLib=true });
+        int members=ast.Members.Count;
+        for (int i=0; i<5; i++) {
+            Assert.Single(checker.GetVisibleExtensions("", [], new gflat.ast.NamedTypeExpression("int", null, 1), true, false, "Read"));
+            Assert.Single(checker.GetVisibleExtensions("", [], new gflat.ast.NamedTypeExpression("int", null, 1), true, false, "Same"));
+            Assert.Empty(checker.GetVisibleExtensions("", [], new gflat.ast.NamedTypeExpression("long", null, 1), true, false, "Read"));
+            Assert.Empty(checker.GetVisibleExtensions("", [], new gflat.ast.NamedTypeExpression("long", null, 1), true, false, "Same"));
+        }
+        Assert.Equal(members, ast.Members.Count);
+    }
+
     [Fact]
     public void PrimitiveContractsPreserveMutableAndReadonlyReferenceGetterSelection()
     {

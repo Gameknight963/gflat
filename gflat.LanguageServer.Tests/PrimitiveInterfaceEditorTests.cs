@@ -6,6 +6,28 @@ namespace gflat.LanguageServer.Tests;
 public sealed class PrimitiveInterfaceEditorTests
 {
     [Fact]
+    public void PrimitiveConstrainedExtensionsHaveCompletionHoverAndNavigation()
+    {
+        const string text = """
+            interface IHash {
+                readonly int Hash();
+                implementation int { public readonly int Hash() => *this; }
+            }
+            int Read<T : IHash>(this ref readonly(T) value) => value.Hash();
+            int main() { int value=42; return value.Read(); }
+            """;
+        var source = new SourceFile(Path.GetFullPath("primitive-extension.gf"), text);
+        var snapshot = new AnalysisSnapshot([source]);
+        Assert.DoesNotContain(snapshot.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, [source]);
+        int method = text.LastIndexOf("Read()", StringComparison.Ordinal);
+        Assert.NotNull(model.Hover(source.Path, method));
+        Assert.NotNull(model.Definition(source.Path, method));
+        var completion = JsonSerializer.SerializeToElement(model.Completion(source.Path, method), Protocol.JsonOptions);
+        Assert.Contains(completion.GetProperty("items").EnumerateArray(), item => item.GetProperty("label").GetString() == "Read");
+    }
+
+    [Fact]
     public void ImplementationBodiesAndConstrainedCallsHaveSemanticInformation()
     {
         const string text = """

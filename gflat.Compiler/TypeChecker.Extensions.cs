@@ -164,6 +164,7 @@ public partial class TypeChecker
         if (_interfaces.ContainsKey(required.Name))
         {
             if (allowInterfaceIdentity && source.Name == required.Name) return true;
+            if (primitiveImplementations.ContainsKey((source.Name, required.Name))) return true;
             if (_structs.TryGetValue(source.Name, out var str)) return str.Interfaces.Contains(required.Name);
             return _classes.TryGetValue(source.Name, out var cls) && ClassImplementsInterface(cls, required.Name);
         }

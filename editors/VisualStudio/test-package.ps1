@@ -76,6 +76,18 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Exceptions.cpp'))) { throw 'VSIX is missing the native exception runtime source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Runtime/Stdio.cpp'))) { throw 'VSIX is missing the native stdio bridge source' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Compiler/Std/core/IGarbageCollector.gf'))) { throw 'VSIX is missing the managed collector contract' }
+    $noThrowSource = Join-Path $extracted 'nothrow-no-stdlib.gf'
+    $noThrowIr = Join-Path $extracted 'nothrow-no-stdlib.ll'
+    @'
+struct Counter { public int Value; public Counter(int value) nothrow { Value=value; } }
+int Pure() nothrow => 42;
+int main() { Counter value=new(Pure()); return value.Value; }
+'@ | Set-Content -LiteralPath $noThrowSource
+    & $compiler $noThrowSource --no-stdlib --emit-ir -o $noThrowIr
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler failed the runtime-free nothrow check' }
+    if ((Get-Content -Raw -LiteralPath $noThrowIr) -match '@__gflat_eh_|\bpersonality\b|\binvoke\b') {
+        throw 'Known nothrow calls unexpectedly require exception support'
+    }
     $smoke = Join-Path $extracted 'unwinding-ref.gf'
     @'
 void Set(ref int value) { value = 42; throw new Exception(); }

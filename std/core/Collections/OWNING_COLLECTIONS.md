@@ -14,6 +14,19 @@ refer to an element still owned by that vector.
 All middle mutations invalidate iterators and views of the vector. Allocation
 failure, invalid indices, and a failing argument copy preserve existing contents.
 
+With `using std;`, `vector.AddRange(readonlySpan)` copies a range into the tail.
+A span borrowed from that same vector is supported, including across growth;
+the implementation preserves its offset and rebinds it after reserving storage.
+Empty ranges do nothing. Allocation failure before copying preserves contents.
+If an element's copy constructor throws, the successfully appended prefix stays
+in the vector and all earlier elements remain valid; capacity may have grown.
+Copy constructors must not mutate the vector or source through other aliases.
+
+`AddRange` is a ref-receiver extension because it requires copyable elements.
+It is instantiated only when called; merely including it does not prevent using
+`Vector<T>` with noncopyable owning elements. The vector's instance operations
+continue to support those elements through explicit movement.
+
 `Stack<T>` owns a last-in, first-out sequence backed by a `Vector<T>`.
 `Queue<T>` owns a first-in, first-out sequence backed by a ring buffer.
 Both start empty without allocating. `Count`, `Capacity`, and `IsEmpty`

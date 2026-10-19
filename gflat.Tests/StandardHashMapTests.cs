@@ -9,6 +9,36 @@ public class StandardHashMapTests
     private static void Run(string code) => Assert.Equal(0, CompilerTestHelper.Run(Sources(code)).ExitCode);
 
     [Fact]
+    public void AutomaticGrowthAllocatesLogarithmicallyRatherThanRehashingEachInsertion()
+        => Run("""
+            using std;
+            int allocations=0; int releases=0;
+            private extern void*? malloc(nuint bytes);
+            private extern void free(void* address);
+            namespace Memory {
+                public replace void*? Allocate(nuint bytes) { allocations++; return malloc(bytes); }
+                public replace void Free(void* address) { releases++; free(address); }
+            }
+            int main() {
+                {
+                    HashMap<int,int> map=new();
+                    for(int i=0;i<1000;i++) map.Add(i,i);
+                    if(allocations>10 || map.Count!=1000 || map.Capacity<1000) return 1;
+                    for(int i=0;i<1000;i++) if(map[&i]!=i) return 2;
+                }
+                if(allocations!=releases) return 3;
+                int before=allocations;
+                {
+                    HashSet<int> set=new();
+                    for(int i=0;i<1000;i++) if(!set.Add(i)) return 4;
+                    if(allocations-before>10 || set.Count!=1000) return 5;
+                }
+                if(allocations!=releases) return 6;
+                return 0;
+            }
+            """);
+
+    [Fact]
     public void GrowthDuplicatesAndRemovalDestroyEachOwnedResourceOnce()
         => Run("""
             using std;

@@ -8,7 +8,7 @@ namespace hash_detail
 }
 
 // Owns keys and values. Keys must also implement IEquatable<K>.
-// Lookups borrow keys; growth invalidates all borrowed entries and values.
+// Lookups borrow keys; insertion/Reserve can rehash and invalidate borrowed views.
 struct HashMap<K : IHashable, V>
 {
     private Entry*? entries;
@@ -105,11 +105,21 @@ struct HashMap<K : IHashable, V>
     {
         nuint hash = key.GetHashCode();
         if (this.Locate(&key, hash) != capacity) return false;
-        if (used >= capacity / 2)
+        nuint available = capacity / 2;
+        if (count == available)
         {
-            if (count < capacity / 4) this.Rehash(capacity);
-            else this.Reserve(count + 1);
+            nuint maximum = ((nuint)0 - (nuint)1) / ((nuint)sizeof(Entry) + 1) / 2;
+            if (count == maximum) throw new Exception("HashMap capacity overflow");
+            nuint grown = 4;
+            if (available != 0)
+            {
+                grown = maximum;
+                if (available <= maximum / 2) grown = available * 2;
+            }
+            if (grown > maximum) grown = maximum;
+            this.Reserve(grown);
         }
+        else if (used >= capacity - capacity / 4) this.Rehash(capacity);
         nuint slot = hash % capacity;
         while (states![slot] == 1) { slot++; if (slot == capacity) slot = 0; }
         bool fresh = states![slot] == 0;

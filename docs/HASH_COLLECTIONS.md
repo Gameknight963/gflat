@@ -26,7 +26,8 @@ allows one explicit constraint, so equality is checked through a constrained
 helper when specializing the collection. Primitive values and `String` have these
 implementations. Enums and pointers do not yet have built-in implementations.
 Equal keys must have equal hashes, and their equality/hash must remain stable
-while stored. Default hashes are deterministic and not resistant to malicious
+while stored. Callbacks must not mutate the collection through another alias.
+Default hashes are deterministic and not resistant to malicious
 collision attacks.
 
 Lookups accept a borrowed key pointer and never copy it. `Find` returns a borrowed
@@ -36,12 +37,15 @@ value. `Remove` destroys an entry; `Clear` destroys every entry but retains stor
 
 Maps use open addressing with linear probing, tombstones, and a maximum 50% load.
 Each entry caches its hash, so growth relocates owning values without calling
-user hash or equality functions. Failed allocation or a throwing key comparison
+user hash or equality functions. Automatic growth doubles usable capacity;
+explicit `Reserve` accepts the requested entry count. Tombstones are compacted
+when too many buckets have been used. Failed allocation or a throwing key comparison
 leaves the existing entries intact. Values are destroyed exactly once.
 
 Enumeration borrows the map and has unspecified order. `HashMap<K,V>::Enumerator`
 returns readonly entry pointers with `Key` and `ValueReadOnly`; set enumerators
 return readonly element pointers. Do not mutate, move, or destroy the collection
-while enumerating. Growth invalidates all borrowed pointers; removal invalidates
+while enumerating. Insertion and `Reserve` may invalidate all borrowed pointers,
+including when tombstone compaction keeps capacity unchanged; removal invalidates
 pointers into the removed entry. Collections do not own objects pointed to by
 pointer-valued elements.

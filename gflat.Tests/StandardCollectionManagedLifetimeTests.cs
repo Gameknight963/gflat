@@ -37,6 +37,11 @@ public sealed class StandardCollectionManagedLifetimeTests
                 GC::Collect();
                 values.RemoveAt(16);
                 if (GC::Collect() != 1) throw new Exception("removed reference survived");
+                values.Insert(16, new^ Node(98));
+                values[16].Next = values[16];
+                values.SwapRemoveAt(16);
+                if (GC::Collect() != 1) throw new Exception("unordered removed reference survived");
+                Sort<Node^>(values.AsSpan(), Compare);
                 for (int i = 0; i < 16; i++) {
                     if (queue.Dequeue().Value != 31 - i) throw new Exception("queue order");
                     if (stack.Pop().Value != i) throw new Exception("stack order");

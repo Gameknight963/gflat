@@ -106,6 +106,17 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return result;
     }
 
+    // Constant-time removal when preserving element order is unnecessary.
+    public T SwapRemoveAt(nuint index)
+    {
+        if (index >= count) throw new Exception("Vector removal index out of range");
+        nuint last = count - 1;
+        T result = move *(data! + index);
+        if (index != last) move *(data! + last) at data! + index;
+        count = last;
+        return result;
+    }
+
     public T Pop()
     {
         if (count == 0) throw new Exception("Cannot pop an empty vector");

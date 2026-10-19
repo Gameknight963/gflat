@@ -113,6 +113,35 @@ public sealed class StandardVectorMutationTests
     }
 
     [Fact]
+    public void UnorderedRemovalMovesTheLastOwnerAndDestroysEveryValueOnce()
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            struct Item {
+                private int* destroyed;
+                public int Key;
+                public Item(int* counter, int key) { destroyed = counter; Key = key; }
+                ~Item() { (*destroyed)++; }
+            }
+            int main() {
+                int destroyed = 0;
+                {
+                    Vector<Item> values = new();
+                    for (int i = 0; i < 5; i++) values.Add(new Item(&destroyed, i));
+                    { Item removed = values.SwapRemoveAt(1); if (removed.Key != 1) return 1; }
+                    if (destroyed != 1 || values.Count != 4 || values[1].Key != 4) return 2;
+                    { Item removed = values.SwapRemoveAt(3); if (removed.Key != 3) return 3; }
+                    if (destroyed != 2 || values.Count != 3 || values[0].Key != 0 || values[1].Key != 4 || values[2].Key != 2) return 4;
+                    while (values.Count != 0) values.SwapRemoveAt(0);
+                    try { values.SwapRemoveAt(0); return 5; } catch (ref Exception error) {}
+                }
+                return destroyed - 5;
+            }
+            """));
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public void ThrowingArgumentCopyHappensBeforeAnyVectorMutation()
     {
         var result = CompilerTestHelper.Run(Sources("""

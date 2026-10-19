@@ -10,6 +10,9 @@ constructors. The insertion argument follows ordinary value semantics and is
 prepared before the vector changes, so inserting a copy of an existing element
 works even when insertion grows the buffer. An explicit move source must not
 refer to an element still owned by that vector.
+`SwapRemoveAt(index)` also returns the removed owner, but fills its slot with
+the last element in constant time. It changes survivor order and is useful when
+that order does not matter.
 
 All middle mutations invalidate iterators and views of the vector. Allocation
 failure, invalid indices, and a failing argument copy preserve existing contents.

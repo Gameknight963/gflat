@@ -126,6 +126,35 @@ public sealed class StandardQueueStackTests
     }
 
     [Fact]
+    public void RawPointerElementsNeverTransferPointeeDestructionToContainers()
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            struct Resource {
+                private int* destroyed;
+                public Resource(int* counter) { destroyed = counter; }
+                ~Resource() { (*destroyed)++; }
+            }
+            int main() {
+                int destroyed = 0;
+                Resource* first = new* Resource(&destroyed);
+                Resource* second = new* Resource(&destroyed);
+                {
+                    Queue<Resource*> queue = new(); Stack<Resource*> stack = new();
+                    queue.Enqueue(first); queue.Enqueue(second);
+                    stack.Push(first); stack.Push(second);
+                    queue.Clear();
+                    if (destroyed != 0) return 1;
+                }
+                if (destroyed != 0) return 2;
+                delete first; delete second;
+                return destroyed - 2;
+            }
+            """));
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public void ZeroSizedElementsAndCapacityOverflowRemainWellDefined()
     {
         var result = CompilerTestHelper.Run(Sources("""

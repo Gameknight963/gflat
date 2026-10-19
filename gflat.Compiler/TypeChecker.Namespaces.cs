@@ -200,7 +200,12 @@ public partial class TypeChecker
     private MethodDeclaration? ResolveGenericFunction(string name)
     {
         for (var scope = _currentNamespace; scope != null; scope = scope.Parent)
+        {
             if (scope.GenericFunctions.TryGetValue(name, out var method)) return method;
+            // Lexical declarations shadow outer/imported callables regardless
+            // of whether the declaration is generic, ordinary, or external.
+            if (scope.Functions.ContainsKey(name) || scope.Externs.ContainsKey(name)) return null;
+        }
         MethodDeclaration? found = null;
         foreach (var imported in CurrentUsings)
         {

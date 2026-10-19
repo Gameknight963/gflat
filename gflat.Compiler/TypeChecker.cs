@@ -4840,6 +4840,8 @@ namespace gflat
             {
                 if (scope.Functions.TryGetValue(name, out MethodDeclaration? method))
                     return method;
+                if (scope.GenericFunctions.ContainsKey(name) || scope.Externs.ContainsKey(name))
+                    return null;
                 scope = scope.Parent;
             }
 
@@ -4869,6 +4871,8 @@ namespace gflat
             {
                 if (scope.Externs.TryGetValue(name, out ExternDeclaration? ext))
                     return ext;
+                if (scope.Functions.ContainsKey(name) || scope.GenericFunctions.ContainsKey(name))
+                    return null;
                 scope = scope.Parent;
             }
 

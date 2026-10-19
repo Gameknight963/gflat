@@ -23,6 +23,26 @@ public class StandardIntegerParsingTests
         { "NUInt", "nuint", "0", nuint.MaxValue.ToString() },
     };
 
+    [Fact]
+    public void LongLeadingZeroInputDoesNotOverflowOrAccumulateStackStorage()
+    {
+        Assert.Equal(0, CompilerTestHelper.Run(Sources("""
+            using std;
+            int main() {
+                char[131072] text;
+                for (nuint i = 0; i < (nuint)131072; i++) text[i] = '0';
+                text[131071] = '7';
+                ulong value = 0ul;
+                if (!TryParseULong(text, 131072, &value)) return 1;
+                if (value != 7ul) return 2;
+                text[131071] = 'x';
+                if (TryParseULong(text, 131072, &value)) return 3;
+                if (value != 0ul) return 4;
+                return 0;
+            }
+            """)).ExitCode);
+    }
+
     [Theory]
     [MemberData(nameof(Widths))]
     public void ExactLimitsAndMalformedInputRespectEachWidth(string name, string type, string minimum, string maximum)

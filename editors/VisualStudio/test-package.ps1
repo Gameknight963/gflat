@@ -127,8 +127,32 @@ int main() {
 '@ | Set-Content -LiteralPath $collections
     $bundledStd = Join-Path $extracted 'Sdk/std/core'
     $querySources = @(Get-ChildItem -LiteralPath (Join-Path $bundledStd 'Collections') -Filter '*.gf' -File | ForEach-Object FullName)
-    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Vector.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @querySources --run -o (Join-Path $extracted 'collections.exe')
+    $contractSources = @('IHashable.gf', 'IEquatable.gf', 'IComparable.gf', 'Hashing.gf') | ForEach-Object { Join-Path $bundledStd $_ }
+    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Vector.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
+    $expandedStd = Join-Path $extracted 'expanded-std.gf'
+    @'
+using std;
+int main() {
+    HashMap<String, int> map = new();
+    map.Add(s"answer", 42);
+    String key = s"answer";
+    if (map[&key] != 42) return 1;
+    Queue<int> queue = new(); queue.Enqueue(42);
+    if (queue.Dequeue() != 42) return 2;
+    char[32] storage;
+    BufferWriter writer = new(storage, 32);
+    map[&key].Format(&writer);
+    if (writer.Length != 2 || writer.Data[0] != '4' || writer.Data[1] != '2') return 3;
+    if (!Utf8::IsValid(writer.Data, writer.Length)) return 4;
+    String hex = HexText::Encode(writer.Data, writer.Length);
+    if (!hex.StartsWith("3432") || hex.Length != 4) return 5;
+    return 0;
+}
+'@ | Set-Content -LiteralPath $expandedStd
+    $allSources = @(Get-ChildItem -LiteralPath $std -Recurse -Filter '*.gf' -File | ForEach-Object FullName)
+    & $compiler $expandedStd @allSources --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged expanded standard library smoke test failed' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal

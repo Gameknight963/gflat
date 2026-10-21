@@ -55,6 +55,7 @@ int main()
     nuint consumed = 0;
     if (VarInt::ReadUInt64(data, written, ref value, ref consumed) != VarInt::Status::Done)
         return 2;
-    return value == 300ul && consumed == written ? 0 : 3;
+    if (value != 300ul || consumed != written) return 3;
+    return 0;
 }
 ```

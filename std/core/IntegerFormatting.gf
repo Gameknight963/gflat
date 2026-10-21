@@ -1,10 +1,74 @@
 namespace std;
 
-// Invariant decimal text into caller storage, without allocation or a terminator.
+// Invariant decimal/hex text into caller storage, without allocation or a terminator.
 // The written-count storage must be disjoint from output. Failure writes zero
 // to written and leaves the character buffer untouched.
 public static class IntegerFormatting
 {
+    private static bool HexMagnitude(ulong value, char* output, nuint capacity,
+        ref nuint written, bool uppercase, nuint minimumDigits) nothrow
+    {
+        written = 0;
+        nuint length = 1;
+        ulong remaining = value;
+        while (remaining >= 16ul) { remaining = remaining >> 4; length++; }
+        if (minimumDigits > length) length = minimumDigits;
+        if (capacity < length) return false;
+        readonly(char)* digits = "0123456789ABCDEF";
+        if (!uppercase) digits = "0123456789abcdef";
+        nuint cursor = length;
+        while (true)
+        {
+            cursor--;
+            output[cursor] = digits[(int)(value & 15ul)];
+            value = value >> 4;
+            if (value == 0ul) break;
+        }
+        while (cursor != 0) { cursor--; output[cursor] = '0'; }
+        written = length;
+        return true;
+    }
+
+    public static bool TryFormatHex(ulong value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude(value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(long value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(uint value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(int value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)(uint)value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(byte value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(sbyte value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)(byte)value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(ushort value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(short value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)(ushort)value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(nuint value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)value, output, capacity, ref written, uppercase, minimumDigits);
+
+    public static bool TryFormatHex(nint value, char* output, nuint capacity, ref nuint written,
+        nuint minimumDigits = 1, bool uppercase = true) nothrow
+        => HexMagnitude((ulong)(nuint)value, output, capacity, ref written, uppercase, minimumDigits);
+
     private static bool Magnitude(ulong value, bool negative, char* output,
         nuint capacity, ref nuint written) nothrow
     {

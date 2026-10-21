@@ -196,6 +196,14 @@ public class FreestandingCoreUtilitiesTests
             float decodedFloat=(float)0; double decodedDouble=(double)0;
             if(!ieeeReader.TryReadFloatLittleEndian(ref decodedFloat)||!ieeeReader.TryReadDoubleBigEndian(ref decodedDouble)||ieeeReader.Position!=12) return 113;
             if(*((uint*)&decodedFloat)!=floatBits||*((ulong*)&decodedDouble)!=doubleBits) return 114;
+            for(nuint i=0;i<22;i++)decimalText[i]='Z';
+            if(!std::IntegerFormatting::TryFormatHex(unsignedMaximum,&decimalText[1],20,ref length,20,false)||length!=20) return 115;
+            for(nuint i=1;i<5;i++)if(decimalText[i]!='0') return 116;
+            for(nuint i=5;i<21;i++)if(decimalText[i]!='f') return 117;
+            if(decimalText[0]!='Z'||decimalText[21]!='Z') return 118;
+            if(std::IntegerFormatting::TryFormatHex(unsignedMaximum,&decimalText[1],19,ref length,20,false)||length!=0) return 119;
+            for(nuint i=1;i<5;i++)if(decimalText[i]!='0') return 120;
+            for(nuint i=5;i<21;i++)if(decimalText[i]!='f') return 121;
             return 42;
         }
         """;

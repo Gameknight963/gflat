@@ -43,6 +43,9 @@ Decimal integer checks format signed 64-bit minimum and unsigned 64-bit maximum
 into guarded caller buffers. Their values come from a separate assembly object
 so LLVM cannot replace formatting with constant output and hide dependencies.
 Both optimization levels link successfully without a libc `memcpy` helper.
+Hexadecimal checks format the same runtime-populated unsigned maximum with
+lowercase digits and a width beyond its natural sixteen digits, checking zero
+padding, guard bytes, and unchanged output when capacity is too short.
 Variable-length integer checks encode and decode runtime-populated 32-bit and
 64-bit values, including their maxima. They also check truncated input,
 overflow, noncanonical encodings, short output buffers, and unchanged output on

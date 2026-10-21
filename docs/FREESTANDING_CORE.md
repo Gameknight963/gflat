@@ -73,11 +73,22 @@ An earlier version of the demo, before the byte-order, percent-encoding, and
 checksum checks were added, measured 10,752 bytes at `-O0` and 6,144 bytes at
 `-O2` on Windows. These are illustrative measurements, not size guarantees.
 
-`BitConverter` remains separately tested rather than included in this integer
-and text executable. Its source has no std dependency, but actual Clang22
-Windows x64 objects at both O0 and O2 reference the `_fltused` ABI marker.
-This test deliberately supplies only process startup and the operating-system
-exit call; it does not add floating-point ABI definitions.
+Floating-point binary checks preserve signed signaling-NaN bit patterns through
+unaligned buffer cursors in mixed byte order. The values originate in the same
+opaque assembly input. No floating-point arithmetic or text formatting occurs.
+
+On Windows x64, LLVM also emits the `_fltused` ABI marker for floating-point
+definitions. Even an integer-only caller that includes `BinaryPrimitives.gf`
+can need this marker at O0 because unused floating-point definitions remain in
+the object. A focused test compiles that minimal integer-only client at O0 and
+inspects its COFF symbol table for the undefined marker.
+
+The platform-owned test startup supplies `@_fltused = global i32 0`; this is a
+data definition, not a call into the CRT. The executable still imports only
+`ExitProcess`. [LLVM's maintainers describe this standalone startup responsibility](https://discourse.llvm.org/t/lld-link-fails-to-link-uefi-binary-because-of-undefined-symbol-fltused/52454).
+Neither `NoStdLib` nor `NoBuiltins` supplies startup, floating-point environment
+initialization, or other platform ABI definitions. `BitConverter.gf` remains
+separately tested and is not a dependency of these byte-order helpers.
 
 ## Limits
 

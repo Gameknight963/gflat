@@ -35,12 +35,15 @@ dependency. Direct pointer use requires the caller to respect `Length` or
 
 `TryReadByte` / `TryWriteByte` handle one byte. Fixed-width methods use
 `TryRead` / `TryWrite` followed by `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`,
-or `UInt64`, and `LittleEndian` or `BigEndian`, matching `BinaryPrimitives`.
-Signed operations preserve two's-complement bits. Addresses need not be aligned
-for the integer's width; reads and writes operate one byte at a time.
+`UInt64`, `Float`, or `Double`, and `LittleEndian` or `BigEndian`, matching
+`BinaryPrimitives`. Signed operations preserve two's-complement bits. Floating
+operations preserve IEEE bits, including signed zero and NaN payloads; their
+widths are four and eight bytes respectively. Addresses need not be aligned
+for the scalar's width; reads and writes operate one byte at a time.
 
 On success, a fixed-width operation advances by its byte width. A failure leaves
-position unchanged; reads set their output to zero, and writes leave bytes
+position unchanged; reads set their output to zero (positive zero for floating
+values), and writes leave bytes
 untouched. Operations check remaining capacity before adding an offset, avoiding
 pointer-sized position overflow.
 

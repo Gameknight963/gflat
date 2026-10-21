@@ -123,4 +123,32 @@ public struct BinaryBufferReader
         if (!BinaryPrimitives::TryReadUInt64BigEndian(data! + position, length - position, ref value)) return false;
         position += 8; return true;
     }
+
+    public bool TryReadFloatLittleEndian(ref float value) nothrow
+    {
+        if (length - position < 4) { value = (float)0; return false; }
+        if (!BinaryPrimitives::TryReadFloatLittleEndian(data! + position, length - position, ref value)) return false;
+        position += 4; return true;
+    }
+
+    public bool TryReadFloatBigEndian(ref float value) nothrow
+    {
+        if (length - position < 4) { value = (float)0; return false; }
+        if (!BinaryPrimitives::TryReadFloatBigEndian(data! + position, length - position, ref value)) return false;
+        position += 4; return true;
+    }
+
+    public bool TryReadDoubleLittleEndian(ref double value) nothrow
+    {
+        if (length - position < 8) { value = (double)0; return false; }
+        if (!BinaryPrimitives::TryReadDoubleLittleEndian(data! + position, length - position, ref value)) return false;
+        position += 8; return true;
+    }
+
+    public bool TryReadDoubleBigEndian(ref double value) nothrow
+    {
+        if (length - position < 8) { value = (double)0; return false; }
+        if (!BinaryPrimitives::TryReadDoubleBigEndian(data! + position, length - position, ref value)) return false;
+        position += 8; return true;
+    }
 }

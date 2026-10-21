@@ -185,6 +185,17 @@ public class FreestandingCoreUtilitiesTests
             uint narrowVariable=(uint)(runtimeInput>>32)|300u; uint narrowDecoded=0u;
             if(!std::VarInt::TryWriteUInt32(&variable[1],10,narrowVariable,ref variableLength)||variableLength!=std::VarInt::GetUInt32Length(narrowVariable)) return 109;
             if(std::VarInt::ReadUInt32(&variable[1],variableLength,ref narrowDecoded,ref variableConsumed)!=std::VarInt::Status::Done||narrowDecoded!=narrowVariable||variableConsumed!=variableLength) return 110;
+            uint floatBits=(uint)(runtimeInput>>32)|0x7f800001u;
+            ulong doubleBits=runtimeInput|0x7ff0000000000001ul;
+            float floatingValue=*((float*)&floatBits); double doubleValue=*((double*)&doubleBits);
+            byte[14] ieee; ieee[0]=(byte)90; ieee[13]=(byte)165;
+            std::BinaryBufferWriter ieeeWriter=new(&ieee[1],12);
+            if(!ieeeWriter.TryWriteFloatLittleEndian(floatingValue)||!ieeeWriter.TryWriteDoubleBigEndian(doubleValue)||ieeeWriter.Position!=12) return 111;
+            if(ieee[0]!=(byte)90||ieee[13]!=(byte)165||ieee[1]!=(byte)1||ieee[4]!=(byte)255||ieee[5]!=(byte)255||ieee[6]!=(byte)240||ieee[12]!=(byte)1) return 112;
+            std::BinaryBufferReader ieeeReader=new(&ieee[1],12);
+            float decodedFloat=(float)0; double decodedDouble=(double)0;
+            if(!ieeeReader.TryReadFloatLittleEndian(ref decodedFloat)||!ieeeReader.TryReadDoubleBigEndian(ref decodedDouble)||ieeeReader.Position!=12) return 113;
+            if(*((uint*)&decodedFloat)!=floatBits||*((ulong*)&decodedDouble)!=doubleBits) return 114;
             return 42;
         }
         """;
@@ -246,8 +257,14 @@ public class FreestandingCoreUtilitiesTests
             arguments.Add(formatterInput);
             if (OperatingSystem.IsWindows())
             {
+                // LLVM emits _fltused for Windows FP code even without CRT calls.
+                // Standalone startup supplies the marker; no x87/printf setup here.
+                // https://discourse.llvm.org/t/lld-link-fails-to-link-uefi-binary-because-of-undefined-symbol-fltused/52454
                 ir += """
 
+                    ; Windows x64 ABI marker, normally supplied by the CRT.
+                    ; These bit-preserving codecs require no FP initialization.
+                    @_fltused = global i32 0
                     declare void @ExitProcess(i32) noreturn
                     define void @bare_entry() {
                         %status = call i32 @main()

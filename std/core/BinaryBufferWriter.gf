@@ -123,4 +123,32 @@ public struct BinaryBufferWriter
         if (!BinaryPrimitives::TryWriteUInt64BigEndian(data! + position, capacity - position, value)) return false;
         position += 8; return true;
     }
+
+    public bool TryWriteFloatLittleEndian(float value) nothrow
+    {
+        if (capacity - position < 4) return false;
+        if (!BinaryPrimitives::TryWriteFloatLittleEndian(data! + position, capacity - position, value)) return false;
+        position += 4; return true;
+    }
+
+    public bool TryWriteFloatBigEndian(float value) nothrow
+    {
+        if (capacity - position < 4) return false;
+        if (!BinaryPrimitives::TryWriteFloatBigEndian(data! + position, capacity - position, value)) return false;
+        position += 4; return true;
+    }
+
+    public bool TryWriteDoubleLittleEndian(double value) nothrow
+    {
+        if (capacity - position < 8) return false;
+        if (!BinaryPrimitives::TryWriteDoubleLittleEndian(data! + position, capacity - position, value)) return false;
+        position += 8; return true;
+    }
+
+    public bool TryWriteDoubleBigEndian(double value) nothrow
+    {
+        if (capacity - position < 8) return false;
+        if (!BinaryPrimitives::TryWriteDoubleBigEndian(data! + position, capacity - position, value)) return false;
+        position += 8; return true;
+    }
 }

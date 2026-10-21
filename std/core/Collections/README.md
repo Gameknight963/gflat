@@ -97,6 +97,12 @@ a second element and does not read its `Current` value. Successful outputs follo
 ordinary copying rules and own their independent resources, as with `Last` and
 `Single`.
 
+These output guarantees describe writes made by the terminal operation. An
+iterator or callback can also change storage through other aliases; if `result`
+borrows that storage, those changes remain visible. Use independent output
+storage when iteration mutates its source, and keep the output reference valid
+for the entire call.
+
 Iterators are values. Their destructors and owned fields are cleaned up on
 completion, early return, `break`, and exceptions. A custom iterator returned as
 a raw pointer has ordinary borrowed-pointer semantics; returning a pointer does

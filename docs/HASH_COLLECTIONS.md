@@ -35,6 +35,18 @@ nullable value pointer; `FindReadOnly` and `ContainsKey` work on readonly maps.
 The ref indexer throws when the key is absent and allows changing an existing
 value. `Remove` destroys an entry; `Clear` destroys every entry but retains storage.
 
+`Extract(key)` removes an entry and transfers its owning `HashMap<K,V>::Entry`
+to the caller. Missing keys throw. Its `Key`, `Value`, and `ValueReadOnly` members
+expose the transferred objects; noncopyable keys and values are supported.
+A successful extraction copies no elements, allocates no storage, and destroys
+neither transferred owner. The entry remains valid independently of later map
+growth, clearing, or destruction. It is an owning value, not a node handle or a
+promise of allocation-free reinsertion. Destroying it destroys its key and value.
+Lookup/hash/equality failure leaves the map unchanged. Passing a key pointer
+borrowed from this map is allowed; lookup finishes before the entry is moved.
+Extraction invalidates borrows into that entry and leaves a tombstone so other
+colliding keys remain findable. The collection retains its allocation/capacity.
+
 Maps use open addressing with linear probing, tombstones, and a maximum 50% load.
 Each entry caches its hash, so growth relocates owning values without calling
 user hash or equality functions. Automatic growth doubles usable capacity;

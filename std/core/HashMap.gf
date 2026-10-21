@@ -162,6 +162,17 @@ struct HashMap<K : IHashable, V>
         return true;
     }
 
+    // Transfer both owners out of the occupied slot, leaving a probe tombstone.
+    public Entry Extract(readonly(K)* key)
+    {
+        nuint slot = this.Locate(key, key.GetHashCode());
+        if (slot == capacity) throw new Exception("HashMap key not found");
+        Entry result = move *(entries! + slot);
+        states![slot] = 2;
+        count--;
+        return result;
+    }
+
     public void Clear()
     {
         for (nuint i = 0; i < capacity; i++)

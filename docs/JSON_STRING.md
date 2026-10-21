@@ -1,9 +1,9 @@
-# Quoting a UTF-8 JSON string
+# Quoting and unquoting a UTF-8 JSON string
 
-`std::JsonString` quotes one counted UTF-8 string into caller-owned storage. It
+`std::JsonString` quotes or unquotes one counted UTF-8 string into caller-owned storage. It
 is a string primitive, not a JSON parser, object model, or serializer. Its only
 std source dependency is `Utf8.gf`; it performs no allocation and calls neither
-libc nor the exception runtime. Both methods are `nothrow`.
+libc nor the exception runtime. All counted-buffer methods are `nothrow`.
 
 ```csharp
 nuint needed = 0;
@@ -39,11 +39,45 @@ capacity before writing output. Failure sets `written` to zero and leaves
 every output byte unchanged. Success changes exactly `written` output bytes;
 storage after the closing quote remains untouched.
 
+## Unquoting one complete literal
+
+`TryGetUnquotedLength(input, count, ref length)` validates one complete JSON
+string literal and reports its decoded UTF-8 byte count.
+`TryUnquote(input, count, output, capacity, ref written)` performs the same
+validation and capacity check before writing any decoded bytes.
+
+Input must include both surrounding quotes, with no outside whitespace or
+trailing data. Literal control bytes below 32, unescaped quotation marks,
+unknown escapes, and malformed UTF-8 are rejected. Standard escapes `\"`, `\\`,
+`\/`, `\b`, `\f`, `\n`, `\r`, and `\t` are decoded. `\uXXXX` accepts either
+hexadecimal letter case. A high surrogate must be immediately followed by a
+`\uXXXX` low surrogate; lone or mismatched surrogates are rejected. This API
+always produces Unicode scalar values, even if a more permissive JSON reader
+would accept an unpaired surrogate escape.
+
+Output is counted UTF-8, with no terminator. Escaped U+0000 becomes an actual
+zero byte inside that count. Raw non-ASCII UTF-8 and its equivalent Unicode
+escapes produce the same bytes. No Unicode normalization occurs.
+
+The empty literal `""` succeeds with length zero, even with zero output capacity;
+it does not access output storage. Empty input is not a literal and fails
+without reading input. On any malformed input or insufficient capacity, the
+metadata count becomes zero and every output byte remains unchanged. The entire
+input is validated, including a malformed suffix after valid text.
+
+Unlike quoting, unquoting supports disjoint input/output buffers **or the exact
+same starting address**. Other overlap is unsupported. Each source scalar or
+complete escape is consumed before its UTF-8 bytes are written into the earlier
+part of the buffer. Decoding only shrinks or preserves body byte lengths, so
+required-length arithmetic cannot overflow the counted input size. The codec
+retains no state or pointers between calls.
+
 ## Borrowing and buffer requirements
 
 The caller supplies live input and writable output regions with their specified
-byte counts. Input, output, and scalar output metadata must be mutually
-disjoint. In-place or overlapping quoting is unsupported. The input must remain
+byte counts. Scalar output metadata must be disjoint from both byte buffers.
+Quoting requires disjoint input and output; unquoting additionally allows the
+exact same starting address. The input must remain
 unchanged between validation and writing, including through other threads or
 aliases. No pointer is retained after the call.
 

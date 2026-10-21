@@ -48,3 +48,18 @@ Bytes 128-255 remain unchanged. This is not Unicode case folding, UTF-8 decoding
 or a locale-sensitive comparison. For example, differently cased accented letters
 encoded in UTF-8 do not become equal. `EqualsIgnoreCase` returns false immediately
 when lengths differ and otherwise applies the same ASCII-only rules.
+
+## Null-terminated comparison
+
+Two-argument overloads accept C strings:
+
+```csharp
+bool command = std::Ascii::EqualsIgnoreCase(input, "help");
+int order = std::Ascii::CompareIgnoreCase(left, right);
+```
+
+Both stop at the first null byte and use the same unsigned ASCII-only folding
+and -1/0/1 ordering as the counted forms. Bytes after a terminator do not affect
+the result. Both pointers must designate readable null-terminated strings.
+These overloads are also `nothrow`, allocate nothing, and do not modify input.
+Use the counted forms to compare embedded null bytes as part of the text.

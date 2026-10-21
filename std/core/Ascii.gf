@@ -68,3 +68,21 @@ bool EqualsIgnoreCase(readonly(char)* left, nuint leftLength,
     if (leftLength != rightLength) return false;
     return CompareIgnoreCase(left, leftLength, right, rightLength) == 0;
 }
+
+// C-string overloads stop at the first null, with the same unsigned ASCII fold.
+int CompareIgnoreCase(readonly(char)* left, readonly(char)* right) nothrow
+{
+    nuint i = 0;
+    while (true)
+    {
+        byte a = (byte)ToUpper(left[i]);
+        byte b = (byte)ToUpper(right[i]);
+        if (a < b) return -1;
+        if (a > b) return 1;
+        if (a == (byte)0) return 0;
+        i++;
+    }
+}
+
+bool EqualsIgnoreCase(readonly(char)* left, readonly(char)* right) nothrow
+    => CompareIgnoreCase(left, right) == 0;

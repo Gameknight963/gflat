@@ -35,6 +35,7 @@ public sealed class StandardAsciiComparisonTests
         Run($$"""
             int main() nothrow {
                 byte[256] folded;
+                char[2] cLeft;char[2] cRight;cLeft[1]='\0';cRight[1]='\0';
                 {{oracle}}
                 for (int i = 0; i < 256; i++) {
                     for (int j = 0; j < 256; j++) {
@@ -44,6 +45,9 @@ public sealed class StandardAsciiComparisonTests
                         if (folded[i] > folded[j]) expected = 1;
                         if (std::Ascii::CompareIgnoreCase(&left, 1, &right, 1) != expected) return 1;
                         if (std::Ascii::EqualsIgnoreCase(&left, 1, &right, 1) != (expected == 0)) return 2;
+                        cLeft[0]=left;cRight[0]=right;
+                        if (std::Ascii::CompareIgnoreCase(cLeft,cRight) != expected) return 3;
+                        if (std::Ascii::EqualsIgnoreCase(cLeft,cRight) != (expected == 0)) return 4;
                     }
                 }
                 return 0;
@@ -69,7 +73,7 @@ public sealed class StandardAsciiComparisonTests
             string right = i % 3 == 0 ? left.ToUpperInvariant() : new(Enumerable.Range(0, random.Next(25)).Select(_ => (char)random.Next(128)).ToArray());
             pairs.Add((left, right));
         }
-        var code = new StringBuilder("int main() nothrow { char[24] left; char[24] right;\n");
+        var code = new StringBuilder("int main() nothrow { char[25] left; char[25] right;\n");
         foreach (var (left, right) in pairs)
         {
             for (int i = 0; i < left.Length; i++) code.AppendLine($"left[{i}] = (char){(int)left[i]};");
@@ -77,6 +81,10 @@ public sealed class StandardAsciiComparisonTests
             int expected = Math.Sign(string.Compare(left, right, StringComparison.OrdinalIgnoreCase));
             code.AppendLine($"if (std::Ascii::CompareIgnoreCase(left, {left.Length}, right, {right.Length}) != {expected}) return 3;");
             code.AppendLine($"if (std::Ascii::EqualsIgnoreCase(left, {left.Length}, right, {right.Length}) != {(expected == 0 ? "true" : "false")}) return 4;");
+            code.AppendLine($"left[{left.Length}]='\\0';right[{right.Length}]='\\0';");
+            int cExpected=Math.Sign(string.Compare(left.Split('\0')[0],right.Split('\0')[0],StringComparison.OrdinalIgnoreCase));
+            code.AppendLine($"if(std::Ascii::CompareIgnoreCase(left,right)!={cExpected})return 10;");
+            code.AppendLine($"if(std::Ascii::EqualsIgnoreCase(left,right)!={(cExpected==0 ? "true" : "false")})return 11;");
         }
         code.AppendLine("""
             readonly(char)*? absent = null;

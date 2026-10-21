@@ -28,6 +28,7 @@ int main()
 | --- | --- |
 | `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
+| `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
 | `LowerBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
 | `UpperBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
 | `IsSorted<T>(Span<readonly(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
@@ -86,7 +87,14 @@ elements. Callbacks may throw; the exception propagates without changing the
 source. Callbacks must keep the span and key alive and must not mutate them
 through another alias. These searches do not require sorted input.
 
-Sorting and reversing relocate values rather than copying them. Owning values
+`Rotate` takes a split index in `[0, Length]`: rotating `[1, 2, 3, 4, 5]` at
+2 produces `[3, 4, 5, 1, 2]`. Zero and `Length` leave the span unchanged.
+An out-of-range split throws before any mutation. Rotation takes linear time
+and constant extra storage, using three reversals; it does not allocate, copy
+elements, or run their destructors. Existing pointers still address the same
+slots, whose values may change.
+
+Sorting, reversing, and rotating relocate values rather than copying them. Owning values
 without copy constructors are supported; every value remains responsible for
 its resources in its final slot. These operations do not allocate or free
 storage and do not run element destructors. A comparator may allocate or throw.

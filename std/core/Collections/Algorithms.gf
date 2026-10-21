@@ -61,6 +61,17 @@ public void Reverse<T>(Span<T> values)
     }
 }
 
+// Move the prefix [0, middle) after the suffix, preserving order within each.
+// Validate before relocating any element; both endpoints are no-ops.
+public void Rotate<T>(Span<T> values, nuint middle)
+{
+    if (middle > values.Length) throw new Exception("Rotation split out of range", 3);
+    if (middle == 0 || middle == values.Length) return;
+    std::Reverse<T>(values.Slice(0, middle));
+    std::Reverse<T>(values.Slice(middle));
+    std::Reverse<T>(values);
+}
+
 // First index whose element is not less than key, or Length if none exists.
 public nuint LowerBound<T>(Span<readonly(T)> values, readonly(T)* key,
     int(readonly(T)*, readonly(T)*)* compare)

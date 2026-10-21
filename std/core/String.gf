@@ -122,7 +122,8 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (count == 0) return;
         nuint maximum = (nuint)0 - (nuint)1;
         if (count > maximum - 1 - length) throw new Exception("String length overflow");
-        if (text >= (readonly(char)*)data && text <= (readonly(char)*)(data + length))
+        // Trimming may leave readable input beyond Length within our allocation.
+        if (text >= (readonly(char)*)data && text <= (readonly(char)*)(data + capacity))
         {
             String snapshot = String::From(text, count);
             this.Insert(index, snapshot.Data, snapshot.Length);

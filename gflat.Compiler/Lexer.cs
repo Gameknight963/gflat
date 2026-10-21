@@ -14,11 +14,14 @@ public class Lexer
 
     public static List<Token> Tokenize(string code, gflat.diagnostics.DiagnosticBag? diagnostics = null)
     {
+        // Tokens carry offsets without per-token AsyncLocal writes. Helpers'
+        // line-based errors receive the matching source span on the error path.
+        SourceFile? diagnosticSource = SourceContext.Current?.Source;
+        if (diagnosticSource?.Text != code) diagnosticSource = null;
         List<Token> tokens = new();
         int line = 1;
         for (int i = 0; i < code.Length;)
         {
-            using var context = SourceContext.Enter(SourceContext.Current?.Source is { } source && source.Text == code ? source.Span(i, 1) : default);
             int tokenStart = i;
             try
             {
@@ -194,8 +197,17 @@ public class Lexer
             }
             i++;
             }
-            catch (TypeCheckException error) when (diagnostics != null)
+            catch (TypeCheckException original) when (diagnosticSource != null || diagnostics != null)
             {
+                TypeCheckException error = original;
+                if (diagnosticSource != null)
+                {
+                    SourceSpan start = diagnosticSource.Span(tokenStart, 1);
+                    SourceSpan span = original.Line == start.Line || original.Line == 0
+                        ? start : diagnosticSource.LineSpan(original.Line);
+                    error = new TypeCheckException(original.Description, span);
+                }
+                if (diagnostics == null) throw error;
                 diagnostics.Report(gflat.diagnostics.DiagnosticRules.GF0004_SyntaxError, error.Span, error.Description);
                 // Keep source offsets and later lines intact. Only editing clients
                 // opt into recovery; compiler lexing continues to reject bad input.

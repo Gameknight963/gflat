@@ -45,6 +45,15 @@ public sealed class StandardJsonStringUnquoteTests
             texts.Add(text.ToString());
         }
         var literals = texts.SelectMany(text => new[] { JsonSerializer.SerializeToUtf8Bytes(text), JsonSerializer.SerializeToUtf8Bytes(text, RawUnicode) }).ToList();
+        // Even relaxed encoders may escape supplementary/noncharacter values.
+        // Construct these bytes directly to exercise actual raw UTF-8 decoding.
+        foreach (int scalar in boundaries)
+        {
+            byte[] raw = Encoding.UTF8.GetBytes(char.ConvertFromUtf32(scalar));
+            literals.Add([(byte)'"', .. raw, (byte)'"']);
+        }
+        byte[] adjacent = Encoding.UTF8.GetBytes(string.Concat(boundaries.Select(char.ConvertFromUtf32)));
+        literals.Add([(byte)'"', .. adjacent, (byte)'"']);
         literals.Add(Encoding.UTF8.GetBytes("\"\\/\\\\\\\"\\b\\f\\n\\r\\t\\u0000\\u0041\\u00e9\\uD834\\udd1e\""));
         int maximumInput = literals.Max(bytes => bytes.Length);
         int maximumOutput = literals.Max(bytes => Encoding.UTF8.GetByteCount(JsonDocument.Parse(bytes).RootElement.GetString()!));

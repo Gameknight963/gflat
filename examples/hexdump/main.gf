@@ -3,12 +3,10 @@ using std;
 // One stack-backed output row, including a full-width byte offset.
 void PrintRow(ulong offset, readonly(char)* bytes, nuint count)
 {
-    byte[8] address;
     char[16] addressText;
     char[32] byteText;
     nuint written = 0;
-    BinaryPrimitives::TryWriteUInt64BigEndian(address, 8, offset);
-    Hex::TryEncode((readonly(char)*)address, 8, addressText, 16, ref written, false);
+    IntegerFormatting::TryFormatHex(offset, addressText, 16, ref written, 16, false);
     Hex::TryEncode(bytes, count, byteText, 32, ref written, false);
     char[87] row;
     BufferWriter output = new(row, 87);

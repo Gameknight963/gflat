@@ -92,6 +92,13 @@ struct PriorityQueue<T>
     public bool TryDequeue(ref T result)
     {
         if (storage.Count == 0) return false;
+        Span<T> elements = storage.AsSpan();
+        nuint start = (nuint)elements.Data!;
+        nuint output = (nuint)&result;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        if (output >= start && output - start < storage.Capacity * stride)
+            throw new Exception("Priority queue output must not refer to its storage");
         result = this.Dequeue();
         return true;
     }

@@ -75,6 +75,12 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     public bool TryDequeue(ref T result)
     {
         if (count == 0) return false;
+        nuint start = (nuint)data!;
+        nuint output = (nuint)&result;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        if (output >= start && output - start < capacity * stride)
+            throw new Exception("Queue output must not refer to its storage");
         result = this.Dequeue();
         return true;
     }

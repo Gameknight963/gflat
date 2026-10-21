@@ -84,7 +84,12 @@ it does not copy its resources. Empty removal or peeking throws `Exception`.
 `TryDequeue(ref result)` and `TryPop(ref result)` return false for an empty
 collection and leave the initialized result unchanged. On success they replace
 it with the removed element, cleaning up its previous value normally.
-The output must not refer to an element inside the collection being modified.
+The output must not borrow the source collection's backing storage. For nonempty
+stacks, queues, and priority queues, these methods check its address against the
+entire allocation and throw before removing an element or invoking a comparator
+when the output aliases that storage. This includes `ref stack.Top`,
+`ref queue.Front`, and other elements reached through iterators. An empty
+collection still returns false without touching or checking the output.
 
 `Clear` destroys every remaining element but retains allocated capacity.
 Destruction destroys remaining elements and releases storage. Pointer elements

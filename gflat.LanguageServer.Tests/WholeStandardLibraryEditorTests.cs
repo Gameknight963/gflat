@@ -49,17 +49,25 @@ public class WholeStandardLibraryEditorTests
                 String text=s"ad"; text.Insert(1,"bc");
                 HashMap<String,int> map=new(); map.Add(s"key",42);
                 String key=s"key"; map.Find(&key);
+                HashMap<String,int>::Entry detached=map.Extract(&key);
                 CRC32 checksum=new(); checksum.Append("123456789",9);
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
                 decoder.Read("a",1,true,&scalar,&consumed);
                 Utf8Scalars characters=new(text.Data,text.Length);
                 Utf8Scalars::Enumerator iterator=characters.GetEnumerator();
                 ITextWriter* output=Console::Out;
+                output.WriteJsonString(text.Data,text.Length);
+                nuint last=text.LastIndexOf('d');
+                text.TrimStart(); text.TrimEnd(); text.PadLeft(8); text.PadRight(10);
+                HashSet<int> first=new(); HashSet<int> second=new();
+                first.UnionWith(&second); first.ExceptWith(&second);
                 readonly(char)*? setting=Environment::GetVariable("GFLAT_TEST_UNSET");
                 byte[4] bytes; BinaryPrimitives::TryWriteUInt32BigEndian(bytes,4,42u);
+                nuint encoded=0; VarInt::TryWriteUInt32(bytes,4,42u,ref encoded);
                 BitSet flags=new(65); flags.SetRange(1,63,true);
                 uint bits=BitConverter::FloatToUInt32Bits(1.0f);
                 int[3] numbers=[1,2,3]; Span<int> values=new(numbers,3);
+                Rotate<int>(values,1);
                 PseudoRandom random=new(42ul); Shuffle<int>(values,ref random);
                 SortedMap<int,String> ordered=new(Comparer<int>::Compare);
                 ordered.Add(3,s"three"); int lookup=3; ordered.FindReadOnly(&lookup);
@@ -79,20 +87,26 @@ public class WholeStandardLibraryEditorTests
                 char[21] digits; nuint digitsWritten=0;
                 IntegerFormatting::TryFormat(42,digits,21,ref digitsWritten);
                 File temporary=File::OpenTemporary(); temporary.Close();
+                int next=Console::PeekByte();
                 return node.Value-42;
             }
             """;
         var source=new SourceFile(Path.GetFullPath("std-editor/complete.gf"),text);
         sources.Add(source);
-        if(brokenFile) sources.Add(new SourceFile(Path.GetFullPath("std-editor/broken.gf"),"void Broken(){does_not_exist();}"));
+        string brokenPath=Path.GetFullPath("std-editor/broken.gf");
+        if(brokenFile) sources.Add(new SourceFile(brokenPath,"void Broken(){does_not_exist();}"));
         var snapshot=new AnalysisSnapshot(sources,new(){NoStdLib=true});
-        if(brokenFile) Assert.Contains(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
+        if(brokenFile) {
+            Assert.Contains(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
+            Assert.All(snapshot.Diagnostics.Where(d=>d.Severity==DiagnosticSeverity.Error),d=>Assert.Equal(brokenPath,d.FilePath));
+        }
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(string member in new[]{"Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {
-            int offset=sourceTokens.Last(token=>token.Text==member).Start;
+            int offset=token.Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
             Assert.NotEqual(JsonValueKind.Null,hover.ValueKind);
             string signature=hover.GetProperty("contents").GetProperty("value").GetString()!;

@@ -40,6 +40,7 @@ implementation lives in `libc`.
 | Bits | `BitOperations` | [Counts, rotations, and byte reversal](../docs/BIT_OPERATIONS.md) |
 | Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |
 | Binary integers | `BinaryPrimitives` | [Checked byte-order reads and writes](../docs/BINARY_PRIMITIVES.md) |
+| Variable-length integers | `VarInt` | [Canonical unsigned base-128 encoding](../docs/VARINT.md) |
 | Byte searches | `ByteSearch` | [Counted binary substring search](../docs/BYTE_SEARCH.md) |
 | Binary buffers | `BinaryBufferReader`, `BinaryBufferWriter` | [Borrowed cursors and bounded payloads](../docs/BINARY_CURSORS.md) |
 | Streaming checksums | `CRC32`, `Adler32` | [Incremental byte checksums](../docs/CHECKSUMS.md) |

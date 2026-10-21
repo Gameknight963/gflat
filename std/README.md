@@ -24,6 +24,7 @@ implementation lives in `libc`.
 | Stable node storage | `LinkedList<T>` | [Owning linked lists and node handles](../docs/LINKED_LIST.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |
 | Ordered maps | `SortedMap<K,V>` | [Sorted contiguous entries and explicit comparison](../docs/SORTED_MAP.md) |
+| Ordered sets | `SortedSet<T>` | [Sorted unique owning values with explicit comparison](../docs/SORTED_SET.md) |
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
 | Algorithms | `Sort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |

@@ -64,3 +64,24 @@ when counts or an early matching/missing element determine the answer. A throwin
 hash/equality callback leaves both sets unchanged. As with individual lookups,
 callbacks must not mutate either set through another alias. Readonly map and set
 enumeration also borrows existing entries; its invalidation rules are unchanged.
+
+## Set mutations
+
+`ExceptWith(readonly(HashSet<T>)* other)` removes matching keys from this set.
+It borrows the other set's keys without copying them, so noncopyable owning keys
+are supported. Passing the same set clears it. It allocates no collection storage;
+removed owners are destroyed normally. The implementation iterates the distinct
+source, rather than holding an iterator into its changing target.
+
+With `Collections/HashSetExtensions.gf` included and `using std;`,
+`target.UnionWith(&source)` copies missing keys into the target. Existing keys are
+checked before copying, and self-union does nothing. Added owning keys use their
+normal copy constructors; the source stays unchanged. This is a separate
+ref-receiver extension so merely using `HashSet<T>` or `ExceptWith` does not
+require noncopyable keys to gain a copy constructor.
+
+Both operations can make partial progress if a later callback, copy, or allocation
+fails. Completed removals or additions remain; all surviving keys stay owned, and
+a distinct source remains intact. Hash/equality/copy callbacks must not mutate either set
+through other aliases. Structural mutation invalidates target iterators and key
+borrows under the rules above. A borrowed source must stay alive for the call.

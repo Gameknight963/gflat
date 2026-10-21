@@ -13,6 +13,13 @@ struct HashSet<T : IHashable>
     public readonly bool Contains(readonly(T)* value) => storage.ContainsKey(value);
     public bool Remove(readonly(T)* value) => storage.Remove(value);
     public void Clear() { storage.Clear(); }
+    public void ExceptWith(readonly(HashSet<T>)* other)
+    {
+        if (this.Count == 0) return;
+        if ((nuint)this == (nuint)other) { this.Clear(); return; }
+        Enumerator iterator = other.GetEnumerator();
+        while (iterator.MoveNext()) this.Remove(iterator.Current);
+    }
     public readonly Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
 
     public readonly bool SetEquals(readonly(HashSet<T>)* other)

@@ -48,11 +48,14 @@ internal static class SourceContext
     public static Scope Enter(SourceSpan span)
     {
         var previous = current.Value;
-        if (span.Source != null) current.Value = span;
+        if (span.Source != null && previous != span) current.Value = span;
         return new Scope(previous);
     }
     public readonly struct Scope(SourceSpan? previous) : IDisposable
     {
-        public void Dispose() => current.Value = previous;
+        public void Dispose()
+        {
+            if (current.Value != previous) current.Value = previous;
+        }
     }
 }

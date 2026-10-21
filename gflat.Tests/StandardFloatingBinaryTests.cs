@@ -7,7 +7,7 @@ namespace gflat.Tests;
 public sealed class StandardFloatingBinaryTests
 {
     [Fact]
-    public void IntegerOnlyWindowsO0ObjectStillReferencesFloatingPointAbiMarker()
+    public void IntegerOnlyWindowsO0ObjectNeedsNoCrtFunctions()
     {
         if (!OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64) return;
         SourceFile[] sources = [
@@ -28,20 +28,26 @@ public sealed class StandardFloatingBinaryTests
             Assert.Equal((ushort)0x8664, BinaryPrimitives.ReadUInt16LittleEndian(image));
             int start = checked((int)BinaryPrimitives.ReadUInt32LittleEndian(image.AsSpan(8)));
             int count = checked((int)BinaryPrimitives.ReadUInt32LittleEndian(image.AsSpan(12)));
-            bool found = false;
             for (int i = 0; i < count;)
             {
                 int symbol = checked(start + i * 18);
-                string name = Encoding.ASCII.GetString(image, symbol, 8).TrimEnd('\0');
-                if (name == "_fltused")
+                if (BinaryPrimitives.ReadInt16LittleEndian(image.AsSpan(symbol + 12)) == 0 && image[symbol + 16] == 2)
                 {
-                    Assert.Equal((short)0, BinaryPrimitives.ReadInt16LittleEndian(image.AsSpan(symbol + 12)));
-                    Assert.Equal((byte)2, image[symbol + 16]); // Undefined external.
-                    found = true;
+                    string name;
+                    if (BinaryPrimitives.ReadUInt32LittleEndian(image.AsSpan(symbol)) == 0)
+                    {
+                        int text = checked(start + count * 18 + (int)BinaryPrimitives.ReadUInt32LittleEndian(image.AsSpan(symbol + 4)));
+                        int end = Array.IndexOf(image, (byte)0, text);
+                        name = Encoding.ASCII.GetString(image, text, end - text);
+                    }
+                    else name = Encoding.ASCII.GetString(image, symbol, 8).TrimEnd('\0');
+                    // The ABI marker is supplied by startup, not a CRT function.
+                    // Removing unused float definitions in future may eliminate it;
+                    // that improvement should continue to pass this test.
+                    Assert.Equal("_fltused", name);
                 }
                 i += 1 + image[symbol + 17]; // Skip auxiliary records.
             }
-            Assert.True(found, "Windows O0 float definitions should retain their documented _fltused requirement.");
         }
         finally { Directory.Delete(directory, true); }
     }

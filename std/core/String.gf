@@ -327,6 +327,27 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         this.Replace(oldText, oldCount, newText, newCount);
     }
 
+    // Total width is measured in bytes; padding never truncates existing text.
+    public void PadLeft(nuint width, char padding = ' ')
+    {
+        if (width <= length) return;
+        this.Reserve(width);
+        nuint added = width - length;
+        for (nuint i = length; i != 0; i--) data[i + added - 1] = data[i - 1];
+        for (nuint i = 0; i < added; i++) data[i] = padding;
+        length = width;
+        data[length] = '\0';
+    }
+
+    public void PadRight(nuint width, char padding = ' ')
+    {
+        if (width <= length) return;
+        this.Reserve(width);
+        for (nuint i = length; i < width; i++) data[i] = padding;
+        length = width;
+        data[length] = '\0';
+    }
+
     private static bool IsAsciiWhitespace(char value) nothrow
         => value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == (char)11 || value == (char)12;
 

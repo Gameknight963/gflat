@@ -43,6 +43,15 @@ zero byte. Embedded zero bytes and non-ASCII bytes are not whitespace. `Append`
 accepts a character, C string, counted bytes, or borrowed String pointer; appending
 from the string's own buffer is supported with or without growth.
 
+`PadLeft(width, padding = ' ')` and `PadRight(width, padding = ' ')` extend the
+same string to a total byte width. They never truncate and do nothing when
+`width <= Length`. Padding is one byte, not a Unicode scalar or display column;
+zero and non-ASCII padding bytes are allowed and count toward `Length`. Existing
+capacity is reused without allocation. Otherwise, one reservation happens before
+any mutation, so allocation failure or an impossible width preserves the original
+storage, capacity, and contents. The trailing zero byte is maintained separately
+from any counted zero padding.
+
 `Insert(index, text)` accepts a C string, counted byte sequence, character, or
 borrowed String pointer. Inserting at `Length` appends. Input borrowed from the
 same string is snapshotted before mutation, including when existing capacity is

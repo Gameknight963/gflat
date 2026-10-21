@@ -168,6 +168,23 @@ public class FreestandingCoreUtilitiesTests
             if(std::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=0) return 97;
             if(std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],386,ref jsonWritten)||jsonWritten!=0) return 98;
             for(nuint i=0;i<388;i++)if(jsonOutput[i]!='Z') return 99;
+            byte[12] variable;
+            for(nuint i=0;i<12;i++)variable[i]=(byte)90;
+            nuint variableLength=0; nuint variableConsumed=0;
+            if(std::VarInt::GetUInt64Length(unsignedMaximum)!=10) return 100;
+            if(std::VarInt::TryWriteUInt64(&variable[1],9,unsignedMaximum,ref variableLength)||variableLength!=0) return 101;
+            for(nuint i=0;i<12;i++)if(variable[i]!=(byte)90) return 102;
+            if(!std::VarInt::TryWriteUInt64(&variable[1],10,unsignedMaximum,ref variableLength)||variableLength!=10) return 103;
+            if(variable[0]!=(byte)90||variable[11]!=(byte)90||variable[10]!=(byte)1) return 104;
+            for(nuint i=1;i<10;i++)if(variable[i]!=(byte)255) return 105;
+            ulong variableValue=42ul;
+            if(std::VarInt::ReadUInt64(&variable[1],9,ref variableValue,ref variableConsumed)!=std::VarInt::Status::NeedMore||variableValue!=42ul||variableConsumed!=0) return 106;
+            if(std::VarInt::ReadUInt64(&variable[1],11,ref variableValue,ref variableConsumed)!=std::VarInt::Status::Done||variableValue!=unsignedMaximum||variableConsumed!=10) return 107;
+            variable[10]=(byte)2;
+            if(std::VarInt::ReadUInt64(&variable[1],10,ref variableValue,ref variableConsumed)!=std::VarInt::Status::Invalid||variableValue!=unsignedMaximum||variableConsumed!=0) return 108;
+            uint narrowVariable=(uint)(runtimeInput>>32)|300u; uint narrowDecoded=0u;
+            if(!std::VarInt::TryWriteUInt32(&variable[1],10,narrowVariable,ref variableLength)||variableLength!=std::VarInt::GetUInt32Length(narrowVariable)) return 109;
+            if(std::VarInt::ReadUInt32(&variable[1],variableLength,ref narrowDecoded,ref variableConsumed)!=std::VarInt::Status::Done||narrowDecoded!=narrowVariable||variableConsumed!=variableLength) return 110;
             return 42;
         }
         """;
@@ -183,7 +200,7 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
-            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf" }
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

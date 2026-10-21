@@ -36,7 +36,10 @@ no allocation. Their worst-case comparison count is O(string length times
 pattern length), including repeated-prefix patterns. Character search is linear.
 
 `Substring` allocates an independent string. `Remove`, character `Replace`, and
-ASCII-whitespace `Trim` modify the existing buffer without allocation. `Append`
+ASCII-whitespace `Trim`, `TrimStart`, and `TrimEnd` modify the existing buffer
+without allocation. Trimming preserves its capacity and storage address, removes
+only space, tab, CR, LF, vertical tab, and form feed, and maintains the trailing
+zero byte. Embedded zero bytes and non-ASCII bytes are not whitespace. `Append`
 accepts a character, C string, counted bytes, or borrowed String pointer; appending
 from the string's own buffer is supported with or without growth.
 
@@ -61,7 +64,8 @@ not require valid UTF-8; binary callers may store arbitrary bytes.
 
 Empty construction and the `Length`, `Capacity`, `IsEmpty`, and `Data` getters
 are explicitly `nothrow`. So are `ToCString()`, `Equals`, `CompareTo`,
-`GetHashCode`, `StartsWith`, `EndsWith`, `LastIndexOf`, `Clear()`, and character-to-character
+`GetHashCode`, `StartsWith`, `EndsWith`, `LastIndexOf`, `Trim()`, `TrimStart()`,
+`TrimEnd()`, `Clear()`, and character-to-character
 `Replace`. These operations allocate
 nothing under their input memory preconditions. Allocating operations, indexed
 access, ranges, and forward searches retain their existing exception contracts.

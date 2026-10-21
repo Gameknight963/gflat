@@ -331,14 +331,29 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         => value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == (char)11 || value == (char)12;
 
     // Trims ASCII whitespace only; no locale or Unicode category assumptions.
-    public void Trim()
+    public void TrimStart() nothrow
     {
         nuint start = 0;
         while (start < length && IsAsciiWhitespace(data[start])) start++;
+        if (start == 0) return;
+        for (nuint i = 0; i < length - start; i++) data[i] = data[i + start];
+        length -= start;
+        data[length] = '\0';
+    }
+
+    public void TrimEnd() nothrow
+    {
         nuint end = length;
-        while (end > start && IsAsciiWhitespace(data[end - 1])) end--;
-        if (start != 0) this.Remove(0, start);
-        if (length != end - start) this.Remove(end - start, length - (end - start));
+        while (end != 0 && IsAsciiWhitespace(data[end - 1])) end--;
+        if (end == length) return;
+        length = end;
+        data[length] = '\0';
+    }
+
+    public void Trim() nothrow
+    {
+        this.TrimEnd();
+        this.TrimStart();
     }
 
     public void Clear() nothrow

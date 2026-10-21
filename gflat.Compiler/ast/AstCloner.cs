@@ -469,6 +469,17 @@ namespace gflat.ast
                 return CloneClass(clsDecl);
             }
             if (node is InterfaceDeclaration iface) return CloneInterface(iface);
+            if (node is EnumDeclaration enumeration)
+            {
+                string name = enumeration.Name;
+                if (_oldName != null && _newName != null && name.StartsWith(_oldName + ".", StringComparison.Ordinal))
+                    name = _newName + name[_oldName.Length..];
+                var members = enumeration.Members.Select(member => new EnumMemberDeclaration(member.Name,
+                    member.Value == null ? null : CloneNode(member.Value), member.Line) { Span = member.Span }).ToList();
+                return new EnumDeclaration(enumeration.SourceName,
+                    enumeration.UnderlyingType == null ? null : CloneType(enumeration.UnderlyingType),
+                    members, enumeration.Accessibility, enumeration.Line) { Name = name };
+            }
 
             return node;
         }

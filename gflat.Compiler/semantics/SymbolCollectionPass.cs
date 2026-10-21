@@ -289,6 +289,10 @@ namespace gflat.semantics
                         info.AllMethods.Add(cm);
                         _symbols.FunctionNamespaces[cm] = nsPath;
                     }
+                    else if (m is EnumDeclaration enumDecl)
+                    {
+                        RegisterEnum(enumDecl, scope, nsPath.Length > 0 ? $"{nsPath}::{cls.Name}" : cls.Name, namespaceVisible: false);
+                    }
                 }
 
                 _symbols.Classes[cls.Name] = info;

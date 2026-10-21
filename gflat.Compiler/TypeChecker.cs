@@ -2326,6 +2326,10 @@ namespace gflat
                         info.AllMethods.Add(cm);
                         _functionNamespaces[cm] = nsPath;
                     }
+                    else if (m is EnumDeclaration enumDecl)
+                    {
+                        RegisterEnum(enumDecl, scope, nsPath.Length > 0 ? $"{nsPath}::{cls.Name}" : cls.Name, namespaceVisible: false);
+                    }
                 }
 
                 _classes[cls.Name] = info;
@@ -5687,6 +5691,9 @@ namespace gflat
                     if (localScope.TryGetValue(ident.Name, out EnumInfo? localInfo))
                         return localInfo;
                 }
+                if (!_localAliases.Any(local => local.ContainsKey(ident.Name)) &&
+                    ResolveEnclosingNestedTypeName(ident.Name) is { } nested && _enums.TryGetValue(nested, out var nestedEnum))
+                    return nestedEnum;
                 NamespaceScope? cur = _currentNamespace;
                 while (cur != null)
                 {
@@ -5748,6 +5755,9 @@ namespace gflat
                     if (localScope.TryGetValue(named.Name, out EnumInfo? info))
                         return info;
                 }
+                if (!_localAliases.Any(local => local.ContainsKey(named.Name)) &&
+                    ResolveEnclosingNestedTypeName(named.Name) is { } nested && _enums.TryGetValue(nested, out var nestedEnum))
+                    return nestedEnum;
                 NamespaceScope? cur = _currentNamespace;
                 while (cur != null)
                 {

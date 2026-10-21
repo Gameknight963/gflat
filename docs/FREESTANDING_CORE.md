@@ -2,7 +2,7 @@
 
 `Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`,
-`BinaryBufferWriter`, `IntegerFormatting`, `ByteSearch`, `CString`, `JsonString`, and the raw
+`BinaryBufferWriter`, `IntegerFormatting`, `ByteSearch`, `CString`, `JsonString`, `VarInt`, and the raw
 byte operations in `Memory/Bytes.gf` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
@@ -43,6 +43,10 @@ Decimal integer checks format signed 64-bit minimum and unsigned 64-bit maximum
 into guarded caller buffers. Their values come from a separate assembly object
 so LLVM cannot replace formatting with constant output and hide dependencies.
 Both optimization levels link successfully without a libc `memcpy` helper.
+Variable-length integer checks encode and decode runtime-populated 32-bit and
+64-bit values, including their maxima. They also check truncated input,
+overflow, noncanonical encodings, short output buffers, and unchanged output on
+failure. See [VarInt](VARINT.md) for its canonical base-128 contract.
 Counted byte searches check first and last overlapping matches, embedded zero
 bytes, empty patterns, and missing patterns in periodic data. A separate assembly
 routine populates the search input so LLVM cannot replace the searches with

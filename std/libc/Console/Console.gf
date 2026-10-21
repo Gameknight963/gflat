@@ -47,6 +47,20 @@ int ReadByte()
     return value;
 }
 
+// One-byte lookahead on the same stdin stream used by all other input APIs.
+int PeekByte()
+{
+    void* stream = __gflat_stdio_stdin();
+    int value = fgetc(stream);
+    if (value == -1)
+    {
+        if (ferror(stream) != 0) throw new std::IOException("Console read failed");
+        return -1;
+    }
+    if (ungetc(value, stream) == -1) throw new std::IOException("Console lookahead failed");
+    return value;
+}
+
 // Consumes an available prefix before reporting unexpected EOF.
 void ReadExactly(char* data, nuint count)
 {
@@ -146,4 +160,5 @@ private extern nuint fwrite(readonly(void)* data, nuint size, nuint count, void*
 private extern nuint fread(char* data, nuint size, nuint count, void* stream);
 private extern int fflush(void* stream);
 private extern int fgetc(void* stream);
+private extern int ungetc(int value, void* stream);
 private extern int ferror(void* stream);

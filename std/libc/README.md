@@ -101,6 +101,12 @@ int main()
   or EOF/error occurs. Zero count performs no input access or consumption.
 - `ReadByte()` returns the next value in 0-255, or -1 at EOF. Input errors throw
   `std::IOException` rather than being mistaken for EOF.
+- `PeekByte()` has the same result/error convention without consuming the next
+  byte. Repeated peeks return the same value; subsequent counted and line reads
+  see that byte. It uses libc's one-byte pushback, performs no application
+  allocation, and respects the existing stdin text mode described below.
+  A peek and a following read are separate operations; callers sharing stdin
+  between threads must coordinate them.
 - `ReadExactly(data, count)` throws `std::EndOfStreamException` if EOF arrives
   before the count is satisfied; the available prefix has already been consumed
   and written. Other input errors remain `std::IOException`.

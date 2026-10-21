@@ -49,8 +49,10 @@ public sealed class StandardSpanCopyTests
         }
         """;
 
-    [Fact]
-    public void OwningElementsAreDeepCopiedAndExactSelfCopyDoesNothing()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void OwningElementsAreDeepCopiedAndExactSelfCopyDoesNothing(int optimization)
         => Run(Owner + """
             int main() { {
                 Vector<Owned> values = new();
@@ -71,10 +73,12 @@ public sealed class StandardSpanCopyTests
                 if (constructed - destroyed != 11) return 6;
             }
             return constructed - destroyed; }
-            """, 0);
+            """, optimization);
 
-    [Fact]
-    public void CapacityFailurePrecedesCopyAndThrowingCopiesPreserveRemainingOwners()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void CapacityFailurePrecedesCopyAndThrowingCopiesPreserveRemainingOwners(int optimization)
         => Run(Owner + """
             int main() { {
                 Vector<Owned> values = new(); for (int i = 0; i < 5; i++) values.Add(new Owned(i));
@@ -95,7 +99,69 @@ public sealed class StandardSpanCopyTests
                 if (constructed - destroyed != 5) return 7;
             }
             return constructed - destroyed; }
-            """, 0);
+            """, optimization);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void CopyFailureAfterOwningFieldInitializationCleansTemporaryAndPreservesDestination(int optimization)
+        => Run("""
+            using std;
+            int allocations = 0; int releases = 0; int copies = 0;
+            int constructed = 0; int destroyed = 0; int budget = -1;
+            private extern void*? malloc(nuint bytes);
+            private extern void free(void* storage);
+            namespace Memory {
+                public replace void*? Allocate(nuint bytes) {
+                    void*? result = malloc(bytes); if (result != null) allocations++; return result;
+                }
+                public replace void Free(void* storage) { releases++; free(storage); }
+            }
+            struct Item {
+                public int Value; public String Text;
+                public Item(int value) { Value = value; Text = s"owned"; constructed++; }
+                public copy Item(readonly(Item)* source) {
+                    copies++; Value = source.Value; Text = source.Text;
+                    if (budget == 0) throw new Exception("copy after allocation");
+                    if (budget > 0) budget--; constructed++;
+                }
+                ~Item() { destroyed++; }
+            }
+            int main() { {
+                Vector<Item> values = new();
+                for (int i = 0; i < 4; i++) values.Add(new Item(i));
+                Span<Item> view = values.AsSpan();
+                int liveAllocations = allocations - releases;
+                budget = 1; bool caught = false;
+                try { view.AsReadOnly().Slice(0,3).CopyTo(view.Slice(1)); }
+                catch { caught = true; }
+                if (!caught || copies != 2 || constructed != 5 || destroyed != 1) return 1;
+                if (allocations - releases != liveAllocations) return 2;
+                if (view[0].Value != 0 || view[1].Value != 1 || view[2].Value != 2 || view[3].Value != 2) return 3;
+                if (view[2].Text.Data == view[3].Text.Data) return 4;
+                view[2].Text.AppendLiteral("!",1);
+                if (view[2].Text.Length != 6 || view[3].Text.Length != 5) return 5;
+                budget = 0; view.AsReadOnly().CopyTo(view);
+                if (copies != 2 || constructed - destroyed != 4) return 6;
+            }
+            if (allocations != releases || constructed != destroyed) return 7;
+            return 0; }
+            """, optimization);
+
+    [Fact]
+    public void CopyToCannotWriteThroughReadonlyDestination()
+    {
+        Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
+            using std;
+            int main() {
+                int[2] source = [1,2]; int[2] destination = [3,4];
+                Span<int> input = new((int*)source,2);
+                Span<int> output = new((int*)destination,2);
+                input.AsReadOnly().CopyTo(output.AsReadOnly());
+                return 0;
+            }
+            """)));
+    }
 
     [Fact]
     public void NoncopyableSpansRemainUsableWithoutInstantiatingCopyTo()

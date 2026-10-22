@@ -38,6 +38,7 @@
     <None Include="..\examples\sort-lines\main.gf" Link="Examples\sort-lines.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\settings-json\main.gf" Link="Examples\settings-json.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\csv-sum\main.gf" Link="Examples\csv-sum.gf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\examples\csv-to-json\main.gf" Link="Examples\csv-to-json.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\checksum\main.gf" Link="Examples\checksum.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\word-count\main.gf" Link="Examples\word-count.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\providers\*.gf" Link="Examples\providers\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

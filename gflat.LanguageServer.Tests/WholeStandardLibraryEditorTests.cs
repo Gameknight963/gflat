@@ -132,6 +132,7 @@ public class WholeStandardLibraryEditorTests
                 int[3] numbers=[1,2,3]; Span<int> values=new(numbers,3);
                 int searchKey=2; nuint found=BinarySearch<int>(values.AsImmutable(),&searchKey,Comparer<int>::Compare);
                 Rotate<int>(values,1);
+                StableSort<int>(values,Comparer<int>::Compare);
                 Vector<int> removedRange=new(); removedRange.Add(1); removedRange.RemoveRange(0,1); removedRange.ShrinkToFit(); removedRange.RemoveAll(RemoveZero);
                 removedRange.InsertRange(0,removedRange.AsImmutable());
                 SpanWindows<int> neighborWindows=removedRange.AsSpan().Windows(2);
@@ -186,6 +187,8 @@ public class WholeStandardLibraryEditorTests
                 std::Utf16::TryDecode(units,1,&scalar,&consumed);
                 Utf16Decoder wideDecoder=new(); wideDecoder.Read(units,1,true,&scalar,&consumed); wideDecoder.Reset();
                 uint reversed=BitOperations::ReverseEndianness(42u);
+                uint roundedBits=BitOperations::RoundUpToPowerOfTwo(42u);
+                ulong roundedWideBits=BitOperations::RoundUpToPowerOfTwo(42ul);
                 bool absolute=Paths::IsFullyQualified("/tmp/file",PathStyle::Unix);
                 Span<readonly(char)> fileName=Paths::GetFileName(textView,PathStyle::Unix);
                 var directoryName=Paths::GetDirectoryName(textView,PathStyle::Unix);
@@ -241,7 +244,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil","Zip","TrySplitOnce","Combine","TryWriteVarUInt32","TryWriteVarUInt64","ReadVarUInt32","ReadVarUInt64","AsEnumerable","ElementAt","InsertRange","Windows","GetFileName","GetDirectoryName","GetExtension","GetFileNameWithoutExtension","GetRoot"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil","Zip","TrySplitOnce","Combine","TryWriteVarUInt32","TryWriteVarUInt64","ReadVarUInt32","ReadVarUInt64","AsEnumerable","ElementAt","InsertRange","Windows","GetFileName","GetDirectoryName","GetExtension","GetFileNameWithoutExtension","GetRoot","RoundUpToPowerOfTwo","StableSort"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

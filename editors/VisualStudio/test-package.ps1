@@ -134,7 +134,7 @@ int main() {
         if (word.Data == words[(nuint)0].Data) return 1;
         word[(nuint)0] = 'z';
     }
-    foreach (readonly(String) word in words.AsReadOnly()) {
+    foreach (immutable(String) word in words.AsImmutable()) {
         if (word.Data[0] != 'a') return 2;
     }
     var lengths = words.AsEnumerable().Select(WordLength).Take(1).ToVector();
@@ -262,6 +262,25 @@ int main() {
     String viewed = s"abc"; Span<char> writableView = viewed.AsSpan(); writableView[1] = 'B';
     Span<readonly(char)> borrowedView = viewed.AsReadOnly();
     if (viewed.Length != 3 || borrowedView.Length != 3 || borrowedView[1] != 'B') return 48;
+    Date leapDay = new(2024, 2, 29); Date nextDay = leapDay.AddDays(1);
+    String calendarText = s$"{nextDay}";
+    if (nextDay.Year != 2024 || nextDay.Month != 3 || nextDay.Day != 1 || !CString::Equals(calendarText.Data, "2024-03-01")) return 49;
+    Date monthEnd = new(2024, 1, 31);
+    if (leapDay.AddYears(1).Day != 28 || monthEnd.AddMonths(1).Day != 29) return 51;
+    Unique<int> firstOwner = new(new* int(41));
+    readonly(Unique<int>)* borrowedOwner = &firstOwner;
+    borrowedOwner.Value++;
+    Unique<int> transferredOwner = move firstOwner;
+    if (transferredOwner.IsEmpty || transferredOwner.Value != 42) return 50;
+    Vector<String> fragments = new(); fragments.Add(s"left"); fragments.Add(s"right");
+    String joined = fragments.AsImmutable().Join(",");
+    if (!CString::Equals(joined.Data, "left,right")) return 52;
+    Date parsedDate = Date::Parse("2024-02-29");
+    if (parsedDate.DayNumber != leapDay.DayNumber) return 53;
+    ushort[3] utf16Input = [(ushort)65, (ushort)0, (ushort)233];
+    String utf8Text = UnicodeText::FromUtf16(utf16Input, 3);
+    Vector<ushort> utf16Output = UnicodeText::ToUtf16(utf8Text.Data, utf8Text.Length);
+    if (utf8Text.Length != 4 || utf16Output.Count != 3 || utf16Output[0] != (ushort)65 || utf16Output[1] != (ushort)0 || utf16Output[2] != (ushort)233) return 54;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

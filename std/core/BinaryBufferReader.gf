@@ -133,6 +133,20 @@ public struct BinaryBufferReader
         position += 8; return true;
     }
 
+    public bool TryReadExtraLongLittleEndian(ref extralong value) nothrow
+    {
+        if (length - position < 16) { value = (extralong)0; return false; }
+        if (!BinaryPrimitives::TryReadExtraLongLittleEndian(data! + position, length - position, ref value)) return false;
+        position += 16; return true;
+    }
+
+    public bool TryReadExtraLongBigEndian(ref extralong value) nothrow
+    {
+        if (length - position < 16) { value = (extralong)0; return false; }
+        if (!BinaryPrimitives::TryReadExtraLongBigEndian(data! + position, length - position, ref value)) return false;
+        position += 16; return true;
+    }
+
     public bool TryReadFloatLittleEndian(ref float value) nothrow
     {
         if (length - position < 4) { value = (float)0; return false; }

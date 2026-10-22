@@ -133,6 +133,20 @@ public struct BinaryBufferWriter
         position += 8; return true;
     }
 
+    public bool TryWriteExtraLongLittleEndian(extralong value) nothrow
+    {
+        if (capacity - position < 16) return false;
+        if (!BinaryPrimitives::TryWriteExtraLongLittleEndian(data! + position, capacity - position, value)) return false;
+        position += 16; return true;
+    }
+
+    public bool TryWriteExtraLongBigEndian(extralong value) nothrow
+    {
+        if (capacity - position < 16) return false;
+        if (!BinaryPrimitives::TryWriteExtraLongBigEndian(data! + position, capacity - position, value)) return false;
+        position += 16; return true;
+    }
+
     public bool TryWriteFloatLittleEndian(float value) nothrow
     {
         if (capacity - position < 4) return false;

@@ -7,6 +7,7 @@ namespace gflat
     public class Parser
     {
         private List<Token> _tokens = new();
+        private bool _copyTokensOnSplit;
         private int _pos;
         private bool _recoverErrors;
         private readonly DiagnosticBag _diagnostics;
@@ -85,6 +86,11 @@ namespace gflat
         {
             if (kind == TokenKind.Greater && Current.Kind == TokenKind.GreaterGreater)
             {
+                if (_copyTokensOnSplit)
+                {
+                    _tokens = new List<Token>(_tokens);
+                    _copyTokensOnSplit = false;
+                }
                 Token pair = Current;
                 _tokens[_pos] = new Token(TokenKind.Greater, pair.Line, pair.Start, pair.Start, column: pair.Column) { Source = pair.Source };
                 _tokens.Insert(_pos + 1, new Token(TokenKind.Greater, pair.Line, pair.Start + 1, pair.End, column: pair.Column + 1) { Source = pair.Source });
@@ -508,27 +514,29 @@ namespace gflat
         {
             if (!Check(TokenKind.Less))
                 return false;
-            int depth = 0;
-            for (int i = _pos; i < _tokens.Count; i++)
+            // A comparison may also contain a later `>(` (for example a cast).
+            // Validate actual type syntax rather than balancing arbitrary angles.
+            var probe = new Parser { _tokens = _tokens, _pos = _pos + 1, _copyTokensOnSplit = true };
+            if (!probe.IsTypeStart()) return false;
+            // Parsing nested types can split >> into two tokens. Keep that and
+            // speculative diagnostics separate from the caller's parser state.
+            // Share the read-only list until a split actually needs to detach it.
+            try
             {
-                if (_tokens[i].Kind == TokenKind.Less)
+                do
                 {
-                    depth++;
-                }
-                else if (_tokens[i].Kind is TokenKind.Greater or TokenKind.GreaterGreater)
-                {
-                    depth -= _tokens[i].Kind == TokenKind.GreaterGreater ? 2 : 1;
-                    if (depth == 0)
-                    {
-                        return i + 1 < _tokens.Count && _tokens[i + 1].Kind == following;
-                    }
-                }
-                else if (_tokens[i].Kind is TokenKind.Semicolon or TokenKind.OpenBrace or TokenKind.CloseBrace)
-                {
-                    return false;
-                }
+                    if (!probe.IsTypeStart()) return false;
+                    probe.ParseTypeExpression();
+                    if (probe._diagnostics.HasErrors) return false;
+                } while (probe.Match(TokenKind.Comma));
+                if (!probe.Check(TokenKind.Greater)) return false;
+                probe.Expect(TokenKind.Greater);
+                return !probe._diagnostics.HasErrors && probe.Check(following);
             }
-            return false;
+            catch (TypeCheckException)
+            {
+                return false;
+            }
         }
 
         private AstNode ParseTypeDeclaration(List<AttributeNode>? attributes = null) => Located(() => ParseTypeDeclarationCoreLocated(attributes));

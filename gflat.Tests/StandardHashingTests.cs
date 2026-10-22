@@ -178,7 +178,7 @@ public class StandardHashingTests
     }
 
     [Fact]
-    public void ExtraLongMapKeysUseBothHalvesAndSeparateCollidingValues()
+    public void ExtraLongMapKeysKeepDistinctValuesAndSurviveRehash()
     {
         string code = """
             using std;
@@ -186,10 +186,6 @@ public class StandardHashingTests
                 extralong minimum = -170141183460469231731687303715884105728;
                 extralong maximum = 170141183460469231731687303715884105727;
                 extralong zero = 0; extralong one = 1; extralong high = (extralong)1 << 64;
-                IHashable* lowHash = &one; IHashable* highHash = &high; IHashable* zeroHash = &zero;
-                // Folding is intentional: these distinct values share a hash.
-                if (lowHash.GetHashCode() != highHash.GetHashCode()) return 1;
-                if (highHash.GetHashCode() == zeroHash.GetHashCode()) return 2;
                 HashMap<extralong, int> map = new();
                 map.Add(minimum, 1); map.Add(maximum, 2); map.Add(zero, 3); map.Add(one, 4); map.Add(high, 5);
                 map.Reserve(1000);

@@ -10,11 +10,11 @@ nuint Bytes(readonly(char)* data, nuint count) nothrow
     return (nuint)hash;
 }
 
-// Fold all 64 input bits into a hash representable on 32- and 64-bit targets.
+// Mix all 64 bits before folding into a target-independent 32-bit result.
 nuint Integer(ulong value) nothrow
 {
-    uint hash = (uint)value ^ (uint)(value >> 32);
-    hash = (hash ^ (hash >> 16)) * (uint)2246822519;
-    hash = (hash ^ (hash >> 13)) * (uint)3266489917;
-    return (nuint)(hash ^ (hash >> 16));
+    value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ul;
+    value = (value ^ (value >> 27)) * 0x94d049bb133111ebul;
+    value = value ^ (value >> 31);
+    return (nuint)((uint)value ^ (uint)(value >> 32));
 }

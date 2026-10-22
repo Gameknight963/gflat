@@ -288,6 +288,9 @@ public class FreestandingCoreUtilitiesTests
             if(!std::BinaryPrimitives::TryWriteExtraLongBigEndian(&wideBinary[1],16,wideBits)) return 171;
             if(!std::BinaryPrimitives::TryReadExtraLongBigEndian(&wideBinary[1],16,ref roundtrip)||roundtrip!=wideBits) return 172;
             if(wideBinary[0]!=(byte)90||wideBinary[17]!=(byte)90) return 173;
+            if(std::Hashing::Integer(runtimeInput)==std::Hashing::Integer(0ul)) return 174;
+            ulong repeatedHashInput=(runtimeInput>>63)|((runtimeInput>>63)<<32);
+            if(std::Hashing::Integer(repeatedHashInput)==std::Hashing::Integer(0ul)) return 175;
             return 42;
         }
         """;

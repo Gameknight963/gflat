@@ -96,7 +96,7 @@ interface IHashable
     implementation extralong
     {
         public immutable nuint GetHashCode()
-            => Hashing::Integer((ulong)*this ^ (ulong)(*this >> 64));
+            => Hashing::Integer((ulong)Hashing::Bytes((readonly(char)*)this, (nuint)sizeof(extralong)));
     }
 
     implementation bool

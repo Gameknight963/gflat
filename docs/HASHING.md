@@ -14,8 +14,9 @@ Each primitive scalar participates through an implementation declared inside
 the corresponding interface. This includes booleans, characters, signed and
 unsigned integers, pointer-sized integers, and floating-point values. The
 primitive type remains built in and does not depend on these interfaces existing.
-Signed 128-bit `extralong` participates as well; its hash folds the high and low
-64-bit halves before applying the ordinary integer mixer.
+Signed 128-bit `extralong` participates as well; its hash processes all 16 bytes
+with FNV-1a, then applies the integer mixer. The bytes use native byte order;
+this is not a portable serialized hash format.
 Character ordering uses unsigned byte values (0 through 255); boolean ordering
 puts false before true.
 
@@ -39,7 +40,8 @@ equal even when their buffers and capacities differ.
 
 `Hashing::Bytes(data, count)` computes deterministic 32-bit FNV-1a and returns
 it as `nuint`. `String.GetHashCode()` uses this function over its full length.
-`Hashing::Integer(ulong)` mixes all 64 bits into a 32-bit result, also returned
+`Hashing::Integer(ulong)` applies a 64-bit avalanche before folding into a
+32-bit result, also returned
 as `nuint`. Neither operation allocates. Hash values are implementation details,
 not persistent identifiers, cryptographic digests, or protection against
 adversarial collision attacks.

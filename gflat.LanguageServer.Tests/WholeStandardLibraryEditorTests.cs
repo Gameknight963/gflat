@@ -57,6 +57,8 @@ public class WholeStandardLibraryEditorTests
                 Utf8Scalars::Enumerator iterator=characters.GetEnumerator();
                 ITextWriter* output=Console::Out;
                 output.WriteJsonString(text.Data,text.Length);
+                char[8] jsonText; nuint jsonLength=0;
+                JsonString::TryUnquote("\"value\"",7,jsonText,8,ref jsonLength);
                 nuint last=text.LastIndexOf('d');
                 text.TrimStart(); text.TrimEnd(); text.PadLeft(8); text.PadRight(10);
                 HashSet<int> first=new(); HashSet<int> second=new();
@@ -108,7 +110,7 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(string member in new[]{"TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {
             int offset=token.Start;

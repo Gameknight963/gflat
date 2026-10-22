@@ -33,7 +33,7 @@ try {
     }
     # The complete optional source library lives in the project SDK. Compiler and
     # server Std folders contain only the built-in runtime contract subset.
-    foreach ($source in @('core/String.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf')) {
+    foreach ($source in @('core/String.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
     $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $extracted 'BUILD-INFO.json') | ConvertFrom-Json
@@ -164,6 +164,29 @@ int main() {
     if (!std::Utf8::IsValid(writer.Data, writer.Length)) return 4;
     String hex = HexText::Encode(writer.Data, writer.Length);
     if (!hex.StartsWith("3432") || hex.Length != 4) return 5;
+    HashMap<String, int>::Entry entry = map.Extract(&key);
+    if (map.Count != 0 || entry.Value != 42 || !entry.Key.Equals(&key)) return 6;
+    SortedSet<int> ordered = new(Comparer<int>::Compare);
+    ordered.Add(9); ordered.Add(3); int search = 3;
+    if (!ordered.Contains(&search)) return 7;
+    Deque<int> ends = new(); ends.AddFirst(42);
+    if (ends.RemoveLast() != 42) return 8;
+    Stack<int> held = new(); held.Push(42); bool rejected = false;
+    try { held.TryPop(ref held.Top); } catch { rejected = true; }
+    if (!rejected || held.Count != 1 || held.Top != 42) return 9;
+    char[8] plain; nuint written = 0;
+    if (!JsonString::TryUnquote("\"ok\"", 4, plain, 8, ref written) || written != 2 || plain[0] != 'o' || plain[1] != 'k') return 10;
+    ITextWriter* target = &writer; target.WriteJsonString(plain, written);
+    if (writer.Length != 6 || writer.Data[2] != '"' || writer.Data[5] != '"') return 11;
+    byte[10] packet; uint number = 0u; nuint consumed = 0;
+    if (!VarInt::TryWriteUInt32(packet, 10, 300u, ref written) || written != 2) return 12;
+    if (VarInt::ReadUInt32(packet, written, ref number, ref consumed) != VarInt::Status::Done || number != 300u || consumed != 2) return 13;
+    if (!BinaryPrimitives::TryWriteFloatBigEndian(packet, 10, 1.0f)) return 14;
+    float restored = 0.0f;
+    if (!BinaryPrimitives::TryReadFloatBigEndian(packet, 4, ref restored) || restored != 1.0f) return 15;
+    char[16] digits;
+    if (!IntegerFormatting::TryFormatHex((sbyte)-1, digits, 16, ref written, 4, false) || written != 4) return 16;
+    if (digits[0] != '0' || digits[1] != '0' || digits[2] != 'f' || digits[3] != 'f') return 17;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

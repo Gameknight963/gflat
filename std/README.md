@@ -34,7 +34,7 @@ implementation lives in `libc`.
 | UTF-16 and conversion | `Utf16`, incremental `Utf16Decoder`, borrowed `Utf16Scalars`, `UnicodeTranscoding` | [Code units and chunked decoding](../docs/UTF16.md), [scalar iteration](../docs/UTF16_SCALARS.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
-| JSON quoting | `JsonString`, writer `WriteJsonString` | [Strict UTF-8 string literals in caller buffers or writers](../docs/JSON_STRING.md) |
+| JSON strings | `JsonString`, writer `WriteJsonString` | [Strict UTF-8 quoting and unquoting in caller buffers, plus writer output](../docs/JSON_STRING.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |

@@ -37,7 +37,7 @@ public sealed class StandardLibraryGuideTests
 
     private static IEnumerable<(string Code, int Line)> Programs(string document)
     {
-        foreach (Match match in Regex.Matches(document, @"(?ms)^```csharp[^\r\n]*\r?\n(?<code>.*?)^```"))
+        foreach (Match match in Regex.Matches(document, @"(?ms)^```(?:csharp|cpp)[^\r\n]*\r?\n(?<code>.*?)^```"))
         {
             Group code = match.Groups["code"];
             if (!Regex.IsMatch(code.Value, @"\bint\s+main\s*\(")) continue;

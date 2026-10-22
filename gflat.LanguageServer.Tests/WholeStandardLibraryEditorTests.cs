@@ -52,6 +52,9 @@ public class WholeStandardLibraryEditorTests
                 Span<readonly(char)> textView=text.AsImmutable(); Span<char> writableText=text.AsSpan();
                 Span<readonly(char)> shallowTextView=text.AsReadOnly();
                 Span<readonly(char)> trimmedText=textView.Trim();
+                bool booleanValue=false;
+                bool booleanParsed=trimmedText.TryParseBool(&booleanValue);
+                bool requiredBoolean=trimmedText.ParseBool();
                 String resizedText=new(); resizedText.Resize(4,'x');
                 String ownedQuotedText=JsonStringText::Quote(trimmedText);
                 String ownedUnquotedText=JsonStringText::Unquote(ownedQuotedText.AsReadOnly());
@@ -87,6 +90,9 @@ public class WholeStandardLibraryEditorTests
                 immutable(Utf16Scalars) wideCharacters=new(scalarUnits,2);
                 var wideScalarQuery=wideCharacters.AsEnumerable().Select((uint scalar) => (int)scalar);
                 ITextWriter* output=Console::Out;
+                CsvWriter csvOutput=new(output);
+                csvOutput.WriteField("a,b",3);
+                csvOutput.WriteEndRecord();
                 output.WriteJsonString(text.Data,text.Length);
                 char[8] jsonText; nuint jsonLength=0;
                 JsonString::TryUnquote("\"value\"",7,jsonText,8,ref jsonLength);
@@ -274,6 +280,20 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(string member in new[]{"WriteField","WriteEndRecord"})
+        {
+            int call=sourceTokens.Single(token=>token.Text==member).Start;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("CsvWriter.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
+        foreach(var item in new[]{("trimmedText.TryParseBool","SpanBooleanParsing.gf"),("trimmedText.ParseBool","SpanBooleanParsingThrowing.gf")})
+        {
+            int call=text.IndexOf(item.Item1,StringComparison.Ordinal)+"trimmedText.".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("bool",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains(item.Item2,JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         foreach(string member in new[]{"Encode","Decode"})
         {
             int call=text.IndexOf("Base64UrlText::"+member,StringComparison.Ordinal)+"Base64UrlText::".Length;

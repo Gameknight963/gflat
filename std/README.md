@@ -54,6 +54,7 @@ implementation lives in `libc`.
 | JSON text | `JsonText::Minify` | [Validate first and remove whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |
 | JSON output | `JsonWriter`, `JsonWriteException` | [Validated output through a borrowed text writer](../docs/JSON_WRITER.md) |
 | CSV input | `CsvReader`, `CsvParseException` | [Borrowed counted fields and caller-buffer decoding](../docs/CSV_READER.md) |
+| CSV output | `CsvWriter` | [Streaming counted fields and CRLF records](../docs/CSV_WRITER.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |

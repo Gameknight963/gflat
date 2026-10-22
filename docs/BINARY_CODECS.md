@@ -78,6 +78,21 @@ unchanged throughout the call; no source pointer is retained. These optional
 helpers require the normal String dependencies, while `Base64Url.gf` remains
 usable without String or libc.
 
+```csharp
+using std;
+
+int main()
+{
+    String original = s"A\0B";
+    String encoded = Base64UrlText::Encode(original.Data, original.Length);
+    String decoded = Base64UrlText::Decode(encoded.Data, encoded.Length);
+    // Counted input preserves the embedded null; a C-string scan would not.
+    if (!encoded.StartsWith("QQBC") || encoded.Length != 4) return 1;
+    if (!decoded.Equals(&original)) return 2;
+    return 0;
+}
+```
+
 # Hexadecimal
 
 `std/core/Hex.gf` defines `std::Hex`, with the same counted-buffer conventions:

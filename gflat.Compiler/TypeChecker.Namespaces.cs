@@ -75,7 +75,7 @@ public partial class TypeChecker
         string? found = null;
         foreach (var imported in CurrentUsings)
         {
-            string? candidate = ResolveNamespaceByName(imported)?.TypeNames.GetValueOrDefault(name);
+            string? candidate = ResolveNamespaceByName(imported, _currentNamespace)?.TypeNames.GetValueOrDefault(name);
             if (candidate == null) continue;
             if (found != null && found != candidate) throw new TypeCheckException($"Type '{name}' is ambiguous between namespaces", 0);
             found = candidate;
@@ -218,7 +218,7 @@ public partial class TypeChecker
         MethodDeclaration? found = null;
         foreach (var imported in CurrentUsings)
         {
-            var candidate = ResolveNamespaceByName(imported)?.GenericFunctions.GetValueOrDefault(name);
+            var candidate = ResolveNamespaceByName(imported, _currentNamespace)?.GenericFunctions.GetValueOrDefault(name);
             if (candidate == null) continue;
             if (found != null && found != candidate) throw new TypeCheckException($"Generic function '{name}' is ambiguous between namespaces", 0);
             found = candidate;

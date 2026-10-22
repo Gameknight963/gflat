@@ -509,7 +509,7 @@ namespace gflat
             FieldDeclaration? found = null;
             foreach (string imported in CurrentUsings.Distinct())
             {
-                var candidate = ResolveNamespaceByName(imported)?.Fields.GetValueOrDefault(name);
+                var candidate = ResolveNamespaceByName(imported, _currentNamespace)?.Fields.GetValueOrDefault(name);
                 if (candidate == null) continue;
                 if (found != null && found != candidate)
                     throw new TypeCheckException($"Global field '{name}' is ambiguous between namespaces", SourceContext.Current ?? SourceContext.ForLine(0));
@@ -1183,7 +1183,7 @@ namespace gflat
                     NamespaceScope? aliasScope = null;
                     foreach (string imported in CurrentUsings)
                     {
-                        var importedScope = ResolveNamespaceByName(imported);
+                        var importedScope = ResolveNamespaceByName(imported, _currentNamespace);
                         if (importedScope?.Aliases.TryGetValue(named.Name, out var alias) != true) continue;
                         if (importedAlias != null && importedAlias != alias)
                             throw new TypeCheckException($"Alias '{named.Name}' is ambiguous between namespaces", named.Line);
@@ -1244,7 +1244,32 @@ namespace gflat
         }
 
         private NamespaceScope? ResolveNamespaceByName(string nsName)
-            => ResolveNamespaceByName(nsName, _currentNamespace);
+            => ResolveVisibleNamespaceByName(nsName, _currentNamespace, CurrentUsings);
+
+        private NamespaceScope? ResolveVisibleNamespaceByName(string nsName, NamespaceScope? start,
+            IEnumerable<string> imports, bool reportAmbiguity = true)
+        {
+            string[] parts = nsName.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return null;
+            NamespaceScope? current = ResolveNamespaceByName(parts[0], start);
+            if (current == null)
+                foreach (string import in imports)
+                {
+                    // Import names themselves use lexical lookup, never other imports.
+                    var candidate = ResolveNamespaceByName(import, start)?.Children.GetValueOrDefault(parts[0]);
+                    if (candidate == null) continue;
+                    if (current != null && current != candidate)
+                    {
+                        if (!reportAmbiguity) return null;
+                        throw new TypeCheckException($"Namespace '{parts[0]}' is ambiguous between imported namespaces",
+                            SourceContext.Current ?? SourceContext.ForLine(0));
+                    }
+                    current = candidate;
+                }
+            for (int i = 1; i < parts.Length && current != null; i++)
+                current = current.Children.GetValueOrDefault(parts[i]);
+            return current;
+        }
 
         private NamespaceScope? ResolveNamespaceByName(string nsName, NamespaceScope? start)
         {
@@ -4869,7 +4894,7 @@ namespace gflat
             MethodDeclaration? foundInUsing = null;
             foreach (string usingNs in CurrentUsings)
             {
-                NamespaceScope? nsScope = ResolveNamespaceByName(usingNs);
+                NamespaceScope? nsScope = ResolveNamespaceByName(usingNs, _currentNamespace);
                 if (nsScope != null && nsScope.Functions.TryGetValue(name, out MethodDeclaration? candidate))
                 {
                     if (foundInUsing != null && foundInUsing != candidate)
@@ -4899,7 +4924,7 @@ namespace gflat
 
             foreach (string usingNs in CurrentUsings)
             {
-                NamespaceScope? nsScope = ResolveNamespaceByName(usingNs);
+                NamespaceScope? nsScope = ResolveNamespaceByName(usingNs, _currentNamespace);
                 if (nsScope != null && nsScope.Externs.TryGetValue(name, out ExternDeclaration? candidate))
                 {
                     return candidate;
@@ -4981,17 +5006,7 @@ namespace gflat
 
             if (node is IdentifierExpression ident)
             {
-                // look for child namespace relative to current
-                NamespaceScope? scope = _currentNamespace;
-                while (scope != null)
-                {
-                    if (scope.Children.TryGetValue(ident.Name, out NamespaceScope? child))
-                        return child;
-                    scope = scope.Parent;
-                }
-                if (_globalScope.Children.TryGetValue(ident.Name, out NamespaceScope? gChild))
-                    return gChild;
-                return null;
+                return ResolveNamespaceByName(ident.Name);
             }
 
             if (node is NamespaceAccessExpression access)

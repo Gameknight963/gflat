@@ -196,6 +196,12 @@ public partial class TypeChecker
         var names = method.GenericParameters.Select(p => p.Name).ToHashSet();
         var expandingAliases = new HashSet<(NamespaceScope, string)>();
         return Qualify(type, allowMethodParameters: true);
+        IEnumerable<string> Imports(TypeExpression t)
+        {
+            var id = t.Span.SourceId ?? (t as NamedTypeExpression)?.NameSpan.SourceId ?? method.Span.SourceId;
+            return id is { } sourceId && _compilationUnit?.FileUsings.TryGetValue(sourceId, out var imports) == true
+                ? imports : _usingNamespaces;
+        }
         TypeExpression Qualify(TypeExpression t, bool allowMethodParameters)
         {
             TypeExpression result = t switch {
@@ -233,12 +239,11 @@ public partial class TypeChecker
                 allowMethodParameters && names.Contains(named.Name)) return null;
             for (var current = scope; current != null; current = current.Parent)
                 if (current.TypeNames.ContainsKey(named.Name) || current.Aliases.ContainsKey(named.Name)) return null;
-            var id = named.Span.SourceId ?? named.NameSpan.SourceId ?? method.Span.SourceId;
-            if (id is { } sourceId && _compilationUnit?.FileUsings.TryGetValue(sourceId, out var imports) == true)
-                foreach (string import in imports)
-                    if (ResolveNamespaceByName(import, scope) is { } imported &&
-                        (imported.TypeNames.ContainsKey(named.Name) || imported.Aliases.ContainsKey(named.Name))) return null;
-            return ResolveNamespaceByName(named.Name, scope);
+            var imports = Imports(named);
+            foreach (string import in imports)
+                if (ResolveNamespaceByName(import, scope) is { } imported &&
+                    (imported.TypeNames.ContainsKey(named.Name) || imported.Aliases.ContainsKey(named.Name))) return null;
+            return ResolveVisibleNamespaceByName(named.Name, scope, imports, reportAmbiguity: false);
         }
         TypeExpression QualifyNamed(NamedTypeExpression n, bool allowMethodParameters)
         {
@@ -246,7 +251,7 @@ public partial class TypeChecker
             string identity = n.Name;
             if (n.Namespace != null)
             {
-                if (ExtensionNamespace(n.Namespace) is { } explicitScope)
+                if (ResolveVisibleNamespaceByName(n.Namespace, scope, Imports(n), reportAmbiguity: false) is { } explicitScope)
                 {
                     if (explicitScope.Aliases.TryGetValue(n.Name, out var target)) return ExpandAlias(explicitScope, n.Name, target);
                     if (explicitScope.TypeNames.TryGetValue(n.Name, out var qualified)) identity = qualified;

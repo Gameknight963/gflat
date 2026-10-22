@@ -93,6 +93,27 @@ their only import is `KERNEL32.dll!ExitProcess`. The same test retains a Linux
 x64 syscall-startup branch for CI. This is evidence for that tested configuration,
 not a blanket guarantee about backend ABI helpers on every target.
 
+## Comparing decoded text
+
+`JsonString::ValueTextEquals(input, count, text, length)` compares one complete
+quoted JSON string with counted, unquoted UTF-8 text. It is `nothrow`, writes
+nothing, and uses no allocation, caller buffer, or owning String. Both input
+regions may overlap; keep them alive and unchanged during the call.
+
+Escapes are decoded using the same rules as `TryUnquote`: `"na\u006de"` equals
+`name`, escaped surrogate pairs equal their UTF-8 scalar, and `\u0000` equals an
+embedded null byte. Equality is exact decoded UTF-8 text, with no case folding
+or Unicode normalization. Both inputs must finish together for equality.
+Malformed JSON string syntax or UTF-8 returns false, as does a mismatch. False
+may short-circuit without examining the remaining bytes, so this predicate is
+not a replacement for the standalone validation methods.
+
+Both counts are explicit; no C-string scanning or terminator is involved.
+Zero-length text is valid and needs no readable text pointer. A quoted input
+count below two returns false without reading either input. For other calls,
+provide valid readable storage for both stated extents. The helper adds no
+source dependencies beyond the existing `JsonString` and `Utf8` files.
+
 ## Writing through ITextWriter
 
 The optional `std/core/JsonStringWriter.gf` adapter adds:

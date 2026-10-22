@@ -46,6 +46,17 @@ resetting, moving, or destroying the reader does not invalidate that span;
 the caller must keep the original bytes alive and unchanged for every use.
 The view neither owns those bytes nor prolongs their lifetime.
 
+`ValueTextEquals(text, count)` compares a current `PropertyName` or `String`
+with counted, unquoted UTF-8 text, without decoding into a buffer or allocating.
+For example, `reader.ValueTextEquals("name", 4)` also matches `"na\u006de"`.
+It has an immutable receiver and is `nothrow`. Comparison is exact decoded text;
+case, normalization, and embedded nulls follow
+[`JsonString::ValueTextEquals`](JSON_STRING.md#comparing-decoded-text).
+For any other token kind or `None`, it returns false without examining `text`.
+A mismatch or malformed expected UTF-8 returns false; the predicate may
+short-circuit and is not a separate input-validation operation. Expected text
+may overlap the borrowed input, but both must remain alive and unchanged.
+
 ## Skipping unknown values
 
 `Skip()` ignores the current value's children without decoding strings or

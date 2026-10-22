@@ -43,6 +43,12 @@ public struct JsonReader
         }
     }
 
+    public immutable bool ValueTextEquals(readonly(char)* text, nuint count) nothrow
+    {
+        if (kind != JsonTokenKind::String && kind != JsonTokenKind::PropertyName) return false;
+        return JsonString::ValueTextEquals(input + tokenOffset, tokenLength, text, count);
+    }
+
     public void Reset()
     {
         stack.Clear(); position = 0; rootComplete = false; failed = false;

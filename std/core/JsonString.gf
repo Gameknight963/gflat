@@ -108,6 +108,29 @@ public static class JsonString
         return true;
     }
 
+    // Compare decoded UTF-8 text without constructing it. False may short-circuit
+    // before examining the rest of either input; this is not a validation API.
+    public static bool ValueTextEquals(readonly(char)* input, nuint count,
+        readonly(char)* text, nuint length) nothrow
+    {
+        if (count < 2) return false;
+        if (input[0] != '"' || input[count - 1] != '"') return false;
+        nuint position = 1;
+        nuint compared = 0;
+        while (position < count - 1)
+        {
+            uint scalar = 0u;
+            if (!ReadQuotedScalar(input, count - 1, ref position, ref scalar)) return false;
+            if (compared == length) return false;
+            uint expected = 0u;
+            nuint consumed = 0;
+            if (!Utf8::TryDecode(text + compared, length - compared, &expected, &consumed)) return false;
+            if (scalar != expected) return false;
+            compared += consumed;
+        }
+        return compared == length;
+    }
+
     // end excludes the closing quote. Consume the whole source scalar before
     // committing decoded bytes, permitting same-start shrinking in TryUnquote.
     private static bool ReadQuotedScalar(readonly(char)* input, nuint end,

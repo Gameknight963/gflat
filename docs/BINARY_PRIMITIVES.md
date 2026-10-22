@@ -1,6 +1,7 @@
 # Binary scalar buffers
 
 `std::BinaryPrimitives` reads and writes signed and unsigned 16-, 32-, and 64-bit integers,
+signed 128-bit `extralong`,
 32-bit `float`, and 64-bit `double` in explicitly selected little- or big-endian byte order. The operations do not
 depend on native alignment, host endianness, or the platform's C `long` width.
 
@@ -28,6 +29,22 @@ bit pattern, using two's-complement interpretation on read. Successful reads
 also support an output variable whose storage overlaps the input; all input
 bytes are read before the result is stored. A failed read still writes zero
 to its output, including when that output overlaps input.
+
+## Signed 128-bit values
+
+`TryReadExtraLongLittleEndian(data, count, ref value)` and
+`TryWriteExtraLongLittleEndian(data, count, value)` take an `extralong` output or
+value. The corresponding `BigEndian` forms reverse the wire byte order. Each
+operation handles exactly sixteen bytes and preserves the complete two's-
+complement representation, including the most negative value.
+
+The usual scalar contracts apply: short reads set the output to zero, short
+writes leave the buffer untouched, and successful reads finish loading all
+sixteen bytes before committing their output. Byte buffers may be unaligned;
+an overlapping scalar output must still have valid `extralong` alignment.
+The implementation combines two 64-bit halves with shifts and bit operations,
+without floating-point conversions, division helpers, or a separate runtime.
+These additions do not add 128-bit cursor or stream overloads.
 
 ## Floating-point values
 

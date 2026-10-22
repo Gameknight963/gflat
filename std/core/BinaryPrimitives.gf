@@ -101,6 +101,37 @@ public static class BinaryPrimitives
     public static bool TryWriteInt64BigEndian(byte* data, nuint count, long value) nothrow
         => TryWriteUInt64BigEndian(data, count, (ulong)value);
 
+    public static bool TryReadExtraLongLittleEndian(readonly(byte)* data, nuint count, ref extralong value) nothrow
+    {
+        if (count < 16) { value = (extralong)0; return false; }
+        ulong low = Read(data, 8, true);
+        ulong high = Read(data + 8, 8, true);
+        value = ((extralong)high << 64) | (extralong)low;
+        return true;
+    }
+    public static bool TryReadExtraLongBigEndian(readonly(byte)* data, nuint count, ref extralong value) nothrow
+    {
+        if (count < 16) { value = (extralong)0; return false; }
+        ulong high = Read(data, 8, false);
+        ulong low = Read(data + 8, 8, false);
+        value = ((extralong)high << 64) | (extralong)low;
+        return true;
+    }
+    public static bool TryWriteExtraLongLittleEndian(byte* data, nuint count, extralong value) nothrow
+    {
+        if (count < 16) return false;
+        Write(data, count, (ulong)value, 8, true);
+        Write(data + 8, count - 8, (ulong)(value >> 64), 8, true);
+        return true;
+    }
+    public static bool TryWriteExtraLongBigEndian(byte* data, nuint count, extralong value) nothrow
+    {
+        if (count < 16) return false;
+        Write(data, count, (ulong)(value >> 64), 8, false);
+        Write(data + 8, count - 8, (ulong)value, 8, false);
+        return true;
+    }
+
     // Decode byte order first; aligned locals preserve IEEE bits without a dependency.
     public static bool TryReadFloatLittleEndian(readonly(byte)* data, nuint count, ref float value) nothrow
     {

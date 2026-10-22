@@ -24,7 +24,7 @@ int main()
             return 2;
         }
         long value = 0l;
-        if (!TryParseLong(token.Data!, token.Length, &value))
+        if (!token.TryParseLong(&value))
         {
             Console::Error.WriteLine("Invalid signed 64-bit integer");
             return 2;
@@ -42,8 +42,10 @@ int main()
 Here `long` holds each parsed signed 64-bit integer, and `extralong` holds the
 exact sum of the three values. `Trim()` removes ASCII whitespace from a borrowed
 view. The counted parser consumes the whole remaining token and reports failure
-without throwing. The empty check precedes `Data!` because an empty span may have
-a null data pointer. See [integer parsing](INTEGER_PARSING.md) for the accepted
+without throwing. The span overload uses its exact byte count and also accepts
+an empty span, reporting failure without dereferencing its data pointer. The
+separate empty check here gives a more specific error message. See
+[integer parsing](INTEGER_PARSING.md) for the accepted
 syntax and throwing alternatives.
 
 ## Owners and borrowed views

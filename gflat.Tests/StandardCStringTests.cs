@@ -11,6 +11,9 @@ public sealed class StandardCStringTests
         => Run("""
             using std;
             int main() {
+                if(!CString::IsNullOrEmpty(null)||!CString::IsNullOrEmpty(""))return 11;
+                char oneByte='x';
+                if(CString::IsNullOrEmpty(&oneByte))return 12;
                 char[4] left;char[4] right;
                 left[1]='\0';right[1]='\0';left[2]='X';right[2]='Y';
                 for(int a=0;a<=255;a++)for(int b=0;b<=255;b++) {
@@ -23,6 +26,7 @@ public sealed class StandardCStringTests
                     if(CString::EndsWith(left,right)!=matches)return 4;
                     nuint length=1;if(a==0)length=0;
                     if(CString::Length(left)!=length)return 5;
+                    if(CString::IsNullOrEmpty(left)!=(a==0))return 13;
                 }
                 if(!CString::Equals("same\0different","same\0suffix"))return 6;
                 if(CString::Length("one\0trailing")!=3)return 7;

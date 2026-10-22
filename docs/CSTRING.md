@@ -19,12 +19,20 @@ bool same = std::CString::Equals("hello", "hello");
 int order = std::CString::Compare("apple", "pear");
 bool prefix = std::CString::StartsWith("hello", "hell");
 bool suffix = std::CString::EndsWith("hello", "llo");
+bool empty = std::CString::IsNullOrEmpty(null);
 ```
 
-Input parameters are borrowed `readonly(char)*` pointers. These helpers neither
+Input parameters are borrowed `readonly(char)*` pointers; `IsNullOrEmpty` accepts
+`readonly(char)*?`. These helpers neither
 own nor retain them, and do not free their bytes. Only `TryCopy` writes to its
 explicit destination buffer. The caller keeps
 each region alive for the duration of the call.
+
+`IsNullOrEmpty` returns true for null or a first byte of zero, and false otherwise.
+It does not read a null pointer and inspects only the first byte of a nonnull
+pointer. This can check optional results such as `Environment::GetVariable`
+without scanning or allocating. All other pointer arguments retain their
+documented nonnullable requirements.
 
 `Length` counts bytes before the first zero byte. `Compare` returns -1, 0, or 1
 under unsigned-byte lexicographic ordering, so bytes 128–255 sort after 127

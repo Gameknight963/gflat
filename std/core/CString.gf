@@ -3,6 +3,12 @@ namespace std;
 // Borrowed null-terminated byte strings; no encoding or ownership is implied.
 public static class CString
 {
+    public static bool IsNullOrEmpty(readonly(char)*? text) nothrow
+    {
+        if (text == null) return true;
+        return text![0] == '\0';
+    }
+
     public static nuint Length(readonly(char)* text) nothrow
     {
         nuint length = 0;

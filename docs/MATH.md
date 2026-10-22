@@ -23,11 +23,17 @@ wrapping or invoking signed overflow. This check also applies to pointer-sized
 
 ## Floating point
 
-`float` and `double` each have `Sqrt`, `IsNaN`, `IsFinite`, `Abs`, `Min`, and `Max`
+`float` and `double` each have `Sqrt`, `CopySign`, `IsNaN`, `IsFinite`, `Abs`, `Min`, and `Max`
 overloads. `IsFinite` excludes both infinities and all NaNs, and includes zeros
 and subnormals. `Abs` clears the sign bit, including for negative zero and NaNs.
 All floating-point helpers are `nothrow`; the signed-integer `Abs` overloads
 retain their overflow exceptions.
+
+`CopySign(magnitude, sign)` returns the first argument with its sign bit replaced
+by the second argument's sign bit. It preserves every other bit, including NaN
+payloads and signaling bits. Negative zero and negative NaNs supply a negative
+sign even though comparing them with zero would not detect it. Both overloads
+use ordinary integer bit operations and allocate nothing.
 
 `Min` and `Max` propagate a NaN input rather than silently selecting the numeric
 input. When both inputs are NaN the first is returned. When comparing positive

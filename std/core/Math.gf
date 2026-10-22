@@ -160,6 +160,12 @@ public static class Math
         return *((float*)&bits);
     }
 
+    public static float CopySign(float magnitude, float sign) nothrow
+    {
+        uint bits = (*((uint*)&magnitude) & 2147483647u) | (*((uint*)&sign) & 2147483648u);
+        return *((float*)&bits);
+    }
+
     public static float Min(float a, float b) nothrow
     {
         if (a != a) return a;
@@ -198,6 +204,12 @@ public static class Math
     public static double Abs(double value) nothrow
     {
         ulong bits = *((ulong*)&value) & 9223372036854775807ul;
+        return *((double*)&bits);
+    }
+
+    public static double CopySign(double magnitude, double sign) nothrow
+    {
+        ulong bits = (*((ulong*)&magnitude) & 9223372036854775807ul) | (*((ulong*)&sign) & 9223372036854775808ul);
         return *((double*)&bits);
     }
 

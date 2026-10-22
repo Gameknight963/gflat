@@ -1,6 +1,6 @@
 # Enumeration and queries
 
-`Vector`, `Span`, and `IntRange` provide an `AsEnumerable()` view for lazy queries.
+`Vector`, `Span`, `IntRange`, and `FilteredIntRange` provide an `AsEnumerable()` adapter for lazy queries.
 Import `std` to make the query extensions visible:
 
 ```csharp
@@ -33,6 +33,13 @@ the view is created. Editing existing elements is visible on the next read.
 For a readonly view use `numbers.AsReadOnly().AsEnumerable()`.
 Its callback parameter types retain that qualification, for example
 `.Where((readonly(int) n) => n > 0)`.
+
+Integer ranges are different from container views: their adapters copy the small
+range state rather than borrowing the original range variable. Both range
+adapters accept immutable receivers. A filtered range remains lazy and can enter
+the general query operators with `.AsEnumerable().Select(...)`; constructing
+that adapter does not evaluate its predicate or allocate storage. Each
+enumeration starts again from the captured range, filter, skip, and take state.
 
 ## Operations
 

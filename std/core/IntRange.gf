@@ -60,7 +60,7 @@ struct IntRange : IEnumerable<int, IntRange::Enumerator>
     public int Start { immutable get => first; }
     public int Count { immutable get => count; }
     public inline immutable IntRange::Enumerator GetEnumerator() => new IntRange::Enumerator(first, count);
-    public Enumerable<int, IntRange, IntRange::Enumerator> AsEnumerable()
+    public immutable Enumerable<int, IntRange, IntRange::Enumerator> AsEnumerable()
         => new Enumerable<int, IntRange, IntRange::Enumerator>(*this);
 
     public immutable FilteredIntRange Where(bool(int)* predicate)

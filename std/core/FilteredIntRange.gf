@@ -70,6 +70,9 @@ struct FilteredIntRange : IEnumerable<int, FilteredIntRange::Enumerator>
     public inline immutable FilteredIntRange::Enumerator GetEnumerator()
         => new FilteredIntRange::Enumerator(source.GetEnumerator(), predicate, skip, take);
 
+    public immutable Enumerable<int, FilteredIntRange, FilteredIntRange::Enumerator> AsEnumerable()
+        => new Enumerable<int, FilteredIntRange, FilteredIntRange::Enumerator>(*this);
+
     public immutable FilteredIntRange Take(int count)
     {
         if (count < 0) throw new Exception("Take count must be nonnegative");

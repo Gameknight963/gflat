@@ -13,6 +13,41 @@ public sealed class StandardEnumerableTests
         if (output != null) Assert.Equal(output, result.StandardOutput);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ImmutableRangeAdaptersOwnTheirSmallSourceAndRemainLazy(int optimization)
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            int calls = 0; int allocations = 0;
+            namespace Memory {
+                public replace void*? Allocate(nuint size) { allocations++; return null; }
+                public replace void Free(void* storage) {}
+            }
+            bool Even(int value) { calls++; return value % 2 == 0; }
+            int Square(int value) => value * value;
+            int Sum(int total, int value) => total + value;
+            Enumerable<int, FilteredIntRange, FilteredIntRange::Enumerator> Make() {
+                immutable(FilteredIntRange) local = new IntRange(0, 10).Where(Even).Skip(1).Take(2);
+                return local.AsEnumerable();
+            }
+            int main() {
+                immutable(IntRange) source = new(0, 10);
+                var all = source.AsEnumerable();
+                immutable(IntRange)* view = &source;
+                if (view.AsEnumerable().Count() != 10 || all.Last() != 9) return 1;
+                var query = Make().Select(Square);
+                if (calls != 0) return 2;
+                if (query.Aggregate(0, Sum) != 20 || calls != 5) return 3;
+                if (query.Aggregate(0, Sum) != 20 || calls != 10) return 4;
+                if (source.Start != 0 || source.Count != 10 || allocations != 0) return 5;
+                return 0;
+            }
+            """), optimization);
+        Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
+    }
+
     [Fact]
     public void LazyOperatorsAllocateNothingAndShortCircuitInOrder()
         => Run("""

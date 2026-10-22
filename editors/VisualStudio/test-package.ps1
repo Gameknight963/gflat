@@ -151,12 +151,14 @@ int main() {
     @'
 using std;
 int smokeDestroyed = 0;
+Vector<int>*? smokeVector = null;
 struct SmokeTemporary {
     public int Value;
     public SmokeTemporary() { Value = 42; }
     ~SmokeTemporary() { smokeDestroyed++; }
 }
 SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
+bool SmokeRemove(readonly(int)* value) => *value == 9;
 int main() {
     HashMap<String, int> map = new();
     map.Add(s"answer", 42);
@@ -164,6 +166,8 @@ int main() {
     if (map[&key] != 42) return 1;
     Queue<int> queue = new(); queue.Enqueue(42);
     if (queue.Dequeue() != 42) return 2;
+    queue.ShrinkToFit();
+    if (queue.Capacity != 0) return 39;
     char[32] storage;
     BufferWriter writer = new(storage, 32);
     map[&key].Format(&writer);
@@ -178,6 +182,8 @@ int main() {
     if (!ordered.Contains(&search)) return 7;
     Deque<int> ends = new(); ends.AddFirst(42);
     if (ends.RemoveLast() != 42) return 8;
+    ends.ShrinkToFit();
+    if (ends.Capacity != 0) return 40;
     Stack<int> held = new(); held.Push(42); bool rejected = false;
     try { held.TryPop(ref held.Top); } catch { rejected = true; }
     if (!rejected || held.Count != 1 || held.Top != 42) return 9;
@@ -225,6 +231,10 @@ int main() {
     if (window[0] != 9 || window[1] != 9) return 33;
     window.ShrinkToFit();
     if (window.Capacity != window.Count || window[0] != 9 || window[1] != 9) return 38;
+    int[1] extra = [5]; Span<readonly(int)> extraRange = new(extra, 1);
+    for (int i = 0; i < 3; i++) window.AddRange(extraRange);
+    if (window.Count != 5 || window.Capacity != 8 || window[4] != 5) return 41;
+    if (window.RemoveAll(SmokeRemove) != 2 || window.Count != 3 || window[0] != 5 || window[2] != 5) return 45;
     JsonReader document = new("{\"ok\":true}", 11); int tokens = 0;
     while (document.Read()) tokens++;
     if (tokens != 4) return 34;
@@ -239,6 +249,16 @@ int main() {
     if (!CString::Equals(structuredOutput.Data, "[42,true,null]")) return 36;
     uint signedEncoding = VarInt::ZigZagEncode(-42);
     if (signedEncoding != 83u || VarInt::ZigZagDecode(signedEncoding) != -42) return 37;
+    char[32] wideHex; nuint wideLength = 0;
+    if (!IntegerFormatting::TryFormatHex((extralong)1 << 127, wideHex, 32, ref wideLength) || wideLength != 32) return 42;
+    if (wideHex[0] != '8') return 43;
+    for (nuint i = 1; i < 32; i++) if (wideHex[i] != '0') return 44;
+    SortedMap<int, int> sortedOwners = new(Comparer<int>::Compare); sortedOwners.Add(3, 42);
+    SortedMap<int, int>::Entry transferred = sortedOwners.Extract(&search);
+    if (sortedOwners.Count != 0 || *transferred.Key != 3 || transferred.Value != 42) return 46;
+    smokeVector = &window;
+    if (smokeVector!.Count != 3) return 47;
+    smokeVector = null;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

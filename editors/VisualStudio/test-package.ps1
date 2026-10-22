@@ -159,6 +159,7 @@ struct SmokeTemporary {
 }
 SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
 bool SmokeRemove(readonly(int)* value) => *value == 9;
+Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
 int main() {
     HashMap<String, int> map = new();
     map.Add(s"answer", 42);
@@ -502,6 +503,19 @@ int main() {
         String batchUrlText = Base64UrlText::Encode(batchBinaryText.Data, batchBinaryText.Length);
         String batchUrlBytes = Base64UrlText::Decode(batchUrlText.Data, batchUrlText.Length);
         if (!batchUrlBytes.Equals(&batchBinaryText)) return 118;
+        String batchPathLeft = s"a\0b";
+        Span<readonly(char)> batchDrive = new("C:/", 3);
+        Span<readonly(char)> batchPathRight = new("c", 1);
+        if (!Paths::IsRooted(batchDrive, PathStyle::Windows)
+            || !Paths::IsFullyQualified(batchDrive, PathStyle::Windows)) return 119;
+        String batchJoinedPath = Paths::Join(batchPathLeft.AsReadOnly(), batchPathRight, PathStyle::Unix);
+        if (batchJoinedPath.Length != 5 || batchJoinedPath[1] != '\0'
+            || batchJoinedPath[3] != '/' || batchJoinedPath[4] != 'c') return 120;
+        Unique<int> batchFoldSeed = new(new* int(10));
+        Unique<int> batchFolded = batchQueue.AsEnumerable().Aggregate(move batchFoldSeed, SmokeOwnedFold);
+        if (batchFolded.Value != 25) return 121;
+        HashSet<int> batchDistinct = batchQueue.AsEnumerable().ToHashSet(); int batchDistinctKey = 7;
+        if (batchDistinct.Count != 2 || !batchDistinct.Contains(&batchDistinctKey)) return 122;
     }
     return 0;
 }

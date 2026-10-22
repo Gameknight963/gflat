@@ -129,6 +129,9 @@ int main()
 - EOF before any bytes returns `false` from `TryReadLine`, with an empty buffer and
   zero length. Empty lines return `true`. A final line without a newline is returned.
 - LF and CRLF endings are removed. Other carriage returns remain text.
+  These rules apply after the host CRT's input translation. For example, on
+  Windows a physical CR-CR-LF sequence can first become CR-LF in text mode,
+  which the line reader then removes as a line ending.
 - If a line is too large, the whole line is consumed, a null-terminated prefix and
   its length remain in the buffer, and `std::BufferTooSmallException` is thrown.
   The next read starts at the next line. Actual read/write failures throw

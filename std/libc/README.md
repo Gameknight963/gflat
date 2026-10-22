@@ -58,6 +58,10 @@ some libc buffering paths report a full byte count despite an internal flush
 failure. This does not force a flush; buffered failures can still appear only at
 an explicit flush or close.
 
+Call `Console::Flush()` before reporting successful output from a command-line
+tool. Normal process exit also attempts to flush libc streams, but a failure
+there cannot change a success code the program has already returned.
+
 The standard-stream accessor bridge in `Runtime/Stdio.cpp` exposes stdin, stdout,
 and stderr because these are C macros rather than portable external variables.
 The actual writer behavior remains gflat code.
@@ -75,6 +79,7 @@ int main()
     int value = 42;
     value.Format(&output);
     Console::WriteLine();
+    Console::Flush();
     return 0;
 }
 ```
@@ -88,6 +93,7 @@ int main()
     nuint length = Console::ReadLine(buffer, 128);
     Console::Write("Hello, ");
     Console::WriteLine(buffer, length);
+    Console::Flush();
     return 0;
 }
 ```

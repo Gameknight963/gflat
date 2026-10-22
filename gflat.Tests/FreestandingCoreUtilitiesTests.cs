@@ -236,6 +236,17 @@ public class FreestandingCoreUtilitiesTests
             if(std::TryParseBool(booleanText,5,&parsedBoolean)||parsedBoolean) return 135;
             parsedBoolean=true;
             if(std::TryParseBool((readonly(char)*)1,0,&parsedBoolean)||parsedBoolean) return 136;
+            char[3] copySource=[(char)((runtimeInput>>56)|1ul),'A','\0'];
+            cText=copySource;
+            char[7] copied;
+            for(nuint i=0;i<7;i++) copied[i]='Z';
+            if(std::CString::TryCopy(cText,&copied[1],2)) return 137;
+            for(nuint i=0;i<7;i++) if(copied[i]!='Z') return 138;
+            if(!std::CString::TryCopy(cText,&copied[1],3)||!std::CString::Equals(cText,&copied[1])) return 139;
+            if(!std::CString::TryCopy(&copied[1],&copied[2],3)||!std::CString::Equals(cText,&copied[2])) return 140;
+            if(!std::CString::TryCopy(&copied[2],&copied[1],3)||!std::CString::Equals(cText,&copied[1])) return 141;
+            if(copied[0]!='Z'||copied[5]!='Z'||copied[6]!='Z') return 142;
+            if(std::CString::TryCopy((readonly(char)*)1,(char*)1,0)) return 143;
             return 42;
         }
         """;

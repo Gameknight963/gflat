@@ -62,8 +62,10 @@ Counted byte searches check first and last overlapping matches, embedded zero
 bytes, empty patterns, and missing patterns in periodic data. A separate assembly
 routine populates the search input so LLVM cannot replace the searches with
 constant answers at O2.
-The same runtime-populated bytes exercise all six C-string helpers, including a
-bounded scan whose terminator lies outside its capacity. `NoBuiltins` prevents
+The same runtime-populated bytes exercise C-string comparisons and bounded
+scanning, including a terminator outside the stated capacity. Terminated copying
+also checks insufficient capacity without writes, overlap in both directions,
+and guard bytes. `NoBuiltins` prevents
 LLVM from replacing the unbounded length loops with external `strlen` calls.
 Raw memory checks copy counted data, move overlapping regions in both directions,
 fill guarded buffers, compare unsigned bytes, and verify zero-count operations.

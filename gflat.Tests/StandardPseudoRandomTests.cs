@@ -33,7 +33,7 @@ public class StandardPseudoRandomTests
         return value ^ (value >> 31);
     }
 
-    // Invert the reference permutation to exercise exact float endpoints rather
+    // Invert the reference permutation to exercise exact floating-point endpoints rather
     // than hoping an ordinary seed happens to generate all zero or all one bits.
     private static ulong SeedForOutput(ulong output)
     {
@@ -57,7 +57,7 @@ public class StandardPseudoRandomTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void FloatDrawsUseOneWordAndNeverRoundUpToOne(int optimization)
+    public void FloatingDrawsUseOneWordAndNeverRoundUpToOne(int optimization)
     {
         ulong zeroSeed = SeedForOutput(0), upperSeed = SeedForOutput(ulong.MaxValue);
         ulong state = zeroSeed;
@@ -77,6 +77,16 @@ public class StandardPseudoRandomTests
                 PseudoRandom high = new({{upperSeed}}ul);
                 float maximum = high.NextFloat();
                 if (maximum != 0.999999940395355224609375f || maximum >= 1.0f) return 2;
+                PseudoRandom doubleLow = new({{zeroSeed}}ul);
+                double doubleMinimum = doubleLow.NextDouble();
+                if (*((ulong*)&doubleMinimum) != 0ul) return 6;
+                PseudoRandom doubleHigh = new({{upperSeed}}ul);
+                double doubleMaximum = doubleHigh.NextDouble();
+                // The largest permitted result is exactly 1 - 2^-53.
+                if (*((ulong*)&doubleMaximum) != 0x3feffffffffffffful) return 7;
+                // Both float and double draws consume exactly one complete word.
+                if (low.NextULong() != doubleLow.NextULong()) return 8;
+                if (high.NextULong() != doubleHigh.NextULong()) return 9;
                 PseudoRandom values = new(42ul); PseudoRandom words = values;
                 for (int i = 0; i < 10000; i++) {
                     float actual = values.NextFloat();

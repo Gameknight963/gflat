@@ -143,6 +143,38 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         count -= length;
     }
 
+    // Stable retained prefix; matched owners stay initialized until cleanup.
+    public nuint RemoveAll(bool(readonly(T)*)* predicate)
+    {
+        nuint originalCount = count;
+        nuint read = 0;
+        nuint write = 0;
+        try
+        {
+            while (read < originalCount)
+            {
+                if (!predicate(data! + read))
+                {
+                    if (read != write)
+                    {
+                        T retained = move *(data! + read);
+                        move *(data! + write) at data! + read;
+                        move retained at data! + write;
+                    }
+                    write++;
+                }
+                read++;
+            }
+        }
+        catch
+        {
+            this.RemoveRange(write, read - write);
+            throw;
+        }
+        this.RemoveRange(write, originalCount - write);
+        return originalCount - write;
+    }
+
     // Constant-time removal when preserving element order is unnecessary.
     public T SwapRemoveAt(nuint index)
     {

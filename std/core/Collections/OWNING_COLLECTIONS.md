@@ -18,6 +18,18 @@ copies or destruction. Failed allocation preserves contents, capacity, and
 existing borrows. Successful shrinking invalidates borrowed pointers, spans,
 and iterators just like capacity growth. Clearing or removing elements alone
 continues to retain capacity.
+`RemoveAll(predicate)` removes matching elements and returns their count, keeping
+survivors in their original order. Its callback borrows the current element as
+`readonly(T)*`; no element is copied and no container storage is allocated.
+Each original element is tested once, in order, unless the callback throws.
+Earlier matches are then removed, while the failing element and unvisited suffix
+remain in order; the original exception propagates and the vector stays valid.
+All slots remain initialized during callbacks, although their intermediate
+ordering may change. Matched owners are destroyed after testing stops, in an
+unspecified order. Callbacks must not structurally mutate or move the vector,
+invoke `RemoveAll` recursively, or retain element borrows across callbacks. Element
+destructors have the language's usual termination-boundary behavior. Capacity
+is retained; any completed removal invalidates iterators and element borrows.
 Middle insertion and removal relocate elements instead of invoking copy
 constructors. The insertion argument follows ordinary value semantics and is
 prepared before the vector changes, so inserting a copy of an existing element

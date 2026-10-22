@@ -472,6 +472,24 @@ int main() {
             foreach (int value in chunk) batchChunkSum += value;
         }
         if (batchChunkCount != 3 || batchChunkLength != 1 || batchChunkSum != 15) return 109;
+        Queue<int> batchQueue = new(); batchQueue.Enqueue(7); batchQueue.Enqueue(8);
+        if (batchQueue.AsEnumerable().First() != 7 || batchQueue.AsEnumerable().Count() != 2) return 110;
+        Stack<int> batchStack = new(); batchStack.Push(7); batchStack.Push(8);
+        if (batchStack.AsEnumerable().First() != 8 || batchStack.AsEnumerable().Count() != 2) return 111;
+        LinkedList<int> batchList = new(); batchList.AddLast(7); batchList.AddLast(8);
+        var batchListQuery = batchList.AsEnumerable();
+        LinkedList<int> batchMovedList = move batchList;
+        if (batchListQuery.ElementAt(1) != 8 || batchMovedList.Count != 2) return 112;
+        CsvReader batchCsv = new("\"a,b\",42\n", 9);
+        char[8] batchField; nuint batchFieldWritten = 0;
+        if (!batchCsv.Read() || !batchCsv.IsQuoted || batchCsv.EndOfRecord
+            || !batchCsv.TryCopyValue(batchField, 8, ref batchFieldWritten)
+            || batchFieldWritten != 3 || batchField[1] != ',') return 113;
+        if (!batchCsv.Read() || !batchCsv.EndOfRecord
+            || !batchCsv.TryCopyValue(batchField, 8, ref batchFieldWritten)) return 114;
+        int batchQuantity = 0;
+        if (!TryParseInt(batchField, batchFieldWritten, &batchQuantity)
+            || batchQuantity != 42 || batchCsv.Read()) return 115;
     }
     return 0;
 }

@@ -391,7 +391,8 @@ public partial class TypeChecker
                 var inferred = candidates[0].GenericBindings.ToDictionary(p => p.Key, p => p.Value);
                 var names = selected.GenericParameters.Select(p => p.Name).ToHashSet();
                 for (int i = 1; i < Math.Min(lowered.Arguments.Count, selected.Parameters.Count); i++)
-                    InferExtensionBindings(selected.Parameters[i].Type, GetType(lowered.Arguments[i]), names, inferred);
+                    InferExtensionBindings(ExtensionFormalType(selected, selected.Parameters[i].Type),
+                        GetType(lowered.Arguments[i]), names, inferred);
                 lowered.TypeArguments.AddRange(selected.GenericParameters.Select(p => inferred.TryGetValue(p.Name, out var type) ? type :
                     throw new TypeCheckException($"Could not infer type parameter '{p.Name}' for extension '{selected.Name}'", call.Span)));
             }

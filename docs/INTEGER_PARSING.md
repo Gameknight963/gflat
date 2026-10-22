@@ -1,5 +1,8 @@
 # Integer parsing
 
+These APIs parse decimal text. Explicit unsigned hexadecimal alternatives are
+documented in [Hexadecimal integer parsing](HEX_INTEGER_PARSING.md).
+
 `std` provides strict decimal parsers for `Byte`, `SByte`, `Short`, `UShort`,
 `Int`, `UInt`, `Long`, `ULong`, `NInt`, and `NUInt`. Each name has four forms:
 

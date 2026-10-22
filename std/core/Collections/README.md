@@ -1,6 +1,6 @@
 # Enumeration and queries
 
-`Vector`, `Span`, `IntRange`, `FilteredIntRange`, `TextParts`, `TextLines`,
+`Vector`, `Deque`, `Span`, `IntRange`, `FilteredIntRange`, `TextParts`, `TextLines`,
 `Utf8Scalars`, `Utf16Scalars`, and `BitSet` provide an `AsEnumerable()` adapter
 for lazy queries.
 Import `std` to make the query extensions visible:
@@ -35,6 +35,11 @@ the view is created. Editing existing elements is visible on the next read.
 For a readonly view use `numbers.AsReadOnly().AsEnumerable()`.
 Its callback parameter types retain that qualification, for example
 `.Where((readonly(int) n) => n > 0)`.
+
+Deque queries capture the ring buffer's pointer, head, capacity, and count,
+rather than requiring contiguous storage. Keep the owner alive and avoid
+structural mutation while using a query; element edits remain visible.
+Its adapter currently requires a mutable owner. See [Deque views](../../../docs/DEQUE.md).
 
 Integer ranges are different from container views: their adapters copy the small
 range state rather than borrowing the original range variable. Both range

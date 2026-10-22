@@ -62,10 +62,13 @@ public partial class TypeChecker
             foreach (var ctor in owner.Constructors)
             {
                 using var context = EnterSignatureContext(ctor, owner.Owner, owner.IsClass);
-                string key = OverloadKey(ctor.Parameters);
-                if (keys.TryGetValue(key, out var first))
-                    DuplicateDeclaration(first, ctor, "Constructors cannot differ only by readonly, immutable, or parameter modifiers");
-                keys[key] = ctor;
+                AnalyzeSafely(() =>
+                {
+                    string key = OverloadKey(ctor.Parameters);
+                    if (keys.TryGetValue(key, out var first))
+                        DuplicateDeclaration(first, ctor, "Constructors cannot differ only by readonly, immutable, or parameter modifiers");
+                    keys[key] = ctor;
+                });
             }
         }
         foreach (var family in groups.Values.Where(g => g.Count > 1))
@@ -82,11 +85,14 @@ public partial class TypeChecker
             var keys = new Dictionary<string, MethodDeclaration>();
             foreach (var method in family)
             {
-                string key = OverloadKey(method);
-                if (keys.TryGetValue(key, out var first))
-                    DuplicateDeclaration(first, method, $"Overloads of '{method.Name}' cannot differ only by readonly, immutable, return type, or declaration modifiers");
-                keys[key] = method;
-                overloadFamilies[method] = family;
+                AnalyzeSafely(() =>
+                {
+                    string key = OverloadKey(method);
+                    if (keys.TryGetValue(key, out var first))
+                        DuplicateDeclaration(first, method, $"Overloads of '{method.Name}' cannot differ only by readonly, immutable, return type, or declaration modifiers");
+                    keys[key] = method;
+                    overloadFamilies[method] = family;
+                });
             }
         }
         void Walk(List<AstNode> members, string scope)

@@ -108,8 +108,8 @@ public partial class TypeChecker
             {
                 string? parent = cls.BaseClass == null ? null : ResolveDeclaredBaseName(cls.BaseClass);
                 var interfaces = declaration is ClassDeclaration { BaseTypes.Count: > 0 } syntax
-                    ? syntax.BaseTypes.Select(ResolveBaseType).ToList()
-                    : cls.Interfaces.Select(ResolveDeclaredBaseName).ToList();
+                    ? ResolveBases(syntax.BaseTypes, ResolveBaseType)
+                    : ResolveBases(cls.Interfaces, ResolveDeclaredBaseName);
                 ValidateDistinctBaseTypes(parent == null ? interfaces : interfaces.Prepend(parent), declaration);
                 cls.BaseClass = parent;
                 cls.Interfaces = interfaces;
@@ -117,8 +117,8 @@ public partial class TypeChecker
             if (_currentStruct is { } str)
             {
                 var interfaces = declaration is StructDeclaration { BaseTypes.Count: > 0 } syntax
-                    ? syntax.BaseTypes.Select(ResolveBaseType).ToList()
-                    : str.Interfaces.Select(ResolveDeclaredBaseName).ToList();
+                    ? ResolveBases(syntax.BaseTypes, ResolveBaseType)
+                    : ResolveBases(str.Interfaces, ResolveDeclaredBaseName);
                 ValidateDistinctBaseTypes(interfaces, declaration);
                 str.Interfaces = interfaces;
             }
@@ -128,6 +128,15 @@ public partial class TypeChecker
             _currentNamespace = previousNamespace; _currentNamespacePath = previousPath;
             _currentClass = previousClass; _currentStruct = previousStruct;
         }
+    }
+
+    // Recovery must not publish a broken generic base name or let one invalid
+    // relation prevent independent declarations from reaching body analysis.
+    private List<string> ResolveBases<T>(IEnumerable<T> bases, Func<T, string> resolve)
+    {
+        List<string> result = new();
+        foreach (T item in bases) AnalyzeSafely(() => result.Add(resolve(item)));
+        return result;
     }
 
     private string ResolveBaseType(TypeExpression type)
@@ -269,6 +278,8 @@ public partial class TypeChecker
             {
                 _currentNamespace = scope;
                 using var context = SourceContext.Enter(member.Span);
+                AnalyzeSafely(() =>
+                {
                 switch (member)
                 {
                     case NamespaceDeclaration ns: Walk(ns.Members, _namespaceScopes[ns]); break;
@@ -321,6 +332,7 @@ public partial class TypeChecker
                         defaultConstantContexts[field] = new(fieldScope, fieldNamespace, _currentClass, _currentStruct);
                         break;
                 }
+                });
             }
         }
     }

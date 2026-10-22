@@ -9,7 +9,17 @@ scope-based destruction, and native code generation through LLVM
 **Work in progress.** The language, standard library, compiler, and project format
 can change without notice. Consider currently nightly releases as "demos"
 
-Also this readme might be out of date
+Also this readme might be out of date.
+
+# UNDER SUPER CONSTURCTION!!
+
+This means you should expect:
+
+ - Slop
+ - Undocumented footguns
+ - Undocumented anything
+ - Unable to build (even CI only works half the time)
+ - Breaking changes
 
 ```csharp
 using std;

@@ -7,9 +7,9 @@ public struct TextLines : IEnumerable<Span<readonly(char)>, TextLines::Enumerato
 
     public TextLines(Span<readonly(char)> text) { source = text; }
 
-    public TextLines::Enumerator GetEnumerator() => new TextLines::Enumerator(source);
+    public immutable TextLines::Enumerator GetEnumerator() => new TextLines::Enumerator(source);
 
-    public Enumerable<Span<readonly(char)>, TextLines, TextLines::Enumerator> AsEnumerable()
+    public immutable Enumerable<Span<readonly(char)>, TextLines, TextLines::Enumerator> AsEnumerable()
         => new Enumerable<Span<readonly(char)>, TextLines, TextLines::Enumerator>(*this);
 
     public struct Enumerator : IEnumerator<Span<readonly(char)>>
@@ -45,10 +45,12 @@ public struct TextLines : IEnumerable<Span<readonly(char)>, TextLines::Enumerato
 
         public Span<readonly(char)> Current
         {
-            get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
-                return source.Slice(start, length);
+                // Slice the copied view metadata; source bytes remain protected.
+                Span<readonly(char)> text = source;
+                return text.Slice(start, length);
             }
         }
     }

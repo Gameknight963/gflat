@@ -10,6 +10,12 @@ single-byte delimiter without copying or allocating. It takes a
 first successful `MoveNext` and after iteration ends. Empty parts have length
 zero and no readable element; do not dereference their Data pointer.
 
+`GetEnumerator()` and `AsEnumerable()` accept mutable, shallow readonly, and
+immutable sequences. `Current` can likewise be read through a readonly or
+immutable iterator observer; advancing still requires a mutable iterator.
+These qualifiers protect the view metadata and returned character access;
+they do not freeze backing storage against writes through another alias.
+
 By default leading, consecutive, and trailing delimiters preserve empty parts.
 An empty input yields one empty part. Set `removeEmpty` to true to skip empty
 parts; empty input then yields none. Embedded zero bytes remain ordinary bytes,

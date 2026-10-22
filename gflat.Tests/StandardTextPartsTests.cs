@@ -4,6 +4,49 @@ namespace gflat.Tests;
 
 public sealed class StandardTextPartsTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ProtectedSequencesAndCurrentObserversRetainIndependentBorrowedViews(int optimization)
+    {
+        var result=CompilerTestHelper.Run(Sources("""
+            using std;
+            int allocations=0;
+            namespace Memory{
+                public replace void*? Allocate(nuint count){allocations++;return null;}
+                public replace void Free(void* data){}
+            }
+            int main(){
+                char[3] bytes=['a',',','b'];TextParts parts=new(new Span<readonly(char)>(bytes,3),',');
+                readonly(TextParts)* shallow=&parts;immutable(TextParts)* deep=&parts;
+                TextParts::Enumerator first=shallow.GetEnumerator();TextParts::Enumerator second=deep.GetEnumerator();
+                var query=deep.AsEnumerable();var otherQuery=shallow.AsEnumerable();
+                TextParts::Enumerator lazy=query.GetEnumerator();TextParts::Enumerator again=otherQuery.GetEnumerator();
+                if(!first.MoveNext()||!second.MoveNext()||!lazy.MoveNext()||!again.MoveNext())return 1;
+                immutable(TextParts::Enumerator)* observer=&first;readonly(TextParts::Enumerator)* shallowObserver=&second;
+                Span<readonly(char)> current=observer.Current;Span<readonly(char)> other=shallowObserver.Current;
+                bytes[0]='x';
+                if(current.Length!=1||current[0]!='x'||other[0]!='x'||lazy.Current[0]!='x'||again.Current[0]!='x')return 2;
+                if(!first.MoveNext()||observer.Current[0]!='b'||shallowObserver.Current[0]!='x')return 3;
+                if(!second.MoveNext()||!lazy.MoveNext()||!again.MoveNext())return 4;
+                if(first.MoveNext()||second.MoveNext()||lazy.MoveNext()||again.MoveNext()||allocations!=0)return 5;
+                return 0;
+            }
+            """),optimization);
+        Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");
+    }
+
+    [Fact]
+    public void ImmutableCurrentObserverCannotWriteBorrowedCharacters()
+    {
+        const string prefix="""
+            using std;
+            void Test(immutable(TextParts::Enumerator)* observer){Span<readonly(char)> part=observer.Current;
+            """;
+        Compiler.Check(Sources(prefix+"char value=part[0];}"));
+        Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(prefix+"part[0]='x';}")));
+    }
+
     private static string Literal(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\0", "\\0") + "\"";
 
     private static SourceFile[] Sources(string program, bool strings = false, bool formatting = false)

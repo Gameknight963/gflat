@@ -37,6 +37,12 @@ line enumeration.
 successful advance and after completion. Copying a view or iterator copies its
 position and borrowed pointer, never its source bytes.
 
+`GetEnumerator()` and `AsEnumerable()` accept mutable, shallow readonly, and
+immutable sequences. `Current` can be read through a readonly or immutable
+iterator observer; advancing still requires a mutable iterator. These views
+prevent character writes through their returned spans, but do not freeze the
+backing storage: writes through another live alias remain visible.
+
 Keep the input storage alive and stable while using any view, iterator, or
 returned line. Moving or resizing an owning source can invalidate them.
 These views never free the source. Valid iteration allocates nothing.

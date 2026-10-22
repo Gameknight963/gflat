@@ -14,9 +14,9 @@ public struct TextParts : IEnumerable<Span<readonly(char)>, TextParts::Enumerato
         this.removeEmpty = removeEmpty;
     }
 
-    public TextParts::Enumerator GetEnumerator() => new TextParts::Enumerator(source, delimiter, removeEmpty);
+    public immutable TextParts::Enumerator GetEnumerator() => new TextParts::Enumerator(source, delimiter, removeEmpty);
 
-    public Enumerable<Span<readonly(char)>, TextParts, TextParts::Enumerator> AsEnumerable()
+    public immutable Enumerable<Span<readonly(char)>, TextParts, TextParts::Enumerator> AsEnumerable()
         => new Enumerable<Span<readonly(char)>, TextParts, TextParts::Enumerator>(*this);
 
     public struct Enumerator : IEnumerator<Span<readonly(char)>>
@@ -55,10 +55,12 @@ public struct TextParts : IEnumerable<Span<readonly(char)>, TextParts::Enumerato
 
         public Span<readonly(char)> Current
         {
-            get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
-                return source.Slice(start, length);
+                // Slice the copied view metadata; source bytes remain protected.
+                Span<readonly(char)> text = source;
+                return text.Slice(start, length);
             }
         }
     }

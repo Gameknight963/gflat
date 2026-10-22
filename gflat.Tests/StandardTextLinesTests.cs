@@ -4,6 +4,46 @@ namespace gflat.Tests;
 
 public sealed class StandardTextLinesTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ProtectedSequencesAndCurrentObserversRetainIndependentBorrowedViews(int optimization)
+        => Run("""
+            using std;
+            int allocations=0;
+            namespace Memory{
+                public replace void*? Allocate(nuint count){allocations++;return null;}
+                public replace void Free(void* data){}
+            }
+            int main(){
+                char[3] bytes=['a','\n','b'];TextLines lines=new(new Span<readonly(char)>(bytes,3));
+                readonly(TextLines)* shallow=&lines;immutable(TextLines)* deep=&lines;
+                TextLines::Enumerator first=shallow.GetEnumerator();TextLines::Enumerator second=deep.GetEnumerator();
+                var query=deep.AsEnumerable();var otherQuery=shallow.AsEnumerable();
+                TextLines::Enumerator lazy=query.GetEnumerator();TextLines::Enumerator again=otherQuery.GetEnumerator();
+                if(!first.MoveNext()||!second.MoveNext()||!lazy.MoveNext()||!again.MoveNext())return 1;
+                immutable(TextLines::Enumerator)* observer=&first;readonly(TextLines::Enumerator)* shallowObserver=&second;
+                Span<readonly(char)> current=observer.Current;Span<readonly(char)> other=shallowObserver.Current;
+                bytes[0]='x';
+                if(current.Length!=1||current[0]!='x'||other[0]!='x'||lazy.Current[0]!='x'||again.Current[0]!='x')return 2;
+                if(!first.MoveNext()||observer.Current[0]!='b'||shallowObserver.Current[0]!='x')return 3;
+                if(!second.MoveNext()||!lazy.MoveNext()||!again.MoveNext())return 4;
+                if(first.MoveNext()||second.MoveNext()||lazy.MoveNext()||again.MoveNext()||allocations!=0)return 5;
+                return 0;
+            }
+            """,optimization);
+
+    [Fact]
+    public void ImmutableCurrentObserverCannotWriteBorrowedCharacters()
+    {
+        const string prefix="""
+            using std;
+            void Test(immutable(TextLines::Enumerator)* observer){Span<readonly(char)> line=observer.Current;
+            """;
+        Compiler.Check(Sources(prefix+"char value=line[0];}"));
+        Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Check(Sources(prefix+"line[0]='x';}")));
+    }
+
     private static string Literal(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"")
         .Replace("\0", "\\0").Replace("\r", "\\r").Replace("\n", "\\n") + "\"";
 

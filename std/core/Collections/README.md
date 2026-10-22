@@ -124,6 +124,11 @@ a second element and does not read its `Current` value. Successful outputs follo
 ordinary copying rules and own their independent resources, as with `Last` and
 `Single`.
 
+The output-parameter terminals currently have a compiler limitation for qualified
+element types such as `readonly(int)`: their `ref T` destination becomes readonly
+too, so assigning the answer is rejected. Value-returning terminals such as
+`First()` and `ElementAt()` work for these views and can initialize a new local.
+
 These output guarantees describe writes made by the terminal operation. An
 iterator or callback can also change storage through other aliases; if `result`
 borrows that storage, those changes remain visible. Use independent output

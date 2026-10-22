@@ -1641,7 +1641,13 @@ namespace gflat
                 }
                 else
                 {
-                    initializer = IsVariableDeclaration() ? ParseVariableDeclaration() : ParseExpression();
+                    if (IsVariableDeclaration()) initializer = ParseVariableDeclaration();
+                    else
+                    {
+                        AstNode expression = ParseExpression();
+                        Expect(TokenKind.Semicolon);
+                        initializer = new ExpressionStatement(expression, expression.Line) { Span = expression.Span };
+                    }
                 }
             }
             else

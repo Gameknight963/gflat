@@ -294,8 +294,6 @@ the source or output can leave a partially consumed line; no rollback is
 promised. Reading uses libc's existing stream buffering, with a 256-byte stack
 chunk for batched writer calls and no additional gflat heap allocation.
 
-### Binary integers
-
 `File/FileLineSequence.gf` adds `FileLineSequence` and `.Lines()` on `File*` for
 lazy enumeration and existing query operators. Its iterator owns and reuses one
 String buffer, while the file stays borrowed and open. Each enumeration consumes
@@ -304,11 +302,15 @@ the shared current file position; it does not reopen or rewind the file.
 or calling `ToVector()` creates independent owning values. See
 [borrowed file lines](../../docs/FILE_LINE_SEQUENCE.md).
 
+### Binary integers
+
 `File/FileBinary.gf` supplies `std::FileBinary`, borrowing `File*` streams. Its
 `ReadUInt16LittleEndian`, `ReadUInt32LittleEndian`, and `ReadUInt64LittleEndian`
 methods read fixed-width unsigned values; the corresponding `BigEndian` methods
 use network byte order. Matching `WriteUInt16/32/64LittleEndian` and
-`WriteUInt16/32/64BigEndian` methods write these representations. Each operation
+`WriteUInt16/32/64BigEndian` methods write these representations. Signed
+`ReadInt16/32/64` and `WriteInt16/32/64` methods are available in both byte orders
+and preserve two's-complement bits. Each operation
 uses an eight-byte stack buffer and works independently of host byte order,
 alignment, pointer width, and the C runtime's `long` size. Truncation throws
 `EndOfStreamException`; actual IO errors throw `IOException` (the base type of

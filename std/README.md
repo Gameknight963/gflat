@@ -28,6 +28,7 @@ implementation lives in `libc`.
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
 | Algorithms | `Sort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |
+| Integer sequences | `IntRange`, `FilteredIntRange` | [Allocation-free ranges and specialized aggregates](core/README.md#integer-sequences) |
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
 | Hexadecimal numbers | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Explicit hexadecimal parsing](../docs/HEX_INTEGER_PARSING.md) |
 | Caller-buffer numbers | `IntegerFormatting::TryFormat`, `TryFormatHex` | [Decimal and hexadecimal formatting without a writer or allocation](../docs/INTEGER_FORMATTING.md) |

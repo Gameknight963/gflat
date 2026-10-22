@@ -113,15 +113,19 @@ predicate, and each enumeration starts again. Filtering runs as far as requested
 filtering limits input integers, while slicing afterward limits matching integers.
 Predicate exceptions propagate normally.
 
-Both sequence types support `Count()`, `Any()`, and `Sum()`. `IntRange` also has
-a cheap `Count` property; its aggregate operations use the known range bounds.
-Filtered aggregates enumerate as needed. Sums return `long` so any valid range
-fits; negative counts and ranges exceeding `int` throw. Enumerator `Current` is
-valid only after a successful `MoveNext()` and before exhaustion.
+Both sequence types support `Any()` and `Sum()`. `IntRange` exposes its known
+length through the `Count` property; `FilteredIntRange.Count()` enumerates to
+count matching values. Filtered aggregates enumerate as needed. Sums return
+`long` so any valid range fits; negative counts and ranges exceeding `int` throw.
+Enumerator `Current` is valid only after a successful `MoveNext()` and before
+exhaustion.
 
-This is a small integer query API, with no closures or universal collection-query
-interfaces. Callbacks can call other functions but cannot capture local variables.
-The sequence and iterator values own no heap storage and need no manual disposal.
+These specialized helpers coexist with the [generic query API](Collections/README.md).
+Use `IntRange.AsEnumerable()` to access those operators. The range types implement
+`IEnumerable<int, IntRange::Enumerator>` and
+`IEnumerable<int, FilteredIntRange::Enumerator>`, respectively.
+Callbacks can call other functions but cannot capture local variables. The
+sequence and iterator values own no heap storage and need no manual disposal.
 
 ## Vectors
 

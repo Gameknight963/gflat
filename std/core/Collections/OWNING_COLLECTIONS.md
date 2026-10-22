@@ -189,6 +189,8 @@ end, and fill the vacated positions with zero. A zero shift changes nothing;
 any count at least `Length` clears the set, including the largest `nuint` count.
 They process words in place without allocating. Padding remains clear, so a
 later `Resize` cannot bring discarded bits back.
+`SetAll`, `Clear`, both shifts, and `CountSetBits` are `nothrow`; they neither
+allocate nor invoke user callbacks.
 
 `SetRange(start, count, value)` sets or clears a consecutive range;
 `FlipRange(start, count)` toggles it. They process affected words without

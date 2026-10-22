@@ -54,13 +54,13 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         this.MaskUnusedBits();
     }
 
-    private void MaskUnusedBits()
+    private void MaskUnusedBits() nothrow
     {
         if (length % 32 != 0)
             data![words - 1] = data![words - 1] & (((uint)1 << (int)(length % 32)) - (uint)1);
     }
 
-    public void SetAll(bool value)
+    public void SetAll(bool value) nothrow
     {
         uint bits = (uint)0;
         if (value) bits = (uint)4294967295;
@@ -68,10 +68,10 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         this.MaskUnusedBits();
     }
 
-    public void Clear() { this.SetAll(false); }
+    public void Clear() nothrow { this.SetAll(false); }
 
     // Shifts keep Length, discard outgoing bits, and clear the vacated positions.
-    public void ShiftLeft(nuint count)
+    public void ShiftLeft(nuint count) nothrow
     {
         if (count == 0) return;
         if (count >= length) { this.Clear(); return; }
@@ -94,7 +94,7 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         this.MaskUnusedBits();
     }
 
-    public void ShiftRight(nuint count)
+    public void ShiftRight(nuint count) nothrow
     {
         if (count == 0) return;
         if (count >= length) { this.Clear(); return; }
@@ -160,7 +160,7 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         return (((uint)1 << (int)count) - (uint)1) << (int)first;
     }
 
-    public immutable nuint CountSetBits()
+    public immutable nuint CountSetBits() nothrow
     {
         nuint total = 0;
         for (nuint i = 0; i < words; i++)

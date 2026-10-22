@@ -4140,6 +4140,10 @@ namespace gflat
             }
             if (IsPropertyValueStorage(target))
                 throw new TypeCheckException("Cannot modify a value returned by a property", line);
+            // A ref getter has already selected and checked the receiver contract.
+            // Assignment targets its returned storage, not a field of the receiver;
+            // CheckAssignmentTarget still enforces the result's own qualification.
+            if (IsReferenceRead(target)) return;
             if (target is UnaryExpression deref && deref.Operator == TokenKind.Star)
             {
                 TypeExpression opType = ResolveAlias(GetType(deref.Operand));

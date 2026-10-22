@@ -896,8 +896,14 @@ Named properties can use the same `ref` modifier. There is one getter body, no
 setter: assignment writes to the returned storage. Receiver-qualified getter
 variants preserve the access contract. An explicit `immutable get` additionally
 provides an immutable receiver variant, checked under deep protection and yielding
-an immutable element. A shallow readonly getter does not automatically promise
-that its pointer targets remain unchanged.
+an immutable element. An explicit `readonly get` instead retains the declared
+reference result on both mutable and shallow readonly receivers. For example,
+`public ref T Value { readonly get => *data; }` can borrow mutable pointed-to
+storage without changing the owner's pointer field. Ordinary return checking
+rejects borrowing a mutable reference to the owner's protected inline fields or
+array elements; declare `ref readonly(T)` when that is the intended result.
+An immutable receiver cannot call this shallow-only getter. An unqualified
+`get` retains its existing receiver-dependent readonly result projection.
 
 Reference properties support address-taking and in-place method calls, including
 on owning values. They can implement interface contracts and virtual class properties.

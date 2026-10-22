@@ -22,6 +22,7 @@ implementation lives in `libc`.
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
 | Double-ended storage | `Deque<T>` | [Owning ring buffer](../docs/DEQUE.md) |
 | Stable node storage | `LinkedList<T>` | [Owning linked lists and node handles](../docs/LINKED_LIST.md) |
+| Single-object ownership | `Unique<T>` | [Move-only ownership of one manual allocation](../docs/UNIQUE.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |
 | Ordered maps | `SortedMap<K,V>` | [Sorted contiguous entries and explicit comparison](../docs/SORTED_MAP.md) |
 | Ordered sets | `SortedSet<T>` | [Sorted unique owning values with explicit comparison](../docs/SORTED_SET.md) |

@@ -27,6 +27,7 @@ int main()
 | Function | Behavior |
 | --- | --- |
 | `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
+| `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/StableSort.gf`; see [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
 | `LowerBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
@@ -95,7 +96,7 @@ and constant extra storage, using three reversals; it does not allocate, copy
 elements, or run their destructors. Existing pointers still address the same
 slots, whose values may change.
 
-Sorting, reversing, and rotating relocate values rather than copying them. Owning values
+`Sort`, `Reverse`, and `Rotate` relocate values rather than copying them. Owning values
 without copy constructors are supported; every value remains responsible for
 its resources in its final slot. These operations do not allocate or free
 storage and do not run element destructors. A comparator may allocate or throw.

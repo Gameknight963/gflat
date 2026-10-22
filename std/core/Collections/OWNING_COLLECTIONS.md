@@ -109,6 +109,34 @@ mutate the destination through another alias.
 requires mutable, copyable elements only when called, and lives separately in
 `Collections/SpanFill.gf`. It does not initialize raw storage.
 
+## Stable sorting
+
+`StableSort<T>(values, compare)` sorts a mutable `Span<T>` while retaining the
+original order of elements whose comparison is zero. For example,
+`StableSort<Record>(records.AsSpan(), CompareByTimestamp)` retains input order
+among records with the same timestamp. Include `Collections/StableSort.gf` and
+its ordinary `Vector`/`Span` dependencies when selecting source files.
+
+The comparator has type `int(immutable(T)*, immutable(T)*)*`: a negative result
+orders the first value before the second, zero treats them as equivalent, and a
+positive result orders the second first. It must define a consistent ordering.
+It must not mutate elements, move or structurally mutate their owner, or sort
+overlapping storage recursively through another alias. Borrowed element addresses
+must not be used to track logical values across sorting: the storage stays in
+place, but its elements change positions.
+
+Sorting an empty or singleton span does not allocate or invoke the comparator.
+Otherwise the operation allocates two index buffers, each holding `Length`
+`nuint` values, with checked allocation sizes. It makes O(n log n) comparisons
+before relocating any elements. Allocation or comparator failure preserves the
+original element contents and order and releases all scratch storage; comparator
+side effects outside the span are outside that guarantee. Once comparisons finish,
+the resulting permutation is applied with typed moves, without element copies,
+element destruction, additional allocation, or callbacks. Noncopyable owners are
+supported and continue to be destroyed normally by their original owner. An
+inconsistent comparator gives no ordering guarantee, but the operation still
+preserves every original owner in the result permutation.
+
 ## Queue and stack
 
 `Stack<T>` owns a last-in, first-out sequence backed by a `Vector<T>`.

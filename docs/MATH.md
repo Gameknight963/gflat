@@ -1,6 +1,8 @@
 # Scalar math
 
-`std/core/Math.gf` provides `std::Math` without libc or native math libraries.
+`std/core/Math.gf` provides `std::Math`, with scalar helpers and checked integer
+operations. It does not directly call C math functions. The checked operations
+still require the normal exception and allocation support.
 
 ## Integers
 
@@ -21,7 +23,7 @@ wrapping or invoking signed overflow. This check also applies to pointer-sized
 
 ## Floating point
 
-`float` and `double` each have `IsNaN`, `IsFinite`, `Abs`, `Min`, and `Max`
+`float` and `double` each have `Sqrt`, `IsNaN`, `IsFinite`, `Abs`, `Min`, and `Max`
 overloads. `IsFinite` excludes both infinities and all NaNs, and includes zeros
 and subnormals. `Abs` clears the sign bit, including for negative zero and NaNs.
 All floating-point helpers are `nothrow`; the signed-integer `Abs` overloads
@@ -33,6 +35,37 @@ and negative zero, `Min` chooses negative zero and `Max` chooses positive zero,
 independently of argument order. Equal zeros of the same sign retain that sign.
 Other finite and infinite values use ordinary comparisons.
 
-Floating-point values use the language's IEEE binary32/binary64 representation;
-these helpers inspect the existing representation using pointer casts and need
-no compiler intrinsics or runtime allocation on their normal paths.
+Classification, `Abs`, `Min`, and `Max` inspect the language's IEEE
+binary32/binary64 values using ordinary gflat operations and pointer casts.
+They allocate nothing on their normal paths.
+
+### Square root
+
+`Sqrt(float value)` returns `float`; `Sqrt(double value)` returns `double`.
+Both are `nothrow`. Positive finite inputs produce the IEEE square root;
+positive infinity remains positive infinity, and both signs of zero retain
+their sign. Negative nonzero inputs, including negative infinity, produce NaN.
+NaN inputs produce NaN; their exact payload, sign, and signaling state are not
+promised for this arithmetic operation.
+
+The implementation uses existing `__llvm_module` support to call
+`llvm.sqrt.f32` / `llvm.sqrt.f64`. No new compiler recognition of `Math` is
+involved. The tiny LLVM helpers are `alwaysinline nounwind`; no fast-math flags,
+approximations, or assumptions excluding NaNs, infinities, or signed zero are
+enabled. As specified by the [LLVM 22.1 intrinsic contract](https://releases.llvm.org/22.1.0/docs/LangRef.html#llvm-sqrt-intrinsic),
+the operation does not set C `errno` or provide floating-point traps. It uses
+LLVM's ordinary floating-point environment assumptions, rather than offering
+dynamic rounding-mode or exception-control semantics.
+
+Windows x64 object inspection at O0 and O2 confirms `sqrtss` / `sqrtsd`
+instructions and no undefined `sqrt` or `sqrtf` library symbols. This is evidence
+for that backend configuration, not a promise that every software-float target
+can avoid support routines. Windows floating-point code retains the documented
+`_fltused` ABI marker requirement.
+
+The complete `Math.gf` is **not currently a standalone no-runtime source**:
+even an application using only `Sqrt` must satisfy the checked integer methods'
+exception/allocation declarations during compilation. Selecting actual
+`Math.gf` and `Exception.gf` with `NoStdLib` currently fails for missing
+`Memory::Allocate` before linking. The square-root tests use the real library
+and its normal contracts; this API does not claim a whole-Math no-CRT proof.

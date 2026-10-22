@@ -1,6 +1,7 @@
 namespace std;
 
-// Scalar arithmetic helpers. No libc or host-native math ABI dependency.
+// Scalar arithmetic helpers, without direct libc calls. Checked integer
+// operations require the ordinary exception/allocation support.
 public static class Math
 {
     public static sbyte Min(sbyte a, sbyte b) nothrow { if (a < b) return a; return b; }
@@ -143,6 +144,10 @@ public static class Math
         return value;
     }
 
+    // LLVM's IEEE square root, without fast-math flags or C math declarations.
+    public static float Sqrt(float value) nothrow
+        => __llvm_module<float>("declare float @llvm.sqrt.f32(float)\ndefine float @root(float %value) alwaysinline nounwind {\n%result = call float @llvm.sqrt.f32(float %value)\nret float %result\n}", "root", value);
+
     public static bool IsNaN(float value) nothrow => value != value;
     public static bool IsFinite(float value) nothrow
     {
@@ -180,6 +185,9 @@ public static class Math
         }
         return b;
     }
+
+    public static double Sqrt(double value) nothrow
+        => __llvm_module<double>("declare double @llvm.sqrt.f64(double)\ndefine double @root(double %value) alwaysinline nounwind {\n%result = call double @llvm.sqrt.f64(double %value)\nret double %result\n}", "root", value);
 
     public static bool IsNaN(double value) nothrow => value != value;
     public static bool IsFinite(double value) nothrow

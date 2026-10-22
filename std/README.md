@@ -16,7 +16,7 @@ implementation lives in `libc`.
 | C strings | `CString` | [Borrowed null-terminated byte utilities](../docs/CSTRING.md) |
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
 | Writer line helpers | `ITextWriter*` `WriteLine` overloads | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
-| Borrowed text parts | `TextParts`, String/Span `Split` | [Allocation-free splitting](../docs/TEXT_PARTS.md) |
+| Borrowed text parts | `TextParts`, String/Span `Split`, Span `Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md) |
 | Borrowed text lines | `TextLines` | [Counted LF and CRLF line views](../docs/TEXT_LINES.md) |
 | Joining text | `Span<immutable(String)>.Join` | [Borrowed owners, counted separators, and one output allocation](../docs/STRING_JOIN.md) |
 | Owning Unicode conversion | `UnicodeText` | [Strict counted UTF-16 and UTF-8 conversion](../docs/UNICODE_TEXT.md) |

@@ -48,3 +48,32 @@ existing parts and can change subsequent splitting; TextParts is not a snapshot.
 
 `AsEnumerable()` exposes the existing concrete query wrapper without changing
 these borrowing rules. Direct `foreach` is sufficient for ordinary iteration.
+
+## Trimming borrowed text
+
+`std/core/TextTrimSpan.gf` optionally adds `Trim()`, `TrimStart()`, and
+`TrimEnd()` to `Span<char>` and `Span<readonly(char)>`. Include `Span.gf` and
+`Ascii.gf` with this extension source. Unlike the owning String's mutating
+methods, these return a sliced view and leave every source byte unchanged.
+
+Trimming uses exactly `Ascii::IsWhiteSpace`: space, tab, LF, vertical tab,
+form feed, and CR. Embedded zero bytes and all non-ASCII bytes are retained;
+this is not Unicode whitespace trimming or UTF-8 decoding.
+
+```csharp
+foreach (Span<readonly(char)> part in text.Split('=')) {
+    Span<readonly(char)> token = part.Trim();
+    // Use token while text's underlying storage remains alive.
+}
+```
+
+The returned view preserves the source's element mutability: trimming a
+`Span<char>` returns a writable alias, and trimming a `Span<readonly(char)>`
+does not permit writes to its elements. The operation does not change the
+source view's metadata or allocate storage. Empty inputs and entirely trimmed
+results use Span's canonical empty view, with zero length and a null Data
+pointer. Normal Span slice contracts apply; these extensions do not add a
+`nothrow` guarantee to the checked slicing API.
+
+These views obey the same lifetime rules as split parts and line views. They
+do not take ownership or extend the underlying allocation's lifetime.

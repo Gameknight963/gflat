@@ -52,7 +52,9 @@ public class WholeStandardLibraryEditorTests
                 Span<readonly(char)> shallowTextView=text.AsReadOnly();
                 HashMap<String,int> map=new(); map.Add(s"key",42);
                 String key=s"key"; map.Find(&key);
+                map.FindReadOnly(&key); map.FindImmutable(&key);
                 HashMap<String,int>::Entry detached=map.Extract(&key);
+                detached.ValueReadOnly; detached.ValueImmutable;
                 CRC32 checksum=new(); checksum.Append("123456789",9);
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
                 decoder.Read("a",1,true,&scalar,&consumed);
@@ -107,6 +109,11 @@ public class WholeStandardLibraryEditorTests
                 float fraction=random.NextFloat();
                 float root=Math::Sqrt(4.0f);
                 float signed=Math::CopySign(root,-0.0f);
+                extralong wide=(extralong)1<<100;
+                extralong wideMinimum=Math::Min(wide+1,wide+2);
+                extralong wideMaximum=Math::Max(wide+1,wide+2);
+                extralong wideClamped=Math::Clamp(wide+3,wide+1,wide+2);
+                extralong wideAbsolute=Math::Abs(-wide);
                 Date calendar=new(2024,2,29); Date tomorrow=calendar.AddDays(1);
                 Date anniversary=calendar.AddYears(1); Date nextMonth=calendar.AddMonths(1);
                 DayOfWeek weekday=calendar.DayOfWeek; int ordinalDay=calendar.DayOfYear;
@@ -114,6 +121,7 @@ public class WholeStandardLibraryEditorTests
                 String dated=s$"Next day: {tomorrow}";
                 Unique<int> owner=new(new* int(41));
                 readonly(Unique<int>)* ownerView=&owner; ownerView.Value++;
+                immutable(Unique<int>)* ownerDeep=&owner; int protectedValue=ownerDeep.ValueImmutable;
                 bool emptyOwner=owner.IsEmpty;
                 Vector<String> parts=new(); parts.Add(s"left"); parts.Add(s"right");
                 String joined=parts.AsImmutable().Join(",");
@@ -124,8 +132,11 @@ public class WholeStandardLibraryEditorTests
                 Vector<ushort> utf16Text=UnicodeText::ToUtf16(utf8Text.Data,utf8Text.Length);
                 SortedMap<int,String> ordered=new(Comparer<int>::Compare);
                 ordered.Add(3,s"three"); int lookup=3; ordered.FindReadOnly(&lookup);
+                readonly(SortedMap<int,String>)* orderedRead=&ordered; orderedRead.FindReadOnly(&lookup);
+                immutable(SortedMap<int,String>)* orderedDeep=&ordered; orderedDeep.FindImmutable(&lookup);
                 SortedMap<int,String>::Enumerator orderedItems=ordered.GetEnumerator();
                 SortedMap<int,String>::Entry transferred=ordered.Extract(&lookup);
+                transferred.ValueReadOnly; transferred.ValueImmutable;
                 SortedSet<int> unique=new(Comparer<int>::Compare); unique.Add(42);
                 SortedSet<int>::Enumerator uniqueItems=unique.GetEnumerator();
                 ushort[2] units=[(ushort)65,(ushort)0];
@@ -167,7 +178,7 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"AddDays","DayNumber","DaysInMonth","AsSpan","AsReadOnly","AsImmutable","RemoveAll","ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(string member in new[]{"AddDays","DayNumber","DaysInMonth","AsSpan","AsReadOnly","AsImmutable","RemoveAll","ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","Min","Max","Clamp","Abs","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","FindImmutable","ValueReadOnly","ValueImmutable","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {
             int offset=token.Start;

@@ -307,6 +307,40 @@ int main() {
     shifted.Resize(96); if (shifted.CountSetBits() != 1) return 63;
     Date weekdayDate = new(2024, 2, 29);
     if (weekdayDate.DayOfWeek != DayOfWeek::Thursday || weekdayDate.DayOfYear != 60) return 64;
+    {
+        byte[4] batchPacket = [(byte)1, (byte)2, (byte)3, (byte)4];
+        BinaryBufferWriter batchOutput = new(batchPacket, 4);
+        if (!batchOutput.TrySkip(1) || !batchOutput.TryWriteBytes(batchPacket, 3)
+            || batchPacket[2] != (byte)2 || batchPacket[3] != (byte)3) return 65;
+        BinaryBufferReader batchInput = new(batchPacket, 4);
+        if (!batchInput.TryReadBytes(&batchPacket[1], 3) || batchPacket[2] != (byte)1 || batchPacket[3] != (byte)2) return 66;
+        char[3] batchUrl; char[2] batchDecoded; nuint batchWritten = 0;
+        char[2] batchBytes = [(char)251, (char)255];
+        if (!Base64Url::TryEncode(batchBytes, 2, batchUrl, 3, ref batchWritten)
+            || batchWritten != 3 || batchUrl[0] != '-' || batchUrl[1] != '_' || batchUrl[2] != '8') return 67;
+        if (!Base64Url::TryDecode(batchUrl, 3, batchDecoded, 2, ref batchWritten)
+            || batchWritten != 2 || batchDecoded[0] != batchBytes[0] || batchDecoded[1] != batchBytes[1]) return 68;
+        int batchKey = 1;
+        HashMap<int, Unique<int>> batchOwners = new();
+        batchOwners.Add(1, new Unique<int>(new* int(41)));
+        readonly(HashMap<int, Unique<int>>)* batchShallow = &batchOwners;
+        batchShallow.FindReadOnly(&batchKey)!.Value = 42;
+        immutable(HashMap<int, Unique<int>>)* batchDeep = &batchOwners;
+        if (batchDeep.FindImmutable(&batchKey)!.ValueImmutable != 42) return 69;
+        SortedMap<int, Unique<int>> batchSorted = new(Comparer<int>::Compare);
+        batchSorted.Add(1, new Unique<int>(new* int(11)));
+        readonly(SortedMap<int, Unique<int>>)* batchSortedShallow = &batchSorted;
+        batchSortedShallow.FindReadOnly(&batchKey)!.Value = 12;
+        immutable(SortedMap<int, Unique<int>>)* batchSortedDeep = &batchSorted;
+        if (batchSortedDeep.FindImmutable(&batchKey)!.ValueImmutable != 12) return 70;
+        extralong batchWide = (extralong)1 << 100;
+        extralong batchMinimum = Math::Min(batchWide + 1, batchWide + 2);
+        extralong batchMaximum = Math::Max(-batchWide - 1, -batchWide - 2);
+        extralong batchClamped = Math::Clamp(batchWide + 3, batchWide + 1, batchWide + 2);
+        extralong batchAbsolute = Math::Abs(-batchWide - 7);
+        if (batchMinimum != batchWide + 1 || batchMaximum != -batchWide - 1
+            || batchClamped != batchWide + 2 || batchAbsolute != batchWide + 7) return 71;
+    }
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

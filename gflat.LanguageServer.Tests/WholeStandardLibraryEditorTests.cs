@@ -43,6 +43,7 @@ public class WholeStandardLibraryEditorTests
         const string text="""
             using std;
             bool Contains(int value) => value == 42;
+            bool RemoveZero(readonly(int)* value) => *value == 0;
             int main() {
                 LinkedList<int> list=new();
                 LinkedList<int>::Node* node=list.AddLast(42);
@@ -85,7 +86,7 @@ public class WholeStandardLibraryEditorTests
                 int[3] numbers=[1,2,3]; Span<int> values=new(numbers,3);
                 int searchKey=2; nuint found=BinarySearch<int>(values.AsReadOnly(),&searchKey,Comparer<int>::Compare);
                 Rotate<int>(values,1);
-                Vector<int> removedRange=new(); removedRange.Add(1); removedRange.RemoveRange(0,1); removedRange.ShrinkToFit();
+                Vector<int> removedRange=new(); removedRange.Add(1); removedRange.RemoveRange(0,1); removedRange.ShrinkToFit(); removedRange.RemoveAll(RemoveZero);
                 PseudoRandom random=new(42ul); Shuffle<int>(values,ref random);
                 values.Fill(7);
                 float fraction=random.NextFloat();
@@ -94,6 +95,7 @@ public class WholeStandardLibraryEditorTests
                 SortedMap<int,String> ordered=new(Comparer<int>::Compare);
                 ordered.Add(3,s"three"); int lookup=3; ordered.FindReadOnly(&lookup);
                 SortedMap<int,String>::Enumerator orderedItems=ordered.GetEnumerator();
+                SortedMap<int,String>::Entry transferred=ordered.Extract(&lookup);
                 SortedSet<int> unique=new(Comparer<int>::Compare); unique.Add(42);
                 SortedSet<int>::Enumerator uniqueItems=unique.GetEnumerator();
                 ushort[2] units=[(ushort)65,(ushort)0];
@@ -135,7 +137,7 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(string member in new[]{"RemoveAll","ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {
             int offset=token.Start;

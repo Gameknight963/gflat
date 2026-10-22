@@ -62,12 +62,12 @@ public sealed class StandardVectorRemoveAllTests
     {
         var result = CompilerTestHelper.Run(Sources("""
             using std;
-            int dead=0;int calls=0;int next=0;bool bad=false;Owner*? watched=null;
+            int dead=0;int calls=0;int next=0;bool bad=false;Vector<Owner>*? watched=null;
             struct Owner{public int* Data;public Owner(int id){Data=new* int(id);}~Owner(){dead++;delete Data;}}
             bool Match(readonly(Owner)* value){
                 if(*value.Data!=next || dead!=0)bad=true;next++;calls++;
                 // Readonly aliases observe initialized owners throughout partitioning.
-                Span<readonly(Owner)> live=new(watched!,10);
+                Span<readonly(Owner)> live=watched!.AsReadOnly();
                 int sum=0;for(nuint i=0;i<live.Length;i++)sum+=*live[i].Data;
                 if(sum!=45)bad=true;
                 return *value.Data%3==1;
@@ -77,7 +77,7 @@ public sealed class StandardVectorRemoveAllTests
                 {
                     Vector<Owner> values=new();values.Reserve(16);
                     for(int i=0;i<10;i++)values.Add(new Owner(i));
-                    watched=values.AsSpan().Data;
+                    watched=&values;
                     if(values.RemoveAll(Match)!=3 || bad || calls!=10 || dead!=3 || values.Count!=7)return 1;
                     int expected=0;for(nuint i=0;i<values.Count;i++){while(expected%3==1)expected++;if(*values[i].Data!=expected)return 2;expected++;}
                     values.Clear();if(dead!=10)return 3;

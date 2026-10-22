@@ -47,8 +47,10 @@ line endings; a binary File preserves the emitted LF bytes.
   and values require strict UTF-8 and use `JsonString`'s escape policy.
 - `WriteBoolean(value)` and `WriteNull()` write their JSON literals.
 - `WriteNumber(value)` supports `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`,
-  `long`, `ulong`, `nint`, and `nuint`. It uses invariant integer formatting in a
-  fixed local 21-byte buffer. There is no floating-point overload yet.
+  `long`, `ulong`, `nint`, `nuint`, and signed 128-bit `extralong`. It uses invariant
+  integer formatting in a fixed local buffer (40 bytes for `extralong`, 21 for
+  the other widths), without allocating number text. There is no floating-point
+  overload yet.
 - `WriteRawNumber(data, length)` validates exactly one JSON number occupying the
   entire counted input, then preserves its spelling. No surrounding whitespace,
   leading plus, extra values, NaN, or infinity are accepted. It reuses

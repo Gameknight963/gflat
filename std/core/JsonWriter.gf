@@ -198,6 +198,13 @@ public struct JsonWriter
             throw new JsonWriteException("JSON integer formatting failed");
         this.WriteToken(buffer, written);
     }
+    public void WriteNumber(extralong value)
+    {
+        char[40] buffer; nuint written = 0;
+        if (!IntegerFormatting::TryFormat(value, buffer, 40, ref written))
+            throw new JsonWriteException("JSON integer formatting failed");
+        this.WriteToken(buffer, written);
+    }
     public void WriteNumber(sbyte value) { this.WriteNumber((long)value); }
     public void WriteNumber(byte value) { this.WriteNumber((ulong)value); }
     public void WriteNumber(short value) { this.WriteNumber((long)value); }

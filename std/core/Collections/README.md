@@ -87,7 +87,8 @@ must borrow those values through pointers.
 
 Elements follow ordinary value semantics. Reading a `String` element copies it;
 `ToVector()` creates independent owning strings. Reading a pointer copies its
-address. The query and the resulting vector do **not** delete its pointee.
+address. Pointer elements do not confer ownership: the query and the resulting
+vector do **not** delete a pointee merely because they contain its address.
 Managed pointer elements keep their normal collector behavior.
 
 `TryLast` and `TrySingle` assign their output only after iteration establishes
@@ -122,3 +123,13 @@ whose `GetEnumerator()` creates an iterator. The source must be copyable: it is
 copied into composed views. Usually it should contain borrowed pointers or
 other small views; it must not retain a pointer to a temporary source object.
 Iterators themselves may own resources and need not be copyable.
+
+Query extensions currently take their receiver by value, so custom source
+copies follow ordinary value semantics. A source or iterator may own backing
+storage and release it during cleanup. Returning a raw pointer from a terminal
+operation does not keep those source copies or iterators alive: a provider of
+borrowed pointer elements must arrange for their storage to survive enumeration
+and terminal cleanup. Built-in borrowed views satisfy this when the original
+owner remains alive. Owning sources can also work, for example with independently
+copied value outputs or shared backing owners whose storage remains alive.
+There is no automatic lifetime tracking for raw pointer results.

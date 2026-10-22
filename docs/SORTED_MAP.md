@@ -34,13 +34,18 @@ int main()
   false for a duplicate. Both destroy unused incoming arguments normally.
 - `Set(key,value)` inserts or replaces the existing value while retaining the
   original stored key. Named copyable arguments copy; `move` transfers owners.
-- `ContainsKey`, `Find`, `FindReadOnly`, `Remove`, and the ref indexer accept
+- `ContainsKey`, `Find`, `FindReadOnly`, `Remove`, `Extract`, and the ref indexer accept
   borrowed key pointers. Missing lookups return null; the indexer throws.
 - `Find` and the indexer allow changing mapped values. Keys are exposed only
   through readonly views, since changing their order would corrupt lookup.
 - `Remove` destroys a matching key/value pair and shifts later entries left.
   `Clear` destroys all entries but retains capacity. `Reserve` reserves entry
   capacity; `Count`, `Capacity`, and `IsEmpty` report collection metadata.
+- `Extract(key)` removes and returns the matching `Entry`, transferring both key
+  and value without copying or destroying them. Missing keys throw. Extraction
+  allocates no entry storage, retains capacity, and shifts later entries left.
+  Comparisons complete before removal; the lookup may borrow the matching entry's
+  key, but all such entry borrows become invalid after extraction.
 
 The map supports noncopyable owning keys and values: buffer growth and shifts
 relocate entries rather than invoking their copy constructors. Moving the map

@@ -102,6 +102,14 @@ struct SortedMap<K, V>
         return true;
     }
 
+    // Transfer both owners without copying; the lookup borrow is not used after removal.
+    public Entry Extract(readonly(K)* key)
+    {
+        nuint index = this.LowerBound(key);
+        if (!this.Matches(index, key)) throw new Exception("SortedMap key not found");
+        return storage.RemoveAt(index);
+    }
+
     public readonly Enumerator GetEnumerator() => new Enumerator(storage.AsReadOnly());
 
     public struct Enumerator

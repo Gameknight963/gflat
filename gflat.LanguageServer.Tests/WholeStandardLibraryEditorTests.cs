@@ -101,6 +101,7 @@ public class WholeStandardLibraryEditorTests
                 first.IntersectWith(&second); first.SymmetricExceptWith(&second);
                 readonly(char)*? setting=Environment::GetVariable("GFLAT_TEST_UNSET");
                 bool missingSetting=CString::IsNullOrEmpty(setting);
+                nuint compositeHash=Hashing::Combine(Hashing::Integer(1ul),Hashing::Integer(2ul));
                 byte[4] bytes; BinaryPrimitives::TryWriteUInt32BigEndian(bytes,4,42u);
                 float number=0.0f; BinaryPrimitives::TryReadFloatLittleEndian(bytes,4,ref number);
                 BinaryBufferWriter binary=new(bytes,4); binary.TryWriteFloatBigEndian(number);
@@ -116,6 +117,11 @@ public class WholeStandardLibraryEditorTests
                 Base64Url::TryDecode("eA",2,urlBytes,2,ref urlCount);
                 nuint encoded=0; VarInt::TryWriteUInt32(bytes,4,42u,ref encoded);
                 uint zigzag=VarInt::ZigZagEncode(-42); int signedNumber=VarInt::ZigZagDecode(zigzag);
+                byte[16] variableBytes; BinaryBufferWriter variableOutput=new(variableBytes,16);
+                variableOutput.TryWriteVarUInt32(300u); variableOutput.TryWriteVarUInt64(300ul);
+                BinaryBufferReader variableInput=new(variableBytes,variableOutput.Position);
+                uint variableSmall=0u; ulong variableLarge=0ul;
+                variableInput.ReadVarUInt32(ref variableSmall); variableInput.ReadVarUInt64(ref variableLarge);
                 BitSet flags=new(65); flags.SetRange(1,63,true);
                 bool any=flags.HasAnySet(); bool all=flags.HasAllSet();
                 flags.ShiftLeft(1); flags.ShiftRight(32);
@@ -180,6 +186,7 @@ public class WholeStandardLibraryEditorTests
                 bool absolute=Paths::IsFullyQualified("/tmp/file",PathStyle::Unix);
                 bool localResult=Contains(42);
                 Deque<int> ends=new(); ends.AddFirst(1); ends.AddLast(2); int removed=ends.RemoveLast(); ends.ShrinkToFit();
+                var endQuery=ends.AsEnumerable().Where((int value) => value > 0);
                 Queue<int> pending=new(); pending.Enqueue(42); pending.ShrinkToFit();
                 TextLines lines=new(new Span<readonly(char)>("a\r\nb",4));
                 TextLines::Enumerator lineIterator=lines.GetEnumerator();
@@ -225,7 +232,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil","Zip","TrySplitOnce"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil","Zip","TrySplitOnce","Combine","TryWriteVarUInt32","TryWriteVarUInt64","ReadVarUInt32","ReadVarUInt64","AsEnumerable"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

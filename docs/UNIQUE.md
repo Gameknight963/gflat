@@ -27,6 +27,15 @@ readonly owner. An immutable owner cannot call that getter to obtain mutable
 access. Passing `ref owner.Value` to a function edits the actual object rather
 than copying it. `&owner.Value` explicitly borrows its address when needed.
 
+`ValueImmutable` returns `ref immutable(T)` and is available through mutable,
+shallow readonly, and immutable owners. It borrows the same object without copying
+or allocating, including when `T` is noncopyable. Its deep view protects inline
+fields and storage reached through raw or managed pointers, and permits only
+immutable instance methods. It throws the same `Exception("Unique is empty")`
+for an empty owner. Existing mutable aliases are not frozen. The borrow follows
+the same lifetime and invalidation rules as `Value`; it does not keep an owner
+alive or transfer deletion responsibility.
+
 `Unique(T* pointer)` adopts a non-null raw pointer; construction itself is `nothrow`
 and does not allocate. After adoption, the caller must not delete the pointer or
 adopt it into another owner. It must identify one live object for which ordinary

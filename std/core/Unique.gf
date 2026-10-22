@@ -20,6 +20,15 @@ public struct Unique<T>
         }
     }
 
+    public ref immutable(T) ValueImmutable
+    {
+        immutable get
+        {
+            if (storage == null) throw new Exception("Unique is empty");
+            return *storage!;
+        }
+    }
+
     ~Unique()
     {
         if (storage != null) delete storage!;

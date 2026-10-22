@@ -39,6 +39,7 @@ implementation lives in `libc`.
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
 | Hexadecimal numbers | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Explicit hexadecimal parsing](../docs/HEX_INTEGER_PARSING.md) |
 | Boolean text | `TryParseBool`, `ParseBool` | [Strict ASCII Boolean parsing](../docs/BOOLEAN_PARSING.md) |
+| Identifiers | `Uuid` | [Canonical UUID parsing, formatting, comparison, and hashing](../docs/UUID.md) |
 | Calendar dates | `Date` | [Gregorian values, calendar arithmetic, strict ISO parsing, and formatting](../docs/DATE.md) |
 | Caller-buffer numbers | `IntegerFormatting::TryFormat`, `TryFormatHex` | [Decimal and hexadecimal formatting without a writer or allocation](../docs/INTEGER_FORMATTING.md) |
 | Unicode | `Utf8`, incremental `Utf8Decoder`, borrowed `Utf8Scalars` | [UTF-8 buffers](../docs/UTF8.md), [chunked decoding](../docs/UTF8_DECODER.md), [scalar iteration](../docs/UTF8_SCALARS.md) |

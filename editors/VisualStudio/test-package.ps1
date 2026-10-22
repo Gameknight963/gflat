@@ -230,6 +230,11 @@ int main() {
     try { while (invalid.Read()) {} }
     catch (JsonParseException* error) { jsonRejected = error.Offset == 3; }
     if (!jsonRejected) return 35;
+    String structuredOutput = new(); JsonWriter structuredWriter = new(&structuredOutput);
+    structuredWriter.WriteStartArray(); structuredWriter.WriteNumber(42);
+    structuredWriter.WriteBoolean(true); structuredWriter.WriteNull();
+    structuredWriter.WriteEndArray(); structuredWriter.Complete();
+    if (!CString::Equals(structuredOutput.Data, "[42,true,null]")) return 36;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

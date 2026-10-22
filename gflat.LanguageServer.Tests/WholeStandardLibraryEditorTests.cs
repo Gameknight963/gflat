@@ -151,6 +151,12 @@ public class WholeStandardLibraryEditorTests
                 values.Fill(7);
                 float fraction=random.NextFloat();
                 float root=Math::Sqrt(4.0f);
+                uint divisor=Math::GreatestCommonDivisor(48u,18u);
+                ulong wideDivisor=Math::GreatestCommonDivisor(48ul,18ul);
+                nuint nativeDivisor=Math::GreatestCommonDivisor((nuint)48,(nuint)18);
+                uint multiple=0u; Math::TryLeastCommonMultiple(48u,18u,ref multiple);
+                ulong wideMultiple=0ul; Math::TryLeastCommonMultiple(48ul,18ul,ref wideMultiple);
+                nuint nativeMultiple=0; Math::TryLeastCommonMultiple((nuint)48,(nuint)18,ref nativeMultiple);
                 float signed=Math::CopySign(root,-0.0f);
                 float truncated=Math::Truncate(-1.5f); double rounded=Math::Round(2.5);
                 float floored=Math::Floor(-1.5f); double ceiling=Math::Ceiling(1.5);
@@ -249,6 +255,22 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(string member in new[]{"GreatestCommonDivisor","TryLeastCommonMultiple"})
+        {
+            var calls=sourceTokens.Where(token=>token.Text==member).ToArray();
+            Assert.Equal(3,calls.Length);
+            string[] widths=["uint","ulong","nuint"];
+            for(int i=0;i<calls.Length;i++)
+            {
+                var call=calls[i];
+                var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call.Start),Protocol.JsonOptions);
+                string signature=hover.GetProperty("contents").GetProperty("value").GetString()!;
+                Assert.Contains(member,signature);
+                Assert.Contains($"{widths[i]} a",signature);
+                if(member=="TryLeastCommonMultiple") Assert.Contains($"ref {widths[i]} result",signature);
+                Assert.Contains("Math.gf",JsonSerializer.Serialize(model.Definition(source.Path,call.Start),Protocol.JsonOptions));
+            }
+        }
         foreach(string member in new[]{"AddDays","DayNumber","DaysInMonth","AsSpan","AsReadOnly","AsImmutable","RemoveAll","ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","Min","Max","Clamp","Abs","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","FindImmutable","ValueReadOnly","ValueImmutable","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {

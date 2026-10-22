@@ -67,6 +67,11 @@ public class WholeStandardLibraryEditorTests
                 decoder.Read("a",1,true,&scalar,&consumed);
                 Utf8Scalars characters=new(text.Data,text.Length);
                 Utf8Scalars::Enumerator iterator=characters.GetEnumerator();
+                immutable(Utf8Scalars) protectedCharacters=characters;
+                var scalarQuery=protectedCharacters.AsEnumerable().Where((uint scalar) => scalar != 0u).Take(2);
+                ushort[2] scalarUnits=[(ushort)65,(ushort)90];
+                immutable(Utf16Scalars) wideCharacters=new(scalarUnits,2);
+                var wideScalarQuery=wideCharacters.AsEnumerable().Select((uint scalar) => (int)scalar);
                 ITextWriter* output=Console::Out;
                 output.WriteJsonString(text.Data,text.Length);
                 char[8] jsonText; nuint jsonLength=0;
@@ -180,7 +185,9 @@ public class WholeStandardLibraryEditorTests
                 bool enabled=false; TryParseBool("True",&enabled);
                 char[8] terminated; CString::TryCopy("ok",terminated,8);
                 Arena scratch=new(); scratch.AllocateZeroed(16,8);
-                File temporary=File::OpenTemporary(); temporary.Close();
+                File temporary=File::OpenTemporary();
+                FileBinary::WriteDoubleBigEndian(&temporary,1.25);
+                temporary.Close();
                 int next=Console::PeekByte();
                 Console::ClearInputError();
                 return node.Value-42;
@@ -209,7 +216,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

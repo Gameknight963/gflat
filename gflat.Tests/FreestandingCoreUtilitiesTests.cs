@@ -291,6 +291,17 @@ public class FreestandingCoreUtilitiesTests
             if(std::Hashing::Integer(runtimeInput)==std::Hashing::Integer(0ul)) return 174;
             ulong repeatedHashInput=(runtimeInput>>63)|((runtimeInput>>63)<<32);
             if(std::Hashing::Integer(repeatedHashInput)==std::Hashing::Integer(0ul)) return 175;
+            std::BinaryBufferWriter wideCursorWriter=new(&wideBinary[1],16);
+            std::BinaryBufferReader wideCursorReader=new(&wideBinary[1],16);
+            if(!wideCursorWriter.TryWriteExtraLongBigEndian(wideBits)
+                ||!wideCursorReader.TryReadExtraLongBigEndian(ref roundtrip)||roundtrip!=wideBits) return 176;
+            wideCursorWriter.Reset();wideCursorReader.Reset();
+            if(!wideCursorWriter.TryWriteExtraLongLittleEndian(wideBits)
+                ||!wideCursorReader.TryReadExtraLongLittleEndian(ref roundtrip)||roundtrip!=wideBits) return 177;
+            if(wideBinary[0]!=(byte)90||wideBinary[17]!=(byte)90) return 178;
+            char[8] escaped=['"','\\','u','0','0','4',(char)(48ul+(runtimeInput>>63)),'"'];
+            if(!std::JsonString::ValueTextEquals(escaped,8,"A",1)
+                ||std::JsonString::ValueTextEquals(escaped,8,"B",1)) return 179;
             return 42;
         }
         """;

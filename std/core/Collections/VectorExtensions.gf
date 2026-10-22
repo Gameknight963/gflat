@@ -9,6 +9,11 @@ public void AddRange<T>(this ref Vector<T> target, Span<readonly(T)> source)
     nuint originalCount = target.Count;
     nuint maximum = (nuint)0 - (nuint)1;
     if (length > maximum - originalCount) throw new Exception("Vector count overflow");
+    nuint required = originalCount + length;
+    nuint stride = (nuint)sizeof(T);
+    if (stride == 0) stride = 1;
+    maximum /= stride;
+    if (required > maximum) throw new Exception("Vector capacity overflow");
 
     // The source may borrow this vector. Save its element offset before Reserve
     // relocates and frees the old buffer; rebind that view after growth.
@@ -19,8 +24,6 @@ public void AddRange<T>(this ref Vector<T> target, Span<readonly(T)> source)
         Span<readonly(T)> original = target.AsReadOnly();
         nuint beginning = (nuint)original.Data!;
         nuint address = (nuint)source.Data!;
-        nuint stride = (nuint)sizeof(T);
-        if (stride == 0) stride = 1;
         if (address >= beginning)
         {
             nuint difference = address - beginning;
@@ -32,7 +35,18 @@ public void AddRange<T>(this ref Vector<T> target, Span<readonly(T)> source)
             }
         }
     }
-    target.Reserve(originalCount + length);
+    if (required > target.Capacity)
+    {
+        nuint grown = 4;
+        if (target.Capacity != 0)
+        {
+            grown = maximum;
+            if (target.Capacity <= maximum / 2) grown = target.Capacity * 2;
+        }
+        if (grown > maximum) grown = maximum;
+        if (grown < required) grown = required;
+        target.Reserve(grown);
+    }
     if (aliasesTarget) source = target.AsReadOnly().Slice(offset, length);
     for (nuint i = 0; i < length; i++) target.Add(source[i]);
 }

@@ -23,6 +23,12 @@ public class FreestandingCoreUtilitiesTests
             if (!std::Base64::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength)) return 7;
             if (decodedLength != length) return 8;
             for (nuint i = 0; i < length; i++) if (input[i] != decoded[i]) return 9;
+            char[2] urlBinary=[(char)((formatter_input()>>63)+250ul),(char)255]; char[3] urlText; char[2] urlBytes;
+            nuint urlWritten=0;
+            if(!std::Base64Url::TryEncode(urlBinary,2,urlText,3,ref urlWritten)||urlWritten!=3
+                ||urlText[0]!='-'||urlText[1]!='_'||urlText[2]!='8')return 162;
+            if(!std::Base64Url::TryDecode(urlText,3,urlBytes,2,ref urlWritten)||urlWritten!=2
+                ||urlBytes[0]!=urlBinary[0]||urlBytes[1]!=urlBinary[1])return 163;
             if (!std::Hex::TryEncode(decoded, decodedLength, encoded, 32, ref encodedLength)) return 10;
             if (encodedLength != (nuint)8) return 11;
             readonly(char)* expected = "F09F9880";
@@ -63,9 +69,9 @@ public class FreestandingCoreUtilitiesTests
             if (packet[0]!=(byte)165 || packet[9]!=(byte)90) return 37;
             byte[4] bulk=[(byte)11,(byte)22,(byte)33,(byte)44];
             std::BinaryBufferWriter bulkWriter=new(bulk,4);
-            if(!bulkWriter.TrySkip(1)||!bulkWriter.TryWriteBytes(bulk,3)||bulk[2]!=(byte)22||bulk[3]!=(byte)33)return 145;
+            if(!bulkWriter.TrySkip(1)||!bulkWriter.TryWriteBytes(bulk,3)||bulk[2]!=(byte)22||bulk[3]!=(byte)33)return 160;
             std::BinaryBufferReader bulkReader=new(bulk,4);
-            if(!bulkReader.TryReadBytes(&bulk[1],3)||bulk[2]!=(byte)11||bulk[3]!=(byte)22)return 146;
+            if(!bulkReader.TryReadBytes(&bulk[1],3)||bulk[2]!=(byte)11||bulk[3]!=(byte)22)return 161;
             ushort[7] unicode = [(ushort)65, (ushort)0, (ushort)0x20ac, (ushort)0xd83d, (ushort)0xde00, (ushort)0xfeff, (ushort)0xffff];
             nuint unicodeBytes = 0; nuint unicodeUnits = 0; nuint unicodeScalars = 0;
             if (!std::Utf16::TryCount(unicode, 7, &unicodeScalars) || unicodeScalars != 6) return 38;
@@ -280,7 +286,7 @@ public class FreestandingCoreUtilitiesTests
         if (RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
-        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
+        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "Base64Url.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
             "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "HexIntegerParsing.gf", "BooleanParsing.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

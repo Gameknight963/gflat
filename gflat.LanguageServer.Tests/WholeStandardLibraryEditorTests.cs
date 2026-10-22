@@ -85,6 +85,13 @@ public class WholeStandardLibraryEditorTests
                 byte[4] bytes; BinaryPrimitives::TryWriteUInt32BigEndian(bytes,4,42u);
                 float number=0.0f; BinaryPrimitives::TryReadFloatLittleEndian(bytes,4,ref number);
                 BinaryBufferWriter binary=new(bytes,4); binary.TryWriteFloatBigEndian(number);
+                binary.Reset(); binary.TryWriteBytes(bytes,4);
+                BinaryBufferReader binaryInput=new(bytes,4); binaryInput.TryReadBytes(bytes,4);
+                char[3] urlText; char[2] urlBytes; nuint urlCount=0;
+                Base64Url::TryGetEncodedLength(1,ref urlCount);
+                Base64Url::TryEncode("x",1,urlText,3,ref urlCount);
+                Base64Url::TryGetDecodedLength(urlText,urlCount,ref urlCount);
+                Base64Url::TryDecode("eA",2,urlBytes,2,ref urlCount);
                 nuint encoded=0; VarInt::TryWriteUInt32(bytes,4,42u,ref encoded);
                 uint zigzag=VarInt::ZigZagEncode(-42); int signedNumber=VarInt::ZigZagDecode(zigzag);
                 BitSet flags=new(65); flags.SetRange(1,63,true);
@@ -171,7 +178,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

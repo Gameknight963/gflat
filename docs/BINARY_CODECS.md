@@ -33,6 +33,11 @@ whole-size buffer. Decoded strings may contain embedded zeros; use `Length`
 rather than a C-string scan. Malformed input, length overflow, and allocation
 failure throw. Include the usual core String dependencies for these conveniences.
 
+For chunked input, [Base64Writer](BASE64_WRITER.md) wraps an `ITextWriter` and
+emits the same padded encoding without a whole-input buffer. `File::CopyTo` can
+feed it directly; call `Complete()` to emit any final padding. It does not close
+or flush the borrowed destination.
+
 # URL-safe Base64
 
 `std/core/Base64Url.gf` defines `std::Base64Url`, a separate caller-buffer codec

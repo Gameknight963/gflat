@@ -130,10 +130,19 @@ int main()
   calling `Memory::Allocate` on the normal path. Capacity includes room for the null terminator;
   zero capacity throws `BufferTooSmallException` before reading or touching the
   buffer. The caller provides valid writable storage.
+- `TryReadLine(ITextWriter* output)` appends one line to any borrowed writer,
+  without a line ending or null terminator. It never clears, flushes, closes,
+  or destroys the sink. An empty line returns true without writing bytes; EOF
+  before a line returns false and leaves the sink's existing contents unchanged.
+  The reader itself does not allocate line storage, but the sink can allocate
+  or throw. A sink exception propagates unchanged; input may already have been
+  consumed beyond the bytes the sink accepted. The remaining line is not drained
+  or recovered automatically, and there is no rollback.
 - `ReadLine(data, capacity)` returns the byte count and throws
   `std::EndOfStreamException` when no line remains. It also leaves a trailing null.
-- EOF before any bytes returns `false` from `TryReadLine`, with an empty buffer and
-  zero length. Empty lines return `true`. A final line without a newline is returned.
+- EOF before any bytes returns `false` from the caller-buffer `TryReadLine`, with
+  an empty buffer and zero length. Empty lines return `true`. A final line without
+  a newline is returned by every line-reading overload.
 - LF and CRLF endings are removed. Other carriage returns remain text.
   These rules apply after the host CRT's input translation. For example, on
   Windows a physical CR-CR-LF sequence can first become CR-LF in text mode,
@@ -142,6 +151,27 @@ int main()
   its length remain in the buffer, and `std::BufferTooSmallException` is thrown.
   The next read starts at the next line. Actual read/write failures throw
   `std::IOException`; partial input/output can already have occurred.
+
+For example, count each stdin line without storing its text or imposing a maximum
+line length in a caller buffer:
+
+```csharp
+using std;
+
+int main()
+{
+    CountingWriter length = new();
+    while (true)
+    {
+        length.Clear();
+        if (!Console::TryReadLine(&length)) break;
+        length.Length.Format(Console::Out);
+        Console::WriteLine();
+    }
+    Console::Flush();
+    return 0;
+}
+```
 
 With the String conveniences:
 

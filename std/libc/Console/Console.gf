@@ -70,6 +70,9 @@ void ReadExactly(char* data, nuint count)
     if (Read(data, count) != count) throw new std::EndOfStreamException();
 }
 
+// Appends one line without its ending. Borrows the sink; never clears or closes it.
+bool TryReadLine(ITextWriter* output) { return detail::ReadLine(output); }
+
 // capacity includes the terminator. No String or application buffer allocation is needed.
 // On overflow the whole line is consumed and a terminated prefix remains.
 bool TryReadLine(char* data, nuint capacity, ref nuint length)

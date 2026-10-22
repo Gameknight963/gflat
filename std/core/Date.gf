@@ -4,7 +4,7 @@ namespace std;
 public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattable
 {
     private int dayNumber;
-    private const int MaximumDayNumber = 3652058;
+    private static const int MaximumDayNumber = 3652058;
 
     public Date() nothrow { dayNumber = 0; }
 

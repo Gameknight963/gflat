@@ -3,7 +3,8 @@
 `std::Date` is an immutable Gregorian calendar value from `0001-01-01` through
 `9999-12-31`. It has no clock, time-of-day, timezone, locale, or OS dependency.
 The Gregorian rules apply throughout that range, including before their historical
-adoption. Its single private `int` day number counts days since `0001-01-01`.
+adoption. Its single private `int` day number counts days since `0001-01-01`;
+the supported-range bound is a static constant and adds no per-date storage.
 An empty/default construction represents that first day, rather than an invalid date.
 
 ```csharp

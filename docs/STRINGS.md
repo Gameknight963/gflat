@@ -71,6 +71,17 @@ any mutation, so allocation failure or an impossible width preserves the origina
 storage, capacity, and contents. The trailing zero byte is maintained separately
 from any counted zero padding.
 
+`Resize(length, fill = '\0')` sets the counted byte length, preserving the prefix.
+Growing initializes every new byte with `fill`; shrinking keeps capacity and
+writes a terminator at the new end. Resizing to the current length does nothing,
+including for a default empty string. Zero and non-ASCII fill bytes are allowed:
+`text.Resize(16)` creates sixteen initialized bytes, even though a C-string
+consumer stops at the first zero. Existing capacity is reused. Growth reserves
+before changing bytes, so overflow or allocation failure preserves the original
+length, capacity, storage, and contents. Fill is passed by value and may come
+from the same string before growth. As with other mutations, borrowed views may
+observe changed contents or be invalidated by buffer relocation.
+
 `Insert(index, text)` accepts a C string, counted byte sequence, character, or
 borrowed String pointer. Inserting at `Length` appends. Input borrowed from the
 same string is snapshotted before mutation, including when existing capacity is

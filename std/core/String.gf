@@ -10,7 +10,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
 
     public String() nothrow
     {
-        // Empty storage is never written or freed; the first append allocates.
+        // Empty storage is never written or freed; the first growth allocates.
         data = (char*)"";
         length = 0;
         capacity = 0;
@@ -64,6 +64,19 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (capacity != 0) Memory::Free((void*)data);
         data = replacement;
         capacity = requested;
+    }
+
+    // Length is counted bytes: a null fill does not shorten the string.
+    public void Resize(nuint requested, char fill = '\0')
+    {
+        if (requested == length) return;
+        if (requested > length)
+        {
+            this.Reserve(requested);
+            for (nuint i = length; i < requested; i++) data[i] = fill;
+        }
+        length = requested;
+        data[length] = '\0';
     }
 
     public void AppendLiteral(readonly(char)* text, nuint count)

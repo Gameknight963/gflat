@@ -42,6 +42,14 @@ and checks bounds.
   and contents; overflow remains a separate error.
   Appending from the same string works, including across growth.
 - `Clear` retains capacity. `Clone` and `ToString()` make independent owned copies.
+- `Resize(length, fill = '\0')` changes the counted byte length. Growing initializes
+  every new byte with `fill`, retaining the existing prefix; shrinking retains
+  capacity. The trailing terminator is maintained in either case. A null fill
+  creates counted embedded nulls, so `Resize(16)` prepares sixteen initialized
+  bytes for a counted codec output, rather than an empty C string. Resize to the
+  current length does nothing. Growth overflow or allocation failure preserves
+  length, contents, capacity, and storage. Fill is passed by value, so
+  `text.Resize(32, text[0])` works even if growth relocates its buffer.
 - `String copy = text;` makes an independent owned copy and may throw on allocation failure.
 - `move text` transfers the buffer and leaves `text` uninitialized. Assign a new value before using it again.
 - `Equals(immutable(String)* other)` compares bytes.

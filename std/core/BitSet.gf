@@ -70,6 +70,52 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
 
     public void Clear() { this.SetAll(false); }
 
+    // Shifts keep Length, discard outgoing bits, and clear the vacated positions.
+    public void ShiftLeft(nuint count)
+    {
+        if (count == 0) return;
+        if (count >= length) { this.Clear(); return; }
+        nuint whole = count / 32;
+        int remainder = (int)(count % 32);
+        // Read lower words before overwriting them.
+        for (nuint end = words; end > whole; end--)
+        {
+            nuint target = end - 1;
+            nuint source = target - whole;
+            uint bits = data![source];
+            if (remainder != 0)
+            {
+                bits = bits << remainder;
+                if (source != 0) bits = bits | (data![source - 1] >> (32 - remainder));
+            }
+            data![target] = bits;
+        }
+        for (nuint i = 0; i < whole; i++) data![i] = 0;
+        this.MaskUnusedBits();
+    }
+
+    public void ShiftRight(nuint count)
+    {
+        if (count == 0) return;
+        if (count >= length) { this.Clear(); return; }
+        nuint whole = count / 32;
+        int remainder = (int)(count % 32);
+        nuint remaining = words - whole;
+        // Read higher words before overwriting them.
+        for (nuint target = 0; target < remaining; target++)
+        {
+            nuint source = target + whole;
+            uint bits = data![source];
+            if (remainder != 0)
+            {
+                bits = bits >> remainder;
+                if (source < words - 1) bits = bits | (data![source + 1] << (32 - remainder));
+            }
+            data![target] = bits;
+        }
+        for (nuint i = remaining; i < words; i++) data![i] = 0;
+    }
+
     public void Flip(nuint index)
     {
         if (index >= length) throw new Exception("BitSet index out of range");

@@ -158,7 +158,7 @@ still receives normal cleanup when insertion throws.
 addressable bits; `CountSetBits()` counts bits that are true. Indexing checks
 bounds and produces a bool rather than a reference into packed storage.
 `HasAnySet()` and `HasAllSet()` test occupancy without counting every set bit,
-stopping when a word determines the answer. They work on readonly sets, allocate
+stopping when a word determines the answer. They work on immutable sets, allocate
 nothing, and are `nothrow`. An empty set has no set bits and satisfies
 `HasAllSet()` because it has no clear logical bits. Unused final-word padding
 does not contribute to either answer.
@@ -181,7 +181,14 @@ int main()
 `SetAll(bool)` fills the logical range; `Clear()` clears it without changing
 length. `Clone()` explicitly makes an independent owned copy. `UnionWith`,
 `IntersectWith`, `ExceptWith`, and `SymmetricExceptWith` modify this set and
-require matching logical lengths; their argument is a borrowed readonly pointer.
+require matching logical lengths; their argument is a borrowed immutable pointer.
+
+`ShiftLeft(count)` moves each set bit toward a higher index; `ShiftRight(count)`
+moves it toward a lower index. Both keep `Length`, discard bits shifted past an
+end, and fill the vacated positions with zero. A zero shift changes nothing;
+any count at least `Length` clears the set, including the largest `nuint` count.
+They process words in place without allocating. Padding remains clear, so a
+later `Resize` cannot bring discarded bits back.
 
 `SetRange(start, count, value)` sets or clears a consecutive range;
 `FlipRange(start, count)` toggles it. They process affected words without

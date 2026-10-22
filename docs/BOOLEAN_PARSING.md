@@ -36,3 +36,23 @@ the same counted and C-string forms. They return the parsed bool or throw
 `Exception` for invalid text. Include both sources to use these wrappers; only
 the Try-only source is needed without an exception runtime. A `String` can be
 parsed through `text.Data, text.Length` without copies or additional wrappers.
+
+## Borrowed spans
+
+Optional `core/SpanBooleanParsing.gf` adds
+`text.TryParseBool(&result)` for `Span<readonly(char)>`; include
+`BooleanParsing.gf` as well. `core/SpanBooleanParsingThrowing.gf` adds
+`text.ParseBool()` and also requires `BooleanParsingThrowing.gf`. The adapters
+forward the view's exact byte count to the existing parser, without trimming,
+copying its bytes, retaining its pointer, or allocating intermediate storage.
+
+Default and zero-length spans are invalid boolean text. The Try form returns
+false and stores false without accessing input; the throwing form reports the
+same invalid input through `Exception`. The Try adapter is `nothrow` and makes
+no allocation. Successful `false` input still returns true from TryParseBool.
+
+The view keeps borrowing its original storage; keep it readable and unchanged
+throughout the call. An immutable span header is accepted. The result may overlap
+suitably aligned writable input under the counted parser's rules above; storing
+the result then changes those input bytes. A failed throwing parse leaves an
+assignment target unchanged.

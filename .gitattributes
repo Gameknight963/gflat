@@ -1,2 +1,3 @@
-# gflat is not registered with Linguist; C++ provides useful source highlighting.
+# C++ highlighting is kind of correct (better than nothing for sure)
 *.gf linguist-language=C++
+*.gf linguist-language=xml

@@ -60,8 +60,34 @@ Ordinary string interpolation uses this interface, so `s$"{date}"` works without
 `ToString()` or a String dependency inside Date. Creating the interpolated String
 itself follows its usual allocation behavior.
 
+## Parsing
+
+`Date::TryParse(text, count, &result)` accepts exactly ten ASCII bytes in
+`yyyy-MM-dd` form, with valid Gregorian components. It accepts neither whitespace,
+signs, omitted leading zeroes, trailing data, nor timestamps. Year zero and
+impossible dates such as `1900-02-29` fail. It is `nothrow` and allocates nothing.
+Failure returns false and resets `result` to the default date, `0001-01-01`.
+When `count != 10`, input is not read, including at zero length.
+
+`Date::TryParse(cString, &result)` accepts the same format terminated by NUL.
+It examines at most eleven bytes; bytes after the first NUL are outside the
+C string. A counted input includes any embedded NUL and therefore rejects it.
+Supply readable input and a writable, properly aligned `Date*` result. Result
+storage may overlap input: all needed input is read before the output is committed.
+
+`Date::Parse(text, count)` and `Date::Parse(cString)` return the parsed date or
+throw `Exception` on invalid input. Successful parsing allocates nothing.
+
+```csharp
+Date birthday = Date::Parse("2000-02-29");
+Date parsed = new();
+if (Date::TryParse("2024-12-31", &parsed)) {
+    Date nextYear = parsed.AddYears(1);
+}
+```
+
 The source is `core/Date.gf`, with the normal equality/comparison/hash and text
-interface dependencies. The complete standard library includes them. No parsing,
+interface dependencies. The complete standard library includes them. No
 current-date lookup, custom formats, other calendars, or timezone conversion is
 provided by this API.
 

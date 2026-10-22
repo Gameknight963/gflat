@@ -18,6 +18,15 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         return 31;
     }
 
+    // Components must already have passed Gregorian range validation.
+    private static int NumberFromParts(int year, int month, int day) nothrow
+    {
+        int previous = year - 1;
+        int result = previous * 365 + previous / 4 - previous / 100 + previous / 400 + day - 1;
+        for (int i = 1; i < month; i++) result += MonthLength(year, i);
+        return result;
+    }
+
     public static bool IsLeapYear(int year)
     {
         if (year < 1 || year > 9999) throw new Exception("Date year must be between 1 and 9999");
@@ -35,9 +44,7 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
     {
         int limit = DaysInMonth(year, month);
         if (day < 1 || day > limit) throw new Exception("Date day is outside the selected month");
-        int previous = year - 1;
-        dayNumber = previous * 365 + previous / 4 - previous / 100 + previous / 400 + day - 1;
-        for (int i = 1; i < month; i++) dayNumber += MonthLength(year, i);
+        dayNumber = NumberFromParts(year, month, day);
     }
 
     public static Date FromDayNumber(int number)
@@ -106,6 +113,57 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         // Check before multiplying so even extreme int arguments cannot overflow.
         if (years < -9998 || years > 9998) throw new Exception("Date addition is outside the supported range");
         return this.AddMonths(years * 12);
+    }
+
+    // Strict invariant yyyy-MM-dd. Commit the result only after reading input,
+    // so properly aligned result storage may overlap the input bytes.
+    public static bool TryParse(readonly(char)* text, nuint count, Date* result) nothrow
+    {
+        Date parsed = new();
+        if (count != 10) { *result = parsed; return false; }
+        int year = 0; int month = 0; int day = 0;
+        for (nuint i = 0; i < 10; i++)
+        {
+            char value = text[i];
+            if (i == 4 || i == 7)
+            {
+                if (value != '-') { *result = parsed; return false; }
+            }
+            else
+            {
+                if (value < '0' || value > '9') { *result = parsed; return false; }
+                int digit = value - '0';
+                if (i < 4) year = year * 10 + digit;
+                else if (i < 7) month = month * 10 + digit;
+                else day = day * 10 + digit;
+            }
+        }
+        if (year < 1 || month < 1 || month > 12 || day < 1 || day > MonthLength(year, month))
+        { *result = parsed; return false; }
+        parsed.dayNumber = NumberFromParts(year, month, day);
+        *result = parsed;
+        return true;
+    }
+
+    public static bool TryParse(readonly(char)* text, Date* result) nothrow
+    {
+        nuint count = 0;
+        while (count < 11 && text[count] != '\0') count++;
+        return TryParse(text, count, result);
+    }
+
+    public static Date Parse(readonly(char)* text, nuint count)
+    {
+        Date result = new();
+        if (!TryParse(text, count, &result)) throw new Exception("Invalid date; expected yyyy-MM-dd");
+        return result;
+    }
+
+    public static Date Parse(readonly(char)* text)
+    {
+        Date result = new();
+        if (!TryParse(text, &result)) throw new Exception("Invalid date; expected yyyy-MM-dd");
+        return result;
     }
 
     public immutable bool Equals(immutable(Date)* other) nothrow => dayNumber == other.dayNumber;

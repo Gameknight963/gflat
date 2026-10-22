@@ -144,6 +144,10 @@ public class WholeStandardLibraryEditorTests
                 DayOfWeek weekday=calendar.DayOfWeek; int ordinalDay=calendar.DayOfYear;
                 int calendarDay=tomorrow.DayNumber; int monthDays=Date::DaysInMonth(2024,2);
                 String dated=s$"Next day: {tomorrow}";
+                Uuid identifier=Uuid::Parse("00112233-4455-6677-8899-aabbccddeeff");
+                ulong identifierHigh=identifier.High; ulong identifierLow=identifier.Low;
+                bool missingIdentifier=identifier.IsNil;
+                String identifierText=s$"Id: {identifier}";
                 Unique<int> owner=new(new* int(41));
                 readonly(Unique<int>)* ownerView=&owner; ownerView.Value++;
                 immutable(Unique<int>)* ownerDeep=&owner; int protectedValue=ownerDeep.ValueImmutable;
@@ -216,7 +220,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

@@ -2,12 +2,12 @@ using System.Text;
 
 namespace gflat.Tests;
 
-public sealed class StandardBase64WriterTests
+public sealed class StandardBase64EncoderTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
         => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
-            .Append(new SourceFile("base64-writer.gf", program));
+            .Append(new SourceFile("base64-encoder.gf", program));
 
     private static void Run(string program, int optimization)
     {
@@ -96,7 +96,7 @@ public sealed class StandardBase64WriterTests
                         int encodedSize=ReadInt(stream);
                         if(encodedSize<0||encodedSize>32768)return 4;
                         if(fread((void*)(char*)expected,1,(nuint)encodedSize,stream)!=(nuint)encodedSize)return 5;
-                        Sink sink=new(output);Base64Writer writer=new(&sink);nuint position=0;
+                        Sink sink=new(output);Base64Encoder writer=new(&sink);nuint position=0;
                         writer.Write((readonly(char)*)1,0);
                         for(int i=0;i<count;i++){
                             writer.Write((readonly(char)*)input+position,(nuint)chunks[i]);position+=(nuint)chunks[i];
@@ -133,7 +133,7 @@ public sealed class StandardBase64WriterTests
                 }
             }
             bool Scenario(int budget,bool large){
-                Sink sink=new(budget);Base64Writer writer=new(&sink);int caught=0;
+                Sink sink=new(budget);Base64Encoder writer=new(&sink);int caught=0;
                 try{
                     if(large){char[195] data;for(nuint i=0;i<195;i++)data[i]=(char)i;writer.Write(data,195);}
                     else{writer.Write("a",1);writer.Write("bcdef",5);writer.Write("g",1);}
@@ -145,7 +145,7 @@ public sealed class StandardBase64WriterTests
                 try{writer.Write((readonly(char)*)1,0);}catch(Exception* error){caught++;}
                 try{writer.Write("later",5);}catch(Exception* error){caught++;}
                 try{writer.Complete();}catch(Exception* error){caught++;}
-                Base64Writer copy=writer;
+                Base64Encoder copy=writer;
                 try{copy.Complete();}catch(Exception* error){caught++;}
                 return caught==5&&sink.Calls==calls&&sink.Count==budget;
             }
@@ -172,21 +172,21 @@ public sealed class StandardBase64WriterTests
                 for(nuint carry=1;carry<=2;carry++){
                 Sink sink=new(output);
                 {
-                    char[2] source=['a','b'];Base64Writer writer=new(&sink);writer.Write(source,carry);
-                    Base64Writer copy=writer;source[0]='x';source[1]='y';Base64Writer moved=move copy;
+                    char[2] source=['a','b'];Base64Encoder writer=new(&sink);writer.Write(source,carry);
+                    Base64Encoder copy=writer;source[0]='x';source[1]='y';Base64Encoder moved=move copy;
                     readonly(char)* original="abc";moved.Write(original+carry,3-carry);moved.Complete();
                     if(sink.Count!=4||output[0]!='Y'||output[1]!='W'||output[2]!='J'||output[3]!='j')return 1;
-                    Base64Writer complete=moved;int calls=sink.Calls;complete.Complete();
+                    Base64Encoder complete=moved;int calls=sink.Calls;complete.Complete();
                     int caught=0;try{complete.Write((readonly(char)*)1,0);}catch(Exception* error){caught++;}
                     try{moved.Write("x",1);}catch(Exception* error){caught++;}
                     if(caught!=2||sink.Calls!=calls)return 2;
                     // Original writer still has a pending byte; its destruction must do nothing.
                 }
                 if(sink.Count!=4)return 3;
-                {Base64Writer abandoned=new(&sink);abandoned.Write("de",2);}
+                {Base64Encoder abandoned=new(&sink);abandoned.Write("de",2);}
                 if(sink.Count!=4)return 4;
                 sink.Write("!",1);if(sink.Count!=5||output[4]!='!')return 5;
-                Base64Writer empty=new(&sink);int calls=sink.Calls;
+                Base64Encoder empty=new(&sink);int calls=sink.Calls;
                 empty.Write((readonly(char)*)1,0);empty.Complete();empty.Complete();
                 if(sink.Calls!=calls)return 6;
                 try{empty.Write((readonly(char)*)1,0);return 7;}catch(Exception* error){}
@@ -211,7 +211,7 @@ public sealed class StandardBase64WriterTests
             Run(DenyAllocation+"""
                 int main(){
                     File input=File::OpenRead("INPUT");File output=File::OpenWrite("OUTPUT");
-                    Base64Writer writer=new(&output);char[257] buffer;
+                    Base64Encoder writer=new(&output);char[257] buffer;
                     if(input.CopyTo(&writer,buffer,257)!=65537)return 1;
                     writer.Complete();input.Close();output.Close();
                     if(attempts!=0)return 2;return 0;

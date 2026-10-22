@@ -1,6 +1,6 @@
 # Streaming Base64 output
 
-`std::Base64Writer` implements `ITextWriter` and encodes counted binary input
+`std::Base64Encoder` implements `ITextWriter` and encodes counted binary input
 to one borrowed destination. It emits standard padded Base64 with the `+` and
 `/` alphabet, without whitespace, line wrapping, a BOM, or a trailing newline.
 It reuses the existing [Base64 codec](BINARY_CODECS.md).
@@ -16,7 +16,7 @@ int main()
 {
     File input = File::OpenRead("input.bin");
     File output = File::OpenWrite("output.txt");
-    Base64Writer encoder = new(&output);
+    Base64Encoder encoder = new(&output);
     char[4096] buffer;
     input.CopyTo(&encoder, buffer, 4096);
     encoder.Complete();

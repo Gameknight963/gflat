@@ -1,7 +1,7 @@
 namespace std;
 
 // Streams padded Base64 to a borrowed sink. Complete emits the final padding.
-public struct Base64Writer : ITextWriter
+public struct Base64Encoder : ITextWriter
 {
     private ITextWriter* output;
     private char first;
@@ -10,7 +10,7 @@ public struct Base64Writer : ITextWriter
     private bool completed;
     private bool failed;
 
-    public Base64Writer(ITextWriter* destination)
+    public Base64Encoder(ITextWriter* destination)
     {
         output = destination;
         first = '\0';

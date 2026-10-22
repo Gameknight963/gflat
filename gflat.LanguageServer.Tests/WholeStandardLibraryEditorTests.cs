@@ -91,7 +91,7 @@ public class WholeStandardLibraryEditorTests
                 immutable(Utf16Scalars) wideCharacters=new(scalarUnits,2);
                 var wideScalarQuery=wideCharacters.AsEnumerable().Select((uint scalar) => (int)scalar);
                 ITextWriter* output=Console::Out;
-                Base64Writer encodedOutput=new(output);
+                Base64Encoder encodedOutput=new(output);
                 encodedOutput.Write(text.Data,text.Length);
                 encodedOutput.Complete();
                 CsvWriter csvOutput=new(output);
@@ -294,7 +294,7 @@ public class WholeStandardLibraryEditorTests
             int call=text.IndexOf("encodedOutput."+member,StringComparison.Ordinal)+"encodedOutput.".Length;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
-            Assert.Contains("Base64Writer.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            Assert.Contains("Base64Encoder.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
         int setCall=sourceTokens.Single(token=>token.Text=="ToHashSet").Start;
         var setHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,setCall),Protocol.JsonOptions);

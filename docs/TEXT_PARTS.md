@@ -77,3 +77,10 @@ pointer. Normal Span slice contracts apply; these extensions do not add a
 
 These views obey the same lifetime rules as split parts and line views. They
 do not take ownership or extend the underlying allocation's lifetime.
+
+## Preserve the remainder after one separator
+
+For a key/value setting such as `mode=fast=checked`, use the optional
+[`TrySplitOnce`](TEXT_SPLIT_ONCE.md) operation to obtain `mode` and `fast=checked`
+without splitting the remaining equals sign. It returns two borrowed readonly
+character spans and clears both outputs when no separator exists.

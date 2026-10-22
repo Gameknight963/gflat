@@ -118,10 +118,49 @@ public sealed class ProjectCreationTests
             Assert.Null(xml.Attribute("Sdk"));
             Assert.Equal(new[] { "$(GflatSdkRoot)/build/Gflat.props", "$(GflatSdkRoot)/build/Gflat.targets" },
                 xml.Elements("Import").Select(import => (string?)import.Attribute("Project")));
-            Assert.DoesNotContain(ProjectCreation.FindToolchainRoot(), File.ReadAllText(path));
+            AssertToolchainImportsResolve(path, ProjectCreation.FindToolchainRoot());
             Assert.True(ProjectModel.Load(path).NoStdLib);
         }
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public void RelativeToolchainImportsCanContainNestedRootPathSegments()
+    {
+        string directory = TemporaryDirectory();
+        try
+        {
+            string toolchain = Path.Combine(directory, "sdk", "toolchain");
+            Directory.CreateDirectory(Path.Combine(toolchain, "build"));
+            File.WriteAllText(Path.Combine(toolchain, "build", "Gflat.props"), "<Project />");
+            File.WriteAllText(Path.Combine(toolchain, "build", "Gflat.targets"), "<Project />");
+            string projectDirectory = Path.Combine(directory, "apps", "nested", "example");
+            string path = ProjectCreation.Create(projectDirectory, "Example", useStd: false, toolchainRoot: toolchain);
+            string root = XElement.Load(path).Elements("PropertyGroup").Elements("GflatSdkRoot").Single().Value;
+            // A relative path legitimately contains rooted-looking substrings.
+            // On Linux this also happens when ../../home/... contains /home/....
+            Assert.Contains("/sdk/toolchain", root);
+            Assert.False(Path.IsPathRooted(root));
+            AssertToolchainImportsResolve(path, toolchain);
+        }
+        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+    }
+
+    private static void AssertToolchainImportsResolve(string project, string toolchain)
+    {
+        var xml = XElement.Load(project);
+        string directory = Path.GetDirectoryName(project)!;
+        string root = xml.Elements("PropertyGroup").Elements("GflatSdkRoot")
+            .Single(property => property.Value != "$(GflatDefaultSdkRoot)").Value;
+        string expected = Path.GetRelativePath(directory, toolchain).Replace('\\', '/');
+        Assert.Equal(ProjectSdk.EscapePropertyValue(expected), root);
+        string decodedRoot = Uri.UnescapeDataString(root);
+        Assert.Equal(Path.GetFullPath(toolchain), Path.GetFullPath(decodedRoot, directory));
+        foreach (var import in xml.Elements("Import"))
+        {
+            string imported = import.Attribute("Project")!.Value.Replace("$(GflatSdkRoot)", decodedRoot);
+            Assert.True(File.Exists(Path.GetFullPath(imported, directory)), imported);
+        }
     }
 
     [Fact]

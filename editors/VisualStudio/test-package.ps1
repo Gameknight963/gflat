@@ -223,6 +223,8 @@ int main() {
     if (window.Count != 2 || window[0] != 1 || window[1] != 3) return 32;
     window.AsSpan().Fill(9);
     if (window[0] != 9 || window[1] != 9) return 33;
+    window.ShrinkToFit();
+    if (window.Capacity != window.Count || window[0] != 9 || window[1] != 9) return 38;
     JsonReader document = new("{\"ok\":true}", 11); int tokens = 0;
     while (document.Read()) tokens++;
     if (tokens != 4) return 34;

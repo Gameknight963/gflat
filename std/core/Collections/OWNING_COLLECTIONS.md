@@ -57,6 +57,23 @@ It is instantiated only when called; merely including it does not prevent using
 `Vector<T>` with noncopyable owning elements. The vector's instance operations
 continue to support those elements through explicit movement.
 
+`vector.InsertRange(index, immutableSpan)` copies a range before `index`, which
+may equal `Count`. Include `Collections/VectorInsertRange.gf` together with
+`Collections/VectorExtensions.gf` and `Collections/Algorithms.gf`. Like `AddRange`,
+this optional extension requires copyable elements only when called. Self-borrowed
+ranges work across growth, including insertion within the source range.
+
+The index is checked even for an empty source. All copies finish before existing
+elements are reordered; insertion then relocates elements without further copies.
+If allocation or copying fails, original contents, order, and count are preserved
+and successfully appended copies are destroyed. Capacity may have grown and
+existing borrows may have been invalidated even on failure. Copy constructors and
+cleanup destructors must not structurally mutate the source or target through
+aliases; their external side effects are outside this guarantee. Destructors retain
+the language's normal termination behavior. Successful insertion invalidates
+element borrows and iterators. Work is linear in the source length plus the
+target suffix length, with no auxiliary element buffer.
+
 ## Copying borrowed spans
 
 With `using std;`, `source.AsImmutable().CopyTo(destination)` assigns copies into

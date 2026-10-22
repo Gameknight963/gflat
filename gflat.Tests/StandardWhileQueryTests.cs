@@ -133,7 +133,7 @@ public sealed class StandardWhileQueryTests
     {
         string[] files=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf","Collections/EnumerableExtensions.gf",
             "Collections/WhereSource.gf","Collections/SelectSource.gf","Collections/SliceSource.gf","Collections/TakeWhileSource.gf","Collections/SkipWhileSource.gf",
-            "Vector.gf","Span.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","String.gf"];
+            "Vector.gf","Span.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","String.gf", "ByteSearch.gf"];
         var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))))
             .Append(new SourceFile("while.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_while_query_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);

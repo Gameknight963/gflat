@@ -146,7 +146,7 @@ public sealed class StandardSortedSetTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => new[]{"Collections/IEnumerable.gf","Collections/Enumerable.gf","Span.gf","Vector.gf","SortedMap.gf","SortedSet.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","String.gf"}
+        => new[]{"Collections/IEnumerable.gf","Collections/Enumerable.gf","Span.gf","Vector.gf","SortedMap.gf","SortedSet.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","String.gf", "ByteSearch.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("sorted-set.gf",program));
 

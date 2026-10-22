@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardStringLastIndexTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => new[]{"IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","IStringConvertable.gf","String.gf"}
+        => new[]{"IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","IStringConvertable.gf","String.gf", "ByteSearch.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("main.gf",code));
 
@@ -80,7 +80,7 @@ public sealed class StandardStringLastIndexTests
         Match probe=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Probe\([^\r\n]*\{\r?\n(?<body>.*?)^\}");
         Assert.True(probe.Success);Assert.Contains("nounwind",probe.Value);
         Assert.DoesNotContain("invoke ",probe.Value);Assert.DoesNotContain("personality",probe.Value);
-        string[] searches=ir.Split('\n').Where(line=>line.StartsWith("define ")&&line.Contains("$LastIndexOf",StringComparison.Ordinal)).ToArray();
+        string[] searches=ir.Split('\n').Where(line=>line.StartsWith("define ")&&line.Contains("$String$LastIndexOf",StringComparison.Ordinal)).ToArray();
         Assert.Equal(3,searches.Length);Assert.All(searches,line=>Assert.Contains("nounwind",line));
         Run(code,optimization);
     }

@@ -9,7 +9,7 @@ public sealed class StandardTextPartsTests
     private static SourceFile[] Sources(string program, bool strings = false, bool formatting = false)
     {
         var names = new List<string> { "Span.gf", "TextParts.gf", "TextPartsSpan.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf" };
-        if (strings) names.AddRange(["StringSplit.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "Formatting.gf"]);
+        if (strings) names.AddRange(["StringSplit.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf", "Formatting.gf"]);
         if (formatting) names.AddRange(["BufferWriter.gf", "BufferTooSmallException.gf", "Formatting.gf"]);
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();

@@ -31,9 +31,11 @@ zero. Search patterns may borrow the string's own storage. Forward character
 search also accepts a start offset. Invalid start and
 substring/removal ranges throw instead of wrapping pointer-sized arithmetic.
 
-Substring searches use simple byte comparisons with constant extra storage and
-no allocation. Their worst-case comparison count is O(string length times
-pattern length), including repeated-prefix patterns. Character search is linear.
+Substring searches reuse `std::ByteSearch`'s Two-Way search with constant extra
+storage, no allocation, and O(string length + pattern length) worst-case work.
+Character search is linear. Explicit source selections containing `String.gf`
+must also include `ByteSearch.gf`; projects referencing the complete standard
+library already include it.
 
 `Substring` allocates an independent string. `Remove`, character `Replace`, and
 ASCII-whitespace `Trim`, `TrimStart`, and `TrimEnd` modify the existing buffer

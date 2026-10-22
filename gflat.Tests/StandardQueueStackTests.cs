@@ -4,7 +4,7 @@ public sealed class StandardQueueStackTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "IStringConvertable.gf",
-        "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf",
+        "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf",
         "Vector.gf", "Span.gf", "Stack.gf", "Queue.gf"
     }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
         .Append(new SourceFile("main.gf", program));

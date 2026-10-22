@@ -229,7 +229,7 @@ public sealed class StandardSortedMapTests
     private static IEnumerable<SourceFile> Sources(string program, bool managed = false)
     {
         string[] files = ["Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Vector.gf", "Span.gf", "SortedMap.gf",
-            "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf"];
+            "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf"];
         IEnumerable<SourceFile> sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))));
         if (managed) sources = sources.Concat(new[] { "GC.gf", "TracingCollector.gf" }
             .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc", file)))));

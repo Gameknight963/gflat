@@ -7,7 +7,7 @@ public sealed class StandardFileOperationsTests
     private static void Run(string directory, string program, bool text = false)
     {
         var names = new List<string> { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/File.gf" };
-        if (text) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/Formatting.gf", "libc/File/FileText.gf"]);
+        if (text) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Formatting.gf", "libc/File/FileText.gf"]);
         var files = names
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));

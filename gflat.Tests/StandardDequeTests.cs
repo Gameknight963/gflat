@@ -143,7 +143,7 @@ public sealed class StandardDequeTests
 
     private static IEnumerable<SourceFile> Sources(string program,bool managed=false)
     {
-        string[] files=["Collections/IEnumerable.gf","Collections/Enumerable.gf","Deque.gf","Span.gf","Vector.gf","String.gf",
+        string[] files=["Collections/IEnumerable.gf","Collections/Enumerable.gf","Deque.gf","Span.gf","Vector.gf","String.gf", "ByteSearch.gf",
             "IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf"];
         IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))));
         if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",file)))));

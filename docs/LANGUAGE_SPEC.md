@@ -1188,7 +1188,8 @@ int main()
 }
 ```
 
-Include `std/core/String.gf` and `std/core/Formatting.gf`, or reference `std/std.gfproj`.
+Include `std/core/String.gf`, its substring-search dependency `std/core/ByteSearch.gf`,
+and `std/core/Formatting.gf`, or reference `std/std.gfproj`.
 Floating-point conversion additionally uses `std/libc/Formatting.gf` and libc's `snprintf`.
 
 The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,

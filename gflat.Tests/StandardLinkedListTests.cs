@@ -8,7 +8,7 @@ public sealed class StandardLinkedListTests
     {
         var files = new List<string> { "core/Collections/IEnumerable.gf", "core/LinkedList.gf" };
         if (text) files.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf",
-            "core/IComparable.gf", "core/Hashing.gf", "core/String.gf"]);
+            "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf"]);
         if (gc) files.AddRange(["libc/GC.gf", "libc/TracingCollector.gf"]);
         return files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))))
             .Append(new SourceFile("main.gf", program));

@@ -248,6 +248,7 @@ public class WholeStandardLibraryEditorTests
                 int firstEnd=endQuery.ElementAt(0);
                 Queue<int> pending=new(); pending.Enqueue(42); pending.ShrinkToFit();
                 Unique<int> foldedOwner=pending.AsEnumerable().Aggregate(new Unique<int>(new* int(0)),FoldOwned);
+                HashSet<int> uniquePending=pending.AsEnumerable().ToHashSet();
                 var pendingQuery=pending.AsEnumerable().Take(1);
                 Stack<int> lifo=new(); lifo.Push(42);
                 var lifoQuery=lifo.AsEnumerable().Take(1);
@@ -285,6 +286,10 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        int setCall=sourceTokens.Single(token=>token.Text=="ToHashSet").Start;
+        var setHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,setCall),Protocol.JsonOptions);
+        Assert.Contains("HashSet",setHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("EnumerableHashSet.gf",JsonSerializer.Serialize(model.Definition(source.Path,setCall),Protocol.JsonOptions));
         int aggregateCall=sourceTokens.Single(token=>token.Text=="Aggregate").Start;
         var aggregateHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,aggregateCall),Protocol.JsonOptions);
         Assert.Contains("Unique",aggregateHover.GetProperty("contents").GetProperty("value").GetString());

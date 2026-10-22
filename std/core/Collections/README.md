@@ -87,10 +87,12 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Aggregate(seed, function)` | Fold values into an accumulator, returning the seed if empty. |
 | `ForEach(action)` | Visit every element. |
 | `ToVector()` | Copy values into a new owning vector. |
+| `ToHashSet()` | Copy distinct values into a new owning hash set. |
 
 Operators are lazy until a terminal operation or `foreach` advances an iterator.
 For paired queries and their iteration/ownership rules, see [Zip](../../../docs/QUERY_ZIP.md).
 For positional access and projection behavior, see [ElementAt](../../../docs/QUERY_ELEMENT_AT.md).
+For owning distinct results, see [ToHashSet](../../../docs/QUERY_HASH_SET.md).
 For overlapping borrowed views of contiguous data, see [span windows](../../../docs/SPAN_WINDOWS.md).
 For nonoverlapping views that retain a shorter final segment, see
 [span chunks](../../../docs/SPAN_CHUNKS.md).

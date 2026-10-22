@@ -12,8 +12,8 @@ readonly(char)* document = "{\"ready\":true}";
 JsonReader reader = new(document, 14);
 while (reader.Read()) {
     JsonTokenKind kind = reader.Kind;
-    readonly(char)* raw = document + reader.TokenOffset;
-    nuint count = reader.TokenLength;
+    Span<readonly(char)> raw = reader.RawToken;
+    nuint count = raw.Length;
     // Process the counted raw lexeme here.
 }
 ```
@@ -32,6 +32,19 @@ sign, and trailing fractional zeros. Large numbers have no machine numeric range
 restriction. `Depth` is the number of enclosing containers: a root opener and its
 closing delimiter both have depth zero; its immediate contents have depth one.
 `Kind` becomes `None` and `TokenLength` becomes zero on completion or error.
+
+`RawToken` returns a borrowed `Span<readonly(char)>` over the exact current
+lexeme, with length `TokenLength`: quotes and escapes remain present, number
+spelling is unchanged, and container tokens contain their single delimiter.
+It is available through mutable, readonly, and immutable reader views. The
+getter copies no input bytes and allocates nothing. Before the first `Read`,
+after completion or a failed read, and after `Reset`, it returns a canonical
+empty span with null `Data` without accessing input storage.
+
+A saved span borrows the original input rather than the reader. Advancing,
+resetting, moving, or destroying the reader does not invalidate that span;
+the caller must keep the original bytes alive and unchanged for every use.
+The view neither owns those bytes nor prolongs their lifetime.
 
 ## Skipping unknown values
 

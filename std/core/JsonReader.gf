@@ -34,6 +34,14 @@ public struct JsonReader
     public nuint TokenOffset { immutable get nothrow => tokenOffset; }
     public nuint TokenLength { immutable get nothrow => tokenLength; }
     public nuint Depth { immutable get nothrow => depth; }
+    public Span<readonly(char)> RawToken
+    {
+        immutable get
+        {
+            if (kind == JsonTokenKind::None) return new Span<readonly(char)>();
+            return new Span<readonly(char)>(input + tokenOffset, tokenLength);
+        }
+    }
 
     public void Reset()
     {

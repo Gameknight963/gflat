@@ -69,6 +69,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `All(predicate)` | Stop at the first failure; true for an empty sequence. |
 | `Count()` | Count elements without reading `Current`; throw on count overflow. |
 | `First()` / `Last()` / `Single()` | Return a value; throw if empty. `Single` also rejects multiple elements. |
+| `ElementAt(index)` | Return the zero-based element; throw with code 3 if out of range. |
 | `TryFirst(ref result)` | Return false without changing `result` if empty. |
 | `TryLast(ref result)` | Return the last value, or false without changing `result` if empty. |
 | `TrySingle(ref result)` | Return the only value, or false without changing `result` if empty or multiple. |
@@ -78,6 +79,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 
 Operators are lazy until a terminal operation or `foreach` advances an iterator.
 For paired queries and their iteration/ownership rules, see [Zip](../../../docs/QUERY_ZIP.md).
+For positional access and projection behavior, see [ElementAt](../../../docs/QUERY_ELEMENT_AT.md).
 Each enumeration starts a fresh iterator. Operator order matters:
 `Take(3).Where(test)` examines at most three input elements;
 `Where(test).Take(3)` looks for three matches.

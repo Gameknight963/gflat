@@ -298,7 +298,7 @@ chunk for batched writer calls and no additional gflat heap allocation.
 lazy enumeration and existing query operators. Its iterator owns and reuses one
 String buffer, while the file stays borrowed and open. Each enumeration consumes
 the shared current file position; it does not reopen or rewind the file.
-`Current` borrows the current String through a readonly reference; copying a line
+`Current` borrows the current String through `ref immutable(String)`; copying a line
 or calling `ToVector()` creates independent owning values. See
 [borrowed file lines](../../docs/FILE_LINE_SEQUENCE.md).
 

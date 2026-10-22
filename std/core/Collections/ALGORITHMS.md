@@ -49,7 +49,7 @@ for an empty span. Input must already be sorted under the same comparator.
 Their result identifies the insertion position, whether or not the key exists.
 For duplicate keys, `[LowerBound, UpperBound)` describes the matching range.
 
-Comparators borrow two elements through readonly pointers and return a negative,
+Comparators borrow two elements through `immutable(T)*` pointers and return a negative,
 zero, or positive `int`. They must provide a consistent ordering and must not
 mutate the elements or collection through other aliases.
 

@@ -432,6 +432,29 @@ int main() {
             || !Paths::GetExtension(batchPath, PathStyle::Unix).StartsWith(".gz")) return 99;
         if (BitOperations::RoundUpToPowerOfTwo(9u) != 16u
             || BitOperations::RoundUpToPowerOfTwo(18446744073709551615ul) != 0ul) return 100;
+        String batchResized = s"x"; batchResized.Resize(4, 'y');
+        if (batchResized.Length != 4 || batchResized[0] != 'x' || batchResized[3] != 'y'
+            || batchResized.Data[4] != '\0') return 101;
+        String batchOwnedQuoted = JsonStringText::Quote("a\n\0", 3);
+        String batchOwnedDecoded = JsonStringText::Unquote(batchOwnedQuoted.AsReadOnly());
+        batchOwnedQuoted.Clear();
+        if (batchOwnedDecoded.Length != 3 || batchOwnedDecoded[0] != 'a'
+            || batchOwnedDecoded[1] != '\n' || batchOwnedDecoded[2] != '\0') return 102;
+        String batchWideNumberText = new(); JsonWriter batchWideNumberWriter = new(&batchWideNumberText);
+        batchWideNumberWriter.WriteNumber((extralong)1 << 127); batchWideNumberWriter.Complete();
+        if (!CString::Equals(batchWideNumberText.Data, "-170141183460469231731687303715884105728")) return 103;
+        BigInteger batchBigFirst = BigInteger::Parse("12345678901234567890");
+        BigInteger batchBigSecond = new(10l);
+        BigInteger batchBigProduct = batchBigFirst.Multiply(&batchBigSecond);
+        String batchBigText = batchBigProduct.ToString();
+        if (!CString::Equals(batchBigText.Data, "123456789012345678900")) return 104;
+        Span<readonly(char)> batchNumberToken = new("+42", 3); long batchNumberValue = 0l;
+        if (!batchNumberToken.TryParseLong(&batchNumberValue) || batchNumberValue != 42l
+            || batchNumberToken.ParseExtraLong() != (extralong)42) return 105;
+        char[4] batchCase = ['A', 'b', '\0', (char)255];
+        Ascii::ToLower(batchCase, 4); Ascii::ToUpper(batchCase, 4);
+        if (batchCase[0] != 'A' || batchCase[1] != 'B' || batchCase[2] != '\0'
+            || batchCase[3] != (char)255) return 106;
     }
     return 0;
 }

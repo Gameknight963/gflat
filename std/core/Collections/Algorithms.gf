@@ -112,6 +112,17 @@ public nuint UpperBound<T>(Span<readonly(T)> values, readonly(T)* key,
     return first;
 }
 
+// First matching index in sorted input, or Length when the key is absent.
+// Use the same ordering as Sort; neither elements nor the key are copied.
+public nuint BinarySearch<T>(Span<readonly(T)> values, readonly(T)* key,
+    int(readonly(T)*, readonly(T)*)* compare)
+{
+    nuint index = std::LowerBound<T>(values, key, compare);
+    if (index == values.Length) return values.Length;
+    if (compare(&values[index], key) != 0) return values.Length;
+    return index;
+}
+
 public bool IsSorted<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)*)* compare)
 {
     for (nuint i = 1; i < values.Length; i++)

@@ -31,6 +31,7 @@ int main()
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
 | `LowerBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
 | `UpperBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
+| `BinarySearch<T>(Span<readonly(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<readonly(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length readonly spans element by element, stopping at the first difference. |
 | `SequenceCompare<T>(first, second, compare)` | Lexicographically compare readonly spans, preserving the first nonzero comparator result; an equal prefix sorts by length. |
@@ -125,3 +126,10 @@ single-element spans do not advance it. The same starting elements and generator
 state produce the same permutation. This is suitable for reproducible simulations
 and games, not security-sensitive randomization. The borrowed span must remain
 valid for the entire call; storage outside it is untouched.
+
+Binary search requires input sorted by the same comparator. It returns the first
+match among duplicates, uses O(log n) comparisons, and returns Length on a miss.
+Use LowerBound instead when you need the insertion position for a missing key.
+Empty spans do not call the comparator. Elements and the key are borrowed; a
+throwing comparator propagates without modifying the span. The callback must
+keep both alive and must not mutate either through another alias.

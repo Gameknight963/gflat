@@ -111,6 +111,11 @@ still receives normal cleanup when insertion throws.
 `BitSet` owns a resizable sequence of packed bits. `Length` is the number of
 addressable bits; `CountSetBits()` counts bits that are true. Indexing checks
 bounds and produces a bool rather than a reference into packed storage.
+`HasAnySet()` and `HasAllSet()` test occupancy without counting every set bit,
+stopping when a word determines the answer. They work on readonly sets, allocate
+nothing, and are `nothrow`. An empty set has no set bits and satisfies
+`HasAllSet()` because it has no clear logical bits. Unused final-word padding
+does not contribute to either answer.
 
 ```csharp
 using std;

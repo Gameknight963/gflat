@@ -125,6 +125,24 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         return total;
     }
 
+    public readonly bool HasAnySet() nothrow
+    {
+        for (nuint i = 0; i < words; i++)
+            if (data![i] != (uint)0) return true;
+        return false;
+    }
+
+    public readonly bool HasAllSet() nothrow
+    {
+        nuint complete = length / 32;
+        for (nuint i = 0; i < complete; i++)
+            if (data![i] != (uint)4294967295) return false;
+        nuint remainder = length % 32;
+        if (remainder != 0)
+            return data![complete] == (((uint)1 << (int)remainder) - (uint)1);
+        return true;
+    }
+
     public readonly BitSet Clone()
     {
         BitSet result = new BitSet(length);

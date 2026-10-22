@@ -33,8 +33,8 @@ int main()
 | `UpperBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
-| `SequenceEqual<T>(first, second, equal)` | Compare equal-length readonly spans element by element, stopping at the first difference. |
-| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare readonly spans, preserving the first nonzero comparator result; an equal prefix sorts by length. |
+| `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. |
+| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. |
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
@@ -59,8 +59,8 @@ spans return zero without calling the comparator. Their indices borrow no value
 ownership: the caller can inspect or explicitly copy the selected source element.
 `SequenceCompare` stops at the first unequal pair, or after the shorter span's
 length when one is an equal prefix. Its length-only results are -1, 0, or 1.
-These three algorithms allocate nothing, copy no elements, and support readonly
-spans of noncopyable owning types. Comparator failures leave their sources
+These three algorithms allocate nothing, copy no elements, and support immutable
+views of noncopyable owning types. Comparator failures leave their sources
 unchanged, provided the callback does not modify them through another alias.
 
 For types implementing `IComparable<T>`, `Comparer<T>::Compare` supplies the

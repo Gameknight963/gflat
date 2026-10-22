@@ -253,7 +253,7 @@ int main()
 ```
 
 `Enqueue`, `Dequeue`, and `TryDequeue(ref result)` use the same ownership rules
-as the FIFO queue. `Top` borrows the next element through a readonly ref property.
+as the FIFO queue. `Top` borrows the next element through `ref immutable(T)`.
 `Count`, `Capacity`, `IsEmpty`, `Reserve`, and `Clear` have their usual collection
 meanings. It does not expose an iterator that could be mistaken for sorted
 enumeration; repeated removal produces priority order.

@@ -31,13 +31,20 @@ Default hashes are deterministic and not resistant to malicious
 collision attacks.
 
 Lookups accept a borrowed key pointer and never copy it. `Find` returns a borrowed
-nullable value pointer; `FindReadOnly` and `ContainsKey` work on immutable maps.
+nullable value pointer; `FindImmutable` and `ContainsKey` work on immutable maps.
+`FindReadOnly` works on a shallow `readonly` map and returns `readonly(V)*?`:
+the value's inline fields cannot change, but its pointers and managed references
+still permit changes to their targets. `FindImmutable` returns `immutable(V)*?`
+and protects those targets too. Both views borrow the stored value without copies
+or allocation; keys remain immutable under either contract.
 The ref indexer throws when the key is absent and allows changing an existing
 value. `Remove` destroys an entry; `Clear` destroys every entry but retains storage.
 
 `Extract(key)` removes an entry and transfers its owning `HashMap<K,V>::Entry`
-to the caller. Missing keys throw. Its `Key`, `Value`, and `ValueReadOnly` members
+to the caller. Missing keys throw. Its `Key`, `Value`, `ValueReadOnly`, and `ValueImmutable` members
 expose the transferred objects; noncopyable keys and values are supported.
+`ValueReadOnly` uses a shallow readonly receiver and value pointer;
+`ValueImmutable` uses an immutable receiver and value pointer.
 A successful extraction copies no elements, allocates no storage, and destroys
 neither transferred owner. The entry remains valid independently of later map
 growth, clearing, or destruction. It is an owning value, not a node handle or a
@@ -55,7 +62,7 @@ when too many buckets have been used. Failed allocation or a throwing key compar
 leaves the existing entries intact. Values are destroyed exactly once.
 
 Enumeration borrows the map and has unspecified order. `HashMap<K,V>::Enumerator`
-returns immutable entry pointers with `Key` and `ValueReadOnly`; set enumerators
+returns immutable entry pointers with `Key` and `ValueImmutable`; set enumerators
 return immutable element pointers. Do not mutate, move, or destroy the collection
 while enumerating. Insertion and `Reserve` may invalidate all borrowed pointers,
 including when tombstone compaction keeps capacity unchanged; removal invalidates

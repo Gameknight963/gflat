@@ -24,7 +24,7 @@ int main()
     scores[&key]++;
     SortedMap<int, int>::Enumerator entries = scores.GetEnumerator();
     entries.MoveNext(); // Key 10 is first.
-    return *entries.Current.ValueReadOnly - 101;
+    return *entries.Current.ValueImmutable - 101;
 }
 ```
 
@@ -34,10 +34,16 @@ int main()
   false for a duplicate. Both destroy unused incoming arguments normally.
 - `Set(key,value)` inserts or replaces the existing value while retaining the
   original stored key. Named copyable arguments copy; `move` transfers owners.
-- `ContainsKey`, `Find`, `FindReadOnly`, `Remove`, `Extract`, and the ref indexer accept
+- `ContainsKey`, `Find`, `FindReadOnly`, `FindImmutable`, `Remove`, `Extract`, and the ref indexer accept
   borrowed key pointers. Missing lookups return null; the indexer throws.
 - `Find` and the indexer allow changing mapped values. Keys are exposed only
   through immutable views, since changing their order would corrupt lookup.
+- `FindReadOnly` accepts a shallow readonly map and returns `readonly(V)*?`:
+  inline fields cannot change, but pointers and managed references in the value
+  still allow changing their targets. `FindImmutable` accepts an immutable map,
+  returns `immutable(V)*?`, and protects those targets too. Neither copies or
+  allocates. An extracted `Entry` exposes the same contracts through
+  `ValueReadOnly` and `ValueImmutable`; its `Key` always remains immutable.
 - `Remove` destroys a matching key/value pair and shifts later entries left.
   `Clear` destroys all entries but retains capacity. `Reserve` reserves entry
   capacity; `Count`, `Capacity`, and `IsEmpty` report collection metadata.
@@ -61,7 +67,7 @@ another alias; their order must remain stable for stored keys.
 ## Iteration, invalidation, and cost
 
 The nested `Enumerator` borrows storage and visits entries in comparer order.
-`Current` returns an immutable entry pointer; `Key` and `ValueReadOnly` are borrowed
+`Current` returns an immutable entry pointer; `Key` and `ValueImmutable` are borrowed
 immutable pointers. Reading `Current` before a successful `MoveNext` or after
 exhaustion throws. An immutable map can also create an enumerator.
 

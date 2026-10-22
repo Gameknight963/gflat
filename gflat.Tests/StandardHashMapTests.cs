@@ -191,10 +191,10 @@ public class StandardHashMapTests
                 map.Set(s"first",s"replacement");
                 if(map[&key].Length!=11 || map.Count!=2) return 3;
                 HashMap<String,String>::Enumerator e=map.GetEnumerator(); nuint seen=0;
-                while(e.MoveNext()) { if(e.Current.Key.Length==0 || e.Current.ValueReadOnly.Length==0) return 4; seen++; }
+                while(e.MoveNext()) { if(e.Current.Key.Length==0 || e.Current.ValueImmutable.Length==0) return 4; seen++; }
                 if(seen!=2) return 5;
                 immutable(HashMap<String,String>)* ro=&map;
-                if(ro.FindReadOnly(&key)==null || !ro.ContainsKey(&key)) return 6;
+                if(ro.FindImmutable(&key)==null || !ro.ContainsKey(&key)) return 6;
                 if(!map.Remove(&key) || map.Find(&key)!=null) return 7;
                 return 0;
             }

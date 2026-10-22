@@ -289,7 +289,7 @@ public sealed class StandardCollectionTraceTests
                 HashMap<Key, Owned>::Enumerator iterator = values.GetEnumerator();
                 while (iterator.MoveNext()) {
                     int key = iterator.Current.Key.Value;
-                    if (key < 0 || key >= 96 || iterator.Current.ValueReadOnly.Value != expected[key]) return false;
+                    if (key < 0 || key >= 96 || iterator.Current.ValueImmutable.Value != expected[key]) return false;
                     seen++;
                 }
                 return seen == count;

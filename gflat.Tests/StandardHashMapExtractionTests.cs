@@ -50,7 +50,7 @@ public sealed class StandardHashMapExtractionTests
                 if(made!=4 || dead!=2 || entry.Key.Id!=7 || entry.Value.Id!=70)return 1;
                 if(entry.Key.Text.Length!=3 || entry.Value.Text.Length!=5)return 2;
                 entry.Value.Text.AppendLiteral("!",1);
-                if(entry.ValueReadOnly.Text.Length!=6)return 3;
+                if(entry.ValueImmutable.Text.Length!=6)return 3;
             }
             if(made!=dead || allocations!=releases)return 4; return 0; }
             """, optimization);

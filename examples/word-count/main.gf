@@ -42,7 +42,7 @@ int main(int argc, char** argv)
         while (iterator.MoveNext())
         {
             immutable(String)* key = iterator.Current.Key;
-            nuint count = *iterator.Current.ValueReadOnly;
+            nuint count = *iterator.Current.ValueImmutable;
             String line = s"";
             line.Append(key);
             line.Append(':');

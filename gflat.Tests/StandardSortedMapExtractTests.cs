@@ -68,7 +68,7 @@ public sealed class StandardSortedMapExtractTests
                  if(map.Count!=3||map.Capacity!=capacity||dead!=0)return 4;
                  var iterator=map.GetEnumerator();
                  for(int i=1;i<=3;i++){
-                  if(!iterator.MoveNext()||iterator.Current.Key.Id!=i||iterator.Current.ValueReadOnly.Id!=i*10)return 5;}
+                  if(!iterator.MoveNext()||iterator.Current.Key.Id!=i||iterator.Current.ValueImmutable.Id!=i*10)return 5;}
                  if(iterator.MoveNext())return 6;
                  {SortedMap<Owner,Owner>::Entry extracted=map.Extract(&probe);
                   if(extracted.Key.Id!=2||extracted.Value.Id!=20||map.Count!=2)return 7;}

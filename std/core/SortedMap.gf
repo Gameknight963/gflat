@@ -23,7 +23,8 @@ struct SortedMap<K, V>
         public Entry(K item, V mapped) { key = move item; value = move mapped; }
         public immutable(K)* Key { immutable get nothrow => &key; }
         public ref V Value { immutable get nothrow => value; }
-        public immutable(V)* ValueReadOnly { immutable get nothrow => &value; }
+        public readonly(V)* ValueReadOnly { readonly get nothrow => &value; }
+        public immutable(V)* ValueImmutable { immutable get nothrow => &value; }
     }
 
     private immutable nuint LowerBound(immutable(K)* key)
@@ -56,12 +57,20 @@ struct SortedMap<K, V>
         return &storage[index].value;
     }
 
-    public immutable immutable(V)*? FindReadOnly(immutable(K)* key)
+    public readonly readonly(V)*? FindReadOnly(immutable(K)* key)
+    {
+        nuint index = this.LowerBound(key);
+        if (!this.Matches(index, key)) return null;
+        Span<readonly(Entry)> items = storage.AsReadOnly();
+        return items[index].ValueReadOnly;
+    }
+
+    public immutable immutable(V)*? FindImmutable(immutable(K)* key)
     {
         nuint index = this.LowerBound(key);
         if (!this.Matches(index, key)) return null;
         Span<immutable(Entry)> items = storage.AsImmutable();
-        return items[index].ValueReadOnly;
+        return items[index].ValueImmutable;
     }
 
     public bool TryAdd(K key, V value)

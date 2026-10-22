@@ -28,9 +28,9 @@ public sealed class StandardSortedMapTests
             var iterator = read.GetEnumerator();
             for (nuint i = 0; i < count; i++) {
                 if (!iterator.MoveNext()) return false;
-                if (iterator.Current.Key.Value != expected[i * 2] || iterator.Current.ValueReadOnly.Value != expected[i * 2 + 1]) return false;
-                if (iterator.Current.Key.Token.Length != 5 || iterator.Current.ValueReadOnly.Token.Length != 5) return false;
-                if (!read.ContainsKey(iterator.Current.Key) || read.FindReadOnly(iterator.Current.Key) == null) return false;
+                if (iterator.Current.Key.Value != expected[i * 2] || iterator.Current.ValueImmutable.Value != expected[i * 2 + 1]) return false;
+                if (iterator.Current.Key.Token.Length != 5 || iterator.Current.ValueImmutable.Token.Length != 5) return false;
+                if (!read.ContainsKey(iterator.Current.Key) || read.FindImmutable(iterator.Current.Key) == null) return false;
                 Owned*? found = map.Find(iterator.Current.Key);
                 if (found == null || found!.Value != expected[i * 2 + 1]) return false;
             }
@@ -99,7 +99,7 @@ public sealed class StandardSortedMapTests
                 Owned probe = new(3); immutable(SortedMap<Owned,Owned>)* read = &map;
                 int[16] expected = [0,0,1,10,2,20,3,30,4,40,5,50,6,60,7,70];
             """);
-        string[] calls = ["map.ContainsKey(&probe)", "map.Find(&probe)", "read.FindReadOnly(&probe)", "map.Remove(&probe)",
+        string[] calls = ["map.ContainsKey(&probe)", "map.Find(&probe)", "read.FindImmutable(&probe)", "map.Remove(&probe)",
             "map[&probe]", "map.TryAdd(new Owned(3),new Owned(99))", "map.Add(new Owned(3),new Owned(99))", "map.Set(new Owned(3),new Owned(99))"];
         foreach (int budget in new[] { 0, 1, 2, 3 })
         foreach (string call in calls)
@@ -171,10 +171,10 @@ public sealed class StandardSortedMapTests
                 original.Add(new Owned(-5),new Owned(10));
                 if (original.TryAdd(new Owned(5),new Owned(99)) || made - dead != 2) return 1;
                 original.Set(new Owned(5),new Owned(20));
-                var iterator = original.GetEnumerator(); if (!iterator.MoveNext() || iterator.Current.Key.Value != -5 || iterator.Current.ValueReadOnly.Value != 20) return 2;
+                var iterator = original.GetEnumerator(); if (!iterator.MoveNext() || iterator.Current.Key.Value != -5 || iterator.Current.ValueImmutable.Value != 20) return 2;
                 SortedMap<Owned,Owned> moved = move original;
                 Owned probe = new(5); moved[&probe].Value = 30;
-                if (moved.FindReadOnly(&probe)!.Value != 30) return 3;
+                if (moved.FindImmutable(&probe)!.Value != 30) return 3;
                 original = new SortedMap<Owned,Owned>(ReverseCompare);
                 original.Add(new Owned(2),new Owned(2)); original.Add(new Owned(1),new Owned(1)); original.Add(new Owned(3),new Owned(3));
                 var reverse = original.GetEnumerator(); int expected = 3; int invalid = 0;

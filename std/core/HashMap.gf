@@ -22,7 +22,7 @@ struct HashMap<K : IHashable, V>
     public nuint Capacity { immutable get nothrow => capacity / 2; }
     public bool IsEmpty { immutable get nothrow => count == 0; }
 
-    // Keys are exposed through a immutable view so their hash cannot be changed.
+    // Keys are exposed through an immutable view so their hash cannot be changed.
     public struct Entry
     {
         private K key;
@@ -31,7 +31,8 @@ struct HashMap<K : IHashable, V>
         public Entry(K item, V mapped, nuint code) { key = move item; value = move mapped; hash = code; }
         public immutable(K)* Key { immutable get => &key; }
         public ref V Value { immutable get => value; }
-        public immutable(V)* ValueReadOnly { immutable get => &value; }
+        public readonly(V)* ValueReadOnly { readonly get => &value; }
+        public immutable(V)* ValueImmutable { immutable get => &value; }
     }
 
     private immutable nuint Locate(immutable(K)* key, nuint hash)
@@ -59,7 +60,14 @@ struct HashMap<K : IHashable, V>
         return &entries![slot].value;
     }
 
-    public immutable immutable(V)*? FindReadOnly(immutable(K)* key)
+    public readonly readonly(V)*? FindReadOnly(immutable(K)* key)
+    {
+        nuint slot = this.Locate(key, key.GetHashCode());
+        if (slot == capacity) return null;
+        return &entries![slot].value;
+    }
+
+    public immutable immutable(V)*? FindImmutable(immutable(K)* key)
     {
         nuint slot = this.Locate(key, key.GetHashCode());
         if (slot == capacity) return null;

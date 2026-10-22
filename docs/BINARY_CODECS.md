@@ -38,6 +38,11 @@ emits the same padded encoding without a whole-input buffer. `File::CopyTo` can
 feed it directly; call `Complete()` to emit any final padding. It does not close
 or flush the borrowed destination.
 
+[Base64Decoder](BASE64_DECODER.md) accepts encoded chunks through the same
+writer interface and sends decoded bytes to its borrowed destination. It uses
+the same strict input rules; unlike whole-buffer `TryDecode`, a later input or
+output failure can occur after earlier chunks have already reached the sink.
+
 # URL-safe Base64
 
 `std/core/Base64Url.gf` defines `std::Base64Url`, a separate caller-buffer codec

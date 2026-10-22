@@ -94,6 +94,9 @@ public class WholeStandardLibraryEditorTests
                 Base64Encoder encodedOutput=new(output);
                 encodedOutput.Write(text.Data,text.Length);
                 encodedOutput.Complete();
+                Base64Decoder decodedOutput=new(output);
+                decodedOutput.Write("eA==",4);
+                decodedOutput.Complete();
                 CsvWriter csvOutput=new(output);
                 csvOutput.WriteField("a,b",3);
                 csvOutput.WriteEndRecord();
@@ -289,12 +292,13 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(var adapter in new[]{("encodedOutput","Base64Encoder.gf"),("decodedOutput","Base64Decoder.gf")})
         foreach(string member in new[]{"Write","Complete"})
         {
-            int call=text.IndexOf("encodedOutput."+member,StringComparison.Ordinal)+"encodedOutput.".Length;
+            int call=text.IndexOf(adapter.Item1+"."+member,StringComparison.Ordinal)+adapter.Item1.Length+1;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
-            Assert.Contains("Base64Encoder.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            Assert.Contains(adapter.Item2,JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
         int setCall=sourceTokens.Single(token=>token.Text=="ToHashSet").Start;
         var setHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,setCall),Protocol.JsonOptions);

@@ -27,13 +27,14 @@ implementation lives in `libc`.
 | Contiguous storage | `Vector<T>`, `Span<T>`, typed span `CopyTo`/`Fill` | [Ownership and views](core/README.md#vectors), [copying and filling initialized elements](core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
 | Double-ended storage | `Deque<T>` | [Owning ring buffer](../docs/DEQUE.md) |
+| Borrowed windows | `Span<T>.Windows` | [Overlapping full-width views and lazy queries](../docs/SPAN_WINDOWS.md) |
 | Stable node storage | `LinkedList<T>` | [Owning linked lists and node handles](../docs/LINKED_LIST.md) |
 | Single-object ownership | `Unique<T>` | [Move-only ownership of one manual allocation](../docs/UNIQUE.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |
 | Ordered maps | `SortedMap<K,V>` | [Sorted contiguous entries and explicit comparison](../docs/SORTED_MAP.md) |
 | Ordered sets | `SortedSet<T>` | [Sorted unique owning values with explicit comparison](../docs/SORTED_SET.md) |
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
-| Algorithms | `Sort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
+| Algorithms | `Sort`, `StableSort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |
 | Integer sequences | `IntRange`, `FilteredIntRange` | [Allocation-free ranges and specialized aggregates](core/README.md#integer-sequences) |
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
@@ -53,7 +54,7 @@ implementation lives in `libc`.
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |
-| Bits | `BitOperations` | [Counts, rotations, and byte reversal](../docs/BIT_OPERATIONS.md) |
+| Bits | `BitOperations` | [Counts, rotations, power-of-two rounding, and byte reversal](../docs/BIT_OPERATIONS.md) |
 | Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |
 | Binary scalars | `BinaryPrimitives` | [Checked byte-order integer and IEEE floating-point reads and writes](../docs/BINARY_PRIMITIVES.md) |
 | Variable-length integers | `VarInt` | [Canonical unsigned base-128 encoding and signed ZigZag transforms](../docs/VARINT.md) |

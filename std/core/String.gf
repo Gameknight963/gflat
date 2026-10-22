@@ -1,6 +1,7 @@
 namespace std;
 
-// Owns UTF-8 bytes. Length and Capacity exclude the trailing null byte.
+// Owns bytes, conventionally UTF-8, without validating their encoding.
+// Length and Capacity exclude the trailing null byte.
 struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquatable<String>, IComparable<String>
 {
     private char* data;

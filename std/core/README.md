@@ -26,7 +26,8 @@ int main()
 }
 ```
 
-`String` owns a mutable UTF-8 buffer and frees it at scope exit. `Length` and
+`String` owns a mutable byte buffer and frees it at scope exit. UTF-8 is a
+convention; construction and byte mutations do not validate encoding. `Length` and
 `Capacity` count bytes, excluding the trailing null. Indexing operates on bytes
 and checks bounds.
 

@@ -84,3 +84,43 @@ keep output variables separate from the parent cursor's fields. Scalar read
 outputs may overlap input bytes under `BinaryPrimitives` rules,
 but a result store can overwrite bytes needed by a future read. No method
 validates a raw pointer's actual allocation or protection.
+
+## Optional variable-length integers
+
+`BinaryBufferVarInt.gf` integrates the standalone [VarInt codec](VARINT.md)
+without adding that dependency to the cursor source files. Include it and
+`VarInt.gf` when selecting sources individually.
+
+```csharp
+bool TryWriteVarUInt32(this ref BinaryBufferWriter writer, uint value) nothrow;
+bool TryWriteVarUInt64(this ref BinaryBufferWriter writer, ulong value) nothrow;
+VarInt::Status ReadVarUInt32(this ref BinaryBufferReader reader, ref uint value) nothrow;
+VarInt::Status ReadVarUInt64(this ref BinaryBufferReader reader, ref ulong value) nothrow;
+```
+
+These use canonical unsigned base-128 encoding. Writers advance only after a
+complete write; short buffers leave every byte and the position unchanged.
+Readers advance only on `Done`; `NeedMore` and `Invalid` preserve both the
+position and output value. To retry incomplete input, construct a reader covering
+the enlarged buffer and position it at the same unfinished prefix. An existing
+reader's captured length does not grow when backing bytes are appended.
+Empty or exhausted readers return `NeedMore`, and writers
+return false, without accessing or calculating an address from their data pointer.
+All four methods allocate nothing and are `nothrow`.
+
+```csharp
+byte[10] buffer;
+BinaryBufferWriter writer = new(buffer, 10);
+bool written = writer.TryWriteVarUInt32(300u);
+BinaryBufferReader reader = new(buffer, writer.Position);
+uint value = 0u;
+VarInt::Status status = reader.ReadVarUInt32(ref value); // Done; value is 300.
+```
+
+A reader decodes into local metadata before committing the caller's result.
+The output reference must be separate from the cursor object's fields, but may
+overlap suitably aligned writable input storage. A successful result store can
+therefore change bytes observed by later reads. The codec's own temporary
+metadata remains separate from the buffer. Normal borrowed-storage lifetime
+and validity requirements still apply. For signed ZigZag values, explicitly
+compose `VarInt::ZigZagEncode`/`ZigZagDecode` with the unsigned methods.

@@ -161,6 +161,12 @@ public class WholeStandardLibraryEditorTests
                 extralong wideAbsolute=Math::Abs(-wide);
                 extralong parsedWide=ParseExtraLong("1267650600228229401496703205376");
                 TryParseExtraLong("-170141183460469231731687303715884105728",&parsedWide);
+                Span<readonly(char)> integerToken=new("42",2);
+                long integerValue=0l; integerToken.TryParseLong(&integerValue);
+                long integerParsed=integerToken.ParseLong();
+                extralong integerWide=integerToken.ParseExtraLong();
+                char[3] caseBuffer=['A','b',(char)255];
+                Ascii::ToLower(caseBuffer,3); Ascii::ToUpper(caseBuffer,3);
                 char[40] wideDigits; nuint wideWritten=0;
                 IntegerFormatting::TryFormat(parsedWide,wideDigits,40,ref wideWritten);
                 String wideText=s$"Wide integer: {parsedWide}";
@@ -254,7 +260,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil","Zip","TrySplitOnce","Combine","TryWriteVarUInt32","TryWriteVarUInt64","ReadVarUInt32","ReadVarUInt64","AsEnumerable","ElementAt","InsertRange","Windows","GetFileName","GetDirectoryName","GetExtension","GetFileNameWithoutExtension","GetRoot","RoundUpToPowerOfTwo","StableSort","Resize","Quote","Unquote","Multiply","Subtract","Sign"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil","Zip","TrySplitOnce","Combine","TryWriteVarUInt32","TryWriteVarUInt64","ReadVarUInt32","ReadVarUInt64","AsEnumerable","ElementAt","InsertRange","Windows","GetFileName","GetDirectoryName","GetExtension","GetFileNameWithoutExtension","GetRoot","RoundUpToPowerOfTwo","StableSort","Resize","Quote","Unquote","Multiply","Subtract","Sign","TryParseLong","ParseLong","ToLower","ToUpper"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
@@ -270,5 +276,10 @@ public class WholeStandardLibraryEditorTests
         int wideNumber=sourceTokens.Last(token=>token.Text=="WriteNumber").Start;
         var wideNumberHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,wideNumber),Protocol.JsonOptions);
         Assert.Contains("extralong value",wideNumberHover.GetProperty("contents").GetProperty("value").GetString());
+        foreach(var item in new[]{("TryParseLong","SpanIntegerParsing.gf"),("ParseLong","SpanIntegerParsingThrowing.gf")})
+        {
+            int offset=sourceTokens.Last(token=>token.Text==item.Item1).Start;
+            Assert.Contains(item.Item2,JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
+        }
     }
 }

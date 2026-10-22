@@ -59,12 +59,17 @@ public partial class TypeChecker
                     if (formattable)
                         action = new(new MemberAccessExpression(part, "Format", false, part.Line), new() { destination }, part.Line) { Span = part.Span };
                     else if (type is NamedTypeExpression primitive && primitive.Name is
-                        "bool" or "char" or "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "nint" or "nuint" or "float" or "double")
+                        "bool" or "char" or "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "extralong" or "nint" or "nuint" or "float" or "double")
                     {
                         if (!_globalScope.Children.TryGetValue("std", out var std) || !std.Functions.TryGetValue("Format", out var first) ||
                             !(overloadFamilies.TryGetValue(first, out var family) ? family : new List<MethodDeclaration> { first })
                                 .Any(m => m.Parameters.Count == 2 && ResolveAlias(m.Parameters[0].Type) is NamedTypeExpression parameter && parameter.Name == primitive.Name))
-                            throw new TypeCheckException($"Primitive interpolation requires std::Format({primitive.Name}, ITextWriter*); include std/core/Formatting.gf (and std/libc/Formatting.gf for floating-point values)", part.Line);
+                        {
+                            string source = primitive.Name == "extralong"
+                                ? "std/core/IntegerFormatting.gf and std/core/ExtraLongFormatting.gf"
+                                : "std/core/Formatting.gf (and std/libc/Formatting.gf for floating-point values)";
+                            throw new TypeCheckException($"Primitive interpolation requires std::Format({primitive.Name}, ITextWriter*); include {source}", part.Line);
+                        }
                         action = new(new NamespaceAccessExpression(new NamespaceAccessExpression(new GlobalExpression(part.Line), "std", part.Line), "Format", part.Line), new() { part, destination }, part.Line) { Span = part.Span };
                     }
                     else if (TypeImplementsInterface(type, "IStringConvertable") || valueType is NamedTypeExpression { Name: "IStringConvertable" })

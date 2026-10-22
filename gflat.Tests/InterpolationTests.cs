@@ -14,6 +14,41 @@ public class InterpolationTests
     }
     private static ExecutionResult Run(string program, bool libc = false) => CompilerTestHelper.Run(Sources(program, libc));
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void FormatsSigned128WithoutNarrowingIncludingGenericHoles(int optimization)
+    {
+        var sources = Sources("""
+            using std;
+            extern int printf(readonly(char)* text, ...);
+            String Render<T>(T value) => s$"{value}";
+            int main() {
+                extralong minimum = (extralong)1 << 127;
+                extralong maximum = minimum ^ (extralong)-1;
+                String rendered = Render<extralong>(minimum);
+                String text = s$"{rendered}|{maximum}";
+                printf("%s", text.Data);
+                return 0;
+            }
+            """).Concat(new[] { "IntegerFormatting.gf", "ExtraLongFormatting.gf" }
+                .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file)))));
+        var result = CompilerTestHelper.Run(sources, optimization);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("-170141183460469231731687303715884105728|170141183460469231731687303715884105727", result.StandardOutput);
+    }
+
+    [Fact]
+    public void Signed128InterpolationNamesItsMissingFormatterSources()
+    {
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
+            using std;
+            String Render(extralong value) => s$"{value}";
+            """)));
+        Assert.Contains("std::Format(extralong, ITextWriter*)", error.Message);
+        Assert.Contains("std/core/IntegerFormatting.gf and std/core/ExtraLongFormatting.gf", error.Message);
+    }
+
     [Fact]
     public void FormatsPrimitivesAndNestedStrings()
     {

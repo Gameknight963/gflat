@@ -1266,8 +1266,11 @@ precedence when both contracts are implemented. Interface views support dynamic 
 receivers require a checked cast or unchecked postfix `!`. Primitives call the exact
 `global::std::Format(value, writer)` overload independently of local using directives.
 Supported primitives are `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`,
-`uint`, `long`, `ulong`, `nint`, `nuint`, `float`, and `double`. Character pointers and
+`uint`, `long`, `ulong`, `extralong`, `nint`, `nuint`, `float`, and `double`. Character pointers and
 arrays are not implicitly converted to text; provide an explicit string value.
+Signed 128-bit formatting uses `std/core/IntegerFormatting.gf` and the optional
+`std/core/ExtraLongFormatting.gf` writer adapter. Both are included by the full
+standard library; explicit source selections must include them together.
 
 Formatting does not imply a heap allocation, a terminator scan, or a caller-owned
 C-string. `std::String` writes its existing counted bytes, preserving embedded nulls.

@@ -83,6 +83,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Quote text lines](../examples/quote-lines/README.md): lazy file lines written directly as newline-delimited JSON strings.
 - [Decode JSON string lines](../examples/unquote-lines/README.md): strict validation and in-place decoding with a reusable buffer.
 - [Check JSON documents](../examples/json-check/README.md): forward-only validation and nesting statistics without building a DOM.
+- [Minify JSON documents](../examples/json-minify/README.md): validate first, then write compact JSON while preserving duplicate names, property order, and number spelling.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

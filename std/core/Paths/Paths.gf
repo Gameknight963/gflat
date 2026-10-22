@@ -8,20 +8,22 @@ public static class Paths
 
     // A rooted Windows path can still depend on the current drive or its directory.
     public static bool IsRooted(immutable(char*) path, PathStyle style) nothrow
-    {
-        if (Paths::IsSeparator(path[0], style)) return true;
-        if (style == PathStyle::Unix) return false;
-        bool letter = (path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z');
-        return letter && path[1] == ':';
-    }
+        => Paths::IsRootedCore(path, Paths::PrefixLength(path, 2), style);
 
     // Classifies the root spelling only; this does not validate a UNC share or name.
     public static bool IsFullyQualified(immutable(char*) path, PathStyle style) nothrow
+        => Paths::IsFullyQualifiedCore(path, Paths::PrefixLength(path, 3), style);
+
+    public static bool IsRooted(Span<readonly(char)> path, PathStyle style) nothrow
     {
-        if (style == PathStyle::Unix) return path[0] == '/';
-        if (Paths::IsSeparator(path[0], style)) return Paths::IsSeparator(path[1], style);
-        bool letter = (path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z');
-        return letter && path[1] == ':' && Paths::IsSeparator(path[2], style);
+        if (path.IsEmpty) return false;
+        return Paths::IsRootedCore(path.Data!, path.Length, style);
+    }
+
+    public static bool IsFullyQualified(Span<readonly(char)> path, PathStyle style) nothrow
+    {
+        if (path.IsEmpty) return false;
+        return Paths::IsFullyQualifiedCore(path.Data!, path.Length, style);
     }
 
     public static String GetFileName(immutable(char*) path, PathStyle style)
@@ -113,8 +115,49 @@ public static class Paths
     // Does not resolve dot segments, validate names, or change existing separators.
     public static String Join(immutable(char*) left, immutable(char*) right, PathStyle style)
     {
-        nuint leftLength = Paths::Length(left);
-        nuint rightLength = Paths::Length(right);
+        return Paths::JoinCore(left, Paths::Length(left), right, Paths::Length(right), style);
+    }
+
+    public static String Join(Span<readonly(char)> left, Span<readonly(char)> right, PathStyle style)
+    {
+        readonly(char)* leftData = "";
+        readonly(char)* rightData = "";
+        if (!left.IsEmpty) leftData = left.Data!;
+        if (!right.IsEmpty) rightData = right.Data!;
+        return Paths::JoinCore(leftData, left.Length, rightData, right.Length, style);
+    }
+
+    // Inspect only the root prefix of a C string, preserving constant-time checks.
+    private static nuint PrefixLength(immutable(char*) path, nuint limit) nothrow
+    {
+        nuint length = 0;
+        while (length < limit && path[length] != '\0') length++;
+        return length;
+    }
+
+    private static bool IsRootedCore(immutable(char*) path, nuint count, PathStyle style) nothrow
+    {
+        if (count == 0) return false;
+        if (Paths::IsSeparator(path[0], style)) return true;
+        if (style == PathStyle::Unix || count < 2) return false;
+        bool letter = (path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z');
+        return letter && path[1] == ':';
+    }
+
+    private static bool IsFullyQualifiedCore(immutable(char*) path, nuint count, PathStyle style) nothrow
+    {
+        if (count == 0) return false;
+        if (style == PathStyle::Unix) return path[0] == '/';
+        if (Paths::IsSeparator(path[0], style))
+            return count >= 2 && Paths::IsSeparator(path[1], style);
+        if (count < 3) return false;
+        bool letter = (path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z');
+        return letter && path[1] == ':' && Paths::IsSeparator(path[2], style);
+    }
+
+    private static String JoinCore(immutable(char*) left, nuint leftLength,
+        immutable(char*) right, nuint rightLength, PathStyle style)
+    {
         if (leftLength == 0) return String::From(right, rightLength);
         String result = String::From(left, leftLength);
         if (rightLength == 0) return move result;

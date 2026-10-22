@@ -6,8 +6,8 @@ filesystem. Every operation takes an explicit `PathStyle::Unix` or
 `PathStyle::Windows`, so a program can manipulate paths from either platform
 regardless of where it runs.
 
-Inputs are null-terminated strings. Results are independent owning `String`
-values. Bytes are preserved: there is no Unicode conversion, case folding,
+The pointer overloads take null-terminated strings. Their results are independent
+owning `String` values. Bytes are preserved: there is no Unicode conversion, case folding,
 validation, existence check, or resolution of `.` and `..`.
 
 The five `Get...` operations also accept `Span<readonly(char)>`, returning a
@@ -23,6 +23,23 @@ String path = s"assets/settings.json";
 Span<readonly(char)> name = Paths::GetFileName(path.AsReadOnly(), PathStyle::Unix);
 // name borrows "settings.json" from path.
 ```
+
+`IsRooted` and `IsFullyQualified` also accept counted spans. They read only the
+root prefix inside the view, allocate nothing, and are `nothrow`. Default and
+zero-length spans return false without reading storage. Embedded null and high
+bytes remain ordinary bytes, so a counted `C`, null, `/` is not a drive root.
+The C-string forms still inspect only a bounded prefix rather than scanning the
+whole path.
+
+`Join(leftSpan, rightSpan, style)` accepts two counted views and returns an
+independent owning `String`. It uses the same boundary rules as the C-string
+form below; embedded null and high bytes are preserved, and the result receives
+a trailing null outside its `Length`. Empty views do not access their storage.
+Keep input storage readable and unchanged during the call; no input pointer is
+retained afterward. Allocation failure preserves both inputs and an existing
+assignment destination. Empty input on both sides requires no result allocation.
+These lexical byte operations do not make counted null bytes valid filenames
+for a filesystem API.
 
 Explicit source selections also need `Span.gf`, `Collections/IEnumerable.gf`,
 and `Collections/Enumerable.gf` for these overload declarations. Ordinary
@@ -55,7 +72,8 @@ projects including the standard library already include these sources.
   followed by a separator for Windows. These are lexical root checks, not name
   validation: `\\` alone qualifies even though it is not a complete UNC share.
   Both classification helpers and `IsSeparator` are `nothrow` and allocate
-  nothing. They inspect null-terminated input without copying it.
+  nothing. Their pointer overloads inspect null-terminated input without
+  copying it.
 
 Windows device paths (`\\?\` and `\\.\`) and alternate data streams are not
 parsed specially. These helpers are not a security boundary: lexical joining

@@ -1,11 +1,31 @@
 namespace std;
 
-// Canonical unsigned base-128 integers, least-significant group first.
+// Canonical unsigned base-128 integers, least-significant group first, plus ZigZag.
 // Metadata refs must not overlap buffers or one another. Zero counts do not
 // dereference buffers. No allocation or other std sources are required.
 public static class VarInt
 {
     public enum Status { Done, NeedMore, Invalid }
+
+    // ZigZag maps small signed magnitudes to small unsigned values. Perform
+    // shifts and sign-mask subtraction unsigned, including at signed minima.
+    public static uint ZigZagEncode(int value) nothrow
+    {
+        uint bits = (uint)value;
+        return (bits << 1) ^ (0u - (bits >> 31));
+    }
+
+    public static ulong ZigZagEncode(long value) nothrow
+    {
+        ulong bits = (ulong)value;
+        return (bits << 1) ^ (0ul - (bits >> 63));
+    }
+
+    public static int ZigZagDecode(uint value) nothrow
+        => (int)((value >> 1) ^ (0u - (value & 1u)));
+
+    public static long ZigZagDecode(ulong value) nothrow
+        => (long)((value >> 1) ^ (0ul - (value & 1ul)));
 
     public static nuint GetUInt32Length(uint value) nothrow => GetUInt64Length((ulong)value);
 

@@ -46,15 +46,21 @@ public sealed class SearchExampleTests
             foreach (string[] arguments in new[] { Array.Empty<string>(), [input], new[] { input, "needle", "extra" } })
             {
                 var usage = await Run(executable, arguments);
-                Assert.Equal(2, usage.ExitCode); Assert.Empty(usage.Error);
-                Assert.Contains("Usage: search", Encoding.ASCII.GetString(usage.Output));
+                Assert.Equal(2, usage.ExitCode); Assert.Empty(usage.Output);
+                Assert.Equal("Usage: search <file> <text>", usage.Error.TrimEnd('\r','\n'));
             }
             var missing = await Run(executable, [Path.Combine(directory, "missing file"), "needle"]);
-            Assert.Equal(1, missing.ExitCode); Assert.Empty(missing.Error);
-            Assert.Contains("Unable to read file.", Encoding.ASCII.GetString(missing.Output));
+            Assert.Equal(1, missing.ExitCode); Assert.Empty(missing.Output);
+            Assert.Equal("Unable to read file.", missing.Error.TrimEnd('\r','\n'));
         }
         finally { Directory.Delete(directory, true); }
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ActualToolReportsImmediateAndBufferedOutputFailure(int optimization)
+        => ExampleOutputFailure.AssertReported("search", optimization, "Unable to write search results.", "needle");
 
     private static byte[] Bytes(string value) => Encoding.UTF8.GetBytes(value);
 

@@ -52,73 +52,7 @@ public class ChecksumExampleTests
     [InlineData(0)]
     [InlineData(2)]
     public void ActualToolReportsImmediateAndBufferedOutputFailure(int optimization)
-    {
-        if(!OperatingSystem.IsWindows()&&!OperatingSystem.IsLinux())return;
-        string directory=Path.Combine(Path.GetTempPath(),"gflat-checksum-flush-"+Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        try
-        {
-            string example=File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/checksum.gf"));
-            const string signature="int main(int argc, char** argv)";
-            Assert.Contains(signature,example);
-            example=example.Replace(signature,"int ExampleMain(int argc, char** argv)");
-            string failure=OperatingSystem.IsWindows()?"""
-                extern int _fileno(void* stream);
-                extern nint _get_osfhandle(int descriptor);
-                extern int CloseHandle(void* handle);
-                bool BreakOutput(void* stream){
-                    // Keep the CRT descriptor valid to avoid its invalid-parameter
-                    // handler; only the underlying OS handle becomes unwritable.
-                    return CloseHandle((void*)_get_osfhandle(_fileno(stream)))!=0;
-                }
-                """:"""
-                bool BreakOutput(void* stream)=>freopen("/dev/full","wb",stream)!=null;
-                """;
-            string setup=OperatingSystem.IsWindows()?"""
-                if(setvbuf(stream,buffer,0,4096)!=0)return 90;
-                if(!BreakOutput(stream))return 91;
-                """:"""
-                if(!BreakOutput(stream))return 91;
-                if(setvbuf(stream,buffer,0,4096)!=0)return 90;
-                """;
-            string wrapper="""
-                extern void* __gflat_stdio_stdout();
-                extern int setvbuf(void* stream,char* buffer,int mode,nuint count);
-                extern int fclose(void* stream);
-                extern void*? freopen(readonly(char)* path,readonly(char)* mode,void* stream);
-                int main(int argc,char** argv){
-                    void* stream=__gflat_stdio_stdout();char[4096] buffer;
-                    if(argc==3){
-                        if(freopen(argv[1],"rb",stream)==null)return 92;
-                        int status=ExampleMain(2,argv);fclose(stream);return status;
-                    }
-                    SETUP
-                    int status=ExampleMain(argc,argv);
-                    // The buffer must remain alive until the stream is closed.
-                    // The example's status, not this cleanup, detects the failure.
-                    fclose(stream);return status;
-                }
-                """.Replace("SETUP",setup);
-            var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
-                .Select(path=>new SourceFile(path,File.ReadAllText(path)))
-                .Append(new SourceFile("checksum-with-output-failure.gf",example+failure+wrapper));
-            string ir=Path.Combine(directory,"checksums.ll"),exe=Path.Combine(directory,"checksums.exe");
-            File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));
-            var compiled=NativeToolchain.Compile(ir,exe,optimizationLevel:optimization);
-            Assert.True(compiled.ExitCode==0,compiled.StandardError);
-            string input=Path.Combine(directory,"input.bin");
-            File.WriteAllBytes(input,[0,1,2,255]);
-            foreach(string[] arguments in new[]{new[]{input},new[]{input,"read-only-output"}})
-            {
-                var run=NativeToolchain.Run(exe,arguments,30000);
-                Assert.Equal(1,run.ExitCode);
-                Assert.Equal("",run.StandardOutput);
-                Assert.Equal("Unable to write checksums",run.StandardError.TrimEnd('\r','\n'));
-                Assert.DoesNotContain("Unable to read",run.StandardError);
-            }
-        }
-        finally{Directory.Delete(directory,true);}
-    }
+        => ExampleOutputFailure.AssertReported("checksum", optimization, "Unable to write checksums");
 
     private static uint Crc(byte[] data)
     {

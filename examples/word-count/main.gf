@@ -10,34 +10,43 @@ void RecordWord(HashMap<String, nuint>* counts, ref String word)
     word.Clear();
 }
 
+void ReadWords(readonly(char)* path, HashMap<String, nuint>* counts)
+{
+    String word = new();
+    File input = File::OpenRead(path);
+    char[4096] buffer;
+    while (true)
+    {
+        nuint read = input.Read(buffer, 4096);
+        if (read == 0) break;
+        for (nuint i = 0; i < read; i++)
+        {
+            char value = buffer[i];
+            if (value >= 'A' && value <= 'Z') value = (char)(value - 'A' + 'a');
+            if (value >= 'a' && value <= 'z') word.Append(value);
+            else RecordWord(counts, ref word);
+        }
+    }
+    RecordWord(counts, ref word);
+    input.Close();
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 2)
     {
-        Console::WriteLine("Usage: word-count <file>");
+        Console::Error.WriteLine("Usage: word-count <file>");
         return 2;
+    }
+    HashMap<String, nuint> counts = new();
+    try { ReadWords(argv[1], &counts); }
+    catch (IOException* error)
+    {
+        Console::Error.WriteLine("Unable to read input file.");
+        return 1;
     }
     try
     {
-        HashMap<String, nuint> counts = new();
-        String word = new();
-        File input = File::OpenRead(argv[1]);
-        char[4096] buffer;
-        while (true)
-        {
-            nuint read = input.Read(buffer, 4096);
-            if (read == 0) break;
-            for (nuint i = 0; i < read; i++)
-            {
-                char value = buffer[i];
-                if (value >= 'A' && value <= 'Z') value = (char)(value - 'A' + 'a');
-                if (value >= 'a' && value <= 'z') word.Append(value);
-                else RecordWord(&counts, ref word);
-            }
-        }
-        RecordWord(&counts, ref word);
-        input.Close();
-
         HashMap<String, nuint>::Enumerator iterator = counts.GetEnumerator();
         while (iterator.MoveNext())
         {
@@ -50,11 +59,12 @@ int main(int argc, char** argv)
             count.Format(&line);
             Console::WriteLine(ref line);
         }
+        Console::Flush();
         return 0;
     }
     catch (IOException* error)
     {
-        Console::WriteLine("Unable to read input file.");
+        Console::Error.WriteLine("Unable to write word counts.");
         return 1;
     }
 }

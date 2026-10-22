@@ -1,12 +1,17 @@
 using std;
 
-void EmitMatch(ref String line, immutable(char*) needle, bool endedWithLF)
+void EmitMatch(ref String line, immutable(char*) needle, bool endedWithLF, ref bool writingOutput)
 {
     // Preserve bytes within a line; normalize its ending for Console output.
     if (endedWithLF && line.Length != 0 && line.Data[line.Length - 1] == '\r')
         line.Remove(line.Length - 1, 1);
     // Shared byte-oriented String search; no regex or Unicode normalization.
-    if (line.Contains(needle)) Console::WriteLine(ref line);
+    if (line.Contains(needle))
+    {
+        writingOutput = true;
+        Console::WriteLine(ref line);
+        writingOutput = false;
+    }
     line.Clear();
 }
 
@@ -14,9 +19,10 @@ int main(int argc, char** argv)
 {
     if (argc != 3)
     {
-        Console::WriteLine("Usage: search <file> <text>");
+        Console::Error.WriteLine("Usage: search <file> <text>");
         return 2;
     }
+    bool writingOutput = false;
     try
     {
         File input = File::OpenRead(argv[1]);
@@ -28,17 +34,20 @@ int main(int argc, char** argv)
             if (count == 0) break;
             for (nuint i = 0; i < count; i++)
             {
-                if (buffer[i] == '\n') EmitMatch(ref line, argv[2], true);
+                if (buffer[i] == '\n') EmitMatch(ref line, argv[2], true, ref writingOutput);
                 else line.Append(&buffer[i], 1);
             }
         }
-        if (line.Length != 0) EmitMatch(ref line, argv[2], false);
+        if (line.Length != 0) EmitMatch(ref line, argv[2], false, ref writingOutput);
         input.Close();
+        writingOutput = true;
+        Console::Flush();
         return 0;
     }
     catch (IOException* error)
     {
-        Console::WriteLine("Unable to read file.");
+        if (writingOutput) Console::Error.WriteLine("Unable to write search results.");
+        else Console::Error.WriteLine("Unable to read file.");
         return 1;
     }
 }

@@ -273,6 +273,21 @@ public class FreestandingCoreUtilitiesTests
             if(wideHex[0]!='Z'||wideHex[37]!='Z'||wideHex[5]!='8') return 151;
             for(nuint i=1;i<5;i++)if(wideHex[i]!='0') return 152;
             for(nuint i=6;i<37;i++)if(wideHex[i]!='0') return 153;
+            char[42] wideDecimal;
+            for(nuint i=0;i<42;i++)wideDecimal[i]='Z';
+            if(std::IntegerFormatting::TryFormat(wideBits,&wideDecimal[1],39,ref length)||length!=0) return 164;
+            for(nuint i=0;i<42;i++)if(wideDecimal[i]!='Z') return 165;
+            if(!std::IntegerFormatting::TryFormat(wideBits,&wideDecimal[1],40,ref length)||length!=40) return 166;
+            if(wideDecimal[0]!='Z'||wideDecimal[41]!='Z') return 167;
+            wideDecimal[41]='\0';
+            if(!std::CString::Equals(&wideDecimal[1],"-170141183460469231731687303715884105728")) return 168;
+            byte[18] wideBinary; wideBinary[0]=(byte)90; wideBinary[17]=(byte)90;
+            if(!std::BinaryPrimitives::TryWriteExtraLongLittleEndian(&wideBinary[1],16,wideBits)) return 169;
+            extralong roundtrip=(extralong)1;
+            if(!std::BinaryPrimitives::TryReadExtraLongLittleEndian(&wideBinary[1],16,ref roundtrip)||roundtrip!=wideBits) return 170;
+            if(!std::BinaryPrimitives::TryWriteExtraLongBigEndian(&wideBinary[1],16,wideBits)) return 171;
+            if(!std::BinaryPrimitives::TryReadExtraLongBigEndian(&wideBinary[1],16,ref roundtrip)||roundtrip!=wideBits) return 172;
+            if(wideBinary[0]!=(byte)90||wideBinary[17]!=(byte)90) return 173;
             return 42;
         }
         """;

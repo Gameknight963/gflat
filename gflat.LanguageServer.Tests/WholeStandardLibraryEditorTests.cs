@@ -109,11 +109,18 @@ public class WholeStandardLibraryEditorTests
                 float fraction=random.NextFloat();
                 float root=Math::Sqrt(4.0f);
                 float signed=Math::CopySign(root,-0.0f);
+                float truncated=Math::Truncate(-1.5f); double rounded=Math::Round(2.5);
+                float floored=Math::Floor(-1.5f); double ceiling=Math::Ceiling(1.5);
                 extralong wide=(extralong)1<<100;
                 extralong wideMinimum=Math::Min(wide+1,wide+2);
                 extralong wideMaximum=Math::Max(wide+1,wide+2);
                 extralong wideClamped=Math::Clamp(wide+3,wide+1,wide+2);
                 extralong wideAbsolute=Math::Abs(-wide);
+                extralong parsedWide=ParseExtraLong("1267650600228229401496703205376");
+                TryParseExtraLong("-170141183460469231731687303715884105728",&parsedWide);
+                char[40] wideDigits; nuint wideWritten=0;
+                IntegerFormatting::TryFormat(parsedWide,wideDigits,40,ref wideWritten);
+                String wideText=s$"Wide integer: {parsedWide}";
                 Date calendar=new(2024,2,29); Date tomorrow=calendar.AddDays(1);
                 Date anniversary=calendar.AddYears(1); Date nextMonth=calendar.AddMonths(1);
                 DayOfWeek weekday=calendar.DayOfWeek; int ordinalDay=calendar.DayOfYear;
@@ -189,7 +196,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
@@ -199,5 +206,8 @@ public class WholeStandardLibraryEditorTests
         int localCall=sourceTokens.Last(token=>token.Text=="Contains").Start;
         var localHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,localCall),Protocol.JsonOptions);
         Assert.Contains("Contains(int value)",localHover.GetProperty("contents").GetProperty("value").GetString());
+        int wideFormat=sourceTokens.First(token=>token.Text=="TryFormat").Start;
+        var wideHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,wideFormat),Protocol.JsonOptions);
+        Assert.Contains("extralong value",wideHover.GetProperty("contents").GetProperty("value").GetString());
     }
 }

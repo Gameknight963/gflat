@@ -1,0 +1,117 @@
+namespace std;
+
+// Proleptic Gregorian calendar date, independent of clocks and time zones.
+public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattable
+{
+    private int dayNumber;
+    private const int MaximumDayNumber = 3652058;
+
+    public Date() nothrow { dayNumber = 0; }
+
+    private static bool Leap(int year) nothrow
+        => year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+
+    private static int MonthLength(int year, int month) nothrow
+    {
+        if (month == 2) { if (Leap(year)) return 29; return 28; }
+        if (month == 4 || month == 6 || month == 9 || month == 11) return 30;
+        return 31;
+    }
+
+    public static bool IsLeapYear(int year)
+    {
+        if (year < 1 || year > 9999) throw new Exception("Date year must be between 1 and 9999");
+        return Leap(year);
+    }
+
+    public static int DaysInMonth(int year, int month)
+    {
+        if (year < 1 || year > 9999) throw new Exception("Date year must be between 1 and 9999");
+        if (month < 1 || month > 12) throw new Exception("Date month must be between 1 and 12");
+        return MonthLength(year, month);
+    }
+
+    public Date(int year, int month, int day)
+    {
+        int limit = DaysInMonth(year, month);
+        if (day < 1 || day > limit) throw new Exception("Date day is outside the selected month");
+        int previous = year - 1;
+        dayNumber = previous * 365 + previous / 4 - previous / 100 + previous / 400 + day - 1;
+        for (int i = 1; i < month; i++) dayNumber += MonthLength(year, i);
+    }
+
+    public static Date FromDayNumber(int number)
+    {
+        if (number < 0 || number > Date::MaximumDayNumber) throw new Exception("Date day number is outside the supported range");
+        Date result = new(); result.dayNumber = number; return result;
+    }
+
+    public int DayNumber { readonly get nothrow => dayNumber; }
+
+    private readonly void GetParts(ref int year, ref int month, ref int day) nothrow
+    {
+        int remaining = dayNumber;
+        int centuries400 = remaining / 146097; remaining %= 146097;
+        int centuries = remaining / 36524; if (centuries == 4) centuries = 3;
+        remaining -= centuries * 36524;
+        int years4 = remaining / 1461; remaining %= 1461;
+        int years = remaining / 365; if (years == 4) years = 3;
+        remaining -= years * 365;
+        year = centuries400 * 400 + centuries * 100 + years4 * 4 + years + 1;
+        month = 1;
+        while (remaining >= Date::MonthLength(year, month))
+        {
+            remaining -= Date::MonthLength(year, month); month++;
+        }
+        day = remaining + 1;
+    }
+
+    public int Year
+    {
+        readonly get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return year; }
+    }
+    public int Month
+    {
+        readonly get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return month; }
+    }
+    public int Day
+    {
+        readonly get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return day; }
+    }
+
+    public readonly Date AddDays(int days)
+    {
+        long result = (long)dayNumber + (long)days;
+        if (result <= -1l || result > (long)Date::MaximumDayNumber) throw new Exception("Date addition is outside the supported range");
+        return Date::FromDayNumber((int)result);
+    }
+
+    public readonly bool Equals(readonly(Date)* other) nothrow => dayNumber == other.dayNumber;
+    public readonly int CompareTo(readonly(Date)* other) nothrow => dayNumber - other.dayNumber;
+    public readonly nuint GetHashCode() nothrow => (nuint)dayNumber;
+
+    // Fixed invariant ISO spelling, counted bytes without a null terminator.
+    public readonly bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
+    {
+        written = 0;
+        if (capacity < 10) return false;
+        int year = 0; int month = 0; int day = 0;
+        this.GetParts(ref year, ref month, ref day);
+        output[0] = (char)('0' + year / 1000);
+        output[1] = (char)('0' + year / 100 % 10);
+        output[2] = (char)('0' + year / 10 % 10);
+        output[3] = (char)('0' + year % 10);
+        output[4] = '-';
+        output[5] = (char)('0' + month / 10); output[6] = (char)('0' + month % 10);
+        output[7] = '-';
+        output[8] = (char)('0' + day / 10); output[9] = (char)('0' + day % 10);
+        written = 10; return true;
+    }
+
+    public readonly void Format(ITextWriter* output)
+    {
+        char[10] buffer; nuint written = 0;
+        this.TryFormat(buffer, 10, ref written);
+        output.Write(buffer, written);
+    }
+}

@@ -47,6 +47,7 @@ public class WholeStandardLibraryEditorTests
             int main() {
                 LinkedList<int> list=new();
                 LinkedList<int>::Node* node=list.AddLast(42);
+                var linkedQuery=list.AsEnumerable().Take(1);
                 String text=s"ad"; text.Insert(1,"bc");
                 Span<readonly(char)> textView=text.AsImmutable(); Span<char> writableText=text.AsSpan();
                 Span<readonly(char)> shallowTextView=text.AsReadOnly();
@@ -285,7 +286,7 @@ public class WholeStandardLibraryEditorTests
         var chunksHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,chunksCall),Protocol.JsonOptions);
         Assert.Contains("SpanChunks",chunksHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("SpanChunks.gf",JsonSerializer.Serialize(model.Definition(source.Path,chunksCall),Protocol.JsonOptions));
-        foreach(var item in new[]{("pending","Queue.gf"),("lifo","Stack.gf")})
+        foreach(var item in new[]{("pending","Queue.gf"),("lifo","Stack.gf"),("list","LinkedList.gf")})
         {
             int call=text.IndexOf(item.Item1+".AsEnumerable",StringComparison.Ordinal)+item.Item1.Length+1;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);

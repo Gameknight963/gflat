@@ -1,7 +1,8 @@
 # Enumeration and queries
 
-`Vector`, `Deque`, `Queue`, `Stack`, `Span`, `IntRange`, `FilteredIntRange`, `TextParts`, `TextLines`,
-`Utf8Scalars`, `Utf16Scalars`, and `BitSet` provide an `AsEnumerable()` adapter
+`Vector`, `Deque`, `Queue`, `Stack`, `LinkedList`, `Span`, `IntRange`,
+`FilteredIntRange`, `TextParts`, `TextLines`, `Utf8Scalars`, `Utf16Scalars`, and
+`BitSet` provide an `AsEnumerable()` adapter
 for lazy queries.
 Import `std` to make the query extensions visible:
 
@@ -45,6 +46,11 @@ Queue queries preserve FIFO order, while stack queries visit the top first.
 Their adapters likewise borrow captured storage metadata and require a mutable
 owner. Keep that owner alive and avoid structural mutation while using the query;
 ordinary element edits remain visible. See [queue and stack views](OWNING_COLLECTIONS.md#queue-and-stack).
+
+Linked-list queries capture the first node and visit values from first to last.
+Do not insert or remove nodes while using them. As with node handles, an owner
+move preserves these views while the destination owner lives. See
+[linked-list borrowing](../../../docs/LINKED_LIST.md#borrowing-and-iteration).
 
 Integer ranges are different from container views: their adapters copy the small
 range state rather than borrowing the original range variable. Both range

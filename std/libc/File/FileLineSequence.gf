@@ -29,9 +29,9 @@ public struct FileLineSequence : IEnumerable<String, FileLineSequence::Enumerato
             return true;
         }
         // The borrowed line is replaced by the next MoveNext and dies with this iterator.
-        public ref readonly(String) Current
+        public ref immutable(String) Current
         {
-            get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current line");
                 return current;

@@ -8,7 +8,7 @@ public class ExternAliasTests
         string ir = CompilerTestHelper.EmitIr("""
             namespace Native {
                 alias FileHandle = void*?;
-                private extern FileHandle fopen(readonly(char*) path, readonly(char*) mode);
+                private extern FileHandle fopen(immutable(char*) path, immutable(char*) mode);
                 private extern int fclose(FileHandle handle);
                 void Probe() { FileHandle handle = fopen("missing-file", "rb"); if (handle != null) fclose(handle); }
             }

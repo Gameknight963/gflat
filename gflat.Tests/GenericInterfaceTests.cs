@@ -21,12 +21,12 @@ public sealed class GenericInterfaceTests
     {
         var result = CompilerTestHelper.Run("""
             namespace Contracts {
-                interface IValue<T> { T Value { readonly get; } }
+                interface IValue<T> { T Value { immutable get; } }
                 alias IntValue = IValue<int>;
                 struct Box<T> : IValue<T> {
                     private T value;
                     public Box(T input) { value = input; }
-                    public T Value { readonly get => value; }
+                    public T Value { immutable get => value; }
                 }
                 T Read<T : IValue<int>>(T value) => value;
             }

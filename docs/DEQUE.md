@@ -25,7 +25,7 @@ ignoring that return destroys it normally. Both throw on an empty deque.
 
 `Front`, `Back`, and `this[index]` are checked ref properties: they borrow the
 stored element rather than copying it. Index zero is the front. Mutable receivers
-allow updating elements; readonly receivers expose readonly references. `Count`,
+allow updating elements; immutable receivers expose immutable references. `Count`,
 `Capacity`, and `IsEmpty` report metadata. `Reserve(n)` reserves space for at least
 `n` entries. `Clear()` destroys every element but retains capacity.
 `ShrinkToFit()` reduces capacity to `Count`, preserving front-to-back order even

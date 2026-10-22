@@ -54,7 +54,7 @@ public sealed class NoStdRuntimeTests
     }
 
     [Theory]
-    [InlineData("readonly(char*) Text() => \"@__gflat_eh_capture\";")]
+    [InlineData("immutable(char*) Text() => \"@__gflat_eh_capture\";")]
     [InlineData("int Value() => __llvm<int>(\"; @__gflat_eh_capture\\nret i32 42\");")]
     [InlineData("int Value() => __llvm_module<int>(\"; @__gflat_eh_capture\\ndefine i32 @entry() { ret i32 42 }\", \"entry\");")]
     public void RuntimeSymbolTextInDataAndCommentsDoesNotAddRuntimeDeclarations(string source)

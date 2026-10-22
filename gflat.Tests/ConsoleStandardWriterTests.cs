@@ -24,7 +24,7 @@ public sealed class ConsoleStandardWriterTests
             }
             class Label : IFormattable {
                 public Label() { }
-                public readonly void Format(ITextWriter* output) { output.Write("<custom>", 8); }
+                public immutable void Format(ITextWriter* output) { output.Write("<custom>", 8); }
             }
             int main() {
                 if (Calls::Allocations != 0) return 1;
@@ -90,7 +90,7 @@ public sealed class ConsoleStandardWriterTests
             var result = CompilerTestHelper.Run(Sources($$"""
                 extern void* __gflat_stdio_stdout();
                 extern void* __gflat_stdio_stderr();
-                extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+                extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
                 int main() {
                     ITextWriter* output = Console::Out;
                     ITextWriter* error = Console::Error;
@@ -142,7 +142,7 @@ public sealed class ConsoleStandardWriterTests
         var result = CompilerTestHelper.Run(Sources("""
             extern void* __gflat_stdio_stdout();
             extern void* __gflat_stdio_stderr();
-            extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
             extern int setvbuf(void* stream, char* buffer, int mode, nuint size);
             extern int fclose(void* stream);
             int main() {
@@ -166,7 +166,7 @@ public sealed class ConsoleStandardWriterTests
         if (!OperatingSystem.IsLinux()) return;
         var result = CompilerTestHelper.Run(Sources("""
             extern void* __gflat_stdio_stderr();
-            extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
             extern int setvbuf(void* stream, char* buffer, int mode, nuint size);
             extern int fclose(void* stream);
             int main() {

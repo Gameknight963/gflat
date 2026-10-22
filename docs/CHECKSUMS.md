@@ -18,7 +18,7 @@ Both types expose the same operations:
 - `Append(readonly(char)* data, nuint count)` consumes exactly `count` bytes.
   The caller supplies readable storage for those bytes; an empty append does not
   access storage.
-- `readonly uint GetValue()` returns the current checksum without resetting it.
+- `immutable uint GetValue()` returns the current checksum without resetting it.
   More bytes can be appended afterward.
 
 Copying a checksum copies its independent running state, so a shared prefix can

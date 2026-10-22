@@ -76,6 +76,7 @@ public partial class TypeChecker
     private bool ValidateCopyUse(AstNode expression, TypeExpression target)
     {
         if (!CopiesValue(expression, target)) return true;
+        if (IsExpressionImmutable(expression) && !CanCopyReadOnlyValue(TypeQualifiers.Immutable(GetType(expression)))) return false;
         if (!CanCopy(target)) return false;
         if (!CanAccessCopy(target, _currentClass?.Name ?? _currentStruct?.Name)) return false;
         if (_currentFunction is MethodDeclaration { IsConst: true } || _currentConstructor?.IsConst == true)

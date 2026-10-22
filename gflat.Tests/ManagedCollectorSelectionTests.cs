@@ -6,7 +6,7 @@ public sealed class ManagedCollectorSelectionTests
 {
     private const string Providers = """
         extern void*? malloc(nuint bytes);
-        extern int printf(readonly(char*) format, ...);
+        extern int printf(immutable(char*) format, ...);
         static class First {
             public static void* Allocate(nuint bytes, nuint alignment) { printf("A"); return malloc(bytes)!; }
             public static void ReferenceAdded(void* slot) nothrow {}
@@ -50,7 +50,7 @@ public sealed class ManagedCollectorSelectionTests
     [InlineData("managed<int, Second> second = first;")]
     [InlineData("managed<int, Second> second = (managed<int, Second>)first;")]
     [InlineData("managed<int, Second>? second = first;")]
-    [InlineData("readonly(managed<int, Second>) second = first;")]
+    [InlineData("immutable(managed<int, Second>) second = first;")]
     public void CollectorsCannotBeImplicitlyMixedOrCastBetween(string operation)
     {
         Assert.Throws<TypeCheckException>(() => Compiler.Emit(Providers + "int main() { int^ first = new^ int(1); " + operation + " return 0; }"));

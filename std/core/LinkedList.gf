@@ -29,7 +29,7 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
 
         public Node*? Next { get => next; }
         public Node*? Previous { get => previous; }
-        public ref T Value { get => value; }
+        public ref T Value { immutable get => value; }
 
         // A node is an identity-bearing allocation, not a copyable value.
         // Field destruction still cleans value when the list deletes the node.
@@ -39,13 +39,13 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
     public LinkedList() { state = null; }
     public nuint Count
     {
-        readonly get nothrow
+        immutable get nothrow
         {
             if (state == null) return 0;
             return state!.Count;
         }
     }
-    public bool IsEmpty { readonly get nothrow => this.Count == 0; }
+    public bool IsEmpty { immutable get nothrow => this.Count == 0; }
     public Node*? First
     {
         get
@@ -194,7 +194,7 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
         }
         public ref T Current
         {
-            get
+            immutable get
             {
                 if (current == null) throw new Exception("Enumerator has no current element");
                 return current!.Value;

@@ -540,8 +540,11 @@ namespace gflat
         private void RecordType(AstNode node, TypeExpression type)
         {
             _types[node] = ResolveAlias(type);
-            if (node is MemberAccessExpression or IdentifierExpression && IsExpressionReadOnly(node))
-                _types[node] = TypeQualifiers.ReadOnly(_types[node]);
+            if (node is MemberAccessExpression or IdentifierExpression)
+            {
+                if (IsExpressionImmutable(node)) _types[node] = CanonicalizeBoundScalarProtection(TypeQualifiers.Immutable(_types[node]));
+                else if (IsExpressionReadOnly(node)) _types[node] = TypeQualifiers.ReadOnly(_types[node]);
+            }
             if (extensions.Count != 0 && node is IdentifierExpression receiver && TryLookupVariable(receiver.Name, out var receiverSlotType))
             {
                 extensionReceiverVariables.Add(receiver);
@@ -772,7 +775,7 @@ namespace gflat
             if (type is ReferenceTypeExpression reference) return "Ref$" + GetTypeMangledName(reference.Inner);
             type = ResolveAlias(type);
             if (type.IsReadOnlyValue)
-                return "ReadOnly$" + GetTypeMangledName(type.WithReadOnlyValue(false));
+                return (type.IsImmutableValue ? "Immutable$" : "ReadOnly$") + GetTypeMangledName(type.WithoutValueProtection());
             if (type is NamedTypeExpression named)
             {
                 string baseName = named.Name;
@@ -1044,7 +1047,9 @@ namespace gflat
                 TypeExpression resolvedArg = ResolveAlias(argType);
                 // readonly(T) supplies this qualification itself. It is not part
                 // of the type substituted for T (unqualified T still preserves it).
-                if (namedParam.IsReadOnlyValue)
+                if (namedParam.IsImmutableValue)
+                    resolvedArg = resolvedArg.WithoutValueProtection();
+                else if (namedParam.IsReadOnlyValue)
                     resolvedArg = resolvedArg.WithReadOnlyValue(false);
                 if (inferred.TryGetValue(namedParam.Name, out TypeExpression? existing))
                 {
@@ -1663,7 +1668,7 @@ namespace gflat
                 b = symbols.ResolveAlias(b);
             }
 
-            if (a.IsReadOnlyValue != b.IsReadOnlyValue) return false;
+            if (a.IsReadOnlyValue != b.IsReadOnlyValue || a.IsImmutableValue != b.IsImmutableValue) return false;
             if (a is NamedTypeExpression na && b is NamedTypeExpression nb)
                 return na.Name == nb.Name;
             if (a is ReferenceTypeExpression ra && b is ReferenceTypeExpression rb)
@@ -1695,7 +1700,7 @@ namespace gflat
         }
 
         private bool TypesMatch(TypeExpression a, TypeExpression b) => TypesMatchPublic(
-            ResolveAlias(a).WithReadOnlyValue(false), ResolveAlias(b).WithReadOnlyValue(false), _symbols);
+            ResolveAlias(a).WithoutValueProtection(), ResolveAlias(b).WithoutValueProtection(), _symbols);
 
         private bool IsAssignable(TypeExpression target, TypeExpression source, AstNode? valueNode = null)
         {
@@ -1738,10 +1743,10 @@ namespace gflat
             if (target is ManagedTypeExpression targetCollector && source is ManagedTypeExpression sourceCollector &&
                 !TypesMatch(ResolveCollectorType(targetCollector.Collector, targetCollector.Line), ResolveCollectorType(sourceCollector.Collector, sourceCollector.Line))) return false;
 
-            if (source.IsReadOnlyValue && !target.IsReadOnlyValue && !CanCopyReadOnlyValue(source))
+            if (source.IsImmutableValue && !target.IsImmutableValue && !CanCopyReadOnlyValue(source))
                 return false;
-            target = target.WithReadOnlyValue(false);
-            source = source.WithReadOnlyValue(false);
+            target = target.WithoutValueProtection();
+            source = source.WithoutValueProtection();
             if (target is ArrayTypeExpression literalArray &&
                 valueNode is LiteralExpression { Token.Kind: TokenKind.StringLiteral } literal)
                 return TypesMatch(ResolveAlias(literalArray.ElementType), Char) &&
@@ -1767,6 +1772,11 @@ namespace gflat
                     return false;
                 if (psExact.IsNullable && !ptExact.IsNullable)
                     return false;
+                // void exposes no writable members, so its shallow and deep views
+                // coincide. Preserve readonly storage and the interface ABI boundary.
+                if (ptExact.IsReadOnly && ResolveAlias(ptExact.Inner) is NamedTypeExpression { Name: "void" } &&
+                    !(ResolveAlias(psExact.Inner) is NamedTypeExpression opaqueSource && IsInterface(opaqueSource)))
+                    return true;
                 if (ptExact.IsReadOnly ? CanReadOnlyView(ptExact.Inner, psExact.Inner) : TypesMatchPublic(ptExact.Inner, psExact.Inner, _symbols))
                     return true;
             }
@@ -1818,7 +1828,7 @@ namespace gflat
             // Struct pointer to interface pointer assignability
             if (target is PointerTypeExpression ptIface && source is PointerTypeExpression psStruct)
             {
-                if (psStruct.IsReadOnly && !ptIface.IsReadOnly)
+                if (psStruct.IsReadOnly && !ptIface.IsReadOnly || psStruct.IsImmutable && !ptIface.IsImmutable)
                     return false;
                 TypeExpression targetInner = ResolveAlias(ptIface.Inner);
                 TypeExpression sourceInner = ResolveAlias(psStruct.Inner);
@@ -1850,7 +1860,7 @@ namespace gflat
             // Struct or class managed ref to interface managed ref assignability
             if (target is ManagedTypeExpression mtIface && source is ManagedTypeExpression msStruct)
             {
-                if (msStruct.IsReadOnly && !mtIface.IsReadOnly)
+                if (msStruct.IsReadOnly && !mtIface.IsReadOnly || msStruct.IsImmutable && !mtIface.IsImmutable)
                     return false;
                 TypeExpression targetInner = ResolveAlias(mtIface.Inner);
                 TypeExpression sourceInner = ResolveAlias(msStruct.Inner);
@@ -1882,7 +1892,7 @@ namespace gflat
             // Class pointer inheritance assignability (Derived* to Base*)
             if (target is PointerTypeExpression ptBase && source is PointerTypeExpression psDerived)
             {
-                if (psDerived.IsReadOnly && !ptBase.IsReadOnly)
+                if (psDerived.IsReadOnly && !ptBase.IsReadOnly || psDerived.IsImmutable && !ptBase.IsImmutable)
                     return false;
                 TypeExpression targetInner = ResolveAlias(ptBase.Inner);
                 TypeExpression sourceInner = ResolveAlias(psDerived.Inner);
@@ -1900,7 +1910,7 @@ namespace gflat
             // Class managed ref inheritance assignability (Derived^ to Base^)
             if (target is ManagedTypeExpression mtBase && source is ManagedTypeExpression msDerived)
             {
-                if (msDerived.IsReadOnly && !mtBase.IsReadOnly)
+                if (msDerived.IsReadOnly && !mtBase.IsReadOnly || msDerived.IsImmutable && !mtBase.IsImmutable)
                     return false;
                 TypeExpression targetInner = ResolveAlias(mtBase.Inner);
                 TypeExpression sourceInner = ResolveAlias(msDerived.Inner);
@@ -1918,7 +1928,7 @@ namespace gflat
             // void* is implicitly convertible to/from any pointer type (except interface fat pointer)
             if (target is PointerTypeExpression pt && source is PointerTypeExpression ps)
             {
-                if (ps.IsReadOnly && !pt.IsReadOnly)
+                if (ps.IsReadOnly && !pt.IsReadOnly || ps.IsImmutable && !pt.IsImmutable)
                     return false;
                 bool targetIsIface = ResolveAlias(pt.Inner) is NamedTypeExpression tNamed && IsInterface(tNamed);
                 bool sourceIsIface = ResolveAlias(ps.Inner) is NamedTypeExpression sNamed && IsInterface(sNamed);
@@ -2426,7 +2436,7 @@ namespace gflat
                                 $"{DescribeSourceCallable(classMethod, capitalized: true)} in class '{DisplayName(node.Name)}' must match nothrow specification of interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",
                                 classMethod.Span);
                         }
-                        if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly)
+                        if (ifaceMethod.IsReadOnly && !classMethod.IsReadOnly || ifaceMethod.IsImmutable && !classMethod.IsImmutable)
                         {
                             throw new TypeCheckException(
                                 $"{DescribeSourceCallable(classMethod, capitalized: true)} in class '{DisplayName(node.Name)}' must be marked readonly to implement interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",
@@ -2545,7 +2555,7 @@ namespace gflat
                             {
                                 PushScope();
                                 NamedTypeExpression classType = NamedTypeExpression.Resolved(node.Name, method.Line);
-                                PointerTypeExpression thisType = new PointerTypeExpression(classType, false, method.Line, isReadOnly: method.IsReadOnly);
+                                PointerTypeExpression thisType = new PointerTypeExpression(method.IsImmutable ? TypeQualifiers.Immutable(classType) : classType, false, method.Line, isReadOnly: method.IsReadOnly);
                                 DeclareVariable("this", thisType, method.Line);
 
                                 foreach (Parameter p in method.Parameters)
@@ -2622,7 +2632,7 @@ namespace gflat
                                 structMethod.Span);
                         }
 
-                        if (ifaceMethod.IsReadOnly && !structMethod.IsReadOnly)
+                        if (ifaceMethod.IsReadOnly && !structMethod.IsReadOnly || ifaceMethod.IsImmutable && !structMethod.IsImmutable)
                         {
                             throw new TypeCheckException(
                                 $"{DescribeSourceCallable(structMethod, capitalized: true)} in struct '{DisplayName(node.Name)}' must be marked readonly to implement interface {DescribeSourceCallable(ifaceMethod, ifaceName)}",
@@ -2740,7 +2750,7 @@ namespace gflat
                             ValidateReturnType(method.ReturnType, method.Line);
                             PushScope();
                             NamedTypeExpression structType = NamedTypeExpression.Resolved(node.Name, method.Line);
-                            PointerTypeExpression thisType = new PointerTypeExpression(structType, false, method.Line, isReadOnly: method.IsReadOnly);
+                            PointerTypeExpression thisType = new PointerTypeExpression(method.IsImmutable ? TypeQualifiers.Immutable(structType) : structType, false, method.Line, isReadOnly: method.IsReadOnly);
                             DeclareVariable("this", thisType, method.Line);
 
                             foreach (Parameter p in method.Parameters)
@@ -3803,7 +3813,7 @@ namespace gflat
                     FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(f.ReturnType, f.ParameterTypes, f.IsManaged, false, node.Line),
                     _ => throw new TypeCheckException("Postfix '!' requires a pointer, managed reference, or function pointer", node.Line)
                 };
-                RecordType(node, result.WithReadOnlyValue(source.IsReadOnlyValue));
+                RecordType(node, result.WithQualifiersFrom(source));
                 return;
             }
             if (node.Operator is TokenKind.PlusPlus or TokenKind.MinusMinus &&
@@ -4099,7 +4109,7 @@ namespace gflat
                     }
                 }
 
-                return IsExpressionReadOnly(member.Object);
+                return objType is not PointerTypeExpression and not ManagedTypeExpression && IsExpressionReadOnly(member.Object);
             }
 
             return false;
@@ -4155,7 +4165,7 @@ namespace gflat
                 TypeExpression rawObjType = ResolveAlias(GetType(memberAccess.Object));
                 if ((rawObjType is PointerTypeExpression p && p.IsReadOnly) ||
                     (rawObjType is ManagedTypeExpression m && m.IsReadOnly) ||
-                    IsExpressionReadOnly(memberAccess.Object))
+                    (rawObjType is not PointerTypeExpression and not ManagedTypeExpression && IsExpressionReadOnly(memberAccess.Object)))
                 {
                     throw new TypeCheckException($"Cannot assign to field '{memberAccess.Member}' on readonly instance", line);
                 }
@@ -4486,7 +4496,8 @@ namespace gflat
                     throw new TypeCheckException("Cast a nullable pointer to non-null before calling a method", node.Line);
                 bool isReceiverReadOnly = (rawObjType is PointerTypeExpression pRec && pRec.IsReadOnly)
                                        || (rawObjType is ManagedTypeExpression mRec && mRec.IsReadOnly)
-                                       || IsExpressionReadOnly(memberAccess.Object);
+                                       || (rawObjType is not PointerTypeExpression and not ManagedTypeExpression && IsExpressionReadOnly(memberAccess.Object));
+                bool isReceiverImmutable = IsReceiverImmutable(memberAccess.Object);
 
                 TypeExpression objType = rawObjType;
                 if (objType is PointerTypeExpression ptr)
@@ -4501,8 +4512,7 @@ namespace gflat
                     if (!ifaceInfo.MethodsByName.TryGetValue(memberAccess.Member, out MethodDeclaration? ifaceMethod))
                         throw new TypeCheckException($"Interface '{DisplayName(namedIface.Name)}' has no method '{memberAccess.Member}'", node.Span);
 
-                    if (isReceiverReadOnly && !ifaceMethod.IsReadOnly)
-                        throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(ifaceMethod)} on readonly instance", node.Line);
+                    CheckReceiverCapability(ifaceMethod, isReceiverReadOnly, isReceiverImmutable, node.Line);
 
                     if (!ifaceMethod.IsNoThrow)
                     {
@@ -4568,8 +4578,7 @@ namespace gflat
                         throw new TypeCheckException($"Class '{DisplayName(named.Name)}' has no method '{memberAccess.Member}'", node.Span);
 
                     method = SelectOverload(mEntry.Method, node);
-                    if (isReceiverReadOnly && !method.IsReadOnly)
-                        throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
+                    CheckReceiverCapability(method, isReceiverReadOnly, isReceiverImmutable, node.Line);
                     if (method.Accessibility == TokenKind.Private && !CanAccessPrivate(_currentClass?.Name, mEntry.DeclaringClass))
                         throw new TypeCheckException($"Cannot access private method '{memberAccess.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     if (method.Accessibility == TokenKind.Protected && (_currentClass == null || !IsSubclassOf(_currentClass.Name, mEntry.DeclaringClass)))
@@ -4604,8 +4613,7 @@ namespace gflat
 
                     method = SelectOverload(method, node);
                     ValidateStructMemberAccess(sInfo, method.Name, method.Accessibility, true, node.Callee.Span);
-                    if (isReceiverReadOnly && !method.IsReadOnly)
-                        throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
+                    CheckReceiverCapability(method, isReceiverReadOnly, isReceiverImmutable, node.Line);
 
                     funcName = $"{named.Name}.{memberAccess.Member}";
                     _resolvedCalls[node] = method;
@@ -4633,10 +4641,9 @@ namespace gflat
                     if (!method.IsStatic && TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
                     {
                         TypeExpression resThisType = ResolveAlias(thisType);
-                        if (((resThisType is PointerTypeExpression p && p.IsReadOnly) || (resThisType is ManagedTypeExpression m && m.IsReadOnly)) && !method.IsReadOnly)
-                        {
-                            throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
-                        }
+                        CheckReceiverCapability(method,
+                            resThisType is PointerTypeExpression { IsReadOnly: true } or ManagedTypeExpression { IsReadOnly: true },
+                            IsDeepReceiverType(resThisType), node.Line);
                     }
                     if (_currentClass.VTableSlots.TryGetValue(funcName, out int slotIndex))
                     {
@@ -4650,10 +4657,9 @@ namespace gflat
                     if (!method.IsStatic && TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
                     {
                         TypeExpression resThisType = ResolveAlias(thisType);
-                        if (((resThisType is PointerTypeExpression p && p.IsReadOnly) || (resThisType is ManagedTypeExpression m && m.IsReadOnly)) && !method.IsReadOnly)
-                        {
-                            throw new TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", node.Line);
-                        }
+                        CheckReceiverCapability(method,
+                            resThisType is PointerTypeExpression { IsReadOnly: true } or ManagedTypeExpression { IsReadOnly: true },
+                            IsDeepReceiverType(resThisType), node.Line);
                     }
                     _resolvedCalls[node] = method;
                 }
@@ -5618,7 +5624,7 @@ namespace gflat
 
         public static string TypeName(TypeExpression type) => TypeName(type, false);
         private static string TypeName(TypeExpression type, bool inheritedReadOnly) => type.IsReadOnlyValue && !inheritedReadOnly
-            ? "readonly(" + TypeNameCore(type, true) + ")" : TypeNameCore(type, inheritedReadOnly);
+            ? (type.IsImmutableValue ? "immutable(" : "readonly(") + TypeNameCore(type, type.IsImmutableValue || type is ArrayTypeExpression) + ")" : TypeNameCore(type, inheritedReadOnly);
         private static string TypeNameCore(TypeExpression type, bool inheritedReadOnly) => type switch
         {
             NamedTypeExpression n => n.Name,
@@ -5864,9 +5870,10 @@ namespace gflat
             if (src is ManagedTypeExpression rawSource && dst is PointerTypeExpression nativeTarget &&
                 (ResolveAlias(nativeTarget.Inner) is not NamedTypeExpression nativeTargetInner || !IsInterface(nativeTargetInner)) &&
                 (ResolveAlias(rawSource.Inner) is not NamedTypeExpression rawSourceInner || !IsInterface(rawSourceInner))) return true;
-            if (src.IsReadOnlyValue && !dst.IsReadOnlyValue && !CanCopyReadOnlyValue(src))
+            if (src.IsImmutableValue && !dst.IsImmutableValue && !CanCopyReadOnlyValue(src))
                 return false;
-            if (src is ManagedTypeExpression { IsReadOnly: true } && dst is ManagedTypeExpression { IsReadOnly: false })
+            if (src is ManagedTypeExpression { IsReadOnly: true } && dst is ManagedTypeExpression { IsReadOnly: false } ||
+                src is ManagedTypeExpression { IsImmutable: true } && dst is ManagedTypeExpression { IsImmutable: false })
                 return false;
 
             if (TypesMatch(src, dst))

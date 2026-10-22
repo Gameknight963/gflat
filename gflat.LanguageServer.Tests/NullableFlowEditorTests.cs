@@ -10,7 +10,7 @@ public sealed class NullableFlowEditorTests
     public void GuardedCallsHaveHoverAndPreserveNullableParameterDeclaration()
     {
         var source = new SourceFile(Path.GetFullPath("nullable.gf"), """
-            struct Item { public readonly int Get() => 42; }
+            struct Item { public immutable int Get() => 42; }
             int Read(Item*? p) { if (p == null) return 0; return p.Get(); }
             """);
         var snapshot = new AnalysisSnapshot([source]);
@@ -29,7 +29,7 @@ public sealed class NullableFlowEditorTests
     public void InvalidAssignmentDropsFactsAndDoesNotHideLaterDeclarations()
     {
         var source = new SourceFile(Path.GetFullPath("nullable-errors.gf"), """
-            struct Item { public readonly int Get() => 42; }
+            struct Item { public immutable int Get() => 42; }
             int Bad(Item*? p) { if (p == null) return 0; p = Missing(); return p.Get(); }
             int Good(Item*? p) { if (p == null) return 0; return p.Get(); }
             """);

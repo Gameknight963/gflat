@@ -50,7 +50,7 @@ public sealed class OverloadTests
     [Theory]
     [InlineData("int F(int x, long y) => 1; int F(long x, int y) => 2; int main() => F(1, 1);")]
     [InlineData("int F(int* x) => 1; int F(readonly(int)* x) => 2; int main() => 0;")]
-    [InlineData("struct S { public int F() => 1; public readonly int F() => 2; } int main() => 0;")]
+    [InlineData("struct S { public int F() => 1; public immutable int F() => 2; } int main() => 0;")]
     [InlineData("int F(int x) => 1; int F(long x) => 2; int main() { int(float)* p = &F; return p(1.0f); }")]
     public void AmbiguousAndUnsupportedOverloadFormsAreDiagnosed(string source)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(source));

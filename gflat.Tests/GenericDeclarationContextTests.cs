@@ -100,7 +100,7 @@ public sealed class GenericDeclarationContextTests
     public void LocalConstantsRestoreEnclosingBindingAndArraysHaveStaticAddresses()
     {
         var result = CompilerTestHelper.Run("""
-            readonly(char*) Text() { const char[3] text = ['o', 'k', '\0']; return &text[0]; }
+            immutable(char*) Text() { const char[3] text = ['o', 'k', '\0']; return &text[0]; }
             int main() {
                 int x = 41; { const int x = 99; if (x != 99) return 1; }
                 x++; if (Text()[0] != 'o') return 2; return x;
@@ -113,7 +113,7 @@ public sealed class GenericDeclarationContextTests
     public void LocalEnumsKeepTheirOwnIdentityAndDoNotEscape()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             int First() { enum Color { Red = 1 } Color color = Color::Red; printf("%s ", typeof(Color).Name); return (int)color; }
             int main() { enum Color { Red = 41 } Color color = Color::Red; printf("%s", typeof(Color).Name); return First() + (int)color; }
             """);

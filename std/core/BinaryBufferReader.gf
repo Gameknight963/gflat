@@ -13,10 +13,10 @@ public struct BinaryBufferReader
         data = storage; length = count; position = 0;
     }
 
-    public nuint Length { readonly get nothrow => length; }
-    public readonly(byte)*? Data { readonly get nothrow => data; }
-    public nuint Position { readonly get nothrow => position; }
-    public nuint Remaining { readonly get nothrow => length - position; }
+    public nuint Length { immutable get nothrow => length; }
+    public readonly(byte)*? Data { immutable get nothrow => data; }
+    public nuint Position { immutable get nothrow => position; }
+    public nuint Remaining { immutable get nothrow => length - position; }
     public void Reset() nothrow { position = 0; }
     public bool TrySkip(nuint count) nothrow
     {

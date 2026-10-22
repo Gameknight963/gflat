@@ -8,7 +8,7 @@ public sealed class LambdaContextTests
     public void LambdaInsideDeferCanReturnFromItsOwnBody()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             int main() {
                 defer {
                     int()* answer = () => { return 42; };

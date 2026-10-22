@@ -13,8 +13,8 @@ public sealed class ClosedGenericInterfaceDisplayTests
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         const string text = """
             using std;
-            nuint Hash<T : IHashable>(ref readonly(T) value) => value.GetHashCode();
-            bool Equal<T : IEquatable<T>>(ref readonly(T) value, readonly(T)* other) => value.Equals(other);
+            nuint Hash<T : IHashable>(ref immutable(T) value) => value.GetHashCode();
+            bool Equal<T : IEquatable<T>>(ref immutable(T) value, immutable(T)* other) => value.Equals(other);
             Iterator Enumerate<T, Iterator>(IEnumerable<T, Iterator>* sequence) => sequence.GetEnumerator();
             int main() {
                 int value = 42; int other = 42;
@@ -35,7 +35,7 @@ public sealed class ClosedGenericInterfaceDisplayTests
         foreach (var (marker, expected, file, owner) in new[] {
             ("value.GetHashCode", "GetHashCode()", "IHashable.gf", "IHashable"),
             ("hashing.GetHashCode", "GetHashCode()", "IHashable.gf", "IHashable"),
-            ("value.Equals", "readonly(T)* other", "IEquatable.gf", "IEquatable"),
+            ("value.Equals", "immutable(T)* other", "IEquatable.gf", "IEquatable"),
             ("equality.Equals", "readonly(int)* other", "IEquatable.gf", "IEquatable<int>"),
             ("sequence.GetEnumerator", "Iterator", "IEnumerable.gf", "IEnumerable")
         })

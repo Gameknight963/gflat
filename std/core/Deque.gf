@@ -9,11 +9,11 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
     private nuint head;
 
     public Deque() { data = null; count = 0; capacity = 0; head = 0; }
-    public nuint Count { readonly get nothrow => count; }
-    public nuint Capacity { readonly get nothrow => capacity; }
-    public bool IsEmpty { readonly get nothrow => count == 0; }
+    public nuint Count { immutable get nothrow => count; }
+    public nuint Capacity { immutable get nothrow => capacity; }
+    public bool IsEmpty { immutable get nothrow => count == 0; }
 
-    private readonly nuint Physical(nuint offset) nothrow
+    private immutable nuint Physical(nuint offset) nothrow
     {
         nuint remaining = capacity - head;
         if (offset < remaining) return head + offset;
@@ -106,7 +106,7 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
 
     public ref T this[nuint index]
     {
-        get
+        immutable get
         {
             if (index >= count) throw new Exception("Deque index out of range");
             return data![this.Physical(index)];
@@ -115,7 +115,7 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
 
     public ref T Front
     {
-        get
+        immutable get
         {
             if (count == 0) throw new Exception("Cannot peek an empty deque");
             return data![head];
@@ -124,7 +124,7 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
 
     public ref T Back
     {
-        get
+        immutable get
         {
             if (count == 0) throw new Exception("Cannot peek an empty deque");
             return data![this.Physical(count - 1)];
@@ -167,7 +167,7 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
         }
         public ref T Current
         {
-            get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
                 return data![position];

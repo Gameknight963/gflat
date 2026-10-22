@@ -3,7 +3,7 @@ namespace std;
 // Optional owning binary conveniences. No text encoding or terminator is added.
 public static class FileBytes
 {
-    public static Vector<byte> ReadAll(readonly(char*) path)
+    public static Vector<byte> ReadAll(immutable(char*) path)
     {
         File input = File::OpenRead(path);
         Vector<byte> bytes = new Vector<byte>();
@@ -19,14 +19,14 @@ public static class FileBytes
         return move bytes;
     }
 
-    public static void WriteAll(readonly(char*) path, readonly(byte)* data, nuint count)
+    public static void WriteAll(immutable(char*) path, readonly(byte)* data, nuint count)
     {
         File output = File::OpenWrite(path);
         output.Write((readonly(char)*)data, count);
         output.Close();
     }
 
-    public static void AppendAll(readonly(char*) path, readonly(byte)* data, nuint count)
+    public static void AppendAll(immutable(char*) path, readonly(byte)* data, nuint count)
     {
         File output = File::OpenAppend(path);
         output.Write((readonly(char)*)data, count);

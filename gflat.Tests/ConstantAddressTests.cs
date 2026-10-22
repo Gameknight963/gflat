@@ -68,7 +68,7 @@ public sealed class ConstantAddressTests
     [Fact]
     public void ConstantPointerAddressRefersToThePointerSlot()
         => Assert.Equal(0, CompilerTestHelper.Run("""
-            const readonly(char*) Text = "hello";
+            const immutable(char*) Text = "hello";
             int main() { if (&Text != &Text || (*(&Text))[0] != 'h') return 1; return 0; }
             """).ExitCode);
 

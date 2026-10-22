@@ -7,7 +7,7 @@ public sealed class StandardDequeTests
 {
     private const string Owner="""
         using std;
-        extern int puts(readonly(char*) text);
+        extern int puts(immutable(char*) text);
         int made=0;int dead=0;
         struct Owned{
             public int Value;public String Token;
@@ -16,7 +16,7 @@ public sealed class StandardDequeTests
         }
         bool Matches(Deque<Owned>* values,readonly(int)* expected,nuint count){
             if(values.Count!=count || values.IsEmpty!=(count==0) || values.Capacity<count)return false;
-            readonly(Deque<Owned>)* read=values;
+            immutable(Deque<Owned>)* read=values;
             var iterator=values.GetEnumerator();
             for(nuint i=0;i<count;i++){
                 if(!iterator.MoveNext() || iterator.Current.Value!=expected[i] || iterator.Current.Token.Length!=5)return false;
@@ -99,7 +99,7 @@ public sealed class StandardDequeTests
                 try{values.RemoveFirst();}catch{caught++;}try{values.RemoveLast();}catch{caught++;}
                 try{values.Front;}catch{caught++;}try{values.Back;}catch{caught++;}try{values[0];}catch{caught++;}
                 var empty=values.GetEnumerator();try{empty.Current;}catch{caught++;}if(empty.MoveNext() || empty.MoveNext())return 1;
-                values.AddFirst(1);values.AddFirst(2);values.AddLast(3);readonly(Deque<int>)* read=&values;
+                values.AddFirst(1);values.AddFirst(2);values.AddLast(3);immutable(Deque<int>)* read=&values;
                 if(read.Front!=2 || read.Back!=3 || (*read)[1]!=1)return 2;
                 var iterator=values.GetEnumerator();int sum=0;while(iterator.MoveNext())sum+=iterator.Current;
                 try{iterator.Current;}catch{caught++;}try{values[3];}catch{caught++;}
@@ -118,7 +118,7 @@ public sealed class StandardDequeTests
     public void ReadonlyBorrowsCannotMutateOwnersAndDequeCannotImplicitlyCopy(string invalid)
     {
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(Owner+"""
-            int main(){Deque<Owned> values=new();values.AddLast(new Owned(1));readonly(Deque<Owned>)* read=&values;
+            int main(){Deque<Owned> values=new();values.AddLast(new Owned(1));immutable(Deque<Owned>)* read=&values;
             """+invalid+"return 0;}")));
         Assert.True(error.Message.Contains("readonly",StringComparison.OrdinalIgnoreCase)||error.Message.Contains("copy",StringComparison.OrdinalIgnoreCase),error.Message);
     }

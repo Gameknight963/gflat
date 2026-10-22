@@ -40,7 +40,7 @@ public partial class TypeChecker
                 : initializer is ArrayLiteralExpression literal ? literal.Elements.Count
                 : initializerType != null ? (ResolveAlias(initializerType) as ArrayTypeExpression)?.Size : null;
         return size is { } bound
-            ? new ArrayTypeExpression(array.ElementType, bound, type.Line).WithReadOnlyValue(type.IsReadOnlyValue)
+            ? new ArrayTypeExpression(array.ElementType, bound, type.Line).WithQualifiersFrom(type)
             : type;
     }
 

@@ -72,7 +72,7 @@ public sealed class ImportedGenericFieldStorageTests
             .Append(new SourceFile("consumer.gf", """
                 using std;
                 Vector<int>*? watched=null;
-                int Sum(){Span<readonly(int)> values=watched!.AsReadOnly();int total=0;for(nuint i=0;i<values.Length;i++)total+=values[i];return total;}
+                int Sum(){Span<readonly(int)> values=watched!.AsImmutable();int total=0;for(nuint i=0;i<values.Length;i++)total+=values[i];return total;}
                 int main(){Vector<int> values=new();values.Add(17);values.Add(25);watched=&values;
                     if(Sum()!=42)return 1;values.Add(3);if(Sum()!=45)return 2;watched=null;return 0;}
                 """));

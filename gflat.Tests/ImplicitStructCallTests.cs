@@ -15,12 +15,12 @@ public class ImplicitStructCallTests
             struct {{declaration}} {
                 private int calls;
                 public R() { calls=0; }
-                public int Calls { readonly get=>calls; }
+                public int Calls { immutable get=>calls; }
                 public int Forward({{parameter}} value)=>Add(40,value);
                 public int Add(int extra,{{parameter}} value) { calls++; return extra+(int)value; }
                 public int Add({{parameter}} value) { calls++; return (int)value; }
-                public readonly int Read({{parameter}} value)=>Identity(value);
-                public readonly int Identity({{parameter}} value)=>(int)value;
+                public immutable int Read({{parameter}} value)=>Identity(value);
+                public immutable int Identity({{parameter}} value)=>(int)value;
             }
             {{(scope.Length==0 ? "" : "}")}}
             int main() {

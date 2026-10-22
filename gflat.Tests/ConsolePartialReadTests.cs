@@ -29,7 +29,7 @@ public sealed class ConsolePartialReadTests
                 """;
             string program = $$"""
                 extern void* __gflat_stdio_stdin();
-                extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+                extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
                 extern int setvbuf(void* stream, char* data, int mode, nuint capacity);
                 extern int ferror(void* stream);
                 {{invalidation}}

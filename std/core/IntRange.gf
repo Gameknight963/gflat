@@ -49,7 +49,7 @@ struct IntRange : IEnumerable<int, IntRange::Enumerator>
 
         public int Current
         {
-            readonly get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
                 return current;
@@ -57,32 +57,32 @@ struct IntRange : IEnumerable<int, IntRange::Enumerator>
         }
     }
 
-    public int Start { readonly get => first; }
-    public int Count { readonly get => count; }
-    public inline readonly IntRange::Enumerator GetEnumerator() => new IntRange::Enumerator(first, count);
+    public int Start { immutable get => first; }
+    public int Count { immutable get => count; }
+    public inline immutable IntRange::Enumerator GetEnumerator() => new IntRange::Enumerator(first, count);
     public Enumerable<int, IntRange, IntRange::Enumerator> AsEnumerable()
         => new Enumerable<int, IntRange, IntRange::Enumerator>(*this);
 
-    public readonly FilteredIntRange Where(bool(int)* predicate)
+    public immutable FilteredIntRange Where(bool(int)* predicate)
         => new FilteredIntRange(*this, predicate, 0, this.Count, false);
 
-    public readonly IntRange Take(int count)
+    public immutable IntRange Take(int count)
     {
         if (count < 0) throw new Exception("Take count must be nonnegative");
         if (count > this.Count) count = this.Count;
         return new IntRange(this.Start, count);
     }
 
-    public readonly IntRange Skip(int count)
+    public immutable IntRange Skip(int count)
     {
         if (count < 0) throw new Exception("Skip count must be nonnegative");
         if (count >= this.Count) return new IntRange(0, 0);
         return new IntRange(this.Start + count, this.Count - count);
     }
 
-    public readonly bool Any() => this.Count != 0;
+    public immutable bool Any() => this.Count != 0;
 
-    public readonly long Sum()
+    public immutable long Sum()
     {
         long count = (long)this.Count;
         return count * (2L * (long)this.Start + count - 1L) / 2L;

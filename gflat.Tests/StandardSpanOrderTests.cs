@@ -11,7 +11,7 @@ public sealed class StandardSpanOrderTests
     {
         var random=new Random(89071);
         var source=new StringBuilder("""
-            using std;extern int puts(readonly(char*) text);int calls=0;
+            using std;extern int puts(immutable(char*) text);int calls=0;
             int Compare(readonly(int)* a,readonly(int)* b){calls++;if(*a<*b)return -1;if(*a>*b)return 1;return 0;}
             int main(){
             """);
@@ -52,10 +52,10 @@ public sealed class StandardSpanOrderTests
                 public replace void Free(void* storage){releases++;free(storage);}
             }
             struct Owner{public int Value;public String Token;public Owner(int value){Value=value;Token=s"owner";made++;}~Owner(){dead++;}}
-            int Compare(readonly(Owner)* a,readonly(Owner)* b){calls++;if(calls==failAt)throw new Exception("compare");if(a.Value<b.Value)return -17;if(a.Value>b.Value)return 23;return 0;}
+            int Compare(immutable(Owner)* a,immutable(Owner)* b){calls++;if(calls==failAt)throw new Exception("compare");if(a.Value<b.Value)return -17;if(a.Value>b.Value)return 23;return 0;}
             int main(){ {
                 Vector<Owner> values=new();values.Add(new Owner(3));values.Add(new Owner(1));values.Add(new Owner(1));values.Add(new Owner(4));values.Add(new Owner(4));
-                Span<readonly(Owner)> source=values.AsReadOnly();int before=allocations;int freed=releases;
+                Span<immutable(Owner)> source=values.AsImmutable();int before=allocations;int freed=releases;
                 calls=0;if(MinIndex<Owner>(source,Compare)!=1 || calls!=4)return 1;
                 calls=0;if(MaxIndex<Owner>(source,Compare)!=3 || calls!=4)return 2;
                 calls=0;if(SequenceCompare<Owner>(source,source,Compare)!=0 || calls!=5)return 3;
@@ -72,7 +72,7 @@ public sealed class StandardSpanOrderTests
                     if(source[0].Value!=3 || source[1].Value!=1 || source[2].Value!=1 || source[3].Value!=4 || source[4].Value!=4)return 13;
                     for(nuint i=0;i<source.Length;i++)if(source[i].Token.Length!=5)return 14;
                 }
-                failAt=0;Span<readonly(Owner)> empty=new();calls=0;
+                failAt=0;Span<immutable(Owner)> empty=new();calls=0;
                 if(MinIndex<Owner>(empty,Compare)!=0 || MaxIndex<Owner>(empty,Compare)!=0 || SequenceCompare<Owner>(empty,source,Compare)!=-1 || calls!=0)return 15;
             }if(made!=dead || allocations!=releases)return 16;return 0;}
             """,optimization);

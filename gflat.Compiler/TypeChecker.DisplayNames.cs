@@ -21,7 +21,7 @@ public partial class TypeChecker
     private string DisplayTypeName(TypeExpression type, bool inheritedReadOnly)
     {
         if (type.IsReadOnlyValue && !inheritedReadOnly)
-            return "readonly(" + DisplayTypeName(type.WithReadOnlyValue(false), true) + ")";
+            return (type.IsImmutableValue ? "immutable(" : "readonly(") + DisplayTypeName(type.WithoutValueProtection(), type.IsImmutableValue || type is ArrayTypeExpression) + ")";
         return type switch
         {
             NamedTypeExpression n => DisplayName(n.Name) + (n.TypeArguments.Count == 0 ? "" : "<" + string.Join(", ", n.TypeArguments.Select(DisplayTypeName)) + ">"),

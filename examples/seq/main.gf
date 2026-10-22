@@ -1,6 +1,6 @@
 using std;
 
-private extern int strcmp(readonly(char*) left, readonly(char*) right);
+private extern int strcmp(immutable(char*) left, immutable(char*) right);
 
 int main(int argc, char** argv)
 {

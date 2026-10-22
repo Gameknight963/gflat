@@ -60,7 +60,7 @@ public class UnwindingTests
             extern int putchar(int c);
             class E : Exception {
                 public E() {}
-                public copy E(readonly(E)* source) { putchar(67); }
+                public copy E(immutable(E)* source) { putchar(67); }
                 public ~E() { putchar(68); }
             }
             int main() { try { E e = new E();

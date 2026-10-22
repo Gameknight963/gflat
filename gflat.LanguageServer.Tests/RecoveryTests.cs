@@ -8,7 +8,7 @@ namespace gflat.LanguageServer.Tests;
 public class RecoveryTests
 {
     private static readonly string[] BrokenPrefixes = [
-        "@\n", "int Missing();\n", "int Broken = ;\n", "readonly(char*) Bad() => \"unterminated\n",
+        "@\n", "int Missing();\n", "int Broken = ;\n", "immutable(char*) Bad() => \"unterminated\n",
         "int Broken() { int bad = ; return 0; }\n", "int Broken() { unknown(); return 0; }\n",
         "int Broken() { int bad = \"wrong\"; return 0; }\n", "}\n",
         "int Broken = 1__2;\n", "int Broken() { missing; missingAgain; }\n",
@@ -151,7 +151,7 @@ public class RecoveryTests
     public void FileScopedNamespaceQualifierInAnotherFileHasNamespaceColor()
     {
         var source = new SourceFile(Path.GetFullPath("console.gf"), "namespace Console; void Flush() { throw new std::IOException(\"Console flush failed\"); }");
-        var exception = new SourceFile(Path.GetFullPath("io.gf"), "namespace std; public class IOException : Exception { public IOException(readonly(char*) message) : base(message, 1) {} }");
+        var exception = new SourceFile(Path.GetFullPath("io.gf"), "namespace std; public class IOException : Exception { public IOException(immutable(char*) message) : base(message, 1) {} }");
         var files = new[] { source, exception };
         var model = new EditorModel(new AnalysisSnapshot(files), files);
         Assert.Equal("namespace", Colors(model, source)[source.Text.IndexOf("std::", StringComparison.Ordinal)]);

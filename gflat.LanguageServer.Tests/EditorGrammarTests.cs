@@ -157,7 +157,7 @@ public class EditorGrammarTests
     [InlineData("public class Player {", "Player", "entity.name.type")]
     [InlineData("readonly(int)^ value;", "int", "storage.type")]
     [InlineData("public ref T this[int i]", "ref", "storage.modifier")]
-    [InlineData("public copy String(readonly(String)* source)", "copy", "storage.modifier")]
+    [InlineData("public copy String(immutable(String)* source)", "copy", "storage.modifier")]
     [InlineData("replace int Allocate() {", "replace", "storage.modifier")]
     [InlineData("return 0xFFul;", "0xFFul", "constant.numeric")]
     [InlineData("float n = 1_000.25f;", "1_000.25f", "constant.numeric")]
@@ -169,13 +169,13 @@ public class EditorGrammarTests
     [InlineData("get => value;", "get", "keyword.other.accessor")]
     [InlineData("namespace std::Collections;", "namespace", "keyword.other")]
     [InlineData("namespace std::Collections;", "::", "keyword.operator")]
-    [InlineData("public int this[int i] { readonly get => data[i]; }", "this", "constant.language")]
-    [InlineData("public int this[int i] { readonly get => data[i]; }", "get", "keyword.other.accessor")]
+    [InlineData("public int this[int i] { immutable get => data[i]; }", "this", "constant.language")]
+    [InlineData("public int this[int i] { immutable get => data[i]; }", "get", "keyword.other.accessor")]
     [InlineData("public static String operator+() {", "String", "entity.name.type")]
     [InlineData("public static String operator s\"\"(readonly(char)* data, nuint length) {", "String", "entity.name.type")]
     [InlineData("String operator s\"\"(", "s\"\"", "entity.name.function.literal")]
     [InlineData("public static String operator+(", "operator", "keyword.other")]
-    [InlineData("public static readonly(std::String)* operator+(", "String", "entity.name.type")]
+    [InlineData("public static immutable(std::String)* operator+(", "String", "entity.name.type")]
     [InlineData("public static List<Pair<int, String>> operator+(", "String", "entity.name.type")]
     [InlineData("public static int operator+(", "int", "storage.type")]
     [InlineData("// String operator+(", "String", "comment.line")]
@@ -192,16 +192,16 @@ public class EditorGrammarTests
     [InlineData("struct String : ITextWriter, IFormattable", "IFormattable", "entity.name.type")]
     [InlineData("sizeof(String)", "String", "entity.name.type")]
     [InlineData("public String Make<T>()", "String", "entity.name.type")]
-    [InlineData("public readonly(List<readonly(String)*>)* Get()", "String", "entity.name.type")]
-    [InlineData("public readonly String Clone()", "String", "entity.name.type")]
+    [InlineData("public immutable(List<immutable(String)*>)* Get()", "String", "entity.name.type")]
+    [InlineData("public immutable String Clone()", "String", "entity.name.type")]
     [InlineData("String message = s\"hello\";", "String", "entity.name.type")]
     [InlineData("private String name;", "String", "entity.name.type")]
-    [InlineData("void Use(readonly(String)* text, String* output)", "String", "entity.name.type")]
+    [InlineData("void Use(immutable(String)* text, String* output)", "String", "entity.name.type")]
     [InlineData("public List<String> Make()", "String", "entity.name.type")]
     [InlineData("public std::String Make()", "String", "entity.name.type")]
-    [InlineData("public readonly(String)* Data {", "String", "entity.name.type")]
+    [InlineData("public immutable(String)* Data {", "String", "entity.name.type")]
     [InlineData("return new String();", "String", "entity.name.type")]
-    [InlineData("public String Name { readonly get => name; }", "String", "entity.name.type")]
+    [InlineData("public String Name { immutable get => name; }", "String", "entity.name.type")]
     [InlineData("public static String From(readonly(char)* text)", "From", "entity.name.function")]
     [InlineData("public static int Count()", "int", "storage.type")]
     [InlineData("value.Set(1);", "Set", "entity.name.function")]
@@ -223,7 +223,7 @@ public class EditorGrammarTests
             previous = result;
             // Follow the actual library declarations, including new overloads, instead
             // of maintaining a separate hand-copied miniature String implementation.
-            foreach (Match match in Regex.Matches(line, @"^\s*(?:(?:public|private|protected|internal|static|readonly)\s+)*(String)(?=\s+[A-Za-z_][A-Za-z0-9_]*\b)"))
+            foreach (Match match in Regex.Matches(line, @"^\s*(?:(?:public|private|protected|internal|static|immutable)\s+)*(String)(?=\s+[A-Za-z_][A-Za-z0-9_]*\b)"))
             {
                 AssertScope(result, match.Groups[1].Index, "entity.name.type");
                 checkedReferences++;

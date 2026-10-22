@@ -3,11 +3,11 @@
 Core provides three independent contracts in `std`:
 
 - `IHashable.GetHashCode()` returns `nuint`.
-- `IEquatable<T>.Equals(readonly(T)* other)` compares borrowed values.
-- `IComparable<T>.CompareTo(readonly(T)* other)` returns a negative value, zero,
+- `IEquatable<T>.Equals(immutable(T)* other)` compares borrowed values.
+- `IComparable<T>.CompareTo(immutable(T)* other)` returns a negative value, zero,
   or a positive value for less than, equal to, or greater than its argument.
 
-All three methods have readonly receivers. Equality and comparison borrow their
+All three methods have immutable receivers. Equality and comparison borrow their
 argument, so comparing owning values does not copy their resources.
 
 Each primitive scalar participates through an implementation declared inside

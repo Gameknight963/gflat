@@ -7,7 +7,7 @@ public sealed class StandardCollectionTraceTests
 {
     private const string OwnedPrelude = """
         using std;
-        extern int puts(readonly(char*) message);
+        extern int puts(immutable(char*) message);
         int made = 0;
         int destroyed = 0;
         struct Owned {
@@ -135,7 +135,7 @@ public sealed class StandardCollectionTraceTests
         var reference = new PriorityQueue<int, int>();
         var trace = new Trace(OwnedPrelude + """
             int compareBudget = -1;
-            int Compare(readonly(Owned)* left, readonly(Owned)* right) {
+            int Compare(immutable(Owned)* left, immutable(Owned)* right) {
                 if (compareBudget == 0) throw new Exception("comparison failed");
                 if (compareBudget > 0) compareBudget--;
                 if (left.Value < right.Value) return -1;
@@ -208,8 +208,8 @@ public sealed class StandardCollectionTraceTests
         var reference = new BitArray(0);
         var trace = new Trace("""
             using std;
-            extern int puts(readonly(char*) message);
-            bool MatchesBits(readonly(BitSet)* values, readonly(uint)* words, nuint length, nuint count) {
+            extern int puts(immutable(char*) message);
+            bool MatchesBits(immutable(BitSet)* values, readonly(uint)* words, nuint length, nuint count) {
                 if (values.Length != length || values.CountSetBits() != count) return false;
                 for (nuint i = 0; i < length; i++) {
                     bool expected = (words[i / 32] & ((uint)1 << (int)(i % 32))) != (uint)0;
@@ -271,9 +271,9 @@ public sealed class StandardCollectionTraceTests
             struct Key : IHashable, IEquatable<Key> {
                 public int Value;
                 public Key(int value) { Value = value; }
-                public readonly nuint GetHashCode() =>
+                public immutable nuint GetHashCode() =>
             """ + (collisions ? " 1;" : " (nuint)(Value * 17);") + """
-                public readonly bool Equals(readonly(Key)* other) => Value == other.Value;
+                public immutable bool Equals(immutable(Key)* other) => Value == other.Value;
             }
             bool Matches(HashMap<Key, Owned>* values, readonly(int)* expected, nuint count) {
                 if (values.Count != count) return false;

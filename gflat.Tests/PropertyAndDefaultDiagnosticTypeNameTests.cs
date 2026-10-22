@@ -26,7 +26,7 @@ public sealed class PropertyAndDefaultDiagnosticTypeNameTests
 
     [Theory]
     [InlineData("Lib::Box<int>*")]
-    [InlineData("readonly(Lib::Box<int>)*?")]
+    [InlineData("immutable(Lib::Box<int>)*?")]
     [InlineData("Lib::Family<int>::Item*")]
     public void OptionalDefaultConversionUsesTheGenericPointerName(string type)
     {

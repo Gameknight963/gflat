@@ -1,7 +1,7 @@
 # Sorted map
 
 `std::SortedMap<K,V>` owns keys and values in a sorted contiguous buffer. Supply
-a comparer borrowing two keys through `readonly(K)*`; return negative, zero, or
+a comparer borrowing two keys through `immutable(K)*`; return negative, zero, or
 positive according to their order. Zero identifies equivalent keys, regardless
 of other equality or hashing implementations.
 
@@ -37,7 +37,7 @@ int main()
 - `ContainsKey`, `Find`, `FindReadOnly`, `Remove`, `Extract`, and the ref indexer accept
   borrowed key pointers. Missing lookups return null; the indexer throws.
 - `Find` and the indexer allow changing mapped values. Keys are exposed only
-  through readonly views, since changing their order would corrupt lookup.
+  through immutable views, since changing their order would corrupt lookup.
 - `Remove` destroys a matching key/value pair and shifts later entries left.
   `Clear` destroys all entries but retains capacity. `Reserve` reserves entry
   capacity; `Count`, `Capacity`, and `IsEmpty` report collection metadata.
@@ -61,9 +61,9 @@ another alias; their order must remain stable for stored keys.
 ## Iteration, invalidation, and cost
 
 The nested `Enumerator` borrows storage and visits entries in comparer order.
-`Current` returns a readonly entry pointer; `Key` and `ValueReadOnly` are borrowed
-readonly pointers. Reading `Current` before a successful `MoveNext` or after
-exhaustion throws. A readonly map can also create an enumerator.
+`Current` returns an immutable entry pointer; `Key` and `ValueReadOnly` are borrowed
+immutable pointers. Reading `Current` before a successful `MoveNext` or after
+exhaustion throws. An immutable map can also create an enumerator.
 
 Insertion and removal can move entries, and growth can replace the entire buffer.
 Treat these operations and capacity growth as invalidating all entry/value

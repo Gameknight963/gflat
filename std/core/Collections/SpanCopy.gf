@@ -2,12 +2,12 @@ namespace std;
 
 // Assignment into initialized elements, not construction into raw storage.
 // Kept separate so merely using Span<T> never requires T to support copying.
-public void CopyTo<T>(this Span<readonly(T)> source, Span<T> destination)
+public void CopyTo<T>(this Span<immutable(T)> source, Span<T> destination)
 {
     nuint count = source.Length;
     if (destination.Length < count) throw new Exception("Span copy destination is too short");
     if (count == 0) return;
-    readonly(T)* input = source.Data!;
+    immutable(T)* input = source.Data!;
     T* output = destination.Data!;
     if ((nuint)input == (nuint)output) return;
     // Backward assignment preserves unread source elements when the destination

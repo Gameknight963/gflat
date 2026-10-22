@@ -1,14 +1,14 @@
 namespace Console;
 
 // C strings stop at the first null. The counted overload writes every byte.
-void Write(readonly(char*) message)
+void Write(immutable(char*) message)
 {
     nuint length = 0;
     while (message[length] != '\0') length++;
     Write(message, length);
 }
 
-void Write(readonly(char*) data, nuint length)
+void Write(immutable(char*) data, nuint length)
 {
     if (length == 0) return;
     void* stream = __gflat_stdio_stdout();
@@ -17,8 +17,8 @@ void Write(readonly(char*) data, nuint length)
 }
 
 void WriteLine() { Write("\n", 1); }
-void WriteLine(readonly(char*) message) { Write(message); WriteLine(); }
-void WriteLine(readonly(char*) data, nuint length) { Write(data, length); WriteLine(); }
+void WriteLine(immutable(char*) message) { Write(message); WriteLine(); }
+void WriteLine(immutable(char*) data, nuint length) { Write(data, length); WriteLine(); }
 
 void Flush()
 {

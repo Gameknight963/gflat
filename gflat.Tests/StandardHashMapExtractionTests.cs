@@ -18,8 +18,8 @@ public sealed class StandardHashMapExtractionTests
             public int Id; public String Text;
             public Key(int id) { Id=id; Text=s"key"; made++; }
             ~Key() { dead++; }
-            public readonly nuint GetHashCode() { if(failHash)throw new Exception("hash"); return 1; }
-            public readonly bool Equals(readonly(Key)* other) { if(failEquality)throw new Exception("equality"); return Id==other.Id; }
+            public immutable nuint GetHashCode() { if(failHash)throw new Exception("hash"); return 1; }
+            public immutable bool Equals(immutable(Key)* other) { if(failEquality)throw new Exception("equality"); return Id==other.Id; }
         }
         struct Payload {
             public int Id; public String Text;
@@ -37,7 +37,7 @@ public sealed class StandardHashMapExtractionTests
                 HashMap<Key,Payload> map=new();
                 map.Add(new Key(7),new Payload(70)); map.Add(new Key(8),new Payload(80));
                 var iterator=map.GetEnumerator();
-                readonly(Key)*? query=null;
+                immutable(Key)*? query=null;
                 while(iterator.MoveNext())if(iterator.Current.Key.Id==7)query=iterator.Current.Key;
                 int before=allocations; int destroyed=dead;
                 HashMap<Key,Payload>::Entry result=map.Extract(query!);
@@ -91,8 +91,8 @@ public sealed class StandardHashMapExtractionTests
             using std;
             struct Key:IHashable,IEquatable<Key> {
                 public int Id; public Key(int id){Id=id;}
-                public readonly nuint GetHashCode()=>1;
-                public readonly bool Equals(readonly(Key)* other)=>Id==other.Id;
+                public immutable nuint GetHashCode()=>1;
+                public immutable bool Equals(immutable(Key)* other)=>Id==other.Id;
             }
             int main(){HashMap<Key,int> map=new();
             """);
@@ -131,8 +131,8 @@ public sealed class StandardHashMapExtractionTests
             struct Key:IHashable,IEquatable<Key> {
                 public int Id; public Node^ Root;
                 public Key(int id,Node^ root){Id=id;Root=root;}
-                public readonly nuint GetHashCode()=>1;
-                public readonly bool Equals(readonly(Key)* other)=>Id==other.Id;
+                public immutable nuint GetHashCode()=>1;
+                public immutable bool Equals(immutable(Key)* other)=>Id==other.Id;
             }
             void Fill(HashMap<Key,Node^>* map) {
                 Node^ a=new^ Node(1);a.Next=a;Node^ b=new^ Node(2);b.Next=b;
@@ -141,7 +141,7 @@ public sealed class StandardHashMapExtractionTests
             }
             HashMap<Key,Node^>::Entry Take() {
                 HashMap<Key,Node^> map=new();Fill(&map);
-                var iterator=map.GetEnumerator();readonly(Key)*? query=null;
+                var iterator=map.GetEnumerator();immutable(Key)*? query=null;
                 while(iterator.MoveNext())if(iterator.Current.Key.Id==1)query=iterator.Current.Key;
                 var entry=map.Extract(query!);
                 map.Clear();return entry;

@@ -10,7 +10,7 @@ public sealed class StandardCollectionOutputAliasTests
             public Item(int id){Id=id;made++;}
             ~Item(){dead++;}
         }
-        int Compare(readonly(Item)* left,readonly(Item)* right){calls++;return left.Id-right.Id;}
+        int Compare(immutable(Item)* left,immutable(Item)* right){calls++;return left.Id-right.Id;}
         """;
 
     [Theory]
@@ -72,7 +72,7 @@ public sealed class StandardCollectionOutputAliasTests
             int main(){
                 for(int slotIndex=0;slotIndex<4;slotIndex++){
                     PriorityQueue<Item> items=new(Compare);for(int i=0;i<4;i++)items.Enqueue(new Item(i));
-                    // Explicit readonly casts remain available in the language.
+                    // Explicit immutable casts remain available in the language.
                     Item* slot=(Item*)&items.Top+slotIndex;int destroyed=dead;calls=0;bool caught=false;
                     try{items.TryDequeue(ref *slot);}catch{caught=true;}
                     if(!caught || calls!=0 || dead!=destroyed || items.Count!=4 || made-dead!=4)return 1;
@@ -92,7 +92,7 @@ public sealed class StandardCollectionOutputAliasTests
             using std;
             int made=0;int dead=0;
             struct Empty{public Empty(){made++;}~Empty(){dead++;}}
-            int Compare(readonly(Empty)* left,readonly(Empty)* right)=>0;
+            int Compare(immutable(Empty)* left,immutable(Empty)* right)=>0;
             int main(){
                 if(sizeof(Empty)!=0)return 1;
                 {Stack<Empty> items=new();items.Push(new Empty());Empty output=new();

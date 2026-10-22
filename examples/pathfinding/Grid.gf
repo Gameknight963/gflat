@@ -13,7 +13,7 @@ static class Grid
         public Pending(nuint cell, nuint cost) { Cell = cell; Cost = cost; }
     }
 
-    private static int Compare(readonly(Pending)* left, readonly(Pending)* right)
+    private static int Compare(immutable(Pending)* left, immutable(Pending)* right)
     {
         if (left.Cost < right.Cost) return -1;
         if (left.Cost > right.Cost) return 1;

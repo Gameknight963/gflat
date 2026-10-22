@@ -423,7 +423,7 @@ public sealed class ServerTests
                 public void Write(readonly(char)* p, nuint n) { }
             }
             struct Value : IFormattable {
-                public readonly void Format(ITextWriter* output) { output.Write("", 0); }
+                public immutable void Format(ITextWriter* output) { output.Write("", 0); }
             }
             """;
         string valid = declarations + "\nint main() { t$\"{new Value()}\"; return 0; }";
@@ -443,7 +443,7 @@ public sealed class ServerTests
     {
         await using var session = new Session();
         await session.Initialize();
-        const string source = "struct S { public int* data; public S(int* p) { data = p; } } int main() { int n = 0; readonly(S) s = new S(&n); s.data[0] = 1; return 0; }";
+        const string source = "struct S { public int* data; public S(int* p) { data = p; } } int main() { int n = 0; immutable(S) s = new S(&n); s.data[0] = 1; return 0; }";
         await session.Open("readonly.gf", source);
         var broken = await session.Diagnostics("readonly.gf", 1);
         Assert.Contains("readonly", broken.GetProperty("params").GetProperty("diagnostics").ToString());

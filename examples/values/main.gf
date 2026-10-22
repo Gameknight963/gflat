@@ -11,7 +11,7 @@ int main()
     name = s"reused"; // Moving consumed the previous value; initialize a new one.
 
     names[0].Append("!", 1);
-    readonly(Vector<String>)* view = &names;
+    immutable(Vector<String>)* view = &names;
     String greeting = s$"Hello {(*view)[0]} and {(*view)[1]}. Count: {names.Count}";
     puts(greeting.ToCString());
     String last = names.Pop();

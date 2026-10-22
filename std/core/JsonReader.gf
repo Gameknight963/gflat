@@ -30,10 +30,10 @@ public struct JsonReader
         kind = JsonTokenKind::None; tokenOffset = 0; tokenLength = 0; depth = 0;
     }
 
-    public JsonTokenKind Kind { readonly get nothrow => kind; }
-    public nuint TokenOffset { readonly get nothrow => tokenOffset; }
-    public nuint TokenLength { readonly get nothrow => tokenLength; }
-    public nuint Depth { readonly get nothrow => depth; }
+    public JsonTokenKind Kind { immutable get nothrow => kind; }
+    public nuint TokenOffset { immutable get nothrow => tokenOffset; }
+    public nuint TokenLength { immutable get nothrow => tokenLength; }
+    public nuint Depth { immutable get nothrow => depth; }
 
     public void Reset()
     {

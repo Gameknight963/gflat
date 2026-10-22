@@ -81,15 +81,15 @@ public sealed class ExtensionMethodTests
     public void ValueReceiverCopiesAndDestroysWhileReferenceReceiverBorrows()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             struct R {
                 public int n;
                 public R(int value) { n = value; }
-                public copy R(readonly(R)* source) { n = source.n; printf("C"); }
+                public copy R(immutable(R)* source) { n = source.n; printf("C"); }
                 ~R() { printf("D"); }
             }
             int Read(this R self) => self.n;
-            int Borrow(this ref readonly(R) self) => self.n;
+            int Borrow(this ref immutable(R) self) => self.n;
             int main() { R r = new R(21); return r.Read() + r.Borrow(); }
             """);
         Assert.Equal(42, result.ExitCode);
@@ -100,7 +100,7 @@ public sealed class ExtensionMethodTests
     public void FreshValueReceiverDoesNotCopyAndHasOneDestructor()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             struct R { public int n; public R() { n = 42; } ~R() { printf("D"); } }
             int Read(this R self) => self.n;
             int main() => new R().Read();
@@ -114,7 +114,7 @@ public sealed class ExtensionMethodTests
     {
         var result = CompilerTestHelper.Run("""
             struct Box<T> { public T value; public Box(T n) { value = n; } }
-            T Read<T>(this ref readonly(Box<T>) self) => self.value;
+            T Read<T>(this ref immutable(Box<T>) self) => self.value;
             int main() { Box<int> box = new Box<int>(42); return box.Read(); }
             """);
         Assert.Equal(42, result.ExitCode);
@@ -125,7 +125,7 @@ public sealed class ExtensionMethodTests
     {
         var (ast, checker) = Compiler.Check("""
             struct Box<T> { public T value; public Box(T n) { value = n; } }
-            T Broken<T>(this ref readonly(Box<T>) self) { return MissingFunction(); }
+            T Broken<T>(this ref immutable(Box<T>) self) { return MissingFunction(); }
             int main() { Box<int> box = new Box<int>(42); return 0; }
             """);
         int count = ast.Members.Count;
@@ -181,7 +181,7 @@ public sealed class ExtensionMethodTests
             using A;
             namespace A {
                 struct Box<T> { public T value; public Box(T n) { value = n; } }
-                T Read<T>(this ref readonly(Box<T>) self) => self.value;
+                T Read<T>(this ref immutable(Box<T>) self) => self.value;
             }
             namespace B { struct Box<T> { public T value; public Box(T n) { value = n; } } }
             int main() { B::Box<int> other = new B::Box<int>(0); A::Box<int> box = new A::Box<int>(42); return box.Read(); }
@@ -210,7 +210,7 @@ public sealed class ExtensionMethodTests
             struct R {
                 public int*?* slot;
                 public R(int*?* s) { slot = s; }
-                public copy R(readonly(R)* other) nothrow { slot = other.slot; *slot = null; }
+                public copy R(immutable(R)* other) nothrow { slot = other.slot; *slot = null; }
                 ~R() {}
             }
             int Read(this R self, int value) => value;
@@ -268,7 +268,7 @@ public sealed class ExtensionMethodTests
         var result = CompilerTestHelper.Run("""
             using Models; using Helpers;
             namespace Models { struct Box<T> { public T value; public Box(T n) { value = n; } } }
-            namespace Helpers { T Read<T>(this ref readonly(Box<T>) self) => self.value; }
+            namespace Helpers { T Read<T>(this ref immutable(Box<T>) self) => self.value; }
             int main() { Box<int> box = new Box<int>(42); return box.Read(); }
             """);
         Assert.Equal(42, result.ExitCode);

@@ -86,11 +86,11 @@ public sealed class GenericStaticCallableTests
     [Fact]
     public void PointerReadonlyNullableAndReferenceShapesAreSubstituted()
     {
-        const string library = "class Box<T>{public static readonly(T)*? Pointer(readonly(T)*? value)=>value;public static T Read(ref T value)=>value;}";
+        const string library = "class Box<T>{public static immutable(T)*? Pointer(immutable(T)*? value)=>value;public static T Read(ref T value)=>value;}";
         var (model, _, main, _) = Analyze("int main(){readonly(int)*? p=Box<int>::Pointer(null);int n=3;return Box<int>::Read(ref n);}", library);
         string pointer = Hover(model, main, main.Text.IndexOf("Pointer", StringComparison.Ordinal));
         Assert.Contains("readonly(int)*?", pointer);
-        Assert.DoesNotContain("readonly(T)", pointer);
+        Assert.DoesNotContain("immutable(T)", pointer);
         Assert.Contains("ref int value", Hover(model, main, main.Text.IndexOf("Read", StringComparison.Ordinal)));
     }
 

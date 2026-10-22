@@ -109,7 +109,7 @@ public partial class TypeChecker
                 helper.ReturnType = method.ReturnType;
                 helper.Parameters[0].Type = new PointerTypeExpression(primitive.WithInterfaceConstraints(new[] { contract }), false,
                     source.Declaration.Line, isReadOnly: method.IsReadOnly);
-                if (contractMethod.IsNoThrow && !method.IsNoThrow || contractMethod.IsReadOnly && !method.IsReadOnly ||
+                if (contractMethod.IsNoThrow && !method.IsNoThrow || contractMethod.IsReadOnly && !method.IsReadOnly || contractMethod.IsImmutable && !method.IsImmutable ||
                     !TypesMatch(method.ReturnType, contractMethod.ReturnType) || method.Parameters.Count != contractMethod.Parameters.Count ||
                     !method.Parameters.Zip(contractMethod.Parameters).All(p => TypesMatch(p.First.Type, p.Second.Type) && p.First.IsConst == p.Second.IsConst))
                     throw new TypeCheckException($"Primitive method '{method.Name}' must match its interface signature, readonly and nothrow requirements", method.Span);
@@ -227,7 +227,7 @@ public partial class TypeChecker
         }
         if (!ReferenceEquals(result, type))
         {
-            result = result.WithReadOnlyValue(type.IsReadOnlyValue);
+            result = result.WithQualifiersFrom(type);
             if (aliasContracts.TryGetValue(type, out var contract)) aliasContracts[result] = contract;
         }
         return result;

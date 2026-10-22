@@ -9,9 +9,9 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
 
     public Vector() { data = null; count = 0; capacity = 0; }
 
-    public nuint Count { readonly get nothrow => count; }
-    public nuint Capacity { readonly get nothrow => capacity; }
-    public bool IsEmpty { readonly get nothrow => count == 0; }
+    public nuint Count { immutable get nothrow => count; }
+    public nuint Capacity { immutable get nothrow => capacity; }
+    public bool IsEmpty { immutable get nothrow => count == 0; }
     public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, count);
     public Enumerable<T, Span<T>, Span<T>::Enumerator> AsEnumerable()
         => new Enumerable<T, Span<T>, Span<T>::Enumerator>(this.AsSpan());
@@ -28,9 +28,15 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return new Span<readonly(T)>((readonly(T)*)data, count);
     }
 
+    public immutable Span<immutable(T)> AsImmutable()
+    {
+        if (count == 0) return new Span<immutable(T)>();
+        return new Span<immutable(T)>((immutable(T)*)data, count);
+    }
+
     public ref T this[nuint index]
     {
-        get
+        immutable get
         {
             if (index >= count) throw new Exception("Vector index out of range");
             return data![index];
@@ -144,7 +150,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
     }
 
     // Stable retained prefix; matched owners stay initialized until cleanup.
-    public nuint RemoveAll(bool(readonly(T)*)* predicate)
+    public nuint RemoveAll(bool(immutable(T)*)* predicate)
     {
         nuint originalCount = count;
         nuint read = 0;

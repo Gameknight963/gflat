@@ -13,8 +13,8 @@ public struct Utf8Scalars : IEnumerable<uint, Utf8Scalars::Enumerator>
         data = text; length = count;
     }
 
-    public nuint ByteLength { readonly get => length; }
-    public readonly Utf8Scalars::Enumerator GetEnumerator()
+    public nuint ByteLength { immutable get => length; }
+    public immutable Utf8Scalars::Enumerator GetEnumerator()
         => new Utf8Scalars::Enumerator(data, length);
 
     public struct Enumerator : IEnumerator<uint>
@@ -44,7 +44,7 @@ public struct Utf8Scalars : IEnumerable<uint, Utf8Scalars::Enumerator>
 
         public uint Current
         {
-            readonly get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
                 return current;

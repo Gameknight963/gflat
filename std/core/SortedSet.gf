@@ -4,25 +4,25 @@ namespace std;
 struct SortedSet<T>
 {
     private SortedMap<T, byte> storage;
-    public SortedSet(int(readonly(T)*, readonly(T)*)* comparison)
+    public SortedSet(int(immutable(T)*, immutable(T)*)* comparison)
     {
         storage = new SortedMap<T, byte>(comparison);
     }
-    public nuint Count { readonly get nothrow => storage.Count; }
-    public nuint Capacity { readonly get nothrow => storage.Capacity; }
-    public bool IsEmpty { readonly get nothrow => storage.IsEmpty; }
+    public nuint Count { immutable get nothrow => storage.Count; }
+    public nuint Capacity { immutable get nothrow => storage.Capacity; }
+    public bool IsEmpty { immutable get nothrow => storage.IsEmpty; }
     public void Reserve(nuint count) { storage.Reserve(count); }
     public bool Add(T value) => storage.TryAdd(move value, 0);
-    public readonly bool Contains(readonly(T)* value) => storage.ContainsKey(value);
-    public bool Remove(readonly(T)* value) => storage.Remove(value);
+    public immutable bool Contains(immutable(T)* value) => storage.ContainsKey(value);
+    public bool Remove(immutable(T)* value) => storage.Remove(value);
     public void Clear() { storage.Clear(); }
-    public readonly Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
+    public immutable Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
 
     public struct Enumerator
     {
         private SortedMap<T, byte>::Enumerator iterator;
         public Enumerator(SortedMap<T, byte>::Enumerator source) { iterator = source; }
         public bool MoveNext() => iterator.MoveNext();
-        public readonly(T)* Current { readonly get => iterator.Current.Key; }
+        public immutable(T)* Current { immutable get => iterator.Current.Key; }
     }
 }

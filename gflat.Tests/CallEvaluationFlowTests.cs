@@ -51,9 +51,9 @@ public sealed class CallEvaluationFlowTests
     [Fact]
     public void ReadonlyMethodReceiverRetainsItsCapturedView()
         => Assert.Equal(42, CompilerTestHelper.Run("""
-            struct Box { public readonly int Read(int value)=>value; }
-            int Clear(ref readonly(Box)*? pointer){pointer=null;return 42;}
-            int main(){Box value=new Box();readonly(Box)*? pointer=&value;return pointer.Read(Clear(ref pointer));}
+            struct Box { public immutable int Read(int value)=>value; }
+            int Clear(ref immutable(Box)*? pointer){pointer=null;return 42;}
+            int main(){Box value=new Box();immutable(Box)*? pointer=&value;return pointer.Read(Clear(ref pointer));}
             """).ExitCode);
 
     [Fact]

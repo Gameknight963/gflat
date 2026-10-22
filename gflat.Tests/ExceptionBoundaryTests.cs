@@ -11,7 +11,7 @@ public class ExceptionBoundaryTests
     public void DefaultHookUsesExceptionCode(string value, int status)
     {
         var result = CompilerTestHelper.Run(
-            "class Custom : Exception { public readonly override int GetCode() => 23; } " +
+            "class Custom : Exception { public immutable override int GetCode() => 23; } " +
             "int main() { throw " + value + "; }");
         Assert.Equal(status, result.ExitCode);
         Assert.Equal("", result.StandardOutput);
@@ -28,7 +28,7 @@ public class ExceptionBoundaryTests
     public void ReplacementUnhandledHookControlsOutputAndExitStatus()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) format, ...);
+            extern int printf(immutable(char*) format, ...);
             extern void exit(int status);
             namespace Exceptions {
                 public replace void Unhandled(Exception*? error) {

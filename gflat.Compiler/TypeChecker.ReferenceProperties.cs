@@ -13,20 +13,22 @@ public partial class TypeChecker
     private void ExpandReferenceProperty(List<AstNode> members, AstNode owner, PropertyDeclaration property)
     {
         var getter = property.Getter;
-        if (getter == null || property.Setter != null || property.Initializer != null || getter.IsStatic || getter.IsReadOnly)
+        if (getter == null || property.Setter != null || property.Initializer != null || getter.IsStatic || getter.IsReadOnly && !getter.IsImmutable)
             throw new TypeCheckException("A ref property has an instance getter and no setter; readonly access follows the receiver", property.Line);
         if (getter.Body == null && owner is not InterfaceDeclaration && !getter.IsAbstract)
             throw new TypeCheckException("A ref property requires a getter body", property.Line);
         var clones = new AstCloner(new());
-        foreach (bool readOnly in new[] { false, true })
+        foreach (int protection in getter.IsImmutable ? new[] { 0, 1, 2 } : new[] { 0, 1 })
         {
-            TypeExpression result = readOnly ? TypeQualifiers.ReadOnly(property.Type) : property.Type;
-            var method = new MethodDeclaration((readOnly ? "$get$readonly$" : "$get$") + property.Name,
+            bool readOnly = protection != 0;
+            bool immutable = protection == 2;
+            TypeExpression result = immutable ? TypeQualifiers.Immutable(property.Type) : readOnly ? TypeQualifiers.ReadOnly(property.Type) : property.Type;
+            var method = new MethodDeclaration((immutable ? "$get$immutable$" : readOnly ? "$get$readonly$" : "$get$") + property.Name,
                 new PointerTypeExpression(result, false, property.Line, readOnly),
                 getter.Parameters, getter.Body == null ? null : (BlockStatement)clones.CloneNode(getter.Body),
                 owner is InterfaceDeclaration ? TokenKind.Public : getter.Accessibility,
                 false, getter.IsVirtual, getter.IsOverride, getter.IsAbstract || owner is InterfaceDeclaration,
-                getter.Line, readOnly, isNoThrow: getter.IsNoThrow)
+                getter.Line, readOnly, isNoThrow: getter.IsNoThrow, isImmutable: immutable)
             { IsInline = getter.IsInline, IsRefReturn = true, PropertyName = property.Name, Span = getter.Span };
             members.Insert(members.IndexOf(property) + 1, method);
         }

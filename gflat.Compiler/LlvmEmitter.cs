@@ -1740,7 +1740,7 @@ public partial class LlvmEmitter : IVisitor
     {
         type = _typeChecker.ResolveAlias(type);
         if (type.IsReadOnlyValue)
-            return "ReadOnly$" + GetMangleTypeName(type.WithReadOnlyValue(false));
+            return "ReadOnly$" + GetMangleTypeName(type.WithoutValueProtection());
         if (type is NamedTypeExpression named)
             return named.Name;
         if (type is PointerTypeExpression ptr)

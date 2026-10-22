@@ -27,8 +27,8 @@ public sealed class BoundFieldDisplayTests
     [Fact]
     public void ReceiverReadonlyDoesNotBecomeAFieldDeclarationQualifier()
     {
-        const string library = "namespace Lib{struct Box<T>{public T value;public readonly(T) fixedValue;public Box(T initial){value=initial;fixedValue=initial;}}}";
-        const string usage = "int main(){Lib::Box<int> box=new Lib::Box<int>(1);readonly(Lib::Box<int>)* view=&box;return view.value+view.fixedValue;}";
+        const string library = "namespace Lib{struct Box<T>{public T value;public immutable(T) fixedValue;public Box(T initial){value=initial;fixedValue=initial;}}}";
+        const string usage = "int main(){Lib::Box<int> box=new Lib::Box<int>(1);immutable(Lib::Box<int>)* view=&box;return view.value+view.fixedValue;}";
         var (model, _, source, _) = Analyze(usage, library);
         Assert.Contains("public int Lib::Box<int>.value", Hover(model, source, usage.IndexOf("value", StringComparison.Ordinal)));
         Assert.Contains("public readonly(int) Lib::Box<int>.fixedValue", Hover(model, source, usage.IndexOf("fixedValue", StringComparison.Ordinal)));

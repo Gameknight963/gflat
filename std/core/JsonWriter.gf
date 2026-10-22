@@ -19,7 +19,7 @@ public struct JsonWriter
         output = destination; stack = new(); rootWritten = false; failed = false;
     }
 
-    private readonly void CheckUsable()
+    private immutable void CheckUsable()
     {
         if (failed) throw new JsonWriteException("JSON writer cannot continue after output failure");
     }
@@ -213,7 +213,7 @@ public struct JsonWriter
     }
 
     // Validation only: does not close containers, flush, or modify the output.
-    public readonly void Complete()
+    public immutable void Complete()
     {
         this.CheckUsable();
         if (!rootWritten || stack.Count != 0) throw new JsonWriteException("Incomplete JSON document");

@@ -13,7 +13,7 @@ public sealed class ProgramArgumentTests
         {
             string source = Path.Combine(directory, "main.gf");
             File.WriteAllText(source, """
-                extern int strcmp(readonly(char*) left, readonly(char*) right);
+                extern int strcmp(immutable(char*) left, immutable(char*) right);
                 int main(int argc, char** argv) {
                     if (argc != 6) return 1;
                     if (strcmp(argv[1], "two words") != 0) return 2;

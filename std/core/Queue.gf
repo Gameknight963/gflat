@@ -9,9 +9,9 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     private nuint head;
 
     public Queue() { data = null; capacity = 0; count = 0; head = 0; }
-    public nuint Count { readonly get nothrow => count; }
-    public nuint Capacity { readonly get nothrow => capacity; }
-    public bool IsEmpty { readonly get nothrow => count == 0; }
+    public nuint Count { immutable get nothrow => count; }
+    public nuint Capacity { immutable get nothrow => capacity; }
+    public bool IsEmpty { immutable get nothrow => count == 0; }
 
     public void Reserve(nuint requested)
     {
@@ -104,7 +104,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
 
     public ref T Front
     {
-        get
+        immutable get
         {
             if (count == 0) throw new Exception("Cannot peek an empty queue");
             return data![head];
@@ -160,7 +160,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
 
         public ref T Current
         {
-            get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
                 return data![position];

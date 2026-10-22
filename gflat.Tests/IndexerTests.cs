@@ -8,7 +8,7 @@ public class IndexerTests
         struct Buffer<T> {
             T* data;
             public Buffer(T* p) { data = p; }
-            public T this[nuint i] { readonly get { return data[i]; } set { data[i] = value; } }
+            public T this[nuint i] { immutable get { return data[i]; } set { data[i] = value; } }
         }
         """;
 
@@ -21,7 +21,7 @@ public class IndexerTests
 
     [Fact]
     public void ReadonlyGetterWorksOnReadonlyView()
-        => Assert.Equal(42, CompilerTestHelper.Run(Buffer + "int main() { int[1] a = [42]; readonly(Buffer<int>) b = new Buffer<int>(a); return b[0]; }").ExitCode);
+        => Assert.Equal(42, CompilerTestHelper.Run(Buffer + "int main() { int[1] a = [42]; immutable(Buffer<int>) b = new Buffer<int>(a); return b[0]; }").ExitCode);
 
     [Fact]
     public void MultipleIndicesAreEvaluatedOnceInOrder()
@@ -151,7 +151,7 @@ public class IndexerTests
     [InlineData("struct S { public int this[int i] => i; } int main() { S s = new S(); s[0] = 1; return 0; }")]
     [InlineData("struct S { public int this[int i] { set {} } } int main() { S s = new S(); return s[0]; }")]
     [InlineData("struct S { public int this[int i] { get => i; private set {} } } int main() { S s = new S(); s[0] = 1; return 0; }")]
-    [InlineData("struct S { public int this[int i] => i; } int main() { readonly(S) s = new S(); return s[0]; }")]
+    [InlineData("struct S { public int this[int i] => i; } int main() { immutable(S) s = new S(); return s[0]; }")]
     [InlineData("struct S { public int this[int i] => i; } int main() { S s = new S(); int* p = &s[0]; return 0; }")]
     [InlineData("struct S { public int this[int i] => i; } int main() { S s = new S(); return s[0, 1]; }")]
     [InlineData("int main() { int[2] a = [1, 2]; return a[0, 1]; }")]
@@ -159,7 +159,7 @@ public class IndexerTests
     [InlineData("struct E { public int n; } struct S { public E this[int i] => new E(); } int main() { S s = new S(); int* p = &s[0].n; return 0; }")]
     [InlineData("struct E { public int[1] n; } struct S { public E this[int i] => new E(); } int main() { S s = new S(); s[0].n[0] = 1; return 0; }")]
     [InlineData("struct E { public int[1] n; } struct S { public E this[int i] => new E(); } int main() { S s = new S(); int* p = &s[0].n[0]; return 0; }")]
-    [InlineData("struct S { public readonly int this[int i] { get => i; } public S() {} } int main() { S s = new S(); s[0]++; return 0; }")]
+    [InlineData("struct S { public immutable int this[int i] { get => i; } public S() {} } int main() { S s = new S(); s[0]++; return 0; }")]
     [InlineData("interface I { int this[int i] { get; } } int main() { I*? p = null; return p[0]; }")]
     [InlineData("interface I { int Get(); } struct S : I { public int Get() => 1; } int main() { S s = new S(); I* p = &s; p[0]; return 0; }")]
     [InlineData("struct S { public int this[int i] => i; } int main() { S s = new S(); const int n = s[0]; return n; }")]

@@ -5,7 +5,7 @@ public sealed class ExtensionAliasScopeTests
     [Theory]
     [InlineData("Selected")]
     [InlineData("Second")]
-    [InlineData("readonly(Second)")]
+    [InlineData("immutable(Second)")]
     public void AliasTargetDoesNotCaptureMethodParameter(string selected)
     {
         string source=$$"""

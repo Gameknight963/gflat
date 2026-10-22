@@ -8,12 +8,12 @@ public sealed class PropertyDiagnosticProvenanceTests
     [InlineData("struct Entry{public readonly(int)* Value{get;set;}} int main(){Entry value=new Entry();return 0;}", "Property 'Entry.Value' requires an initializer or constructor assignment")]
     [InlineData("class Entry{public readonly(int)* Value{get;set;}} int main(){Entry value=new Entry();return 0;}", "Property 'Entry.Value' requires an initializer or constructor assignment")]
     [InlineData("namespace Lib{struct Entry{public readonly(int)* Value{get;set;}}} int main(){Lib::Entry value=new Lib::Entry();return 0;}", "Property 'Lib::Entry.Value' requires an initializer or constructor assignment")]
-    [InlineData("namespace Lib{class Entry<T>{public readonly(T)* Value{get;set;}}} int main(){Lib::Entry<int> value=new Lib::Entry<int>();return 0;}", "Property 'Lib::Entry<int>.Value' requires an initializer or constructor assignment")]
-    [InlineData("namespace Lib{class Family<T>{public struct Entry{public readonly(T)* Value{get;set;}}}} int main(){Lib::Family<int>::Entry value=new Lib::Family<int>::Entry();return 0;}", "Property 'Lib::Family<int>::Entry.Value' requires an initializer or constructor assignment")]
+    [InlineData("namespace Lib{class Entry<T>{public immutable(T)* Value{get;set;}}} int main(){Lib::Entry<int> value=new Lib::Entry<int>();return 0;}", "Property 'Lib::Entry<int>.Value' requires an initializer or constructor assignment")]
+    [InlineData("namespace Lib{class Family<T>{public struct Entry{public immutable(T)* Value{get;set;}}}} int main(){Lib::Family<int>::Entry value=new Lib::Family<int>::Entry();return 0;}", "Property 'Lib::Family<int>::Entry.Value' requires an initializer or constructor assignment")]
     [InlineData("namespace Lib{struct Entry{public int* field;}} int main(){Lib::Entry value=new Lib::Entry();return 0;}", "Field 'Lib::Entry.field' requires an initializer or constructor assignment")]
     [InlineData("struct Entry{public readonly(int)* Value{get;set;}public Entry(){}}", "Property 'Value' must be initialized before use or constructor completion")]
     [InlineData("class Entry{public readonly(int)* Value{get;set;}public Entry(){}}", "Property 'Value' must be initialized before use or constructor completion")]
-    [InlineData("namespace Lib{struct Entry<T>{public readonly(T)* Value{get;set;}public Entry(){}}} int main(){Lib::Entry<int> value=new Lib::Entry<int>();return 0;}", "Property 'Value' must be initialized before use or constructor completion")]
+    [InlineData("namespace Lib{struct Entry<T>{public immutable(T)* Value{get;set;}public Entry(){}}} int main(){Lib::Entry<int> value=new Lib::Entry<int>();return 0;}", "Property 'Value' must be initialized before use or constructor completion")]
     [InlineData("struct Entry{public readonly(int)* Value{get;set;}public Entry(int* pointer){int n=*Value;Value=pointer;}}", "Property 'Value' must be initialized before use or constructor completion")]
     [InlineData("struct Inner{public readonly(int)* Value{get;set;}}struct Outer{public Inner child;public Outer(){}}", "Property 'child.Value' must be initialized before use or constructor completion")]
     [InlineData("struct Inner{public readonly(int)* pointer;}struct Outer{public Inner Value{get;set;}public Outer(){}}", "Field 'Value.pointer' must be initialized before use or constructor completion")]
@@ -39,7 +39,7 @@ public sealed class PropertyDiagnosticProvenanceTests
         => Assert.Equal(0, CompilerTestHelper.Run($$"""
             namespace Lib {
                 {{kind}} Entry<T> {
-                    public readonly(T)* Value { get; }
+                    public immutable(T)* Value { get; }
                     public Entry(T* pointer) { Value=pointer; }
                 }
             }

@@ -6,9 +6,9 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
     private Vector<T> storage;
 
     public Stack() { storage = new Vector<T>(); }
-    public nuint Count { readonly get nothrow => storage.Count; }
-    public nuint Capacity { readonly get nothrow => storage.Capacity; }
-    public bool IsEmpty { readonly get nothrow => storage.Count == 0; }
+    public nuint Count { immutable get nothrow => storage.Count; }
+    public nuint Capacity { immutable get nothrow => storage.Capacity; }
+    public bool IsEmpty { immutable get nothrow => storage.Count == 0; }
 
     public void Reserve(nuint capacity) { storage.Reserve(capacity); }
     public void Push(T value) { storage.Add(move value); }
@@ -31,7 +31,7 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
     // Borrows the top element instead of copying an owning value.
     public ref T Top
     {
-        get
+        immutable get
         {
             if (storage.Count == 0) throw new Exception("Cannot peek an empty stack");
             return storage[storage.Count - 1];
@@ -64,7 +64,7 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
 
         public ref T Current
         {
-            get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
                 return storage[position];

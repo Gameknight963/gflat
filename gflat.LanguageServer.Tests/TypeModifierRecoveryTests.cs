@@ -6,16 +6,18 @@ namespace gflat.LanguageServer.Tests;
 
 public sealed class TypeModifierRecoveryTests
 {
-    [Fact]
-    public void InvalidClassModifierPreservesBodyAndCrossFileMemberNavigation()
+    [Theory]
+    [InlineData("readonly")]
+    [InlineData("immutable")]
+    public void InvalidClassModifierPreservesBodyAndCrossFileMemberNavigation(string modifier)
     {
-        const string declaration = "readonly class Holder { public int Read(){int retained=7;return retained;} }";
+        string declaration = modifier + " class Holder { public int Read(){int retained=7;return retained;} }";
         const string usage = "int ReadHolder(Holder* holder)=>holder.Read();";
         var library = new SourceFile(Path.GetFullPath("invalid-modifier-library.gf"), declaration);
         var consumer = new SourceFile(Path.GetFullPath("invalid-modifier-consumer.gf"), usage);
         var snapshot = new AnalysisSnapshot([library, consumer], new() { NoStdLib=true });
         var error = Assert.Single(snapshot.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
-        Assert.Equal("readonly", declaration.Substring(error.Span.Start, error.Span.Length));
+        Assert.Equal(modifier, declaration.Substring(error.Span.Start, error.Span.Length));
         var local = snapshot.Nodes.Select(n => n.Node).OfType<VariableDeclaration>().Single(n => n.Name == "retained");
         Assert.Equal("int", TypeChecker.TypeName(snapshot.Checker!.GetType(local)));
         var model = new EditorModel(snapshot, [library, consumer]);
@@ -31,6 +33,7 @@ public sealed class TypeModifierRecoveryTests
 
     [Theory]
     [InlineData("readonly alias Slot=int*;", "readonly")]
+    [InlineData("immutable alias Slot=int*;", "immutable")]
     [InlineData("abstract struct Unused{}", "abstract")]
     [InlineData("const class Unused{}", "const")]
     public void InvalidTypeAndAliasModifiersPreserveLaterSemanticBindings(string declaration, string modifier)

@@ -1,6 +1,6 @@
 using std;
 
-void EmitMatch(ref String line, readonly(char*) needle, bool endedWithLF)
+void EmitMatch(ref String line, immutable(char*) needle, bool endedWithLF)
 {
     // Preserve bytes within a line; normalize its ending for Console output.
     if (endedWithLF && line.Length != 0 && line.Data[line.Length - 1] == '\r')

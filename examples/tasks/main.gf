@@ -23,12 +23,12 @@ struct Task
     }
 }
 
-bool IsCommand(readonly(String)* text, readonly(char)* command)
+bool IsCommand(immutable(String)* text, readonly(char)* command)
 {
     return text.Length == CString::Length(command) && text.StartsWith(command);
 }
 
-bool Complete(Vector<Task>* tasks, readonly(String)* line)
+bool Complete(Vector<Task>* tasks, immutable(String)* line)
 {
     int number = 0;
     if (!TryParseInt(line.Data + 5, line.Length - 5, &number)) return false;
@@ -37,12 +37,12 @@ bool Complete(Vector<Task>* tasks, readonly(String)* line)
     return true;
 }
 
-void List(readonly(Vector<Task>)* tasks)
+void List(immutable(Vector<Task>)* tasks)
 {
     if (tasks.Count == 0) Console::WriteLine("No tasks yet.");
     for (nuint i = 0; i < tasks.Count; i++)
     {
-        readonly(Task)* task = &(*tasks)[i];
+        immutable(Task)* task = &(*tasks)[i];
         char mark = ' ';
         if (task.Done) mark = 'x';
         String row = s$"{i + 1}. [{mark}] {task.Title}";

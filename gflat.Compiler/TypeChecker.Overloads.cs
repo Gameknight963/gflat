@@ -19,7 +19,7 @@ public partial class TypeChecker
         return family.FirstOrDefault(m => OverloadKey(m) == contractKey) ?? representative;
     }
 
-    // Readonly is not an overload discriminator, at any pointer depth.
+    // Readonly and immutable are not overload discriminators, at any pointer depth.
     private string OverloadTypeKey(TypeExpression type)
     {
         type = ResolveAlias(type);
@@ -64,7 +64,7 @@ public partial class TypeChecker
                 using var context = EnterSignatureContext(ctor, owner.Owner, owner.IsClass);
                 string key = OverloadKey(ctor.Parameters);
                 if (keys.TryGetValue(key, out var first))
-                    DuplicateDeclaration(first, ctor, "Constructors cannot differ only by readonly or parameter modifiers");
+                    DuplicateDeclaration(first, ctor, "Constructors cannot differ only by readonly, immutable, or parameter modifiers");
                 keys[key] = ctor;
             }
         }
@@ -84,7 +84,7 @@ public partial class TypeChecker
             {
                 string key = OverloadKey(method);
                 if (keys.TryGetValue(key, out var first))
-                    DuplicateDeclaration(first, method, $"Overloads of '{method.Name}' cannot differ only by readonly, return type, or declaration modifiers");
+                    DuplicateDeclaration(first, method, $"Overloads of '{method.Name}' cannot differ only by readonly, immutable, return type, or declaration modifiers");
                 keys[key] = method;
                 overloadFamilies[method] = family;
             }

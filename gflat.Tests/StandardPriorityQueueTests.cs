@@ -55,7 +55,7 @@ public sealed class StandardPriorityQueueTests
                 }
                 ~Item() { (*destroyed)++; }
             }
-            int Compare(readonly(Item)* left, readonly(Item)* right) => left.Priority - right.Priority;
+            int Compare(immutable(Item)* left, immutable(Item)* right) => left.Priority - right.Priority;
             int main() {
                 int destroyed = 0;
                 {
@@ -88,7 +88,7 @@ public sealed class StandardPriorityQueueTests
                 public Item(int* counter, int priority) { destroyed = counter; Priority = priority; }
                 ~Item() { (*destroyed)++; }
             }
-            int Compare(readonly(Item)* left, readonly(Item)* right) {
+            int Compare(immutable(Item)* left, immutable(Item)* right) {
                 if (fail) throw new Exception("comparison failed");
                 return left.Priority - right.Priority;
             }

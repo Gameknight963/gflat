@@ -51,13 +51,20 @@ public partial class TypeChecker
         {
             identity = MarkResolvedNominal(identity);
             CheckPublishedTypeBinding(identity, source.Line);
-            TypeExpression qualified = source.IsReadOnlyValue ? TypeQualifiers.ReadOnly(identity) : identity;
+            TypeExpression qualified = CanonicalizeBoundScalarProtection(identity.WithQualifiersFrom(source));
             if (source.InterfaceConstraints.Count > 0) qualified = qualified.WithInterfaceConstraints(source.InterfaceConstraints);
             if (source.GenericUse != null) qualified = qualified.WithGenericUse(source.GenericUse);
             if (aliasContracts.TryGetValue(identity, out var contract)) aliasContracts[qualified] = contract;
             binding.Publish(qualified);
         }
     }
+
+    // Enums, like built-in scalar types, have no reachable mutable storage.
+    // Do this after binding so aliases and generic substitutions use enum identity;
+    // the syntax-level qualifier helper need not know about the symbol table.
+    private TypeExpression CanonicalizeBoundScalarProtection(TypeExpression type) =>
+        type is NamedTypeExpression { IsImmutableValue: true } named && ResolveEnum(named) != null
+            ? type.WithoutValueProtection().WithReadOnlyValue(true) : type;
 
     private TypeExpression MarkResolvedNominal(TypeExpression type)
     {

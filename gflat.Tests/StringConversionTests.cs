@@ -11,7 +11,7 @@ public sealed class StringConversionTests
             using std;
             int main() {
                 String original = s"a\0b";
-                readonly(IStringConvertable)* view = &original;
+                immutable(IStringConvertable)* view = &original;
                 String converted = view.ToString();
                 original[0] = 'X';
                 original.Clear();
@@ -28,11 +28,11 @@ public sealed class StringConversionTests
         var result = Run("""
             using std;
             struct Value : IStringConvertable {
-                public readonly String ToString() => s"a\0b";
+                public immutable String ToString() => s"a\0b";
             }
             int main() {
                 Value value = new Value();
-                readonly(IStringConvertable)* view = &value;
+                immutable(IStringConvertable)* view = &value;
                 String result = s$"[{value}]{view}";
                 if (result.Length != (nuint)8 || result[2] != '\0' || result[6] != '\0') return 1;
                 return 0;
@@ -47,9 +47,9 @@ public sealed class StringConversionTests
         var result = Run("""
             using std;
             struct Value : IStringConvertable, IFormattable {
-                public readonly String ToString() { throw new Exception("unexpected conversion"); }
-                public readonly readonly(char*) ToCString() { throw new Exception("unexpected C string"); }
-                public readonly void Format(ITextWriter* output) { output.Write("direct", 6); }
+                public immutable String ToString() { throw new Exception("unexpected conversion"); }
+                public immutable immutable(char*) ToCString() { throw new Exception("unexpected C string"); }
+                public immutable void Format(ITextWriter* output) { output.Write("direct", 6); }
             }
             int main() {
                 String result = s$"{new Value()}";
@@ -77,7 +77,7 @@ public sealed class StringConversionTests
             ~Destination() { printf("D"); }
         }
         struct Value : IStringConvertable {
-            public readonly String ToString() { printf("T"); return s"text"; }
+            public immutable String ToString() { printf("T"); return s"text"; }
             ~Value() { printf("V"); }
         }
         """;

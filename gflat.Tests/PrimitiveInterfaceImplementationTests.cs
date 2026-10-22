@@ -11,10 +11,10 @@ public sealed class PrimitiveInterfaceImplementationTests
     {
         var result = CompilerTestHelper.Run(Contract + """
             interface IEqual<T> {
-                readonly bool Equal(T other);
-                implementation int : IEqual<int> { public readonly bool Equal(int other) => *this == other; }
+                immutable bool Equal(T other);
+                implementation int : IEqual<int> { public immutable bool Equal(int other) => *this == other; }
             }
-            int Read<T : IHash>(this ref readonly(T) value) => value.Hash();
+            int Read<T : IHash>(this ref immutable(T) value) => value.Hash();
             struct Box<T> { public T value; public Box(T item) { value=item; } }
             bool Same<T : IEqual<T>>(this ref Box<T> box, T other) => box.value.Equal(other);
             int main() {
@@ -32,8 +32,8 @@ public sealed class PrimitiveInterfaceImplementationTests
     {
         var (ast, checker) = Compiler.Check(Contract + """
             interface IEqual<T> {
-                readonly bool Equal(T other);
-                implementation int : IEqual<int> { public readonly bool Equal(int other) => *this == other; }
+                immutable bool Equal(T other);
+                implementation int : IEqual<int> { public immutable bool Equal(int other) => *this == other; }
             }
             int Read<T : IHash>(this T value) => value.Hash();
             bool Same<T : IEqual<T>>(this T value, T other) => value.Equal(other);
@@ -56,21 +56,21 @@ public sealed class PrimitiveInterfaceImplementationTests
             struct Cell<T> {
                 private T value;
                 public Cell(T item) { value=item; }
-                public ref T Item { get => value; }
-                public ref T this[int i] { get => value; }
+                public ref T Item { immutable get => value; }
+                public ref T this[int i] { immutable get => value; }
             }
             int main() {
                 Cell<int> cell=new(4);
                 cell.Item=20;
                 cell[0]+=22;
-                readonly(Cell<int>)* view=&cell;
+                immutable(Cell<int>)* view=&cell;
                 return view.Item+(*view)[0]-42;
             }
             """);
         Assert.Equal(42, result.ExitCode);
         Assert.Throws<TypeCheckException>(() => Compiler.Emit(Contract + """
-            struct Cell<T> { public T value; public ref T Item { get => value; } }
-            int main() { Cell<int> cell=new(); readonly(Cell<int>)* view=&cell; view.Item=5; return 0; }
+            struct Cell<T> { public T value; public ref T Item { immutable get => value; } }
+            int main() { Cell<int> cell=new(); immutable(Cell<int>)* view=&cell; view.Item=5; return 0; }
             """));
     }
 
@@ -100,8 +100,8 @@ public sealed class PrimitiveInterfaceImplementationTests
 
     private const string Contract = """
         interface IHash {
-            readonly int Hash();
-            implementation int { public readonly int Hash() => *this; }
+            immutable int Hash();
+            implementation int { public immutable int Hash() => *this; }
         }
         """;
 
@@ -115,7 +115,7 @@ public sealed class PrimitiveInterfaceImplementationTests
     [Fact]
     public void ConstrainedFunctionCallsThePrimitiveImplementation()
     {
-        var result = CompilerTestHelper.Run(Contract + "int Read<T : IHash>(ref readonly(T) n) => n.Hash(); int main() { int n = 42; return Read(ref n); }");
+        var result = CompilerTestHelper.Run(Contract + "int Read<T : IHash>(ref immutable(T) n) => n.Hash(); int main() { int n = 42; return Read(ref n); }");
         Assert.Equal(42, result.ExitCode);
     }
 
@@ -124,8 +124,8 @@ public sealed class PrimitiveInterfaceImplementationTests
     {
         var result = CompilerTestHelper.Run("""
             interface IEqual<T> {
-                readonly bool Equal(T other);
-                implementation int : IEqual<int> { public readonly bool Equal(int other) => *this == other; }
+                immutable bool Equal(T other);
+                implementation int : IEqual<int> { public immutable bool Equal(int other) => *this == other; }
             }
             bool Equal<T : IEqual<T>>(T a, T b) => a.Equal(b);
             int main() { int a = 42; IEqual<int>* p = &a; if (!p.Equal(42)) return 1; if (Equal(42, 42)) return 42; return 0; }
@@ -138,8 +138,8 @@ public sealed class PrimitiveInterfaceImplementationTests
     {
         var result = CompilerTestHelper.Run(Contract + """
             interface IOther {
-                readonly int Hash();
-                implementation int { public readonly int Hash() => *this + 2; }
+                immutable int Hash();
+                implementation int { public immutable int Hash() => *this + 2; }
             }
             int A<T : IHash>(T n) => n.Hash();
             int B<T : IOther>(T n) => n.Hash();
@@ -154,7 +154,7 @@ public sealed class PrimitiveInterfaceImplementationTests
     [InlineData("interface I { implementation void {} }", "primitive value type")]
     [InlineData("interface I { implementation int* {} }", "primitive value type")]
     [InlineData("interface I { int Read(); implementation int {} }", "does not implement")]
-    [InlineData("interface I { readonly int Read(); implementation int { public int Read() => 1; } }", "readonly")]
+    [InlineData("interface I { immutable int Read(); implementation int { public int Read() => 1; } }", "readonly")]
     [InlineData("interface I { int Read(); implementation int { public long Read() => 1; } }", "signature")]
     [InlineData("interface I<T> { implementation int {} }", "closed interface specialization")]
     [InlineData("interface J {} interface I { implementation int : J {} }", "enclosing interface")]
@@ -185,7 +185,7 @@ public sealed class PrimitiveInterfaceImplementationTests
                 public Holder(T input) { value = input; }
                 public int Read() => value.Hash();
             }
-            int Read<T : IHash>(readonly(T)* value) => value.Hash();
+            int Read<T : IHash>(immutable(T)* value) => value.Hash();
             int main() { Holder<int> h = new(21); int n = 21; return h.Read() + Read(&n); }
             """);
         Assert.Equal(42, result.ExitCode);
@@ -226,7 +226,7 @@ public sealed class PrimitiveInterfaceImplementationTests
     public void GenericContainersProjectFieldsAndResultsIntoTheCallersScope()
     {
         var result = CompilerTestHelper.Run(Contract + """
-            interface IOther { readonly int Hash(); implementation int { public readonly int Hash() => *this + 1; } }
+            interface IOther { immutable int Hash(); implementation int { public immutable int Hash() => *this + 1; } }
             struct Box<T : IHash> { public T value; public Box(T n) { value=n; } public T Get() => value; }
             int Read<T : IOther>(Box<T> box) => box.Get().Hash() + box.value.Hash();
             int main() { Box<int> box=new(20); return Read<int>(box); }
@@ -248,8 +248,8 @@ public sealed class PrimitiveInterfaceImplementationTests
     public void ImplementationMethodsCanCallOtherMethodsOfTheirContract()
     {
         var result = CompilerTestHelper.Run("""
-            interface I { readonly int Read(); readonly int Value();
-                implementation int { public readonly int Read() => this.Value(); public readonly int Value() => *this; }
+            interface I { immutable int Read(); immutable int Value();
+                implementation int { public immutable int Read() => this.Value(); public immutable int Value() => *this; }
             }
             int main() { int n=42; I* p=&n; return p.Read(); }
             """);
@@ -262,10 +262,10 @@ public sealed class PrimitiveInterfaceImplementationTests
     public void EveryPrimitiveHasNativeLayoutAndUsableInterfaceDispatch(int optimization)
     {
         string[] types = ["byte", "sbyte", "short", "ushort", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "extralong", "char", "bool"];
-        string implementations = string.Join("\n", types.Select(t => "implementation " + t + " { public readonly int Read() { " +
+        string implementations = string.Join("\n", types.Select(t => "implementation " + t + " { public immutable int Read() { " +
             (t == "bool" ? "if (*this) return 42; return 0;" : "return (int)*this;") + " } }"));
         string checks = string.Join("\n", types.Select((t, i) => t + " n" + i + " = " + (t == "bool" ? "true" : "(" + t + ")42") + "; I* p" + i + " = &n" + i + "; if (p" + i + ".Read() != 42) return 1;"));
-        var result = CompilerTestHelper.Run("interface I { readonly int Read(); " + implementations + " } int main() { " + checks + " return 42; }", optimization);
+        var result = CompilerTestHelper.Run("interface I { immutable int Read(); " + implementations + " } int main() { " + checks + " return 42; }", optimization);
         Assert.Equal(42, result.ExitCode);
     }
 
@@ -281,18 +281,18 @@ public sealed class PrimitiveInterfaceImplementationTests
 
     [Fact]
     public void ReadonlyContractsCannotMutateThePrimitive()
-        => Assert.Throws<TypeCheckException>(() => Compiler.Emit("interface I { readonly int Read(); implementation int { public readonly int Read() { *this=1; return 42; } } } int main()=>0;"));
+        => Assert.Throws<TypeCheckException>(() => Compiler.Emit("interface I { immutable int Read(); implementation int { public immutable int Read() { *this=1; return 42; } } } int main()=>0;"));
 
     [Fact]
     public void AReadonlyBorrowCannotCallAMutablePrimitiveMethod()
-        => Assert.Throws<TypeCheckException>(() => Compiler.Emit("interface I { void Update(); implementation int { public void Update() { *this=1; } } } void Read<T:I>(ref readonly(T) n) { n.Update(); } int main() { int n=0; Read(ref n); return 0; }"));
+        => Assert.Throws<TypeCheckException>(() => Compiler.Emit("interface I { void Update(); implementation int { public void Update() { *this=1; } } } void Read<T:I>(ref immutable(T) n) { n.Update(); } int main() { int n=0; Read(ref n); return 0; }"));
 
     [Fact]
     public void ContractDefaultsApplyToConstrainedAndInterfaceCalls()
     {
         var result = CompilerTestHelper.Run("""
-            interface I { readonly int Read(int extra = 2);
-                implementation int { public readonly int Read(int extra = 99) => *this + extra; }
+            interface I { immutable int Read(int extra = 2);
+                implementation int { public immutable int Read(int extra = 99) => *this + extra; }
             }
             int Read<T : I>(T value) => value.Read();
             int main() { int value = 19; I* p = &value; return Read(value) + p.Read(); }
@@ -317,7 +317,7 @@ public sealed class PrimitiveInterfaceImplementationTests
     public void DeclaredAndPrimitiveImplementationsShareTheSameContract()
     {
         var result = CompilerTestHelper.Run(Contract + """
-            struct Number : IHash { public readonly int Hash() => 21; }
+            struct Number : IHash { public immutable int Hash() => 21; }
             int Read<T : IHash>(T value) => value.Hash();
             int main() { Number n = new(); return Read(n) + Read(21); }
             """);
@@ -338,9 +338,9 @@ public sealed class PrimitiveInterfaceImplementationTests
     public void GenericSpecializationsStayIndependent()
     {
         var result = CompilerTestHelper.Run("""
-            interface IEqual<T> { readonly bool Equal(T other);
-                implementation int : IEqual<int> { public readonly bool Equal(int other) => *this == other; }
-                implementation long : IEqual<long> { public readonly bool Equal(long other) => *this == other; }
+            interface IEqual<T> { immutable bool Equal(T other);
+                implementation int : IEqual<int> { public immutable bool Equal(int other) => *this == other; }
+                implementation long : IEqual<long> { public immutable bool Equal(long other) => *this == other; }
             }
             bool Same<T : IEqual<T>>(T a, T b) => a.Equal(b);
             int main() { if (!Same(42,42)) return 1; if (!Same(42l,42l)) return 2;

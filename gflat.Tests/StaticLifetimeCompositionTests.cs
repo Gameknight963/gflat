@@ -40,11 +40,11 @@ public sealed class StaticLifetimeCompositionTests
             struct Token {
                 private int id;
                 public Token(int value) { id = value; }
-                public readonly int Read() => id;
+                public immutable int Read() => id;
                 ~Token() { putchar(id); }
             }
             static class State {
-                public static readonly(Token) token = new Token(65);
+                public static immutable(Token) token = new Token(65);
                 static State() { token = new Token(66); }
             }
             int main() { putchar(67); return State::token.Read() - 66; }

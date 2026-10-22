@@ -29,9 +29,9 @@ public class StandardHashingTests
     public void ScalarsSupportBorrowedGenericAndInterfaceCalls(string type, string low, string high)
         => Run($$"""
             using std;
-            bool Same<T : IEquatable<T>>(ref readonly(T) a, ref readonly(T) b) => a.Equals(&b);
-            int Order<T : IComparable<T>>(ref readonly(T) a, ref readonly(T) b) => a.CompareTo(&b);
-            nuint Hash<T : IHashable>(ref readonly(T) a) => a.GetHashCode();
+            bool Same<T : IEquatable<T>>(ref immutable(T) a, ref immutable(T) b) => a.Equals(&b);
+            int Order<T : IComparable<T>>(ref immutable(T) a, ref immutable(T) b) => a.CompareTo(&b);
+            nuint Hash<T : IHashable>(ref immutable(T) a) => a.GetHashCode();
             int main() {
                 {{type}} a = ({{type}})({{low}}); {{type}} b = ({{type}})({{high}}); {{type}} copy = a;
                 if (!Same(ref a, ref copy) || Same(ref a, ref b)) return 1;
@@ -94,9 +94,9 @@ public class StandardHashingTests
                 public replace void*? Allocate(nuint count) { allocations++; return malloc(count); }
                 public replace void Free(void* data) { releases++; free(data); }
             }
-            nuint Hash<T : IHashable>(ref readonly(T) value) => value.GetHashCode();
-            bool Equal<T : IEquatable<T>>(ref readonly(T) a, ref readonly(T) b) => a.Equals(&b);
-            int Compare<T : IComparable<T>>(ref readonly(T) a, ref readonly(T) b) => a.CompareTo(&b);
+            nuint Hash<T : IHashable>(ref immutable(T) value) => value.GetHashCode();
+            bool Equal<T : IEquatable<T>>(ref immutable(T) a, ref immutable(T) b) => a.Equals(&b);
+            int Compare<T : IComparable<T>>(ref immutable(T) a, ref immutable(T) b) => a.CompareTo(&b);
             int main() {
                 {
                     String a = s"borrowed"; String b = s"borrowed"; b.Reserve(100);

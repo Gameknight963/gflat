@@ -52,7 +52,7 @@ public class EditorScopeTests
     }
 
     [Theory]
-    [InlineData("public int this[nuint index] { readonly get { return (int)in|dex; } set {} }", "index")]
+    [InlineData("public int this[nuint index] { immutable get { return (int)in|dex; } set {} }", "index")]
     [InlineData("public int this[nuint index] { get => 0; set { int n = (int)in|dex; } }", "index")]
     [InlineData("public int this[nuint index] => (int)in|dex;", "index")]
     [InlineData("public int this[nuint index] { get => 0; set { int n = va|lue; } }", "value")]

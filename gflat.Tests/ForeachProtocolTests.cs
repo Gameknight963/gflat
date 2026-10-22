@@ -9,7 +9,7 @@ public sealed class ForeachProtocolTests
             private int n;
             public Iterator() { n = -1; }
             public bool MoveNext() { n++; return n < 3; }
-            public int Current { readonly get => n; }
+            public int Current { immutable get => n; }
         }
         """;
 
@@ -17,7 +17,7 @@ public sealed class ForeachProtocolTests
     [InlineData("struct Source { public Iterator GetEnumerator() => new Iterator(); }", "Source source = new Source();", "source")]
     [InlineData("struct Source {} Iterator GetEnumerator(this ref Source source) => new Iterator();", "Source source = new Source();", "source")]
     [InlineData("struct Source {} Iterator GetEnumerator(this ref Source source) => new Iterator();", "Source source = new Source(); Source* p = &source;", "p")]
-    [InlineData("struct Source {} Iterator GetEnumerator(this ref readonly(Source) source) => new Iterator();", "readonly(Source) source = new Source();", "source")]
+    [InlineData("struct Source {} Iterator GetEnumerator(this ref immutable(Source) source) => new Iterator();", "immutable(Source) source = new Source();", "source")]
     [InlineData("struct Source {} Iterator GetEnumerator(this ref Source source) => new Iterator();", "", "new Source()")]
     public void CurrentPropertiesWorkWithOrdinaryAndExtensionFactories(string source, string locals, string collection)
     {
@@ -28,7 +28,7 @@ public sealed class ForeachProtocolTests
     [Theory]
     [InlineData("public ref int Current { get => n; }")]
     [InlineData("public ref readonly(int) Current { get => n; }")]
-    [InlineData("public readonly int Current() => n;")]
+    [InlineData("public immutable int Current() => n;")]
     public void CurrentMethodsAndReferenceGettersKeepValueIteration(string current)
     {
         string iterator = "struct Iterator { private int n; public Iterator() { n = -1; } public bool MoveNext() { n++; return n < 3; } " + current + " }";
@@ -44,12 +44,12 @@ public sealed class ForeachProtocolTests
     }
 
     private const string OwningSource = """
-        extern int printf(readonly(char*) message, ...);
+        extern int printf(immutable(char*) message, ...);
         struct Iterator {
             private int n;
             public Iterator() { n = -1; printf("E"); }
             public bool MoveNext() { n++; return n < 3; }
-            public int Current { readonly get => n; }
+            public int Current { immutable get => n; }
             ~Iterator() { printf("I"); }
         }
         struct Source {
@@ -75,7 +75,7 @@ public sealed class ForeachProtocolTests
     [Fact]
     public void ThrowingCurrentGetterDestroysIteratorThenCollection()
     {
-        var source = OwningSource.Replace("public int Current { readonly get => n; }", "public int Current { readonly get { throw new Exception(); } }");
+        var source = OwningSource.Replace("public int Current { immutable get => n; }", "public int Current { immutable get { throw new Exception(); } }");
         var result = CompilerTestHelper.Run(source + " int main() { try { foreach (int item in Make()) {} } catch {} return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("SGEIC", result.StandardOutput);

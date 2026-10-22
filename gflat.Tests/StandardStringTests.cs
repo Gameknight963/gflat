@@ -187,7 +187,7 @@ public class StandardStringTests
             }
             int main() {
                 String text = s"abc";
-                readonly(char*) original = text.Data;
+                immutable(char*) original = text.Data;
                 nuint capacity = text.Capacity;
                 try { text.Reserve(100); return 1; } catch (ref BadAllocException error) { if (error.GetCode() != 1) return 3; }
                 if (text.Length != (nuint)3 || text.Capacity != capacity || text.Data != original) return 2;
@@ -213,7 +213,7 @@ public class StandardStringTests
             }
             int main() {
                 String text = s"abc";
-                readonly(char*) original = text.Data;
+                immutable(char*) original = text.Data;
                 nuint capacity = text.Capacity;
                 try { GROW; return 1; }
                 catch (ref BadAllocException error) { if (error.GetCode() != 1) return 2; }

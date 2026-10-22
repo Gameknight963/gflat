@@ -64,15 +64,15 @@ public sealed class StandardVectorRemoveAllTests
             using std;
             int dead=0;int calls=0;int next=0;bool bad=false;Vector<Owner>*? watched=null;
             struct Owner{public int* Data;public Owner(int id){Data=new* int(id);}~Owner(){dead++;delete Data;}}
-            bool Match(readonly(Owner)* value){
+            bool Match(immutable(Owner)* value){
                 if(*value.Data!=next || dead!=0)bad=true;next++;calls++;
                 // Readonly aliases observe initialized owners throughout partitioning.
-                Span<readonly(Owner)> live=watched!.AsReadOnly();
+                Span<immutable(Owner)> live=watched!.AsImmutable();
                 int sum=0;for(nuint i=0;i<live.Length;i++)sum+=*live[i].Data;
                 if(sum!=45)bad=true;
                 return *value.Data%3==1;
             }
-            bool NeverCalled(readonly(Owner)* value){throw new Exception("empty predicate called");}
+            bool NeverCalled(immutable(Owner)* value){throw new Exception("empty predicate called");}
             int main(){
                 {
                     Vector<Owner> values=new();values.Reserve(16);
@@ -99,7 +99,7 @@ public sealed class StandardVectorRemoveAllTests
             class PredicateFailure:Exception{public int Index;public PredicateFailure(int index):base("predicate failed",77){Index=index;}}
             int failAt=0;int calls=0;int dead=0;
             struct Owner{public int* Data;public Owner(int id){Data=new* int(id);}~Owner(){dead++;delete Data;}}
-            bool Match(readonly(Owner)* value){int index=calls++;if(index==failAt)throw new PredicateFailure(index);return *value.Data%3==1;}
+            bool Match(immutable(Owner)* value){int index=calls++;if(index==failAt)throw new PredicateFailure(index);return *value.Data%3==1;}
             int main(){for(int failure=0;failure<10;failure++){
                     dead=0;calls=0;failAt=failure;
                     {
@@ -138,7 +138,7 @@ public sealed class StandardVectorRemoveAllTests
                 public Owner(int id){Root=new^ Node(id);Root.Next=Root;}
                 ~Owner(){GC::Collect();if(TracingCollector::ManagedCount!=(nuint)expectedLive)bad=true;expectedLive--;dead++;}
             }
-            bool Match(readonly(Owner)* owner){
+            bool Match(immutable(Owner)* owner){
                 GC::Collect();if(TracingCollector::ManagedCount!=12 || dead!=0 || owner.Root.Id!=calls)bad=true;
                 int index=calls++;if(index==failAt)throw new PredicateFailure();return owner.Root.Id%2==1;
             }

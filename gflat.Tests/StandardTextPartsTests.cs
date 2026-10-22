@@ -37,7 +37,7 @@ public sealed class StandardTextPartsTests
                 $"if (!Part(&iterator, {Literal(part)}, {part.Length})) return {i + 1};"));
             Run($$"""
                 using std;
-                bool Part(TextParts::Enumerator* iterator, readonly(char*) expected, nuint count) {
+                bool Part(TextParts::Enumerator* iterator, immutable(char*) expected, nuint count) {
                     if (!iterator.MoveNext()) return false;
                     Span<readonly(char)> part = iterator.Current;
                     if (part.Length != count) return false;
@@ -205,7 +205,7 @@ public sealed class StandardTextPartsTests
                 }
                 count.Format(&output);
                 if (Calls::Allocations != 0 || output.Length != (nuint)6) return 1;
-                readonly(char*) expected = "a//b/4";
+                immutable(char*) expected = "a//b/4";
                 for (nuint i = 0; i < output.Length; i++) if (output.Data[i] != expected[i]) return 2;
                 return 0;
             }

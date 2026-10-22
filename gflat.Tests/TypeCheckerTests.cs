@@ -1990,7 +1990,7 @@ namespace gflat.Tests
                     int x;
                     int y;
 
-                    public readonly void Reset()
+                    public immutable void Reset()
                     {
                         this.x = 0;
                     }
@@ -2019,7 +2019,7 @@ namespace gflat.Tests
                         this.count = this.count + 1;
                     }
 
-                    public readonly int GetCount()
+                    public immutable int GetCount()
                     {
                         return this.count;
                     }
@@ -2028,14 +2028,14 @@ namespace gflat.Tests
                 int main()
                 {
                     Counter c = new Counter();
-                    readonly(Counter)* ptr = &c;
+                    immutable(Counter)* ptr = &c;
                     ptr.Increment();
                     return 0;
                 }
                 """;
 
             TypeCheckException ex = Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(code));
-            Assert.Contains("Cannot call non-readonly method 'Increment' on readonly instance", ex.Message);
+            Assert.Contains("Cannot call non-immutable method 'Increment' on immutable instance", ex.Message);
         }
 
         [Fact]
@@ -2046,7 +2046,7 @@ namespace gflat.Tests
                 {
                     int count;
 
-                    public readonly int GetCount()
+                    public immutable int GetCount()
                     {
                         return this.count;
                     }
@@ -2055,7 +2055,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Counter c = new Counter();
-                    readonly(Counter)* ptr = &c;
+                    immutable(Counter)* ptr = &c;
                     return ptr.GetCount();
                 }
                 """;
@@ -2535,13 +2535,13 @@ namespace gflat.Tests
                     int y;
                 }
 
-                const readonly(char*) N_Point = nameof(Point);
-                const readonly(char*) N_Int = nameof(int);
+                const immutable(char*) N_Point = nameof(Point);
+                const immutable(char*) N_Int = nameof(int);
 
                 int main()
                 {
                     int myVariable = 42;
-                    const readonly(char*) N_Var = nameof(myVariable);
+                    const immutable(char*) N_Var = nameof(myVariable);
                     return 0;
                 }
                 """;
@@ -2570,7 +2570,7 @@ namespace gflat.Tests
                 int main()
                 {
                     Point pt;
-                    const readonly(char*) N_Field = nameof(pt.x);
+                    const immutable(char*) N_Field = nameof(pt.x);
                     return 0;
                 }
                 """;
@@ -2900,7 +2900,7 @@ namespace gflat.Tests
                     {
                         return ex.GetCode();
                     }
-                    catch (readonly(Exception)* e)
+                    catch (immutable(Exception)* e)
                     {
                         return 2;
                     }

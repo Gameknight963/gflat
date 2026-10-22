@@ -32,7 +32,7 @@ public sealed class GenericNestedIdentityTests
     }
 
     [Theory]
-    [InlineData("readonly(Family<int>::Item)")]
+    [InlineData("immutable(Family<int>::Item)")]
     [InlineData("Family<int>::Item*?")]
     [InlineData("Family<int>::Item[2]")]
     public void NestedPublicationComposesWithExistingTypeWrappers(string fieldType)
@@ -88,7 +88,7 @@ public sealed class GenericNestedIdentityTests
     public void ReadonlyNestedIdentityStaysReadonlyAfterPublication()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
-            struct Owner { public readonly(Family<int>::Item)*? value; }
+            struct Owner { public immutable(Family<int>::Item)*? value; }
             struct Family<T> {
                 public struct Item { public T number; }
                 public static Owner Make() => new Owner();

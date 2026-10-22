@@ -9,11 +9,11 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
 
     public BitSet() { data = null; length = 0; words = 0; }
     public BitSet(nuint size) { data = null; length = 0; words = 0; this.Resize(size); }
-    public nuint Length { readonly get nothrow => length; }
+    public nuint Length { immutable get nothrow => length; }
 
     public bool this[nuint index]
     {
-        readonly get
+        immutable get
         {
             if (index >= length) throw new Exception("BitSet index out of range");
             uint mask = (uint)1 << (int)(index % 32);
@@ -114,7 +114,7 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         return (((uint)1 << (int)count) - (uint)1) << (int)first;
     }
 
-    public readonly nuint CountSetBits()
+    public immutable nuint CountSetBits()
     {
         nuint total = 0;
         for (nuint i = 0; i < words; i++)
@@ -125,14 +125,14 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         return total;
     }
 
-    public readonly bool HasAnySet() nothrow
+    public immutable bool HasAnySet() nothrow
     {
         for (nuint i = 0; i < words; i++)
             if (data![i] != (uint)0) return true;
         return false;
     }
 
-    public readonly bool HasAllSet() nothrow
+    public immutable bool HasAllSet() nothrow
     {
         nuint complete = length / 32;
         for (nuint i = 0; i < complete; i++)
@@ -143,39 +143,39 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         return true;
     }
 
-    public readonly BitSet Clone()
+    public immutable BitSet Clone()
     {
         BitSet result = new BitSet(length);
         for (nuint i = 0; i < words; i++) result.data![i] = data![i];
         return result;
     }
 
-    public void UnionWith(readonly(BitSet)* other)
+    public void UnionWith(immutable(BitSet)* other)
     {
         if (length != other.length) throw new Exception("BitSet lengths differ");
         for (nuint i = 0; i < words; i++) data![i] = data![i] | other.data![i];
     }
 
-    public void IntersectWith(readonly(BitSet)* other)
+    public void IntersectWith(immutable(BitSet)* other)
     {
         if (length != other.length) throw new Exception("BitSet lengths differ");
         for (nuint i = 0; i < words; i++) data![i] = data![i] & other.data![i];
     }
 
-    public void ExceptWith(readonly(BitSet)* other)
+    public void ExceptWith(immutable(BitSet)* other)
     {
         if (length != other.length) throw new Exception("BitSet lengths differ");
         for (nuint i = 0; i < words; i++) data![i] = data![i] & (other.data![i] ^ (uint)4294967295);
     }
 
-    public void SymmetricExceptWith(readonly(BitSet)* other)
+    public void SymmetricExceptWith(immutable(BitSet)* other)
     {
         if (length != other.length) throw new Exception("BitSet lengths differ");
         for (nuint i = 0; i < words; i++) data![i] = data![i] ^ other.data![i];
     }
 
     // Enumerates the indices of set bits in ascending order. Borrows storage.
-    public readonly Enumerator GetEnumerator() => new Enumerator(data, length);
+    public immutable Enumerator GetEnumerator() => new Enumerator(data, length);
 
     ~BitSet() { if (data != null) Memory::Free((void*)data); }
 
@@ -225,7 +225,7 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         }
         public nuint Current
         {
-            readonly get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
                 return current;

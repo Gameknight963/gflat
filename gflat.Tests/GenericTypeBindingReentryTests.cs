@@ -10,8 +10,8 @@ public sealed class GenericTypeBindingReentryTests
     [InlineData("Box<int>[2]", 8)]
     [InlineData("Box<int>[Limits<int>::Count()]", 16)]
     [InlineData("BoxInt", 4)]
-    [InlineData("readonly(BoxInt)", 4)]
-    [InlineData("readonly(BoxInt)*?", 8)]
+    [InlineData("immutable(BoxInt)", 4)]
+    [InlineData("immutable(BoxInt)*?", 8)]
     [InlineData("Box<int>*?*?", 8)]
     public void SpecializedBodiesCanQueryTheRegisteredOwnerLayout(string fieldType, int size)
     {
@@ -88,7 +88,7 @@ public sealed class GenericTypeBindingReentryTests
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check("""
             alias BoxInt = Box<int>;
-            struct Owner { public readonly(BoxInt)*? value; }
+            struct Owner { public immutable(BoxInt)*? value; }
             struct Box<T> { public T value; public static Owner Make() => new Owner(); }
             void Mutate(Owner* owner) { owner.value!.value = 1; }
             int main() => 0;

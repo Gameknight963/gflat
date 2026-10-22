@@ -8,7 +8,7 @@ public class ConstructorCastTests
             struct View {
                 readonly(char)* text;
                 public View(readonly(char)* p) { text = p; }
-                public readonly char First() { return text[0]; }
+                public immutable char First() { return text[0]; }
             }
             int main() {
                 char[2] data = "x";

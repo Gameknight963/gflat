@@ -1,8 +1,8 @@
 ﻿namespace Console;
 
 // Borrow the existing String buffer rather than copying an owning value.
-void Write(ref readonly(std::String) message) { Write(message.Data, message.Length); }
-void WriteLine(ref readonly(std::String) message) { Write(message.Data, message.Length); WriteLine(); }
+void Write(ref immutable(std::String) message) { Write(message.Data, message.Length); }
+void WriteLine(ref immutable(std::String) message) { Write(message.Data, message.Length); WriteLine(); }
 
 bool TryReadLine(ref std::String line)
 {

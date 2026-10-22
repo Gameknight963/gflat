@@ -24,7 +24,9 @@ namespace gflat.ast
         public bool IsVirtual { get; }
         public bool IsOverride { get; }
         public bool IsAbstract { get; }
-        public bool IsReadOnly { get; internal set; }
+        private bool _isReadOnly;
+        public bool IsReadOnly { get => _isReadOnly || IsImmutable; internal set => _isReadOnly = value; }
+        public bool IsImmutable { get; internal set; }
         // Synthetic auto-getters infer their receiver capability from the bound
         // result; explicit readonly accessors must retain their source contract.
         internal bool InferAutoGetterReadOnly { get; set; }
@@ -34,7 +36,7 @@ namespace gflat.ast
         public bool IsGeneric => GenericParameters.Count > 0;
         public bool IsNoThrow { get; set; }
 
-        public MethodDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, BlockStatement? body, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool isNoThrow = false) : base(line)
+        public MethodDeclaration(string name, TypeExpression returnType, List<Parameter> parameters, BlockStatement? body, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool isNoThrow = false, bool isImmutable = false) : base(line)
         {
             Name = name;
             ReturnType = returnType;
@@ -46,6 +48,7 @@ namespace gflat.ast
             IsOverride = isOverride;
             IsAbstract = isAbstract;
             IsReadOnly = isReadOnly;
+            IsImmutable = isImmutable;
             IsConst = isConst;
             Attributes = attributes ?? new List<AttributeNode>();
             GenericParameters = genericParameters ?? new List<GenericParameter>();

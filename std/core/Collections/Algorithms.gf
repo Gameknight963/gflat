@@ -12,7 +12,7 @@ namespace detail
     }
 
     private void SiftDown<T>(T* data, nuint root, nuint count,
-        int(readonly(T)*, readonly(T)*)* compare)
+        int(immutable(T)*, immutable(T)*)* compare)
     {
         while (root < count / 2)
         {
@@ -27,7 +27,7 @@ namespace detail
 
 // Allocation-free heapsort. Equal elements need not retain their relative order.
 // A throwing comparator can leave a partial ordering, but all values remain owned.
-public void Sort<T>(Span<T> values, int(readonly(T)*, readonly(T)*)* compare)
+public void Sort<T>(Span<T> values, int(immutable(T)*, immutable(T)*)* compare)
 {
     nuint count = values.Length;
     if (count < 2) return;
@@ -73,8 +73,8 @@ public void Rotate<T>(Span<T> values, nuint middle)
 }
 
 // First index whose element is not less than key, or Length if none exists.
-public nuint LowerBound<T>(Span<readonly(T)> values, readonly(T)* key,
-    int(readonly(T)*, readonly(T)*)* compare)
+public nuint LowerBound<T>(Span<immutable(T)> values, immutable(T)* key,
+    int(immutable(T)*, immutable(T)*)* compare)
 {
     nuint first = 0;
     nuint count = values.Length;
@@ -93,8 +93,8 @@ public nuint LowerBound<T>(Span<readonly(T)> values, readonly(T)* key,
 }
 
 // First index whose element is greater than key, or Length if none exists.
-public nuint UpperBound<T>(Span<readonly(T)> values, readonly(T)* key,
-    int(readonly(T)*, readonly(T)*)* compare)
+public nuint UpperBound<T>(Span<immutable(T)> values, immutable(T)* key,
+    int(immutable(T)*, immutable(T)*)* compare)
 {
     nuint first = 0;
     nuint count = values.Length;
@@ -114,8 +114,8 @@ public nuint UpperBound<T>(Span<readonly(T)> values, readonly(T)* key,
 
 // First matching index in sorted input, or Length when the key is absent.
 // Use the same ordering as Sort; neither elements nor the key are copied.
-public nuint BinarySearch<T>(Span<readonly(T)> values, readonly(T)* key,
-    int(readonly(T)*, readonly(T)*)* compare)
+public nuint BinarySearch<T>(Span<immutable(T)> values, immutable(T)* key,
+    int(immutable(T)*, immutable(T)*)* compare)
 {
     nuint index = std::LowerBound<T>(values, key, compare);
     if (index == values.Length) return values.Length;
@@ -123,15 +123,15 @@ public nuint BinarySearch<T>(Span<readonly(T)> values, readonly(T)* key,
     return index;
 }
 
-public bool IsSorted<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)*)* compare)
+public bool IsSorted<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(T)*)* compare)
 {
     for (nuint i = 1; i < values.Length; i++)
         if (compare(&values[i - 1], &values[i]) > 0) return false;
     return true;
 }
 
-public bool SequenceEqual<T>(Span<readonly(T)> first, Span<readonly(T)> second,
-    bool(readonly(T)*, readonly(T)*)* equal)
+public bool SequenceEqual<T>(Span<immutable(T)> first, Span<immutable(T)> second,
+    bool(immutable(T)*, immutable(T)*)* equal)
 {
     if (first.Length != second.Length) return false;
     for (nuint i = 0; i < first.Length; i++)
@@ -140,7 +140,7 @@ public bool SequenceEqual<T>(Span<readonly(T)> first, Span<readonly(T)> second,
 }
 
 // Return Length for an empty span; strict comparisons keep the first equal item.
-public nuint MinIndex<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)*)* compare)
+public nuint MinIndex<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(T)*)* compare)
 {
     if (values.Length == 0) return values.Length;
     nuint best = 0;
@@ -149,7 +149,7 @@ public nuint MinIndex<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)
     return best;
 }
 
-public nuint MaxIndex<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)*)* compare)
+public nuint MaxIndex<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(T)*)* compare)
 {
     if (values.Length == 0) return values.Length;
     nuint best = 0;
@@ -159,8 +159,8 @@ public nuint MaxIndex<T>(Span<readonly(T)> values, int(readonly(T)*, readonly(T)
 }
 
 // Preserve the first nonzero comparison; otherwise order by prefix length.
-public int SequenceCompare<T>(Span<readonly(T)> first, Span<readonly(T)> second,
-    int(readonly(T)*, readonly(T)*)* compare)
+public int SequenceCompare<T>(Span<immutable(T)> first, Span<immutable(T)> second,
+    int(immutable(T)*, immutable(T)*)* compare)
 {
     nuint count = first.Length;
     if (second.Length < count) count = second.Length;
@@ -175,7 +175,7 @@ public int SequenceCompare<T>(Span<readonly(T)> first, Span<readonly(T)> second,
 }
 
 // Returns Length when no element matches, including for an empty span.
-public nuint FindIndex<T>(Span<readonly(T)> values, bool(readonly(T)*)* predicate)
+public nuint FindIndex<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
 {
     for (nuint i = 0; i < values.Length; i++)
         if (predicate(&values[i])) return i;
@@ -183,16 +183,16 @@ public nuint FindIndex<T>(Span<readonly(T)> values, bool(readonly(T)*)* predicat
 }
 
 // Search callbacks borrow both values; elements and keys are never copied.
-public nuint IndexOf<T>(Span<readonly(T)> values, readonly(T)* key,
-    bool(readonly(T)*, readonly(T)*)* equal)
+public nuint IndexOf<T>(Span<immutable(T)> values, immutable(T)* key,
+    bool(immutable(T)*, immutable(T)*)* equal)
 {
     for (nuint i = 0; i < values.Length; i++)
         if (equal(&values[i], key)) return i;
     return values.Length;
 }
 
-public nuint LastIndexOf<T>(Span<readonly(T)> values, readonly(T)* key,
-    bool(readonly(T)*, readonly(T)*)* equal)
+public nuint LastIndexOf<T>(Span<immutable(T)> values, immutable(T)* key,
+    bool(immutable(T)*, immutable(T)*)* equal)
 {
     nuint i = values.Length;
     while (i != 0)
@@ -203,14 +203,14 @@ public nuint LastIndexOf<T>(Span<readonly(T)> values, readonly(T)* key,
     return values.Length;
 }
 
-public bool Contains<T>(Span<readonly(T)> values, readonly(T)* key,
-    bool(readonly(T)*, readonly(T)*)* equal)
+public bool Contains<T>(Span<immutable(T)> values, immutable(T)* key,
+    bool(immutable(T)*, immutable(T)*)* equal)
 {
     return IndexOf<T>(values, key, equal) != values.Length;
 }
 
 // Move matching elements to the prefix and return its length. Not stable.
-public nuint Partition<T>(Span<T> values, bool(readonly(T)*)* predicate)
+public nuint Partition<T>(Span<T> values, bool(immutable(T)*)* predicate)
 {
     nuint boundary = 0;
     for (nuint i = 0; i < values.Length; i++)

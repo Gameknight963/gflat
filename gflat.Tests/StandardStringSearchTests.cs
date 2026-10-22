@@ -20,7 +20,7 @@ public sealed class StandardStringSearchTests
             if (sample % 2 == 0 && pattern.Length <= input.Length)
                 input.AsSpan(random.Next(input.Length - pattern.Length + 1), pattern.Length).CopyTo(pattern);
             Assign(code, "input", input); Assign(code, "pattern", pattern);
-            code.AppendLine($"{{ String text = String::From(input, {input.Length}); readonly(String)* view = &text;");
+            code.AppendLine($"{{ String text = String::From(input, {input.Length}); immutable(String)* view = &text;");
             foreach (int start in new[] { 0, input.Length / 2, input.Length }.Distinct())
             {
                 int offset = input.AsSpan(start).IndexOf(pattern);

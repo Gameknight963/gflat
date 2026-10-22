@@ -15,7 +15,7 @@ public sealed class RenameTests
     [Theory]
     [InlineData("int F() { int |value = 1; value++; return value; } int G() { int value = 2; return value; }", 3)]
     [InlineData("int F(ref int |value) { value++; return value; }", 3)]
-    [InlineData("readonly(char*) F(int |value) => nameof(value);", 2)]
+    [InlineData("immutable(char*) F(int |value) => nameof(value);", 2)]
     [InlineData("struct S { public S(int |value) { int copy = value; } }", 2)]
     [InlineData("struct S { public int this[int |index] { get => index; } }", 2)]
     [InlineData("int F() { int(int)* f = (int |value) => value; return f(1); }", 2)]
@@ -78,7 +78,7 @@ public sealed class RenameTests
     [Fact]
     public void ApplyingEditsPreservesCommentsLiteralsAndOtherScopes()
     {
-        var (model, source, offset) = Analyze("int F(int |value) { nameof(value); // value\n readonly(char*) text = \"value\"; return value; } int G(int value) => value;");
+        var (model, source, offset) = Analyze("int F(int |value) { nameof(value); // value\n immutable(char*) text = \"value\"; return value; } int G(int value) => value;");
         var edits = model.Rename(source.Path, offset, "renamed");
         string text = source.Text;
         foreach (var edit in edits.OrderByDescending(edit => edit.Range.Start.Line).ThenByDescending(edit => edit.Range.Start.Character)) {
@@ -86,7 +86,7 @@ public sealed class RenameTests
             int end = Workspace.Offset(source.Text, System.Text.Json.JsonSerializer.SerializeToElement(edit.Range.End, Protocol.JsonOptions));
             text = text.Remove(start, end - start).Insert(start, edit.NewText);
         }
-        Assert.Equal("int F(int renamed) { nameof(renamed); // value\n readonly(char*) text = \"value\"; return renamed; } int G(int value) => value;", text);
+        Assert.Equal("int F(int renamed) { nameof(renamed); // value\n immutable(char*) text = \"value\"; return renamed; } int G(int value) => value;", text);
         Compiler.Emit(text);
     }
 }

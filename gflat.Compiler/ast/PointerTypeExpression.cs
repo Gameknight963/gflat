@@ -9,6 +9,7 @@ namespace gflat.ast
         public TypeExpression Inner { get; }
         public bool IsNullable { get; }
         public bool IsReadOnly { get; }
+        public bool IsImmutable => Inner.IsImmutableValue;
 
         public PointerTypeExpression(TypeExpression inner, bool isNullable, int line, bool isReadOnly = false) : base(line)
         {

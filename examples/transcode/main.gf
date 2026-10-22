@@ -10,10 +10,10 @@ bool IsMode(readonly(char)* argument, readonly(char)* expected)
     return false;
 }
 
-Vector<byte> ToUtf16Le(ref readonly(Vector<byte>) input)
+Vector<byte> ToUtf16Le(ref immutable(Vector<byte>) input)
 {
     if(input.IsEmpty)return new Vector<byte>();
-    Span<readonly(byte)> bytes=input.AsReadOnly();
+    Span<readonly(byte)> bytes=input.AsImmutable();
     nuint units=0;
     if(!UnicodeTranscoding::TryGetUtf16Length((readonly(char)*)bytes.Data!,bytes.Length,ref units))
         throw new Exception("Input is not valid UTF-8");
@@ -30,11 +30,11 @@ Vector<byte> ToUtf16Le(ref readonly(Vector<byte>) input)
     return move result;
 }
 
-Vector<byte> FromUtf16Le(ref readonly(Vector<byte>) input)
+Vector<byte> FromUtf16Le(ref immutable(Vector<byte>) input)
 {
     if(input.IsEmpty)return new Vector<byte>();
     if(input.Count%2!=0)throw new Exception("UTF-16LE input has an odd byte count");
-    Span<readonly(byte)> bytes=input.AsReadOnly();
+    Span<readonly(byte)> bytes=input.AsImmutable();
     nuint units=bytes.Length/2;
     Vector<ushort> wide=new(); wide.Reserve(units);
     for(nuint i=0;i<units;i++) {
@@ -43,12 +43,12 @@ Vector<byte> FromUtf16Le(ref readonly(Vector<byte>) input)
         wide.Add(value);
     }
     nuint required=0;
-    if(!UnicodeTranscoding::TryGetUtf8Length(wide.AsReadOnly().Data!,units,ref required))
+    if(!UnicodeTranscoding::TryGetUtf8Length(wide.AsImmutable().Data!,units,ref required))
         throw new Exception("Input is not valid UTF-16LE");
     Vector<byte> result=new(); result.Reserve(required);
     for(nuint i=0;i<required;i++)result.Add((byte)0);
     nuint written=0;
-    UnicodeTranscoding::TryUtf16ToUtf8(wide.AsReadOnly().Data!,units,(char*)result.AsSpan().Data!,required,ref written);
+    UnicodeTranscoding::TryUtf16ToUtf8(wide.AsImmutable().Data!,units,(char*)result.AsSpan().Data!,required,ref written);
     return move result;
 }
 
@@ -64,7 +64,7 @@ int main(int argc,char** argv)
         if(IsMode(argv[1],"utf8-to-utf16le"))output=ToUtf16Le(ref input);
         else output=FromUtf16Le(ref input);
         if(output.IsEmpty) { File empty=File::OpenWrite(argv[3]); empty.Close(); }
-        else FileBytes::WriteAll(argv[3],output.AsReadOnly().Data!,output.Count);
+        else FileBytes::WriteAll(argv[3],output.AsImmutable().Data!,output.Count);
     }
     catch(Exception* error) { Console::Error.WriteLine(error.GetMessage()); return 1; }
     return 0;

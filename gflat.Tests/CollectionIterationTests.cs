@@ -22,13 +22,13 @@ public sealed class CollectionIterationTests
             using std;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
                 public replace void Free(void* pointer) { free(pointer); }
             }
-            int Sum(readonly(Vector<int>)* values) {
-                int sum = 0; foreach (int item in values.AsReadOnly()) sum += item; return sum;
+            int Sum(immutable(Vector<int>)* values) {
+                int sum = 0; foreach (int item in values.AsImmutable()) sum += item; return sum;
             }
             int main() {
                 int[3] buffer = [1, 2, 3];
@@ -72,7 +72,7 @@ public sealed class CollectionIterationTests
                 Vector<String> values = new Vector<String>(); values.Add(s"abc");
                 foreach (String item in values) { if (item.Data == values[(nuint)0].Data) return 3; item[(nuint)0] = 'z'; }
                 if (values[(nuint)0].Data[0] != 'a') return 1;
-                foreach (readonly(String) item in values.AsReadOnly()) { if (item.Data[0] != 'a' || item.Data == values[(nuint)0].Data) return 2; }
+                foreach (immutable(String) item in values.AsImmutable()) { if (item.Data[0] != 'a' || item.Data == values[(nuint)0].Data) return 2; }
                 return 0;
             }
             """);
@@ -85,7 +85,7 @@ public sealed class CollectionIterationTests
             int main() {
                 Vector<Node^> values = new Vector<Node^>(); values.Add(new^ Node());
                 foreach (Node^ item in values) { GC::Collect(); item.value = 42; }
-                foreach (readonly(Node^) item in values.AsReadOnly()) { GC::Collect(); if (item.value != 42) return 1; }
+                foreach (immutable(Node^) item in values.AsImmutable()) { GC::Collect(); if (item.value != 42) return 1; }
                 return 0;
             }
             """, gc: true);
@@ -96,7 +96,7 @@ public sealed class CollectionIterationTests
             using std;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => malloc(size);
                 public replace void Free(void* pointer) { printf("F"); free(pointer); }
@@ -129,7 +129,7 @@ public sealed class CollectionIterationTests
             class Node { public int value; }
             int main() {
                 Vector<Node^> values = new Vector<Node^>();
-                foreach (readonly(Node^) item in values.AsReadOnly()) item.value = 42;
+                foreach (immutable(Node^) item in values.AsImmutable()) item.value = 42;
                 return 0;
             }
             """, gc: true)));

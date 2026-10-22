@@ -22,7 +22,7 @@ public class NothrowCallEmissionTests
             struct Counter {
                 public int Value;
                 public Counter(int value) nothrow { Value=value; }
-                public copy Counter(readonly(Counter)* source) nothrow { Value=source.Value; }
+                public copy Counter(immutable(Counter)* source) nothrow { Value=source.Value; }
             }
             int main(){Counter first=new(21); Counter second=first; return first.Value+second.Value;}
             """,options:new(){NoStdLib=true});

@@ -62,6 +62,7 @@ public partial class TypeChecker
             ["IsManaged"] = new ConstValue.Boolean(type is ManagedTypeExpression),
             ["IsNullable"] = new ConstValue.Boolean(type is PointerTypeExpression { IsNullable: true } or ManagedTypeExpression { IsNullable: true } or FunctionPointerTypeExpression { IsNullable: true }),
             ["IsReadOnly"] = new ConstValue.Boolean(type.IsReadOnlyValue),
+            ["IsImmutable"] = new ConstValue.Boolean(type.IsImmutableValue),
             ["HasDestructor"] = new ConstValue.Boolean(hasLayout && !isReference && HasDestructor(type)),
             ["ElementType"] = element == null ? new ConstValue.Integer(0) :
                 new ConstValue.Pointer("std$TypeInfo", DescribeResolvedType(element, line)),

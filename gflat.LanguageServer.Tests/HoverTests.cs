@@ -70,19 +70,19 @@ public class HoverTests
     }
 
     [Theory]
-    [InlineData("readonly(char*)")]
-    [InlineData("readonly(char**)")]
-    [InlineData("readonly(char*?)")]
-    [InlineData("readonly(char[4])")]
+    [InlineData("immutable(char*)")]
+    [InlineData("immutable(char**)")]
+    [InlineData("immutable(char*?)")]
+    [InlineData("immutable(char[4])")]
     [InlineData("readonly(char)*")]
-    [InlineData("readonly(char*)*")]
-    [InlineData("readonly(char^)")]
+    [InlineData("immutable(char*)*")]
+    [InlineData("immutable(char^)")]
     public void ReadonlyTypesAvoidRepeatingInheritedQualifications(string type)
     {
         var hover = Hover("void Read(" + type + " mes|sage) {}", true);
         string text = hover.GetProperty("contents").GetProperty("value").GetString()!;
         Assert.Contains(type + " message", text);
-        Assert.DoesNotContain("readonly(readonly", text);
+        Assert.DoesNotContain("immutable(immutable", text);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class HoverTests
     [Fact]
     public void HoveringTheUnderlyingNameStillShowsTheUnderlyingLayout()
     {
-        var text = Hover("struct S { int x; } void F(readonly(|S)*? p) {}").GetProperty("contents").GetProperty("value").GetString();
+        var text = Hover("struct S { int x; } void F(immutable(|S)*? p) {}").GetProperty("contents").GetProperty("value").GetString();
         Assert.Contains("struct S", text);
         Assert.Contains("**Size:** 4 bytes", text);
     }
@@ -103,8 +103,9 @@ public class HoverTests
 
     [Theory]
     [InlineData("struct S {} void F(read|only(S)*? p) {}", "readonly(S)*?", 8)]
-    [InlineData("struct S {} void F(readonly(S)|*? p) {}", "readonly(S)*?", 8)]
-    [InlineData("struct S {} void F(readonly(S)*|? p) {}", "readonly(S)*?", 8)]
+    [InlineData("struct S {} void F(immu|table(S)*? p) {}", "immutable(S)*?", 8)]
+    [InlineData("struct S {} void F(immutable(S)|*? p) {}", "immutable(S)*?", 8)]
+    [InlineData("struct S {} void F(immutable(S)*|? p) {}", "immutable(S)*?", 8)]
     [InlineData("struct S {} void F(S|^? p) {}", "S^?", 8)]
     public void CompoundAnnotationsHaveTheirOwnHover(string source, string type, int size)
     {

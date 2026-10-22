@@ -7,8 +7,8 @@ public sealed class NominalIdentityTests
     [Theory]
     [InlineData("Word")]
     [InlineData("Selected")]
-    [InlineData("readonly(Word)")]
-    [InlineData("readonly(Selected)")]
+    [InlineData("immutable(Word)")]
+    [InlineData("immutable(Selected)")]
     public void ResolvedGlobalArgumentsCannotBeCapturedByNestedNames(string argument)
     {
         string source = $$"""
@@ -81,7 +81,7 @@ public sealed class NominalIdentityTests
 
     [Theory]
     [InlineData("Selected")]
-    [InlineData("readonly(Selected)")]
+    [InlineData("immutable(Selected)")]
     public void NominalContractViewsRemainRestrictedAfterGenericSubstitution(string selected)
     {
         string source = $$"""

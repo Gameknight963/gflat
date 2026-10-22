@@ -100,7 +100,7 @@ public sealed class HierarchySignatureContextTests
     {
         const string source = """
             namespace Library {
-                alias Text=readonly(char*);
+                alias Text=immutable(char*);
                 class Base { public virtual Text Read()=>"base"; }
                 class Box<T>:Base { public override Text Read()=>"child"; }
             }

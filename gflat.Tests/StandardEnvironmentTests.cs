@@ -54,7 +54,7 @@ public sealed class StandardEnvironmentTests
             int main() {
                 readonly(char)*? value = Environment::GetVariable("GFLAT_STD_PRESENT");
                 if (value == null) return 1;
-                readonly(char*) expected = "value with spaces";
+                immutable(char*) expected = "value with spaces";
                 for (int i = 0; i < 17; i++) if (value![i] != expected[i]) return 2;
                 if (value![17] != '\0') return 3;
                 readonly(char)*? empty = Environment::GetVariable("GFLAT_STD_EMPTY");

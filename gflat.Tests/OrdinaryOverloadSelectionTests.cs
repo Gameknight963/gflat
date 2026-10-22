@@ -40,7 +40,7 @@ public sealed class OrdinaryOverloadSelectionTests
 
     [Theory]
     [InlineData("int Read(int value)=>1;int Read(int value)=>2;", "cannot differ only")]
-    [InlineData("class Box{public int Read()=>1;public readonly int Read()=>2;}", "cannot differ only")]
+    [InlineData("class Box{public int Read()=>1;public immutable int Read()=>2;}", "cannot differ only")]
     [InlineData("extern int Read(int value);int Read(int value)=>value;", "Duplicate declaration")]
     [InlineData("class Box{public static virtual int Read(int value)=>1;public static int Read(long value)=>2;}", "Static methods cannot")]
     public void OrdinaryGroupsRetainTheirExistingValidation(string declarations, string message)

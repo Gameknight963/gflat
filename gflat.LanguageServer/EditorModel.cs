@@ -236,11 +236,21 @@ public sealed partial class EditorModel
             type = Visible(path, offset, left.Text).FirstOrDefault(s => s.Name == left.Text)?.Type;
         string? owner = TypeOwner(type, path, offset);
         if (left.Text == "this") owner = Owner(ContextParents(path, offset));
-        var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset))
+        var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset) && ReceiverAllowsMember(s, type))
             .Select(member => BindInstanceMember(member, type)).ToArray();
         return members.Concat(ExtensionMembers(path, offset, expression?.Node, type)
             .Where(extension => name == null || extension.Name == name)
             .Where(extension => !members.Any(member => member.Name == extension.Name && IsCallableMember(member))));
+    }
+
+    private static bool ReceiverAllowsMember(Symbol symbol, TypeExpression? receiver)
+    {
+        while (receiver is ReferenceTypeExpression reference) receiver = reference.Inner;
+        receiver = receiver switch { PointerTypeExpression pointer => pointer.Inner, ManagedTypeExpression managed => managed.Inner, _ => receiver };
+        var method = symbol.Syntax.Node switch { MethodDeclaration callable => callable, PropertyDeclaration property => property.Getter, _ => null };
+        if (method == null || receiver == null) return true;
+        if (receiver.IsImmutableValue) return method.IsImmutable;
+        return !receiver.IsReadOnlyValue || method.IsReadOnly;
     }
 
     private HashSet<string?>? ContractOwners(Symbol alias, string path, int offset)
@@ -384,7 +394,7 @@ public sealed partial class EditorModel
                 .Where(s => named.Name == s.Name || named.Name.StartsWith(s.Name + "$", StringComparison.Ordinal))
                 .OrderByDescending(s => s.Name.Length).FirstOrDefault();
             if (internalMatch.Symbol != null && (named.Namespace == null || named.Namespace == internalMatch.Symbol.Namespace)) return internalMatch.Symbol.Qualified;
-            string display = TemplateName(DisplayType(named.WithReadOnlyValue(false)));
+            string display = TemplateName(DisplayType(named.WithoutValueProtection()));
             return symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && (s.Qualified == name || s.Qualified == display))?.Qualified
                 ?? Visible(path, offset, name).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == name)?.Qualified;
         }
@@ -507,8 +517,8 @@ public sealed partial class EditorModel
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
-            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof", "var"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "ref", "copy", "const", "expect", "weak", "replace"];
-            foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly", "managed" }).Distinct())
+            string[] keywords = inBody ? ["if", "else", "for", "foreach", "while", "return", "new", "move", "delete", "defer", "try", "catch", "throw", "this", "null", "true", "false", "sizeof", "alignof", "typeof", "nameof", "var"] : ["namespace", "using", "class", "struct", "interface", "enum", "public", "private", "static", "inline", "extern", "readonly", "immutable", "ref", "copy", "const", "expect", "weak", "replace"];
+            foreach (var word in keywords.Concat(new[] { "void", "bool", "char", "int", "uint", "long", "ulong", "nint", "nuint", "float", "double", "readonly", "immutable", "managed" }).Distinct())
                 items.Add(new { label = word, kind = 14, textEdit = new { range, newText = word } });
             if (index >= 2 && ts[index - 1].Kind == TokenKind.Colon && ts[index - 2].Kind == TokenKind.CloseParen)
                 items.Add(new { label = "base", kind = 14, textEdit = new { range, newText = "base" } });
@@ -650,7 +660,7 @@ public sealed partial class EditorModel
             .SelectMany(p => new[] { (p.Getter, "get"), (p.Setter, "set") })
             .Where(a => a.Item1 != null)
             .Select(a => ts.SkipWhile(t => t.Start < a.Item1!.Span.Start)
-                .SkipWhile(t => t.Kind is TokenKind.Readonly or TokenKind.Public or TokenKind.Private or TokenKind.Protected or TokenKind.Internal)
+                .SkipWhile(t => t.Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Public or TokenKind.Private or TokenKind.Protected or TokenKind.Internal)
                 .FirstOrDefault() is { } t && t.Text == a.Item2 ? t.Start : -1).ToHashSet();
         for (int i = 0; i < ts.Length; i++)
         {

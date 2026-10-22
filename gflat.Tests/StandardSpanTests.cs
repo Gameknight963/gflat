@@ -22,12 +22,12 @@ public class StandardSpanTests
                 if (values[1] != 22 || span.Length != (nuint)4 || slice.Length != (nuint)2) return 1;
                 Span<int> tail = span.Slice(3);
                 if (tail[(nuint)0] != 40) return 2;
-                Span<readonly(int)> view = span.AsReadOnly();
+                Span<readonly(int)> view = span.AsImmutable();
                 Span<readonly(int)> middle = view.Slice(1, 2);
                 span[(nuint)1] = 42;
                 if (middle[(nuint)0] != 42 || middle.Slice(1)[(nuint)0] != 30) return 3;
-                readonly(Span<int>) borrowed = span;
-                Span<readonly(int)> readonlyView = borrowed.AsReadOnly();
+                immutable(Span<int>) borrowed = span;
+                Span<readonly(int)> readonlyView = borrowed.AsImmutable();
                 if (readonlyView[(nuint)1] != 42) return 4;
                 return 0;
             }
@@ -39,14 +39,14 @@ public class StandardSpanTests
             using std;
             int main() {
                 Span<int> empty = new Span<int>();
-                Span<readonly(int)> readonlyEmpty = empty.AsReadOnly();
+                Span<readonly(int)> readonlyEmpty = empty.AsImmutable();
                 if (!empty.IsEmpty || empty.Data != null || !readonlyEmpty.IsEmpty) return 1;
                 Span<int> slice = empty.Slice(0, 0);
                 Span<readonly(int)> roSlice = readonlyEmpty.Slice(0);
                 if (!slice.IsEmpty || !roSlice.IsEmpty) return 2;
                 int[2] values = [1, 2];
                 Span<int> span = new Span<int>(values, 2);
-                Span<readonly(int)> view = span.AsReadOnly();
+                Span<readonly(int)> view = span.AsImmutable();
                 nuint max = (nuint)0 - (nuint)1;
                 int caught = 0;
                 try { empty[(nuint)0]; } catch { caught++; }
@@ -68,9 +68,9 @@ public class StandardSpanTests
         => Run("""
             using std;
             int main() {
-                readonly(Span<readonly(char)>) text = new Span<readonly(char)>("a\0b", 3);
+                immutable(Span<readonly(char)>) text = new Span<readonly(char)>("a\0b", 3);
                 if (text.Length != (nuint)3 || text[(nuint)2] != 'b') return 1;
-                Span<readonly(char)> tail = text.AsReadOnly().Slice(1);
+                Span<readonly(char)> tail = text.AsImmutable().Slice(1);
                 if (tail.Length != (nuint)2 || tail[(nuint)0] != '\0') return 2;
                 return 0;
             }
@@ -87,7 +87,7 @@ public class StandardSpanTests
                 Span<int*> span = new Span<int*>(pointers, 1);
                 int* pointer = span[(nuint)0];
                 *pointer = 7;
-                Span<readonly(int*)> view = span.AsReadOnly();
+                Span<immutable(int*)> view = span.AsImmutable();
                 readonly(int)* borrowed = view[(nuint)0];
                 if (*borrowed != 7) return 1;
                 Pair[1] pairs = [new Pair()];
@@ -96,7 +96,7 @@ public class StandardSpanTests
                 copy.x = 42;
                 if (pairs[0].x != 0) return 2;
                 structs[(nuint)0] = copy;
-                Span<readonly(Pair)> readonlyStructs = structs.AsReadOnly();
+                Span<immutable(Pair)> readonlyStructs = structs.AsImmutable();
                 Pair other = readonlyStructs[(nuint)0];
                 if (other.x != 42) return 3;
                 return 0;
@@ -109,7 +109,7 @@ public class StandardSpanTests
             using std;
             int main() {
                 int n = 0; int*[1] pointers = [&n];
-                Span<readonly(int*)> view = new Span<readonly(int*)>(pointers, 1);
+                Span<immutable(int*)> view = new Span<immutable(int*)>(pointers, 1);
                 int* pointer = view[(nuint)0];
                 return 0;
             }
@@ -163,10 +163,10 @@ public class StandardSpanTests
             """)));
 
     [Theory]
-    [InlineData("readonly(Span<int>) s = new Span<int>(a, 1); s[(nuint)0] = 2;")]
+    [InlineData("immutable(Span<int>) s = new Span<int>(a, 1); s[(nuint)0] = 2;")]
     [InlineData("Span<readonly(int)> s = new Span<readonly(int)>(a, 1); s[(nuint)0] = 2;")]
     [InlineData("Span<readonly(int)> s = new Span<readonly(int)>(a, 1); int* p = s.Data;")]
-    [InlineData("readonly(Span<int>) s = new Span<int>(a, 1); Span<int> mutable = s.Slice(0);")]
+    [InlineData("immutable(Span<int>) s = new Span<int>(a, 1); Span<int> mutable = s.Slice(0);")]
     public void ReadonlyViewsCannotBeUsedToModifyStorage(string body)
         => Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources("using std; int main() { int[1] a = [1]; " + body + " return 0; }")));
 }

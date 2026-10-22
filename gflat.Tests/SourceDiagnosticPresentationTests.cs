@@ -46,8 +46,8 @@ public sealed class SourceDiagnosticPresentationTests
     [Theory]
     [InlineData("class", "int Read() nothrow;", "public int Read()=>0;", "must match nothrow specification of interface method 'Lib::I.Read'")]
     [InlineData("struct", "int Read() nothrow;", "public int Read()=>0;", "must match nothrow specification of interface method 'Lib::I.Read'")]
-    [InlineData("class", "readonly int Read();", "public int Read()=>0;", "must be marked readonly to implement interface method 'Lib::I.Read'")]
-    [InlineData("struct", "readonly int Read();", "public int Read()=>0;", "must be marked readonly to implement interface method 'Lib::I.Read'")]
+    [InlineData("class", "immutable int Read();", "public int Read()=>0;", "must be marked readonly to implement interface method 'Lib::I.Read'")]
+    [InlineData("struct", "immutable int Read();", "public int Read()=>0;", "must be marked readonly to implement interface method 'Lib::I.Read'")]
     [InlineData("class", "int Read(int value);", "public int Read()=>0;", "has 0 parameters, but interface 'Lib::I' expects 1")]
     [InlineData("struct", "int Read(int value);", "public int Read()=>0;", "has 0 parameters, but interface 'Lib::I' expects 1")]
     public void InterfaceModifierAndArityDiagnosticsKeepSourceOwners(string kind, string contract, string implementation, string detail)
@@ -60,13 +60,13 @@ public sealed class SourceDiagnosticPresentationTests
     public void InterfaceParameterErrorsPointIntoTheImplementationsSourceFile(string kind)
     {
         const string contracts = "namespace Contract{public struct Box<T>{public T value;}public interface I{void Read(Box<int>* value);}}";
-        string implementation = $"namespace App{{{kind} Impl<T>:Contract::I{{public void Read(readonly(Contract::Box<long>)* value){{}}}}}}";
+        string implementation = $"namespace App{{{kind} Impl<T>:Contract::I{{public void Read(immutable(Contract::Box<long>)* value){{}}}}}}";
         var diagnostics = Compiler.Analyze([new SourceFile("contract.gf", contracts), new SourceFile("implementation.gf", implementation),
             new SourceFile("caller.gf", "int main(){App::Impl<int> item=new App::Impl<int>();return 0;}")], new() { NoStdLib = true });
         var error = Assert.Single(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
-        Assert.Equal($"Parameter 'value' of method 'Read' in {kind} 'App::Impl<int>' has type 'readonly(Contract::Box<long>)*', but interface 'Contract::I' expects 'Contract::Box<int>*'", error.Message);
+        Assert.Equal($"Parameter 'value' of method 'Read' in {kind} 'App::Impl<int>' has type 'immutable(Contract::Box<long>)*', but interface 'Contract::I' expects 'Contract::Box<int>*'", error.Message);
         Assert.Equal("implementation.gf", error.FilePath);
-        Assert.Equal("readonly(Contract::Box<long>)* value", implementation.Substring(error.Span.Start, error.Span.Length));
+        Assert.Equal("immutable(Contract::Box<long>)* value", implementation.Substring(error.Span.Start, error.Span.Length));
     }
 
     private static void AssertError(string source, string expected, string offending)

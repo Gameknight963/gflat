@@ -180,13 +180,13 @@ public class StandardQueryOwnershipTests
             struct Item {
                 private String text;
                 public Item(String value) { text = move value; live++; }
-                public copy Item(readonly(Item)* source) {
+                public copy Item(immutable(Item)* source) {
                     copies++;
                     text = source.text;
                     if (copies == failAt) throw new Exception("copy");
                     live++;
                 }
-                public nuint Length { readonly get => text.Length; }
+                public nuint Length { immutable get => text.Length; }
                 ~Item() { live--; }
             }
             int main() {

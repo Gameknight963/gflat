@@ -3,7 +3,7 @@ namespace std;
 namespace hash_detail
 {
     // Kept separately because a generic parameter currently has one interface constraint.
-    bool Equal<T : IEquatable<T>>(readonly(T)* left, readonly(T)* right)
+    bool Equal<T : IEquatable<T>>(immutable(T)* left, immutable(T)* right)
         => left.Equals(right);
 }
 
@@ -18,23 +18,23 @@ struct HashMap<K : IHashable, V>
     private nuint used;
 
     public HashMap() { entries = null; states = null; capacity = 0; count = 0; used = 0; }
-    public nuint Count { readonly get nothrow => count; }
-    public nuint Capacity { readonly get nothrow => capacity / 2; }
-    public bool IsEmpty { readonly get nothrow => count == 0; }
+    public nuint Count { immutable get nothrow => count; }
+    public nuint Capacity { immutable get nothrow => capacity / 2; }
+    public bool IsEmpty { immutable get nothrow => count == 0; }
 
-    // Keys are exposed through a readonly view so their hash cannot be changed.
+    // Keys are exposed through a immutable view so their hash cannot be changed.
     public struct Entry
     {
         private K key;
         private V value;
         private nuint hash;
         public Entry(K item, V mapped, nuint code) { key = move item; value = move mapped; hash = code; }
-        public readonly(K)* Key { readonly get => &key; }
-        public ref V Value { get => value; }
-        public readonly(V)* ValueReadOnly { readonly get => &value; }
+        public immutable(K)* Key { immutable get => &key; }
+        public ref V Value { immutable get => value; }
+        public immutable(V)* ValueReadOnly { immutable get => &value; }
     }
 
-    private readonly nuint Locate(readonly(K)* key, nuint hash)
+    private immutable nuint Locate(immutable(K)* key, nuint hash)
     {
         if (capacity == 0) return capacity;
         nuint slot = hash % capacity;
@@ -49,17 +49,17 @@ struct HashMap<K : IHashable, V>
         return capacity;
     }
 
-    public readonly bool ContainsKey(readonly(K)* key)
+    public immutable bool ContainsKey(immutable(K)* key)
         => this.Locate(key, key.GetHashCode()) != capacity;
 
-    public V*? Find(readonly(K)* key)
+    public V*? Find(immutable(K)* key)
     {
         nuint slot = this.Locate(key, key.GetHashCode());
         if (slot == capacity) return null;
         return &entries![slot].value;
     }
 
-    public readonly readonly(V)*? FindReadOnly(readonly(K)* key)
+    public immutable immutable(V)*? FindReadOnly(immutable(K)* key)
     {
         nuint slot = this.Locate(key, key.GetHashCode());
         if (slot == capacity) return null;
@@ -142,9 +142,9 @@ struct HashMap<K : IHashable, V>
         this.Add(move key, move value);
     }
 
-    public ref V this[readonly(K)* key]
+    public ref V this[immutable(K)* key]
     {
-        get
+        immutable get
         {
             nuint slot = this.Locate(key, key.GetHashCode());
             if (slot == capacity) throw new Exception("HashMap key not found");
@@ -152,7 +152,7 @@ struct HashMap<K : IHashable, V>
         }
     }
 
-    public bool Remove(readonly(K)* key)
+    public bool Remove(immutable(K)* key)
     {
         nuint slot = this.Locate(key, key.GetHashCode());
         if (slot == capacity) return false;
@@ -163,7 +163,7 @@ struct HashMap<K : IHashable, V>
     }
 
     // Transfer both owners out of the occupied slot, leaving a probe tombstone.
-    public Entry Extract(readonly(K)* key)
+    public Entry Extract(immutable(K)* key)
     {
         nuint slot = this.Locate(key, key.GetHashCode());
         if (slot == capacity) throw new Exception("HashMap key not found");
@@ -183,19 +183,19 @@ struct HashMap<K : IHashable, V>
         count = 0; used = 0;
     }
 
-    public readonly Enumerator GetEnumerator() => new Enumerator(entries, states, capacity);
+    public immutable Enumerator GetEnumerator() => new Enumerator(entries, states, capacity);
 
     ~HashMap() { this.Clear(); if (entries != null) Memory::Free((void*)entries); }
 
     // Enumeration borrows the map; do not mutate or destroy it while enumerating.
     public struct Enumerator
     {
-        private readonly(Entry)*? entries;
+        private immutable(Entry)*? entries;
         private readonly(byte)*? states;
         private nuint capacity;
         private nuint position;
         private bool valid;
-        public Enumerator(readonly(Entry)*? storage, readonly(byte)*? flags, nuint size)
+        public Enumerator(immutable(Entry)*? storage, readonly(byte)*? flags, nuint size)
         { entries = storage; states = flags; capacity = size; position = 0; valid = false; }
         public bool MoveNext()
         {
@@ -204,9 +204,9 @@ struct HashMap<K : IHashable, V>
             valid = position < capacity;
             return valid;
         }
-        public readonly(Entry)* Current
+        public immutable(Entry)* Current
         {
-            readonly get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current entry");
                 return entries! + position;

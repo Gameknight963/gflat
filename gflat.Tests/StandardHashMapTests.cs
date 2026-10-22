@@ -45,8 +45,8 @@ public class StandardHashMapTests
             struct Key : IHashable, IEquatable<Key> {
                 public int id; private int* destroyed;
                 public Key(int n,int* counter) { id=n; destroyed=counter; }
-                public readonly nuint GetHashCode()=>(nuint)(id%3);
-                public readonly bool Equals(readonly(Key)* other)=>id==other.id;
+                public immutable nuint GetHashCode()=>(nuint)(id%3);
+                public immutable bool Equals(immutable(Key)* other)=>id==other.id;
                 ~Key() { (*destroyed)++; }
             }
             struct Value {
@@ -86,8 +86,8 @@ public class StandardHashMapTests
             }
             struct Key : IHashable, IEquatable<Key> {
                 public int id; public Key(int n) { id=n; }
-                public readonly nuint GetHashCode()=>0;
-                public readonly bool Equals(readonly(Key)* other) {
+                public immutable nuint GetHashCode()=>0;
+                public immutable bool Equals(immutable(Key)* other) {
                     if(compareFail) throw new Exception("comparison failed");
                     return id==other.id;
                 }
@@ -114,8 +114,8 @@ public class StandardHashMapTests
             using std;
             struct Key : IHashable, IEquatable<Key> {
                 public int id;
-                public readonly nuint GetHashCode()=>(nuint)id;
-                public readonly bool Equals(readonly(Key)* other)=>id==other.id;
+                public immutable nuint GetHashCode()=>(nuint)id;
+                public immutable bool Equals(immutable(Key)* other)=>id==other.id;
             }
             int main() {
                 HashMap<Key,int> map=new(); map.Add(new Key(),1);
@@ -158,8 +158,8 @@ public class StandardHashMapTests
             struct Key : IHashable, IEquatable<Key> {
                 public int value;
                 public Key(int x) { value=x; }
-                public readonly nuint GetHashCode()=>0;
-                public readonly bool Equals(readonly(Key)* other)=>value==other.value;
+                public immutable nuint GetHashCode()=>0;
+                public immutable bool Equals(immutable(Key)* other)=>value==other.value;
             }
             int main() {
                 HashMap<Key,int> map=new();
@@ -193,7 +193,7 @@ public class StandardHashMapTests
                 HashMap<String,String>::Enumerator e=map.GetEnumerator(); nuint seen=0;
                 while(e.MoveNext()) { if(e.Current.Key.Length==0 || e.Current.ValueReadOnly.Length==0) return 4; seen++; }
                 if(seen!=2) return 5;
-                readonly(HashMap<String,String>)* ro=&map;
+                immutable(HashMap<String,String>)* ro=&map;
                 if(ro.FindReadOnly(&key)==null || !ro.ContainsKey(&key)) return 6;
                 if(!map.Remove(&key) || map.Find(&key)!=null) return 7;
                 return 0;

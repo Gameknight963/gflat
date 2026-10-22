@@ -20,7 +20,7 @@ public sealed class StandardPriorityQueueFailureTests
             public Item(int priority){Priority=priority;Text=s"owned";made++;}
             ~Item(){dead++;}
         }
-        int Compare(readonly(Item)* left,readonly(Item)* right){
+        int Compare(immutable(Item)* left,immutable(Item)* right){
             int index=calls;calls++;if(index==failAt)throw new Exception("comparison");
             return left.Priority-right.Priority;
         }
@@ -42,7 +42,7 @@ public sealed class StandardPriorityQueueFailureTests
                 if(comparisons<4)return 1;
                 for(int failure=0;failure<comparisons;failure++){
                     PriorityQueue<Item> items=new(Compare);Fill(&items);
-                    readonly(Item)* saved=&items.Top;int memory=allocations-releases;int destroyed=dead;
+                    immutable(Item)* saved=&items.Top;int memory=allocations-releases;int destroyed=dead;
                     calls=0;failAt=failure;bool caught=false;
                     try{items.Enqueue(new Item(-1));}catch{caught=true;}
                     failAt=-1;
@@ -67,7 +67,7 @@ public sealed class StandardPriorityQueueFailureTests
                 for(int failure=0;failure<comparisons;failure++){
                     PriorityQueue<Item> items=new(Compare);Fill(&items);Item output=new Item(99);
                     readonly(char)*? outputData=output.Text.Data;
-                    readonly(Item)* saved=&items.Top;int memory=allocations-releases;int destroyed=dead;
+                    immutable(Item)* saved=&items.Top;int memory=allocations-releases;int destroyed=dead;
                     calls=0;failAt=failure;bool caught=false;
                     try{if(useTry==1)items.TryDequeue(ref output);else items.Dequeue();}catch{caught=true;}
                     failAt=-1;
@@ -88,7 +88,7 @@ public sealed class StandardPriorityQueueFailureTests
         => Run(Prelude+"""
             int main(){ {
                 PriorityQueue<Item> items=new(Compare);items.Reserve(31);Fill(&items);
-                readonly(Item)* saved=&items.Top;int memory=allocations-releases;
+                immutable(Item)* saved=&items.Top;int memory=allocations-releases;
                 Item incoming=new Item(-1);int destroyed=dead;
                 calls=0;failAllocation=true;bool caught=false;
                 try{items.Enqueue(move incoming);}catch{caught=true;}

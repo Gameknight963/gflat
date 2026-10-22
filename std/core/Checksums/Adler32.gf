@@ -22,5 +22,5 @@ public struct Adler32
         }
     }
 
-    public readonly uint GetValue() nothrow => (second << 16) | first;
+    public immutable uint GetValue() nothrow => (second << 16) | first;
 }

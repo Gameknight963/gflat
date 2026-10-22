@@ -3,7 +3,7 @@ namespace std;
 // Owning String conveniences, kept separate from the caller-buffer codec.
 public static class Base64Text
 {
-    public static String Encode(readonly(char*) data, nuint count)
+    public static String Encode(immutable(char*) data, nuint count)
     {
         nuint length = 0;
         if (!Base64::TryGetEncodedLength(count, ref length)) throw new Exception("Base64 length overflow");
@@ -23,7 +23,7 @@ public static class Base64Text
         return move result;
     }
 
-    public static String Decode(readonly(char*) text, nuint count)
+    public static String Decode(immutable(char*) text, nuint count)
     {
         nuint length = 0;
         if (!Base64::TryGetDecodedLength(text, count, ref length)) throw new Exception("Invalid Base64");

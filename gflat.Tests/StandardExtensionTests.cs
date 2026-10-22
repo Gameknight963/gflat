@@ -70,7 +70,7 @@ public sealed class StandardExtensionTests
             using std;
             extern void* malloc(nuint size);
             extern void free(void* storage);
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
                 public replace void Free(void* storage) { free(storage); }

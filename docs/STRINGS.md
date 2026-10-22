@@ -20,11 +20,12 @@ Search, indexing, slicing, and removal use byte offsets. They do not split on
 Unicode character boundaries automatically. UTF-8 validation and scalar decoding
 are available separately through `std::Utf8`.
 
-The optional `StringSpan.gf` source adds `text.AsSpan()` and `text.AsReadOnly()`.
-Both borrow exactly `Length` bytes, including embedded zeros, without copying the
+The optional `StringSpan.gf` source adds `text.AsSpan()`, `text.AsReadOnly()`, and
+`text.AsImmutable()`. All borrow exactly `Length` bytes, including embedded zeros, without copying the
 owner or allocating. `AsSpan` requires a mutable `ref String` receiver and returns
-`Span<char>`; `AsReadOnly` accepts `ref readonly(String)` and returns
-`Span<readonly(char)>`. Temporary owners are rejected. Empty views have null data,
+`Span<char>`. `AsReadOnly` accepts `ref readonly(String)`; `AsImmutable` accepts
+`ref immutable(String)`. Both return `Span<readonly(char)>`: shallow and deep
+protection are equivalent for individual characters. Temporary owners are rejected. Empty views have null data,
 even when the String retains an allocation; neither spare capacity nor the shared
 empty sentinel or trailing terminator is exposed through these views.
 

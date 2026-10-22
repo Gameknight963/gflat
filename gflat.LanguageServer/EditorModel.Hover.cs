@@ -117,7 +117,8 @@ public sealed partial class EditorModel
         if (symbol.Syntax.Node is MethodDeclaration method)
         {
             if (method.IsStatic) Keyword("static");
-            if (method.IsReadOnly) Keyword("readonly");
+            if (method.IsImmutable) Keyword("immutable");
+            else if (method.IsReadOnly) Keyword("readonly");
             if (method.IsConst) Keyword("const");
             if (method.IsAbstract) Keyword("abstract");
             if (method.IsVirtual) Keyword("virtual");
@@ -184,13 +185,15 @@ public sealed partial class EditorModel
             if (property.Getter != null)
             {
                 if (property.Getter.Accessibility != symbol.Access) Keyword(property.Getter.Accessibility.ToString().ToLowerInvariant());
-                if (property.Getter.IsReadOnly) Keyword("readonly");
+                if (property.Getter.IsImmutable) Keyword("immutable");
+                else if (property.Getter.IsReadOnly) Keyword("readonly");
                 Add("get", "keyword"); Add("; ", "punctuation");
             }
             if (property.Setter != null)
             {
                 if (property.Setter.Accessibility != symbol.Access) Keyword(property.Setter.Accessibility.ToString().ToLowerInvariant());
-                if (property.Setter.IsReadOnly) Keyword("readonly");
+                if (property.Setter.IsImmutable) Keyword("immutable");
+                else if (property.Setter.IsReadOnly) Keyword("readonly");
                 Add("set", "keyword"); Add("; ", "punctuation");
             }
             Add("}", "punctuation");
@@ -322,7 +325,7 @@ public sealed partial class EditorModel
             var target = token.Kind == TokenKind.Identifier ? TypeSymbol(string.Concat(lexed[first..(i + 1)].Select(t => t.Text)), context) : null;
             if (target == null && token.Kind == TokenKind.Identifier)
                 target = Visible(path, offset).FirstOrDefault(s => (s.IsTypeParameter || IsType(s.Syntax.Node)) && s.Name == token.Text);
-            parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind is TokenKind.Readonly or TokenKind.Managed ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation"), token.Text, Target: SymbolLocation(target)));
+            parts.Add(new(target?.Classification ?? (TypeChecker.IsPrimitive(token.Text) || token.Kind is TokenKind.Readonly or TokenKind.Immutable or TokenKind.Managed ? "keyword" : token.Kind == TokenKind.Identifier ? "type" : char.IsDigit(token.Text.FirstOrDefault()) ? "number" : "punctuation"), token.Text, Target: SymbolLocation(target)));
             cursor = token.End + 1;
         }
         return parts.ToArray();

@@ -14,9 +14,9 @@ public sealed class UnqualifiedStaticMemberTests
         var result = CompilerTestHelper.Run($$"""
             {{kind}} Sample {
                 private static int Helper(int value) => value + 1;
-                public readonly int Read() => Helper(41);
+                public immutable int Read() => Helper(41);
             }
-            int main(){Sample value=new();readonly(Sample)* read=&value;return read.Read()-42;}
+            int main(){Sample value=new();immutable(Sample)* read=&value;return read.Read()-42;}
             """, optimization);
         Assert.Equal(0, result.ExitCode);
     }
@@ -50,9 +50,9 @@ public sealed class UnqualifiedStaticMemberTests
                 private const int Bias=0;
                 private static int Helper(int value)=>value+1;
                 private static int Helper(long value)=>(int)value;
-                public readonly int Read()=>Helper(40)+Helper(1l)+Bias;
+                public immutable int Read()=>Helper(40)+Helper(1l)+Bias;
             }
-            int main(){Sample value=new();readonly(Sample)* read=&value;return read.Read()-42;}
+            int main(){Sample value=new();immutable(Sample)* read=&value;return read.Read()-42;}
             """, optimization);
         Assert.Equal(0, result.ExitCode);
     }
@@ -63,7 +63,7 @@ public sealed class UnqualifiedStaticMemberTests
     public void InstanceMutationAndPrivateConstantAccessRemainRestricted(string kind)
     {
         Assert.Throws<TypeCheckException>(() => Compiler.Check($$"""
-            {{kind}} Sample{private int Helper()=>42;public readonly int Read()=>Helper();}
+            {{kind}} Sample{private int Helper()=>42;public immutable int Read()=>Helper();}
             """));
         Assert.Throws<TypeCheckException>(() => Compiler.Check($$"""
             {{kind}} Sample{private const int Limit=42;}int main()=>Sample::Limit;

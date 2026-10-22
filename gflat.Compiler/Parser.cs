@@ -265,6 +265,7 @@ namespace gflat
             TokenKind accessibility = TokenKind.Public; // default for free functions
             Token? firstAccessibility = null;
             bool isReadonly = false;
+            bool isImmutable = false;
             bool isConst = false;
             bool isAbstract = false;
             bool isInline = false;
@@ -281,10 +282,11 @@ namespace gflat
                 {
                     ParseAccessibilityModifier(ref accessibility, ref firstAccessibility);
                 }
-                else if (Check(TokenKind.Readonly) && Peek().Kind != TokenKind.OpenParen && !isReadonly)
+                else if (Current.Kind is TokenKind.Readonly or TokenKind.Immutable && Peek().Kind != TokenKind.OpenParen)
                 {
+                    if (isReadonly) throw new TypeCheckException("Use exactly one of readonly or immutable", Current.Span);
+                    isImmutable = Consume().Kind == TokenKind.Immutable;
                     isReadonly = true;
-                    Consume();
                 }
                 else if (Check(TokenKind.Const))
                 {
@@ -357,7 +359,7 @@ namespace gflat
             {
                 if (isAbstract) RejectDeclarationModifier(modifierStart, modifierEnd, TokenKind.Abstract,
                     "Namespace functions cannot be abstract");
-                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, false, false, false, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect));
+                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, false, false, false, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect, isImmutable: isImmutable));
             }
 
             if (Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater))
@@ -393,7 +395,7 @@ namespace gflat
                 bool invalid = modifier.Kind switch {
                     TokenKind.Static => destructor || copy,
                     TokenKind.Const => destructor,
-                    TokenKind.Readonly or TokenKind.Override or TokenKind.Abstract => true,
+                    TokenKind.Readonly or TokenKind.Immutable or TokenKind.Override or TokenKind.Abstract => true,
                     TokenKind.Virtual => !destructor,
                     _ => false
                 };
@@ -413,7 +415,7 @@ namespace gflat
             {
                 Token modifier = _tokens[i];
                 bool invalid = modifier.Kind switch {
-                    TokenKind.Const or TokenKind.Readonly or TokenKind.Virtual or TokenKind.Override => true,
+                    TokenKind.Const or TokenKind.Readonly or TokenKind.Immutable or TokenKind.Virtual or TokenKind.Override => true,
                     TokenKind.Abstract => declaration is not (TokenKind.Class or TokenKind.Interface),
                     TokenKind.Static => declaration == TokenKind.Alias,
                     _ => false
@@ -718,6 +720,7 @@ namespace gflat
             int modifierStart = _pos;
             bool isConst = false;
             bool isReadonly = false;
+            bool isImmutable = false;
             bool isVirtual = false;
             bool isOverride = false;
             bool isAbstract = false;
@@ -733,7 +736,12 @@ namespace gflat
                 { ParseAccessibilityModifier(ref accessibility, ref firstAccessibility); }
                 else if (Check(TokenKind.Static)) { isStatic = true; Consume(); }
                 else if (Check(TokenKind.Const)) { isConst = true; Consume(); }
-                else if (Check(TokenKind.Readonly) && Peek().Kind != TokenKind.OpenParen && !isReadonly) { isReadonly = true; Consume(); }
+                else if (Current.Kind is TokenKind.Readonly or TokenKind.Immutable && Peek().Kind != TokenKind.OpenParen)
+                {
+                    if (isReadonly) throw new TypeCheckException("Use exactly one of readonly or immutable", Current.Span);
+                    isImmutable = Consume().Kind == TokenKind.Immutable;
+                    isReadonly = true;
+                }
                 else if (Check(TokenKind.Virtual)) { fieldModifier ??= Current; isVirtual = true; Consume(); }
                 else if (Check(TokenKind.Override)) { fieldModifier ??= Current; isOverride = true; Consume(); }
                 else if (Check(TokenKind.Abstract)) { fieldModifier ??= Current; isAbstract = true; Consume(); }
@@ -852,7 +860,7 @@ namespace gflat
                     throw new TypeCheckException("Indexers must be instance properties and cannot be const, weak, or replace", line);
                 if (indices.Any(p => p.IsConst || p.Name == "value"))
                     throw new TypeCheckException("Indexer parameters cannot be const or named 'value' (reserved for the setter)", line);
-                return Finish(ParseProperty(type, "$index", accessibility, false, isVirtual, isOverride, isAbstract, isReadonly, line, indices, isRef));
+                return Finish(ParseProperty(type, "$index", accessibility, false, isVirtual, isOverride, isAbstract, isReadonly, line, indices, isRef, isImmutable));
             }
 
             name = Expect(TokenKind.Identifier).Text;
@@ -864,13 +872,13 @@ namespace gflat
 
             // if followed by ( it's a method, otherwise a field
             if (Check(TokenKind.OpenParen))
-                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect));
+                return Finish(ParseMethodDeclaration(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadonly, isConst, attributes, genericParams, allowMissingBody: implementation == FunctionImplementationKind.Expect, isImmutable: isImmutable));
 
             if (Check(TokenKind.OpenBrace) || Check(TokenKind.EqualsGreater))
             {
                 if (genericParams.Count != 0 || implementation != FunctionImplementationKind.Ordinary || isConst)
                     throw new TypeCheckException("Properties cannot be generic, const, weak, or replace", line);
-                return Finish(ParseProperty(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, isReadonly, line, isRef: isRef));
+                return Finish(ParseProperty(type, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, isReadonly, line, isRef: isRef, isImmutable: isImmutable));
             }
 
             ValidateFieldModifiers(fieldModifier, genericStart);
@@ -878,14 +886,14 @@ namespace gflat
         }
 
         private PropertyDeclaration ParseProperty(TypeExpression type, string name, TokenKind accessibility,
-            bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, bool isReadonly, int line, List<Parameter>? indices = null, bool isRef = false)
+            bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, bool isReadonly, int line, List<Parameter>? indices = null, bool isRef = false, bool isImmutable = false)
         {
             MethodDeclaration Accessor(bool getter, TokenKind access, BlockStatement? body, int accessorLine) =>
                 new MethodDeclaration((getter ? "$get$" : "$set$") + name,
                     getter ? type : new NamedTypeExpression("void", null, line),
                     (indices ?? new List<Parameter>()).Concat(getter ? Array.Empty<Parameter>() : new[] { new Parameter("value", type, accessorLine) }).ToList(),
                     body, access, isStatic, isVirtual, isOverride, isAbstract, accessorLine, isReadonly)
-                { PropertyName = name };
+                { PropertyName = name, IsImmutable = isImmutable };
 
             if (Check(TokenKind.EqualsGreater))
             {
@@ -910,7 +918,12 @@ namespace gflat
                         accessibility == TokenKind.Public && access is TokenKind.Protected or TokenKind.Internal;
                     if (!narrower) throw new TypeCheckException("An accessor must be more restrictive than its property", start.Line);
                 }
-                bool accessorReadOnly = Match(TokenKind.Readonly);
+                bool accessorImmutable = Match(TokenKind.Immutable);
+                bool accessorReadOnly = accessorImmutable || Match(TokenKind.Readonly);
+                if (Current.Kind is TokenKind.Readonly or TokenKind.Immutable)
+                    throw new TypeCheckException("Use exactly one of readonly or immutable", Current.Span);
+                if (isImmutable && accessorReadOnly && !accessorImmutable)
+                    throw new TypeCheckException("An immutable property cannot have a shallow readonly accessor", start.Span);
                 Token keyword = Expect(TokenKind.Identifier);
                 bool getter = keyword.Text == "get";
                 if (!getter && keyword.Text != "set")
@@ -933,7 +946,7 @@ namespace gflat
                 if (accessorReadOnly)
                     method = new MethodDeclaration(method.Name, method.ReturnType, method.Parameters, method.Body,
                         method.Accessibility, method.IsStatic, method.IsVirtual, method.IsOverride, method.IsAbstract,
-                        method.Line, isReadOnly: true) { PropertyName = name };
+                        method.Line, isReadOnly: true) { PropertyName = name, IsImmutable = isImmutable || accessorImmutable };
                 method.Span = start.Source?.Span(start.Start, _tokens[_pos - 1].End + 1 - start.Start) ?? start.Span;
                 if (!getter) method.Parameters[^1].Span = keyword.Span;
                 method.IsNoThrow = isNoThrow;
@@ -1151,9 +1164,9 @@ namespace gflat
             return new OperatorDeclaration(opToken.Kind, opSymbol, returnType, parameters, body, accessibility, isStatic, line);
         }
 
-        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool allowMissingBody = false) => Located(() => ParseMethodDeclarationCoreLocated(returnType, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, allowMissingBody));
+        private MethodDeclaration ParseMethodDeclaration(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool allowMissingBody = false, bool isImmutable = false) => Located(() => ParseMethodDeclarationCoreLocated(returnType, name, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, allowMissingBody, isImmutable));
 
-        private MethodDeclaration ParseMethodDeclarationCoreLocated(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool allowMissingBody = false)
+        private MethodDeclaration ParseMethodDeclarationCoreLocated(TypeExpression returnType, string name, TokenKind accessibility, bool isStatic, bool isVirtual, bool isOverride, bool isAbstract, int line, bool isReadOnly = false, bool isConst = false, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, bool allowMissingBody = false, bool isImmutable = false)
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
@@ -1181,7 +1194,7 @@ namespace gflat
                 }
                 else body = ParseBodyOrBlock();
             }
-            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, isNoThrow: isNoThrow);
+            return new MethodDeclaration(name, returnType, parameters, body, accessibility, isStatic, isVirtual, isOverride, isAbstract, line, isReadOnly, isConst, attributes, genericParameters, isNoThrow: isNoThrow, isImmutable: isImmutable);
         }
 
         private FieldDeclaration ParseFieldDeclaration(TypeExpression type, string name, TokenKind accessibility, bool isStatic, bool isConst, bool isReadonly, int line) => Located(() => ParseFieldDeclarationCoreLocated(type, name, accessibility, isStatic, isConst, isReadonly, line));
@@ -1193,7 +1206,7 @@ namespace gflat
                 initializer = ParseExpression();
             Expect(TokenKind.Semicolon);
             if (isReadonly)
-                throw new TypeCheckException("Use readonly(T) for a field type; bare readonly is a method modifier", line);
+                throw new TypeCheckException("Use readonly(T) or immutable(T) for a field type; bare receiver modifiers apply to methods", line);
             return new FieldDeclaration(name, type, initializer, accessibility, isConst, isStatic, line, type.IsReadOnlyValue);
         }
 
@@ -1203,12 +1216,14 @@ namespace gflat
         {
             int line = Current.Line;
             TypeExpression type;
-            if (Match(TokenKind.Readonly))
+            if (Current.Kind is TokenKind.Readonly or TokenKind.Immutable)
             {
+                bool immutable = Consume().Kind == TokenKind.Immutable;
                 if (!Check(TokenKind.OpenParen))
-                    throw new TypeCheckException("Use readonly(T) to qualify a type", line);
+                    throw new TypeCheckException("Use readonly(T) or immutable(T) to qualify a type", line);
                 Consume();
-                type = TypeQualifiers.ReadOnly(ParseTypeExpression());
+                TypeExpression qualified = ParseTypeExpression();
+                type = immutable ? TypeQualifiers.Immutable(qualified) : TypeQualifiers.ReadOnly(qualified);
                 Expect(TokenKind.CloseParen);
             }
             else
@@ -1444,7 +1459,7 @@ namespace gflat
             TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
             TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
             TokenKind.Char or TokenKind.ExtraLong or
-            TokenKind.Void or TokenKind.Managed or TokenKind.Identifier or TokenKind.Readonly;
+            TokenKind.Void or TokenKind.Managed or TokenKind.Identifier or TokenKind.Readonly or TokenKind.Immutable;
 
         private bool IsVariableDeclaration()
         {

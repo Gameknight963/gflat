@@ -51,7 +51,9 @@ public sealed partial class EditorModel
                             method.IsRefReturn && !method.IsReadOnly && method.Span == target.Span);
                         if (mutable?.ReturnType is PointerTypeExpression pointer)
                         {
-                            if (actual.IsReadOnlyValue && !pointer.Inner.IsReadOnlyValue)
+                            if (actual.IsImmutableValue && !pointer.Inner.IsImmutableValue)
+                                display = TypeQualifiers.Immutable(display);
+                            else if (actual.IsReadOnlyValue && !pointer.Inner.IsReadOnlyValue)
                                 display = TypeQualifiers.ReadOnly(display);
                         }
                         else display = actual;

@@ -7,7 +7,7 @@ struct Player : IFormattable
     public int score;
     public Player(int value) { score = value; }
 
-    public readonly void Format(ITextWriter* output)
+    public immutable void Format(ITextWriter* output)
     {
         output.Write("Player(score=", 13);
         std::Format(score, output);

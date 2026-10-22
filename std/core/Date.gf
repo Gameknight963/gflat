@@ -46,9 +46,9 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         Date result = new(); result.dayNumber = number; return result;
     }
 
-    public int DayNumber { readonly get nothrow => dayNumber; }
+    public int DayNumber { immutable get nothrow => dayNumber; }
 
-    private readonly void GetParts(ref int year, ref int month, ref int day) nothrow
+    private immutable void GetParts(ref int year, ref int month, ref int day) nothrow
     {
         int remaining = dayNumber;
         int centuries400 = remaining / 146097; remaining %= 146097;
@@ -68,30 +68,30 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
 
     public int Year
     {
-        readonly get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return year; }
+        immutable get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return year; }
     }
     public int Month
     {
-        readonly get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return month; }
+        immutable get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return month; }
     }
     public int Day
     {
-        readonly get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return day; }
+        immutable get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return day; }
     }
 
-    public readonly Date AddDays(int days)
+    public immutable Date AddDays(int days)
     {
         long result = (long)dayNumber + (long)days;
         if (result < 0l || result > (long)MaximumDayNumber) throw new Exception("Date addition is outside the supported range");
         return Date::FromDayNumber((int)result);
     }
 
-    public readonly bool Equals(readonly(Date)* other) nothrow => dayNumber == other.dayNumber;
-    public readonly int CompareTo(readonly(Date)* other) nothrow => dayNumber - other.dayNumber;
-    public readonly nuint GetHashCode() nothrow => (nuint)dayNumber;
+    public immutable bool Equals(immutable(Date)* other) nothrow => dayNumber == other.dayNumber;
+    public immutable int CompareTo(immutable(Date)* other) nothrow => dayNumber - other.dayNumber;
+    public immutable nuint GetHashCode() nothrow => (nuint)dayNumber;
 
     // Fixed invariant ISO spelling, counted bytes without a null terminator.
-    public readonly bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
+    public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         if (capacity < 10) return false;
@@ -108,7 +108,7 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         written = 10; return true;
     }
 
-    public readonly void Format(ITextWriter* output)
+    public immutable void Format(ITextWriter* output)
     {
         char[10] buffer; nuint written = 0;
         this.TryFormat(buffer, 10, ref written);

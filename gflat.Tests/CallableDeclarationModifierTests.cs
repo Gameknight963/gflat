@@ -10,7 +10,7 @@ public sealed class CallableDeclarationModifierTests
             foreach(string modifier in new[]{"readonly","virtual","override","abstract"})
                 yield return [owner,modifier,"S(){}","Constructors cannot be readonly, virtual, override, or abstract"];
             foreach(string modifier in new[]{"static","readonly","virtual","override","abstract"})
-                yield return [owner,modifier,"copy S(readonly(S)* other){}","Copy constructors cannot be static, readonly, virtual, override, or abstract"];
+                yield return [owner,modifier,"copy S(immutable(S)* other){}","Copy constructors cannot be static, readonly, virtual, override, or abstract"];
             foreach(string modifier in new[]{"static","const","readonly","override","abstract"})
                 yield return [owner,modifier,"~S(){}","Destructors cannot be static, const, readonly, override, or abstract"];
         }
@@ -36,8 +36,8 @@ public sealed class CallableDeclarationModifierTests
     }
 
     [Theory]
-    [InlineData("public inline const readonly S(){}","readonly")]
-    [InlineData("public inline const static copy S(readonly(S)* other){}","static")]
+    [InlineData("public inline const immutable S(){}","immutable")]
+    [InlineData("public inline const static copy S(immutable(S)* other){}","static")]
     [InlineData("public inline virtual override ~S(){}","override")]
     public void TheDiagnosticSkipsValidEarlierModifiers(string declaration,string expected)
     {
@@ -54,7 +54,7 @@ public sealed class CallableDeclarationModifierTests
             struct S {
                 public int value;
                 public inline const S(int item){value=item;}
-                public inline copy S(readonly(S)* other){value=other.value+1;}
+                public inline copy S(immutable(S)* other){value=other.value+1;}
             }
             const Literal folded=new Literal(20);
             int main(){S first=new S(21);S second=first;return folded.value+second.value;}

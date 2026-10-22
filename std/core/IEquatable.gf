@@ -3,11 +3,11 @@ namespace std;
 // Primitive equality treats all NaNs as equal and signed zeros as equal.
 interface IEquatable<T>
 {
-    readonly bool Equals(readonly(T)* other);
+    immutable bool Equals(immutable(T)* other);
 
     implementation byte : IEquatable<byte>
     {
-        public readonly bool Equals(readonly(byte)* other)
+        public immutable bool Equals(readonly(byte)* other)
         {
             return *this == *other;
         }
@@ -15,7 +15,7 @@ interface IEquatable<T>
 
     implementation sbyte : IEquatable<sbyte>
     {
-        public readonly bool Equals(readonly(sbyte)* other)
+        public immutable bool Equals(readonly(sbyte)* other)
         {
             return *this == *other;
         }
@@ -23,7 +23,7 @@ interface IEquatable<T>
 
     implementation short : IEquatable<short>
     {
-        public readonly bool Equals(readonly(short)* other)
+        public immutable bool Equals(readonly(short)* other)
         {
             return *this == *other;
         }
@@ -31,7 +31,7 @@ interface IEquatable<T>
 
     implementation ushort : IEquatable<ushort>
     {
-        public readonly bool Equals(readonly(ushort)* other)
+        public immutable bool Equals(readonly(ushort)* other)
         {
             return *this == *other;
         }
@@ -39,7 +39,7 @@ interface IEquatable<T>
 
     implementation int : IEquatable<int>
     {
-        public readonly bool Equals(readonly(int)* other)
+        public immutable bool Equals(readonly(int)* other)
         {
             return *this == *other;
         }
@@ -47,7 +47,7 @@ interface IEquatable<T>
 
     implementation uint : IEquatable<uint>
     {
-        public readonly bool Equals(readonly(uint)* other)
+        public immutable bool Equals(readonly(uint)* other)
         {
             return *this == *other;
         }
@@ -55,7 +55,7 @@ interface IEquatable<T>
 
     implementation long : IEquatable<long>
     {
-        public readonly bool Equals(readonly(long)* other)
+        public immutable bool Equals(readonly(long)* other)
         {
             return *this == *other;
         }
@@ -63,7 +63,7 @@ interface IEquatable<T>
 
     implementation ulong : IEquatable<ulong>
     {
-        public readonly bool Equals(readonly(ulong)* other)
+        public immutable bool Equals(readonly(ulong)* other)
         {
             return *this == *other;
         }
@@ -71,7 +71,7 @@ interface IEquatable<T>
 
     implementation nint : IEquatable<nint>
     {
-        public readonly bool Equals(readonly(nint)* other)
+        public immutable bool Equals(readonly(nint)* other)
         {
             return *this == *other;
         }
@@ -79,7 +79,7 @@ interface IEquatable<T>
 
     implementation nuint : IEquatable<nuint>
     {
-        public readonly bool Equals(readonly(nuint)* other)
+        public immutable bool Equals(readonly(nuint)* other)
         {
             return *this == *other;
         }
@@ -87,7 +87,7 @@ interface IEquatable<T>
 
     implementation char : IEquatable<char>
     {
-        public readonly bool Equals(readonly(char)* other)
+        public immutable bool Equals(readonly(char)* other)
         {
             return *this == *other;
         }
@@ -95,12 +95,12 @@ interface IEquatable<T>
 
     implementation extralong : IEquatable<extralong>
     {
-        public readonly bool Equals(readonly(extralong)* other) => *this == *other;
+        public immutable bool Equals(readonly(extralong)* other) => *this == *other;
     }
 
     implementation bool : IEquatable<bool>
     {
-        public readonly bool Equals(readonly(bool)* other)
+        public immutable bool Equals(readonly(bool)* other)
         {
             return *this == *other;
         }
@@ -108,7 +108,7 @@ interface IEquatable<T>
 
     implementation float : IEquatable<float>
     {
-        public readonly bool Equals(readonly(float)* other)
+        public immutable bool Equals(readonly(float)* other)
         {
             return *this == *other || (*this != *this && *other != *other);
         }
@@ -116,7 +116,7 @@ interface IEquatable<T>
 
     implementation double : IEquatable<double>
     {
-        public readonly bool Equals(readonly(double)* other)
+        public immutable bool Equals(readonly(double)* other)
         {
             return *this == *other || (*this != *this && *other != *other);
         }

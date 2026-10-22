@@ -86,7 +86,7 @@ public sealed class ExtensionEditorTests
     [Fact]
     public void NonCallablePropertiesAndExtensionMethodsBothAppear()
     {
-        const string library = "namespace Extras; int Count(this ref readonly(Box) box) => box.Count;";
+        const string library = "namespace Extras; int Count(this ref immutable(Box) box) => box.Count;";
         var (model, path, offset, _) = Analyze("using Extras; struct Box { public int Count => 42; } int main() { Box b = new Box(); b.|; return 0; }", library);
         var items = Json(model.Completion(path, offset)).GetProperty("items").EnumerateArray()
             .Where(item => item.GetProperty("label").GetString() == "Count").ToArray();
@@ -98,7 +98,7 @@ public sealed class ExtensionEditorTests
     [Fact]
     public void LiteralReceiversHaveCompletionAndNavigation()
     {
-        const string library = "namespace Extras; int Bytes(this readonly(char*) text) => 3;";
+        const string library = "namespace Extras; int Bytes(this immutable(char*) text) => 3;";
         var (model, path, offset, _) = Analyze("using Extras; int main() => \"abc\".By|tes();", library);
         Assert.NotNull(model.Hover(path, offset));
         Assert.Contains("extension-library.gf", Json(model.Definition(path, offset)).ToString());
@@ -117,12 +117,12 @@ public sealed class ExtensionEditorTests
     [Fact]
     public void PointerPointeeCompletionsPreserveReadonly()
     {
-        const string library = "namespace Extras; void Bump(this ref Box box) { box.value++; } int Read(this ref readonly(Box) box) => box.value;";
+        const string library = "namespace Extras; void Bump(this ref Box box) { box.value++; } int Read(this ref immutable(Box) box) => box.value;";
         const string box = "struct Box { public int value; } ";
         var (model, path, offset, _) = Analyze("using Extras; " + box + "void F(Box* p) { p.|; }", library);
         Assert.Contains("Bump", Labels(model.Completion(path, offset)));
         Assert.Contains("Read", Labels(model.Completion(path, offset)));
-        var (readOnly, rp, ro, _) = Analyze("using Extras; " + box + "void F(readonly(Box)* p) { p.|; }", library);
+        var (readOnly, rp, ro, _) = Analyze("using Extras; " + box + "void F(immutable(Box)* p) { p.|; }", library);
         Assert.DoesNotContain("Bump", Labels(readOnly.Completion(rp, ro)));
         Assert.Contains("Read", Labels(readOnly.Completion(rp, ro)));
     }
@@ -134,7 +134,7 @@ public sealed class ExtensionEditorTests
             using Extras;
             struct Box<T> { public T value; public Box(T n) { value = n; } }
             int main() { Box<int> box = new Box<int>(42); return box.Ge|t(); }
-            """, "namespace Extras; T Get<T>(this ref readonly(Box<T>) box) => box.value;");
+            """, "namespace Extras; T Get<T>(this ref immutable(Box<T>) box) => box.value;");
         Assert.Contains("int Extras::Get<int>()", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());
         Assert.NotNull(model.Definition(path, offset));
     }
@@ -203,7 +203,7 @@ public sealed class ExtensionEditorTests
     public void CallableInstanceMembersKeepCompletionAndNavigationPriority()
     {
         const string declaration = "struct Box { public int Read() => 42; } ";
-        const string library = "namespace Extras; int Read(this ref readonly(Box) value) => 1;";
+        const string library = "namespace Extras; int Read(this ref immutable(Box) value) => 1;";
         var (model, path, offset, _) = Analyze("using Extras; " + declaration + "int main() { Box box = new Box(); return box.Re|ad(); }", library);
         Assert.Contains("extension-main.gf", Json(model.Definition(path, offset)).ToString());
         Assert.Contains("Box.Read", Json(model.Hover(path, offset)).GetProperty("contents").GetProperty("value").GetString());

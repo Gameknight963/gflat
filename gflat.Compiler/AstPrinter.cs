@@ -79,7 +79,7 @@ namespace gflat
 
         public void Visit(MethodDeclaration node)
         {
-            Print($"Method: {node.Accessibility} {(node.IsConst ? "const " : "")}{(node.IsReadOnly ? "readonly " : "")}{(node.IsStatic ? "static " : "")}{(node.IsVirtual ? "virtual " : "")}{(node.IsOverride ? "override " : "")}{(node.IsAbstract ? "abstract " : "")}{(node.IsNoThrow ? "nothrow " : "")}{node.Name}");
+            Print($"Method: {node.Accessibility} {(node.IsConst ? "const " : "")}{(node.IsImmutable ? "immutable " : node.IsReadOnly ? "readonly " : "")}{(node.IsStatic ? "static " : "")}{(node.IsVirtual ? "virtual " : "")}{(node.IsOverride ? "override " : "")}{(node.IsAbstract ? "abstract " : "")}{(node.IsNoThrow ? "nothrow " : "")}{node.Name}");
             Indented(() =>
             {
                 Print("ReturnType:");
@@ -273,14 +273,14 @@ namespace gflat
             Indented(() => node.Left.Accept(this));
         }
 
-        public void Visit(NamedTypeExpression node) => Print($"Type: {(node.Namespace != null ? node.Namespace + "::" : "")}{node.Name}");
+        public void Visit(NamedTypeExpression node) => Print($"Type: {(node.IsImmutableValue ? "immutable " : node.IsReadOnlyValue ? "readonly " : "")}{(node.Namespace != null ? node.Namespace + "::" : "")}{node.Name}");
         public void Visit(NestedTypeExpression node)
         {
-            Print($"NestedType: {node.Member}");
+            Print($"NestedType: {(node.IsImmutableValue ? "immutable " : node.IsReadOnlyValue ? "readonly " : "")}{node.Member}");
             Indented(() => node.Parent.Accept(this));
         }
-        public void Visit(PointerTypeExpression node) { Print($"PointerType{(node.IsReadOnly ? " readonly" : "")}{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }
-        public void Visit(ManagedTypeExpression node) { Print($"ManagedType{(node.IsReadOnly ? " readonly" : "")}{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }
+        public void Visit(PointerTypeExpression node) { Print($"PointerType{(node.IsImmutable ? " immutable" : node.IsReadOnly ? " readonly" : "")}{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }
+        public void Visit(ManagedTypeExpression node) { Print($"ManagedType{(node.IsImmutable ? " immutable" : node.IsReadOnly ? " readonly" : "")}{(node.IsNullable ? "?" : "")}"); Indented(() => node.Inner.Accept(this)); }
         public void Visit(ArrayTypeExpression node) { Print($"ArrayType{(node.Size.HasValue ? $"[{node.Size}]" : "[]")}"); Indented(() => node.ElementType.Accept(this)); }
         public void Visit(IndexExpression node)
         {

@@ -8,7 +8,7 @@ public sealed class NonCallableDeclarationModifierTests
     public static IEnumerable<object[]> IgnoredModifiers()
     {
         foreach (string declaration in new[] { "class C{}", "struct S{}", "interface I{}", "enum E{A}", "alias Word=int;" })
-            foreach (string modifier in new[] { "const", "readonly" })
+            foreach (string modifier in new[] { "const", "readonly", "immutable" })
             {
                 yield return ["public " + modifier + " " + declaration, modifier, declaration.Split(' ')[0]];
                 yield return ["namespace Library{ " + modifier + " public " + declaration + " }", modifier, declaration.Split(' ')[0]];
@@ -24,9 +24,9 @@ public sealed class NonCallableDeclarationModifierTests
                     yield return [owner + " Outer<T>{public " + modifier + " " + declaration + "}", modifier, declaration.Split(' ')[0]];
         yield return ["class Outer{public abstract struct Inner{}}", "abstract", "struct"];
         yield return ["class Outer{public const class Inner{}}", "const", "class"];
-        yield return ["class Outer{public readonly enum Inner{A}}", "readonly", "enum"];
-        yield return ["public abstract readonly class C{}", "readonly", "class"];
-        yield return ["public weak readonly alias Selected=int;", "readonly", "alias"];
+        yield return ["class Outer{public immutable enum Inner{A}}", "immutable", "enum"];
+        yield return ["public abstract immutable class C{}", "immutable", "class"];
+        yield return ["public weak immutable alias Selected=int;", "immutable", "alias"];
     }
 
     [Theory]
@@ -59,10 +59,10 @@ public sealed class NonCallableDeclarationModifierTests
             """, options: new() { NoStdLib = true });
 
     [Theory]
-    [InlineData("readonly class C{public int Read(){int later=7;return later;}}", typeof(ClassDeclaration))]
+    [InlineData("immutable class C{public int Read(){int later=7;return later;}}", typeof(ClassDeclaration))]
     [InlineData("const struct C{public int Read(){int later=7;return later;}}", typeof(StructDeclaration))]
     [InlineData("abstract enum C{A} int Read(){int later=7;return later;}", typeof(EnumDeclaration))]
-    [InlineData("readonly alias C=int; int Read(){C later=7;return later;}", typeof(AliasDeclaration))]
+    [InlineData("immutable alias C=int; int Read(){C later=7;return later;}", typeof(AliasDeclaration))]
     public void EditorRecoveryRetainsKnownDeclarationShapeButCompilationRejectsIt(string text, Type declarationType)
     {
         var source = new SourceFile("recover-noncallable-modifier.gf", text);

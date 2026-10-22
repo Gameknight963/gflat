@@ -59,7 +59,7 @@ struct FilteredIntRange : IEnumerable<int, FilteredIntRange::Enumerator>
 
         public int Current
         {
-            readonly get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
                 return current;
@@ -67,17 +67,17 @@ struct FilteredIntRange : IEnumerable<int, FilteredIntRange::Enumerator>
         }
     }
 
-    public inline readonly FilteredIntRange::Enumerator GetEnumerator()
+    public inline immutable FilteredIntRange::Enumerator GetEnumerator()
         => new FilteredIntRange::Enumerator(source.GetEnumerator(), predicate, skip, take);
 
-    public readonly FilteredIntRange Take(int count)
+    public immutable FilteredIntRange Take(int count)
     {
         if (count < 0) throw new Exception("Take count must be nonnegative");
         if (explicitLimit && count > take) count = take;
         return new FilteredIntRange(source, predicate, skip, count);
     }
 
-    public readonly FilteredIntRange Skip(int count)
+    public immutable FilteredIntRange Skip(int count)
     {
         if (count < 0) throw new Exception("Skip count must be nonnegative");
         if (explicitLimit && count > take) count = take;
@@ -89,19 +89,19 @@ struct FilteredIntRange : IEnumerable<int, FilteredIntRange::Enumerator>
         return new FilteredIntRange(source, predicate, skipped, remaining, explicitLimit);
     }
     
-    public readonly int Count()
+    public immutable int Count()
     {
         int count = 0;
         foreach (int value in *this) count++;
         return count;
     }
 
-    public readonly bool Any()
+    public immutable bool Any()
     {
         FilteredIntRange::Enumerator iterator = this.GetEnumerator();
         return iterator.MoveNext();
     }
-    public readonly long Sum()
+    public immutable long Sum()
     {
         long sum = 0;
         foreach (int value in *this) sum += (long)value;

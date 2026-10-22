@@ -13,8 +13,8 @@ public sealed class StandardBitSetRangeTests
         var random = new Random(91207);
         var source = new StringBuilder("""
             using std;
-            extern int puts(readonly(char*) message);
-            bool Matches(readonly(BitSet)* bits, readonly(uint)* words, nuint count) {
+            extern int puts(immutable(char*) message);
+            bool Matches(immutable(BitSet)* bits, readonly(uint)* words, nuint count) {
                 if (bits.CountSetBits() != count) return false;
                 for (nuint i = 0; i < bits.Length; i++) {
                     bool expected = (words[i / 32] & ((uint)1 << (int)(i % 32))) != (uint)0;

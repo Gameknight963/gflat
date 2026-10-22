@@ -10,7 +10,7 @@ public sealed class UnhandledHookContractTests
     [InlineData("private void Unhandled(Exception*? error) {}")]
     [InlineData("public void Unhandled(Exception* error) {}")]
     [InlineData("public void Unhandled(ref Exception error) {}")]
-    [InlineData("public void Unhandled(readonly(Exception*?) error) {}")]
+    [InlineData("public void Unhandled(immutable(Exception*?) error) {}")]
     [InlineData("public void Unhandled<T>(Exception*? error) {}")]
     public void InvalidUnhandledContractsHaveASourceDiagnostic(string method)
     {

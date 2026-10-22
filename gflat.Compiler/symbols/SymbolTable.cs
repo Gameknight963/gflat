@@ -125,7 +125,7 @@ namespace gflat.symbols
         public TypeExpression ResolveAliasDirect(TypeExpression type)
         {
             var resolved = ResolveAliasDirectCore(type);
-            return type.IsReadOnlyValue ? TypeQualifiers.ReadOnly(resolved) : resolved;
+            return resolved.WithQualifiersFrom(type);
         }
         private TypeExpression ResolveAliasDirectCore(TypeExpression type)
         {

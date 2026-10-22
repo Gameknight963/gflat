@@ -12,7 +12,7 @@ public sealed class ConstructorNameSyntaxTests
     [InlineData("S()*")]
     [InlineData("Other::S")]
     [InlineData("S<int>")]
-    [InlineData("readonly(S)")]
+    [InlineData("immutable(S)")]
     public void ConstructorsRequirePlainNames(string name)
     {
         string source = "class S{public " + name + "(){}}int main()=>0;";
@@ -33,7 +33,7 @@ public sealed class ConstructorNameSyntaxTests
     [Theory]
     [InlineData("class S{public S(){}}int main()=>0;")]
     [InlineData("class S{public const S(){}}int main()=>0;")]
-    [InlineData("struct S{public copy S(readonly(S)* source){}}int main()=>0;")]
+    [InlineData("struct S{public copy S(immutable(S)* source){}}int main()=>0;")]
     [InlineData("class S{static S(){}}int main()=>0;")]
     public void ExistingConstructorFormsKeepTheirSyntax(string source)
         => Assert.Empty(Compiler.Analyze([new SourceFile("valid-constructor.gf", source)], new() { NoStdLib = true }));

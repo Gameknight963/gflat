@@ -21,7 +21,7 @@ public sealed class StandardSpanSearchTests
                 Span<int> mutable = new((int*)data,12);
                 for(nuint start=0;start<=12;start++) {
                     for(nuint length=0;length<=12-start;length++) {
-                        Span<readonly(int)> values=mutable.AsReadOnly().Slice(start,length);
+                        Span<readonly(int)> values=mutable.AsImmutable().Slice(start,length);
                         for(int key=-1;key<=10;key++) {
                             nuint first=length; nuint last=length;
                             for(nuint i=0;i<length;i++) if(data[start+i]==key) {
@@ -44,7 +44,7 @@ public sealed class StandardSpanSearchTests
                 }
                 mutable[0]=42;
                 int changed=42;
-                if(IndexOf<int>(mutable.AsReadOnly(),&changed,Equal)!=0) return 6;
+                if(IndexOf<int>(mutable.AsImmutable(),&changed,Equal)!=0) return 6;
                 return 0;
             }
             """, optimization, "EqualityComparer.gf");
@@ -64,7 +64,7 @@ public sealed class StandardSpanSearchTests
             public Item(int key) { Key=key; Name=s"owned"; }
             ~Item() { destroyed++; }
         }
-        bool Equal(readonly(Item)* a,readonly(Item)* b) {
+        bool Equal(immutable(Item)* a,immutable(Item)* b) {
             calls++;
             if(failAt!=0 && calls==failAt) throw new Exception("comparison failed");
             return a.Key==b.Key && a.Name.Equals(&b.Name);
@@ -80,7 +80,7 @@ public sealed class StandardSpanSearchTests
                 {
                     Vector<Item> items=new();
                     items.Add(new Item(2));items.Add(new Item(3));items.Add(new Item(2));
-                    Span<readonly(Item)> values=items.AsReadOnly();
+                    Span<immutable(Item)> values=items.AsImmutable();
                     int before=allocations; int freed=releases;
                     for(int i=0;i<100;i++) {
                         if(IndexOf<Item>(values,&items[2],Equal)!=0) return 1;
@@ -104,9 +104,9 @@ public sealed class StandardSpanSearchTests
                 {
                     Vector<Item> items=new();
                     items.Add(new Item(1));items.Add(new Item(2));items.Add(new Item(3));
-                    Span<readonly(Item)> values=items.AsReadOnly();
+                    Span<immutable(Item)> values=items.AsImmutable();
                     failAt=1;
-                    Span<readonly(Item)> empty=new();
+                    Span<immutable(Item)> empty=new();
                     if(IndexOf<Item>(empty,&items[0],Equal)!=0 || LastIndexOf<Item>(empty,&items[0],Equal)!=0) return 1;
                     if(Contains<Item>(empty,&items[0],Equal) || calls!=0) return 2;
                     failAt=2; calls=0;

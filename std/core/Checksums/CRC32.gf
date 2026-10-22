@@ -23,5 +23,5 @@ public struct CRC32
     }
 
     // Returns the finalized numeric checksum without changing the streaming state.
-    public readonly uint GetValue() nothrow => state ^ 0xffffffffu;
+    public immutable uint GetValue() nothrow => state ^ 0xffffffffu;
 }

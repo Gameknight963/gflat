@@ -3,7 +3,7 @@ namespace std;
 // Owning String conveniences kept separate from the nothrow buffer codec.
 public static class PercentEncodingText
 {
-    public static String Encode(readonly(char*) data, nuint count)
+    public static String Encode(immutable(char*) data, nuint count)
     {
         nuint length = 0;
         if (!PercentEncoding::TryGetEncodedLength(data, count, ref length)) throw new Exception("Percent-encoded length overflow");
@@ -19,7 +19,7 @@ public static class PercentEncodingText
         return move result;
     }
 
-    public static String Decode(readonly(char*) text, nuint count)
+    public static String Decode(immutable(char*) text, nuint count)
     {
         nuint length = 0;
         if (!PercentEncoding::TryGetDecodedLength(text, count, ref length)) throw new Exception("Invalid percent encoding");

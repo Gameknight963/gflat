@@ -12,3 +12,9 @@ public Span<readonly(char)> AsReadOnly(this ref readonly(String) value)
     if (value.Length == 0) return new Span<readonly(char)>();
     return new Span<readonly(char)>(value.Data, value.Length);
 }
+
+public Span<readonly(char)> AsImmutable(this ref immutable(String) value)
+{
+    if (value.Length == 0) return new Span<readonly(char)>();
+    return new Span<readonly(char)>(value.Data, value.Length);
+}

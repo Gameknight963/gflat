@@ -79,7 +79,7 @@ public sealed class ConstantAggregateCopyTests
             struct Number {
                 public int value;
                 public const Number(int input) { value = input; }
-                public copy Number(readonly(Number)* source) { value = source.value + 1; }
+                public copy Number(immutable(Number)* source) { value = source.value + 1; }
             }
             Number original = new Number(7);
             """;
@@ -93,7 +93,7 @@ public sealed class ConstantAggregateCopyTests
             struct Number {
                 public int value;
                 public const Number(int input) { value = input; }
-                public copy Number(readonly(Number)* source) { value = source.value + 1; }
+                public copy Number(immutable(Number)* source) { value = source.value + 1; }
             }
             const int Fold() { Number value = new Number(7); return value.value; }
             int main() {
@@ -111,7 +111,7 @@ public sealed class ConstantAggregateCopyTests
             struct Number {
                 public int value;
                 public const Number(int input) { value = input; }
-                public copy Number(readonly(Number)* source) { value = source.value + 1; }
+                public copy Number(immutable(Number)* source) { value = source.value + 1; }
             }
             const int Fold() {
                 Number[1] values = [new Number(7)];

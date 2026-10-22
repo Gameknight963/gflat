@@ -11,7 +11,7 @@ public sealed class ReadonlyAutoPropertyTests
     [InlineData("struct")]
     public void GenericReadonlyResultsKeepPropertyTypingAndNavigationAcrossFiles(string kind)
     {
-        string declaration = "namespace Lib { public " + kind + " Box<T>{public readonly(T) Value{get;set;} public Box(T value){Value=value;}}}";
+        string declaration = "namespace Lib { public " + kind + " Box<T>{public immutable(T) Value{get;set;} public Box(T value){Value=value;}}}";
         const string usage = "int main(){Lib::Box<int> box=new Lib::Box<int>(42);return box.Value;}";
         var library = new SourceFile(Path.GetFullPath("readonly-auto-library.gf"), declaration);
         var consumer = new SourceFile(Path.GetFullPath("readonly-auto-consumer.gf"), usage);

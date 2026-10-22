@@ -16,8 +16,8 @@ public sealed class NameofTests
     public void SourceNamesProduceStaticCString(string declarations, string target, string expected)
     {
         var result = CompilerTestHelper.Run(declarations + $$"""
-            extern int printf(readonly(char*) format, ...);
-            int main() { readonly(char*) name = nameof({{target}}); printf("%s", name); return 0; }
+            extern int printf(immutable(char*) format, ...);
+            int main() { immutable(char*) name = nameof({{target}}); printf("%s", name); return 0; }
             """);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(expected, result.StandardOutput);
@@ -27,7 +27,7 @@ public sealed class NameofTests
     public void NullableUninitializedAndTypeReceiversDoNotEvaluateMembers()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) format, ...);
+            extern int printf(immutable(char*) format, ...);
             struct S {
                 public int field;
                 public int P { get { throw new Exception(); } }
@@ -35,7 +35,7 @@ public sealed class NameofTests
                 public int F(int n) => n;
                 public int F(char n) => 1;
             }
-            readonly(char*) Name() { S*? p; return nameof(p.field); }
+            immutable(char*) Name() { S*? p; return nameof(p.field); }
             int main() {
                 S s; S*? p = null;
                 printf("%s %s %s %s %s", Name(), nameof(s.P), nameof(p.WriteOnly), nameof(S::F), nameof(p.F));
@@ -62,9 +62,9 @@ public sealed class NameofTests
     public void GenericParameterAndNestedTypeKeepSourceNames()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) format, ...);
+            extern int printf(immutable(char*) format, ...);
             namespace N { public class Outer { public class Inner {} } }
-            readonly(char*) Name<T>(T item) => nameof(T);
+            immutable(char*) Name<T>(T item) => nameof(T);
             int main() { printf("%s %s", Name(1), nameof(N::Outer::Inner)); return 0; }
             """);
         Assert.Equal(0, result.ExitCode);
@@ -106,7 +106,7 @@ public sealed class NameofTests
     {
         var result = CompilerTestHelper.Run([
             new SourceFile("library.gf", "namespace N; public struct Target { public int field; } alias A = Target;"),
-            new SourceFile("main.gf", "struct Target {} extern int printf(readonly(char*) text, ...); int main() { printf(\"%s\", nameof(N::A::field)); return 0; }")
+            new SourceFile("main.gf", "struct Target {} extern int printf(immutable(char*) text, ...); int main() { printf(\"%s\", nameof(N::A::field)); return 0; }")
         ]);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("field", result.StandardOutput);

@@ -91,7 +91,7 @@ public sealed class StandardEnumerableTests
             bool Even(readonly(int) n) => n % 2 == 0;
             int main() {
                 Vector<int> values = new Vector<int>(); values.Add(2); values.Add(4);
-                var query = values.AsReadOnly().AsEnumerable().Where(Even);
+                var query = values.AsImmutable().AsEnumerable().Where(Even);
                 if (query.Count() != 2 || query.First() != 2 || query.Last() != 4) return 1;
                 if (query.Take(1).Single() != 2) return 2;
                 return 0;

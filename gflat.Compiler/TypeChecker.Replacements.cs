@@ -106,7 +106,7 @@ public partial class TypeChecker
     {
         using var context = SourceContext.Enter(method.Span);
         if (type.IsReadOnlyValue)
-            return "readonly(" + SignatureType(type.WithReadOnlyValue(false), method) + ")";
+            return (type.IsImmutableValue ? "immutable(" : "readonly(") + SignatureType(type.WithoutValueProtection(), method) + ")";
         if (type is NamedTypeExpression { IsResolvedNominal: true } nominal) return nominal.Name;
         if (type is NamedTypeExpression generic && generic.Namespace == null)
         {
@@ -143,7 +143,7 @@ public partial class TypeChecker
         SignatureType(first.ReturnType, first) == SignatureType(second.ReturnType, second) &&
         first.Accessibility == second.Accessibility && first.IsStatic == second.IsStatic &&
         first.IsVirtual == second.IsVirtual && first.IsOverride == second.IsOverride &&
-        first.IsConst == second.IsConst && first.IsReadOnly == second.IsReadOnly && first.IsNoThrow == second.IsNoThrow &&
+        first.IsConst == second.IsConst && first.IsReadOnly == second.IsReadOnly && first.IsImmutable == second.IsImmutable && first.IsNoThrow == second.IsNoThrow &&
         first.Parameters.Select(p => p.IsConst).SequenceEqual(second.Parameters.Select(p => p.IsConst)) &&
         first.Parameters.Select(p => p.IsExtensionReceiver).SequenceEqual(second.Parameters.Select(p => p.IsExtensionReceiver)) &&
         first.GenericParameters.Select(p => p.Constraint == null ? "" : SignatureType(p.Constraint, first))

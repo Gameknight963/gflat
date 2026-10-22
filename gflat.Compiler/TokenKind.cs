@@ -88,6 +88,7 @@ namespace gflat
         Static,
         Inline,
         Readonly,
+        Immutable,
         Virtual,
         Override,
         Expect,

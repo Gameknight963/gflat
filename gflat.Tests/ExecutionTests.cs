@@ -2733,7 +2733,7 @@ namespace gflat.Tests
                     public int width;
                     public int height;
 
-                    public readonly int Area()
+                    public immutable int Area()
                     {
                         return this.width * this.height;
                     }
@@ -2744,7 +2744,7 @@ namespace gflat.Tests
                     Rectangle r;
                     r.width = 6;
                     r.height = 7;
-                    readonly(Rectangle)* ptr = &r;
+                    immutable(Rectangle)* ptr = &r;
                     return ptr.Area();
                 }
                 """;
@@ -2768,7 +2768,7 @@ namespace gflat.Tests
                         this.score = score;
                     }
 
-                    public readonly int GetTotal()
+                    public immutable int GetTotal()
                     {
                         return this.id + this.score;
                     }
@@ -2903,7 +2903,7 @@ namespace gflat.Tests
 
                 int main()
                 {
-                    readonly(char*) name = nameof(Point);
+                    immutable(char*) name = nameof(Point);
                     if (name[0] == 'P' && name[4] == 't')
                     {
                         return 42;
@@ -3124,14 +3124,14 @@ namespace gflat.Tests
             string code = """
                 class Exception
                 {
-                    public readonly(char*) message;
+                    public immutable(char*) message;
                     public int code;
                     public Exception(readonly(char)* msg, int c)
                     {
                         message = msg;
                         code = c;
                     }
-                    public readonly virtual int GetCode()
+                    public immutable virtual int GetCode()
                     {
                         return code;
                     }
@@ -3205,14 +3205,14 @@ namespace gflat.Tests
                 {
                     public int code;
                     public BaseException(int c) { code = c; }
-                    public readonly virtual int GetCode() { return code; }
+                    public immutable virtual int GetCode() { return code; }
                 }
 
                 class CustomException : BaseException
                 {
                     public int extra;
                     public CustomException(int c, int e) : base(c) { extra = e; }
-                    public readonly override int GetCode() { return code + extra; }
+                    public immutable override int GetCode() { return code + extra; }
                 }
 
                 const CustomException* oom = new* CustomException(10, 32);
@@ -3267,7 +3267,7 @@ namespace gflat.Tests
                     {
                         extra = e;
                     }
-                    public readonly override int GetCode()
+                    public immutable override int GetCode()
                     {
                         return code + extra;
                     }

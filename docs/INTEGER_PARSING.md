@@ -41,7 +41,7 @@ exception definitions and runtime.
 `core/Parsing.gf` supplies the existing `Int` functions. The other widths live
 in `core/IntegerParsing.gf`; neither file depends on libc. Optional
 `core/StringParsing.gf` and `core/StringIntegerParsing.gf` provide borrowed
-readonly String extension methods:
+immutable String extension methods:
 
 ```cpp
 String text = s"18446744073709551615";

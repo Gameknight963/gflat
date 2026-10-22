@@ -2,7 +2,7 @@ namespace std;
 
 // Kept outside Vector<T>: only calls to this copying operation instantiate its
 // copy requirement. A vector of noncopyable values can still use its own methods.
-public void AddRange<T>(this ref Vector<T> target, Span<readonly(T)> source)
+public void AddRange<T>(this ref Vector<T> target, Span<immutable(T)> source)
 {
     nuint length = source.Length;
     if (length == 0) return;
@@ -21,7 +21,7 @@ public void AddRange<T>(this ref Vector<T> target, Span<readonly(T)> source)
     nuint offset = 0;
     if (originalCount != 0)
     {
-        Span<readonly(T)> original = target.AsReadOnly();
+        Span<immutable(T)> original = target.AsImmutable();
         nuint beginning = (nuint)original.Data!;
         nuint address = (nuint)source.Data!;
         if (address >= beginning)
@@ -47,6 +47,6 @@ public void AddRange<T>(this ref Vector<T> target, Span<readonly(T)> source)
         if (grown < required) grown = required;
         target.Reserve(grown);
     }
-    if (aliasesTarget) source = target.AsReadOnly().Slice(offset, length);
+    if (aliasesTarget) source = target.AsImmutable().Slice(offset, length);
     for (nuint i = 0; i < length; i++) target.Add(source[i]);
 }

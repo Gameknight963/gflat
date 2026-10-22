@@ -48,7 +48,8 @@ public class WholeStandardLibraryEditorTests
                 LinkedList<int> list=new();
                 LinkedList<int>::Node* node=list.AddLast(42);
                 String text=s"ad"; text.Insert(1,"bc");
-                Span<readonly(char)> textView=text.AsReadOnly(); Span<char> writableText=text.AsSpan();
+                Span<readonly(char)> textView=text.AsImmutable(); Span<char> writableText=text.AsSpan();
+                Span<readonly(char)> shallowTextView=text.AsReadOnly();
                 HashMap<String,int> map=new(); map.Add(s"key",42);
                 String key=s"key"; map.Find(&key);
                 HashMap<String,int>::Entry detached=map.Extract(&key);
@@ -85,7 +86,7 @@ public class WholeStandardLibraryEditorTests
                 bool any=flags.HasAnySet(); bool all=flags.HasAllSet();
                 uint bits=BitConverter::FloatToUInt32Bits(1.0f);
                 int[3] numbers=[1,2,3]; Span<int> values=new(numbers,3);
-                int searchKey=2; nuint found=BinarySearch<int>(values.AsReadOnly(),&searchKey,Comparer<int>::Compare);
+                int searchKey=2; nuint found=BinarySearch<int>(values.AsImmutable(),&searchKey,Comparer<int>::Compare);
                 Rotate<int>(values,1);
                 Vector<int> removedRange=new(); removedRange.Add(1); removedRange.RemoveRange(0,1); removedRange.ShrinkToFit(); removedRange.RemoveAll(RemoveZero);
                 PseudoRandom random=new(42ul); Shuffle<int>(values,ref random);
@@ -141,7 +142,7 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"AddDays","DayNumber","DaysInMonth","AsSpan","AsReadOnly","RemoveAll","ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(string member in new[]{"AddDays","DayNumber","DaysInMonth","AsSpan","AsReadOnly","AsImmutable","RemoveAll","ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {
             int offset=token.Start;

@@ -29,7 +29,7 @@ public sealed class BoundPropertyHoverTests
     [Fact]
     public void GenericRefPropertyShowsValueTypeRatherThanLoweredPointer()
     {
-        const string library = "namespace Lib{struct Box<T>{T storage;public Box(T value){storage=value;}public ref T Value{get=>storage;}}}";
+        const string library = "namespace Lib{struct Box<T>{T storage;public Box(T value){storage=value;}public ref T Value{immutable get=>storage;}}}";
         const string usage = "int main(){Lib::Box<int> box=new Lib::Box<int>(1);box.Value=42;return box.Value;}";
         var (model, _, source, _) = Analyze(usage, library);
         foreach (int position in Positions(usage, "Value"))
@@ -81,8 +81,8 @@ public sealed class BoundPropertyHoverTests
     [Fact]
     public void ReadonlyReferencePropertyKeepsItsRecordedValueProjection()
     {
-        const string library = "namespace Lib{struct Box<T>{T storage;public Box(T value){storage=value;}public ref T Value{get=>storage;}}}";
-        const string usage = "int main(){Lib::Box<int> box=new Lib::Box<int>(42);readonly(Lib::Box<int>)* view=&box;return view.Value;}";
+        const string library = "namespace Lib{struct Box<T>{T storage;public Box(T value){storage=value;}public ref T Value{immutable get=>storage;}}}";
+        const string usage = "int main(){Lib::Box<int> box=new Lib::Box<int>(42);immutable(Lib::Box<int>)* view=&box;return view.Value;}";
         var (model, snapshot, source, _) = Analyze(usage, library);
         int position = usage.IndexOf("Value", StringComparison.Ordinal);
         var read = snapshot.Nodes.Select(n => n.Node).OfType<MemberAccessExpression>().Single(n => n.Member == "Value" && n.Span.SourceId == source.Id);
@@ -97,14 +97,14 @@ public sealed class BoundPropertyHoverTests
     [InlineData(true)]
     public void AliasToReadonlyTypeIsNotQualifiedAgain(bool reference)
     {
-        string property = reference ? "public ref View Value{get=>storage;}" : "public View Value{get=>storage;}";
-        string library = "namespace Lib{alias View=readonly(int*);struct Box<T>{View storage;public Box(View value){storage=value;}" + property + "}}";
+        string property = reference ? "public ref View Value{immutable get=>storage;}" : "public View Value{get=>storage;}";
+        string library = "namespace Lib{alias View=immutable(int*);struct Box<T>{View storage;public Box(View value){storage=value;}" + property + "}}";
         string usage = "int main(){int number=42;Lib::Box<int> box=new Lib::Box<int>(&number);" +
-            (reference ? "readonly(Lib::Box<int>)* view=&box;return *view.Value;}" : "return *box.Value;}");
+            (reference ? "immutable(Lib::Box<int>)* view=&box;return *view.Value;}" : "return *box.Value;}");
         var (model, _, source, _) = Analyze(usage, library);
         string hover = Hover(model, source, usage.IndexOf("Value", StringComparison.Ordinal));
         Assert.Contains("View Lib::Box<int>.Value", hover);
-        Assert.DoesNotContain("readonly(View)", hover);
+        Assert.DoesNotContain("immutable(View)", hover);
     }
 
     [Fact]
@@ -122,14 +122,16 @@ public sealed class BoundPropertyHoverTests
         Assert.Equal(templateHover, Hover(model, declaration, templateRead));
     }
 
-    [Fact]
-    public void ReadonlyReferencePointerResultRetainsPointeeProtection()
+    [Theory]
+    [InlineData("readonly", "readonly(int*)")]
+    [InlineData("immutable", "immutable(int*)")]
+    public void ReferencePointerResultPreservesViewDepth(string qualifier, string expected)
     {
-        const string library = "namespace Lib{struct Box<T>{T storage;public Box(T value){storage=value;}public ref T Value{get=>storage;}}}";
-        const string usage = "int main(){int value=42;Lib::Box<int*> box=new Lib::Box<int*>(&value);readonly(Lib::Box<int*>)* view=&box;return *view.Value;}";
+        const string library = "namespace Lib{struct Box<T>{T storage;public Box(T value){storage=value;}public ref T Value{immutable get=>storage;}}}";
+        string usage = "int main(){int value=42;Lib::Box<int*> box=new Lib::Box<int*>(&value);" + qualifier + "(Lib::Box<int*>)* view=&box;return *view.Value;}";
         var (model, _, source, _) = Analyze(usage, library);
         string hover = Hover(model, source, usage.IndexOf("Value", StringComparison.Ordinal));
-        Assert.Contains("ref readonly(int*) Lib::Box<int*>", hover);
+        Assert.Contains("ref " + expected + " Lib::Box<int*>", hover);
     }
 
     private static IEnumerable<int> Positions(string source, string text)

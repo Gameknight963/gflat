@@ -34,12 +34,12 @@ public sealed class VoidStorageTests
         Assert.Equal(0, CompilerTestHelper.Run("""
             alias Nothing = void;
             Nothing NoResult() {}
-            void Call(void()* callback, readonly(void*) opaque) { callback(); }
+            void Call(void()* callback, immutable(void*) opaque) { callback(); }
             int main() {
                 int value = 42;
                 void* address = (void*)&value;
                 void** slot = &address;
-                readonly(void*) view = *slot;
+                immutable(void*) view = *slot;
                 Call(NoResult, view);
                 if (*(int*)address != 42) return 1;
                 return 0;

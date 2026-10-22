@@ -5,29 +5,29 @@ struct HashSet<T : IHashable>
 {
     private HashMap<T, byte> storage;
     public HashSet() { storage = new HashMap<T, byte>(); }
-    public nuint Count { readonly get nothrow => storage.Count; }
-    public nuint Capacity { readonly get nothrow => storage.Capacity; }
-    public bool IsEmpty { readonly get nothrow => storage.IsEmpty; }
+    public nuint Count { immutable get nothrow => storage.Count; }
+    public nuint Capacity { immutable get nothrow => storage.Capacity; }
+    public bool IsEmpty { immutable get nothrow => storage.IsEmpty; }
     public void Reserve(nuint count) { storage.Reserve(count); }
     public bool Add(T value) => storage.TryAdd(move value, 0);
-    public readonly bool Contains(readonly(T)* value) => storage.ContainsKey(value);
-    public bool Remove(readonly(T)* value) => storage.Remove(value);
+    public immutable bool Contains(immutable(T)* value) => storage.ContainsKey(value);
+    public bool Remove(immutable(T)* value) => storage.Remove(value);
     public void Clear() { storage.Clear(); }
-    public void ExceptWith(readonly(HashSet<T>)* other)
+    public void ExceptWith(immutable(HashSet<T>)* other)
     {
         if (this.Count == 0) return;
         if ((nuint)this == (nuint)other) { this.Clear(); return; }
         Enumerator iterator = other.GetEnumerator();
         while (iterator.MoveNext()) this.Remove(iterator.Current);
     }
-    public readonly Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
+    public immutable Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
 
-    public readonly bool SetEquals(readonly(HashSet<T>)* other)
+    public immutable bool SetEquals(immutable(HashSet<T>)* other)
     {
         return this.Count == other.Count && this.IsSubsetOf(other);
     }
 
-    public readonly bool IsSubsetOf(readonly(HashSet<T>)* other)
+    public immutable bool IsSubsetOf(immutable(HashSet<T>)* other)
     {
         if (this.Count > other.Count) return false;
         Enumerator iterator = this.GetEnumerator();
@@ -36,22 +36,22 @@ struct HashSet<T : IHashable>
         return true;
     }
 
-    public readonly bool IsSupersetOf(readonly(HashSet<T>)* other)
+    public immutable bool IsSupersetOf(immutable(HashSet<T>)* other)
     {
         return other.IsSubsetOf(this);
     }
 
-    public readonly bool IsProperSubsetOf(readonly(HashSet<T>)* other)
+    public immutable bool IsProperSubsetOf(immutable(HashSet<T>)* other)
     {
         return this.Count < other.Count && this.IsSubsetOf(other);
     }
 
-    public readonly bool IsProperSupersetOf(readonly(HashSet<T>)* other)
+    public immutable bool IsProperSupersetOf(immutable(HashSet<T>)* other)
     {
         return this.Count > other.Count && this.IsSupersetOf(other);
     }
 
-    public readonly bool Overlaps(readonly(HashSet<T>)* other)
+    public immutable bool Overlaps(immutable(HashSet<T>)* other)
     {
         if (this.Count == 0 || other.Count == 0) return false;
         // Probe the larger set while visiting only the smaller set's elements.
@@ -67,6 +67,6 @@ struct HashSet<T : IHashable>
         private HashMap<T, byte>::Enumerator iterator;
         public Enumerator(HashMap<T, byte>::Enumerator source) { iterator = source; }
         public bool MoveNext() => iterator.MoveNext();
-        public readonly(T)* Current { readonly get => iterator.Current.Key; }
+        public immutable(T)* Current { immutable get => iterator.Current.Key; }
     }
 }

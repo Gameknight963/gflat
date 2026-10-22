@@ -34,8 +34,8 @@ public sealed class ConsoleInputStateTests
     {
         Run("""
             extern void* __gflat_stdio_stdin();
-            extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
-            extern void*? fopen(readonly(char*) path, readonly(char*) mode);
+            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
+            extern void*? fopen(immutable(char*) path, immutable(char*) mode);
             extern int fclose(void* stream);
             extern int fputc(int value, void* stream);
             extern int feof(void* stream);
@@ -76,7 +76,7 @@ public sealed class ConsoleInputStateTests
     {
         Run("""
             extern void* __gflat_stdio_stdin();
-            extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
             extern int feof(void* stream);
             extern int ferror(void* stream);
             int main() {

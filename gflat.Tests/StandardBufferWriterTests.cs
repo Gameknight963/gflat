@@ -115,7 +115,7 @@ public sealed class StandardBufferWriterTests
                 writer.Write("ab");
                 storage[2] = 'c'; storage[3] = 'd'; storage[4] = 'e'; storage[5] = 'f';
                 writer.Write(storage, 6);
-                readonly(char*) expected = "ababcdef";
+                immutable(char*) expected = "ababcdef";
                 for (int i = 0; i < 8; i++) if (storage[i] != expected[i]) return 1;
                 if (writer.Length != (nuint)8 || storage[8] != '\0') return 2;
                 writer.Clear();
@@ -141,7 +141,7 @@ public sealed class StandardBufferWriterTests
             }
             class Label : IFormattable {
                 public Label() { }
-                public readonly void Format(ITextWriter* output) { output.Write("<label>", 7); }
+                public immutable void Format(ITextWriter* output) { output.Write("<label>", 7); }
             }
             int main() {
                 char[64] storage;
@@ -152,7 +152,7 @@ public sealed class StandardBufferWriterTests
                 Label label = new Label();
                 IFormattable* formattable = &label;
                 formattable.Format(output);
-                readonly(char*) expected = "-42true!<label>";
+                immutable(char*) expected = "-42true!<label>";
                 if (writer.Length != (nuint)15 || Calls::Allocations != 0) return 1;
                 for (nuint i = 0; i < writer.Length; i++) if (writer.Data[i] != expected[i]) return 2;
                 return 0;

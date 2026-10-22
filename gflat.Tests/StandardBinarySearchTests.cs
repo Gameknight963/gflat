@@ -40,7 +40,7 @@ public sealed class StandardBinarySearchTests
                             for (nuint i = 0; i < values.Count; i++)
                                 if (values[i] == key) { expected = i; break; }
                             calls = 0;
-                            if (BinarySearch<int>(values.AsReadOnly(), &key, Compare) != expected) return 2;
+                            if (BinarySearch<int>(values.AsImmutable(), &key, Compare) != expected) return 2;
                             if (calls > 9) return 3;
                         }
                     }
@@ -70,7 +70,7 @@ public sealed class StandardBinarySearchTests
                 public Item(int* counter, int key) { destroyed = counter; Key = key; }
                 ~Item() { (*destroyed)++; }
             }
-            int Compare(readonly(Item)* left, readonly(Item)* right) {
+            int Compare(immutable(Item)* left, immutable(Item)* right) {
                 calls++;
                 if (calls == failAt) throw new Exception("comparison failed");
                 if (left.Key < right.Key) return -1;
@@ -82,13 +82,13 @@ public sealed class StandardBinarySearchTests
                 {
                     Vector<Item> values = new();
                     for (int i = 0; i < 65; i++) values.Add(new Item(&destroyed, i / 3));
-                    readonly(Item)* key = &values[35];
-                    if (BinarySearch<Item>(values.AsReadOnly(), key, Compare) != 33) return 1;
+                    immutable(Item)* key = &values[35];
+                    if (BinarySearch<Item>(values.AsImmutable(), key, Compare) != 33) return 1;
                     int totalCalls = calls;
                     for (int failure = 1; failure <= totalCalls; failure++) {
                         failAt = failure;
                         calls = 0; bool caught = false;
-                        try { BinarySearch<Item>(values.AsReadOnly(), key, Compare); }
+                        try { BinarySearch<Item>(values.AsImmutable(), key, Compare); }
                         catch (Exception* error) { caught = true; }
                         if (!caught || destroyed != 0 || values.Count != 65) return 2;
                         for (nuint i = 0; i < values.Count; i++)

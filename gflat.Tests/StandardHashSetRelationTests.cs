@@ -6,7 +6,7 @@ public sealed class StandardHashSetRelationTests
 {
     private const string Prelude = """
         using std;
-        extern int puts(readonly(char*) message);
+        extern int puts(immutable(char*) message);
         int made = 0; int destroyed = 0; int allocations = 0; int releases = 0;
         bool failHash = false; bool failEquality = false;
         private extern void*? malloc(nuint bytes);
@@ -20,11 +20,11 @@ public sealed class StandardHashSetRelationTests
             public String Label;
             public Key(int value) { Value = value; Label = s"owned"; made++; }
             ~Key() { destroyed++; }
-            public readonly nuint GetHashCode() {
+            public immutable nuint GetHashCode() {
                 if (failHash) throw new Exception("hash failed");
                 return 1;
             }
-            public readonly bool Equals(readonly(Key)* other) {
+            public immutable bool Equals(immutable(Key)* other) {
                 if (failEquality) throw new Exception("equality failed");
                 return Value == other.Value;
             }
@@ -57,7 +57,7 @@ public sealed class StandardHashSetRelationTests
             foreach (int value in leftValues) source.AppendLine($"left.Add(new Key({value}));");
             foreach (int value in rightValues) source.AppendLine($"right.Add(new Key({value}));");
             created += leftValues.Length + rightValues.Length;
-            source.AppendLine("readonly(HashSet<Key>)* a = &left; readonly(HashSet<Key>)* b = &right;");
+            source.AppendLine("immutable(HashSet<Key>)* a = &left; immutable(HashSet<Key>)* b = &right;");
             source.AppendLine("int beforeAllocations = allocations; int beforeReleases = releases;");
             Relations("a", "b", left, right, scenario);
             Relations("b", "a", right, left, scenario);
@@ -95,7 +95,7 @@ public sealed class StandardHashSetRelationTests
                 HashSet<Key> smaller = new(); HashSet<Key> larger = new();
                 smaller.Add(new Key(1)); smaller.Add(new Key(2));
                 larger.Add(new Key(1)); larger.Add(new Key(2)); larger.Add(new Key(3));
-                readonly(HashSet<Key>)* a = &smaller; readonly(HashSet<Key>)* b = &larger;
+                immutable(HashSet<Key>)* a = &smaller; immutable(HashSet<Key>)* b = &larger;
                 int caught = 0;
             """);
         foreach (string call in new[] { "a.SetEquals(a)", "a.IsSubsetOf(b)", "b.IsSupersetOf(a)",

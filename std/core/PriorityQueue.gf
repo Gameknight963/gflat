@@ -5,23 +5,23 @@ namespace std;
 struct PriorityQueue<T>
 {
     private Vector<T> storage;
-    private int(readonly(T)*, readonly(T)*)* compare;
+    private int(immutable(T)*, immutable(T)*)* compare;
 
-    public PriorityQueue(int(readonly(T)*, readonly(T)*)* comparison)
+    public PriorityQueue(int(immutable(T)*, immutable(T)*)* comparison)
     {
         storage = new Vector<T>();
         compare = comparison;
     }
 
-    public nuint Count { readonly get nothrow => storage.Count; }
-    public nuint Capacity { readonly get nothrow => storage.Capacity; }
-    public bool IsEmpty { readonly get nothrow => storage.Count == 0; }
+    public nuint Count { immutable get nothrow => storage.Count; }
+    public nuint Capacity { immutable get nothrow => storage.Capacity; }
+    public bool IsEmpty { immutable get nothrow => storage.Count == 0; }
     public void Reserve(nuint capacity) { storage.Reserve(capacity); }
     public void Clear() { storage.Clear(); }
 
-    public ref readonly(T) Top
+    public ref immutable(T) Top
     {
-        get
+        immutable get
         {
             if (storage.Count == 0) throw new Exception("Cannot peek an empty priority queue");
             return storage[0];

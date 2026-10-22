@@ -217,7 +217,7 @@ namespace gflat.semantics
                     {
                         throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' must match nothrow specification of base method", method.Span);
                     }
-                    if (baseMethod.IsReadOnly && !method.IsReadOnly)
+                    if (baseMethod.IsReadOnly && !method.IsReadOnly || baseMethod.IsImmutable && !method.IsImmutable)
                     {
                         throw new TypeCheckException($"Overriding method '{method.Name}' in class '{_symbols.DisplayName(cls.Name)}' must be marked readonly to match base method", method.Span);
                     }

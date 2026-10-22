@@ -21,12 +21,12 @@ public static class Base64
     }
 
     // Input/output must not overlap. Failure leaves output untouched and written=0.
-    public static bool TryEncode(readonly(char*) data, nuint count, char* output, nuint capacity, ref nuint written) nothrow
+    public static bool TryEncode(immutable(char*) data, nuint count, char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         nuint required = 0;
         if (!Base64::TryGetEncodedLength(count, ref required) || required > capacity) return false;
-        readonly(char*) alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        immutable(char*) alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         nuint index = 0;
         nuint target = 0;
         while (count - index >= 3)
@@ -56,7 +56,7 @@ public static class Base64
     }
 
     // Validates every byte, including canonical zero padding bits.
-    public static bool TryGetDecodedLength(readonly(char*) text, nuint count, ref nuint length) nothrow
+    public static bool TryGetDecodedLength(immutable(char*) text, nuint count, ref nuint length) nothrow
     {
         length = 0;
         if (count % 4 != 0) return false;
@@ -91,7 +91,7 @@ public static class Base64
 
     // Disjoint buffers or exact same start address are supported. Input is
     // validated before writing, so malformed input/capacity failure changes nothing.
-    public static bool TryDecode(readonly(char*) text, nuint count, char* output, nuint capacity, ref nuint written) nothrow
+    public static bool TryDecode(immutable(char*) text, nuint count, char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         nuint required = 0;

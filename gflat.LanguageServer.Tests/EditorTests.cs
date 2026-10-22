@@ -105,7 +105,7 @@ public class EditorTests
     [Fact]
     public void AccessorKeywordsHaveSemanticColors()
     {
-        var (model, path, _, source) = Analyze("struct S { int n; public int Value { readonly get { return n; } set { n = value; } } } void |F() {}");
+        var (model, path, _, source) = Analyze("struct S { int n; public int Value { immutable get { return n; } set { n = value; } } } void |F() {}");
         var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
         int column = 0, count = 0;
         for (int i = 0; i < data.Length; i += 5)
@@ -168,7 +168,7 @@ public class EditorTests
     [Fact]
     public void MoveAndReferenceAccessorsHaveContextualColorsAndNavigation()
     {
-        var (model, path, offset, source) = Analyze("struct S { int n; public S() {} public copy S(readonly(S)* source) { n = source.n; } public ref int Value => n; } void F(S* ptr) { S value = new S(); move value at p|tr; }");
+        var (model, path, offset, source) = Analyze("struct S { int n; public S() {} public copy S(immutable(S)* source) { n = source.n; } public ref int Value => n; } void F(S* ptr) { S value = new S(); move value at p|tr; }");
         Assert.NotNull(model.Definition(path, offset));
         var data = Json(model.SemanticTokens(path)).GetProperty("data").EnumerateArray().Select(x => x.GetInt32()).ToArray();
         var keywords = new List<string>();

@@ -14,7 +14,7 @@ public sealed class StandardSortedMapExtractTests
             public Owner(int id){Id=id;}
             ~Owner(){dead++;}
         }
-        int Compare(readonly(Owner)* a,readonly(Owner)* b){
+        int Compare(immutable(Owner)* a,immutable(Owner)* b){
             if(budget==0)throw new Exception("comparer failed");if(budget>0)budget--;
             if(a.Id<b.Id)return -1;if(a.Id>b.Id)return 1;return 0;
         }
@@ -33,7 +33,7 @@ public sealed class StandardSortedMapExtractTests
                   if(middle.Key.Id!=3||middle.Value.Id!=30||map.Count!=4||dead!=0)return 1;}
                  if(dead!=3)return 2;
                  {var iterator=map.GetEnumerator();iterator.MoveNext();
-                  readonly(Owner)* key=iterator.Current.Key;
+                  immutable(Owner)* key=iterator.Current.Key;
                   SortedMap<Owner,Owner>::Entry first=map.Extract(key);
                   if(first.Key.Id!=1||first.Value.Id!=10||dead!=3||map.Count!=3)return 3;}
                  if(dead!=5)return 4;

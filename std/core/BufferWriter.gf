@@ -16,17 +16,17 @@ public struct BufferWriter : ITextWriter
         if (storageCapacity != 0) data[0] = '\0';
     }
 
-    public nuint Length { readonly get nothrow => length; }
+    public nuint Length { immutable get nothrow => length; }
     public nuint Capacity
     {
-        readonly get nothrow
+        immutable get nothrow
         {
             if (storageCapacity == 0) return 0;
             return storageCapacity - 1;
         }
     }
-    public nuint Remaining { readonly get nothrow => this.Capacity - length; }
-    public readonly(char)* Data { readonly get nothrow => data; }
+    public nuint Remaining { immutable get nothrow => this.Capacity - length; }
+    public readonly(char)* Data { immutable get nothrow => data; }
 
     public void Clear() nothrow
     {

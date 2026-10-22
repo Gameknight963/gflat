@@ -49,7 +49,7 @@ public sealed class StandardFileBytesTests
                     if (bytes.Count == 0 && bytes.Capacity != 0) return 2;
                     for (nuint i = 0; i < bytes.Count; i++) if (bytes[i] != (byte)i) return 3;
                     Vector<byte> moved = move bytes;
-                    Span<readonly(byte)> view = moved.AsReadOnly();
+                    Span<readonly(byte)> view = moved.AsImmutable();
                     byte sentinel = 0;
                     readonly(byte)* data = &sentinel;
                     if (view.Length != 0) data = view.Data!;

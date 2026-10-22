@@ -86,7 +86,7 @@ public partial class TypeChecker
                         additions.Add(new MethodDeclaration(accessor.Name, accessor.ReturnType, accessor.Parameters, body,
                             owner is InterfaceDeclaration ? TokenKind.Public : accessor.Accessibility,
                             accessor.IsStatic, accessor.IsVirtual, accessor.IsOverride, signature, accessor.Line,
-                            accessor.IsReadOnly, isNoThrow: accessor.IsNoThrow)
+                            accessor.IsReadOnly, isNoThrow: accessor.IsNoThrow, isImmutable: accessor.IsImmutable)
                         { InferAutoGetterReadOnly = auto && getter && !accessor.IsReadOnly && !accessor.IsStatic && owner != null && !accessor.IsVirtual && !accessor.IsOverride,
                             IsInline = accessor.IsInline, PropertyName = property.Name, Span = accessor.Span.Source == null ? property.Span : accessor.Span });
                     }
@@ -238,9 +238,9 @@ public partial class TypeChecker
             receiver = new IdentifierExpression("this", expression.Line) { Span = expression.Span };
             receiver.Accept(this);
         }
-        if (getter?.IsRefReturn == true && receiver != null && (IsExpressionReadOnly(receiver) || ResolveAlias(GetType(receiver)) is PointerTypeExpression { IsReadOnly: true } or ManagedTypeExpression { IsReadOnly: true }))
+        if (getter?.IsRefReturn == true && receiver != null && ((ResolveAlias(GetType(receiver)) is not PointerTypeExpression and not ManagedTypeExpression && IsExpressionReadOnly(receiver)) || ResolveAlias(GetType(receiver)) is PointerTypeExpression { IsReadOnly: true } or ManagedTypeExpression { IsReadOnly: true }))
         {
-            string readName = "$get$readonly$" + name;
+            string readName = (IsReceiverImmutable(receiver) ? "$get$immutable$" : "$get$readonly$") + name;
             getter = _structs.TryGetValue(owner, out var rs) ? rs.Methods.GetValueOrDefault(readName) :
                 _classes.TryGetValue(owner, out var rc) ? rc.Methods.GetValueOrDefault(readName).Method :
                 _interfaces.TryGetValue(owner, out var ri) ? ri.MethodsByName.GetValueOrDefault(readName) : getter;
@@ -266,7 +266,8 @@ public partial class TypeChecker
         // normal layout validation, rather than during declaration signatures.
         using var context = EnterMethodSignatureContext(method);
         TypeExpression result = ResolveAlias(method.ReturnType);
-        method.IsReadOnly = IsAssignable(result, TypeQualifiers.ReadOnly(result));
+        method.IsImmutable = IsAssignable(result, TypeQualifiers.Immutable(result));
+        method.IsReadOnly = method.IsImmutable || IsAssignable(result, TypeQualifiers.ReadOnly(result));
     }
 
     private MethodDeclaration RequireAccessor(PropertyAccess property, bool getter, AstNode site)

@@ -9,8 +9,8 @@ struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
     public Span() { data = null; length = 0; }
     public Span(T* buffer, nuint count) { data = buffer; length = count; }
 
-    public nuint Length { readonly get nothrow => length; }
-    public bool IsEmpty { readonly get nothrow => length == 0; }
+    public nuint Length { immutable get nothrow => length; }
+    public bool IsEmpty { immutable get nothrow => length == 0; }
     public Span<T>::Enumerator GetEnumerator() => new Span<T>::Enumerator(data, length);
     public Enumerable<T, Span<T>, Span<T>::Enumerator> AsEnumerable()
         => new Enumerable<T, Span<T>, Span<T>::Enumerator>(*this);
@@ -18,7 +18,7 @@ struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
 
     public ref T this[nuint index]
     {
-        get
+        immutable get
         {
             if (index >= length) throw new Exception("Span index out of range", 3);
             return data![index];
@@ -43,6 +43,12 @@ struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
     {
         if (length == 0) return new Span<readonly(T)>();
         return new Span<readonly(T)>((readonly(T)*)data, length);
+    }
+
+    public immutable Span<immutable(T)> AsImmutable()
+    {
+        if (length == 0) return new Span<immutable(T)>();
+        return new Span<immutable(T)>((immutable(T)*)data, length);
     }
 
     // Borrows the same storage as its source view.
@@ -70,7 +76,7 @@ struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
 
         public ref T Current
         {
-            get
+            immutable get
             {
                 if (!valid) throw new Exception("Enumerator has no current element");
                 return data![position - 1];

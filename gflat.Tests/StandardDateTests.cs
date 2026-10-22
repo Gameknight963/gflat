@@ -91,7 +91,7 @@ public sealed class StandardDateTests
                 try{first.AddDays(-2147483648);}catch(ref Exception error){caught++;}
                 try{last.AddDays(2147483647);}catch(ref Exception error){caught++;}
                 if(caught!=17||first.DayNumber!=0||last.DayNumber!=3652058)return 1;
-                readonly(Date) date=new(2024,2,29);String text=s$"Date: {date}";
+                immutable(Date) date=new(2024,2,29);String text=s$"Date: {date}";
                 if(!CString::Equals(text.Data,"Date: 2024-02-29"))return 2;
                 String direct=new();date.Format(&direct);if(!CString::Equals(direct.Data,"2024-02-29"))return 3;
                 FailWriter output=new();try{date.Format(&output);return 4;}catch(ref Exception error){}

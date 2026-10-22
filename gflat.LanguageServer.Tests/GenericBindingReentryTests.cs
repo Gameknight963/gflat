@@ -63,7 +63,7 @@ public sealed class GenericBindingReentryTests
     [InlineData("Box<int>*?", 8)]
     [InlineData("Box<int>[2]", 8)]
     [InlineData("BoxInt", 4)]
-    [InlineData("readonly(BoxInt)", 4)]
+    [InlineData("immutable(BoxInt)", 4)]
     public void GenericBodiesCanQueryContainingLayoutsWithoutBreakingEditorBindings(string fieldType, int size)
     {
         string alias = fieldType.Contains("BoxInt", StringComparison.Ordinal) ? "public alias BoxInt = Box<int>;" : "";

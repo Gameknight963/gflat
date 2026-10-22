@@ -7,7 +7,7 @@ public static class Paths
         => value == '/' || (style == PathStyle::Windows && value == '\\');
 
     // A rooted Windows path can still depend on the current drive or its directory.
-    public static bool IsRooted(readonly(char*) path, PathStyle style) nothrow
+    public static bool IsRooted(immutable(char*) path, PathStyle style) nothrow
     {
         if (Paths::IsSeparator(path[0], style)) return true;
         if (style == PathStyle::Unix) return false;
@@ -16,7 +16,7 @@ public static class Paths
     }
 
     // Classifies the root spelling only; this does not validate a UNC share or name.
-    public static bool IsFullyQualified(readonly(char*) path, PathStyle style) nothrow
+    public static bool IsFullyQualified(immutable(char*) path, PathStyle style) nothrow
     {
         if (style == PathStyle::Unix) return path[0] == '/';
         if (Paths::IsSeparator(path[0], style)) return Paths::IsSeparator(path[1], style);
@@ -24,14 +24,14 @@ public static class Paths
         return letter && path[1] == ':' && Paths::IsSeparator(path[2], style);
     }
 
-    public static String GetFileName(readonly(char*) path, PathStyle style)
+    public static String GetFileName(immutable(char*) path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         nuint start = Paths::FileNameStart(path, length, style);
         return String::From(path + start, length - start);
     }
 
-    public static String GetDirectoryName(readonly(char*) path, PathStyle style)
+    public static String GetDirectoryName(immutable(char*) path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         nuint root = Paths::RootLength(path, length, style);
@@ -43,7 +43,7 @@ public static class Paths
         return String::From(path, end);
     }
 
-    public static String GetExtension(readonly(char*) path, PathStyle style)
+    public static String GetExtension(immutable(char*) path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         nuint start = Paths::FileNameStart(path, length, style);
@@ -52,7 +52,7 @@ public static class Paths
         return String::From(path + dot, length - dot);
     }
 
-    public static String GetFileNameWithoutExtension(readonly(char*) path, PathStyle style)
+    public static String GetFileNameWithoutExtension(immutable(char*) path, PathStyle style)
     {
         nuint length = Paths::Length(path);
         nuint start = Paths::FileNameStart(path, length, style);
@@ -60,7 +60,7 @@ public static class Paths
         return String::From(path + start, dot - start);
     }
 
-    public static String GetRoot(readonly(char*) path, PathStyle style)
+    public static String GetRoot(immutable(char*) path, PathStyle style)
     {
         return String::From(path, Paths::RootLength(path, Paths::Length(path), style));
     }
@@ -68,7 +68,7 @@ public static class Paths
     // Concatenates components, even if right is rooted. Removes one duplicated
     // separator at the join boundary; otherwise preserves the original spelling.
     // Does not resolve dot segments, validate names, or change existing separators.
-    public static String Join(readonly(char*) left, readonly(char*) right, PathStyle style)
+    public static String Join(immutable(char*) left, immutable(char*) right, PathStyle style)
     {
         nuint leftLength = Paths::Length(left);
         nuint rightLength = Paths::Length(right);
@@ -88,14 +88,14 @@ public static class Paths
         return move result;
     }
 
-    private static nuint Length(readonly(char*) text)
+    private static nuint Length(immutable(char*) text)
     {
         nuint length = 0;
         while (text[length] != '\0') length++;
         return length;
     }
 
-    private static nuint FileNameStart(readonly(char*) path, nuint length, PathStyle style)
+    private static nuint FileNameStart(immutable(char*) path, nuint length, PathStyle style)
     {
         nuint root = Paths::RootLength(path, length, style);
         nuint start = length;
@@ -103,7 +103,7 @@ public static class Paths
         return start;
     }
 
-    private static nuint ExtensionStart(readonly(char*) path, nuint start, nuint end)
+    private static nuint ExtensionStart(immutable(char*) path, nuint start, nuint end)
     {
         nuint index = end;
         while (index > start)
@@ -114,7 +114,7 @@ public static class Paths
         return end;
     }
 
-    private static nuint RootLength(readonly(char*) path, nuint length, PathStyle style)
+    private static nuint RootLength(immutable(char*) path, nuint length, PathStyle style)
     {
         if (length == 0) return 0;
         if (style == PathStyle::Unix)

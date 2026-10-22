@@ -64,7 +64,7 @@ public class StandardVectorTests
                 for (int i = 0; i < 20; i++) words.Add(s"extra");
                 words[(nuint)0].Append("!", 1);
                 words[(nuint)1] = s"replacement";
-                readonly(Vector<String>)* read = &words;
+                immutable(Vector<String>)* read = &words;
                 if ((*read)[(nuint)0].Length != (nuint)4) return 2;
                 String last = words.Pop();
                 if (last.Length != (nuint)5 || words.Count != (nuint)21) return 3;

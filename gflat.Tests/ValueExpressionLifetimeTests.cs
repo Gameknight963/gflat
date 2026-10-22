@@ -30,7 +30,7 @@ public sealed class ValueExpressionLifetimeTests
 
     [Theory]
     [InlineData("struct Owner { ~Owner() {} }")]
-    [InlineData("struct Owner { public Owner() {} private copy Owner(readonly(Owner)* source) {} ~Owner() {} }")]
+    [InlineData("struct Owner { public Owner() {} private copy Owner(immutable(Owner)* source) {} ~Owner() {} }")]
     public void CastsCannotBypassAnOwningValuesCopyContract(string declaration)
         => Assert.Contains("copy", Assert.Throws<TypeCheckException>(() => CompilerTestHelper.Check(declaration + " int main() { Owner value = new Owner(); (Owner)value; return 0; }")).Message, StringComparison.OrdinalIgnoreCase);
 
@@ -47,7 +47,7 @@ public sealed class ValueExpressionLifetimeTests
             struct Owner {
                 private int number;
                 public Owner(int value) { number = value; }
-                public copy Owner(readonly(Owner)* source) { putchar(67); number = source.number; }
+                public copy Owner(immutable(Owner)* source) { putchar(67); number = source.number; }
                 public int Read() => number;
                 ~Owner() { putchar(68); }
             }
@@ -84,7 +84,7 @@ public sealed class ValueExpressionLifetimeTests
             alias Owners = Owner[2];
             int main() { Owners values = [new Owner(), new Owner()]; return EXPRESSION; }
             """.Replace("EXPRESSION", expression).Replace("COPY_MEMBERS", expression.StartsWith("default") ? "" :
-                "public Owner() { number = 0; } public copy Owner(readonly(Owner)* source) { number = source.number; putchar(67); }"));
+                "public Owner() { number = 0; } public copy Owner(immutable(Owner)* source) { number = source.number; putchar(67); }"));
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(output, result.StandardOutput);
     }
@@ -97,7 +97,7 @@ public sealed class ValueExpressionLifetimeTests
             struct Owner {
                 private int number;
                 public Owner() { number = 42; }
-                public copy Owner(readonly(Owner)* source) { putchar(67); throw new Exception(); }
+                public copy Owner(immutable(Owner)* source) { putchar(67); throw new Exception(); }
                 public int Read() => number;
                 ~Owner() { putchar(68); }
             }

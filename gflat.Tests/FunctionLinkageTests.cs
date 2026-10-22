@@ -47,7 +47,7 @@ public sealed class FunctionLinkageTests
     public void UnusedFunctionAndItsDataAreDiscarded(int optimization, bool internalize)
     {
         string ir = Compiler.Emit("""
-            extern int puts(readonly(char*) text);
+            extern int puts(immutable(char*) text);
             int Unused() => puts("gflat_unused_function_data_984276");
             int main() => 42;
             """, options: new() { NoStdLib = true, InternalizeFunctions = internalize });

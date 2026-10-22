@@ -15,7 +15,7 @@ public sealed class StandardPathTests
 
     private const string Equal = """
         using std;
-        bool Equal(ref readonly(String) value, readonly(char*) expected) {
+        bool Equal(ref immutable(String) value, immutable(char*) expected) {
             nuint i = 0;
             while (expected[i] != '\0') {
                 if (i >= value.Length || value.Data[i] != expected[i]) return false;
@@ -105,7 +105,7 @@ public sealed class StandardPathTests
             $"if (!Check({Literal(item.Path)}, {Literal(item.Name)}, {Literal(item.Directory)}, {Literal(item.Extension)}, {Literal(item.Stem)}, {Literal(item.Root)})) return {i + 1};"));
         Run(Equal + $$"""
 
-            bool Check(readonly(char*) path, readonly(char*) name, readonly(char*) directory, readonly(char*) extension, readonly(char*) stem, readonly(char*) root) {
+            bool Check(immutable(char*) path, immutable(char*) name, immutable(char*) directory, immutable(char*) extension, immutable(char*) stem, immutable(char*) root) {
                 String a = Paths::GetFileName(path, PathStyle::{{style}});
                 String b = Paths::GetDirectoryName(path, PathStyle::{{style}});
                 String c = Paths::GetExtension(path, PathStyle::{{style}});

@@ -12,7 +12,7 @@ public sealed class CallContractTests
 
     [Fact]
     public void InterfaceCannotDiscardReadonlyAggregateReturn()
-        => Assert.Throws<TypeCheckException>(() => Compiler.Check("struct B { public int* data; } interface I { B Get(); } struct S : I { public B value; public readonly(B) Get() => value; }"));
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check("struct B { public int* data; } interface I { B Get(); } struct S : I { public B value; public immutable(B) Get() => value; }"));
 
     [Fact]
     public void InterfaceConversionThroughBaseKeepsDerivedOverride()

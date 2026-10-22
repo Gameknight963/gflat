@@ -17,10 +17,10 @@ public sealed class IntegerSequenceTests
             using std;
             bool Even(int value) => value % 2 == 0;
             int main() {
-                readonly(IntRange) source = new IntRange(0, 10);
+                immutable(IntRange) source = new IntRange(0, 10);
                 if (!source.Any() || source.Sum() != 45l) return 1;
                 if (source.Take(3).Sum() != 3l || source.Skip(8).Sum() != 17l) return 2;
-                readonly(FilteredIntRange) filtered = source.Where(Even);
+                immutable(FilteredIntRange) filtered = source.Where(Even);
                 if (!filtered.Any() || filtered.Count() != 5 || filtered.Sum() != 20l) return 3;
                 if (filtered.Take(2).Sum() != 2l || filtered.Skip(3).Sum() != 14l) return 4;
                 int first = 0;
@@ -28,7 +28,7 @@ public sealed class IntegerSequenceTests
                 foreach (int value in filtered) first += value;
                 foreach (int value in filtered) second += value;
                 if (first != 20 || second != 20 || source.Count != 10) return 5;
-                readonly(IntRange)* view = &source;
+                immutable(IntRange)* view = &source;
                 if (!view.Any() || view.Take(2).Sum() != 1l) return 6;
                 return 0;
             }
@@ -43,7 +43,7 @@ public sealed class IntegerSequenceTests
             using std;
             extern void* malloc(nuint count);
             extern void free(void* storage);
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint count) { printf("allocation"); return malloc(count); }
                 public replace void Free(void* storage) { free(storage); }
@@ -67,7 +67,7 @@ public sealed class IntegerSequenceTests
     {
         var result = Run("""
             using std;
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             bool Odd(int n) { printf("%d", n); return n % 2 == 1; }
             int main() {
                 FilteredIntRange query = new IntRange(0, 10).Where(&Odd).Take(1);
@@ -86,7 +86,7 @@ public sealed class IntegerSequenceTests
     {
         var result = Run("""
             using std;
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             bool Seen(int n) { printf("%d", n); return true; }
             int main() {
                 if (new IntRange(0, 3).Where(&Seen).Skip(3).Any()) return 1;

@@ -19,7 +19,7 @@ public sealed class StandardCollectionManagedLifetimeTests
                 public Node^? Next;
                 public Node(int value) { Value = value; }
             }
-            int Compare(readonly(Node^)* left, readonly(Node^)* right) {
+            int Compare(immutable(Node^)* left, immutable(Node^)* right) {
                 GC::Collect();
                 return (*left).Value - (*right).Value;
             }

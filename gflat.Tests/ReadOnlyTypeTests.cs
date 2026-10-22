@@ -10,8 +10,8 @@ public sealed class ReadOnlyTypeTests
             public int count;
             public Buffer(int* p) { data = p; count = 1; }
             public void Set() { data[0] = 99; }
-            public readonly int Get() => data[0];
-            public readonly readonly(int)* Data() => data;
+            public immutable int Get() => data[0];
+            public immutable readonly(int)* Data() => data;
         }
         """;
 
@@ -28,7 +28,7 @@ public sealed class ReadOnlyTypeTests
     [InlineData("Buffer copy = *view;")]
     public void ReadOnlyReceiverCannotExposeWritableStorage(string operation)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(Buffer +
-            "int main() { int x = 42; Buffer b = new Buffer(&x); readonly(Buffer)* view = &b; " + operation + " return 0; }"));
+            "int main() { int x = 42; Buffer b = new Buffer(&x); immutable(Buffer)* view = &b; " + operation + " return 0; }"));
 
     [Theory]
     [InlineData("data[0] = 0;")]
@@ -37,19 +37,19 @@ public sealed class ReadOnlyTypeTests
     [InlineData("int* p = data;")]
     public void ReadOnlyMethodsPreserveTransitiveQualification(string operation)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(
-            "struct S { public int* data; public readonly void Change() { " + operation + " } }"));
+            "struct S { public int* data; public immutable void Change() { " + operation + " } }"));
 
     [Theory]
     [InlineData("readonly(int) x = 1; x = 2;")]
-    [InlineData("int x = 1; readonly(int*) p = &x; p = &x;")]
-    [InlineData("int x = 1; readonly(int*) p = &x; *p = 2;")]
-    [InlineData("readonly(int[2]) a = [1, 2]; a[0] = 2;")]
+    [InlineData("int x = 1; immutable(int*) p = &x; p = &x;")]
+    [InlineData("int x = 1; immutable(int*) p = &x; *p = 2;")]
+    [InlineData("immutable(int[2]) a = [1, 2]; a[0] = 2;")]
     [InlineData("readonly(int)[2] a = [1, 2]; a[0] = 2;")]
     [InlineData("readonly(int) x = 1; int* p = &x;")]
-    [InlineData("readonly(int[2]) a = [1, 2]; int* p = a;")]
-    [InlineData("readonly(Buffer) b = default(Buffer); Buffer copy = (Buffer)b;")]
+    [InlineData("immutable(int[2]) a = [1, 2]; int* p = a;")]
+    [InlineData("immutable(Buffer) b = default(Buffer); Buffer copy = (Buffer)b;")]
     [InlineData("int x = 1; int* p = &x; int** pp = &p; readonly(int)** unsafeView = pp;")]
-    [InlineData("readonly(Buffer) b = default(Buffer); b.Set();")]
+    [InlineData("immutable(Buffer) b = default(Buffer); b.Set();")]
     public void InvalidWritesAndConversionsAreRejected(string body)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(Buffer + "int main() { " + body + " return 0; }"));
 
@@ -57,7 +57,7 @@ public sealed class ReadOnlyTypeTests
     public void CollectionViewAndExplicitRawCastExecute()
         => Assert.Equal(43, CompilerTestHelper.Run(Buffer + """
             int main() {
-                int x = 41; Buffer b = new Buffer(&x); readonly(Buffer)* view = &b;
+                int x = 41; Buffer b = new Buffer(&x); immutable(Buffer)* view = &b;
                 readonly(int)* p = view.Data();
                 int* writable = (int*)p; *writable = 42;
                 readonly(int) n = view.Get(); int copy = n; copy++;
@@ -70,7 +70,7 @@ public sealed class ReadOnlyTypeTests
         => Assert.Equal(42, CompilerTestHelper.Run("""
             int main() {
                 int x = 1; int y = 40; readonly(int)* p = &x; p = &y;
-                readonly(int[2]) a = [1, 2]; int[2] b = a; b[0] = 2;
+                immutable(int[2]) a = [1, 2]; int[2] b = a; b[0] = 2;
                 return *p + b[0];
             }
             """).ExitCode);
@@ -82,23 +82,23 @@ public sealed class ReadOnlyTypeTests
                 public readonly(int) value;
                 private int* counter;
                 public S(int n, int* p) { value = n; counter = p; }
-                public readonly int Get() => value;
+                public immutable int Get() => value;
                 public ~S() { *counter = 42; }
             }
-            int main() { int destroyed = 0; { readonly(S) s = new S(7, &destroyed); if (s.Get() != 7) return 1; } return destroyed; }
+            int main() { int destroyed = 0; { immutable(S) s = new S(7, &destroyed); if (s.Get() != 7) return 1; } return destroyed; }
             """).ExitCode);
 
     [Fact]
     public void ReadOnlyMethodCanReturnUnrelatedMutableStorage()
         => Assert.Equal(42, CompilerTestHelper.Run("""
-            struct S { public readonly int* Data(int* external) => external; }
-            int main() { int x = 0; readonly(S) s = new S(); *s.Data(&x) = 42; return x; }
+            struct S { public immutable int* Data(int* external) => external; }
+            int main() { int x = 0; immutable(S) s = new S(); *s.Data(&x) = 42; return x; }
             """).ExitCode);
 
     [Fact]
     public void DeepReadOnlyPointerConversionIsSafe()
         => Assert.Equal(42, CompilerTestHelper.Run("""
-            int main() { int x = 42; int* p = &x; readonly(int*)* pp = &p; return **pp; }
+            int main() { int x = 42; int* p = &x; immutable(int*)* pp = &p; return **pp; }
             """).ExitCode);
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class ReadOnlyTypeTests
     [InlineData("Buffer b = view.inner;")]
     public void NestedFieldsAndPointerArraysKeepReadOnly(string operation)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(Buffer +
-            "struct Outer { public Buffer inner; public int*[2] items; } int main() { readonly(Outer) view = default(Outer); " + operation + " return 0; }"));
+            "struct Outer { public Buffer inner; public int*[2] items; } int main() { immutable(Outer) view = default(Outer); " + operation + " return 0; }"));
 
     [Theory]
     [InlineData("value = 2;")]
@@ -130,9 +130,9 @@ public sealed class ReadOnlyTypeTests
             struct S {
                 public int* data;
                 public S(int* p) { data = p; }
-                public readonly readonly(int)* Data => data;
+                public immutable readonly(int)* Data => data;
             }
-            int main() { int x = 42; readonly(S) s = new S(&x); return *s.Data; }
+            int main() { int x = 42; immutable(S) s = new S(&x); return *s.Data; }
             """).ExitCode);
 
     [Fact]
@@ -148,8 +148,8 @@ public sealed class ReadOnlyTypeTests
             }
             struct S { public int^ data; public S(int^ p) { data = p; } }
             """;
-        Assert.Equal(42, CompilerTestHelper.Run(source + "int main() { int^ p = new^ int(42); readonly(S)^ view = new^ S(p); readonly(int)^ q = view.data; return *q; }").ExitCode);
-        Assert.Throws<TypeCheckException>(() => Compiler.Check(source + "int main() { int^ p = new^ int(42); readonly(S)^ view = new^ S(p); *view.data = 0; return 0; }"));
-        Assert.Throws<TypeCheckException>(() => Compiler.Check(source + "int main() { int^ p = new^ int(42); readonly(S)^ view = new^ S(p); int^ q = (int^)view.data; return 0; }"));
+        Assert.Equal(42, CompilerTestHelper.Run(source + "int main() { int^ p = new^ int(42); immutable(S)^ view = new^ S(p); readonly(int)^ q = view.data; return *q; }").ExitCode);
+        Assert.Throws<TypeCheckException>(() => Compiler.Check(source + "int main() { int^ p = new^ int(42); immutable(S)^ view = new^ S(p); *view.data = 0; return 0; }"));
+        Assert.Throws<TypeCheckException>(() => Compiler.Check(source + "int main() { int^ p = new^ int(42); immutable(S)^ view = new^ S(p); int^ q = (int^)view.data; return 0; }"));
     }
 }

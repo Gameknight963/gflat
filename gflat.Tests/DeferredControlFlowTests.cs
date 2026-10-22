@@ -20,7 +20,7 @@ public sealed class DeferredControlFlowTests
     public void DeferredCodeCanControlItsOwnLoops()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             int main() {
                 defer {
                     int total = 0;

@@ -8,7 +8,7 @@ public sealed class NullableFlowTests
         struct Item {
             public int value;
             public Item(int n) { value = n; }
-            public readonly int Get() => value;
+            public immutable int Get() => value;
             ~Item() {}
         }
         void Other() {}
@@ -57,7 +57,7 @@ public sealed class NullableFlowTests
     public void BranchAssignmentsAndReadonlyPointersPreserveTheirTypes()
     {
         Assert.Equal(42, CompilerTestHelper.Run(Item + """
-            int Read(readonly(Item)*? p) { if (p == null) return 0; return p.Get(); }
+            int Read(immutable(Item)*? p) { if (p == null) return 0; return p.Get(); }
             int main() {
                 Item first = new Item(42); Item second = new Item(12);
                 Item*? p;
@@ -66,7 +66,7 @@ public sealed class NullableFlowTests
             }
             """).ExitCode);
         Assert.Throws<TypeCheckException>(() => Compiler.Check(Item + """
-            void Bad(readonly(Item)*? p) { if (p == null) return; p.value = 3; }
+            void Bad(immutable(Item)*? p) { if (p == null) return; p.value = 3; }
             """));
     }
 
@@ -131,7 +131,7 @@ public sealed class NullableFlowTests
             }
             struct Owner {
                 public Owner() {}
-                public copy Owner(readonly(Owner)* other) {}
+                public copy Owner(immutable(Owner)* other) {}
                 ~Owner() {}
             }
             int Read(Item*? p) {
@@ -208,7 +208,7 @@ public sealed class NullableFlowTests
         struct CopyOnly {
             private Item*?* slot;
             public CopyOnly(Item*?* storage, int ignored = 0) { slot = storage; }
-            public copy CopyOnly(readonly(CopyOnly)* source) nothrow {
+            public copy CopyOnly(immutable(CopyOnly)* source) nothrow {
                 slot = (Item*?*)source.slot;
                 *slot = null;
             }
@@ -299,9 +299,9 @@ public sealed class NullableFlowTests
     public void GuardedInterfacePointersDispatchFromStructsClassesAndNull()
     {
         Assert.Equal(42, CompilerTestHelper.Run("""
-            interface I { readonly int Get(); }
-            struct S : I { public readonly int Get() => 20; }
-            class C : I { public readonly int Get() => 22; }
+            interface I { immutable int Get(); }
+            struct S : I { public immutable int Get() => 20; }
+            class C : I { public immutable int Get() => 22; }
             int Read(I*? p) { if (p == null) return 0; return p.Get(); }
             int main() { S first = new S(); C second = new C(); return Read(&first) + Read(&second) + Read(null); }
             """).ExitCode);

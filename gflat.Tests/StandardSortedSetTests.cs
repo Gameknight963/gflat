@@ -18,11 +18,11 @@ public sealed class StandardSortedSetTests
             public Owned(int id,int identity){Id=id;Identity=identity;Text=s"owned";made++;}
             ~Owned(){dead++;}
         }
-        int Compare(readonly(Owned)* left,readonly(Owned)* right){
+        int Compare(immutable(Owned)* left,immutable(Owned)* right){
             if(budget==0)throw new Exception("comparison");if(budget>0)budget--;
             return left.Id-right.Id;
         }
-        bool Matches(readonly(SortedSet<Owned>)* values){
+        bool Matches(immutable(SortedSet<Owned>)* values){
             if(values.Count!=8)return false;
             var iterator=values.GetEnumerator();
             for(int i=0;i<8;i++){
@@ -42,7 +42,7 @@ public sealed class StandardSortedSetTests
             using std;
             int Ascending(readonly(int)* a,readonly(int)* b)=>*a-*b;
             int Descending(readonly(int)* a,readonly(int)* b)=>*b-*a;
-            bool Matches(readonly(SortedSet<int>)* values,readonly(int)* expected,nuint length){
+            bool Matches(immutable(SortedSet<int>)* values,readonly(int)* expected,nuint length){
                 if(values.Count!=length || values.IsEmpty!=(length==0) || values.Capacity<length)return false;
                 var iterator=values.GetEnumerator();
                 for(nuint i=0;i<length;i++)if(!iterator.MoveNext() || *iterator.Current!=expected[i] || !values.Contains(iterator.Current))return false;
@@ -78,8 +78,8 @@ public sealed class StandardSortedSetTests
         => Run(Owners+"""
             int main(){ {
                 SortedSet<Owned> values=new(Compare);values.Add(new Owned(3,11));
-                readonly(SortedSet<Owned>)* read=&values;
-                var first=read.GetEnumerator();first.MoveNext();readonly(Owned)* saved=first.Current;
+                immutable(SortedSet<Owned>)* read=&values;
+                var first=read.GetEnumerator();first.MoveNext();immutable(Owned)* saved=first.Current;
                 int before=allocations;
                 if(values.Add(new Owned(3,99)) || dead!=1 || values.Count!=1 || saved.Identity!=11)return 1;
                 if(allocations!=before+1 || saved.Text.Length!=5)return 2;
@@ -102,8 +102,8 @@ public sealed class StandardSortedSetTests
         => Run(Owners+"""
             int main(){ {
                 SortedSet<Owned> values=new(Compare);for(int i=0;i<8;i++)values.Add(new Owned(i,i));
-                Owned query=new Owned(3,30);readonly(SortedSet<Owned>)* read=&values;
-                var iterator=read.GetEnumerator();iterator.MoveNext();readonly(Owned)* saved=iterator.Current;
+                Owned query=new Owned(3,30);immutable(SortedSet<Owned>)* read=&values;
+                var iterator=read.GetEnumerator();iterator.MoveNext();immutable(Owned)* saved=iterator.Current;
                 for(int operation=0;operation<3;operation++)for(int failure=0;failure<4;failure++){
                     budget=failure;bool caught=false;
                     try{if(operation==0)read.Contains(&query);else if(operation==1)values.Remove(&query);else values.Add(new Owned(3,99));}
@@ -122,7 +122,7 @@ public sealed class StandardSortedSetTests
         => Run(Owners+"""
             int main(){ {
                 SortedSet<Owned> values=new(Compare);values.Reserve(1);values.Add(new Owned(5,50));
-                var iterator=values.GetEnumerator();iterator.MoveNext();readonly(Owned)* saved=iterator.Current;
+                var iterator=values.GetEnumerator();iterator.MoveNext();immutable(Owned)* saved=iterator.Current;
                 Owned incoming=new Owned(1,10);fail=true;bool caught=false;
                 try{values.Add(move incoming);}catch{caught=true;}fail=false;
                 if(!caught || values.Count!=1 || values.Capacity!=1 || saved.Id!=5 || made-dead!=1)return 1;

@@ -154,7 +154,7 @@ public sealed class StandardVectorMutationTests
                 public Item(int* copyCount, int* destroyCount, int key, bool failCopy) {
                     copies = copyCount; destroyed = destroyCount; Key = key; fail = failCopy;
                 }
-                public copy Item(readonly(Item)* source) {
+                public copy Item(immutable(Item)* source) {
                     copies = (int*)source.copies; destroyed = (int*)source.destroyed;
                     Key = source.Key; fail = source.fail; (*copies)++;
                     if (fail) throw new Exception("copy failed");

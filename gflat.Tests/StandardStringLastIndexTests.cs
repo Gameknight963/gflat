@@ -31,7 +31,7 @@ public sealed class StandardStringLastIndexTests
             byte[] input=new byte[random.Next(65)],pattern=new byte[random.Next(19)];random.NextBytes(input);random.NextBytes(pattern);
             if(test%2==0 && pattern.Length<=input.Length)input.AsSpan(random.Next(input.Length-pattern.Length+1),pattern.Length).CopyTo(pattern);
             Assign(code,"input",input);Assign(code,"pattern",pattern);
-            code.AppendLine($"pattern[{pattern.Length}]='\\0';{{String value=String::From(input,{input.Length});readonly(String)* view=&value;int before=allocations;int freed=releases;");
+            code.AppendLine($"pattern[{pattern.Length}]='\\0';{{String value=String::From(input,{input.Length});immutable(String)* view=&value;int before=allocations;int freed=releases;");
             int found=input.AsSpan().LastIndexOf(pattern),zero=Array.IndexOf(pattern,(byte)0);
             byte[] cstring=zero<0?pattern:pattern[..zero];int cfound=input.AsSpan().LastIndexOf(cstring);
             code.AppendLine($"if(view.LastIndexOf(pattern,{pattern.Length})!={Index(found)})return 1;");
@@ -50,15 +50,15 @@ public sealed class StandardStringLastIndexTests
     {
         string code="""
             using std;
-            bool Probe(readonly(String)* text,readonly(char)* key,nuint count,char value) nothrow {
+            bool Probe(immutable(String)* text,readonly(char)* key,nuint count,char value) nothrow {
                 return text.LastIndexOf(value)!=String::NotFound && text.LastIndexOf(key,count)!=String::NotFound && text.LastIndexOf(key)!=String::NotFound;
             }
             int main() {
-                String empty=new();readonly(String)* none=&empty;
+                String empty=new();immutable(String)* none=&empty;
                 if(none.LastIndexOf('a')!=String::NotFound||none.LastIndexOf("")!=0)return 1;
                 if(none.LastIndexOf((readonly(char)*)1,0)!=0||none.LastIndexOf((readonly(char)*)1,1)!=String::NotFound)return 2;
                 char[256] bytes;for(int i=0;i<256;i++)bytes[i]=(char)i;
-                String text=String::From(bytes,256);readonly(String)* view=&text;
+                String text=String::From(bytes,256);immutable(String)* view=&text;
                 for(nuint i=0;i<256;i++)if(view.LastIndexOf((char)i)!=i)return 3;
                 for(nuint i=0;i<=256;i++)if(view.LastIndexOf(view.Data+i,256-i)!=i)return 4;
                 for(nuint i=1;i<=256;i++)if(view.LastIndexOf(view.Data+i)!=i)return 5;

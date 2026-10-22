@@ -15,7 +15,7 @@ public static class Checksums<Algorithm : IByteHash>
         public nuint Length;
     }
 
-    public static Result Compute(readonly(char*) data, nuint length)
+    public static Result Compute(immutable(char*) data, nuint length)
     {
         Result result = new Result();
         result.Value = Algorithm::Seed;

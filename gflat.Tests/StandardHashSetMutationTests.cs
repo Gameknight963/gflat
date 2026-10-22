@@ -16,10 +16,10 @@ public sealed class StandardHashSetMutationTests
         struct Key:IHashable,IEquatable<Key>{
             public int Value;public String Token;
             public Key(int value){Value=value;Token=s"owner";made++;}
-            public copy Key(readonly(Key)* source){copies++;Value=source.Value;Token=source.Token;if(copies==failCopy)throw new Exception("copy");made++;}
+            public copy Key(immutable(Key)* source){copies++;Value=source.Value;Token=source.Token;if(copies==failCopy)throw new Exception("copy");made++;}
             ~Key(){dead++;}
-            public readonly nuint GetHashCode(){hashCalls++;if(hashCalls==failHash)throw new Exception("hash");return 1;}
-            public readonly bool Equals(readonly(Key)* other){equalityCalls++;if(equalityCalls==failEquality)throw new Exception("equality");return Value==other.Value;}
+            public immutable nuint GetHashCode(){hashCalls++;if(hashCalls==failHash)throw new Exception("hash");return 1;}
+            public immutable bool Equals(immutable(Key)* other){equalityCalls++;if(equalityCalls==failEquality)throw new Exception("equality");return Value==other.Value;}
         }
         """;
 
@@ -30,8 +30,8 @@ public sealed class StandardHashSetMutationTests
     {
         var random=new Random(81119);HashSet<int>[] sets=[[],[]];
         var source=new StringBuilder("""
-            using std;extern int puts(readonly(char*) text);
-            bool Matches(readonly(HashSet<int>)* values,readonly(int)* expected,nuint count){
+            using std;extern int puts(immutable(char*) text);
+            bool Matches(immutable(HashSet<int>)* values,readonly(int)* expected,nuint count){
                 if(values.Count!=count)return false;for(nuint i=0;i<count;i++)if(!values.Contains(expected+i))return false;return true;
             }
             int main(){HashSet<int> a=new();HashSet<int> b=new();
@@ -59,13 +59,13 @@ public sealed class StandardHashSetMutationTests
         => Run(Owners+"""
             struct Unique:IHashable,IEquatable<Unique>{
                 public int Value;public String Token;public Unique(int value){Value=value;Token=s"unique";made++;}~Unique(){dead++;}
-                public readonly nuint GetHashCode()=>1;
-                public readonly bool Equals(readonly(Unique)* other)=>Value==other.Value;
+                public immutable nuint GetHashCode()=>1;
+                public immutable bool Equals(immutable(Unique)* other)=>Value==other.Value;
             }
             int main(){ {
                 HashSet<Unique> target=new();HashSet<Unique> source=new();
                 for(int i=0;i<8;i++){target.Add(new Unique(i));source.Add(new Unique(i+4));}
-                int before=allocations;readonly(HashSet<Unique>)* read=&source;target.ExceptWith(read);
+                int before=allocations;immutable(HashSet<Unique>)* read=&source;target.ExceptWith(read);
                 if(target.Count!=4 || source.Count!=8 || made!=16 || dead!=4 || allocations!=before || copies!=0)return 1;
                 var iterator=source.GetEnumerator();while(iterator.MoveNext())if(iterator.Current.Token.Length!=6)return 2;
                 target.ExceptWith(&target);if(target.Count!=0 || dead!=8 || allocations!=before)return 3;
@@ -82,7 +82,7 @@ public sealed class StandardHashSetMutationTests
             int main(){ {
                 HashSet<Key> target=new();HashSet<Key> source=new();
                 for(int i=0;i<8;i++){target.Add(new Key(i));source.Add(new Key(i));}
-                readonly(HashSet<Key>)* read=&source;
+                immutable(HashSet<Key>)* read=&source;
                 int before=allocations;failCopy=1;target.UnionWith(read);
                 if(copies!=0 || target.Count!=8 || source.Count!=8 || allocations!=before)return 1;
                 failHash=hashCalls+1;target.UnionWith(&target);failHash=0;
@@ -135,11 +135,11 @@ public sealed class StandardHashSetMutationTests
             using std;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;}}
             struct Key:IHashable,IEquatable<Key>{
-                public int Id;public readonly(Node^) Value;
+                public int Id;public immutable(Node^) Value;
                 public Key(int id,Node^ value){Id=id;Value=value;}
-                public copy Key(readonly(Key)* source){Id=source.Id;Value=source.Value;}
-                public readonly nuint GetHashCode()=>(nuint)Id;
-                public readonly bool Equals(readonly(Key)* other)=>Id==other.Id;
+                public copy Key(immutable(Key)* source){Id=source.Id;Value=source.Value;}
+                public immutable nuint GetHashCode()=>(nuint)Id;
+                public immutable bool Equals(immutable(Key)* other)=>Id==other.Id;
             }
             void Fill(HashSet<Key>* target,HashSet<Key>* source){
                 Node^ a=new^ Node(0);a.Next=a;target.Add(new Key(0,a));

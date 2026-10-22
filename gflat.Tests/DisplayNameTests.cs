@@ -11,9 +11,13 @@ public class DisplayNameTests
         var type = TypeQualifiers.ReadOnly(new NamedTypeExpression("Box", null, 1,
             [new PointerTypeExpression(TypeQualifiers.ReadOnly(new NamedTypeExpression("char", null, 1)), false, 1)]));
         Assert.Equal("readonly(Box<readonly(char)*>)", new TypeChecker().DisplayTypeName(type));
+        Assert.Equal("immutable(Box<readonly(char)*>)", new TypeChecker().DisplayTypeName(TypeQualifiers.Immutable(type)));
         var pointer = TypeQualifiers.ReadOnly(new PointerTypeExpression(new NamedTypeExpression("char", null, 1), false, 1));
         Assert.Equal("readonly(char*)", TypeChecker.TypeName(pointer));
-        Assert.True(((PointerTypeExpression)pointer).Inner.IsReadOnlyValue);
+        Assert.False(((PointerTypeExpression)pointer).Inner.IsReadOnlyValue);
+        var deep=TypeQualifiers.Immutable(pointer);
+        Assert.Equal("immutable(char*)", TypeChecker.TypeName(deep));
+        Assert.True(((PointerTypeExpression)deep).Inner.IsReadOnlyValue);
     }
     [Fact]
     public void NamespacedGenericAndNestedTypesKeepSourceSpelling()

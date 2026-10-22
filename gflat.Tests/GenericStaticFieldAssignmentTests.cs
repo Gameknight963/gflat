@@ -43,7 +43,7 @@ public sealed class GenericStaticFieldAssignmentTests
     [InlineData("class")]
     [InlineData("struct")]
     public void ReadonlyStaticFieldsRemainProtected(string kind)
-        => AssertError(kind + " Box<T>{public static readonly(T) value;}int main(){Box<int>::value=42;return 0;}", "readonly");
+        => AssertError(kind + " Box<T>{public static immutable(T) value;}int main(){Box<int>::value=42;return 0;}", "readonly");
 
     [Fact]
     public void UnknownGenericTypeQualifiersProduceSourceErrors()

@@ -14,7 +14,7 @@ public sealed class ArrayValueParameterTests
 
     [Fact]
     public void ReadonlyArrayCanBePassedAsIndependentMutableCopy()
-        => Assert.Equal(42, CompilerTestHelper.Run("int Change(int[2] a) { a[0] = 41; return a[0]; } int main() { readonly(int[2]) a = [1, 2]; return Change(a) + a[0]; }").ExitCode);
+        => Assert.Equal(42, CompilerTestHelper.Run("int Change(int[2] a) { a[0] = 41; return a[0]; } int main() { immutable(int[2]) a = [1, 2]; return Change(a) + a[0]; }").ExitCode);
 
     [Fact]
     public void ArrayArgumentsWorkThroughMethodsConstructorsAndFunctionPointers()
@@ -40,7 +40,7 @@ public sealed class ArrayValueParameterTests
     [Theory]
     [InlineData("void F(int[] a) {} int main() => 0;")]
     [InlineData("int main() { long[2] a = [1, 2]; return 0; }")]
-    [InlineData("void F(int*[1] a) {} int main() { int n = 1; readonly(int*[1]) a = [&n]; F(a); return 0; }")]
+    [InlineData("void F(int*[1] a) {} int main() { int n = 1; immutable(int*[1]) a = [&n]; F(a); return 0; }")]
     public void UnsupportedOrUnsafeArrayConversionsAreRejected(string source)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(source));
 }

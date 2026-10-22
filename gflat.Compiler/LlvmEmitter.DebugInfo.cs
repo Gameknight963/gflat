@@ -35,7 +35,7 @@ public partial class LlvmEmitter
         _debugTypes[key] = id; // Publish before visiting fields of recursive types.
         string value;
         if (type.IsReadOnlyValue)
-            value = $"!DIDerivedType(tag: DW_TAG_const_type, baseType: {DebugType(type.WithReadOnlyValue(false))})";
+            value = $"!DIDerivedType(tag: DW_TAG_const_type, baseType: {DebugType(type.WithoutValueProtection())})";
         else if (type is PointerTypeExpression pointer)
         {
             if (_typeChecker.ResolveAlias(pointer.Inner) is NamedTypeExpression inner && _typeChecker.IsInterface(inner))

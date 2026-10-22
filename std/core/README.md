@@ -171,8 +171,9 @@ throws before the first element or after exhaustion.
 
 `Vector<T>.AsSpan()` borrows a mutable view. `AsReadOnly()` on vectors and spans
 returns `Span<readonly(T)>`; use `foreach` over this view for readonly collections.
-Declare readonly reference or owning element types explicitly when required, such
-as `readonly(Node^)` or `readonly(String)`. Mutable collections retain mutable
+`AsImmutable()` returns `Span<immutable(T)>` and also protects storage reached
+through each element. Declare deeply protected reference or owning element types
+explicitly when required, such as `immutable(Node^)` or `immutable(String)`. Mutable collections retain mutable
 reference elements.
 
 Views and iterators do not extend the owner's lifetime. Keep the owner alive and
@@ -205,10 +206,13 @@ int main()
 - Lengths and indices use `nuint`. Indexing and slicing check bounds.
 - A ref indexer exposes existing elements: it supports owning types, in-place
   mutation, and taking addresses. It does not copy an owner just to access it.
-- Access through `readonly(Span<T>)` or `readonly(Vector<T>)` projects readonly
-  elements, including deep readonly for pointer-containing elements.
+- Access through `readonly(Span<T>)` or `readonly(Vector<T>)` protects immediate
+  storage. `immutable(Span<T>)` and `immutable(Vector<T>)` additionally protect
+  elements and their reachable storage through immutable reference getters.
 - `Span<T>.AsReadOnly()` returns `Span<readonly(T)>`. Use this view when slicing
   through a readonly span; the resulting slice preserves element readonly.
+- `AsImmutable()` returns `Span<immutable(T)>` when deep element protection is
+  required. The two qualifications are equivalent for primitive scalar elements.
 - `Data` is nullable and bypasses bounds checks. Copying a span copies only its
   pointer and length.
 

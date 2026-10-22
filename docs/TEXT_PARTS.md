@@ -19,7 +19,7 @@ Unicode code-point or multi-character delimiter operation.
 `TextPartsSpan.gf` adds `Split(delimiter, removeEmpty = false)` extensions for
 `Span<char>` and `Span<readonly(char)>`. These copy only the borrowed view's
 metadata. `StringSplit.gf` separately adds the same convenience to an owning
-String through a `ref readonly(String)` receiver, avoiding a deep copy and
+String through a `ref immutable(String)` receiver, avoiding a deep copy and
 rejecting temporary String receivers. Neither extension file changes String or
 Span's own source dependencies.
 

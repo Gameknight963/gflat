@@ -140,7 +140,7 @@ public sealed class StandardFileLineSequenceTests
     private static void RunCompileFailure(Func<string,string> program)
     {
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(program("\"unused\""))));
-        Assert.Contains("readonly",error.Message,StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("immutable",error.Message,StringComparison.OrdinalIgnoreCase);
     }
     private static void Run(byte[] contents,Func<string,string> program,int optimization)
     {

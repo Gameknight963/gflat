@@ -122,7 +122,7 @@ public sealed class ConsoleInputTests
     {
         Run("""
             extern void* __gflat_stdio_stdin();
-            extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+            extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
             extern void clearerr(void* stream);
             int main() {
                 void* stream = __gflat_stdio_stdin();

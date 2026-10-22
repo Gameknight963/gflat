@@ -31,7 +31,7 @@ Default hashes are deterministic and not resistant to malicious
 collision attacks.
 
 Lookups accept a borrowed key pointer and never copy it. `Find` returns a borrowed
-nullable value pointer; `FindReadOnly` and `ContainsKey` work on readonly maps.
+nullable value pointer; `FindReadOnly` and `ContainsKey` work on immutable maps.
 The ref indexer throws when the key is absent and allows changing an existing
 value. `Remove` destroys an entry; `Clear` destroys every entry but retains storage.
 
@@ -55,8 +55,8 @@ when too many buckets have been used. Failed allocation or a throwing key compar
 leaves the existing entries intact. Values are destroyed exactly once.
 
 Enumeration borrows the map and has unspecified order. `HashMap<K,V>::Enumerator`
-returns readonly entry pointers with `Key` and `ValueReadOnly`; set enumerators
-return readonly element pointers. Do not mutate, move, or destroy the collection
+returns immutable entry pointers with `Key` and `ValueReadOnly`; set enumerators
+return immutable element pointers. Do not mutate, move, or destroy the collection
 while enumerating. Insertion and `Reserve` may invalidate all borrowed pointers,
 including when tombstone compaction keeps capacity unchanged; removal invalidates
 pointers into the removed entry. Collections do not own objects pointed to by
@@ -66,7 +66,7 @@ pointer-valued elements.
 
 `HashSet<T>` provides `SetEquals`, `IsSubsetOf`, `IsSupersetOf`,
 `IsProperSubsetOf`, `IsProperSupersetOf`, and `Overlaps`. Each takes a
-`readonly(HashSet<T>)*` and works on a readonly receiver. They borrow keys rather
+`immutable(HashSet<T>)*` and works on an immutable receiver. They borrow keys rather
 than copying them, and perform no allocations, so noncopyable owning keys work
 as well. Both empty sets are equal and subsets of each other; proper relations
 require different counts, and an empty set never overlaps another set.
@@ -79,7 +79,7 @@ enumeration also borrows existing entries; its invalidation rules are unchanged.
 
 ## Set mutations
 
-`ExceptWith(readonly(HashSet<T>)* other)` removes matching keys from this set.
+`ExceptWith(immutable(HashSet<T>)* other)` removes matching keys from this set.
 It borrows the other set's keys without copying them, so noncopyable owning keys
 are supported. Passing the same set clears it. It allocates no collection storage;
 removed owners are destroyed normally. The implementation iterates the distinct

@@ -78,7 +78,7 @@ public class ExplicitDestructorTests
 
     [Theory]
     [InlineData("S*? p = null; p.~S();", "non-null")]
-    [InlineData("readonly(S)* p = new* S(); p.~S();", "mutable")]
+    [InlineData("immutable(S)* p = new* S(); p.~S();", "mutable")]
     [InlineData("S^? p = null; p!.~S();", "raw pointer")]
     [InlineData("S p = new S(); p.~S();", "raw pointer")]
     [InlineData("S* p = new* S(); p.~int();", "must match")]

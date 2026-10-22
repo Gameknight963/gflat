@@ -44,7 +44,7 @@ public sealed class PathfindingExampleTests
         var program = new System.Text.StringBuilder("""
             using std;
             using Pathfinding;
-            bool Verify(readonly(char*) text, int expected) {
+            bool Verify(immutable(char*) text, int expected) {
                 Span<readonly(char)> cells = new(text, 42);
                 Vector<nuint> path = Grid::FindPath(cells, 7, 0, 41);
                 if (expected < 0) return path.Count == 0;

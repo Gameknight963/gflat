@@ -14,9 +14,12 @@ public sealed class AccessorDiagnosticPresentationTests
         string property = indexer ? "this[int index]" : "Value";
         string read = indexer ? "(*value)[0]" : "value.Value";
         string label = indexer ? "indexer accessor 'this[]'" : "property accessor 'Value'";
-        string source = "namespace Lib{" + kind + " Entry<T>{public int " + property + "{get{return 0;}}}}" +
-            "void F(readonly(Lib::Entry<int>)* value){" + read + ";}int main()=>0;";
-        AssertError(source, $"Cannot call non-readonly {label} on readonly instance", read);
+        foreach (string qualifier in new[] { "readonly", "immutable" })
+        {
+            string source = "namespace Lib{" + kind + " Entry<T>{public int " + property + "{get{return 0;}}}}" +
+                "void F("+qualifier+"(Lib::Entry<int>)* value){" + read + ";}int main()=>0;";
+            AssertError(source, $"Cannot call non-{qualifier} {label} on {qualifier} instance", read);
+        }
     }
 
     [Theory]
@@ -53,8 +56,11 @@ public sealed class AccessorDiagnosticPresentationTests
     [InlineData("class")]
     [InlineData("struct")]
     public void OrdinaryReadonlyMethodDiagnosticsKeepTheirWording(string kind)
-        => AssertError($"{kind} Entry{{public int Read()=>0;}}void F(readonly(Entry)* value){{value.Read();}}",
-            "Cannot call non-readonly method 'Read' on readonly instance", "value.Read()");
+    {
+        foreach (string qualifier in new[] { "readonly", "immutable" })
+            AssertError($"{kind} Entry{{public int Read()=>0;}}void F({qualifier}(Entry)* value){{value.Read();}}",
+                $"Cannot call non-{qualifier} method 'Read' on {qualifier} instance", "value.Read()");
+    }
 
     private static void AssertError(string source, string expected, string offending)
     {

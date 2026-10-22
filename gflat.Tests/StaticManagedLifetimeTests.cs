@@ -165,7 +165,7 @@ public sealed class StaticManagedLifetimeTests
             struct Child {
                 private managed<int, Probe>? item;
                 public Child() { item = null; }
-                public copy Child(readonly(Child)* source) { item = null; throw new Exception(); }
+                public copy Child(immutable(Child)* source) { item = null; throw new Exception(); }
                 ~Child() { putchar(68); }
             }
             struct Owner {
@@ -189,7 +189,7 @@ public sealed class StaticManagedLifetimeTests
                 private managed<int, Probe>? item;
                 private static int copies;
                 public Child() { item = null; }
-                public copy Child(readonly(Child)* source) {
+                public copy Child(immutable(Child)* source) {
                     item = null; copies++;
                     if (copies == 2) throw new Exception();
                 }
@@ -279,7 +279,7 @@ public sealed class StaticManagedLifetimeTests
     [InlineData("Owner value = new Owner(); try { (Owner)value; } catch {}", true)]
     public void CastedOwningValuesBalanceManagedStorage(string body, bool throws = false)
     {
-        string owner = OwnerSource.Replace("~Owner() {}", "public copy Owner(readonly(Owner)* source) { item = null; " +
+        string owner = OwnerSource.Replace("~Owner() {}", "public copy Owner(immutable(Owner)* source) { item = null; " +
             (throws ? "throw new Exception();" : "") + " } ~Owner() {}");
         var result = CompilerTestHelper.Run(ProbeSource + owner + """
             void Work() { BODY }
@@ -307,7 +307,7 @@ public sealed class StaticManagedLifetimeTests
                 public Destination() { item = null; }
                 public static Destination operator t""(readonly(char)* text, nuint count) => new Destination();
                 public void Write(readonly(char)* text, nuint count) { WRITE }
-                public readonly void Format(ITextWriter* output) { output.Write("nested", 6); }
+                public immutable void Format(ITextWriter* output) { output.Write("nested", 6); }
                 DESTRUCTOR
             }
             void Work() { BODY }

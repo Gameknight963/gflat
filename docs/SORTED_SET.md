@@ -34,8 +34,8 @@ borrows its query and destroys a matching stored value; it returns false on a
 miss. `Clear` destroys all values while retaining capacity. `Reserve`, `Count`,
 `Capacity`, and `IsEmpty` follow the other owning collections.
 
-`Contains` and `GetEnumerator` work on readonly receivers. The nested
-`SortedSet<T>::Enumerator` borrows the storage and exposes `readonly(T)* Current`
+`Contains` and `GetEnumerator` work on immutable receivers. The nested
+`SortedSet<T>::Enumerator` borrows the storage and exposes `immutable(T)* Current`
 in comparator order. Keys cannot be modified through that pointer. The source
 must remain alive and at a stable address; do not mutate, move, or destroy it
 while iterating. Structural mutations may invalidate borrowed pointers. If a

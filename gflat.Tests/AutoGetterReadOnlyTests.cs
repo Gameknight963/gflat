@@ -23,7 +23,7 @@ public sealed class AutoGetterReadOnlyTests
     {
         string source=$$$"""
             struct Holder {public {{{type}}} Value{get;} public Holder({{{type}}} value){Value=value;}}
-            int main(){int value=41;readonly(Holder) holder=new Holder({{{argument}}});return {{{result}}};}
+            int main(){int value=41;immutable(Holder) holder=new Holder({{{argument}}});return {{{result}}};}
             """;
         Assert.Equal(42,CompilerTestHelper.Run(source).ExitCode);
     }
@@ -57,7 +57,7 @@ public sealed class AutoGetterReadOnlyTests
             struct Holder<T>{public T Value{get;}public Holder(T value){Value=value;}}
             int main(){
                 int^ value=new^ int(42);
-                {{{(readOnly ? "readonly(Holder<"+type+">)" : "Holder<"+type+">")}}} holder=new Holder<{{{type}}}>(value);
+                {{{(readOnly ? "immutable(Holder<"+type+">)" : "Holder<"+type+">")}}} holder=new Holder<{{{type}}}>(value);
                 {{{(readOnly ? "" : "*holder.Value=42;")}}}
                 return *holder.Value;
             }
@@ -72,7 +72,7 @@ public sealed class AutoGetterReadOnlyTests
     {
         string source=$$$"""
             struct Holder<T>{public T Value{get;}public Holder(T value){Value=value;}}
-            int main(){int value=42;readonly(Holder<{{{type}}}>) holder=new Holder<{{{type}}}>({{{argument}}});return {{{result}}};}
+            int main(){int value=42;immutable(Holder<{{{type}}}>) holder=new Holder<{{{type}}}>({{{argument}}});return {{{result}}};}
             """;
         Assert.Equal(42,CompilerTestHelper.Run(source).ExitCode);
     }
@@ -86,8 +86,8 @@ public sealed class AutoGetterReadOnlyTests
                 int value=1;
                 Holder<int*> mutable=new Holder<int*>(&value);
                 *mutable.Value=40;
-                readonly(Holder<int>) scalar=new Holder<int>(1);
-                readonly(Holder<readonly(int)*>) pointer=new Holder<readonly(int)*>(&value);
+                immutable(Holder<int>) scalar=new Holder<int>(1);
+                immutable(Holder<readonly(int)*>) pointer=new Holder<readonly(int)*>(&value);
                 return scalar.Value+*pointer.Value+1;
             }
             """;
@@ -110,10 +110,20 @@ public sealed class AutoGetterReadOnlyTests
     {
         const string source="""
             struct Holder {public int* Value{get;}public Holder(int* value){Value=value;}}
-            int main(){int value=42;Holder holder=new Holder(&value);readonly(Holder)* view=&holder;return *view.Value;}
+            int main(){int value=42;Holder holder=new Holder(&value);immutable(Holder)* view=&holder;return *view.Value;}
             """;
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(source));
-        Assert.Contains("on readonly instance",error.Message);
+        Assert.Contains("on immutable instance",error.Message);
+    }
+
+    [Fact]
+    public void ShallowReceiverCanUsePointerAutoGetterWithoutReassigningItsStorage()
+    {
+        const string source="""
+            struct Holder{public int* Value{get;}public Holder(int* value){Value=value;}}
+            int main(){int value=1;Holder holder=new(&value);readonly(Holder)* view=&holder;*view.Value=42;return value;}
+            """;
+        Assert.Equal(42,CompilerTestHelper.Run(source).ExitCode);
     }
 
     [Fact]
@@ -139,7 +149,7 @@ public sealed class AutoGetterReadOnlyTests
     public void ExplicitReadOnlyStillRejectsAMutablePointerReturn()
     {
         const string source="""
-            struct Holder {public int* Value{readonly get;}public Holder(int* value){Value=value;}}
+            struct Holder {public int* Value{immutable get;}public Holder(int* value){Value=value;}}
             int main(){int value=42;Holder holder=new Holder(&value);return *holder.Value;}
             """;
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(source));
@@ -187,9 +197,9 @@ public sealed class AutoGetterReadOnlyTests
     public void GenericScalarGetterImplementsAReadOnlyInterfaceContract()
     {
         const string source="""
-            interface IValue {int Value{readonly get;}}
+            interface IValue {int Value{immutable get;}}
             struct Holder<T>:IValue {public T Value{get;}public Holder(T value){Value=value;}}
-            int main(){Holder<int> holder=new Holder<int>(42);readonly(IValue)* view=(readonly(IValue)*)&holder;return view.Value;}
+            int main(){Holder<int> holder=new Holder<int>(42);immutable(IValue)* view=(immutable(IValue)*)&holder;return view.Value;}
             """;
         Assert.Equal(42,CompilerTestHelper.Run(source).ExitCode);
     }
@@ -209,7 +219,7 @@ public sealed class AutoGetterReadOnlyTests
     public void MutablePointerGetterCannotImplementAReadOnlyInterfaceContract()
     {
         const string source="""
-            interface IValue {int* Value{readonly get;}}
+            interface IValue {int* Value{immutable get;}}
             struct Holder<T>:IValue {public T Value{get;}public Holder(T value){Value=value;}}
             int main(){int value=42;Holder<int*> holder=new Holder<int*>(&value);return 0;}
             """;
@@ -222,9 +232,9 @@ public sealed class AutoGetterReadOnlyTests
     {
         const string source="""
             class Holder {public virtual int Value{get;set;}}
-            int main(){Holder holder=new Holder();readonly(Holder)* view=&holder;return view.Value;}
+            int main(){Holder holder=new Holder();immutable(Holder)* view=&holder;return view.Value;}
             """;
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(source));
-        Assert.Contains("on readonly instance",error.Message);
+        Assert.Contains("on immutable instance",error.Message);
     }
 }

@@ -19,7 +19,8 @@ public partial class TypeChecker
         if (IsManagedStorage(node.Operand))
             throw new TypeCheckException("Cannot borrow a reference into managed storage", node.Span);
         var type = GetType(node.Operand);
-        if (IsExpressionReadOnly(node.Operand)) type = TypeQualifiers.ReadOnly(type);
+        if (IsExpressionImmutable(node.Operand)) type = TypeQualifiers.Immutable(type);
+        else if (IsExpressionReadOnly(node.Operand)) type = TypeQualifiers.ReadOnly(type);
         RecordType(node, new ReferenceTypeExpression(type, node.Line));
     }
 

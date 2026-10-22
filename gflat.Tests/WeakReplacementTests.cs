@@ -92,7 +92,7 @@ public class WeakReplacementTests
     [InlineData("weak replace int f() => 1;", "exactly one")]
     [InlineData("weak int f(int[2] x) => 1; replace int f(int[3] x) => 2;", "matching weak")]
     [InlineData("weak int f(const int x) => 1; replace int f(int x) => 2;", "must match")]
-    [InlineData("class C { public readonly weak int f() => 1; public replace int f() => 2; }", "static methods")]
+    [InlineData("class C { public immutable weak int f() => 1; public replace int f() => 2; }", "static methods")]
     [InlineData("extern int f(); weak int f() => 1;", "extern declaration")]
     [InlineData("class C { public static virtual weak int f() => 1; }", "Static methods cannot")]
     [InlineData("interface I { weak int f(); }", "concrete function body")]

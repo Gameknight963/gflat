@@ -66,10 +66,10 @@ public sealed class StandardFileStateTests
             Directory.CreateDirectory(scratch);
             string exe = Compile(directory, """
                 using std;
-                extern int puts(readonly(char*) text);
+                extern int puts(immutable(char*) text);
                 extern int fflush(void*? stream);
                 extern int getchar();
-                void Wait(readonly(char*) stage) { puts(stage); fflush(null); getchar(); }
+                void Wait(immutable(char*) stage) { puts(stage); fflush(null); getchar(); }
                 int main() {
                     {
                         File original = File::OpenTemporary();

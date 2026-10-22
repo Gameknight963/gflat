@@ -12,7 +12,7 @@ public static class Hex
     }
 
     // Input and output must not overlap. Failure leaves output untouched.
-    public static bool TryEncode(readonly(char*) data, nuint count, char* output, nuint capacity, ref nuint written, bool uppercase = true) nothrow
+    public static bool TryEncode(immutable(char*) data, nuint count, char* output, nuint capacity, ref nuint written, bool uppercase = true) nothrow
     {
         written = 0;
         nuint required = 0;
@@ -29,7 +29,7 @@ public static class Hex
         return true;
     }
 
-    public static bool TryGetDecodedLength(readonly(char*) text, nuint count, ref nuint length) nothrow
+    public static bool TryGetDecodedLength(immutable(char*) text, nuint count, ref nuint length) nothrow
     {
         length = 0;
         if (count % 2 != 0) return false;
@@ -40,7 +40,7 @@ public static class Hex
 
     // Accepts either letter case. Supports disjoint buffers or exact same start.
     // All input is validated first; failure leaves output untouched and written=0.
-    public static bool TryDecode(readonly(char*) text, nuint count, char* output, nuint capacity, ref nuint written) nothrow
+    public static bool TryDecode(immutable(char*) text, nuint count, char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         nuint required = 0;

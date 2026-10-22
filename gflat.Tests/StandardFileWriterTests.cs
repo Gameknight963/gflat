@@ -41,7 +41,7 @@ public sealed class StandardFileWriterTests
                 }
                 class Label : IFormattable {
                     public Label() { }
-                    public readonly void Format(ITextWriter* output) { output.Write("<tag>", 5); }
+                    public immutable void Format(ITextWriter* output) { output.Write("<tag>", 5); }
                 }
                 int main() {
                     if (sizeof(File) != sizeof(void*)) return 1;

@@ -51,7 +51,7 @@ public partial class TypeChecker
             FunctionPointerTypeExpression p => new FunctionPointerTypeExpression(p.ReturnType, p.ParameterTypes, p.IsManaged, false, node.Line),
             _ => declared
         };
-        return result.WithReadOnlyValue(type.IsReadOnlyValue);
+        return result.WithQualifiersFrom(type);
     }
 
     private void CheckNullableStorage(AstNode node, bool escape = false)

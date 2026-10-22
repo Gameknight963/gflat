@@ -18,13 +18,13 @@ public sealed class StandardComparerTests
                     if (pending.Dequeue() != 2 || pending.Dequeue() != 5 || pending.Dequeue() != 9) return 1;
                     Vector<int> numbers = new(); numbers.Add(7); numbers.Add(2); numbers.Add(3);
                     Sort<int>(numbers.AsSpan(), Comparer<int>::Compare);
-                    if (!IsSorted<int>(numbers.AsReadOnly(), Comparer<int>::Compare)) return 2;
-                    if (!SequenceEqual<int>(numbers.AsReadOnly(), numbers.AsReadOnly(), EqualityComparer<int>::Equals)) return 3;
+                    if (!IsSorted<int>(numbers.AsImmutable(), Comparer<int>::Compare)) return 2;
+                    if (!SequenceEqual<int>(numbers.AsImmutable(), numbers.AsImmutable(), EqualityComparer<int>::Equals)) return 3;
                     Vector<String> words = new(); words.Add(s"pear"); words.Add(s"apple"); words.Add(s"banana");
                     Sort<String>(words.AsSpan(), Comparer<String>::Compare);
                     String apple = s"apple"; String pear = s"pear";
                     if (!words[0].Equals(&apple) || !words[2].Equals(&pear)) return 4;
-                    if (!SequenceEqual<String>(words.AsReadOnly(), words.AsReadOnly(), EqualityComparer<String>::Equals)) return 5;
+                    if (!SequenceEqual<String>(words.AsImmutable(), words.AsImmutable(), EqualityComparer<String>::Equals)) return 5;
                     return 0;
                 }
                 """)));

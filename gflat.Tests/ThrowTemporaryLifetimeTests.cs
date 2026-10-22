@@ -13,13 +13,13 @@ public sealed class ThrowTemporaryLifetimeTests
         struct Buffer{
             public int* Data;
             public Buffer(int value){Data=new* int(value);buffers++;}
-            public copy Buffer(readonly(Buffer)* source){Data=new* int(*source.Data);buffers++;}
+            public copy Buffer(immutable(Buffer)* source){Data=new* int(*source.Data);buffers++;}
             ~Buffer(){bufferDead++;delete Data;}
         }
         class Failure:Exception{
             public Buffer Value;
             public Failure(int value){Value=new Buffer(value);made++;}
-            public copy Failure(readonly(Failure)* source){
+            public copy Failure(immutable(Failure)* source){
                 copies++;Value=source.Value;putchar(67);
                 if(failCopy)throw new Exception();made++;
             }

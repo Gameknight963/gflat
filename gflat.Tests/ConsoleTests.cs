@@ -204,7 +204,7 @@ public class ConsoleTests
             var result = Run("""
                 extern void* __gflat_stdio_stdin();
                 extern void* __gflat_stdio_stdout();
-                extern void*? freopen(readonly(char*) path, readonly(char*) mode, void* stream);
+                extern void*? freopen(immutable(char*) path, immutable(char*) mode, void* stream);
                 int main() {
                 """ + $$"""
                     if (freopen({{literal}}, "w", __gflat_stdio_stdin()) == null) return 1;

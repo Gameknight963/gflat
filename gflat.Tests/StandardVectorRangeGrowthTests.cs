@@ -15,7 +15,7 @@ public sealed class StandardVectorRangeGrowthTests
                  for(int i=0;i<1024;i++)target.AddRange(source);
                  if(target.Count!=1024||target.Capacity!=1024||allocations-before!=ordinary)return 1;
                  for(nuint i=0;i<target.Count;i++)if(target[i]!=7)return 2;
-                 target.AddRange(target.AsReadOnly());
+                 target.AddRange(target.AsImmutable());
                  if(target.Count!=2048||target.Capacity!=2048)return 3;
                  for(nuint i=0;i<target.Count;i++)if(target[i]!=7)return 4;}
                 {Vector<int> target=new();target.Add(1);int[20] values;
@@ -36,11 +36,11 @@ public sealed class StandardVectorRangeGrowthTests
         => Run("""
             int main(){
                 {Vector<int> target=new();for(int i=0;i<4;i++)target.Add(i);
-                 nuint capacity=target.Capacity;readonly(int)* address=target.AsReadOnly().Data!;
+                 nuint capacity=target.Capacity;readonly(int)* address=target.AsImmutable().Data!;
                  deny=true;
-                 try{target.AddRange(target.AsReadOnly());return 1;}catch(ref BadAllocException error){}
+                 try{target.AddRange(target.AsImmutable());return 1;}catch(ref BadAllocException error){}
                  deny=false;
-                 if(target.Count!=4||target.Capacity!=capacity||target.AsReadOnly().Data!=address)return 2;
+                 if(target.Count!=4||target.Capacity!=capacity||target.AsImmutable().Data!=address)return 2;
                  for(nuint i=0;i<4;i++)if(target[i]!=(int)i)return 3;
                  int before=allocations;
                  Span<readonly(int)> excessive=new((readonly(int)*)1,(nuint)0-(nuint)1);
@@ -49,7 +49,7 @@ public sealed class StandardVectorRangeGrowthTests
                  Span<readonly(int)> excessiveBytes=new((readonly(int)*)1,((nuint)0-(nuint)1)/(nuint)sizeof(int));
                  try{target.AddRange(excessiveBytes);return 6;}catch(ref Exception error){}
                  if(largeAllocations!=0||target.Count!=4||target.Capacity!=capacity)return 7;
-                 target.AddRange(target.AsReadOnly());
+                 target.AddRange(target.AsImmutable());
                  if(target.Count!=8||target.Capacity!=8)return 8;
                  for(nuint i=0;i<8;i++)if(target[i]!=(int)(i%4))return 9;}
                 if(allocations!=releases)return 10;return 0;

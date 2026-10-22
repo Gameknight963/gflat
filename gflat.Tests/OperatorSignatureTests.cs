@@ -15,7 +15,7 @@ public sealed class OperatorSignatureTests
     [Theory]
     [InlineData("Number", "Number")]
     [InlineData("Number", "Alias")]
-    [InlineData("Number", "readonly(Number)")]
+    [InlineData("Number", "immutable(Number)")]
     [InlineData("int", "Number")]
     public void DuplicateOperatorSignaturesCannotDifferByReturnTypeAliasesOrReadonly(string result, string secondOperand)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check($$"""
@@ -82,9 +82,9 @@ public sealed class OperatorSignatureTests
     public void ReadonlyReturnTypesRemainDistinctFromTheRejectedMethodModifier()
         => Compiler.Check("""
             struct Number {
-                public static readonly(Number) operator +(Number a, Number b) => default;
+                public static immutable(Number) operator +(Number a, Number b) => default;
             }
-            int main() { Number a = default; readonly(Number) b = a + a; return 0; }
+            int main() { Number a = default; immutable(Number) b = a + a; return 0; }
             """);
 
     [Theory]

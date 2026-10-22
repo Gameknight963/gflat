@@ -16,7 +16,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     // A value copy owns an independent buffer. Moving needs no user-written code.
-    public copy String(readonly(String)* source)
+    public copy String(immutable(String)* source)
     {
         data = (char*)"";
         length = 0;
@@ -24,11 +24,11 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         this.AppendLiteral(source.data, source.length);
     }
 
-    public nuint Length { readonly get nothrow => length; }
-    public nuint Capacity { readonly get nothrow => capacity; }
-    public bool IsEmpty { readonly get nothrow => length == 0; }
+    public nuint Length { immutable get nothrow => length; }
+    public nuint Capacity { immutable get nothrow => capacity; }
+    public bool IsEmpty { immutable get nothrow => length == 0; }
     public const nuint NotFound = (nuint)0 - (nuint)1;
-    public readonly(char)* Data { readonly get nothrow => data; }
+    public readonly(char)* Data { immutable get nothrow => data; }
 
     // Null-terminated input. Use the count overload for buffers or embedded nulls.
     public static String From(readonly(char)* text)
@@ -112,7 +112,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         this.AppendLiteral(text, count);
     }
 
-    public void Append(readonly(String)* text) { this.AppendLiteral(text.Data, text.Length); }
+    public void Append(immutable(String)* text) { this.AppendLiteral(text.Data, text.Length); }
     public void Append(char value) { this.AppendLiteral(&value, 1); }
 
     // Self-insertion snapshots the input before either shifting or reallocating.
@@ -151,29 +151,29 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     }
 
     public void Insert(nuint index, char value) { this.Insert(index, &value, 1); }
-    public void Insert(nuint index, readonly(String)* text) { this.Insert(index, text.Data, text.Length); }
+    public void Insert(nuint index, immutable(String)* text) { this.Insert(index, text.Data, text.Length); }
 
     // Byte offsets, as with the indexer. The result owns an independent buffer.
-    public readonly String Substring(nuint start, nuint count)
+    public immutable String Substring(nuint start, nuint count)
     {
         if (start > length || count > length - start) throw new Exception("String substring out of range");
         return String::From(data + start, count);
     }
 
-    public readonly String Substring(nuint start)
+    public immutable String Substring(nuint start)
     {
         if (start > length) throw new Exception("String substring out of range");
         return this.Substring(start, length - start);
     }
 
-    public readonly nuint IndexOf(char value, nuint start = 0)
+    public immutable nuint IndexOf(char value, nuint start = 0)
     {
         if (start > length) throw new Exception("String search start out of range");
         for (nuint i = start; i < length; i++) if (data[i] == value) return i;
         return NotFound;
     }
 
-    public readonly nuint IndexOf(readonly(char)* text, nuint count, nuint start = 0)
+    public immutable nuint IndexOf(readonly(char)* text, nuint count, nuint start = 0)
     {
         if (start > length) throw new Exception("String search start out of range");
         if (count == 0) return start;
@@ -184,14 +184,14 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return start + found;
     }
 
-    public readonly nuint IndexOf(readonly(char)* text)
+    public immutable nuint IndexOf(readonly(char)* text)
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
         return this.IndexOf(text, count, 0);
     }
 
-    public readonly nuint LastIndexOf(char value) nothrow
+    public immutable nuint LastIndexOf(char value) nothrow
     {
         nuint i = length;
         while (i != 0)
@@ -202,7 +202,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return NotFound;
     }
 
-    public readonly nuint LastIndexOf(readonly(char)* text, nuint count) nothrow
+    public immutable nuint LastIndexOf(readonly(char)* text, nuint count) nothrow
     {
         if (count == 0) return length;
         if (count > length) return NotFound;
@@ -211,32 +211,32 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return found;
     }
 
-    public readonly nuint LastIndexOf(readonly(char)* text) nothrow
+    public immutable nuint LastIndexOf(readonly(char)* text) nothrow
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
         return this.LastIndexOf(text, count);
     }
 
-    public readonly bool Contains(char value) => this.IndexOf(value) != NotFound;
-    public readonly bool Contains(readonly(char)* text) => this.IndexOf(text) != NotFound;
-    public readonly bool Contains(readonly(char)* text, nuint count) => this.IndexOf(text, count, 0) != NotFound;
+    public immutable bool Contains(char value) => this.IndexOf(value) != NotFound;
+    public immutable bool Contains(readonly(char)* text) => this.IndexOf(text) != NotFound;
+    public immutable bool Contains(readonly(char)* text, nuint count) => this.IndexOf(text, count, 0) != NotFound;
 
-    public readonly bool StartsWith(readonly(char)* text, nuint count) nothrow
+    public immutable bool StartsWith(readonly(char)* text, nuint count) nothrow
     {
         if (count > length) return false;
         for (nuint i = 0; i < count; i++) if (data[i] != text[i]) return false;
         return true;
     }
 
-    public readonly bool StartsWith(readonly(char)* text) nothrow
+    public immutable bool StartsWith(readonly(char)* text) nothrow
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
         return this.StartsWith(text, count);
     }
 
-    public readonly bool EndsWith(readonly(char)* text, nuint count) nothrow
+    public immutable bool EndsWith(readonly(char)* text, nuint count) nothrow
     {
         if (count > length) return false;
         nuint start = length - count;
@@ -244,7 +244,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return true;
     }
 
-    public readonly bool EndsWith(readonly(char)* text) nothrow
+    public immutable bool EndsWith(readonly(char)* text) nothrow
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
@@ -369,27 +369,27 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (capacity != 0) data[0] = '\0';
     }
 
-    public readonly String ToString() => String::From(data, length);
+    public immutable String ToString() => String::From(data, length);
 
     // Borrowed text: valid until mutation, movement, or destruction of this string.
-    public readonly readonly(char)* ToCString() nothrow => data;
+    public immutable readonly(char)* ToCString() nothrow => data;
 
     public void Write(readonly(char)* text, nuint count) { this.AppendLiteral(text, count); }
-    public readonly void Format(ITextWriter* output) { output.Write(data, length); }
+    public immutable void Format(ITextWriter* output) { output.Write(data, length); }
 
-    public readonly String Clone() { return String::From(data, length); }
+    public immutable String Clone() { return String::From(data, length); }
 
-    public readonly bool Equals(readonly(String)* other) nothrow
+    public immutable bool Equals(immutable(String)* other) nothrow
     {
         if (length != other.Length) return false;
         for (nuint i = 0; i < length; i++) if (data[i] != other.Data[i]) return false;
         return true;
     }
 
-    public readonly nuint GetHashCode() nothrow => Hashing::Bytes(data, length);
+    public immutable nuint GetHashCode() nothrow => Hashing::Bytes(data, length);
 
     // Ordinal UTF-8 byte order, independent of locale and null termination.
-    public readonly int CompareTo(readonly(String)* other) nothrow
+    public immutable int CompareTo(immutable(String)* other) nothrow
     {
         nuint limit = length;
         if (other.Length < limit) limit = other.Length;
@@ -405,7 +405,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
 
     public char this[nuint index]
     {
-        readonly get
+        immutable get
         {
             if (index >= length) throw new Exception("String index out of range", 3);
             return data[index];

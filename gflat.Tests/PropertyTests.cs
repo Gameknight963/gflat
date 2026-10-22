@@ -127,7 +127,7 @@ public class PropertyTests
             struct S { public int Value { get; set; } = 5; }
             int main() {
                 Counter c = new Counter(); Base* b = (Base*)&c; b.Count = 7;
-                S s = new S(); readonly(S)* p = &s;
+                S s = new S(); immutable(S)* p = &s;
                 return b.Count + p.Value;
             }
             """).ExitCode);
@@ -175,8 +175,8 @@ public class PropertyTests
     public void ExplicitReadOnlyGetterCanHaveMutableSetter()
     {
         Assert.Equal(9, CompilerTestHelper.Run("""
-            struct S { int n; public int P { readonly get => n; set => n = value; } }
-            int main() { S s = new S(); s.P = 9; readonly(S)* p = &s; return p.P; }
+            struct S { int n; public int P { immutable get => n; set => n = value; } }
+            int main() { S s = new S(); s.P = 9; immutable(S)* p = &s; return p.P; }
             """).ExitCode);
     }
 
@@ -264,7 +264,7 @@ public class PropertyTests
     [InlineData("struct S { public int P { get; public set; } }", "more restrictive")]
     [InlineData("struct S { public int P; public int P => 1; }", "Duplicate declaration")]
     [InlineData("struct S { public int P { get; set; } } int main() { S s; s.P = 1; return 0; }", "unassigned")]
-    [InlineData("struct S { public int P { get; set; } } int main() { S s = new S(); readonly(S)* p = &s; p.P = 1; return 0; }", "readonly")]
+    [InlineData("struct S { public int P { get; set; } } int main() { S s = new S(); immutable(S)* p = &s; p.P = 1; return 0; }", "immutable")]
     [InlineData("struct V { public int X; } struct S { public V P => new V(); } int main() { S s = new S(); s.P.X = 1; return 0; }", "value returned by a property")]
     [InlineData("struct S { public void P { get; set; } }", "Properties cannot")]
     [InlineData("struct V { ~V() {} } struct S { public V P { get; set; } }", "Returning this field requires a copy constructor")]

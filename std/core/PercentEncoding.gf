@@ -4,7 +4,7 @@ namespace std;
 // Counted bytes, no allocation, and no trailing null in output.
 public static class PercentEncoding
 {
-    public static bool TryGetEncodedLength(readonly(char*) data, nuint count, ref nuint length) nothrow
+    public static bool TryGetEncodedLength(immutable(char*) data, nuint count, ref nuint length) nothrow
     {
         length = 0;
         nuint required = 0;
@@ -21,13 +21,13 @@ public static class PercentEncoding
     }
 
     // Input/output must be disjoint. Failure changes no output bytes.
-    public static bool TryEncode(readonly(char*) data, nuint count, char* output, nuint capacity, ref nuint written) nothrow
+    public static bool TryEncode(immutable(char*) data, nuint count, char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         if (count > capacity) return false;
         nuint required = 0;
         if (!PercentEncoding::TryGetEncodedLength(data, count, ref required) || required > capacity) return false;
-        readonly(char*) digits = "0123456789ABCDEF";
+        immutable(char*) digits = "0123456789ABCDEF";
         nuint target = 0;
         for (nuint i = 0; i < count; i++)
         {
@@ -45,7 +45,7 @@ public static class PercentEncoding
         return true;
     }
 
-    public static bool TryGetDecodedLength(readonly(char*) text, nuint count, ref nuint length) nothrow
+    public static bool TryGetDecodedLength(immutable(char*) text, nuint count, ref nuint length) nothrow
     {
         length = 0;
         nuint index = 0;
@@ -66,7 +66,7 @@ public static class PercentEncoding
 
     // Decodes once. '+' remains '+'. Disjoint or exact same-address buffers
     // are supported. Malformed input/capacity failure leaves output untouched.
-    public static bool TryDecode(readonly(char*) text, nuint count, char* output, nuint capacity, ref nuint written) nothrow
+    public static bool TryDecode(immutable(char*) text, nuint count, char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;
         nuint required = 0;

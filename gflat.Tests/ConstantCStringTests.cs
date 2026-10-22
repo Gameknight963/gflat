@@ -30,15 +30,15 @@ public sealed class ConstantCStringTests
     {
         var result = CompilerTestHelper.Run("""
             extern int puts(readonly(char)* text);
-            const readonly(char*) tail = "hello" + 1;
+            const immutable(char*) tail = "hello" + 1;
             readonly(char)* Default(readonly(char)* value = "hello" + 1) => value;
             struct View {
                 public readonly(char)* text;
                 public const View(readonly(char)* value) { text = value; }
             }
             const View view = new View("hello" + 1);
-            const readonly(char*) Rest() => "hello" + 1;
-            const readonly(char*) returned = Rest();
+            const immutable(char*) Rest() => "hello" + 1;
+            const immutable(char*) returned = Rest();
             int main() {
                 puts(tail);
                 if (tail[0] != 'e' || tail[4] != '\0') return 1;
@@ -98,12 +98,12 @@ public sealed class ConstantCStringTests
     [InlineData("const int invalid = (int)\"é\"[3];", "outside")]
     [InlineData("const int invalid = (int)(\"abc\" + 4)[0];", "outside")]
     [InlineData("const int invalid = (int)\"abc\"[18446744073709551615ul];", "outside")]
-    [InlineData("const readonly(char*) invalid = \"abc\" - 1;", "outside")]
-    [InlineData("const readonly(char*) invalid = \"abc\" + 5;", "outside")]
+    [InlineData("const immutable(char*) invalid = \"abc\" - 1;", "outside")]
+    [InlineData("const immutable(char*) invalid = \"abc\" + 5;", "outside")]
     [InlineData("const bool invalid = \"abc\" < \"def\";", "distinct")]
     [InlineData("const long invalid = \"abc\" - \"def\";", "distinct")]
     [InlineData("const bool invalid = (\"abc\" + 4) == \"def\";", "one-past")]
-    [InlineData("const readonly(int*) invalid = (readonly(int)*)\"abcdefgh\" + 1;", "cast")]
+    [InlineData("const immutable(int*) invalid = (readonly(int)*)\"abcdefgh\" + 1;", "cast")]
     public void InvalidOrUnrepresentableConstantPointerOperationsProduceDiagnostics(string source, string expected)
         => Assert.Contains(expected, Assert.Throws<TypeCheckException>(() => Compiler.Check(source)).Message, StringComparison.OrdinalIgnoreCase);
 }

@@ -36,7 +36,7 @@ and consume each other's remaining input. `Any`, `Count`, and early termination
 also consume lines; a later enumeration continues from the position they left.
 `Take(0)` constructs its iterator without advancing the file.
 
-`Current` is a checked `ref readonly(String)` property. Reading metadata or
+`Current` is a checked `ref immutable(String)` property. Reading metadata or
 borrowing its data does not copy the String. Its references, pointers, and spans
 are invalidated by the next `MoveNext`, iterator movement, or destruction.
 Reading `Current` before the first successful advance or after completion throws.

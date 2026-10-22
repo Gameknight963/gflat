@@ -42,7 +42,7 @@ public class ConsumingValueTests
         struct R {
             public int n;
             public R(int value) { n = value; }
-            public copy R(readonly(R)* source) {
+            public copy R(immutable(R)* source) {
                 if (source.n == 9) throw new Exception();
                 n = source.n;
                 printf("C%d", n);
@@ -71,7 +71,7 @@ public class ConsumingValueTests
     {
         var result = CompilerTestHelper.Run(Copyable + """
             void Use(R value) { value.n = 2; }
-            R Read(readonly(R)* value) { return *value; }
+            R Read(immutable(R)* value) { return *value; }
             int main() { R a = new R(1); Use(a); R b = Read(&a); return 0; }
             """);
         Assert.Equal(0, result.ExitCode);
@@ -100,7 +100,7 @@ public class ConsumingValueTests
     [InlineData("class Base { R item; public Base() { item = new R(1); } } class Derived : Base { R other; public Derived() { other = new R(2); throw new Exception(); } }", "Derived a = new Derived();", "D2D1")]
     [InlineData("class Base { R item; public Base() { item = new R(1); throw new Exception(); } } class Derived : Base { public Derived() {} }", "Derived a = new Derived();", "D1")]
     [InlineData("struct Holder { R item; public Holder(R value) { throw new Exception(); } }", "Holder a = new Holder(new R(1));", "D1")]
-    [InlineData("struct Holder { R item; public Holder() { item = new R(1); } public copy Holder(readonly(Holder)* source) { item = source.item; throw new Exception(); } }", "Holder a = new Holder(); Holder b = a;", "C1D1D1")]
+    [InlineData("struct Holder { R item; public Holder() { item = new R(1); } public copy Holder(immutable(Holder)* source) { item = source.item; throw new Exception(); } }", "Holder a = new Holder(); Holder b = a;", "C1D1D1")]
     public void ConstructionFailureCleansCompletedOwners(string types, string body, string expected)
     {
         var result = CompilerTestHelper.Run(Copyable + types + "int main() { try {" + body + "} catch {} return 0; }");
@@ -171,7 +171,7 @@ public class ConsumingValueTests
     public void InheritedCopyConstructorsWithoutDestructorsAreNotSkipped()
     {
         var result = CompilerTestHelper.Run("""
-            class Base { public int n; public Base() { n = 1; } public copy Base(readonly(Base)* p) { n = p.n + 1; } }
+            class Base { public int n; public Base() { n = 1; } public copy Base(immutable(Base)* p) { n = p.n + 1; } }
             class Derived : Base {}
             int main() { Derived a = new Derived(); Derived b = a; return b.n; }
             """);
@@ -179,11 +179,11 @@ public class ConsumingValueTests
     }
 
     [Theory]
-    [InlineData("struct Secret { private copy Secret(readonly(Secret)* p) {} public Secret() {} }", "Secret a = new Secret(); Secret b = a;")]
-    [InlineData("struct Secret { private copy Secret(readonly(Secret)* p) {} public Secret() {} }", "Secret a = new Secret(); Secret b = new Secret(&a);")]
-    [InlineData("struct Secret { private copy Secret(readonly(Secret)* p) {} public Secret() {} } struct Holder { Secret s = new Secret(); }", "Holder a = new Holder(); Holder b = a;")]
+    [InlineData("struct Secret { private copy Secret(immutable(Secret)* p) {} public Secret() {} }", "Secret a = new Secret(); Secret b = a;")]
+    [InlineData("struct Secret { private copy Secret(immutable(Secret)* p) {} public Secret() {} }", "Secret a = new Secret(); Secret b = new Secret(&a);")]
+    [InlineData("struct Secret { private copy Secret(immutable(Secret)* p) {} public Secret() {} } struct Holder { Secret s = new Secret(); }", "Holder a = new Holder(); Holder b = a;")]
     [InlineData("struct S { public copy S(S* p) {} }", "")]
-    [InlineData("struct S { public copy S(readonly(S)*? p) {} }", "")]
+    [InlineData("struct S { public copy S(immutable(S)*? p) {} }", "")]
     [InlineData("struct S { public copy S() {} }", "")]
     public void CopyContractsAreChecked(string types, string body)
         => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(types + "int main() {" + body + "return 0;}"));

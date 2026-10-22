@@ -8,7 +8,7 @@ public class TypeofTests
     public void BareFunctionSignaturesDescribeTheirShapeWithoutValueLayout()
     {
         Assert.Equal(42, CompilerTestHelper.Run("""
-            alias Transform = int(readonly(char*), ref int);
+            alias Transform = int(immutable(char*), ref int);
             const bool NoLayout = !typeof(Transform).HasLayout;
             int main() {
                 std::TypeInfo info = typeof(Transform);
@@ -33,10 +33,10 @@ public class TypeofTests
     {
         Assert.Equal(0, CompilerTestHelper.Run("""
             int main() {
-                std::TypeInfo signature = typeof(int(readonly(char*), ref readonly(int), int**)*);
+                std::TypeInfo signature = typeof(int(immutable(char*), ref readonly(int), int**)*);
                 if (signature.Kind != std::TypeKind::FunctionPointer || signature.ElementType != null) return 1;
                 if (signature.ReturnType!.Size != (nuint)4 || signature.ParameterCount != (nuint)3) return 2;
-                readonly(std::TypeInfo)* parameters = signature.ParameterTypes!;
+                immutable(std::TypeInfo)* parameters = signature.ParameterTypes!;
                 if (parameters[0].Kind != std::TypeKind::Pointer || !parameters[0].IsReadOnly || !parameters[0].ElementType!.IsReadOnly) return 3;
                 if (parameters[1].Kind != std::TypeKind::Reference || parameters[1].IsReadOnly || !parameters[1].ElementType!.IsReadOnly) return 4;
                 if (parameters[2].ElementType!.ElementType!.Size != (nuint)4) return 5;
@@ -96,8 +96,8 @@ public class TypeofTests
     public void ParameterDescriptorStorageOutlivesTheProducingFunction()
     {
         Assert.Equal(42, CompilerTestHelper.Run("""
-            readonly(std::TypeInfo)* Parameters() => typeof(int(int, long)*).ParameterTypes!;
-            int main() { readonly(std::TypeInfo)* types = Parameters(); if (types[0].Size != (nuint)4 || types[1].Size != (nuint)8) return 1; return 42; }
+            immutable(std::TypeInfo)* Parameters() => typeof(int(int, long)*).ParameterTypes!;
+            int main() { immutable(std::TypeInfo)* types = Parameters(); if (types[0].Size != (nuint)4 || types[1].Size != (nuint)8) return 1; return 42; }
             """).ExitCode);
     }
 
@@ -138,17 +138,17 @@ public class TypeofTests
     public void NamesResolveAliasesAndGenericNamespacesWithoutMangling()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             namespace Game { struct Box<T> { public T value; } }
             alias IntBox = Game::Box<int>;
             int main() {
                 printf("%s\n", typeof(IntBox).Name);
-                printf("%s\n", typeof(readonly(char*)).Name);
+                printf("%s\n", typeof(immutable(char*)).Name);
                 return 0;
             }
             """);
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal("Game::Box<int>\nreadonly(char*)\n", result.StandardOutput.Replace("\r\n", "\n"));
+        Assert.Equal("Game::Box<int>\nimmutable(char*)\n", result.StandardOutput.Replace("\r\n", "\n"));
     }
 
     [Fact]
@@ -177,8 +177,8 @@ public class TypeofTests
     [Theory]
     [InlineData("int**", false, false, false)]
     [InlineData("readonly(int)**", false, false, true)]
-    [InlineData("readonly(int*)*", false, true, true)]
-    [InlineData("readonly(int**)", true, true, true)]
+    [InlineData("immutable(int*)*", false, true, true)]
+    [InlineData("immutable(int**)", true, true, true)]
     public void ReadonlyQualificationIsDescribedAtEachLayer(string type, bool outer, bool middle, bool leaf)
     {
         string Boolean(bool value) => value ? "true" : "false";

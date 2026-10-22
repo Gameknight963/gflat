@@ -10,7 +10,7 @@ public sealed class GenericTypeTokenNavigationTests
     [Theory]
     [InlineData("Library::Family<Library::Arg>::Item")]
     [InlineData("Family<Arg>::Item")]
-    [InlineData("readonly(Library::Family<Library::Arg>::Item)*?")]
+    [InlineData("immutable(Library::Family<Library::Arg>::Item)*?")]
     public void GenericTypeSegmentsNavigateToTheirOwnDeclarations(string type)
     {
         string text = "using Library; void Use(" + type + " value) {} int main()=>0;";

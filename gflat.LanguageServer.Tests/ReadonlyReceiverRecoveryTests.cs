@@ -7,10 +7,10 @@ namespace gflat.LanguageServer.Tests;
 public sealed class ReadonlyReceiverRecoveryTests
 {
     [Theory]
-    [InlineData("class", "public static readonly int Broken()=>0;")]
-    [InlineData("struct", "public static readonly int Broken()=>0;")]
-    [InlineData("static class", "public static readonly int Broken()=>0;")]
-    [InlineData("static class", "public static int Broken{readonly get=>0;}")]
+    [InlineData("class", "public static immutable int Broken()=>0;")]
+    [InlineData("struct", "public static immutable int Broken()=>0;")]
+    [InlineData("static class", "public static immutable int Broken()=>0;")]
+    [InlineData("static class", "public static int Broken{immutable get=>0;}")]
     public void ReceiverErrorsPreserveHealthySiblingBodiesAndCrossFileCalls(string kind, string invalid)
     {
         string declaration = kind + " Holder{" + invalid + " public static int Healthy(){long actual=42;return (int)actual;}}";

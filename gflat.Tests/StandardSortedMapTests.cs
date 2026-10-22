@@ -7,7 +7,7 @@ public sealed class StandardSortedMapTests
 {
     private const string Prelude = """
         using std;
-        extern int puts(readonly(char*) text);
+        extern int puts(immutable(char*) text);
         int made = 0; int dead = 0; int budget = -1;
         struct Owned {
             public int Value;
@@ -15,7 +15,7 @@ public sealed class StandardSortedMapTests
             public Owned(int value) { Value = value; Token = s"owner"; made++; }
             ~Owned() { dead++; }
         }
-        int Compare(readonly(Owned)* left, readonly(Owned)* right) {
+        int Compare(immutable(Owned)* left, immutable(Owned)* right) {
             if (budget == 0) throw new Exception("comparison failed");
             if (budget > 0) budget--;
             if (left.Value < right.Value) return -1;
@@ -24,7 +24,7 @@ public sealed class StandardSortedMapTests
         }
         bool Matches(SortedMap<Owned,Owned>* map, readonly(int)* expected, nuint count) {
             if (map.Count != count || map.IsEmpty != (count == 0) || map.Capacity < count) return false;
-            readonly(SortedMap<Owned,Owned>)* read = map;
+            immutable(SortedMap<Owned,Owned>)* read = map;
             var iterator = read.GetEnumerator();
             for (nuint i = 0; i < count; i++) {
                 if (!iterator.MoveNext()) return false;
@@ -96,7 +96,7 @@ public sealed class StandardSortedMapTests
         var source = new StringBuilder(Prelude).AppendLine("""
             int main() { { SortedMap<Owned,Owned> map = new(Compare);
                 for (int i = 0; i < 8; i++) map.Add(new Owned(i),new Owned(i * 10));
-                Owned probe = new(3); readonly(SortedMap<Owned,Owned>)* read = &map;
+                Owned probe = new(3); immutable(SortedMap<Owned,Owned>)* read = &map;
                 int[16] expected = [0,0,1,10,2,20,3,30,4,40,5,50,6,60,7,70];
             """);
         string[] calls = ["map.ContainsKey(&probe)", "map.Find(&probe)", "read.FindReadOnly(&probe)", "map.Remove(&probe)",
@@ -160,12 +160,12 @@ public sealed class StandardSortedMapTests
     [InlineData(2)]
     public void ComparerEquivalenceKeepsOriginalKeysAndMovesPreserveOwnership(int optimization)
         => Run(Prelude + """
-            int AbsoluteCompare(readonly(Owned)* a, readonly(Owned)* b) {
+            int AbsoluteCompare(immutable(Owned)* a, immutable(Owned)* b) {
                 int left = a.Value; int right = b.Value;
                 if (left < 0) left = -left; if (right < 0) right = -right;
                 if (left < right) return -1; if (left > right) return 1; return 0;
             }
-            int ReverseCompare(readonly(Owned)* a, readonly(Owned)* b) => Compare(b,a);
+            int ReverseCompare(immutable(Owned)* a, immutable(Owned)* b) => Compare(b,a);
             int main() { {
                 SortedMap<Owned,Owned> original = new(AbsoluteCompare);
                 original.Add(new Owned(-5),new Owned(10));

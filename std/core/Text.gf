@@ -6,5 +6,5 @@ interface ITextWriter
 
 interface IFormattable
 {
-    readonly void Format(ITextWriter* output);
+    immutable void Format(ITextWriter* output);
 }

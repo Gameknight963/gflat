@@ -87,7 +87,7 @@ public sealed class StandardTryQueryTests
             struct Item{
                 public String Text;
                 public Item(String text){Text=move text;live++;}
-                public copy Item(readonly(Item)* source){copies++;Text=source.Text;if(copies==failAt)throw new Exception("copy");live++;}
+                public copy Item(immutable(Item)* source){copies++;Text=source.Text;if(copies==failAt)throw new Exception("copy");live++;}
                 ~Item(){live--;}
             }
             int main(){{

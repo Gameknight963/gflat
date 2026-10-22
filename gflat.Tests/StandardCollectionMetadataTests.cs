@@ -16,9 +16,9 @@ public sealed class StandardCollectionMetadataTests
     {
         string ir = Compiler.Emit(Sources("""
             using std;
-            bool ReadMetadata(readonly(Vector<int>)* vector, Span<int>* span, readonly(Queue<int>)* queue,
-                readonly(Stack<int>)* stack, readonly(PriorityQueue<int>)* priority, readonly(BitSet)* bits,
-                readonly(HashMap<int,int>)* map, readonly(HashSet<int>)* set, readonly(LinkedList<int>)* list) nothrow {
+            bool ReadMetadata(immutable(Vector<int>)* vector, Span<int>* span, immutable(Queue<int>)* queue,
+                immutable(Stack<int>)* stack, immutable(PriorityQueue<int>)* priority, immutable(BitSet)* bits,
+                immutable(HashMap<int,int>)* map, immutable(HashSet<int>)* set, immutable(LinkedList<int>)* list) nothrow {
                 return vector.Count == 0 && vector.Capacity == 0 && vector.IsEmpty && span.Length == 0 && span.IsEmpty && span.Data == null
                     && queue.Count == 0 && queue.Capacity == 0 && queue.IsEmpty
                     && stack.Count == 0 && stack.Capacity == 0 && stack.IsEmpty

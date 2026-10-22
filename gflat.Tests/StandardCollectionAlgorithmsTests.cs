@@ -41,8 +41,8 @@ public sealed class StandardCollectionAlgorithmsTests
                 for (int key = -1; key <= 20; key++) {
                     nuint lower = 0; while (lower < values.Count && values[lower] < key) lower++;
                     nuint upper = 0; while (upper < values.Count && values[upper] <= key) upper++;
-                    if (LowerBound<int>(values.AsReadOnly(), &key, Compare) != lower) return 1;
-                    if (UpperBound<int>(values.AsReadOnly(), &key, Compare) != upper) return 2;
+                    if (LowerBound<int>(values.AsImmutable(), &key, Compare) != lower) return 1;
+                    if (UpperBound<int>(values.AsImmutable(), &key, Compare) != upper) return 2;
                 }
                 Span<readonly(int)> empty = new(); int key = 42;
                 if (LowerBound<int>(empty, &key, Compare) != 0 || UpperBound<int>(empty, &key, Compare) != 0) return 3;
@@ -64,7 +64,7 @@ public sealed class StandardCollectionAlgorithmsTests
                 public Item(int* counter, int key) { destroyed = counter; Key = key; Name = s"owned"; }
                 ~Item() { (*destroyed)++; }
             }
-            int Compare(readonly(Item)* a, readonly(Item)* b) => a.Key - b.Key;
+            int Compare(immutable(Item)* a, immutable(Item)* b) => a.Key - b.Key;
             int main() {
                 int destroyed = 0;
                 {
@@ -93,29 +93,29 @@ public sealed class StandardCollectionAlgorithmsTests
                 public Item(int* counter, int key) { destroyed = counter; Key = key; }
                 ~Item() { (*destroyed)++; }
             }
-            int Compare(readonly(Item)* a, readonly(Item)* b) => a.Key - b.Key;
-            bool Equal(readonly(Item)* a, readonly(Item)* b) => a.Key == b.Key;
-            bool Even(readonly(Item)* item) => item.Key % 2 == 0;
+            int Compare(immutable(Item)* a, immutable(Item)* b) => a.Key - b.Key;
+            bool Equal(immutable(Item)* a, immutable(Item)* b) => a.Key == b.Key;
+            bool Even(immutable(Item)* item) => item.Key % 2 == 0;
             int main() {
                 int destroyed = 0;
                 {
                     Vector<Item> values = new(); Vector<Item> other = new();
-                    if (!IsSorted<Item>(values.AsReadOnly(), Compare)) return 1;
-                    if (!SequenceEqual<Item>(values.AsReadOnly(), other.AsReadOnly(), Equal)) return 2;
-                    if (FindIndex<Item>(values.AsReadOnly(), Even) != 0) return 3;
+                    if (!IsSorted<Item>(values.AsImmutable(), Compare)) return 1;
+                    if (!SequenceEqual<Item>(values.AsImmutable(), other.AsImmutable(), Equal)) return 2;
+                    if (FindIndex<Item>(values.AsImmutable(), Even) != 0) return 3;
                     for (int i = 0; i < 20; i++) { values.Add(new Item(&destroyed, i)); other.Add(new Item(&destroyed, i)); }
-                    if (!IsSorted<Item>(values.AsReadOnly(), Compare)) return 4;
-                    if (!SequenceEqual<Item>(values.AsReadOnly(), other.AsReadOnly(), Equal)) return 5;
-                    if (FindIndex<Item>(values.AsReadOnly().Slice(1), Even) != 1) return 6;
+                    if (!IsSorted<Item>(values.AsImmutable(), Compare)) return 4;
+                    if (!SequenceEqual<Item>(values.AsImmutable(), other.AsImmutable(), Equal)) return 5;
+                    if (FindIndex<Item>(values.AsImmutable().Slice(1), Even) != 1) return 6;
                     nuint boundary = Partition<Item>(values.AsSpan(), Even);
                     if (boundary != 10 || destroyed != 0) return 7;
                     for (nuint i = 0; i < boundary; i++) if (values[i].Key % 2 != 0) return 8;
                     for (nuint i = boundary; i < values.Count; i++) if (values[i].Key % 2 == 0) return 9;
-                    if (SequenceEqual<Item>(values.AsReadOnly(), other.AsReadOnly(), Equal)) return 10;
+                    if (SequenceEqual<Item>(values.AsImmutable(), other.AsImmutable(), Equal)) return 10;
                     Reverse<Item>(other.AsSpan());
-                    if (IsSorted<Item>(other.AsReadOnly(), Compare)) return 11;
+                    if (IsSorted<Item>(other.AsImmutable(), Compare)) return 11;
                     other.Clear();
-                    if (SequenceEqual<Item>(values.AsReadOnly(), other.AsReadOnly(), Equal)) return 12;
+                    if (SequenceEqual<Item>(values.AsImmutable(), other.AsImmutable(), Equal)) return 12;
                 }
                 return destroyed - 40;
             }
@@ -135,7 +135,7 @@ public sealed class StandardCollectionAlgorithmsTests
                 public Item(int* counter, int key) { destroyed = counter; Key = key; }
                 ~Item() { (*destroyed)++; }
             }
-            int Compare(readonly(Item)* a, readonly(Item)* b) {
+            int Compare(immutable(Item)* a, immutable(Item)* b) {
                 comparisons++;
                 if (comparisons == 20) throw new Exception("comparison failed");
                 return a.Key - b.Key;

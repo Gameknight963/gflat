@@ -97,7 +97,7 @@ public class ExceptionReserveTests
     public void NewAllocationFailureThrowsBadAllocWithoutRunningConstructor()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) format, ...);
+            extern int printf(immutable(char*) format, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => null;
                 public replace void Free(void* ptr) { }
@@ -122,7 +122,7 @@ public class ExceptionReserveTests
         var result = CompilerTestHelper.Run("""
             extern void*? malloc(nuint size);
             extern void free(void* storage);
-            extern int printf(readonly(char*) format, ...);
+            extern int printf(immutable(char*) format, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A;"); return malloc(size); }
                 public replace void Free(void* ptr) { printf("F;"); free(ptr); }

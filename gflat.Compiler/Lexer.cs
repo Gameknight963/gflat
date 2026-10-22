@@ -269,6 +269,7 @@ public class Lexer
             "static" => TokenKind.Static,
             "inline" => TokenKind.Inline,
             "readonly" => TokenKind.Readonly,
+            "immutable" => TokenKind.Immutable,
             "virtual" => TokenKind.Virtual,
             "override" => TokenKind.Override,
             "expect" => TokenKind.Expect,

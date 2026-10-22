@@ -164,7 +164,7 @@ public sealed class OverloadDeclarationContextTests
             int main() { Library::Box<int> item=new Library::Box<int>(); return 0; }
             """;
         var errors = Analyze(source).Where(d => d.Severity == DiagnosticSeverity.Error);
-        Assert.Contains(errors, d => d.Message == "Overloads of 'Read' cannot differ only by readonly, return type, or declaration modifiers");
+        Assert.Contains(errors, d => d.Message == "Overloads of 'Read' cannot differ only by readonly, immutable, return type, or declaration modifiers");
     }
 
     [Theory]
@@ -181,7 +181,7 @@ public sealed class OverloadDeclarationContextTests
             int main() { int value=0; Library::Box<int> item=new Library::Box<int>(&value); return 0; }
             """;
         var errors = Analyze(source).Where(d => d.Severity == DiagnosticSeverity.Error);
-        Assert.Contains(errors, d => d.Message == "Constructors cannot differ only by readonly or parameter modifiers");
+        Assert.Contains(errors, d => d.Message == "Constructors cannot differ only by readonly, immutable, or parameter modifiers");
     }
 
     private static IReadOnlyList<Diagnostic> Analyze(string source) =>

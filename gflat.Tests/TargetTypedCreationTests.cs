@@ -87,7 +87,7 @@ public sealed class TargetTypedCreationTests
     [Fact]
     public void ReadonlyAndNullableRawTargetsStillConstructMutableNonNullObjects() => Succeeds("""
         int main() {
-            readonly(Thing)*? value = new();
+            immutable(Thing)*? value = new();
             int result = value!.value;
             delete (Thing*)value!;
             return result - 42;

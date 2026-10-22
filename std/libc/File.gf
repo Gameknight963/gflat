@@ -10,15 +10,15 @@ public struct File : ITextWriter
 
     public File() { handle = null; }
 
-    private File(readonly(char*) path, readonly(char*) mode)
+    private File(immutable(char*) path, immutable(char*) mode)
     {
         handle = file_detail::fopen(path, mode);
         if (handle == null) throw new IOException("File open failed");
     }
 
-    public static File OpenRead(readonly(char*) path) => new File(path, "rb");
-    public static File OpenWrite(readonly(char*) path) => new File(path, "wb");
-    public static File OpenAppend(readonly(char*) path) => new File(path, "ab");
+    public static File OpenRead(immutable(char*) path) => new File(path, "rb");
+    public static File OpenWrite(immutable(char*) path) => new File(path, "wb");
+    public static File OpenAppend(immutable(char*) path) => new File(path, "ab");
 
     // libc owns temporary naming/location; fclose removes the temporary file.
     public static File OpenTemporary()
@@ -28,20 +28,20 @@ public struct File : ITextWriter
         if (result.handle == null) throw new IOException("Temporary file creation failed");
         return move result;
     }
-    public static void Remove(readonly(char*) path)
+    public static void Remove(immutable(char*) path)
     {
         if (file_detail::remove(path) != 0) throw new IOException("File removal failed");
     }
 
-    public static void Rename(readonly(char*) source, readonly(char*) destination)
+    public static void Rename(immutable(char*) source, immutable(char*) destination)
     {
         if (file_detail::rename(source, destination) != 0) throw new IOException("File rename failed");
     }
-    public bool IsOpen { readonly get => handle != null; }
+    public bool IsOpen { immutable get => handle != null; }
     // Observed stream status, not a prediction: only a read attempt detects EOF.
     public bool EndOfFile
     {
-        readonly get
+        immutable get
         {
             if (handle == null) throw new IOException("File is closed");
             return file_detail::feof(handle!) != 0;
@@ -140,7 +140,7 @@ public struct File : ITextWriter
             throw new IOException("File write failed");
     }
 
-    public void Write(readonly(char*) text)
+    public void Write(immutable(char*) text)
     {
         nuint count = 0;
         while (text[count] != '\0') count++;
@@ -157,8 +157,8 @@ public struct File : ITextWriter
 
     // File streams are binary: the newline is one LF byte on every platform.
     public void WriteLine() { this.Write("\n", 1); }
-    public void WriteLine(readonly(char*) text) { this.Write(text); this.WriteLine(); }
-    public void WriteLine(readonly(char*) data, nuint count) { this.Write(data, count); this.WriteLine(); }
+    public void WriteLine(immutable(char*) text) { this.Write(text); this.WriteLine(); }
+    public void WriteLine(immutable(char*) data, nuint count) { this.Write(data, count); this.WriteLine(); }
 
     // fclose consumes the stream even when it reports failure. Never retry it.
     public void Close()
@@ -177,10 +177,10 @@ public struct File : ITextWriter
 
 namespace file_detail
 {
-    private extern FileHandle fopen(readonly(char*) path, readonly(char*) mode);
+    private extern FileHandle fopen(immutable(char*) path, immutable(char*) mode);
     private extern int fclose(FileHandle stream);
     private extern nuint fread(char* data, nuint size, nuint count, FileHandle stream);
-    private extern nuint fwrite(readonly(char*) data, nuint size, nuint count, FileHandle stream);
+    private extern nuint fwrite(immutable(char*) data, nuint size, nuint count, FileHandle stream);
     private extern int fflush(FileHandle stream);
     private extern int ferror(FileHandle stream);
     private extern int feof(readonly(void)* stream);
@@ -188,6 +188,6 @@ namespace file_detail
     private extern int fgetc(FileHandle stream);
     private extern int ungetc(int value, FileHandle stream);
     private extern FileHandle tmpfile();
-    private extern int remove(readonly(char*) path);
-    private extern int rename(readonly(char*) source, readonly(char*) destination);
+    private extern int remove(immutable(char*) path);
+    private extern int rename(immutable(char*) source, immutable(char*) destination);
 }

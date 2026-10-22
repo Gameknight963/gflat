@@ -3,11 +3,11 @@ namespace std;
 // Equal values must produce equal hashes. Hashes are not persistent identifiers.
 interface IHashable
 {
-    readonly nuint GetHashCode();
+    immutable nuint GetHashCode();
 
     implementation byte
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -15,7 +15,7 @@ interface IHashable
 
     implementation sbyte
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -23,7 +23,7 @@ interface IHashable
 
     implementation short
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -31,7 +31,7 @@ interface IHashable
 
     implementation ushort
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -39,7 +39,7 @@ interface IHashable
 
     implementation int
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -47,7 +47,7 @@ interface IHashable
 
     implementation uint
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -55,7 +55,7 @@ interface IHashable
 
     implementation long
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -63,7 +63,7 @@ interface IHashable
 
     implementation ulong
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -71,7 +71,7 @@ interface IHashable
 
     implementation nint
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -79,7 +79,7 @@ interface IHashable
 
     implementation nuint
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -87,7 +87,7 @@ interface IHashable
 
     implementation char
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             return Hashing::Integer((ulong)*this);
         }
@@ -95,13 +95,13 @@ interface IHashable
 
     implementation extralong
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
             => Hashing::Integer((ulong)*this ^ (ulong)(*this >> 64));
     }
 
     implementation bool
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             if (*this) return (nuint)1;
             return (nuint)0;
@@ -110,7 +110,7 @@ interface IHashable
 
     implementation float
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             if (*this == 0.0f || *this != *this) return (nuint)0;
             return Hashing::Integer((ulong)*((readonly(uint)*)this));
@@ -119,7 +119,7 @@ interface IHashable
 
     implementation double
     {
-        public readonly nuint GetHashCode()
+        public immutable nuint GetHashCode()
         {
             if (*this == 0.0d || *this != *this) return (nuint)0;
             return Hashing::Integer((ulong)*((readonly(ulong)*)this));

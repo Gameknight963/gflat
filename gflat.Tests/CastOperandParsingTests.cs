@@ -5,7 +5,7 @@ public sealed class CastOperandParsingTests
     [Theory]
     [InlineData("int value = (int)default(int); return value;", 0)]
     [InlineData("std::TypeInfo value = (std::TypeInfo)typeof(int); if (value.Size == 4) return 42; return 0;", 42)]
-    [InlineData("readonly(std::TypeInfo)*? value = (readonly(std::TypeInfo)*?)typeof(int*).ElementType; if (value!.Size == 4) return 42; return 0;", 42)]
+    [InlineData("immutable(std::TypeInfo)*? value = (immutable(std::TypeInfo)*?)typeof(int*).ElementType; if (value!.Size == 4) return 42; return 0;", 42)]
     public void CastsAcceptExistingUnaryOperandForms(string body, int expected)
         => Assert.Equal(expected, CompilerTestHelper.Run("int main() { " + body + " }").ExitCode);
 

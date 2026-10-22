@@ -4,6 +4,44 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    private bool IsDeepReceiverType(TypeExpression type) => ResolveAlias(type) switch
+    {
+        PointerTypeExpression p => p.IsImmutable,
+        ManagedTypeExpression m => m.IsImmutable,
+        var value => value.IsImmutableValue
+    };
+
+    private bool IsReceiverImmutable(AstNode expression) => IsDeepReceiverType(GetType(expression)) ||
+        (ResolveAlias(GetType(expression)) is not PointerTypeExpression and not ManagedTypeExpression && IsExpressionImmutable(expression));
+
+    private bool IsExpressionImmutable(AstNode node)
+    {
+        if (ResolveAlias(GetType(node)).IsImmutableValue) return true;
+        if (_propertyReads.ContainsKey(node)) return false;
+        if (node is IdentifierExpression id)
+        {
+            bool field = id.Name == "this" || !_scopes.Any(s => s.ContainsKey(id.Name)) &&
+                (_currentStruct?.FieldIndex(id.Name) >= 0 || _currentClass?.FieldIndex(id.Name) >= 0);
+            return field && TryLookupVariable("this", out var owner) && owner != null && IsDeepReceiverType(owner);
+        }
+        if (node is MemberAccessExpression member) return IsReceiverImmutable(member.Object);
+        if (node is UnaryExpression { Operator: TokenKind.Star } dereference) return IsDeepReceiverType(GetType(dereference.Operand));
+        if (node is IndexExpression index)
+        {
+            var target = ResolveAlias(GetType(index.Target));
+            return target is PointerTypeExpression or ManagedTypeExpression ? IsDeepReceiverType(target) : IsExpressionImmutable(index.Target);
+        }
+        return false;
+    }
+
+    private void CheckReceiverCapability(MethodDeclaration method, bool readOnly, bool immutable, int line)
+    {
+        if (immutable && !method.IsImmutable)
+            throw new gflat.CompileExceptions.TypeCheckException($"Cannot call non-immutable {DescribeSourceCallable(method)} on immutable instance", line);
+        if (readOnly && !method.IsReadOnly)
+            throw new gflat.CompileExceptions.TypeCheckException($"Cannot call non-readonly {DescribeSourceCallable(method)} on readonly instance", line);
+    }
+
     private bool CanInitializeReadOnlyField(AstNode target)
     {
         if (_lambdaScopeBoundaries.Count != 0) return false;
@@ -49,13 +87,15 @@ public partial class TypeChecker
     private bool CanCopyReadOnlyValue(TypeExpression type, HashSet<string>? visiting = null)
     {
         type = ResolveAlias(type);
+        if (!type.IsImmutableValue) return true;
         if (type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression) return true;
-        if (type is ArrayTypeExpression a) return CanCopyReadOnlyElement(a.ElementType, visiting);
+        if (type is ArrayTypeExpression a) return CanCopyReadOnlyElement(TypeQualifiers.Immutable(a.ElementType), visiting);
         if (type is not NamedTypeExpression n) return true;
         // An explicit copy constructor reads the readonly source and defines
         // the new value's resources. Its fields are not copied as raw aliases.
         // ValidateCopyUse separately checks accessibility and throwing behavior.
-        if (CopyConstructor(type) != null) return true;
+        if (CopyConstructor(type) is { } copy)
+            return ResolveAlias(copy.Parameters[0].Type) is PointerTypeExpression { IsImmutable: true };
         visiting ??= new();
         if (!visiting.Add(n.Name)) return true;
         IEnumerable<TypeExpression> fields = _structs.TryGetValue(n.Name, out var s) ? s.Fields.Select(f => f.Type) :
@@ -68,12 +108,19 @@ public partial class TypeChecker
         type = ResolveAlias(type);
         return type switch
         {
-            PointerTypeExpression p => p.IsReadOnly && TypesMatchPublic(p.Inner, TypeQualifiers.ReadOnly(p.Inner)),
-            ManagedTypeExpression m => m.IsReadOnly && TypesMatchPublic(m.Inner, TypeQualifiers.ReadOnly(m.Inner)),
-            _ => CanCopyReadOnlyValue(type, visiting)
+            PointerTypeExpression p => p.IsReadOnly && TypesMatchPublic(p.Inner, TypeQualifiers.Immutable(p.Inner)),
+            ManagedTypeExpression m => m.IsReadOnly && TypesMatchPublic(m.Inner, TypeQualifiers.Immutable(m.Inner)),
+            _ => CanCopyReadOnlyValue(TypeQualifiers.Immutable(type), visiting)
         };
     }
 
-    private bool CanReadOnlyView(TypeExpression target, TypeExpression source) =>
-        TypesMatchPublic(TypeQualifiers.ReadOnly(ResolveAlias(target)), TypeQualifiers.ReadOnly(ResolveAlias(source)));
+    private bool CanReadOnlyView(TypeExpression target, TypeExpression source)
+    {
+        target = ResolveAlias(target);
+        source = ResolveAlias(source);
+        if (source.IsImmutableValue && !target.IsImmutableValue) return false;
+        return target.IsImmutableValue
+            ? TypesMatchPublic(TypeQualifiers.Immutable(target), TypeQualifiers.Immutable(source))
+            : TypesMatchPublic(TypeQualifiers.ReadOnly(target), TypeQualifiers.ReadOnly(source));
+    }
 }

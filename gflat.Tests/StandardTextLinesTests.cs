@@ -109,7 +109,7 @@ public sealed class StandardTextLinesTests
                 char[2] bytes=['x','\n'];
                 Span<char> writable=new(bytes,2);
                 TextLines mutableLines=writable.Lines();
-                TextLines readonlyLines=writable.AsReadOnly().Lines();
+                TextLines readonlyLines=writable.AsImmutable().Lines();
                 if(mutableLines.AsEnumerable().Count()!=1||readonlyLines.AsEnumerable().Count()!=1)return 5;
                 String empty=new();
                 if(empty.Lines().AsEnumerable().Any())return 6;

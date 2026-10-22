@@ -8,7 +8,7 @@ public sealed class TypeIdentifierSpanTests
     [Fact]
     public void ParserKeepsEachQualifiedGenericIdentifierSpanSeparate()
     {
-        const string text = "void Use(readonly(Library::Family<Other::Arg>::Item)*? value) {}";
+        const string text = "void Use(immutable(Library::Family<Other::Arg>::Item)*? value) {}";
         var source = new SourceFile("type-spans.gf", text);
         var unit = new Compilation([source], new DiagnosticBag()).Unit;
         var method = unit.Members.OfType<MethodDeclaration>().Single(m => m.Name == "Use");

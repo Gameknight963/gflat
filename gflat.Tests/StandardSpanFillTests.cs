@@ -37,7 +37,7 @@ public sealed class StandardSpanFillTests
         struct Owner{
             public int Id;public String Text;
             public Owner(int id){Id=id;Text=s"owned";made++;}
-            public copy Owner(readonly(Owner)* source){
+            public copy Owner(immutable(Owner)* source){
                 copies++;Id=source.Id;Text=source.Text;
                 if(budget==0)throw new Exception("copy failed");
                 if(budget>0)budget--;made++;
@@ -105,9 +105,9 @@ public sealed class StandardSpanFillTests
             class Node{public int Id;public Node^? Next;public Node(int id){Id=id;}}
             int dead=0;bool bad=false;
             struct Owner{
-                public readonly(Node^) Root;
+                public immutable(Node^) Root;
                 public Owner(int id){Node^ node=new^ Node(id);node.Next=node;Root=node;}
-                public copy Owner(readonly(Owner)* source){Root=source.Root;}
+                public copy Owner(immutable(Owner)* source){Root=source.Root;}
                 ~Owner(){GC::Collect();if(Root.Id<0)bad=true;dead++;}
             }
             void Exercise(){

@@ -135,7 +135,7 @@ public class PlacementConstructionTests
     [InlineData("S* p = (S*)Memory::Allocate((nuint)sizeof(S)); new S() at p;")]
     [InlineData("S* p = (S*)Memory::Allocate((nuint)sizeof(S)); new^ S() at p;")]
     [InlineData("S*? p = null; new* S() at p;")]
-    [InlineData("readonly(S)* p = (readonly(S)*)Memory::Allocate((nuint)sizeof(S)); new* S() at p;")]
+    [InlineData("immutable(S)* p = (immutable(S)*)Memory::Allocate((nuint)sizeof(S)); new* S() at p;")]
     [InlineData("void* p = (void*)Memory::Allocate((nuint)sizeof(S)); new* S() at p;")]
     [InlineData("S* p; new* S() at p;")]
     [InlineData("S^? p = null; new* S() at p!;")]

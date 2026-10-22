@@ -1,7 +1,7 @@
 // Default exception base. Automatically available unless the program supplies one.
 class Exception
 {
-    public readonly(char*) message;
+    public immutable(char*) message;
     public int code;
 
     public Exception()
@@ -22,12 +22,12 @@ class Exception
         code = c;
     }
 
-    public readonly virtual readonly(char)* GetMessage()
+    public immutable virtual readonly(char)* GetMessage()
     {
         return message;
     }
 
-    public readonly virtual int GetCode()
+    public immutable virtual int GetCode()
     {
         return code;
     }

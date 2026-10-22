@@ -35,7 +35,7 @@ public partial class TypeChecker
                 constructed = target;
                 break;
         }
-        constructed = ResolveAlias(constructed).WithReadOnlyValue(false);
+        constructed = ResolveAlias(constructed).WithoutValueProtection();
         if (constructed is not NamedTypeExpression named || named.Name == "void" || ResolveInterface(named) != null)
             throw new TypeCheckException($"Target-typed creation requires a constructible value type, got '{DisplayTypeName(target)}'", creation.Span);
         if (creation.Destination != null && creation.Kind != AllocationKind.Pointer)

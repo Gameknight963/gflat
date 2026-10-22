@@ -10,10 +10,10 @@ public sealed class PrimitiveInterfaceEditorTests
     {
         const string text = """
             interface IHash {
-                readonly int Hash();
-                implementation int { public readonly int Hash() => *this; }
+                immutable int Hash();
+                implementation int { public immutable int Hash() => *this; }
             }
-            int Read<T : IHash>(this ref readonly(T) value) => value.Hash();
+            int Read<T : IHash>(this ref immutable(T) value) => value.Hash();
             int main() { int value=42; return value.Read(); }
             """;
         var source = new SourceFile(Path.GetFullPath("primitive-extension.gf"), text);
@@ -32,8 +32,8 @@ public sealed class PrimitiveInterfaceEditorTests
     {
         const string text = """
             interface IHash {
-                readonly int Hash(int extra);
-                implementation int { public readonly int Hash(int extra) => *this + extra; }
+                immutable int Hash(int extra);
+                implementation int { public immutable int Hash(int extra) => *this + extra; }
             }
             int Read<T : IHash>(T n) => n.Hash(2);
             int main() => Read(40);

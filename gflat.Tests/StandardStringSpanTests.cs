@@ -14,8 +14,8 @@ public sealed class StandardStringSpanTests
                 public replace void*? Allocate(nuint count){if(deny)return null;allocations++;return malloc(count);}
                 public replace void Free(void* storage){releases++;free(storage);}
             }
-            bool Inspect(ref readonly(String) text){
-                Span<readonly(char)> view=text.AsReadOnly();
+            bool Inspect(ref immutable(String) text){
+                Span<readonly(char)> view=text.AsImmutable();
                 return view.Length==4&&view.Data==text.Data&&view[0]=='a'&&view[1]=='\0';
             }
             int main(){
@@ -25,10 +25,10 @@ public sealed class StandardStringSpanTests
                  if(bytes.Length!=4||bytes.Data!=(char*)text.Data||!Inspect(ref text))return 1;
                  Span<char> slice=bytes.Slice(1,2);slice[0]='B';slice[1]='\0';
                  if(text[1]!='B'||text[2]!='\0'||text.Length!=4||text.Capacity!=capacity||text.Data[4]!='\0')return 2;
-                 Span<readonly(char)> read=text.AsReadOnly();if(read[1]!='B'||read[2]!='\0')return 3;
+                 Span<readonly(char)> read=text.AsImmutable();if(read[1]!='B'||read[2]!='\0')return 3;
                  if(allocations!=before)return 4;deny=false;}
-                {readonly(String) text=s"read";deny=true;
-                 Span<readonly(char)> read=text.AsReadOnly();if(read.Length!=4||read[0]!='r')return 5;deny=false;}
+                {immutable(String) text=s"read";deny=true;
+                 Span<readonly(char)> read=text.AsImmutable();if(read.Length!=4||read[0]!='r')return 5;deny=false;}
                 if(allocations!=releases)return 6;return 0;
             }
             """,optimization);
@@ -40,7 +40,7 @@ public sealed class StandardStringSpanTests
         => Run("""
             using std;
             bool Empty(ref String text){
-                Span<char> bytes=text.AsSpan();Span<readonly(char)> read=text.AsReadOnly();
+                Span<char> bytes=text.AsSpan();Span<readonly(char)> read=text.AsImmutable();
                 return bytes.Length==0&&bytes.Data==null&&read.Length==0&&read.Data==null;
             }
             int main(){String text=new();if(!Empty(ref text))return 1;
@@ -51,9 +51,9 @@ public sealed class StandardStringSpanTests
             """,optimization);
 
     [Theory]
-    [InlineData("readonly(String) text=s\"read\";text.AsSpan();")]
+    [InlineData("immutable(String) text=s\"read\";text.AsSpan();")]
     [InlineData("String::From(\"temporary\").AsSpan();")]
-    [InlineData("String::From(\"temporary\").AsReadOnly();")]
+    [InlineData("String::From(\"temporary\").AsImmutable();")]
     public void ViewsRejectReadonlyMutationAndTemporaryOwners(string statement)
         => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("using std;int main(){"+statement+"return 0;}")));
 

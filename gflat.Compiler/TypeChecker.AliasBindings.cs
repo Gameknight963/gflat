@@ -122,7 +122,7 @@ public partial class TypeChecker
                 result = new NamedTypeExpression(named.Name, named.Namespace, target.Line, named.TypeArguments)
                     { Span = target.Span };
                 if (named.IsResolvedNominal) result = ((NamedTypeExpression)result).AsResolvedNominal();
-                result = result.WithReadOnlyValue(named.IsReadOnlyValue);
+                result = result.WithQualifiersFrom(named);
                 aliasContracts[result] = contract;
             }
             return result;

@@ -6,7 +6,7 @@ public class ValueModelTests
         struct View<T> {
             T* data;
             public View(T* p) { data = p; }
-            public ref T this[int i] { get => data[i]; }
+            public ref T this[int i] { immutable get => data[i]; }
         }
         """;
 
@@ -14,7 +14,7 @@ public class ValueModelTests
     public void ReferenceIndexerBorrowsAndProjectsReadonly()
     {
         var result = CompilerTestHelper.Run(View + """
-            int Read(readonly(View<int>)* v) { return (*v)[0]; }
+            int Read(immutable(View<int>)* v) { return (*v)[0]; }
             int main() {
                 int[2] numbers = [1, 2];
                 View<int> v = new View<int>(numbers);
@@ -29,9 +29,9 @@ public class ValueModelTests
     }
 
     [Theory]
-    [InlineData("void F(readonly(View<int>)* v) { (*v)[0] = 1; }")]
-    [InlineData("int* F(readonly(View<int>)* v) { return &(*v)[0]; }")]
-    [InlineData("void F(readonly(View<int*>)* v) { *(*v)[0] = 1; }")]
+    [InlineData("void F(immutable(View<int>)* v) { (*v)[0] = 1; }")]
+    [InlineData("int* F(immutable(View<int>)* v) { return &(*v)[0]; }")]
+    [InlineData("void F(immutable(View<int*>)* v) { *(*v)[0] = 1; }")]
     public void ReadonlyReferenceIndexerCannotLeakMutableStorage(string source)
         => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(View + source + "int main() { return 0; }"));
 
@@ -113,14 +113,14 @@ public class ValueModelTests
     public void ReferencePropertiesDispatchThroughInterfacesAndBaseClasses()
     {
         var result = CompilerTestHelper.Run("""
-            interface I { ref int Value { get; } }
-            class Base : I { protected int n = 1; public virtual ref int Value => n; }
-            class Derived : Base { private int other = 2; public override ref int Value => other; }
+            interface I { ref int Value { immutable get; } }
+            class Base : I { protected int n = 1; public virtual immutable ref int Value => n; }
+            class Derived : Base { private int other = 2; public override immutable ref int Value => other; }
             int main() {
                 Base* p = new* Derived();
                 I* i = p;
                 i.Value = 9;
-                readonly(I)* r = i;
+                immutable(I)* r = i;
                 if (r.Value != 9 || p.Value != 9) return 1;
                 delete i;
                 return 0;
@@ -140,7 +140,7 @@ public class ValueModelTests
         => Assert.Equal("", CompilerTestHelper.Run(Resource + "int main() { R value; return 0; }").StandardOutput);
     [Theory]
     [InlineData("void Use(R value) {} int main() { R a = new R(1); Use(a); return 0; }")]
-    [InlineData("int main() { readonly(R) a = new R(1); R b = move a; return 0; }")]
+    [InlineData("int main() { immutable(R) a = new R(1); R b = move a; return 0; }")]
     [InlineData("class Base {} class Derived : Base { ~Derived() {} } void Use(Base value) {} int main() { Use(new Derived()); return 0; }")]
     public void OwnershipCannotBeCopiedOrSlicedImplicitly(string source)
         => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => CompilerTestHelper.Check(Resource + source));

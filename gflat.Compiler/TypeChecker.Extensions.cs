@@ -34,6 +34,7 @@ public partial class TypeChecker
             MemberAccessExpression m => GetType(m.Object) is PointerTypeExpression || CanBorrowExtensionReceiver(m.Object),
             IndexExpression i => GetType(i.Target) is PointerTypeExpression || CanBorrowExtensionReceiver(i.Target), _ => false };
     }
+    public bool IsExtensionReceiverImmutable(AstNode receiver) => _types.TryGetValue(receiver, out var type) && type.IsImmutableValue;
     public bool IsExtensionReceiverReadOnly(AstNode receiver) => _types.TryGetValue(receiver, out var type) &&
         (type.IsReadOnlyValue || _constValues.ContainsKey(receiver));
 
@@ -116,7 +117,8 @@ public partial class TypeChecker
             var formal = ExtensionFormalType(method, method.Parameters[0].Type);
             bool reference = formal is ReferenceTypeExpression;
             if (reference && !storage) return;
-            if (reference && adaptation == ExtensionReceiverAdaptation.Exact && receiverStorageType != null) source = receiverStorageType;
+            if (reference && adaptation == ExtensionReceiverAdaptation.Exact && receiverStorageType != null)
+                source = receiverStorageType.WithQualifiersFrom(source);
             if (readOnly) source = TypeQualifiers.ReadOnly(source);
             if (reference) source = new ReferenceTypeExpression(source, source.Line);
             var bindings = new Dictionary<string, TypeExpression>();
@@ -204,7 +206,7 @@ public partial class TypeChecker
                 FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(Qualify(f.ReturnType, allowMethodParameters),
                     f.ParameterTypes.Select(p => Qualify(p, allowMethodParameters)).ToList(), f.IsManaged, f.IsNullable, f.Line, f.IsSignature),
                 NamedTypeExpression n => QualifyNamed(n, allowMethodParameters), _ => t };
-            return result.WithReadOnlyValue(t.IsReadOnlyValue || result.IsReadOnlyValue);
+            return result.WithQualifiersFrom(t);
         }
         TypeExpression QualifyNamed(NamedTypeExpression n, bool allowMethodParameters)
         {
@@ -260,23 +262,23 @@ public partial class TypeChecker
                 pair.Value.Name == named.Name &&
                 pair.Value.TypeArguments.Count == named.TypeArguments.Count &&
                 pair.Value.TypeArguments.Zip(named.TypeArguments).All(p => TypesMatchPublic(p.First, p.Second)));
-            return known.Key == null ? null : NamedTypeExpression.Resolved(known.Key, type.Line).WithReadOnlyValue(type.IsReadOnlyValue);
+            return known.Key == null ? null : NamedTypeExpression.Resolved(known.Key, type.Line).WithQualifiersFrom(type);
         }
         if (type is ReferenceTypeExpression r)
-            return KnownExtensionType(r.Inner) is { } inner ? new ReferenceTypeExpression(inner, r.Line).WithReadOnlyValue(r.IsReadOnlyValue) : null;
+            return KnownExtensionType(r.Inner) is { } inner ? new ReferenceTypeExpression(inner, r.Line).WithQualifiersFrom(r) : null;
         if (type is PointerTypeExpression p)
-            return KnownExtensionType(p.Inner) is { } inner ? new PointerTypeExpression(inner, p.IsNullable, p.Line, p.IsReadOnly).WithReadOnlyValue(p.IsReadOnlyValue) : null;
+            return KnownExtensionType(p.Inner) is { } inner ? new PointerTypeExpression(inner, p.IsNullable, p.Line, p.IsReadOnly).WithQualifiersFrom(p) : null;
         if (type is ManagedTypeExpression m)
-            return KnownExtensionType(m.Inner) is { } inner ? new ManagedTypeExpression(inner, m.IsNullable, m.Line, m.IsReadOnly, m.Collector) { UsesDefaultCollector = m.UsesDefaultCollector }.WithReadOnlyValue(m.IsReadOnlyValue) : null;
+            return KnownExtensionType(m.Inner) is { } inner ? new ManagedTypeExpression(inner, m.IsNullable, m.Line, m.IsReadOnly, m.Collector) { UsesDefaultCollector = m.UsesDefaultCollector }.WithQualifiersFrom(m) : null;
         if (type is ArrayTypeExpression a)
-            return KnownExtensionType(a.ElementType) is { } inner ? new ArrayTypeExpression(inner, a.Size, a.Line).WithReadOnlyValue(a.IsReadOnlyValue) : null;
+            return KnownExtensionType(a.ElementType) is { } inner ? new ArrayTypeExpression(inner, a.Size, a.Line).WithQualifiersFrom(a) : null;
         if (type is FunctionPointerTypeExpression function)
         {
             var result = KnownExtensionType(function.ReturnType);
             var parameters = function.ParameterTypes.Select(KnownExtensionType).ToList();
             if (result == null || parameters.Any(p => p == null)) return null;
             return new FunctionPointerTypeExpression(result, parameters.Select(p => p!).ToList(), function.IsManaged,
-                function.IsNullable, function.Line, function.IsSignature).WithReadOnlyValue(function.IsReadOnlyValue);
+                function.IsNullable, function.Line, function.IsSignature).WithQualifiersFrom(function);
         }
         // Unresolved nested generic syntax cannot be inferred without specializing
         // its parent. Nongeneric signatures have already resolved these nodes.
@@ -369,7 +371,8 @@ public partial class TypeChecker
         if (candidates[0].IsReferenceReceiver)
         {
             var storageType = GetExtensionReceiverStorageType(receiver) ?? GetType(receiver);
-            if (IsExpressionReadOnly(receiver)) storageType = TypeQualifiers.ReadOnly(storageType);
+            if (IsExpressionImmutable(receiver)) storageType = TypeQualifiers.Immutable(storageType);
+            else if (IsExpressionReadOnly(receiver)) storageType = TypeQualifiers.ReadOnly(storageType);
             if (NullableLocal(receiver) is { } escaped) { nullableEscaped.Add(escaped); NullableWrite(escaped); }
             receiver = new UnaryExpression(receiver, TokenKind.Ref, true, receiver.Line) { Span = receiver.Span };
             RecordType(receiver, new ReferenceTypeExpression(storageType, receiver.Line));

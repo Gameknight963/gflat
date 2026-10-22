@@ -35,7 +35,7 @@ public sealed class QueryAndOwnerHoverTests
 
     [Fact]
     public void ReadonlyReceiverAndReadonlyReturnAreBothPreserved()
-        => Assert.Contains("readonly readonly(int)*", Text(Hover("struct S { public readonly readonly(int)* R|ead() => (readonly(int)*)0; }")));
+        => Assert.Contains("immutable readonly(int)*", Text(Hover("struct S { public immutable readonly(int)* R|ead() => (readonly(int)*)0; }")));
 
     [Theory]
     [InlineData("void F() { std|::TypeInfo info; }")]

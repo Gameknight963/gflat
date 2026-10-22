@@ -11,11 +11,11 @@ public sealed class ExtensionTypeShapeTests
                 public T* data;
                 public View(T* storage) { data = storage; }
             }
-            void Copy<T>(this View<readonly(T)> source, View<T> destination) {
+            void Copy<T>(this View<immutable(T)> source, View<T> destination) {
                 T* output = destination.data;
                 output[0] = source.data[0];
             }
-            void CopyScalar<T>(readonly(T)* source, T* destination) { *destination = *source; }
+            void CopyScalar<T>(immutable(T)* source, T* destination) { *destination = *source; }
             int main() {
                 readonly(int) source = 42;
                 int destination = 0;
@@ -48,8 +48,8 @@ public sealed class ExtensionTypeShapeTests
     [Theory]
     [InlineData("int(int)", false)]
     [InlineData("int(int)", true)]
-    [InlineData("readonly(int(int))", false)]
-    [InlineData("readonly(int(int))", true)]
+    [InlineData("immutable(int(int))", false)]
+    [InlineData("immutable(int(int))", true)]
     [InlineData("int(int)*", false)]
     [InlineData("int(int)*", true)]
     [InlineData("int(int)*?", false)]

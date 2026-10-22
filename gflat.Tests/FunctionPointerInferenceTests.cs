@@ -72,7 +72,7 @@ public sealed class FunctionPointerInferenceTests
     public void NullableReadonlyResultMetadataIsPreserved()
     {
         var result = CompilerTestHelper.Run("""
-            readonly(char*?) Text(int value) => "hello";
+            immutable(char*?) Text(int value) => "hello";
             int Inspect<T>(T(int)* callback) {
                 if (!typeof(T).IsNullable || !typeof(T).IsReadOnly) return 1;
                 T text = callback(1);

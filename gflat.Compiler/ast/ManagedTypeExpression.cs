@@ -11,6 +11,7 @@ namespace gflat.ast
         public bool UsesDefaultCollector { get; internal set; }
         public bool IsNullable { get; }
         public bool IsReadOnly { get; }
+        public bool IsImmutable => Inner.IsImmutableValue;
 
         public ManagedTypeExpression(TypeExpression inner, bool isNullable, int line, bool isReadOnly = false, TypeExpression? collector = null) : base(line)
         {

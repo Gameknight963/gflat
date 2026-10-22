@@ -41,7 +41,7 @@ int main(int argc, char** argv)
         HashMap<String, nuint>::Enumerator iterator = counts.GetEnumerator();
         while (iterator.MoveNext())
         {
-            readonly(String)* key = iterator.Current.Key;
+            immutable(String)* key = iterator.Current.Key;
             nuint count = *iterator.Current.ValueReadOnly;
             String line = s"";
             line.Append(key);

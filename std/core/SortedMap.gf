@@ -4,15 +4,15 @@ namespace std;
 struct SortedMap<K, V>
 {
     private Vector<Entry> storage;
-    private int(readonly(K)*, readonly(K)*)* compare;
+    private int(immutable(K)*, immutable(K)*)* compare;
 
-    public SortedMap(int(readonly(K)*, readonly(K)*)* comparison)
+    public SortedMap(int(immutable(K)*, immutable(K)*)* comparison)
     {
         storage = new Vector<Entry>(); compare = comparison;
     }
-    public nuint Count { readonly get nothrow => storage.Count; }
-    public nuint Capacity { readonly get nothrow => storage.Capacity; }
-    public bool IsEmpty { readonly get nothrow => storage.IsEmpty; }
+    public nuint Count { immutable get nothrow => storage.Count; }
+    public nuint Capacity { immutable get nothrow => storage.Capacity; }
+    public bool IsEmpty { immutable get nothrow => storage.IsEmpty; }
     public void Reserve(nuint count) { storage.Reserve(count); }
     public void Clear() { storage.Clear(); }
 
@@ -21,14 +21,14 @@ struct SortedMap<K, V>
         private K key;
         private V value;
         public Entry(K item, V mapped) { key = move item; value = move mapped; }
-        public readonly(K)* Key { readonly get nothrow => &key; }
-        public ref V Value { get nothrow => value; }
-        public readonly(V)* ValueReadOnly { readonly get nothrow => &value; }
+        public immutable(K)* Key { immutable get nothrow => &key; }
+        public ref V Value { immutable get nothrow => value; }
+        public immutable(V)* ValueReadOnly { immutable get nothrow => &value; }
     }
 
-    private readonly nuint LowerBound(readonly(K)* key)
+    private immutable nuint LowerBound(immutable(K)* key)
     {
-        Span<readonly(Entry)> items = storage.AsReadOnly();
+        Span<immutable(Entry)> items = storage.AsImmutable();
         nuint first = 0; nuint count = items.Length;
         while (count != 0)
         {
@@ -39,28 +39,28 @@ struct SortedMap<K, V>
         return first;
     }
 
-    private readonly bool Matches(nuint index, readonly(K)* key)
+    private immutable bool Matches(nuint index, immutable(K)* key)
     {
         if (index == storage.Count) return false;
-        Span<readonly(Entry)> items = storage.AsReadOnly();
+        Span<immutable(Entry)> items = storage.AsImmutable();
         return compare(items[index].Key, key) == 0;
     }
 
-    public readonly bool ContainsKey(readonly(K)* key)
+    public immutable bool ContainsKey(immutable(K)* key)
         => this.Matches(this.LowerBound(key), key);
 
-    public V*? Find(readonly(K)* key)
+    public V*? Find(immutable(K)* key)
     {
         nuint index = this.LowerBound(key);
         if (!this.Matches(index, key)) return null;
         return &storage[index].value;
     }
 
-    public readonly readonly(V)*? FindReadOnly(readonly(K)* key)
+    public immutable immutable(V)*? FindReadOnly(immutable(K)* key)
     {
         nuint index = this.LowerBound(key);
         if (!this.Matches(index, key)) return null;
-        Span<readonly(Entry)> items = storage.AsReadOnly();
+        Span<immutable(Entry)> items = storage.AsImmutable();
         return items[index].ValueReadOnly;
     }
 
@@ -84,9 +84,9 @@ struct SortedMap<K, V>
         storage.Insert(index, new Entry(move key, move value));
     }
 
-    public ref V this[readonly(K)* key]
+    public ref V this[immutable(K)* key]
     {
-        get
+        immutable get
         {
             nuint index = this.LowerBound(key);
             if (!this.Matches(index, key)) throw new Exception("SortedMap key not found");
@@ -94,7 +94,7 @@ struct SortedMap<K, V>
         }
     }
 
-    public bool Remove(readonly(K)* key)
+    public bool Remove(immutable(K)* key)
     {
         nuint index = this.LowerBound(key);
         if (!this.Matches(index, key)) return false;
@@ -103,20 +103,20 @@ struct SortedMap<K, V>
     }
 
     // Transfer both owners without copying; the lookup borrow is not used after removal.
-    public Entry Extract(readonly(K)* key)
+    public Entry Extract(immutable(K)* key)
     {
         nuint index = this.LowerBound(key);
         if (!this.Matches(index, key)) throw new Exception("SortedMap key not found");
         return storage.RemoveAt(index);
     }
 
-    public readonly Enumerator GetEnumerator() => new Enumerator(storage.AsReadOnly());
+    public immutable Enumerator GetEnumerator() => new Enumerator(storage.AsImmutable());
 
     public struct Enumerator
     {
-        private Span<readonly(Entry)>::Enumerator iterator;
-        public Enumerator(Span<readonly(Entry)> items) { iterator = items.GetEnumerator(); }
+        private Span<immutable(Entry)>::Enumerator iterator;
+        public Enumerator(Span<immutable(Entry)> items) { iterator = items.GetEnumerator(); }
         public bool MoveNext() => iterator.MoveNext();
-        public readonly(Entry)* Current { readonly get => &iterator.Current; }
+        public immutable(Entry)* Current { immutable get => &iterator.Current; }
     }
 }

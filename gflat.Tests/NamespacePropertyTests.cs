@@ -8,7 +8,7 @@ public class NamespacePropertyTests
     public void ExplicitAccessorsSupportQualifiedReadsWritesAndUpdates()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             namespace Settings {
                 public int Value { get => 4; set { printf("%d", value); } }
                 int Read() => Value;
@@ -38,7 +38,7 @@ public class NamespacePropertyTests
     public void ThrowingAccessorsPropagateNormally()
     {
         var result = CompilerTestHelper.Run("""
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             namespace Settings {
                 int Value { get { throw new Exception(); } set { throw new Exception(); } }
             }
@@ -55,8 +55,8 @@ public class NamespacePropertyTests
     [Theory]
     [InlineData("int P { get => 1; set; }", "either have bodies")]
     [InlineData("int P { get => 1; } = 2;", "initializers")]
-    [InlineData("readonly int P => 1;", "receiver modifiers")]
-    [InlineData("int P { readonly get => 1; }", "readonly")]
+    [InlineData("immutable int P => 1;", "receiver modifiers")]
+    [InlineData("int P { immutable get => 1; }", "readonly")]
     [InlineData("int P { get => this.value; }", "not a struct")]
     [InlineData("int P => 1; int main() { P = 2; return 0; }", "no setter")]
     [InlineData("int P { set {} } int main() => P;", "no getter")]

@@ -137,14 +137,14 @@ namespace gflat.ast
             List<Parameter> parameters = m.Parameters.Select(scope.CloneParameter).ToList();
             BlockStatement? body = m.Body != null ? (BlockStatement)scope.CloneNode(m.Body) : null;
             var genericParams = scope.CloneGenericParameters(m.Name, m.GenericParameters);
-            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams, isNoThrow: m.IsNoThrow) { InferAutoGetterReadOnly = m.InferAutoGetterReadOnly, IsInline = m.IsInline, StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, StaticConstructorName = m.StaticConstructorName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
+            return new MethodDeclaration(methodName, retType, parameters, body, m.Accessibility, m.IsStatic, m.IsVirtual, m.IsOverride, m.IsAbstract, m.Line, m.IsReadOnly, m.IsConst, m.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams, isNoThrow: m.IsNoThrow, isImmutable: m.IsImmutable) { InferAutoGetterReadOnly = m.InferAutoGetterReadOnly, IsInline = m.IsInline, StringLiteralPrefix = m.StringLiteralPrefix, ImplementationKind = m.ImplementationKind, PropertyName = m.PropertyName, StaticConstructorName = m.StaticConstructorName, IsPropertyInitializer = m.IsPropertyInitializer, IsRefReturn = m.IsRefReturn };
         }
 
         public TypeExpression CloneType(TypeExpression type)
         {
             using var context = SourceContext.Enter(type.Span);
             var result = CloneTypeLocated(type);
-            if (type.IsReadOnlyValue) result = TypeQualifiers.ReadOnly(result);
+            result = result.WithQualifiersFrom(type);
             if (type.InterfaceConstraints.Count > 0) result = result.WithInterfaceConstraints(type.InterfaceConstraints);
             if (type.GenericUse != null) result = result.WithGenericUse((NamedTypeExpression)CloneType(type.GenericUse));
             result.Span = type.Span;

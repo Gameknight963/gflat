@@ -179,7 +179,7 @@ public sealed class GarbageCollectionTests
         var result = Run("""
         extern void*? malloc(nuint size);
         extern void free(void* storage);
-        extern int printf(readonly(char*) text, ...);
+        extern int printf(immutable(char*) text, ...);
         namespace Memory {
             public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
             public replace void Free(void* storage) { printf("F"); free(storage); }
@@ -241,7 +241,7 @@ public sealed class GarbageCollectionTests
         var result = Run("""
             extern void*? malloc(nuint size);
             extern void free(void* storage);
-            extern int puts(readonly(char*) text);
+            extern int puts(immutable(char*) text);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => malloc(size);
                 public replace void Free(void* storage) {
@@ -347,7 +347,7 @@ public sealed class GarbageCollectionTests
     {
         var result = Run("""
             extern void*? malloc(nuint size);
-            extern int puts(readonly(char*) text);
+            extern int puts(immutable(char*) text);
             void*? __gflat_gc_alloc(nuint size) { puts("legacy allocation"); return malloc(size); }
             int main() {
                 int^ value = new^ int(42);

@@ -7,7 +7,7 @@ public class StringLiteralOperatorTests
     private const string View = """
         namespace Text {
             class View {
-                public readonly(char*) data;
+                public immutable(char*) data;
                 public nuint length;
                 public View(readonly(char)* p, nuint n) { data = p; length = n; }
                 public static View operator s""(readonly(char)* p, nuint n) {

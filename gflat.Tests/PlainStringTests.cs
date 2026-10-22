@@ -8,9 +8,9 @@ public class PlainStringTests
     public void LiteralsReturnStablePointersAndUsePointerSizedType()
     {
         Assert.Equal(42, CompilerTestHelper.Run("""
-            readonly(char*) Text() => "hello";
+            immutable(char*) Text() => "hello";
             int main() {
-                readonly(char*) text = Text();
+                immutable(char*) text = Text();
                 if (text[4] != 'o' || text[5] != '\0') return 1;
                 return 42;
             }
@@ -20,7 +20,7 @@ public class PlainStringTests
     [Fact]
     public void LiteralTypeIsAReadonlyPointer()
     {
-        var snapshot = new AnalysisSnapshot([new SourceFile("literal.gf", "readonly(char*) Text() => \"hello\";")]);
+        var snapshot = new AnalysisSnapshot([new SourceFile("literal.gf", "immutable(char*) Text() => \"hello\";")]);
         var literal = snapshot.Nodes.Select(n => n.Node).OfType<gflat.ast.LiteralExpression>().Single(n => n.Token.Text == "\"hello\"");
         Assert.Equal("readonly(char)*", TypeChecker.TypeName(snapshot.Checker!.GetType(literal)));
     }
@@ -34,7 +34,7 @@ public class PlainStringTests
         Assert.Equal(42, CompilerTestHelper.Run("""
             int main() {
             """ + declaration + $$"""
-                readonly(char*) original = "hello";
+                immutable(char*) original = "hello";
                 buffer[0] = 'H';
                 if (buffer[0] != 'H' || original[0] != 'h') return 1;
                 for (int i = 5; i < {{size}}; i++) if (buffer[i] != '\0') return 2;
@@ -77,7 +77,7 @@ public class PlainStringTests
             struct Text {
                 public int length;
                 public Text(int size) { length = size; }
-                public static Text operator c""(readonly(char*) text, nuint length) { return new Text((int)length); }
+                public static Text operator c""(immutable(char*) text, nuint length) { return new Text((int)length); }
             }
             int main() { Text text = c"abc"; if (text.length == 3) return 42; return 1; }
             """).ExitCode);

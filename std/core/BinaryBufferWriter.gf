@@ -13,10 +13,10 @@ public struct BinaryBufferWriter
         data = storage; capacity = count; position = 0;
     }
 
-    public nuint Capacity { readonly get nothrow => capacity; }
+    public nuint Capacity { immutable get nothrow => capacity; }
     public byte*? Data { get nothrow => data; }
-    public nuint Position { readonly get nothrow => position; }
-    public nuint Remaining { readonly get nothrow => capacity - position; }
+    public nuint Position { immutable get nothrow => position; }
+    public nuint Remaining { immutable get nothrow => capacity - position; }
     public void Reset() nothrow { position = 0; }
     public bool TrySkip(nuint count) nothrow
     {

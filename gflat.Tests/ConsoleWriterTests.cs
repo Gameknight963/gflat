@@ -13,7 +13,7 @@ public sealed class ConsoleWriterTests
     {
         var result = CompilerTestHelper.Run(Sources("""
             using std;
-            extern int printf(readonly(char*) text, ...);
+            extern int printf(immutable(char*) text, ...);
             extern void* malloc(nuint count);
             extern void free(void* storage);
             namespace Memory {

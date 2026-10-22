@@ -74,7 +74,7 @@ public class InterpolationTests
             struct Value : IFormattable {
                 public int n;
                 public Value(int id) { n = id; printf("C%d;", n); }
-                public readonly void Format(ITextWriter* output) { printf("F%d;", n); std::Format(n, output); }
+                public immutable void Format(ITextWriter* output) { printf("F%d;", n); std::Format(n, output); }
                 ~Value() { printf("D%d;", n); }
             }
             Value Make(int n) { return new Value(n); }
@@ -98,11 +98,11 @@ public class InterpolationTests
                 public static void ReferenceRemoved(void* slot) nothrow {}
             }
             struct Value : IFormattable {
-                public readonly void Format(ITextWriter* output) { std::Format(3, output); }
+                public immutable void Format(ITextWriter* output) { std::Format(3, output); }
             }
             int main() {
                 Value value = new Value();
-                readonly(IFormattable)* p = &value;
+                immutable(IFormattable)* p = &value;
                 Value^ managedReference = new^ Value();
                 String a = s$"{p}{managedReference}";
                 if (false && s$"{99}".Length == (nuint)2) return 1;
@@ -150,7 +150,7 @@ public class InterpolationTests
             using std;
             extern int putchar(int c);
             struct Broken : IFormattable {
-                public readonly void Format(ITextWriter* output) { throw new Exception(); }
+                public immutable void Format(ITextWriter* output) { throw new Exception(); }
             }
             String F() nothrow { Broken b = new Broken(); return s$"{b}"; }
             int main() { try { F(); } catch { putchar(67); } putchar(88); return 0; }

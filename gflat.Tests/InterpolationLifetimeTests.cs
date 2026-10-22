@@ -31,7 +31,7 @@ public class InterpolationLifetimeTests
             ~Destination() { printf("D"); }
         }
         struct Value : IFormattable {
-            public readonly void Format(ITextWriter* output) {
+            public immutable void Format(ITextWriter* output) {
                 output.Write("x", 1);
             }
             ~Value() { printf("V"); }

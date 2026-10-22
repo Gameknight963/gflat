@@ -9,20 +9,20 @@ public sealed class ReadonlyReceiverDeclarationTests
     private const string Message = "Readonly methods require an instance receiver";
 
     [Theory]
-    [InlineData("public readonly int Read()=>42;")]
-    [InlineData("namespace Lib{public readonly int Read()=>42;}")]
-    [InlineData("class Entry{public static readonly int Read()=>42;}")]
-    [InlineData("struct Entry{public static readonly int Read()=>42;}")]
-    [InlineData("static class Entry{public static readonly int Read()=>42;}")]
-    [InlineData("static interface I{readonly int Read();}")]
-    [InlineData("class Box<T>{public static readonly int Read()=>42;}")]
-    [InlineData("public readonly int Read<T>()=>42;")]
-    [InlineData("class Entry{public static readonly int Value{get{return 42;}}}")]
-    [InlineData("class Entry{public static int Value{readonly get{return 42;}}}")]
-    [InlineData("struct Entry{public static int Value{readonly get{return 42;}}}")]
-    [InlineData("static class Entry{public static int Value{readonly get{return 42;}}}")]
-    [InlineData("static interface I{readonly int Value{get;}}")]
-    [InlineData("namespace Lib{}public weak readonly int Lib::Read()=>42;")]
+    [InlineData("public immutable int Read()=>42;")]
+    [InlineData("namespace Lib{public immutable int Read()=>42;}")]
+    [InlineData("class Entry{public static immutable int Read()=>42;}")]
+    [InlineData("struct Entry{public static immutable int Read()=>42;}")]
+    [InlineData("static class Entry{public static immutable int Read()=>42;}")]
+    [InlineData("static interface I{immutable int Read();}")]
+    [InlineData("class Box<T>{public static immutable int Read()=>42;}")]
+    [InlineData("public immutable int Read<T>()=>42;")]
+    [InlineData("class Entry{public static immutable int Value{get{return 42;}}}")]
+    [InlineData("class Entry{public static int Value{immutable get{return 42;}}}")]
+    [InlineData("struct Entry{public static int Value{immutable get{return 42;}}}")]
+    [InlineData("static class Entry{public static int Value{immutable get{return 42;}}}")]
+    [InlineData("static interface I{immutable int Value{get;}}")]
+    [InlineData("namespace Lib{}public weak immutable int Lib::Read()=>42;")]
     public void ReceiverlessReadonlyDeclarationsAreRejectedOnce(string source)
     {
         var error = Assert.Single(Errors(source));
@@ -37,14 +37,14 @@ public sealed class ReadonlyReceiverDeclarationTests
 
     [Fact]
     public void InvalidReceiverMetadataCannotReachEmission()
-        => Assert.Equal(Message, Assert.Throws<TypeCheckException>(() => Compiler.Emit("public readonly int Read()=>42;", options: new() { NoStdLib = true })).Description);
+        => Assert.Equal(Message, Assert.Throws<TypeCheckException>(() => Compiler.Emit("public immutable int Read()=>42;", options: new() { NoStdLib = true })).Description);
 
     [Theory]
-    [InlineData("class Entry{public readonly int Read()=>42;}")]
-    [InlineData("struct Entry{public readonly int Read()=>42;}")]
-    [InlineData("interface I{readonly int Read();}")]
+    [InlineData("class Entry{public immutable int Read()=>42;}")]
+    [InlineData("struct Entry{public immutable int Read()=>42;}")]
+    [InlineData("interface I{immutable int Read();}")]
     [InlineData("readonly(int) Read()=>42;")]
-    [InlineData("readonly(char*) Read()=>\"text\";")]
+    [InlineData("immutable(char*) Read()=>\"text\";")]
     [InlineData("class Entry{public static readonly(int) Read()=>42;}")]
     [InlineData("struct Entry{public static readonly(int) Read()=>42;}")]
     [InlineData("static class Entry{public static readonly(int) Read()=>42;}")]
@@ -56,10 +56,10 @@ public sealed class ReadonlyReceiverDeclarationTests
         => Assert.Empty(Errors(source));
 
     [Theory]
-    [InlineData("public readonly int Bad()=>42;", "int Healthy(){long actual=42;return (int)actual;}", "Healthy()", 1)]
-    [InlineData("static class Entry{public static readonly int Bad()=>42;", "public static int Healthy(){long actual=42;return (int)actual;}}", "Entry::Healthy()", 1)]
-    [InlineData("static interface I{readonly int Bad();}", "int Healthy(){long actual=42;return (int)actual;}", "Healthy()", 1)]
-    [InlineData("weak readonly int Read()=>MissingDefault();replace readonly int Read()=>42;", "int Healthy(){long actual=42;return (int)actual;}", "Healthy()", 2)]
+    [InlineData("public immutable int Bad()=>42;", "int Healthy(){long actual=42;return (int)actual;}", "Healthy()", 1)]
+    [InlineData("static class Entry{public static immutable int Bad()=>42;", "public static int Healthy(){long actual=42;return (int)actual;}}", "Entry::Healthy()", 1)]
+    [InlineData("static interface I{immutable int Bad();}", "int Healthy(){long actual=42;return (int)actual;}", "Healthy()", 1)]
+    [InlineData("weak immutable int Read()=>MissingDefault();replace immutable int Read()=>42;", "int Healthy(){long actual=42;return (int)actual;}", "Healthy()", 2)]
     public void RecoveryContinuesToBindHealthyBodies(string invalid, string healthy, string call, int errorCount)
     {
         var snapshot = new AnalysisSnapshot([new SourceFile("readonly-recovery.gf", invalid + healthy + "int main()=>" + call + ";")], new() { NoStdLib = true });

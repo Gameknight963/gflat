@@ -11,8 +11,8 @@ public sealed class StandardBitSetOccupancyTests
     public void EverySmallLengthAndSingleHoleRespectWordPaddingAndReadonlyNothrowQueries(int optimization)
         => Run("""
             using std;
-            bool Any(readonly(BitSet)* value) nothrow=>value.HasAnySet();
-            bool All(readonly(BitSet)* value) nothrow=>value.HasAllSet();
+            bool Any(immutable(BitSet)* value) nothrow=>value.HasAnySet();
+            bool All(immutable(BitSet)* value) nothrow=>value.HasAllSet();
             int main(){BitSet bits=new();
                 for(nuint length=0;length<131;length++){
                     bits.Resize(length);bits.Clear();

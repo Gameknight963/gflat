@@ -1,6 +1,7 @@
 namespace std;
 
-// Fixed-width integers with explicit byte order. Borrows the stream.
+// Fixed-width integers and IEEE floating-point values with explicit byte order.
+// Borrows the stream.
 // These operations never depend on host endianness, alignment, or C long width.
 public static class FileBinary
 {
@@ -30,6 +31,32 @@ public static class FileBinary
     public static void WriteInt64LittleEndian(File* output, long value) { WriteUInt64LittleEndian(output, (ulong)value); }
     public static long ReadInt64BigEndian(File* input) => (long)ReadUInt64BigEndian(input);
     public static void WriteInt64BigEndian(File* output, long value) { WriteUInt64BigEndian(output, (ulong)value); }
+
+    public static float ReadFloatLittleEndian(File* input)
+    {
+        uint bits = ReadUInt32LittleEndian(input);
+        return *((float*)&bits);
+    }
+    public static float ReadFloatBigEndian(File* input)
+    {
+        uint bits = ReadUInt32BigEndian(input);
+        return *((float*)&bits);
+    }
+    public static void WriteFloatLittleEndian(File* output, float value) { WriteUInt32LittleEndian(output, *((uint*)&value)); }
+    public static void WriteFloatBigEndian(File* output, float value) { WriteUInt32BigEndian(output, *((uint*)&value)); }
+
+    public static double ReadDoubleLittleEndian(File* input)
+    {
+        ulong bits = ReadUInt64LittleEndian(input);
+        return *((double*)&bits);
+    }
+    public static double ReadDoubleBigEndian(File* input)
+    {
+        ulong bits = ReadUInt64BigEndian(input);
+        return *((double*)&bits);
+    }
+    public static void WriteDoubleLittleEndian(File* output, double value) { WriteUInt64LittleEndian(output, *((ulong*)&value)); }
+    public static void WriteDoubleBigEndian(File* output, double value) { WriteUInt64BigEndian(output, *((ulong*)&value)); }
 
     private static ulong Read(File* input, nuint count, bool littleEndian)
     {

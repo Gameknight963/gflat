@@ -302,7 +302,7 @@ the shared current file position; it does not reopen or rewind the file.
 or calling `ToVector()` creates independent owning values. See
 [borrowed file lines](../../docs/FILE_LINE_SEQUENCE.md).
 
-### Binary integers
+### Binary numbers
 
 `File/FileBinary.gf` supplies `std::FileBinary`, borrowing `File*` streams. Its
 `ReadUInt16LittleEndian`, `ReadUInt32LittleEndian`, and `ReadUInt64LittleEndian`
@@ -316,6 +316,19 @@ alignment, pointer width, and the C runtime's `long` size. Truncation throws
 `EndOfStreamException`; actual IO errors throw `IOException` (the base type of
 `EndOfStreamException`), with the same partial-progress behavior as
 `ReadExactly` and `Write`. Writes do not flush or close the stream.
+
+`ReadFloatLittleEndian` / `ReadFloatBigEndian`, `ReadDoubleLittleEndian` /
+`ReadDoubleBigEndian`, and matching `WriteFloat` / `WriteDouble` methods read
+and write IEEE-754 binary32 and binary64 representations. These are useful for
+binary sensor or geometry records. They preserve every bit, including signed
+zero, subnormals, infinities, and NaN signs/payloads; no numerical conversion or
+NaN canonicalization occurs. Each operation consumes or writes exactly four or
+eight bytes on success, beginning at the stream's current position.
+
+These adapters reuse the unsigned integer operations and add no source
+requirement beyond the existing FileBinary dependencies. Truncated reads may
+consume an available prefix before throwing; writes can make partial progress
+before an IO failure. They do not rewind, flush, or close the borrowed file.
 
 ## Managed memory
 

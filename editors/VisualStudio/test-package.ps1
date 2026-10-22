@@ -221,6 +221,15 @@ int main() {
     Vector<int> window = new(); window.Add(1); window.Add(2); window.Add(3);
     window.RemoveRange(1, 1);
     if (window.Count != 2 || window[0] != 1 || window[1] != 3) return 32;
+    window.AsSpan().Fill(9);
+    if (window[0] != 9 || window[1] != 9) return 33;
+    JsonReader document = new("{\"ok\":true}", 11); int tokens = 0;
+    while (document.Read()) tokens++;
+    if (tokens != 4) return 34;
+    JsonReader invalid = new("[1,]", 4); bool jsonRejected = false;
+    try { while (invalid.Read()) {} }
+    catch (JsonParseException* error) { jsonRejected = error.Offset == 3; }
+    if (!jsonRejected) return 35;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

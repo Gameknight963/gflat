@@ -81,6 +81,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Unicode conversion](../examples/transcode/README.md): strict UTF-8/UTF-16LE conversion with validation before output-file creation.
 - [Quote text lines](../examples/quote-lines/README.md): lazy file lines written directly as newline-delimited JSON strings.
 - [Decode JSON string lines](../examples/unquote-lines/README.md): strict validation and in-place decoding with a reusable buffer.
+- [Check JSON documents](../examples/json-check/README.md): forward-only validation and nesting statistics without building a DOM.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

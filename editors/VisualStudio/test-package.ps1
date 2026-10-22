@@ -516,6 +516,13 @@ int main() {
         if (batchFolded.Value != 25) return 121;
         HashSet<int> batchDistinct = batchQueue.AsEnumerable().ToHashSet(); int batchDistinctKey = 7;
         if (batchDistinct.Count != 2 || !batchDistinct.Contains(&batchDistinctKey)) return 122;
+        String batchTransformResult = new();
+        Base64Decoder batchDecoder = new(&batchTransformResult);
+        Base64Encoder batchEncoder = new(&batchDecoder);
+        batchEncoder.Write(batchBinaryText.Data, 1);
+        batchEncoder.Write(batchBinaryText.Data + 1, batchBinaryText.Length - 1);
+        batchEncoder.Complete(); batchDecoder.Complete();
+        if (!batchTransformResult.Equals(&batchBinaryText)) return 123;
     }
     return 0;
 }

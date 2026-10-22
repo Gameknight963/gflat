@@ -12,7 +12,7 @@ void WriteChecksum(uint value)
     Console::Write(hex, written);
 }
 
-void PrintFile(readonly(char)* path)
+void ReadChecksums(readonly(char)* path, ref uint crcValue, ref uint adlerValue)
 {
     File input = File::OpenRead(path);
     CRC32 crc = new();
@@ -26,30 +26,45 @@ void PrintFile(readonly(char)* path)
         adler.Append(buffer, count);
     }
     input.Close();
-    WriteChecksum(crc.GetValue());
-    Console::Write(" ");
-    WriteChecksum(adler.GetValue());
-    Console::Write("  ");
-    Console::WriteLine(path);
+    crcValue = crc.GetValue();
+    adlerValue = adler.GetValue();
 }
 
 int main(int argc, char** argv)
 {
     if (argc < 2)
     {
-        Console::WriteLine("Usage: checksum <file> [more files...]");
+        Console::Error.WriteLine("Usage: checksum <file> [more files...]");
         return 2;
     }
     int status = 0;
-    for (int i = 1; i < argc; i++)
+    try
     {
-        try { PrintFile(argv[i]); }
-        catch (IOException* error)
+        for (int i = 1; i < argc; i++)
         {
-            Console::Write("Unable to read: ");
+            uint crc = 0;
+            uint adler = 0;
+            try { ReadChecksums(argv[i], ref crc, ref adler); }
+            catch (IOException* error)
+            {
+                Console::Error.Write("Unable to read: ", 16);
+                Console::Error.WriteLine(argv[i]);
+                status = 1;
+                continue;
+            }
+            WriteChecksum(crc);
+            Console::Write(" ");
+            WriteChecksum(adler);
+            Console::Write("  ");
             Console::WriteLine(argv[i]);
-            status = 1;
         }
+        // Buffered writes can fail only when the pending bytes are flushed.
+        Console::Flush();
+    }
+    catch (IOException* error)
+    {
+        Console::Error.WriteLine("Unable to write checksums");
+        return 1;
     }
     return status;
 }

@@ -29,6 +29,10 @@ ulong ParseULong(this ref immutable(String) text) => std::ParseULong(text.Data, 
 bool TryParseULong(this ref immutable(String) text, ulong* result) nothrow
     => std::TryParseULong(text.Data, text.Length, result);
 
+extralong ParseExtraLong(this ref immutable(String) text) => std::ParseExtraLong(text.Data, text.Length);
+bool TryParseExtraLong(this ref immutable(String) text, extralong* result) nothrow
+    => std::TryParseExtraLong(text.Data, text.Length, result);
+
 nint ParseNInt(this ref immutable(String) text) => std::ParseNInt(text.Data, text.Length);
 bool TryParseNInt(this ref immutable(String) text, nint* result) nothrow
     => std::TryParseNInt(text.Data, text.Length, result);

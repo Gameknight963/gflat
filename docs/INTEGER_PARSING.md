@@ -4,7 +4,7 @@ These APIs parse decimal text. Explicit unsigned hexadecimal alternatives are
 documented in [Hexadecimal integer parsing](HEX_INTEGER_PARSING.md).
 
 `std` provides strict decimal parsers for `Byte`, `SByte`, `Short`, `UShort`,
-`Int`, `UInt`, `Long`, `ULong`, `NInt`, and `NUInt`. Each name has four forms:
+`Int`, `UInt`, `Long`, `ULong`, `ExtraLong`, `NInt`, and `NUInt`. Each name has four forms:
 
 ```cpp
 bool TryParseLong(readonly(char)* text, long* result) nothrow;
@@ -26,6 +26,11 @@ prefixes, trailing characters, and values outside the result type's range fail.
 `Exception` on the same inputs. Overflow is checked before multiplication and
 addition, including at the unsigned 64-bit boundary and the signed minimum.
 Pointer-sized parsers use the target's pointer-sized integer limits.
+`ExtraLong` always uses the signed 128-bit range, from
+`-170141183460469231731687303715884105728` through
+`170141183460469231731687303715884105727`, independently of pointer size.
+It checks a negative decimal accumulator before each step and needs no
+128-bit division or remainder runtime helper.
 
 Parsing finishes reading its input before committing a successful output, so
 the output may overlap input storage when that storage is valid and suitably

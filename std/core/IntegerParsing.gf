@@ -204,6 +204,46 @@ ulong ParseULong(readonly(char)* text, nuint count)
 ulong ParseULong(readonly(char)* text)
     => ParseULong(text, integer_parsing_detail::Length(text));
 
+bool TryParseExtraLong(readonly(char)* text, nuint count, extralong* result) nothrow
+{
+    if (count == 0) { *result = (extralong)0; return false; }
+    nuint index = 0;
+    bool negative = text[0] == '-';
+    if (negative || text[0] == '+') index++;
+    if (index == count) { *result = (extralong)0; return false; }
+    // -floor(2^127 / 10), assembled without 128-bit division or wide literals.
+    extralong cutoff = -(((extralong)922337203685477580ul << 64) | (extralong)14757395258967641292ul);
+    int last = 7;
+    if (negative) last = 8;
+    extralong value = (extralong)0;
+    for (; index < count; index++)
+    {
+        char ch = text[index];
+        if (ch < '0' || ch > '9') { *result = (extralong)0; return false; }
+        int digit = ch - '0';
+        if (value < cutoff || (value == cutoff && digit > last))
+        { *result = (extralong)0; return false; }
+        value = value * (extralong)10 - (extralong)digit;
+    }
+    if (!negative) value = -value;
+    *result = value;
+    return true;
+}
+
+bool TryParseExtraLong(readonly(char)* text, extralong* result) nothrow
+    => TryParseExtraLong(text, integer_parsing_detail::Length(text), result);
+
+extralong ParseExtraLong(readonly(char)* text, nuint count)
+{
+    extralong result = (extralong)0;
+    if (!TryParseExtraLong(text, count, &result))
+        throw new Exception("Invalid or out-of-range decimal extralong");
+    return result;
+}
+
+extralong ParseExtraLong(readonly(char)* text)
+    => ParseExtraLong(text, integer_parsing_detail::Length(text));
+
 bool TryParseNInt(readonly(char)* text, nuint count, nint* result) nothrow
 {
     ulong negativeLimit = 1ul << (sizeof(nint) * 8 - 1);

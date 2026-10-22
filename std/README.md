@@ -89,6 +89,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Decode JSON string lines](../examples/unquote-lines/README.md): strict validation and in-place decoding with a reusable buffer.
 - [Check JSON documents](../examples/json-check/README.md): forward-only validation and nesting statistics without building a DOM.
 - [Minify JSON documents](../examples/json-minify/README.md): validate first, then write compact JSON while preserving duplicate names, property order, and number spelling.
+- [Number statistics](../examples/number-stats/README.md): bounded stdin lines, borrowed ASCII trimming, strict integer parsing, and an exact 128-bit running sum.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

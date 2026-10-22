@@ -1011,7 +1011,8 @@ namespace gflat
             List<Parameter> parameters = new();
             bool isVariadic = false;
 
-            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile) &&
+                !Check(TokenKind.OpenBrace) && !Check(TokenKind.CloseBrace) && !Check(TokenKind.Semicolon))
             {
                 // check for variadic ...
                 if (Check(TokenKind.Dot) && Peek().Kind == TokenKind.Dot && Peek(2).Kind == TokenKind.Dot)
@@ -1021,7 +1022,7 @@ namespace gflat
                     break;
                 }
                 parameters.Add(ParseParameter());
-                if (Check(TokenKind.OpenBrace)) break;
+                if (Check(TokenKind.OpenBrace) || Check(TokenKind.CloseBrace) || Check(TokenKind.Semicolon)) break;
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -1038,10 +1039,11 @@ namespace gflat
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
-            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile) &&
+                !Check(TokenKind.OpenBrace) && !Check(TokenKind.CloseBrace) && !Check(TokenKind.Semicolon))
             {
                 parameters.Add(ParseParameter());
-                if (Check(TokenKind.OpenBrace)) break;
+                if (Check(TokenKind.OpenBrace) || Check(TokenKind.CloseBrace) || Check(TokenKind.Semicolon)) break;
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -1086,6 +1088,11 @@ namespace gflat
         private BlockStatement ParseBodyOrBlockCoreLocated()
         {
             int line = Current.Line;
+            if (Check(TokenKind.CloseBrace))
+            {
+                _diagnostics.Report(DiagnosticRules.GF0004_SyntaxError, Current.Span, "Expected body before closing delimiter");
+                return new BlockStatement(new List<AstNode>(), line);
+            }
             if (Check(TokenKind.OpenBrace))
                 return ParseBlockStatement();
 
@@ -1123,10 +1130,11 @@ namespace gflat
 
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
-            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile) &&
+                !Check(TokenKind.OpenBrace) && !Check(TokenKind.CloseBrace) && !Check(TokenKind.Semicolon))
             {
                 parameters.Add(ParseParameter());
-                if (Check(TokenKind.OpenBrace)) break;
+                if (Check(TokenKind.OpenBrace) || Check(TokenKind.CloseBrace) || Check(TokenKind.Semicolon)) break;
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -1141,10 +1149,11 @@ namespace gflat
         {
             Expect(TokenKind.OpenParen);
             List<Parameter> parameters = new();
-            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
+            while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile) &&
+                !Check(TokenKind.OpenBrace) && !Check(TokenKind.CloseBrace) && !Check(TokenKind.Semicolon))
             {
                 parameters.Add(ParseParameter());
-                if (Check(TokenKind.OpenBrace)) break;
+                if (Check(TokenKind.OpenBrace) || Check(TokenKind.CloseBrace) || Check(TokenKind.Semicolon)) break;
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }

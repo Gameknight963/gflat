@@ -57,6 +57,20 @@ extension is checked only when called; spans of noncopyable values remain usable
 without calling it. For source-library selection its file is
 `Collections/SpanCopy.gf`.
 
+`span.Fill(value)` assigns a snapshot of `value` to every initialized element,
+in increasing index order. For example, `work.AsSpan().Slice(2, 4).Fill(0)` resets
+four existing work slots. The value is an ordinary by-value parameter: its copy
+is prepared even for an empty span, and it may borrow an element of the target
+because that snapshot precedes all assignments. Each element assignment uses
+its normal copy constructor and destroys the replaced owner. If the parameter
+copy fails, no elements change; if a later element copy fails, completed prefix
+assignments remain and other elements stay valid. Copy constructors must not
+mutate the destination through another alias.
+
+`Fill` allocates no container storage, although value copies may allocate. It
+requires mutable, copyable elements only when called, and lives separately in
+`Collections/SpanFill.gf`. It does not initialize raw storage.
+
 ## Queue and stack
 
 `Stack<T>` owns a last-in, first-out sequence backed by a `Vector<T>`.

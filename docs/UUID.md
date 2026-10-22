@@ -70,3 +70,29 @@ uses no clock, operating-system generator, or random source.
 
 The representation and canonical hexadecimal form follow
 [RFC 9562, section 4](https://www.rfc-editor.org/rfc/rfc9562.html#section-4).
+
+## Command-line example
+
+This program checks one identifier and prints its canonical lowercase form.
+It uses the standard project library and does not construct an owning String:
+
+```csharp
+using std;
+
+int main(int argc, char** argv)
+{
+    if (argc != 2) {
+        Console::Error.WriteLine("Usage: uuid-check <identifier>");
+        return 2;
+    }
+    Uuid id = new();
+    if (!Uuid::TryParse(argv[1], &id)) {
+        Console::Error.WriteLine("Expected a UUID in 8-4-4-4-12 hexadecimal groups");
+        return 2;
+    }
+    id.Format(Console::Out);
+    Console::WriteLine();
+    Console::Flush();
+    return 0;
+}
+```

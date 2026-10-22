@@ -10,6 +10,24 @@ Inputs are null-terminated strings. Results are independent owning `String`
 values. Bytes are preserved: there is no Unicode conversion, case folding,
 validation, existence check, or resolution of `.` and `..`.
 
+The five `Get...` operations also accept `Span<readonly(char)>`, returning a
+borrowed `Span<readonly(char)>` instead of allocating a `String`. They use the
+same lexical rules below, read only the supplied count, and treat embedded null
+and high bytes as ordinary path bytes. Empty results have null `Data` and zero
+length. No terminator is appended or promised. Keep the original storage alive
+and do not relocate it while using a result; edits through another mutable view
+remain visible. These views protect characters but do not freeze their owner.
+
+```csharp
+String path = s"assets/settings.json";
+var name = Paths::GetFileName(path.AsReadOnly(), PathStyle::Unix);
+// name borrows "settings.json" from path.
+```
+
+Explicit source selections also need `Span.gf`, `Collections/IEnumerable.gf`,
+and `Collections/Enumerable.gf` for these overload declarations. Ordinary
+projects including the standard library already include these sources.
+
 - `GetFileName(path, style)` returns the final component. A trailing separator
   produces an empty filename. Windows drive prefixes and UNC roots are excluded.
 - `GetDirectoryName(path, style)` returns the containing directory, preserving a

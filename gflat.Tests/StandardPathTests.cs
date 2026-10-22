@@ -6,7 +6,7 @@ public sealed class StandardPathTests
 
     private static void Run(string program, int optimization = 0)
     {
-        var files = new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Formatting.gf", "core/Paths/PathStyle.gf", "core/Paths/Paths.gf" }
+        var files = new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Formatting.gf", "core/Span.gf", "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/Paths/PathStyle.gf", "core/Paths/Paths.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(files, optimization);

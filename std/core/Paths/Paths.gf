@@ -139,4 +139,47 @@ public static class Paths
         if (index < length) index++;
         return index;
     }
+    // Borrowed counted views; no terminator is read or appended.
+    public static Span<readonly(char)> GetFileName(Span<readonly(char)> path, PathStyle style)
+    {
+        if (path.IsEmpty) return new Span<readonly(char)>();
+        nuint start = Paths::FileNameStart(path.Data!, path.Length, style);
+        return path.Slice(start);
+    }
+
+    public static Span<readonly(char)> GetDirectoryName(Span<readonly(char)> path, PathStyle style)
+    {
+        if (path.IsEmpty) return new Span<readonly(char)>();
+        nuint root = Paths::RootLength(path.Data!, path.Length, style);
+        if (path.Length <= root) return new Span<readonly(char)>();
+        nuint end = path.Length;
+        while (end > root && !Paths::IsSeparator(path[end - 1], style)) end--;
+        if (end > root) end--;
+        while (end > root && Paths::IsSeparator(path[end - 1], style)) end--;
+        return path.Slice(0, end);
+    }
+
+    public static Span<readonly(char)> GetExtension(Span<readonly(char)> path, PathStyle style)
+    {
+        if (path.IsEmpty) return new Span<readonly(char)>();
+        nuint start = Paths::FileNameStart(path.Data!, path.Length, style);
+        nuint dot = Paths::ExtensionStart(path.Data!, start, path.Length);
+        if (dot == path.Length || dot + 1 == path.Length) return new Span<readonly(char)>();
+        return path.Slice(dot);
+    }
+
+    public static Span<readonly(char)> GetFileNameWithoutExtension(Span<readonly(char)> path, PathStyle style)
+    {
+        if (path.IsEmpty) return new Span<readonly(char)>();
+        nuint start = Paths::FileNameStart(path.Data!, path.Length, style);
+        nuint dot = Paths::ExtensionStart(path.Data!, start, path.Length);
+        return path.Slice(start, dot - start);
+    }
+
+    public static Span<readonly(char)> GetRoot(Span<readonly(char)> path, PathStyle style)
+    {
+        if (path.IsEmpty) return new Span<readonly(char)>();
+        return path.Slice(0, Paths::RootLength(path.Data!, path.Length, style));
+    }
+
 }

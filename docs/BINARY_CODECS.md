@@ -21,7 +21,7 @@ Encoding requires disjoint buffers. Decoding supports disjoint buffers or the
 exact same starting address for an in-place operation; other overlapping
 regions are unsupported.
 
-For Base64, Hex, and PercentEncoding, the scalar `length` and `written`
+For Base64, Base64Url, Hex, and PercentEncoding, the scalar `length` and `written`
 variables must occupy separate storage from the input and output byte buffers.
 In-place decoding support applies to the byte buffers, not these count outputs:
 storing a count into encoded or decoded bytes would overwrite their contents.
@@ -32,6 +32,40 @@ result once and process small stack chunks without allocating an intermediate
 whole-size buffer. Decoded strings may contain embedded zeros; use `Length`
 rather than a C-string scan. Malformed input, length overflow, and allocation
 failure throw. Include the usual core String dependencies for these conveniences.
+
+# URL-safe Base64
+
+`std/core/Base64Url.gf` defines `std::Base64Url`, a separate caller-buffer codec
+using the RFC 4648 section 5 alphabet (`-` and `_` instead of `+` and `/`). This
+API explicitly selects the **unpadded** profile: it emits no `=` and rejects
+padding on input. It also rejects whitespace, standard-alphabet `+`/`/`, and
+nonzero unused bits in a final two- or three-character group. There is one
+accepted encoding for each byte sequence. Input lengths congruent to one modulo
+four cannot encode complete bytes and are rejected.
+
+The four `nothrow` methods have the same argument order as `Base64`:
+
+- `TryGetEncodedLength(count, ref length)` checks pointer-sized size overflow.
+- `TryEncode(data, count, output, capacity, ref written)` emits counted ASCII.
+- `TryGetDecodedLength(text, count, ref length)` validates the entire input.
+- `TryDecode(text, count, output, capacity, ref written)` validates input and
+  capacity before writing any output.
+
+Every failure sets the output count to zero and leaves the output byte buffer
+untouched. Empty input succeeds without reading input or writing output. No
+terminator is added; binary zeros are ordinary data. Encoding requires disjoint
+buffers; decoding also supports the exact same starting address. Other overlap
+is unsupported. Count output variables must remain separate from both buffers.
+The codec allocates nothing and requires neither `String`, libc, nor `Base64`.
+
+For example, the bytes `FB FF FF` encode to `-___`; a single ASCII `f` encodes
+to `Zg`. `Zg==` and `Zh` are both rejected: the first has padding, and the
+second has nonzero unused bits. This is an encoding, not encryption.
+
+The alphabet and explicitly omitted padding follow
+[RFC 4648 section 5](https://www.rfc-editor.org/rfc/rfc4648.html#section-5);
+canonical unused bits follow
+[section 3.5](https://www.rfc-editor.org/rfc/rfc4648.html#section-3.5).
 
 # Hexadecimal
 

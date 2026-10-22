@@ -40,7 +40,7 @@ implementation lives in `libc`.
 | Unicode | `Utf8`, incremental `Utf8Decoder`, borrowed `Utf8Scalars` | [UTF-8 buffers](../docs/UTF8.md), [chunked decoding](../docs/UTF8_DECODER.md), [scalar iteration](../docs/UTF8_SCALARS.md) |
 | UTF-16 and conversion | `Utf16`, incremental `Utf16Decoder`, borrowed `Utf16Scalars`, `UnicodeTranscoding` | [Code units and chunked decoding](../docs/UTF16.md), [scalar iteration](../docs/UTF16_SCALARS.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
-| Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
+| Binary text | `Base64`, unpadded `Base64Url`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
 | JSON strings | `JsonString`, writer `WriteJsonString` | [Strict UTF-8 quoting and unquoting in caller buffers, plus writer output](../docs/JSON_STRING.md) |
 | JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens over borrowed UTF-8 input](../docs/JSON_READER.md) |
 | JSON text | `JsonText::Minify` | [Validate first and remove whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |

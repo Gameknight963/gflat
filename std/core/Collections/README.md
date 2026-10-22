@@ -1,6 +1,8 @@
 # Enumeration and queries
 
-`Vector`, `Span`, `IntRange`, and `FilteredIntRange` provide an `AsEnumerable()` adapter for lazy queries.
+`Vector`, `Span`, `IntRange`, `FilteredIntRange`, `TextParts`, `TextLines`,
+`Utf8Scalars`, `Utf16Scalars`, and `BitSet` provide an `AsEnumerable()` adapter
+for lazy queries.
 Import `std` to make the query extensions visible:
 
 ```csharp
@@ -41,12 +43,20 @@ the general query operators with `.AsEnumerable().Select(...)`; constructing
 that adapter does not evaluate its predicate or allocate storage. Each
 enumeration starts again from the captured range, filter, skip, and take state.
 
+Text and Unicode scalar adapters copy small views that borrow the caller's
+storage. BitSet's adapter captures its packed storage and bit length, yielding
+set-bit indices. These adapters do not copy their owners or extend a buffer's
+lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
+[Unicode scalars](../../../docs/UTF8_SCALARS.md), and
+[BitSet queries](OWNING_COLLECTIONS.md#packed-bits) for their invalidation rules.
+
 ## Operations
 
 | Operation | Behavior |
 | --- | --- |
 | `Where(predicate)` | Yield elements passing the predicate. |
 | `Select(selector)` | Project elements when their `Current` value is read. |
+| `Zip(other, selector)` | Project pairs in order until either input ends. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements; counts are `nuint`. |
 | `TakeWhile(predicate)` | Yield the initial matching prefix; stop permanently at the first false result. |
 | `SkipWhile(predicate)` | Skip the initial matching prefix, then yield every remaining element without testing again. |
@@ -62,6 +72,7 @@ enumeration starts again from the captured range, filter, skip, and take state.
 | `ToVector()` | Copy values into a new owning vector. |
 
 Operators are lazy until a terminal operation or `foreach` advances an iterator.
+For paired queries and their iteration/ownership rules, see [Zip](../../../docs/QUERY_ZIP.md).
 Each enumeration starts a fresh iterator. Operator order matters:
 `Take(3).Where(test)` examines at most three input elements;
 `Where(test).Take(3)` looks for three matches.

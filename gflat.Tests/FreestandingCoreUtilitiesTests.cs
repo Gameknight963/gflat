@@ -247,6 +247,10 @@ public class FreestandingCoreUtilitiesTests
             if(!std::CString::TryCopy(&copied[2],&copied[1],3)||!std::CString::Equals(cText,&copied[1])) return 141;
             if(copied[0]!='Z'||copied[5]!='Z'||copied[6]!='Z') return 142;
             if(std::CString::TryCopy((readonly(char)*)1,(char*)1,0)) return 143;
+            if(std::VarInt::ZigZagEncode((long)runtimeInput)!=unsignedMaximum ||
+                std::VarInt::ZigZagDecode(unsignedMaximum)!=(long)runtimeInput) return 144;
+            if(std::VarInt::ZigZagEncode((int)(runtimeInput>>32))!=(uint)unsignedMaximum ||
+                std::VarInt::ZigZagDecode((uint)unsignedMaximum)!=(int)(runtimeInput>>32)) return 145;
             return 42;
         }
         """;

@@ -367,6 +367,23 @@ int main() {
         if (batchQuery.Aggregate(0, (int total, int value) => total + value) != 2) return 79;
         if (!CString::IsNullOrEmpty(null) || CString::IsNullOrEmpty(batchSpaced.Data)) return 80;
         if (std::Hashing::Integer(4294967297ul) == std::Hashing::Integer(0ul)) return 81;
+        JsonReader batchToken = new("\"na\\u006de\"", 11);
+        if (!batchToken.Read() || !batchToken.ValueTextEquals("name", 4)) return 82;
+        Span<readonly(char)> batchRaw = batchToken.RawToken;
+        if (batchRaw.Length != 11 || !batchRaw.StartsWith("\"na", 3)
+            || !batchRaw.EndsWith("e\"")) return 83;
+        BinaryBufferWriter batchCursorOutput = new(batchWideBytes, 16);
+        BinaryBufferReader batchCursorInput = new(batchWideBytes, 16);
+        if (!batchCursorOutput.TryWriteExtraLongLittleEndian(batchParsed)
+            || !batchCursorInput.TryReadExtraLongLittleEndian(ref batchRoundtrip)
+            || batchRoundtrip != batchParsed) return 84;
+        immutable(Utf8Scalars) batchScalars = new("ABC", 3);
+        if (batchScalars.AsEnumerable().Select((uint scalar) => (int)scalar)
+            .Aggregate(0, (int total, int scalar) => total + scalar) != 198) return 85;
+        ushort[3] batchUnits = [(ushort)65, (ushort)0, (ushort)90];
+        immutable(Utf16Scalars) batchWideScalars = new(batchUnits, 3);
+        if (batchWideScalars.AsEnumerable().Select((uint scalar) => (int)scalar)
+            .Aggregate(0, (int total, int scalar) => total + scalar) != 155) return 86;
     }
     return 0;
 }

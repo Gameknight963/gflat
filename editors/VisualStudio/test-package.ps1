@@ -415,6 +415,23 @@ int main() {
         batchEnds.AddLast(1); batchEnds.AddLast(2); batchEnds.AddLast(3); batchEnds.AddLast(4);
         batchEnds.RemoveFirst(); batchEnds.RemoveFirst(); batchEnds.AddLast(5); batchEnds.AddLast(6);
         if (batchEnds.AsEnumerable().Aggregate(0, (int total, int value) => total + value) != 18) return 94;
+        if (new IntRange(1, 3).AsEnumerable().ElementAt(1) != 2) return 95;
+        Vector<int> batchInserted = new(); batchInserted.Add(3); batchInserted.Add(1); batchInserted.Add(2);
+        batchInserted.InsertRange(1, batchInserted.AsImmutable().Slice(0, 2));
+        if (batchInserted.Count != 5 || batchInserted[0] != 3 || batchInserted[1] != 3
+            || batchInserted[2] != 1 || batchInserted[3] != 1 || batchInserted[4] != 2) return 96;
+        StableSort<int>(batchInserted.AsSpan(), Comparer<int>::Compare);
+        if (batchInserted[0] != 1 || batchInserted[1] != 1 || batchInserted[2] != 2
+            || batchInserted[3] != 3 || batchInserted[4] != 3) return 97;
+        int batchWindowSum = 0; nuint batchWindowCount = 0;
+        foreach (Span<int> window in batchInserted.AsSpan().Windows(2, 2))
+        { batchWindowSum += window[0] + window[1]; batchWindowCount++; }
+        if (batchWindowSum != 7 || batchWindowCount != 2) return 98;
+        Span<readonly(char)> batchPath = new("/tmp/file.tar.gz", 16);
+        if (!Paths::GetFileName(batchPath, PathStyle::Unix).StartsWith("file.tar.gz")
+            || !Paths::GetExtension(batchPath, PathStyle::Unix).StartsWith(".gz")) return 99;
+        if (BitOperations::RoundUpToPowerOfTwo(9u) != 16u
+            || BitOperations::RoundUpToPowerOfTwo(18446744073709551615ul) != 0ul) return 100;
     }
     return 0;
 }

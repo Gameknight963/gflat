@@ -251,6 +251,17 @@ public class FreestandingCoreUtilitiesTests
                 std::VarInt::ZigZagDecode(unsignedMaximum)!=(long)runtimeInput) return 144;
             if(std::VarInt::ZigZagEncode((int)(runtimeInput>>32))!=(uint)unsignedMaximum ||
                 std::VarInt::ZigZagDecode((uint)unsignedMaximum)!=(int)(runtimeInput>>32)) return 145;
+            extralong wideBits=(extralong)runtimeInput<<64;
+            char[38] wideHex;
+            for(nuint i=0;i<38;i++)wideHex[i]='Z';
+            if(!std::IntegerFormatting::TryFormatHex(wideBits,&wideHex[1],36,ref length,36,false)||length!=36) return 146;
+            if(wideHex[0]!='Z'||wideHex[37]!='Z'||wideHex[5]!='8') return 147;
+            for(nuint i=1;i<5;i++)if(wideHex[i]!='0') return 148;
+            for(nuint i=6;i<37;i++)if(wideHex[i]!='0') return 149;
+            if(std::IntegerFormatting::TryFormatHex(wideBits,&wideHex[1],35,ref length,36,false)||length!=0) return 150;
+            if(wideHex[0]!='Z'||wideHex[37]!='Z'||wideHex[5]!='8') return 151;
+            for(nuint i=1;i<5;i++)if(wideHex[i]!='0') return 152;
+            for(nuint i=6;i<37;i++)if(wideHex[i]!='0') return 153;
             return 42;
         }
         """;

@@ -18,7 +18,7 @@ implementation lives in `libc`.
 | Writer line helpers | `ITextWriter*` `WriteLine` overloads | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split` | [Allocation-free splitting](../docs/TEXT_PARTS.md) |
 | Borrowed text lines | `TextLines` | [Counted LF and CRLF line views](../docs/TEXT_LINES.md) |
-| Contiguous storage | `Vector<T>`, `Span<T>`, typed span `CopyTo` | [Ownership and views](core/README.md#vectors), [copying initialized elements](core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
+| Contiguous storage | `Vector<T>`, `Span<T>`, typed span `CopyTo`/`Fill` | [Ownership and views](core/README.md#vectors), [copying and filling initialized elements](core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
 | Double-ended storage | `Deque<T>` | [Owning ring buffer](../docs/DEQUE.md) |
 | Stable node storage | `LinkedList<T>` | [Owning linked lists and node handles](../docs/LINKED_LIST.md) |
@@ -38,6 +38,7 @@ implementation lives in `libc`.
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
 | JSON strings | `JsonString`, writer `WriteJsonString` | [Strict UTF-8 quoting and unquoting in caller buffers, plus writer output](../docs/JSON_STRING.md) |
+| JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens over borrowed UTF-8 input](../docs/JSON_READER.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |

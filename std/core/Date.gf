@@ -42,7 +42,7 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
 
     public static Date FromDayNumber(int number)
     {
-        if (number < 0 || number > Date::MaximumDayNumber) throw new Exception("Date day number is outside the supported range");
+        if (number < 0 || number > MaximumDayNumber) throw new Exception("Date day number is outside the supported range");
         Date result = new(); result.dayNumber = number; return result;
     }
 
@@ -59,9 +59,9 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         remaining -= years * 365;
         year = centuries400 * 400 + centuries * 100 + years4 * 4 + years + 1;
         month = 1;
-        while (remaining >= Date::MonthLength(year, month))
+        while (remaining >= MonthLength(year, month))
         {
-            remaining -= Date::MonthLength(year, month); month++;
+            remaining -= MonthLength(year, month); month++;
         }
         day = remaining + 1;
     }
@@ -82,7 +82,7 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
     public readonly Date AddDays(int days)
     {
         long result = (long)dayNumber + (long)days;
-        if (result <= -1l || result > (long)Date::MaximumDayNumber) throw new Exception("Date addition is outside the supported range");
+        if (result < 0l || result > (long)MaximumDayNumber) throw new Exception("Date addition is outside the supported range");
         return Date::FromDayNumber((int)result);
     }
 

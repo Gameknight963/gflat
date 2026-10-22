@@ -58,3 +58,31 @@ bool valid = text.TryParseULong(&attempted);
 These methods use `String.Length`, preserve embedded nulls for validation, and
 do not copy or allocate string storage. The String `TryParse...` wrappers are
 also explicitly `nothrow`; the `Parse...` wrappers retain their exceptions.
+
+## Counted span extensions
+
+`core/SpanIntegerParsing.gf` supplies `TryParse...` extensions for
+`Span<readonly(char)>` at all eleven widths above. The corresponding throwing
+extensions live in `core/SpanIntegerParsingThrowing.gf`:
+
+```csharp
+char[4] buffer = ['x', '1', '2', 'x'];
+Span<readonly(char)> text = new(&buffer[1], 2);
+long value = text.ParseLong(); // 12; neither surrounding byte is read.
+long attempted = 0l;
+bool valid = text.TryParseLong(&attempted);
+```
+
+These methods copy only span metadata and forward its exact byte count to the
+existing parsers. They do not scan for a terminator, copy the owner, or retain a
+pointer. An empty span fails normally and writes zero from `TryParse...`, even
+when its `Data` is null. Embedded NUL remains invalid decimal text. Successful
+and failed overlapping outputs follow the counted pointer rules above. Keep
+input and output storage valid for the call; the span does not extend their
+lifetimes. The `TryParse...` extensions are `nothrow` and allocate nothing.
+
+The two wrapper files are optional and add no dependency to `Span.gf` or the
+base parsers. Explicit source selections still need their normal Span/query
+contracts and `Parsing.gf`/`IntegerParsing.gf`; those base files include throwing
+definitions, so selecting the Try wrapper alone does not remove their exception
+dependencies. Boolean and hexadecimal parsing are separate APIs.

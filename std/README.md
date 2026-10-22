@@ -74,6 +74,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 ## Runnable examples
 
 - [Word count](../examples/word-count/README.md): streamed input and owning hash keys.
+- [Task list](../examples/tasks/README.md): owning titles, reference-indexer updates, and reusable console input.
 - [File checksums](../examples/checksum/README.md): streaming CRC32 and Adler32 over binary files.
 - [Hex dump](../examples/hexdump/README.md): byte offsets, hex columns, and printable ASCII with stack-backed formatting.
 - [Unicode conversion](../examples/transcode/README.md): strict UTF-8/UTF-16LE conversion with validation before output-file creation.

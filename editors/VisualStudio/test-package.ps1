@@ -187,6 +187,20 @@ int main() {
     char[16] digits;
     if (!IntegerFormatting::TryFormatHex((sbyte)-1, digits, 16, ref written, 4, false) || written != 4) return 16;
     if (digits[0] != '0' || digits[1] != '0' || digits[2] != 'f' || digits[3] != 'f') return 17;
+    uint parsed = 0u;
+    if (!TryParseHexUInt("0x2a", &parsed) || parsed != 42u || ParseHexUInt("2a") != 42u) return 18;
+    BitSet occupancy = new(65); occupancy.SetRange(0, 65, true);
+    if (!occupancy.HasAllSet() || !occupancy.HasAnySet()) return 19;
+    Arena scratch = new(); byte* cleared = (byte*)scratch.AllocateZeroed(4);
+    for (int i = 0; i < 4; i++) if (cleared[i] != (byte)0) return 20;
+    if (!writer.TryWrite("!") || writer.Length != 7) return 21;
+    PseudoRandom random = new(42ul); float fraction = random.NextFloat();
+    if (fraction < 0.0f || fraction >= 1.0f) return 22;
+    int[3] sorted = [1, 2, 3]; Span<int> searchValues = new(sorted, 3);
+    if (BinarySearch<int>(searchValues.AsReadOnly(), &search, Comparer<int>::Compare) != 2) return 23;
+    int iterations = 99;
+    for (iterations = 0; iterations < 3; iterations++) {}
+    if (iterations != 3) return 24;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

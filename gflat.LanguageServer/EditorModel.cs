@@ -213,19 +213,24 @@ public sealed partial class EditorModel
             int start = separatorIndex - 1;
             while (start >= 2 && ts[start - 1].Kind == TokenKind.DoubleColon) start -= 2;
             string qualifier = string.Concat(ts[start..separatorIndex].Select(t => t.Text));
-            if (qualifier.StartsWith("global::")) qualifier = qualifier[8..];
+            bool globalQualifier = qualifier.StartsWith("global::");
+            if (globalQualifier) qualifier = qualifier[8..];
             if (qualifier == "global") qualifier = "";
-            var resolved = Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier && (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || s.Classification == "namespace"))
+            string? namespacePath = snapshot.Checker?.ResolveVisibleNamespacePath(qualifier,
+                globalQualifier ? "" : Namespace(ContextParents(path, offset)),
+                globalQualifier ? [] : snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? []);
+            var resolved = namespacePath != null ? null : Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier &&
+                (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || snapshot.Checker == null && s.Classification == "namespace"))
                 ?? symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == qualifier);
             if (resolved != null && ContractOwners(resolved, path, offset) is { } owners)
             {
                 return SymbolsNamed(name).Where(s => owners.Contains(s.Owner) && s.Static && Accessible(s, path, offset));
             }
-            qualifier = resolved is { IsTypeParameter: true }
+            qualifier = namespacePath ?? (resolved is { IsTypeParameter: true }
                 ? TypeOwner(resolved.TypeConstraint, path, offset) ?? qualifier
                 : resolved?.Syntax.Node is AliasDeclaration
                     ? TypeOwner(resolved.Type, path, offset) ?? qualifier
-                    : resolved?.Qualified ?? qualifier;
+                    : resolved?.Qualified ?? qualifier);
             return SymbolsNamed(name).Where(s => s.Scope == null &&
                 (s.Namespace == qualifier && s.Owner == null || s.Owner == qualifier && (s.Static || IsType(s.Syntax.Node))) && Accessible(s, path, offset));
         }

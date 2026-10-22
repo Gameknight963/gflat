@@ -23,6 +23,30 @@ positive counterpart in the same type, so it throws `Exception` rather than
 wrapping or invoking signed overflow. This check also applies to pointer-sized
 `nint` and 128-bit `extralong` values.
 
+### Common divisors and multiples
+
+`GreatestCommonDivisor(a, b)` and `TryLeastCommonMultiple(a, b, ref result)`
+have `uint`, `ulong`, and `nuint` overloads. Use matching unsigned argument and
+result types; no signed absolute-value convention is implied.
+
+GCD returns the greatest common divisor using Euclid's algorithm.
+`GreatestCommonDivisor(0, value)` returns `value`, and GCD of two zeroes is zero.
+LCM returns true with the exact least common multiple when it fits. If either
+operand is zero it succeeds with zero; overflow returns false and sets `result`
+to zero. It divides out the GCD before checking multiplication, so a large
+intermediate `a * b` does not itself cause rejection.
+
+```csharp
+uint divisor = Math::GreatestCommonDivisor(48u, 18u); // 6
+uint period = 0u;
+bool fits = Math::TryLeastCommonMultiple(6u, 8u, ref period); // true, 24
+```
+
+The result may alias a caller variable passed as either input: input values are
+captured before the result is written. These operations are `nothrow`, allocate
+nothing, and add no library or runtime dependencies. Existing throwing methods
+in `Math.gf` still require their normal exception support.
+
 ## Floating point
 
 `float` and `double` each have `Sqrt`, `CopySign`, `IsNaN`, `IsFinite`, `Abs`,

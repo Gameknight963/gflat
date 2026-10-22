@@ -114,6 +114,58 @@ public static class Math
         return value;
     }
 
+    public static uint GreatestCommonDivisor(uint a, uint b) nothrow
+    {
+        while (b != 0u) { uint remainder = a % b; a = b; b = remainder; }
+        return a;
+    }
+
+    public static ulong GreatestCommonDivisor(ulong a, ulong b) nothrow
+    {
+        while (b != 0ul) { ulong remainder = a % b; a = b; b = remainder; }
+        return a;
+    }
+
+    public static nuint GreatestCommonDivisor(nuint a, nuint b) nothrow
+    {
+        while (b != (nuint)0) { nuint remainder = a % b; a = b; b = remainder; }
+        return a;
+    }
+
+    // Divide before multiplying so a common factor does not cause false overflow.
+    public static bool TryLeastCommonMultiple(uint a, uint b, ref uint result) nothrow
+    {
+        result = 0u;
+        if (a == 0u || b == 0u) return true;
+        uint reduced = a / GreatestCommonDivisor(a, b);
+        uint maximum = 0u - 1u;
+        if (reduced > maximum / b) return false;
+        result = reduced * b;
+        return true;
+    }
+
+    public static bool TryLeastCommonMultiple(ulong a, ulong b, ref ulong result) nothrow
+    {
+        result = 0ul;
+        if (a == 0ul || b == 0ul) return true;
+        ulong reduced = a / GreatestCommonDivisor(a, b);
+        ulong maximum = 0ul - 1ul;
+        if (reduced > maximum / b) return false;
+        result = reduced * b;
+        return true;
+    }
+
+    public static bool TryLeastCommonMultiple(nuint a, nuint b, ref nuint result) nothrow
+    {
+        result = (nuint)0;
+        if (a == (nuint)0 || b == (nuint)0) return true;
+        nuint reduced = a / GreatestCommonDivisor(a, b);
+        nuint maximum = (nuint)0 - (nuint)1;
+        if (reduced > maximum / b) return false;
+        result = reduced * b;
+        return true;
+    }
+
     public static sbyte Abs(sbyte value)
     {
         sbyte minimum = (sbyte)-128;

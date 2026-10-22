@@ -13,10 +13,12 @@ public struct JsonWriter
     private Vector<byte> stack;
     private bool rootWritten;
     private bool failed;
+    private readonly(bool) indented;
 
-    public JsonWriter(ITextWriter* destination)
+    public JsonWriter(ITextWriter* destination, bool indented = false)
     {
         output = destination; stack = new(); rootWritten = false; failed = false;
+        this.indented = indented;
     }
 
     private immutable void CheckUsable()
@@ -69,9 +71,18 @@ public struct JsonWriter
         stack.Reserve(grown);
     }
 
+    private void WriteIndent(nuint depth)
+    {
+        output.Write("\n", 1);
+        for (nuint i = 0; i < depth; i++) output.Write("  ", 2);
+    }
+
     private void WriteValuePrefix()
     {
-        if (stack.Count != 0 && stack[stack.Count - 1] == ArrayNext) output.Write(",", 1);
+        if (stack.Count == 0) return;
+        byte state = stack[stack.Count - 1];
+        if (state == ArrayNext) output.Write(",", 1);
+        if (indented && (state == ArrayFirst || state == ArrayNext)) this.WriteIndent(stack.Count);
     }
 
     private void CommitValue()
@@ -118,6 +129,7 @@ public struct JsonWriter
         if (state != ObjectFirst && state != ObjectNext)
             throw new JsonWriteException("Cannot close JSON object before its property value or inside an array");
         failed = true;
+        if (indented && state == ObjectNext) this.WriteIndent(stack.Count - 1);
         output.Write("}", 1);
         stack.Pop(); failed = false;
     }
@@ -130,6 +142,7 @@ public struct JsonWriter
         if (state != ArrayFirst && state != ArrayNext)
             throw new JsonWriteException("Cannot close JSON array inside an object");
         failed = true;
+        if (indented && state == ArrayNext) this.WriteIndent(stack.Count - 1);
         output.Write("]", 1);
         stack.Pop(); failed = false;
     }
@@ -145,8 +158,9 @@ public struct JsonWriter
         CheckString(data, length);
         failed = true;
         if (state == ObjectNext) output.Write(",", 1);
+        if (indented) this.WriteIndent(stack.Count);
         std::WriteJsonString(output, data, length);
-        output.Write(":", 1);
+        if (indented) output.Write(": ", 2); else output.Write(":", 1);
         stack[last] = ObjectValue; failed = false;
     }
 

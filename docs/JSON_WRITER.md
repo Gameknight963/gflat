@@ -1,6 +1,6 @@
 # JSON writer
 
-`std::JsonWriter` writes one compact UTF-8 JSON document to a borrowed
+`std::JsonWriter` writes one UTF-8 JSON document to a borrowed
 `ITextWriter*`. It owns its nesting stack, not the destination. It never closes,
 flushes, or destroys the destination, and destruction writes nothing. Keep the
 destination alive and at a stable address until the writer is no longer used.
@@ -23,6 +23,17 @@ writer.WriteEndObject();
 writer.Complete();
 // output contains {"name":"Ada","scores":[42,true,null]}
 ```
+
+`JsonWriter(destination, bool indented = false)` keeps compact output as the
+default. Pass `true` to emit two-space indentation and LF newlines to the destination.
+Array items and object properties start on their own indented lines. Nonempty
+containers put their closing delimiter on a line at their parent's depth; empty
+`[]` and `{}` remain inline. Indented properties use one space after the colon.
+Root scalar values receive no extra whitespace, and no final newline is appended.
+There are no locale, custom indentation, or newline options. Indentation writes
+directly to the destination without buffering text or allocating extra storage.
+Destination behavior still applies: a console in host text mode can translate
+line endings; a binary File preserves the emitted LF bytes.
 
 ## Operations
 
@@ -67,6 +78,9 @@ written. The JSON writer then rejects every further write and `Complete()` with
 `JsonWriteException`; it cannot roll back external output. Construct a new writer
 for another document or destination. There is no reset, automatic completion,
 or implicit flush. Earlier successful output remains after any later failure.
+This also applies if writing indentation, a newline, or the space after a colon
+fails. Invalid operations and failed nesting allocation emit no extra whitespace
+and remain retryable under the same validation rules as compact output.
 
 Input buffers must remain valid and unchanged throughout each call. In
 particular, do not pass a view into the same destination `String` or another

@@ -84,6 +84,11 @@ requires mutable, copyable elements only when called, and lives separately in
 `Queue<T>` owns a first-in, first-out sequence backed by a ring buffer.
 Both start empty without allocating. `Count`, `Capacity`, and `IsEmpty`
 describe their current state; `Reserve` grows capacity without changing contents.
+`Queue<T>.ShrinkToFit()` reduces capacity to `Count` while preserving FIFO order,
+including wrapped storage; an empty queue frees its buffer. A tight queue does
+nothing. Successful relocation invalidates borrowed elements and iterators;
+failed allocation preserves contents, capacity, and existing borrows. It moves
+owners without invoking copy constructors or destroying elements.
 
 ```csharp
 using std;

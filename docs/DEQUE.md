@@ -28,6 +28,11 @@ stored element rather than copying it. Index zero is the front. Mutable receiver
 allow updating elements; readonly receivers expose readonly references. `Count`,
 `Capacity`, and `IsEmpty` report metadata. `Reserve(n)` reserves space for at least
 `n` entries. `Clear()` destroys every element but retains capacity.
+`ShrinkToFit()` reduces capacity to `Count`, preserving front-to-back order even
+when the old ring wraps. Empty storage is released, and an already tight deque
+does nothing. Shrinking relocates owners without copying or destroying them;
+allocation failure preserves the old buffer and all borrows. Successful
+relocation invalidates borrowed elements and iterators just like growth.
 
 The nested `Enumerator` visits elements from front to back and exposes ref
 `Current`. Reading it before a successful `MoveNext` or after exhaustion throws.

@@ -66,7 +66,7 @@ public sealed class StandardJsonStringTextTests
                 }
                 """,optimization);
             string[] lines=File.ReadAllLines(file+".jsonl",Encoding.UTF8);
-            Assert.Equal(values,lines.Select(line=>JsonSerializer.Deserialize<string>(line)).ToList());
+            Assert.Equal(values,lines.Select(line=>JsonSerializer.Deserialize<string>(line)!).ToList());
         }
         finally{File.Delete(file);File.Delete(file+".jsonl");}
     }

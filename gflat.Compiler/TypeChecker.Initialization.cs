@@ -45,6 +45,9 @@ public partial class TypeChecker
                 {
                     var arguments = new List<AstNode>();
                     var constructor = SelectBestOverload(parent.Constructors, c => c.Parameters, arguments, parent.Name, line);
+                    // The generated constructor belongs to this derived type,
+                    // independently of who called new on it.
+                    ValidateConstructorAccess(constructor, parent.Name, name, SourceContext.ForLine(line));
                     AddDefaultArguments(arguments, constructor.Parameters, new DefaultExpression(null, line));
                     implicitBaseCalls[name] = (constructor, arguments);
                 }

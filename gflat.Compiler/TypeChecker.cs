@@ -3082,6 +3082,7 @@ namespace gflat
                         throw new TypeCheckException($"No matching base constructor found for '{baseClass.Name}' with arguments ({argTypes})", node.Line);
                     }
                     var selectedBase = SelectBestOverload(matches, c => c.Parameters, node.BaseArguments, baseClass.Name, node.Line);
+                    ValidateConstructorAccess(selectedBase, baseClass.Name, ownerName, node.Span);
                     _resolvedBaseConstructors[node] = selectedBase;
                     AddDefaultArguments(node.BaseArguments, selectedBase.Parameters, node);
                 }
@@ -3097,6 +3098,7 @@ namespace gflat
                     {
                         var arguments = new List<AstNode>();
                         var selectedBase = SelectBestOverload(baseClass.Constructors, c => c.Parameters, arguments, baseClass.Name, node.Line);
+                        ValidateConstructorAccess(selectedBase, baseClass.Name, ownerName, node.Span);
                         _resolvedBaseConstructors[node] = selectedBase;
                         AddDefaultArguments(arguments, selectedBase.Parameters, node);
                         node.BaseArguments = arguments;
@@ -5267,6 +5269,7 @@ namespace gflat
                         throw new TypeCheckException($"No matching constructor found for '{DisplayName(cInfo.Name)}' with arguments ({argTypes})", node.Line);
                     }
                     matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line);
+                    if (!matchedCtor.IsCopy) ValidateConstructorAccess(matchedCtor, cInfo.Name, _currentClass?.Name ?? _currentStruct?.Name, node.Span);
                     _resolvedConstructors[node] = matchedCtor;
                     AddDefaultArguments(node.Arguments, matchedCtor.Parameters, node);
                     if (!matchedCtor.IsNoThrow) { _throwingCalls.Add(node); RecordImplicitException(); }
@@ -5363,6 +5366,7 @@ namespace gflat
                     throw new TypeCheckException($"No matching constructor found for '{DisplayName(sInfo.Name)}' with arguments ({argTypes})", node.Line);
                 }
                 matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line);
+                if (!matchedStructCtor.IsCopy) ValidateConstructorAccess(matchedStructCtor, sInfo.Name, _currentClass?.Name ?? _currentStruct?.Name, node.Span);
                 _resolvedConstructors[node] = matchedStructCtor;
                 AddDefaultArguments(node.Arguments, matchedStructCtor.Parameters, node);
                 if (!matchedStructCtor.IsNoThrow) { _throwingCalls.Add(node); RecordImplicitException(); }

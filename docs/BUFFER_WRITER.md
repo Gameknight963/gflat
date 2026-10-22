@@ -28,14 +28,28 @@ Each write checks capacity first: an overflow throws `BufferTooSmallException`
 without modifying the buffer or the writer's length. Formatting can make
 multiple writes; if a later write fails, earlier successful writes remain.
 
+`TryWrite(data, count)` and `TryWrite(text)` provide the same counted and
+C-string operations without throwing on capacity exhaustion. Both are
+`nothrow`: false leaves every buffer byte and `Length` unchanged, while true
+appends all bytes and maintains the terminator. `Write` delegates to these
+methods and throws only if they return false. There is one shared copy path.
+
 Source buffers may overlap the destination. Copying follows `memmove` order,
 including appending the writer's own data. `Clear()` resets the length and
 terminator without freeing or allocating anything.
+Overlap may include the current terminator as counted payload, or initialized
+bytes retained beyond `Length` after `Clear()`. Sources must still be readable
+for their stated count; C-string input must have a readable terminator and is
+measured before any destination bytes change. Neither form reads uninitialized
+tail storage on the caller's behalf.
 
 A constructor size of zero is supported: construction, `Clear`, and empty
 writes do not touch the supplied pointer. `Capacity` and `Remaining` are zero,
 nonempty writes throw, and `Data` is not guaranteed to point to a terminated
 string. A one-byte buffer can hold only the terminator.
+The `TryWrite` counterparts return false for nonempty input. A zero-count
+`TryWrite` returns true without reading either buffer, including a zero-sized
+writer; its C-string overload still reads input to find the terminator.
 
 Copying a writer borrows the same storage with an independent position; writes
 through either copy affect that shared storage. The writer does not synchronize

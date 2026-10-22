@@ -36,10 +36,10 @@ public struct BufferWriter : ITextWriter
 
     // Each call either appends every byte or leaves the writer unchanged.
     // Source may overlap the buffer, including the current trailing terminator.
-    public void Write(readonly(char)* text, nuint count)
+    public bool TryWrite(readonly(char)* text, nuint count) nothrow
     {
-        if (count > this.Remaining) throw new BufferTooSmallException();
-        if (count == 0) return;
+        if (count > this.Remaining) return false;
+        if (count == 0) return true;
         char* target = data + length;
         if ((readonly(char)*)target > text && (readonly(char)*)target < text + count)
         {
@@ -50,12 +50,23 @@ public struct BufferWriter : ITextWriter
             for (nuint i = 0; i < count; i++) target[i] = text[i];
         length += count;
         data[length] = '\0';
+        return true;
+    }
+
+    public bool TryWrite(readonly(char)* text) nothrow
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return this.TryWrite(text, count);
+    }
+
+    public void Write(readonly(char)* text, nuint count)
+    {
+        if (!this.TryWrite(text, count)) throw new BufferTooSmallException();
     }
 
     public void Write(readonly(char)* text)
     {
-        nuint count = 0;
-        while (text[count] != '\0') count++;
-        this.Write(text, count);
+        if (!this.TryWrite(text)) throw new BufferTooSmallException();
     }
 }

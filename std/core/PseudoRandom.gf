@@ -45,6 +45,11 @@ struct PseudoRandom
         return (int)((long)inclusiveMin + (long)this.NextULong(width));
     }
 
+    // 24 random bits, producing a finite value in [0, 1).
+    // Convert the selected bits directly; rounding NextDouble to float can yield 1.
+    public float NextFloat() nothrow
+        => (float)(this.NextULong() >> 40) * (1.0f / 16777216.0f);
+
     // 53 random bits, producing a finite value in [0, 1).
     public double NextDouble() nothrow
         => (double)(this.NextULong() >> 11) * (1.0d / 9007199254740992.0d);

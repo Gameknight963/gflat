@@ -22,6 +22,7 @@ random.Fill(bytes, 32);
 | `NextInt(exclusiveMax)` | An integer from zero through `exclusiveMax - 1`. |
 | `NextInt(inclusiveMin, exclusiveMax)` | An integer in the specified half-open interval, including negative ranges. |
 | `NextDouble()` | A double in `[0, 1)`, constructed from 53 random bits. |
+| `NextFloat()` | A float in `[0, 1)`, constructed from 24 random bits. |
 | `Fill(char* output, nuint count)` | Exactly `count` bytes written into caller-owned storage. |
 
 Bounded integer methods use rejection sampling to avoid modulo bias. Zero upper

@@ -33,6 +33,64 @@ public class StandardPseudoRandomTests
         return value ^ (value >> 31);
     }
 
+    // Invert the reference permutation to exercise exact float endpoints rather
+    // than hoping an ordinary seed happens to generate all zero or all one bits.
+    private static ulong SeedForOutput(ulong output)
+    {
+        static ulong UndoShift(ulong value, int shift) {
+            ulong result = value;
+            for (int offset = shift; offset < 64; offset += shift) result ^= value >> offset;
+            return result;
+        }
+        static ulong Inverse(ulong odd) {
+            ulong result = 1;
+            for (int i = 0; i < 6; i++) result = unchecked(result * (2 - odd * result));
+            return result;
+        }
+        ulong state = UndoShift(output, 31);
+        state = unchecked(state * Inverse(0x94d049bb133111ebUL));
+        state = UndoShift(state, 27);
+        state = unchecked(state * Inverse(0xbf58476d1ce4e5b9UL));
+        return unchecked(UndoShift(state, 30) - 0x9e3779b97f4a7c15UL);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void FloatDrawsUseOneWordAndNeverRoundUpToOne(int optimization)
+    {
+        ulong zeroSeed = SeedForOutput(0), upperSeed = SeedForOutput(ulong.MaxValue);
+        ulong state = zeroSeed;
+        Assert.Equal(0UL, Next(ref state));
+        state = upperSeed;
+        Assert.Equal(ulong.MaxValue, Next(ref state));
+        var random = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/PseudoRandom.gf")));
+        var result = CompilerTestHelper.Run([random, new SourceFile("main.gf", $$"""
+            using std;
+            int allocations = 0;
+            replace void*? Memory::Allocate(nuint bytes) { allocations++; return null; }
+            replace void Memory::Free(void* storage) { allocations++; }
+            int main() {
+                PseudoRandom low = new({{zeroSeed}}ul);
+                float minimum = low.NextFloat();
+                if (minimum != 0.0f || *((uint*)&minimum) != 0u) return 1;
+                PseudoRandom high = new({{upperSeed}}ul);
+                float maximum = high.NextFloat();
+                if (maximum != 0.999999940395355224609375f || maximum >= 1.0f) return 2;
+                PseudoRandom values = new(42ul); PseudoRandom words = values;
+                for (int i = 0; i < 10000; i++) {
+                    float actual = values.NextFloat();
+                    float expected = (float)(words.NextULong() >> 40) / 16777216.0f;
+                    if (actual != expected || actual < 0.0f || actual >= 1.0f) return 3;
+                }
+                if (values.NextULong() != words.NextULong()) return 4;
+                if (allocations != 0) return 5;
+                return 0;
+            }
+            """)], optimization);
+        Assert.Equal(0, result.ExitCode);
+    }
+
     [Theory]
     [InlineData(1UL)]
     [InlineData(3UL)]

@@ -41,7 +41,7 @@ public sealed class JsonMinifyExampleTests
                 byte[] compact=result.Output[..^Encoding.UTF8.GetByteCount(Environment.NewLine)];
                 Assert.Equal(Tokens(original,false),Tokens(compact,true));
                 Assert.Equal(original,File.ReadAllBytes(input));
-                // A second pass must be stable, including normalized string escaping.
+                // A second pass must be stable, including original string escaping and numeric spelling.
                 File.WriteAllBytes(input,compact);var repeated=await Run(executable,[input]);
                 Assert.Equal(0,repeated.ExitCode);Assert.Equal(result.Output,repeated.Output);Assert.Empty(repeated.Error);
             }
@@ -76,8 +76,8 @@ public sealed class JsonMinifyExampleTests
                 var gap=bytes.AsSpan((int)previousEnd,(int)(reader.TokenStartIndex-previousEnd));
                 Assert.True(gap.IsEmpty||gap.SequenceEqual(","u8)||gap.SequenceEqual(":"u8));
             }
-            string value=reader.TokenType is JsonTokenType.String or JsonTokenType.PropertyName?reader.GetString()!:
-                reader.TokenType==JsonTokenType.Number?Encoding.UTF8.GetString(reader.ValueSpan):"";
+            string value=reader.TokenType is JsonTokenType.String or JsonTokenType.PropertyName or JsonTokenType.Number
+                ? Encoding.UTF8.GetString(reader.ValueSpan) : "";
             result.Add((reader.TokenType,value));
             previousEnd=reader.BytesConsumed;
         }

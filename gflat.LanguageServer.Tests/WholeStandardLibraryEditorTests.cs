@@ -101,6 +101,7 @@ public class WholeStandardLibraryEditorTests
                 measuredOutput.TryWrite(text.Data,text.Length);
                 nuint measuredLength=measuredOutput.Length;
                 measuredOutput.Clear();
+                bool hasInputLine=Console::TryReadLine(&measuredOutput);
                 CsvWriter csvOutput=new(output);
                 csvOutput.WriteField("a,b",3);
                 csvOutput.WriteEndRecord();
@@ -311,6 +312,10 @@ public class WholeStandardLibraryEditorTests
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.Contains("CountingWriter.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
+        int lineCall=text.IndexOf("Console::TryReadLine(&measuredOutput)",StringComparison.Ordinal)+"Console::".Length;
+        var lineHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,lineCall),Protocol.JsonOptions);
+        Assert.Contains("ITextWriter* output",lineHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("Console.gf",JsonSerializer.Serialize(model.Definition(source.Path,lineCall),Protocol.JsonOptions));
         int setCall=sourceTokens.Single(token=>token.Text=="ToHashSet").Start;
         var setHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,setCall),Protocol.JsonOptions);
         Assert.Contains("HashSet",setHover.GetProperty("contents").GetProperty("value").GetString());

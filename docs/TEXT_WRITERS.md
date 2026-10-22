@@ -25,3 +25,6 @@ These helpers work with any `ITextWriter*`, including borrowed File, BufferWrite
 String, and application writer implementations. They never close or destroy it;
 its owner must keep it alive for the call. As with File and Console counted
 writes, the caller supplies valid readable input storage.
+
+To measure emitted bytes without storing output, use
+[`CountingWriter`](COUNTING_WRITER.md). It also accepts these line helpers.

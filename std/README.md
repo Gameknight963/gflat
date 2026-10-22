@@ -18,6 +18,7 @@ implementation lives in `libc`.
 | Text | `String`, `ITextWriter`, `IFormattable`, `IStringConvertable` | [Strings](../docs/STRINGS.md), [formatting](core/README.md#strings-and-formatting) |
 | C strings | `CString` | [Borrowed null-terminated byte utilities](../docs/CSTRING.md) |
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
+| Byte measurement | `CountingWriter` | [Count writer output without storing it](../docs/COUNTING_WRITER.md) |
 | Writer line helpers | `ITextWriter*` `WriteLine` overloads | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split`, Span `TrySplitOnce`/`Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md), [key/value views](../docs/TEXT_SPLIT_ONCE.md) |
 | Borrowed text matching | Span `StartsWith`, `EndsWith` | [Counted and C-string patterns without copying](../docs/TEXT_MATCH_SPAN.md) |

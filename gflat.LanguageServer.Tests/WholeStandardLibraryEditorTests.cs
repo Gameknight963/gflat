@@ -97,6 +97,10 @@ public class WholeStandardLibraryEditorTests
                 Base64Decoder decodedOutput=new(output);
                 decodedOutput.Write("eA==",4);
                 decodedOutput.Complete();
+                CountingWriter measuredOutput=new();
+                measuredOutput.TryWrite(text.Data,text.Length);
+                nuint measuredLength=measuredOutput.Length;
+                measuredOutput.Clear();
                 CsvWriter csvOutput=new(output);
                 csvOutput.WriteField("a,b",3);
                 csvOutput.WriteEndRecord();
@@ -299,6 +303,13 @@ public class WholeStandardLibraryEditorTests
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.Contains(adapter.Item2,JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
+        foreach(string member in new[]{"TryWrite","Length","Clear"})
+        {
+            int call=text.IndexOf("measuredOutput."+member,StringComparison.Ordinal)+"measuredOutput.".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("CountingWriter.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
         int setCall=sourceTokens.Single(token=>token.Text=="ToHashSet").Start;
         var setHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,setCall),Protocol.JsonOptions);

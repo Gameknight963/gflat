@@ -91,7 +91,25 @@ try {
     Write-Host 'Bundled MSBuild passed with dotnet unavailable: explicit imports, SDK-style projects, references, configurations, incremental builds, errors, and clean.'
 }
 finally {
-    foreach ($name in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name]) }
+    foreach ($name in $savedEnvironment.Keys) {
+        # PowerShell converts $null to an empty string for a string parameter.
+        # On .NET 9+ that sets an empty variable instead of removing it. An empty
+        # MSBuildSDKsPath still overrides SDK discovery in a later dotnet build.
+        if ($null -eq $savedEnvironment[$name]) {
+            [Environment]::SetEnvironmentVariable($name, [NullString]::Value)
+        }
+        else {
+            [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name])
+        }
+    }
+    foreach ($name in $savedEnvironment.Keys) {
+        if ($null -eq $savedEnvironment[$name]) {
+            if (Test-Path -LiteralPath "Env:$name") { throw "Isolation test left an environment override: $name" }
+        }
+        elseif ([Environment]::GetEnvironmentVariable($name) -cne $savedEnvironment[$name]) {
+            throw "Isolation test changed the original environment value: $name"
+        }
+    }
     if (-not $scratch.StartsWith($testBase, [StringComparison]::OrdinalIgnoreCase)) { throw 'Test cleanup must remain inside its temporary directory' }
     Remove-Item -LiteralPath $scratch -Recurse -Force
 }

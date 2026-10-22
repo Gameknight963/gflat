@@ -384,6 +384,17 @@ int main() {
         immutable(Utf16Scalars) batchWideScalars = new(batchUnits, 3);
         if (batchWideScalars.AsEnumerable().Select((uint scalar) => (int)scalar)
             .Aggregate(0, (int total, int scalar) => total + scalar) != 155) return 86;
+        Uuid batchIdentifier = Uuid::Parse("00112233-4455-6677-8899-AABBCCDDEEFF");
+        char[36] batchIdentifierText; nuint batchIdentifierLength = 0;
+        if (batchIdentifier.High != 0x0011223344556677ul || batchIdentifier.Low != 0x8899aabbccddeefful
+            || !batchIdentifier.TryFormat(batchIdentifierText, 36, ref batchIdentifierLength)
+            || batchIdentifierLength != 36) return 87;
+        BitSet batchSelected = new(8); batchSelected[1] = true; batchSelected[3] = true;
+        immutable(BitSet)* batchSelectedView = &batchSelected;
+        if (batchSelectedView.AsEnumerable().Aggregate((nuint)0, (nuint total, nuint bit) => total + bit) != 4) return 88;
+        var batchPairs = new IntRange(1, 3).AsEnumerable().Zip(new IntRange(10, 2).AsEnumerable(),
+            (int first, int second) => first + second);
+        if (batchPairs.Aggregate(0, (int total, int value) => total + value) != 24) return 89;
     }
     return 0;
 }

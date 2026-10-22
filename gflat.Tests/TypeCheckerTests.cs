@@ -1448,7 +1448,7 @@ namespace gflat.Tests
                     int x = 10;
                     int y = 20;
 
-                    Point(int x, int y)
+                    public Point(int x, int y)
                     {
                         this.x = x;
                         this.y = y;
@@ -1514,7 +1514,7 @@ namespace gflat.Tests
                 struct Point
                 {
                     int x;
-                    Point(int x)
+                    public Point(int x)
                     {
                         this.x = x;
                     }
@@ -2318,7 +2318,7 @@ namespace gflat.Tests
                     public int x;
                     public int y;
 
-                    Point(int x, int y)
+                    public Point(int x, int y)
                     {
                         this.x = x;
                         this.y = y;
@@ -2777,7 +2777,7 @@ namespace gflat.Tests
                 {
                     public int x;
                     public int y;
-                    Point(int a, int b) { x = a; y = b; }
+                    public Point(int a, int b) { x = a; y = b; }
                 }
 
                 const Point* p = new* Point(1, 2);
@@ -2799,7 +2799,7 @@ namespace gflat.Tests
                 {
                     public int x;
                     int y;
-                    Point(int a, int b) { x = a; y = b; }
+                    public Point(int a, int b) { x = a; y = b; }
                 }
 
                 const Point* p = new* Point(1, 2);
@@ -2823,7 +2823,7 @@ namespace gflat.Tests
                 {
                     int x;
                     int y;
-                    Point(int a, int b) { x = a; y = b; }
+                    public Point(int a, int b) { x = a; y = b; }
                 }
 
                 const Point* p = new* Point(1, 2);
@@ -2847,7 +2847,7 @@ namespace gflat.Tests
                 {
                     public int x;
                     public int y;
-                    Point(int a, int b) { x = a; y = b; }
+                    public Point(int a, int b) { x = a; y = b; }
                 }
 
                 const Point Origin = new Point(0, 0);
@@ -2870,7 +2870,7 @@ namespace gflat.Tests
                 {
                     int x;
                     int y;
-                    Point(int a, int b) { x = a; y = b; }
+                    public Point(int a, int b) { x = a; y = b; }
                 }
 
                 const Point Origin = new Point(0, 0);

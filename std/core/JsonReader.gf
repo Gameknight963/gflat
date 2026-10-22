@@ -3,14 +3,14 @@ namespace std;
 // Owns its nesting stack; borrows immutable counted UTF-8 input.
 public struct JsonReader
 {
-    private const byte ArrayFirst = (byte)0;
-    private const byte ArrayValue = (byte)1;
-    private const byte ArrayComma = (byte)2;
-    private const byte ObjectFirst = (byte)3;
-    private const byte ObjectKey = (byte)4;
-    private const byte ObjectColon = (byte)5;
-    private const byte ObjectValue = (byte)6;
-    private const byte ObjectComma = (byte)7;
+    private static const byte ArrayFirst = (byte)0;
+    private static const byte ArrayValue = (byte)1;
+    private static const byte ArrayComma = (byte)2;
+    private static const byte ObjectFirst = (byte)3;
+    private static const byte ObjectKey = (byte)4;
+    private static const byte ObjectColon = (byte)5;
+    private static const byte ObjectValue = (byte)6;
+    private static const byte ObjectComma = (byte)7;
 
     private readonly(char)* input;
     private nuint length;

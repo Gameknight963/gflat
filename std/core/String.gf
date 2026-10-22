@@ -27,7 +27,7 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
     public nuint Length { immutable get nothrow => length; }
     public nuint Capacity { immutable get nothrow => capacity; }
     public bool IsEmpty { immutable get nothrow => length == 0; }
-    public const nuint NotFound = (nuint)0 - (nuint)1;
+    public static const nuint NotFound = (nuint)0 - (nuint)1;
     public readonly(char)* Data { immutable get nothrow => data; }
 
     // Null-terminated input. Use the count overload for buffers or embedded nulls.

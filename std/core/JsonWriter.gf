@@ -3,11 +3,11 @@ namespace std;
 // Owns nesting state; borrows the destination without flushing or closing it.
 public struct JsonWriter
 {
-    private const byte ArrayFirst = (byte)0;
-    private const byte ArrayNext = (byte)1;
-    private const byte ObjectFirst = (byte)2;
-    private const byte ObjectNext = (byte)3;
-    private const byte ObjectValue = (byte)4;
+    private static const byte ArrayFirst = (byte)0;
+    private static const byte ArrayNext = (byte)1;
+    private static const byte ObjectFirst = (byte)2;
+    private static const byte ObjectNext = (byte)3;
+    private static const byte ObjectValue = (byte)4;
 
     private ITextWriter* output;
     private Vector<byte> stack;

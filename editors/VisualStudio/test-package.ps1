@@ -235,6 +235,8 @@ int main() {
     structuredWriter.WriteBoolean(true); structuredWriter.WriteNull();
     structuredWriter.WriteEndArray(); structuredWriter.Complete();
     if (!CString::Equals(structuredOutput.Data, "[42,true,null]")) return 36;
+    uint signedEncoding = VarInt::ZigZagEncode(-42);
+    if (signedEncoding != 83u || VarInt::ZigZagDecode(signedEncoding) != -42) return 37;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

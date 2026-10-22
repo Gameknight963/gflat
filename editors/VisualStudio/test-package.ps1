@@ -523,6 +523,13 @@ int main() {
         batchEncoder.Write(batchBinaryText.Data + 1, batchBinaryText.Length - 1);
         batchEncoder.Complete(); batchDecoder.Complete();
         if (!batchTransformResult.Equals(&batchBinaryText)) return 123;
+        CountingWriter batchByteCount = new();
+        Base64Decoder batchMeasuredDecoder = new(&batchByteCount);
+        batchMeasuredDecoder.Write("eAB5", 4);
+        batchMeasuredDecoder.Complete();
+        if (batchByteCount.Length != 3) return 124;
+        batchByteCount.Clear();
+        if (batchByteCount.Length != 0) return 125;
     }
     return 0;
 }

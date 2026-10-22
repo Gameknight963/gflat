@@ -18,6 +18,7 @@ implementation lives in `libc`.
 | Writer line helpers | `ITextWriter*` `WriteLine` overloads | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split` | [Allocation-free splitting](../docs/TEXT_PARTS.md) |
 | Borrowed text lines | `TextLines` | [Counted LF and CRLF line views](../docs/TEXT_LINES.md) |
+| Joining text | `Span<immutable(String)>.Join` | [Borrowed owners, counted separators, and one output allocation](../docs/STRING_JOIN.md) |
 | Contiguous storage | `Vector<T>`, `Span<T>`, typed span `CopyTo`/`Fill` | [Ownership and views](core/README.md#vectors), [copying and filling initialized elements](core/Collections/OWNING_COLLECTIONS.md#copying-borrowed-spans) |
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
 | Double-ended storage | `Deque<T>` | [Owning ring buffer](../docs/DEQUE.md) |

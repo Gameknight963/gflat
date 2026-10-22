@@ -103,6 +103,8 @@ namespace gflat
                     span = span with { Length = 0 };
                 _diagnostics.Report(DiagnosticRules.GF0005_ExpectedToken, span, kind.ToString(), Current.Kind.ToString(), Current.Text);
 
+                if (_recoverErrors && kind == TokenKind.Greater && Check(TokenKind.OpenBrace))
+                    return new Token(TokenKind.Greater, Current.Line, Current.Start, Current.Start);
                 if (kind == TokenKind.Semicolon)
                 {
                     return new Token(TokenKind.Semicolon, Current.Line, Current.Start, Current.Start, ";");
@@ -1249,9 +1251,10 @@ namespace gflat
                 if (Check(TokenKind.Less))
                 {
                     Consume(); // <
-                    while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
+                    while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.OpenBrace)))
                     {
                         typeArgs.Add(ParseTypeExpression());
+                        if (_recoverErrors && Check(TokenKind.OpenBrace)) break;
                         if (!Check(TokenKind.Greater))
                             Expect(TokenKind.Comma);
                     }
@@ -1279,9 +1282,10 @@ namespace gflat
                     if (Check(TokenKind.Less))
                     {
                         Consume();
-                        while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile))
+                        while (!Check(TokenKind.Greater) && !Check(TokenKind.EndOfFile) && !(_recoverErrors && Check(TokenKind.OpenBrace)))
                         {
                             memberTypeArgs.Add(ParseTypeExpression());
+                            if (_recoverErrors && Check(TokenKind.OpenBrace)) break;
                             if (!Check(TokenKind.Greater))
                                 Expect(TokenKind.Comma);
                         }

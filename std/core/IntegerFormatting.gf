@@ -5,6 +5,34 @@ namespace std;
 // to written and leaves the character buffer untouched.
 public static class IntegerFormatting
 {
+    public static bool TryFormatHex(extralong value, char* output, nuint capacity,
+        ref nuint written, nuint minimumDigits = 1, bool uppercase = true) nothrow
+    {
+        nuint length = 32;
+        if (value >= (extralong)0)
+        {
+            length = 1;
+            extralong remaining = value;
+            while (remaining >= (extralong)16) { remaining = remaining >> 4; length++; }
+        }
+        nuint naturalDigits = length;
+        if (minimumDigits > length) length = minimumDigits;
+        written = 0;
+        if (capacity < length) return false;
+        readonly(char)* digits = "0123456789ABCDEF";
+        if (!uppercase) digits = "0123456789abcdef";
+        nuint cursor = length;
+        for (nuint i = 0; i < naturalDigits; i++)
+        {
+            cursor--;
+            output[cursor] = digits[(int)(value & (extralong)15)];
+            value = value >> 4;
+        }
+        while (cursor != 0) { cursor--; output[cursor] = '0'; }
+        written = length;
+        return true;
+    }
+
     private static bool HexMagnitude(ulong value, char* output, nuint capacity,
         ref nuint written, bool uppercase, nuint minimumDigits) nothrow
     {

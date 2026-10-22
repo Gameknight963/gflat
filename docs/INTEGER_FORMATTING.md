@@ -35,8 +35,8 @@ caller-buffer and freestanding code that does not need writer dispatch.
 
 ## Hexadecimal
 
-`TryFormatHex` has the same ten integral overloads as decimal `TryFormat`, including
-the signed/unsigned byte, short, and pointer-sized types:
+`TryFormatHex` supports the ten decimal integer types plus the signed 128-bit
+`extralong` type:
 
 ```csharp
 char[16] address;
@@ -56,8 +56,11 @@ For example, `-1` as an `int` produces `FFFFFFFF`; as a `long` it produces
 `FFFFFFFFFFFFFFFF`. These are the original type's two's-complement bits; an
 `int` is not sign-extended to 64 bits. Likewise, `sbyte` -1 produces `FF`,
 `short` -1 produces `FFFF`, and `nint` uses the target pointer width.
-A width of 20 pads these results with
-enough leading zeros to reach 20 characters.
+An `extralong` negative value uses all 32 hexadecimal digits; positive values
+omit leading zeros unless padding is requested. For example, `(extralong)-1`
+produces 32 `F` digits. A 32-byte buffer holds any unpadded `extralong` result.
+A width of 20 pads shorter results with leading zeros to reach 20 characters;
+longer results are never truncated.
 
 The whole result is preflighted before writing. Insufficient capacity sets
 `written` to zero and leaves all output bytes unchanged, including for an
@@ -66,3 +69,8 @@ natural digit count and padding width; it does not add values that could
 overflow. The decimal buffer lifetime and count-output separation rules above
 apply equally here. All hexadecimal overloads are `nothrow`, allocate nothing,
 and add no source or runtime dependencies.
+
+Decimal `TryFormat(extralong)` and writer-based `Format(extralong, writer)` are
+not supplied yet; calls are rejected rather than narrowing to 64 bits. Hexadecimal
+formatting uses shifts and masks, so adding this overload does not introduce
+128-bit division helpers or a compiler-runtime dependency for standard builds.

@@ -90,7 +90,8 @@ public class WholeStandardLibraryEditorTests
                 document.Read(); document.Skip();
                 String serialized=new(); JsonWriter jsonOutput=new(&serialized);
                 jsonOutput.WriteStartObject(); jsonOutput.WritePropertyName("value");
-                jsonOutput.WriteNumber(42); jsonOutput.WriteEndObject(); jsonOutput.Complete();
+                jsonOutput.WriteNumber(42); jsonOutput.WritePropertyName("wide");
+                jsonOutput.WriteNumber((extralong)1 << 100); jsonOutput.WriteEndObject(); jsonOutput.Complete();
                 String prettyText=new(); JsonWriter pretty=new(&prettyText,true);
                 pretty.WriteStartArray(); pretty.WriteEndArray(); pretty.Complete();
                 String compactText=new(); JsonText::Minify(" [ true ] ",10,&compactText);
@@ -257,5 +258,8 @@ public class WholeStandardLibraryEditorTests
         int wideFormat=sourceTokens.First(token=>token.Text=="TryFormat").Start;
         var wideHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,wideFormat),Protocol.JsonOptions);
         Assert.Contains("extralong value",wideHover.GetProperty("contents").GetProperty("value").GetString());
+        int wideNumber=sourceTokens.Last(token=>token.Text=="WriteNumber").Start;
+        var wideNumberHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,wideNumber),Protocol.JsonOptions);
+        Assert.Contains("extralong value",wideNumberHover.GetProperty("contents").GetProperty("value").GetString());
     }
 }

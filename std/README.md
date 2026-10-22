@@ -47,7 +47,7 @@ implementation lives in `libc`.
 | UTF-16 and conversion | `Utf16`, incremental `Utf16Decoder`, borrowed `Utf16Scalars`, `UnicodeTranscoding` | [Code units and chunked decoding](../docs/UTF16.md), [scalar iteration](../docs/UTF16_SCALARS.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
 | ASCII bytes | `Ascii` classification, comparison, and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, unpadded `Base64Url`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
-| JSON strings | `JsonString`, writer `WriteJsonString` | [Strict UTF-8 quoting, unquoting, and decoded comparison without allocation](../docs/JSON_STRING.md) |
+| JSON strings | `JsonString`, `JsonStringText`, writer `WriteJsonString` | [Strict UTF-8 buffer codecs and owning String conveniences](../docs/JSON_STRING.md) |
 | JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens, borrowed raw lexemes, and decoded text comparison](../docs/JSON_READER.md) |
 | JSON text | `JsonText::Minify` | [Validate first and remove whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |
 | JSON output | `JsonWriter`, `JsonWriteException` | [Validated output through a borrowed text writer](../docs/JSON_WRITER.md) |

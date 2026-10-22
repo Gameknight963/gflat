@@ -1,5 +1,28 @@
 # Quoting and unquoting a UTF-8 JSON string
 
+## Owning String conveniences
+
+`JsonStringText::Quote(data, count)` returns an independent owning `String`
+containing one quoted JSON literal. `JsonStringText::Unquote(text, count)`
+returns the decoded owning UTF-8 text from one complete quoted literal. Counts
+are bytes; embedded NULs remain counted data. Both use the strict validation and
+escape policy described below, and throw `Exception` for invalid input.
+Each operation also accepts a `Span<readonly(char)>`, for example
+`JsonStringText::Unquote(reader.RawToken)`.
+
+The complete input is validated before allocating result storage. Successful
+nonempty results use one allocation; unquoting `""` allocates nothing, while
+quoting empty input allocates its two quote bytes. The result has its normal
+String terminator beyond `Length`. Allocation failure propagates normally.
+Keep the input alive and unchanged during the call; no input pointer is retained,
+and later input changes do not affect the returned owner.
+
+These optional conveniences live in `JsonStringText.gf`, with normal String,
+`StringSpan.gf`, Span and JSON string codec dependencies. The `JsonString` buffer
+codec remains independent of owning strings and allocation.
+
+## Caller-owned buffers
+
 `std::JsonString` quotes or unquotes one counted UTF-8 string into caller-owned storage. It
 is a string primitive, not a JSON parser, object model, or serializer. Its only
 std source dependency is `Utf8.gf`; it performs no allocation and calls neither

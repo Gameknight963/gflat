@@ -54,6 +54,12 @@ public class WholeStandardLibraryEditorTests
                 String resizedText=new(); resizedText.Resize(4,'x');
                 String ownedQuotedText=JsonStringText::Quote(trimmedText);
                 String ownedUnquotedText=JsonStringText::Unquote(ownedQuotedText.AsReadOnly());
+                BigInteger arbitraryInteger=new(42l);
+                BigInteger arbitraryFactor=BigInteger::Parse("1000000000000000000000000000000");
+                BigInteger arbitraryProduct=arbitraryInteger.Multiply(&arbitraryFactor);
+                BigInteger arbitrarySum=arbitraryProduct.Add(&arbitraryInteger);
+                BigInteger arbitraryDifference=arbitrarySum.Subtract(&arbitraryInteger);
+                int arbitrarySign=arbitraryDifference.Sign;
                 bool prefix=trimmedText.StartsWith("a"); bool suffix=trimmedText.EndsWith("d",1);
                 Span<char> trimmedWritable=writableText.TrimStart().TrimEnd();
                 Span<readonly(char)> textKey=new(); Span<readonly(char)> textValue=new();
@@ -248,7 +254,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil","Zip","TrySplitOnce","Combine","TryWriteVarUInt32","TryWriteVarUInt64","ReadVarUInt32","ReadVarUInt64","AsEnumerable","ElementAt","InsertRange","Windows","GetFileName","GetDirectoryName","GetExtension","GetFileNameWithoutExtension","GetRoot","RoundUpToPowerOfTwo","StableSort","Resize","Quote","Unquote"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian","WriteDoubleBigEndian","High","Low","IsNil","Zip","TrySplitOnce","Combine","TryWriteVarUInt32","TryWriteVarUInt64","ReadVarUInt32","ReadVarUInt64","AsEnumerable","ElementAt","InsertRange","Windows","GetFileName","GetDirectoryName","GetExtension","GetFileNameWithoutExtension","GetRoot","RoundUpToPowerOfTwo","StableSort","Resize","Quote","Unquote","Multiply","Subtract","Sign"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

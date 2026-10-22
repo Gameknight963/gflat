@@ -85,15 +85,18 @@ public sealed partial class EditorModel
         }
     }
 
-    private Symbol BindInterfaceMember(Symbol source, TypeExpression? receiver)
+    private Symbol BindInstanceMember(Symbol source, TypeExpression? receiver)
     {
         if (snapshot.Checker is not { } checker || source.Syntax.Node is not MethodDeclaration) return source;
         while (receiver is PointerTypeExpression or ManagedTypeExpression or ReferenceTypeExpression)
             receiver = receiver switch { PointerTypeExpression pointer => pointer.Inner, ManagedTypeExpression managed => managed.Inner,
                 ReferenceTypeExpression reference => reference.Inner, _ => receiver };
-        return receiver is NamedTypeExpression named && checker.GetInterface(named.Name) is { } contract &&
-            contract.MethodsByName.TryGetValue(source.Name, out var method)
-                ? BindCallable(source, method, contract.Name) : source;
+        if (receiver is not NamedTypeExpression named) return source;
+        if (checker.GetInterface(named.Name) is { } contract && contract.MethodsByName.TryGetValue(source.Name, out var method))
+            return BindCallable(source, method, contract.Name);
+        var methods = checker.GetStructByIdentity(named.Name)?.AllMethods ?? checker.GetClassByIdentity(named.Name)?.AllMethods;
+        var target = methods?.FirstOrDefault(candidate => SourceCallable(candidate)?.Syntax == source.Syntax);
+        return target == null ? source : BindCallable(source, target);
     }
 
     private Symbol BindCallable(Symbol source, MethodDeclaration target, string? interfaceOwner = null)

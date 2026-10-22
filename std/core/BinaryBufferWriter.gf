@@ -24,6 +24,15 @@ public struct BinaryBufferWriter
         position += count; return true;
     }
 
+    // Overlap with the borrowed output bytes is permitted.
+    public bool TryWriteBytes(readonly(byte)* input, nuint count) nothrow
+    {
+        if (count > capacity - position) return false;
+        if (count == 0) return true;
+        Memory::Move((void*)(data! + position), (readonly(void)*)input, count);
+        position += count; return true;
+    }
+
     // Reserves a bounded writable view, without initializing its bytes.
     // Output must not alias this writer.
     public bool TryWriteSlice(nuint count, ref BinaryBufferWriter slice) nothrow

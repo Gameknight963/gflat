@@ -61,6 +61,11 @@ public class FreestandingCoreUtilitiesTests
             if (!reader.TryReadUInt16BigEndian(ref field) || field!=(ushort)48879 || reader.Position!=8 || reader.Remaining!=0) return 35;
             if (reader.TryReadUInt16BigEndian(ref field) || field!=(ushort)0 || reader.Position!=8) return 36;
             if (packet[0]!=(byte)165 || packet[9]!=(byte)90) return 37;
+            byte[4] bulk=[(byte)11,(byte)22,(byte)33,(byte)44];
+            std::BinaryBufferWriter bulkWriter=new(bulk,4);
+            if(!bulkWriter.TrySkip(1)||!bulkWriter.TryWriteBytes(bulk,3)||bulk[2]!=(byte)22||bulk[3]!=(byte)33)return 145;
+            std::BinaryBufferReader bulkReader=new(bulk,4);
+            if(!bulkReader.TryReadBytes(&bulk[1],3)||bulk[2]!=(byte)11||bulk[3]!=(byte)22)return 146;
             ushort[7] unicode = [(ushort)65, (ushort)0, (ushort)0x20ac, (ushort)0xd83d, (ushort)0xde00, (ushort)0xfeff, (ushort)0xffff];
             nuint unicodeBytes = 0; nuint unicodeUnits = 0; nuint unicodeScalars = 0;
             if (!std::Utf16::TryCount(unicode, 7, &unicodeScalars) || unicodeScalars != 6) return 38;

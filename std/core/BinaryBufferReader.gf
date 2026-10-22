@@ -24,6 +24,15 @@ public struct BinaryBufferReader
         position += count; return true;
     }
 
+    // Overlap with the borrowed input bytes is permitted.
+    public bool TryReadBytes(byte* output, nuint count) nothrow
+    {
+        if (count > length - position) return false;
+        if (count == 0) return true;
+        Memory::Move((void*)output, (readonly(void)*)(data! + position), count);
+        position += count; return true;
+    }
+
     // Returns a bounded view of the next bytes. Output must not alias this reader.
     public bool TryReadSlice(nuint count, ref BinaryBufferReader slice) nothrow
     {

@@ -102,11 +102,11 @@ public sealed class StandardFloatingBinaryTests
 
     private static void Run(string program, int optimization, bool cursors = false)
     {
-        string[] names = cursors ? ["BinaryPrimitives.gf", "BinaryBufferReader.gf", "BinaryBufferWriter.gf"] : ["BinaryPrimitives.gf"];
+        string[] names = cursors ? ["BinaryPrimitives.gf", "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "Memory/Bytes.gf"] : ["BinaryPrimitives.gf"];
         SourceFile[] sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
-        foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$", "@malloc", "@free" })
+        foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$Allocate", "gflat$Memory$Free", "@malloc", "@free" })
             Assert.DoesNotContain(forbidden, ir);
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

@@ -118,11 +118,11 @@ public class StandardBinaryCursorTests
 
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = new[] { "BinaryPrimitives.gf", "BinaryBufferReader.gf", "BinaryBufferWriter.gf" }
+        SourceFile[] sources = new[] { "BinaryPrimitives.gf", "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "Memory/Bytes.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
-        foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$","@malloc","@free"}) Assert.DoesNotContain(forbidden,ir);
+        foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$Allocate","gflat$Memory$Free","@malloc","@free"}) Assert.DoesNotContain(forbidden,ir);
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 }

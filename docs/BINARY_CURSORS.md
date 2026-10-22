@@ -1,9 +1,9 @@
 # Borrowed binary buffer cursors
 
 `std::BinaryBufferReader` and `std::BinaryBufferWriter` track a position within
-caller-owned bytes. They do not own storage, allocate, or depend on libc. All
+caller-owned bytes. They do not own storage, allocate, or directly call libc. All
 constructors, properties, and methods are `nothrow`. Include their respective
-source files and `core/BinaryPrimitives.gf`.
+source files, `core/BinaryPrimitives.gf`, and `core/Memory/Bytes.gf`.
 
 ```csharp
 using std;
@@ -48,6 +48,24 @@ untouched. Operations check remaining capacity before adding an offset, avoiding
 pointer-sized position overflow.
 
 ## Bounded payloads
+
+`TryReadBytes(byte* output, nuint count)` copies the next `count` bytes into
+caller-provided storage. `TryWriteBytes(readonly(byte)* input, nuint count)`
+copies from caller-provided storage into the next `count` bytes. Both advance
+only after a successful copy. Insufficient remaining bytes leave the position
+and destination bytes unchanged. Source and destination may overlap, including
+identical regions: copying uses `Memory::Move`. An overlapping read may change
+bytes that a later read will observe.
+
+Zero counts succeed without accessing either pointer, including for a default
+empty cursor. Pointer arguments still have non-null types. For positive counts,
+the caller supplies live readable/writable regions of at least that size;
+neither region may overlap the cursor object's fields. The methods check only
+the cursor's remaining extent, not the allocation behind a caller pointer.
+
+The [raw-memory linking notes](MEMORY.md#native-linking) also apply: an optimizer
+may generate libc byte-operation calls. Freestanding callers can select
+`NoBuiltins` and must inspect their target's final linkage.
 
 `TryReadSlice(count, ref BinaryBufferReader slice)` consumes the next `count`
 bytes and returns a reader bounded to just that region. The writer equivalent,

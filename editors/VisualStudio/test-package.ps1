@@ -259,6 +259,9 @@ int main() {
     smokeVector = &window;
     if (smokeVector!.Count != 3) return 47;
     smokeVector = null;
+    String viewed = s"abc"; Span<char> writableView = viewed.AsSpan(); writableView[1] = 'B';
+    Span<readonly(char)> borrowedView = viewed.AsReadOnly();
+    if (viewed.Length != 3 || borrowedView.Length != 3 || borrowedView[1] != 'B') return 48;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

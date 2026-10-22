@@ -25,8 +25,9 @@ wrapping or invoking signed overflow. This check also applies to pointer-sized
 
 ## Floating point
 
-`float` and `double` each have `Sqrt`, `CopySign`, `IsNaN`, `IsFinite`, `Abs`, `Min`, and `Max`
-overloads. `IsFinite` excludes both infinities and all NaNs, and includes zeros
+`float` and `double` each have `Sqrt`, `CopySign`, `IsNaN`, `IsFinite`, `Abs`,
+`Min`, `Max`, `Truncate`, `Floor`, `Ceiling`, and `Round` overloads.
+`IsFinite` excludes both infinities and all NaNs, and includes zeros
 and subnormals. `Abs` clears the sign bit, including for negative zero and NaNs.
 All floating-point helpers are `nothrow`; the signed-integer `Abs` overloads
 retain their overflow exceptions.
@@ -46,6 +47,33 @@ Other finite and infinite values use ordinary comparisons.
 Classification, `Abs`, `Min`, and `Max` inspect the language's IEEE
 binary32/binary64 values using ordinary gflat operations and pointer casts.
 They allocate nothing on their normal paths.
+
+### Integral rounding
+
+These functions return the same floating-point type as their input; they do not
+convert to an integer type or impose an integer range limit:
+
+| Method | Result |
+| --- | --- |
+| `Truncate(value)` | Integral value toward zero. |
+| `Floor(value)` | Greatest integral value no greater than the input. |
+| `Ceiling(value)` | Least integral value no less than the input. |
+| `Round(value)` | Nearest integral value, with exact halfway cases choosing the even integer. |
+
+For example, `Round(2.5)` is `2.0`, `Round(3.5)` is `4.0`, and `Round(-0.5)`
+is negative zero. `Truncate(-0.25)` and `Ceiling(-0.25)` also return negative
+zero, whereas `Floor(-0.25)` returns `-1.0`. Every method preserves an input's
+zero sign. Already integral values, infinities, and NaNs are returned unchanged;
+NaN signs, payloads, and signaling bits are preserved in the returned value.
+
+The implementation uses IEEE binary32/binary64 bit masks. `Floor` and `Ceiling`
+adjust a truncated value by an exactly representable one only when required;
+`Round` examines discarded bits and the retained integer's parity. All eight
+overloads are `nothrow`, allocate nothing, and use no C math functions, LLVM
+rounding intrinsics, or floating-to-integer conversions. They do not offer
+decimal-digit rounding, alternative midpoint modes, or control over floating-
+point environment flags and traps. The whole-source runtime caveat below still
+applies to `Math.gf`.
 
 ### Square root
 

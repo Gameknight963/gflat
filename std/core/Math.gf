@@ -184,6 +184,59 @@ public static class Math
         return *((float*)&bits);
     }
 
+    public static float Truncate(float value) nothrow
+    {
+        uint bits = *((uint*)&value);
+        int exponent = (int)((bits >> 23) & 255u) - 127;
+        if (exponent >= 23) return value;
+        if (exponent < 0) bits = bits & 2147483648u;
+        else
+        {
+            uint fraction = (1u << (23 - exponent)) - 1u;
+            bits = bits & (fraction ^ 4294967295u);
+        }
+        return *((float*)&bits);
+    }
+
+    public static float Floor(float value) nothrow
+    {
+        float result = Math::Truncate(value);
+        if (value < result) return result - 1f;
+        return result;
+    }
+
+    public static float Ceiling(float value) nothrow
+    {
+        float result = Math::Truncate(value);
+        if (value > result) return result + 1f;
+        return result;
+    }
+
+    public static float Round(float value) nothrow
+    {
+        uint bits = *((uint*)&value);
+        int exponent = (int)((bits >> 23) & 255u) - 127;
+        if (exponent >= 23) return value;
+        uint sign = bits & 2147483648u;
+        if (exponent < -1) return *((float*)&sign);
+        if (exponent == -1)
+        {
+            // Exactly +/-0.5 ties with the even integer zero.
+            if ((bits & 8388607u) != 0u) sign = sign | 1065353216u;
+            return *((float*)&sign);
+        }
+        int shift = 23 - exponent;
+        uint unit = 1u << shift;
+        uint mask = unit - 1u;
+        uint discarded = bits & mask;
+        uint significand = (bits & 8388607u) | 8388608u;
+        uint truncated = bits & (mask ^ 4294967295u);
+        uint half = unit >> 1;
+        if (discarded > half || (discarded == half && ((significand >> shift) & 1u) != 0u))
+            truncated += unit;
+        return *((float*)&truncated);
+    }
+
     public static float Min(float a, float b) nothrow
     {
         if (a != a) return a;
@@ -229,6 +282,58 @@ public static class Math
     {
         ulong bits = (*((ulong*)&magnitude) & 9223372036854775807ul) | (*((ulong*)&sign) & 9223372036854775808ul);
         return *((double*)&bits);
+    }
+
+    public static double Truncate(double value) nothrow
+    {
+        ulong bits = *((ulong*)&value);
+        int exponent = (int)((bits >> 52) & 2047ul) - 1023;
+        if (exponent >= 52) return value;
+        if (exponent < 0) bits = bits & 9223372036854775808ul;
+        else
+        {
+            ulong fraction = (1ul << (52 - exponent)) - 1ul;
+            bits = bits & (fraction ^ 18446744073709551615ul);
+        }
+        return *((double*)&bits);
+    }
+
+    public static double Floor(double value) nothrow
+    {
+        double result = Math::Truncate(value);
+        if (value < result) return result - 1.0;
+        return result;
+    }
+
+    public static double Ceiling(double value) nothrow
+    {
+        double result = Math::Truncate(value);
+        if (value > result) return result + 1.0;
+        return result;
+    }
+
+    public static double Round(double value) nothrow
+    {
+        ulong bits = *((ulong*)&value);
+        int exponent = (int)((bits >> 52) & 2047ul) - 1023;
+        if (exponent >= 52) return value;
+        ulong sign = bits & 9223372036854775808ul;
+        if (exponent < -1) return *((double*)&sign);
+        if (exponent == -1)
+        {
+            if ((bits & 4503599627370495ul) != 0ul) sign = sign | 4607182418800017408ul;
+            return *((double*)&sign);
+        }
+        int shift = 52 - exponent;
+        ulong unit = 1ul << shift;
+        ulong mask = unit - 1ul;
+        ulong discarded = bits & mask;
+        ulong significand = (bits & 4503599627370495ul) | 4503599627370496ul;
+        ulong truncated = bits & (mask ^ 18446744073709551615ul);
+        ulong half = unit >> 1;
+        if (discarded > half || (discarded == half && ((significand >> shift) & 1ul) != 0ul))
+            truncated += unit;
+        return *((double*)&truncated);
     }
 
     public static double Min(double a, double b) nothrow

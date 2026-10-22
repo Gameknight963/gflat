@@ -1,6 +1,6 @@
 # Enumeration and queries
 
-`Vector`, `Deque`, `Span`, `IntRange`, `FilteredIntRange`, `TextParts`, `TextLines`,
+`Vector`, `Deque`, `Queue`, `Stack`, `Span`, `IntRange`, `FilteredIntRange`, `TextParts`, `TextLines`,
 `Utf8Scalars`, `Utf16Scalars`, and `BitSet` provide an `AsEnumerable()` adapter
 for lazy queries.
 Import `std` to make the query extensions visible:
@@ -40,6 +40,11 @@ Deque queries capture the ring buffer's pointer, head, capacity, and count,
 rather than requiring contiguous storage. Keep the owner alive and avoid
 structural mutation while using a query; element edits remain visible.
 Its adapter currently requires a mutable owner. See [Deque views](../../../docs/DEQUE.md).
+
+Queue queries preserve FIFO order, while stack queries visit the top first.
+Their adapters likewise borrow captured storage metadata and require a mutable
+owner. Keep that owner alive and avoid structural mutation while using the query;
+ordinary element edits remain visible. See [queue and stack views](OWNING_COLLECTIONS.md#queue-and-stack).
 
 Integer ranges are different from container views: their adapters copy the small
 range state rather than borrowing the original range variable. Both range

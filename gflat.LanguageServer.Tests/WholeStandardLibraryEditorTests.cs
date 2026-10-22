@@ -224,6 +224,9 @@ public class WholeStandardLibraryEditorTests
                 var endQuery=ends.AsEnumerable().Where((int value) => value > 0);
                 int firstEnd=endQuery.ElementAt(0);
                 Queue<int> pending=new(); pending.Enqueue(42); pending.ShrinkToFit();
+                var pendingQuery=pending.AsEnumerable().Take(1);
+                Stack<int> lifo=new(); lifo.Push(42);
+                var lifoQuery=lifo.AsEnumerable().Take(1);
                 TextLines lines=new(new Span<readonly(char)>("a\r\nb",4));
                 TextLines::Enumerator lineIterator=lines.GetEnumerator();
                 nuint cLength=0; CString::TryGetLength("text",5,ref cLength);
@@ -282,6 +285,13 @@ public class WholeStandardLibraryEditorTests
         var chunksHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,chunksCall),Protocol.JsonOptions);
         Assert.Contains("SpanChunks",chunksHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("SpanChunks.gf",JsonSerializer.Serialize(model.Definition(source.Path,chunksCall),Protocol.JsonOptions));
+        foreach(var item in new[]{("pending","Queue.gf"),("lifo","Stack.gf")})
+        {
+            int call=text.IndexOf(item.Item1+".AsEnumerable",StringComparison.Ordinal)+item.Item1.Length+1;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("AsEnumerable",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains(item.Item2,JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         foreach(string member in new[]{"AddDays","DayNumber","DaysInMonth","AsSpan","AsReadOnly","AsImmutable","RemoveAll","ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","Min","Max","Clamp","Abs","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","FindImmutable","ValueReadOnly","ValueImmutable","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {

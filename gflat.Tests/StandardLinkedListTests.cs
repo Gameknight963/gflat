@@ -6,7 +6,7 @@ public sealed class StandardLinkedListTests
 {
     private static IEnumerable<SourceFile> Sources(string program, bool text = false, bool gc = false)
     {
-        var files = new List<string> { "core/Collections/IEnumerable.gf", "core/LinkedList.gf" };
+        var files = new List<string> { "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/LinkedList.gf" };
         if (text) files.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf",
             "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf"]);
         if (gc) files.AddRange(["libc/GC.gf", "libc/TracingCollector.gf"]);

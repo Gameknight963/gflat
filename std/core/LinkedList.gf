@@ -174,6 +174,17 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
 
     public Enumerator GetEnumerator() => new Enumerator(this.First);
 
+    public Enumerable<T, LinkedList<T>::View, LinkedList<T>::Enumerator> AsEnumerable()
+        => new Enumerable<T, LinkedList<T>::View, LinkedList<T>::Enumerator>(new View(this.First));
+
+    // Captures the first node; moving the owner leaves these nodes in place.
+    public struct View : IEnumerable<T, LinkedList<T>::Enumerator>
+    {
+        private Node*? first;
+        private View(Node*? node) { first = node; }
+        public LinkedList<T>::Enumerator GetEnumerator() => new LinkedList<T>::Enumerator(first);
+    }
+
     ~LinkedList()
     {
         this.Clear();

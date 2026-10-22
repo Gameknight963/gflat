@@ -71,3 +71,20 @@ Do not mutate the list during enumeration. Moving its owner alone preserves
 the captured node addresses, so iteration can continue while the new owner
 remains alive. `Current` throws before the first successful `MoveNext` and after
 enumeration finishes.
+
+`AsEnumerable()` exposes the same first-to-last order to lazy queries. Its nested
+`View` captures only the first node pointer, without copying the list or its
+values. Each enumeration creates a fresh cursor; edits through valid element
+references remain visible. Do not insert or remove nodes while using the view.
+Moving the owner preserves the node chain, so existing queries remain usable
+while the destination owner lives. Reinitializing the moved-from variable creates
+an independent list and does not retarget existing views.
+
+View creation and iteration allocate nothing. Noncopyable elements support direct
+borrowed iterator access, `Count()`, and `Any()`. Query operators that return
+elements by value can require copying during generic specialization; that also
+applies when the final consumer only counts their output. Callbacks and copying
+terminals retain their ordinary allocation and exception behavior.
+
+For explicit source selection, include `Collections/Enumerable.gf` alongside
+`Collections/IEnumerable.gf` and `LinkedList.gf`, plus the operator sources used.

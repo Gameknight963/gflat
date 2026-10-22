@@ -621,9 +621,11 @@ public sealed partial class EditorModel
             else if (ts[i].Kind is TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.CloseBrace) { if (stack.Count > 0) stack.Pop(); }
             else if (ts[i].Kind == TokenKind.Comma && stack.Count > 0) { var frame = stack.Pop(); stack.Push((frame.Index, frame.Commas + 1)); }
         }
-        var call = stack.FirstOrDefault(f => ts[f.Index].Kind == TokenKind.OpenParen && CallableNameBeforeParenthesis(ts, f.Index) >= 0, (Index: -1, Commas: 0));
+        var call = stack.FirstOrDefault(f => ts[f.Index].Kind == TokenKind.OpenParen &&
+            (constructorArgumentLists.ContainsKey(ts[f.Index]) || CallableNameBeforeParenthesis(ts, f.Index) >= 0), (Index: -1, Commas: 0));
         if (call.Index < 0) return null;
-        int nameIndex = CallableNameBeforeParenthesis(ts, call.Index);
+        int nameIndex = constructorArgumentLists.TryGetValue(ts[call.Index], out var creationToken)
+            ? Array.IndexOf(ts, creationToken) : CallableNameBeforeParenthesis(ts, call.Index);
         var candidates = boundCallableFamilies.GetValueOrDefault(ts[nameIndex]) ?? (ts[nameIndex].Kind == TokenKind.Base
             ? BaseConstructors(path, offset).ToArray()
             : Candidates(path, offset, nameIndex).Where(s => s.Name == ts[nameIndex].Text && s.Parameters != null).ToArray());

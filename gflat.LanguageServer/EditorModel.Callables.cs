@@ -6,6 +6,7 @@ public sealed partial class EditorModel
 {
     private readonly Dictionary<Token, Symbol> boundCallableReferences = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Token, Symbol[]> boundCallableFamilies = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<Token, Token> constructorArgumentLists = new(ReferenceEqualityComparer.Instance);
 
     private static int CallableNameBeforeParenthesis(Token[] tokens, int parenthesis)
     {
@@ -31,9 +32,16 @@ public sealed partial class EditorModel
     {
         if (snapshot.Checker is not { } checker) return;
         var bound = new Dictionary<MethodDeclaration, Symbol>(ReferenceEqualityComparer.Instance);
+        // Checking rewrites creation.Type and may reuse a declaration's type span.
+        // The captured child span still identifies the type actually written here.
+        var writtenCreationTypes = new Dictionary<NewExpression, SourceSpan>(ReferenceEqualityComparer.Instance);
+        foreach (var syntax in snapshot.Nodes)
+            if (syntax.Node is TypeExpression && syntax.Parent?.Node is NewExpression creation &&
+                (!writtenCreationTypes.TryGetValue(creation, out var previous) || syntax.Span.Start < previous.Start))
+                writtenCreationTypes[creation] = syntax.Span;
         foreach (var syntax in snapshot.Nodes)
         {
-            if (syntax.Node is NewExpression { IsTargetTyped: true } creation && syntax.Span.Source?.Path is { } creationPath)
+            if (syntax.Node is NewExpression creation && syntax.Span.Source?.Path is { } creationPath)
             {
                 var creationToken = tokens[creationPath].FirstOrDefault(t => t.Start == syntax.Span.Start && t.Kind == TokenKind.New);
                 string? creationOwner = TypeOwner(creation.Type, creationPath, syntax.Span.Start);
@@ -43,14 +51,21 @@ public sealed partial class EditorModel
                     var constructors = checker.GetClassByIdentity(creationType.Name)?.Constructors ?? checker.GetStructByIdentity(creationType.Name)?.Constructors;
                     if (constructors != null)
                         creationFamily = constructors.Select(ctor => SourceCallable(ctor) is { } sourceCtor
-                            ? sourceCtor with { BoundParameters = ctor.Parameters } : null)
+                            ? sourceCtor with { Owner = checker.DisplayName(creationType.Name), BoundParameters = ctor.Parameters } : null)
                             .OfType<Symbol>().Where(s => Accessible(s, creationPath, syntax.Span.Start)).ToArray();
                 }
                 if (creationToken != null && creationFamily.Length > 0)
                 {
                     boundCallableFamilies[creationToken] = creationFamily;
+                    if (writtenCreationTypes.TryGetValue(creation, out var writtenType) &&
+                        tokens[creationPath].FirstOrDefault(t => t.Kind == TokenKind.OpenParen &&
+                            t.Start >= writtenType.Start + writtenType.Length && t.Start < syntax.Span.Start + syntax.Span.Length) is { } arguments)
+                        constructorArgumentLists[arguments] = creationToken;
                     if (checker.GetResolvedConstructor(creation) is { } creationConstructor && SourceCallable(creationConstructor) is { } creationSource)
-                        boundCallableReferences[creationToken] = creationSource with { BoundParameters = creationConstructor.Parameters };
+                        boundCallableReferences[creationToken] = creationSource with {
+                            Owner = creation.Type is NamedTypeExpression named ? checker.DisplayName(named.Name) : creationSource.Owner,
+                            BoundParameters = creationConstructor.Parameters
+                        };
                 }
             }
             CallExpression? call = syntax.Node as CallExpression;

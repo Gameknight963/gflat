@@ -235,7 +235,8 @@ public sealed partial class EditorModel
             type = Visible(path, offset, left.Text).FirstOrDefault(s => s.Name == left.Text)?.Type;
         string? owner = TypeOwner(type, path, offset);
         if (left.Text == "this") owner = Owner(ContextParents(path, offset));
-        var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset)).ToArray();
+        var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset))
+            .Select(member => BindInterfaceMember(member, type)).ToArray();
         return members.Concat(ExtensionMembers(path, offset, expression?.Node, type)
             .Where(extension => name == null || extension.Name == name)
             .Where(extension => !members.Any(member => member.Name == extension.Name && IsCallableMember(member))));

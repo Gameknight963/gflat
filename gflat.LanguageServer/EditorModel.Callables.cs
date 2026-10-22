@@ -56,7 +56,15 @@ public sealed partial class EditorModel
             CallExpression? call = syntax.Node as CallExpression;
             AstNode expression = call?.Callee ?? (syntax.Node is UnaryExpression { Operator: TokenKind.Ampersand } address ? address.Operand : syntax.Node);
             if (call != null && checker.GetExtensionDefinition(call) != null) continue;
+            string? interfaceOwner = null;
             var target = (call != null ? checker.GetResolvedCall(call) : checker.GetFunctionAddressTarget(syntax.Node)) as MethodDeclaration;
+            // Interface dispatch has its own checker binding. Its method carries
+            // the closed signature even though GetResolvedCall returns null.
+            if (call != null && checker.TryGetInterfaceCall(call, out var interfaceCall))
+            {
+                target = interfaceCall.Method;
+                interfaceOwner = interfaceCall.Interface.Name;
+            }
             if (target == null || SourceCallable(target) is not { } source || source.Syntax.Node is not MethodDeclaration definition ||
                 expression.Span.Source?.Path is not { } path || !tokens.TryGetValue(path, out var fileTokens)) continue;
             string? name = expression switch { IdentifierExpression id => id.Name, NamespaceAccessExpression access => access.Member, MemberAccessExpression access => access.Member, _ => null };
@@ -64,7 +72,7 @@ public sealed partial class EditorModel
             int memberStart = expression switch { NamespaceAccessExpression access => access.Left.Span.Start + access.Left.Span.Length, MemberAccessExpression access => access.Object.Span.Start + access.Object.Span.Length, _ => expression.Span.Start };
             var token = fileTokens.FirstOrDefault(token => token.Kind == TokenKind.Identifier && token.Text == name && token.Start >= memberStart && token.End < expression.Span.Start + expression.Span.Length);
             if (token == null) continue;
-            if (!bound.TryGetValue(target, out var selected)) bound[target] = selected = BindCallable(source, target);
+            if (!bound.TryGetValue(target, out var selected)) bound[target] = selected = BindCallable(source, target, interfaceOwner);
             boundCallableReferences[token] = selected;
             if (ReferenceEquals(target, definition)) continue;
             IEnumerable<MethodDeclaration> methods = [target];
@@ -77,7 +85,18 @@ public sealed partial class EditorModel
         }
     }
 
-    private Symbol BindCallable(Symbol source, MethodDeclaration target)
+    private Symbol BindInterfaceMember(Symbol source, TypeExpression? receiver)
+    {
+        if (snapshot.Checker is not { } checker || source.Syntax.Node is not MethodDeclaration) return source;
+        while (receiver is PointerTypeExpression or ManagedTypeExpression or ReferenceTypeExpression)
+            receiver = receiver switch { PointerTypeExpression pointer => pointer.Inner, ManagedTypeExpression managed => managed.Inner,
+                ReferenceTypeExpression reference => reference.Inner, _ => receiver };
+        return receiver is NamedTypeExpression named && checker.GetInterface(named.Name) is { } contract &&
+            contract.MethodsByName.TryGetValue(source.Name, out var method)
+                ? BindCallable(source, method, contract.Name) : source;
+    }
+
+    private Symbol BindCallable(Symbol source, MethodDeclaration target, string? interfaceOwner = null)
     {
         if (ReferenceEquals(source.Syntax.Node, target) || snapshot.Checker is not { } checker) return source;
         if (checker.GetPrimitiveMethodSource(target) != null)
@@ -86,7 +105,8 @@ public sealed partial class EditorModel
         var genericNames = DisplayGenericNames(source);
         var bindings = new Dictionary<string, TypeExpression>();
         string? owner = source.Owner;
-        if (checker.TryGetMethodOwner(target, out var identity, out _))
+        string? identity = interfaceOwner;
+        if (identity != null || checker.TryGetMethodOwner(target, out identity, out _))
         {
             owner = checker.DisplayName(identity);
             BindDisplayOwnerArguments(source, identity, bindings, definition.GenericParameters.Select(parameter => parameter.Name).ToHashSet());

@@ -69,13 +69,17 @@ public class WholeStandardLibraryEditorTests
                     nuint depth=document.Depth;
                 }
                 document.Reset();
+                document.Read(); document.Skip();
                 String serialized=new(); JsonWriter jsonOutput=new(&serialized);
                 jsonOutput.WriteStartObject(); jsonOutput.WritePropertyName("value");
                 jsonOutput.WriteNumber(42); jsonOutput.WriteEndObject(); jsonOutput.Complete();
+                String prettyText=new(); JsonWriter pretty=new(&prettyText,true);
+                pretty.WriteStartArray(); pretty.WriteEndArray(); pretty.Complete();
                 nuint last=text.LastIndexOf('d');
                 text.TrimStart(); text.TrimEnd(); text.PadLeft(8); text.PadRight(10);
                 HashSet<int> first=new(); HashSet<int> second=new();
                 first.UnionWith(&second); first.ExceptWith(&second);
+                first.IntersectWith(&second); first.SymmetricExceptWith(&second);
                 readonly(char)*? setting=Environment::GetVariable("GFLAT_TEST_UNSET");
                 byte[4] bytes; BinaryPrimitives::TryWriteUInt32BigEndian(bytes,4,42u);
                 float number=0.0f; BinaryPrimitives::TryReadFloatLittleEndian(bytes,4,ref number);
@@ -164,7 +168,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","Join","Parse","TryParse","FromUtf16","ToUtf16"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

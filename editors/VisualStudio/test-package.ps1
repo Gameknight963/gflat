@@ -281,6 +281,23 @@ int main() {
     String utf8Text = UnicodeText::FromUtf16(utf16Input, 3);
     Vector<ushort> utf16Output = UnicodeText::ToUtf16(utf8Text.Data, utf8Text.Length);
     if (utf8Text.Length != 4 || utf16Output.Count != 3 || utf16Output[0] != (ushort)65 || utf16Output[1] != (ushort)0 || utf16Output[2] != (ushort)233) return 54;
+    HashSet<int> overlap = new(); overlap.Add(1); overlap.Add(2);
+    HashSet<int> otherSet = new(); otherSet.Add(2); otherSet.Add(3);
+    overlap.IntersectWith(&otherSet); int shared = 2;
+    if (overlap.Count != 1 || !overlap.Contains(&shared)) return 55;
+    overlap.SymmetricExceptWith(&otherSet); int different = 3;
+    if (overlap.Count != 1 || !overlap.Contains(&different) || otherSet.Count != 2) return 56;
+    readonly(char)* skipDocument = "{\"ignored\":[1,{\"x\":2}],\"kept\":3}";
+    JsonReader skipped = new(skipDocument, CString::Length(skipDocument));
+    skipped.Read(); skipped.Read(); skipped.Skip();
+    if (skipped.Kind != JsonTokenKind::EndArray || skipped.Depth != 1) return 57;
+    skipped.Read(); skipped.Read();
+    if (skipped.Kind != JsonTokenKind::Number || skipped.TokenLength != 1) return 58;
+    skipped.Read(); if (skipped.Read()) return 59;
+    String indented = new(); JsonWriter pretty = new(&indented, true);
+    pretty.WriteStartObject(); pretty.WritePropertyName("values"); pretty.WriteStartArray();
+    pretty.WriteNumber(1); pretty.WriteNumber(2); pretty.WriteEndArray(); pretty.WriteEndObject(); pretty.Complete();
+    if (!CString::Equals(indented.Data, "{\n  \"values\": [\n    1,\n    2\n  ]\n}")) return 60;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

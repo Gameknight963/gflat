@@ -67,6 +67,17 @@ The alphabet and explicitly omitted padding follow
 canonical unused bits follow
 [section 3.5](https://www.rfc-editor.org/rfc/rfc4648.html#section-3.5).
 
+`std/core/Base64UrlText.gf` separately provides owning
+`Base64UrlText::Encode(data, count)` and `Decode(text, count)` conveniences.
+They use this same strictly unpadded profile, reserve the result once, and
+process small stack chunks. Decoded strings preserve binary zeros and own an
+independent, null-terminated buffer; `Length` excludes that terminator. Empty
+input returns an empty String without allocating result storage. Invalid input,
+length overflow, and allocation failure throw. Input must remain readable and
+unchanged throughout the call; no source pointer is retained. These optional
+helpers require the normal String dependencies, while `Base64Url.gf` remains
+usable without String or libc.
+
 # Hexadecimal
 
 `std/core/Hex.gf` defines `std::Hex`, with the same counted-buffer conventions:

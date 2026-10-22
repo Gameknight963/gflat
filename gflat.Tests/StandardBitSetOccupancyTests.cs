@@ -97,7 +97,7 @@ public sealed class StandardBitSetOccupancyTests
 
     private static void Run(string program,int optimization)
     {
-        var sources=new[]{"Collections/IEnumerable.gf","BitSet.gf"}
+        var sources=new[]{"Collections/IEnumerable.gf", "Collections/Enumerable.gf","BitSet.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("bitset-occupancy.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_bitset_occupancy_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);

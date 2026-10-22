@@ -199,7 +199,26 @@ leaves all bits unchanged. A zero-length range is valid anywhere up to `Length`,
 including on an empty set. Neither operation changes the logical length.
 
 Enumeration yields **indices of set bits**, in ascending order, and borrows
-storage. Mutation invalidates the iterator. Failed allocation during `Resize`
+storage. `AsEnumerable()` provides lazy queries over those indices through a
+nested `BitSet::View`, capturing only the word pointer and bit length. It works
+through mutable, shallow readonly, and immutable receivers; no owner is copied,
+no allocation is made, and no pointer to the BitSet object is retained. For
+example, `visited.AsEnumerable().Where(IsVisible).Take(10)` scans only far enough
+to find ten matching set-bit indices.
+
+Each enumeration starts again at zero using the captured length, so changes to
+bit contents are visible on later enumerations. An active enumerator reloads
+words as it advances: edits ahead of its position may change future results;
+edits behind it do not repeat indices. Its current index stays cached until
+`MoveNext`. Keep the original storage alive: resizing, moving, or destroying the
+owning BitSet invalidates these borrows. Queries and views do not own or extend
+the storage's lifetime. The public `View(storage, bitLength)` constructor also
+accepts caller-owned words; null is valid only for zero length, otherwise provide
+at least `ceil(bitLength / 32)` readable words for every later enumeration.
+
+Explicit source selection now requires `Collections/Enumerable.gf` alongside
+`BitSet.gf` and `Collections/IEnumerable.gf`; query operators additionally use
+their ordinary collection source files. Failed allocation during `Resize`
 preserves both the original bits and length. Padding bits outside the logical
 length are always kept clear.
 

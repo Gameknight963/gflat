@@ -223,7 +223,23 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
     // Enumerates the indices of set bits in ascending order. Borrows storage.
     public immutable Enumerator GetEnumerator() => new Enumerator(data, length);
 
+    public immutable Enumerable<nuint, BitSet::View, BitSet::Enumerator> AsEnumerable()
+        => new Enumerable<nuint, BitSet::View, BitSet::Enumerator>(new View(data, length));
+
     ~BitSet() { if (data != null) Memory::Free((void*)data); }
+
+    // Captures storage and bit length, not the owning BitSet or iterator position.
+    public struct View : IEnumerable<nuint, BitSet::Enumerator>
+    {
+        private readonly(uint)*? data;
+        private nuint length;
+        public View(readonly(uint)*? storage, nuint size)
+        {
+            if (storage == null && size != 0) throw new Exception("BitSet view storage is null");
+            data = storage; length = size;
+        }
+        public immutable BitSet::Enumerator GetEnumerator() => new BitSet::Enumerator(data, length);
+    }
 
     public struct Enumerator
     {

@@ -88,7 +88,7 @@ public sealed class StandardBitSetRangeTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = new[] { "Collections/IEnumerable.gf", "BitSet.gf" }
+        var sources = new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "BitSet.gf" }
             .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("ranges.gf", program));
         string directory = Path.Combine(Path.GetTempPath(), "gflat_bit_ranges_" + Guid.NewGuid().ToString("N"));

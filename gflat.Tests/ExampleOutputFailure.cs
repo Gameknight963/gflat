@@ -4,6 +4,10 @@ namespace gflat.Tests;
 internal static class ExampleOutputFailure
 {
     internal static void AssertReported(string exampleName, int optimization, string diagnostic, params string[] extraArguments)
+        => AssertReportedWithInput(exampleName, optimization, diagnostic, "needle apple\npear needle\n", extraArguments);
+
+    internal static void AssertReportedWithInput(string exampleName, int optimization, string diagnostic,
+        string inputText, params string[] extraArguments)
     {
         if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) return;
         string directory = Path.Combine(Path.GetTempPath(), "gflat-output-failure-" + Guid.NewGuid().ToString("N"));
@@ -59,7 +63,7 @@ internal static class ExampleOutputFailure
             var compiled = NativeToolchain.Compile(ir, executable, optimizationLevel: optimization);
             Assert.True(compiled.ExitCode == 0, compiled.StandardError);
             string input = Path.Combine(directory, "input.txt");
-            File.WriteAllText(input, "needle apple\npear needle\n");
+            File.WriteAllText(input, inputText);
             string[] arguments = [input, .. extraArguments];
             foreach (string[] mode in new[] { arguments, [.. arguments, "read-only-output"] })
             {

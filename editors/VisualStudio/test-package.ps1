@@ -490,6 +490,18 @@ int main() {
         int batchQuantity = 0;
         if (!TryParseInt(batchField, batchFieldWritten, &batchQuantity)
             || batchQuantity != 42 || batchCsv.Read()) return 115;
+        String batchCsvText = new(); CsvWriter batchCsvWriter = new(&batchCsvText);
+        batchCsvWriter.WriteField("a,b", 3); batchCsvWriter.WriteField("true", 4);
+        batchCsvWriter.WriteEndRecord();
+        String batchCsvExpected = s"\"a,b\",true\r\n";
+        if (!batchCsvText.Equals(&batchCsvExpected)) return 116;
+        Span<readonly(char)> batchBooleanText = new("TrUe", 4); bool batchBoolean = false;
+        if (!batchBooleanText.TryParseBool(&batchBoolean) || !batchBoolean
+            || !batchBooleanText.ParseBool()) return 117;
+        String batchBinaryText = s"x\0y";
+        String batchUrlText = Base64UrlText::Encode(batchBinaryText.Data, batchBinaryText.Length);
+        String batchUrlBytes = Base64UrlText::Decode(batchUrlText.Data, batchUrlText.Length);
+        if (!batchUrlBytes.Equals(&batchBinaryText)) return 118;
     }
     return 0;
 }

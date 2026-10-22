@@ -1,6 +1,6 @@
 namespace std;
 
-// Owns its elements. Views and iterators borrow storage; mutation invalidates them.
+// Owns its elements. Views and iterators borrow storage; structural mutation invalidates them.
 struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
 {
     private Vector<T> storage;
@@ -39,6 +39,17 @@ struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>
     }
 
     public Enumerator GetEnumerator() => new Enumerator(storage.AsSpan());
+
+    public Enumerable<T, Stack<T>::View, Stack<T>::Enumerator> AsEnumerable()
+        => new Enumerable<T, Stack<T>::View, Stack<T>::Enumerator>(new View(storage.AsSpan()));
+
+    // The view retains the captured top-to-bottom extent without copying owners.
+    public struct View : IEnumerable<T, Stack<T>::Enumerator>
+    {
+        private Span<T> storage;
+        private View(Span<T> elements) { storage = elements; }
+        public Stack<T>::Enumerator GetEnumerator() => new Stack<T>::Enumerator(storage);
+    }
 
     // Enumeration proceeds from the top toward the bottom.
     public struct Enumerator

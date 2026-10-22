@@ -188,10 +188,26 @@ follow ordinary pointer semantics: the collection does not delete pointees.
 Collections themselves can be moved, but do not provide implicit deep copies.
 
 Enumeration borrows storage and visits queue elements in FIFO order and stack
-elements from top to bottom. Keep the collection alive and unchanged while
-using an iterator or borrowed element. Mutation invalidates these borrows;
+elements from top to bottom. Keep the collection alive and structurally unchanged while
+using an iterator or borrowed element. Structural mutation invalidates these borrows;
 there is no runtime mutation counter. The nested `Enumerator.Current` property
 throws before the first successful `MoveNext` and after enumeration ends.
+
+`AsEnumerable()` exposes the same order to lazy queries without copying the
+owning queue/stack or its elements. It stores a nested borrowed `View`: ring
+metadata for a queue, or a captured span for a stack. Fresh enumerations have
+independent cursors, and ordinary element edits through valid aliases remain
+visible. Captured views do not track a later count or extend the owner's lifetime.
+Structural mutation, moving, or destroying the container invalidates them.
+View construction and iteration allocate nothing; callbacks and value copies
+retain their normal behavior. Include `Collections/Enumerable.gf` when selecting
+these container sources explicitly, plus query operator sources actually used.
+
+Noncopyable elements support view construction, direct borrowed iterator access,
+`Count()`, and `Any()`. Operators whose `Current` returns an element by value can
+require copying during generic specialization, even before a terminal reads it.
+For example, a borrowed noncopyable sequence cannot currently use `Take` merely
+to count a prefix. These adapters do not change that existing query limitation.
 
 Growth checks capacity arithmetic and throws `BadAllocException` on allocation
 failure. Failed allocation preserves existing elements. The insertion argument

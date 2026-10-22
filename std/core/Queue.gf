@@ -1,6 +1,6 @@
 namespace std;
 
-// An owning FIFO ring buffer. Mutation invalidates borrowed elements and iterators.
+// An owning FIFO ring buffer. Structural mutation invalidates borrowed elements and iterators.
 struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
 {
     private T*? data;
@@ -124,6 +124,23 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     }
 
     public Enumerator GetEnumerator() => new Enumerator(data, capacity, head, count);
+
+    public Enumerable<T, Queue<T>::View, Queue<T>::Enumerator> AsEnumerable()
+        => new Enumerable<T, Queue<T>::View, Queue<T>::Enumerator>(new View(data, capacity, head, count));
+
+    // Copies only ring metadata; the queue continues to own its elements.
+    public struct View : IEnumerable<T, Queue<T>::Enumerator>
+    {
+        private T*? data;
+        private nuint capacity;
+        private nuint head;
+        private nuint count;
+        private View(T*? storage, nuint size, nuint start, nuint length)
+        {
+            data = storage; capacity = size; head = start; count = length;
+        }
+        public Queue<T>::Enumerator GetEnumerator() => new Queue<T>::Enumerator(data, capacity, head, count);
+    }
 
     ~Queue()
     {

@@ -7,12 +7,13 @@ public sealed class StandardLibraryGuideTests
     public static IEnumerable<object[]> CompletePrograms()
     {
         int count = 0;
-        foreach (string path in Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Guides"), "*.md").Order(StringComparer.Ordinal))
+        string directory = Path.Combine(AppContext.BaseDirectory, "Guides");
+        foreach (string path in Directory.GetFiles(directory, "*.md", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
         {
             int index = 0;
             foreach (var example in Programs(File.ReadAllText(path)))
             {
-                yield return [Path.GetFileName(path), index++];
+                yield return [Path.GetRelativePath(directory, path), index++];
                 count++;
             }
         }

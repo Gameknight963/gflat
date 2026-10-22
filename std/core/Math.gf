@@ -84,6 +84,16 @@ public static class Math
         return value;
     }
 
+    public static extralong Min(extralong a, extralong b) nothrow { if (a < b) return a; return b; }
+    public static extralong Max(extralong a, extralong b) nothrow { if (a > b) return a; return b; }
+    public static extralong Clamp(extralong value, extralong minimum, extralong maximum)
+    {
+        if (minimum > maximum) throw new Exception("Minimum must not exceed maximum");
+        if (value < minimum) return minimum;
+        if (value > maximum) return maximum;
+        return value;
+    }
+
     public static nint Min(nint a, nint b) nothrow { if (a < b) return a; return b; }
     public static nint Max(nint a, nint b) nothrow { if (a > b) return a; return b; }
     public static nint Clamp(nint value, nint minimum, nint maximum)
@@ -133,6 +143,14 @@ public static class Math
         long minimum = -9223372036854775807l - 1l;
         if (value == minimum) throw new Exception("Absolute value overflow");
         if (value < 0) return (long)(-value);
+        return value;
+    }
+
+    public static extralong Abs(extralong value)
+    {
+        extralong minimum = (extralong)1 << 127;
+        if (value == minimum) throw new Exception("Absolute value overflow");
+        if (value < (extralong)0) return -value;
         return value;
     }
 

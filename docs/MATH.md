@@ -8,7 +8,9 @@ still require the normal exception and allocation support.
 
 `Min(a, b)`, `Max(a, b)`, and `Clamp(value, minimum, maximum)` have ordinary
 overloads for `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`,
-`nint`, and `nuint`. Each returns the same integer type as its arguments.
+`extralong`, `nint`, and `nuint`. Each returns the same integer type
+as its arguments, including exact signed 128-bit comparisons without
+conversion through floating point.
 `Clamp` includes both bounds and throws `Exception` if minimum exceeds maximum.
 Use matching argument types; these APIs do not define mixed signed/unsigned
 comparison rules of their own.
@@ -19,7 +21,7 @@ contract for inverted bounds.
 `Abs(value)` has overloads for the signed types. The most negative value has no
 positive counterpart in the same type, so it throws `Exception` rather than
 wrapping or invoking signed overflow. This check also applies to pointer-sized
-`nint` values.
+`nint` and 128-bit `extralong` values.
 
 ## Floating point
 

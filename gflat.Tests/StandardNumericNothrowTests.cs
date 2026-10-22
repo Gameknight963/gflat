@@ -33,6 +33,9 @@ public class StandardNumericNothrowTests
                 if (std::Math::Abs(-2.0f) != 2.0f || std::Math::Abs(-2.0) != 2.0) return 9;
                 if (std::Math::Min(1.0f, 2.0f) != 1.0f || std::Math::Max(1.0f, 2.0f) != 2.0f) return 10;
                 if (std::Math::Min(1.0, 2.0) != 1.0 || std::Math::Max(1.0, 2.0) != 2.0) return 11;
+                extralong wide = (extralong)1 << 100;
+                if (std::Math::Min(wide, wide + (extralong)1) != wide) return 12;
+                if (std::Math::Max(wide, wide + (extralong)1) != wide + (extralong)1) return 13;
                 return 0;
             }
             """;
@@ -55,9 +58,9 @@ public class StandardNumericNothrowTests
         Assert.Equal(2, helpers.Length);
         Assert.All(helpers, line => Assert.Contains("nounwind", line));
         string[] pureMath = definitions.Where(line => Regex.IsMatch(line, @"\$Math\$(Min|Max|IsNaN|IsFinite)\$") || line.Contains("$Math$Abs$") && Regex.IsMatch(line, @"\((float|double) ")).ToArray();
-        Assert.Equal(30, pureMath.Length);
+        Assert.Equal(32, pureMath.Length);
         Assert.All(pureMath, line => Assert.Contains("nounwind", line));
-        string[] throwing = definitions.Where(line => Regex.IsMatch(line, @"\$(Parse\w+|Clamp)\$") || line.Contains("$Math$Abs$") && Regex.IsMatch(line, @"\(i(8|16|32|64) ")).ToArray();
+        string[] throwing = definitions.Where(line => Regex.IsMatch(line, @"\$(Parse\w+|Clamp)\$") || line.Contains("$Math$Abs$") && Regex.IsMatch(line, @"\(i(8|16|32|64|128) ")).ToArray();
         Assert.NotEmpty(throwing);
         Assert.All(throwing, line => Assert.DoesNotContain("nounwind", line));
 

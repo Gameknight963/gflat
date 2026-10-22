@@ -4,6 +4,9 @@ Projects include this source library by default. `NoStdLib` disables the default
 reference; applications can then select individual source files or provide their
 own runtime contracts. See [project setup](../docs/PROJECTS.md).
 
+Start with [a complete text-processing program](../docs/STDLIB_GETTING_STARTED.md)
+for parsing, formatting, and the ownership rules used by these APIs.
+
 ## Core
 
 Core algorithms and data structures contain no direct libc calls. Owning types

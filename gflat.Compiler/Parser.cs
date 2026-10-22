@@ -1451,7 +1451,9 @@ namespace gflat
             if (Check(TokenKind.Identifier) && Current.Text == "move") return false;
             // look ahead to see if this is "type name" or "type* name" etc
             int saved = _pos;
-            var savedTokens = new List<Token>(_tokens);
+            var savedTokens = _tokens;
+            bool savedCopyTokensOnSplit = _copyTokensOnSplit;
+            _copyTokensOnSplit = true;
             int diagMark = _diagnostics.Count;
             try
             {
@@ -1472,6 +1474,7 @@ namespace gflat
             {
                 _pos = saved;
                 _tokens = savedTokens;
+                _copyTokensOnSplit = savedCopyTokensOnSplit;
             }
         }
 

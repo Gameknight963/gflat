@@ -19,7 +19,7 @@ int main()
     values.Add(9); values.Add(2); values.Add(5);
     Sort<int>(values.AsSpan(), Compare);
     int key = 5;
-    nuint index = LowerBound<int>(values.AsReadOnly(), &key, Compare);
+    nuint index = LowerBound<int>(values.AsImmutable(), &key, Compare);
     return (int)index - 1;
 }
 ```
@@ -29,18 +29,18 @@ int main()
 | `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
-| `LowerBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
-| `UpperBound<T>(Span<readonly(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
-| `BinarySearch<T>(Span<readonly(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
-| `IsSorted<T>(Span<readonly(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
+| `LowerBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
+| `UpperBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
+| `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
+| `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length readonly spans element by element, stopping at the first difference. |
 | `SequenceCompare<T>(first, second, compare)` | Lexicographically compare readonly spans, preserving the first nonzero comparator result; an equal prefix sorts by length. |
-| `MinIndex<T>(Span<readonly(T)>, compare)` | Index of the first least element, or span length when empty. |
-| `MaxIndex<T>(Span<readonly(T)>, compare)` | Index of the first greatest element, or span length when empty. |
-| `FindIndex<T>(Span<readonly(T)>, predicate)` | First matching index, or span length when no element matches. |
-| `IndexOf<T>(Span<readonly(T)>, key, equal)` | First equal element's index, or span length when absent. |
-| `LastIndexOf<T>(Span<readonly(T)>, key, equal)` | Last equal element's index, or span length when absent. |
-| `Contains<T>(Span<readonly(T)>, key, equal)` | Whether any element equals the borrowed key. |
+| `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. |
+| `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. |
+| `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
+| `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. |
+| `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. |
+| `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. |
 | `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
 | `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
 
@@ -69,15 +69,15 @@ comparison callback, for example `Sort<int>(span, Comparer<int>::Compare)`.
 `SequenceEqual`. These are static bridges and allocate no comparer objects.
 Explicit custom callbacks remain available for other orderings or equality rules.
 
-Equality searches borrow the key through `readonly(T)*`, so noncopyable owning
+Equality searches borrow the key through `immutable(T)*`, so noncopyable owning
 elements are supported without constructing or copying a search value. Mutable
-spans can be searched through `AsReadOnly()`. For example:
+spans can be searched through `AsImmutable()`. For example:
 
 ```csharp
 int key = 5;
-nuint first = IndexOf<int>(values.AsReadOnly(), &key, EqualityComparer<int>::Equals);
-nuint last = LastIndexOf<int>(values.AsReadOnly(), &key, EqualityComparer<int>::Equals);
-bool found = Contains<int>(values.AsReadOnly(), &key, EqualityComparer<int>::Equals);
+nuint first = IndexOf<int>(values.AsImmutable(), &key, EqualityComparer<int>::Equals);
+nuint last = LastIndexOf<int>(values.AsImmutable(), &key, EqualityComparer<int>::Equals);
+bool found = Contains<int>(values.AsImmutable(), &key, EqualityComparer<int>::Equals);
 ```
 
 `IndexOf` and `Contains` compare from the beginning; `LastIndexOf` compares from
@@ -103,7 +103,7 @@ If it throws during sorting, ordering may be partial but every element remains
 alive and owned by the source collection.
 
 `Partition` has the same ownership guarantee if its predicate throws. The
-predicate borrows an element through `readonly(T)*` and runs once per element
+predicate borrows an element through `immutable(T)*` and runs once per element
 unless an earlier invocation throws. `FindIndex` stops at the first match;
 `IsSorted` stops at the first out-of-order adjacent pair. Empty spans are sorted
 and compare equal to other empty spans without invoking callbacks.

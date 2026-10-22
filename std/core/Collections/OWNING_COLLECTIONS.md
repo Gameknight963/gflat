@@ -20,7 +20,7 @@ and iterators just like capacity growth. Clearing or removing elements alone
 continues to retain capacity.
 `RemoveAll(predicate)` removes matching elements and returns their count, keeping
 survivors in their original order. Its callback borrows the current element as
-`readonly(T)*`; no element is copied and no container storage is allocated.
+`immutable(T)*`; no element is copied and no container storage is allocated.
 Each original element is tested once, in order, unless the callback throws.
 Earlier matches are then removed, while the failing element and unvisited suffix
 remain in order; the original exception propagates and the vector stays valid.
@@ -42,7 +42,7 @@ that order does not matter.
 All middle mutations invalidate iterators and views of the vector. Allocation
 failure, invalid indices, and a failing argument copy preserve existing contents.
 
-With `using std;`, `vector.AddRange(readonlySpan)` copies a range into the tail.
+With `using std;`, `vector.AddRange(immutableSpan)` copies a range into the tail.
 A span borrowed from that same vector is supported, including across growth;
 the implementation preserves its offset and rebinds it after reserving storage.
 Empty ranges do nothing. Allocation failure before copying preserves contents.
@@ -59,7 +59,7 @@ continue to support those elements through explicit movement.
 
 ## Copying borrowed spans
 
-With `using std;`, `source.AsReadOnly().CopyTo(destination)` assigns copies into
+With `using std;`, `source.AsImmutable().CopyTo(destination)` assigns copies into
 an existing `Span<T>`. The destination must contain initialized elements and
 have room for every source element. Its unused tail stays unchanged. This is
 typed copying: normal copy constructors run and replaced destination values are
@@ -197,7 +197,7 @@ length are always kept clear.
 ## Priority queue
 
 `PriorityQueue<T>` owns a binary min-heap. Its constructor accepts a comparison
-function borrowing two elements through `readonly(T)*` pointers. Return a
+function borrowing two elements through `immutable(T)*` pointers. Return a
 negative result when the left element should be removed first, zero for equal
 priority, and a positive result otherwise. Equal-priority removal order is not
 stable. Comparator state and stored priorities must remain consistent while

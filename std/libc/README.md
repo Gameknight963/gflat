@@ -147,8 +147,8 @@ int main()
 ```
 
 `ReadLine()` returns an owning `std::String` and throws at EOF. `TryReadLine(ref line)`
-clears and reuses the existing string's capacity. The `Write(ref readonly(String))`
-and `WriteLine(ref readonly(String))` overloads borrow its counted buffer; they do
+clears and reuses the existing string's capacity. The `Write(ref immutable(String))`
+and `WriteLine(ref immutable(String))` overloads borrow its counted buffer; they do
 not copy the string or allocate. On read or allocation errors the reused String
 remains valid and can contain a partial line. Input may stop partway through
 that line; the next read resumes at its remaining suffix. Unlike bounded-buffer
@@ -269,7 +269,7 @@ and `File::Write` directly without the owning convenience source.
 It reads raw bytes without validating UTF-8, removing a BOM, or translating
 newlines. Memory grows with the file; use `File::Read` or `CopyTo` for bounded
 storage. `WriteAll` truncates and `AppendAll` appends; both accept a C string,
-counted bytes, or `ref readonly(String)`. These helpers explicitly close the
+counted bytes, or `ref immutable(String)`. These helpers explicitly close the
 file so final flush/close failures are reported. They are not atomic updates.
 
 ### Reading lines

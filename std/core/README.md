@@ -43,7 +43,7 @@ and checks bounds.
 - `Clear` retains capacity. `Clone` and `ToString()` make independent owned copies.
 - `String copy = text;` makes an independent owned copy and may throw on allocation failure.
 - `move text` transfers the buffer and leaves `text` uninitialized. Assign a new value before using it again.
-- `Equals(readonly(String)* other)` compares bytes.
+- `Equals(immutable(String)* other)` compares bytes.
 
 Interpolation uses `IFormattable.Format(ITextWriter*)` and
 `ITextWriter.Write(readonly(char)*, nuint)`. The writer consumes bytes during the
@@ -53,7 +53,7 @@ stack buffers or literal text, without allocating intermediate strings.
 With `using std;`, primitive values also support `value.Format(writer)`.
 Floating-point overloads live in `../libc/Formatting.gf`.
 
-Types can instead implement `IStringConvertable`, whose readonly `ToString()`
+Types can instead implement `IStringConvertable`, whose immutable `ToString()`
 returns an owning `std::String`. Interpolation keeps that temporary alive while
 writing its counted bytes, then destroys it. If a type implements both contracts,
 the direct `Format` operation takes precedence. A borrowed `ToCString()` method
@@ -258,8 +258,11 @@ Parameter names, defaults, and method modifiers are not part of a function-point
 type and are not exposed here.
 
 `IsReadOnly` describes the current value layer: `readonly(int)*` has a mutable
-pointer and readonly element; `readonly(int*)` has both readonly. `IsNullable`
-likewise describes only the current layer. `HasLayout` is false for void/interface
+pointer and readonly element; `readonly(int*)` has a readonly pointer and mutable
+element. `IsImmutable` identifies deep protection at the current layer;
+`immutable(int*)` protects both the pointer and its element. Primitive leaves
+canonicalize immutable protection to readonly because there is no deeper storage.
+`IsNullable` likewise describes only the current layer. `HasLayout` is false for void/interface
 elements, with zero size/alignment; pointers to them have their own layouts.
 `HasFixedLength` and `Length` describe fixed arrays, with zero length otherwise.
 Descriptors do not allocate managed objects or provide dynamic runtime type tests.

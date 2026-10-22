@@ -213,10 +213,14 @@ int main() {
     char[3] terminated;
     if (!CString::TryCopy("ok", terminated, 3) || !CString::Equals("ok", terminated)) return 26;
     if (Math::Sqrt(4.0f) != 2.0f || Math::Sqrt(9.0d) != 3.0d) return 27;
+    if (Math::CopySign(2.0f, -0.0f) != -2.0f || Math::CopySign(-3.0d, 0.0d) != 3.0d) return 31;
     for (int ticks = 0; ticks < 3; Tick(ref ticks)) {}
     if (smokeDestroyed != 3) return 28;
     for (new SmokeTemporary(); smokeDestroyed < 4;) return 30;
     if (smokeDestroyed != 4) return 29;
+    Vector<int> window = new(); window.Add(1); window.Add(2); window.Add(3);
+    window.RemoveRange(1, 1);
+    if (window.Count != 2 || window[0] != 1 || window[1] != 3) return 32;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

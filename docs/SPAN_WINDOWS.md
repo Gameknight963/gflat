@@ -17,6 +17,8 @@ foreach (Span<int> pair in values.Windows(2)) {
 `SpanWindows<T>`. Every result is a full `Span<T>` of `width` elements; starts are
 0, `step`, twice `step`, and so on while the full window fits. No partial final
 window is produced. Width and step must be positive, even for an empty source.
+For nonoverlapping groups that retain a shorter final piece, use
+[chunks](SPAN_CHUNKS.md).
 A width greater than the source length produces no windows. Cursor advancement
 checks the remaining distance before addition, including very large steps.
 

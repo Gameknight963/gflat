@@ -47,6 +47,14 @@ public static class CString
         return true;
     }
 
+    // Find the current terminator before reusing the bounded overlap-safe copy.
+    public static bool TryAppend(readonly(char)* text, char* output, nuint capacity) nothrow
+    {
+        nuint length = 0;
+        if (!TryGetLength(output, capacity, ref length)) return false;
+        return TryCopy(text, output + length, capacity - length);
+    }
+
     public static int Compare(readonly(char)* left, readonly(char)* right) nothrow
     {
         nuint index = 0;

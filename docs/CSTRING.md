@@ -24,8 +24,8 @@ bool empty = std::CString::IsNullOrEmpty(null);
 
 Input parameters are borrowed `readonly(char)*` pointers; `IsNullOrEmpty` accepts
 `readonly(char)*?`. These helpers neither
-own nor retain them, and do not free their bytes. Only `TryCopy` writes to its
-explicit destination buffer. The caller keeps
+own nor retain them, and do not free their bytes. `TryCopy` and `TryAppend` write
+only to their explicit destination buffers. The caller keeps
 each region alive for the duration of the call.
 
 `IsNullOrEmpty` returns true for null or a first byte of zero, and false otherwise.
@@ -87,3 +87,32 @@ there is no terminator in that range. Output must designate writable storage for
 the stated capacity. Keep both regions stable during validation and copying;
 the method retains no pointer. There is no allocation, exception, `strcpy`, or
 mandatory additional std source. The native-optimizer caveats above still apply.
+
+## Bounded append
+
+```csharp
+char[16] output;
+std::CString::TryCopy("hello", output, 16);
+bool appended = std::CString::TryAppend("!", output, 16); // hello!
+```
+
+`TryAppend(text, output, capacity)` appends to an existing terminated string.
+Capacity is the entire destination extent, including its existing prefix and
+the final terminator. It first scans at most `capacity` destination bytes. If
+none is zero, it returns false without reading `text`. Otherwise it scans at
+most `capacity - currentLength` input bytes, enough to determine whether the
+appended bytes and terminator fit. Neither scan reads beyond its stated bound.
+
+Failure leaves every destination byte unchanged, including when input overlaps
+output. Capacity zero reads neither pointer and returns false. Success preserves
+the existing prefix and writes the appended bytes plus terminator, leaving the
+remaining capacity unchanged. Appending empty text succeeds whenever the
+destination already has a terminator, including when no further payload fits.
+
+Input and output may overlap in either direction: appending the destination to
+itself or appending one of its suffixes is supported. The input must be readable
+through its first terminator, or for the remaining capacity if no terminator is
+found. Output must be readable and writable for the full capacity. Keep both
+regions stable during the call. Like `TryCopy`, this operation allocates nothing,
+is `nothrow`, and uses no additional std source; the optimizer caveats above
+remain applicable.

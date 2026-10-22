@@ -11,6 +11,13 @@ an already processed middle window without repeatedly shifting the same suffix
 with `RemoveAt`. It neither allocates nor copies elements, including noncopyable
 owners. The entire range is checked before destruction; an empty range is a
 no-op even at `Count`, while a start beyond `Count` is invalid.
+`ShrinkToFit()` explicitly releases unused peak storage, setting `Capacity` to
+`Count`. An empty vector frees its buffer; an already tight vector does nothing.
+Otherwise it allocates an exact-size buffer and relocates survivors without
+copies or destruction. Failed allocation preserves contents, capacity, and
+existing borrows. Successful shrinking invalidates borrowed pointers, spans,
+and iterators just like capacity growth. Clearing or removing elements alone
+continues to retain capacity.
 Middle insertion and removal relocate elements instead of invoking copy
 constructors. The insertion argument follows ordinary value semantics and is
 prepared before the vector changes, so inserting a copy of an existing element

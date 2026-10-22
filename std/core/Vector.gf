@@ -40,6 +40,24 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
     public void Reserve(nuint requested)
     {
         if (requested <= capacity) return;
+        this.RelocateStorage(requested);
+    }
+
+    // Release unused peak storage explicitly; structural borrows are invalidated.
+    public void ShrinkToFit()
+    {
+        if (count == capacity) return;
+        this.RelocateStorage(count);
+    }
+
+    private void RelocateStorage(nuint requested)
+    {
+        if (requested == 0)
+        {
+            if (data != null) Memory::Free((void*)data);
+            data = null; capacity = 0;
+            return;
+        }
         nuint maximum = (nuint)0 - (nuint)1;
         nuint stride = (nuint)sizeof(T);
         if (stride == 0) stride = 1;

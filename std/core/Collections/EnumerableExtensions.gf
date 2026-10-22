@@ -106,7 +106,7 @@ public Enumerable<U, SelectSource<T, U, S, E>, SelectSource<T, U, S, E>::Enumera
 public U Aggregate<T, U, S, E>(this Enumerable<T, S, E> source, U seed, U(U, T)* accumulate)
 {
     E iterator = source.GetEnumerator();
-    while (iterator.MoveNext()) seed = accumulate(seed, iterator.Current);
+    while (iterator.MoveNext()) seed = accumulate(move seed, iterator.Current);
     return move seed;
 }
 

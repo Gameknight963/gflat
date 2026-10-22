@@ -130,6 +130,38 @@ address. Pointer elements do not confer ownership: the query and the resulting
 vector do **not** delete a pointee merely because they contain its address.
 Managed pointer elements keep their normal collector behavior.
 
+`Aggregate` owns its seed parameter. Passing a named seed normally copies it at
+entry; use `move seed` to transfer it instead, including a noncopyable owner such
+as `Unique<T>`. Each iteration transfers the current accumulator to the callback,
+then uses the callback's returned value as the next accumulator. A callback that
+returns its owning parameter should return `move accumulator`. This avoids
+copying the accumulator on every step; source elements still follow ordinary
+callback argument copying rules. An empty sequence returns the supplied seed.
+Iterator or callback exceptions clean up the current accumulator and iterator.
+
+For example, a fold can update one uniquely owned integer without reallocating it:
+
+```csharp
+using std;
+
+Unique<int> Add(Unique<int> accumulator, int value)
+{
+    accumulator.Value += value;
+    return move accumulator;
+}
+
+int main()
+{
+    int[3] data = [1, 2, 3];
+    Span<int> values = new(data, 3);
+    Unique<int> seed = new(new* int(10));
+    Unique<int> total = values.AsEnumerable().Aggregate(move seed, Add);
+    // seed is consumed; total now owns the same integer, containing 16.
+    if (total.Value != 16) return 1;
+    return 0;
+}
+```
+
 `TryLast` and `TrySingle` assign their output only after iteration establishes
 the answer. A throwing iterator, callback, or element copy leaves that output
 unchanged; these errors still propagate normally. `TrySingle` stops after finding

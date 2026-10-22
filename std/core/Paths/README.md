@@ -20,7 +20,7 @@ remain visible. These views protect characters but do not freeze their owner.
 
 ```csharp
 String path = s"assets/settings.json";
-var name = Paths::GetFileName(path.AsReadOnly(), PathStyle::Unix);
+Span<readonly(char)> name = Paths::GetFileName(path.AsReadOnly(), PathStyle::Unix);
 // name borrows "settings.json" from path.
 ```
 

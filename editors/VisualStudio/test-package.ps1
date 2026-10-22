@@ -150,6 +150,13 @@ int main() {
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'
 using std;
+int smokeDestroyed = 0;
+struct SmokeTemporary {
+    public int Value;
+    public SmokeTemporary() { Value = 42; }
+    ~SmokeTemporary() { smokeDestroyed++; }
+}
+SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
 int main() {
     HashMap<String, int> map = new();
     map.Add(s"answer", 42);
@@ -201,6 +208,15 @@ int main() {
     int iterations = 99;
     for (iterations = 0; iterations < 3; iterations++) {}
     if (iterations != 3) return 24;
+    bool enabled = false;
+    if (!TryParseBool("True", &enabled) || !enabled || ParseBool("false")) return 25;
+    char[3] terminated;
+    if (!CString::TryCopy("ok", terminated, 3) || !CString::Equals("ok", terminated)) return 26;
+    if (Math::Sqrt(4.0f) != 2.0f || Math::Sqrt(9.0d) != 3.0d) return 27;
+    for (int ticks = 0; ticks < 3; Tick(ref ticks)) {}
+    if (smokeDestroyed != 3) return 28;
+    for (new SmokeTemporary(); smokeDestroyed < 4;) return 30;
+    if (smokeDestroyed != 4) return 29;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

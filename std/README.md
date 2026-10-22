@@ -78,6 +78,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Hex dump](../examples/hexdump/README.md): byte offsets, hex columns, and printable ASCII with stack-backed formatting.
 - [Unicode conversion](../examples/transcode/README.md): strict UTF-8/UTF-16LE conversion with validation before output-file creation.
 - [Quote text lines](../examples/quote-lines/README.md): lazy file lines written directly as newline-delimited JSON strings.
+- [Decode JSON string lines](../examples/unquote-lines/README.md): strict validation and in-place decoding with a reusable buffer.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

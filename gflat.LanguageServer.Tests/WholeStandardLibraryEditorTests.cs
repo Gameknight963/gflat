@@ -99,6 +99,8 @@ public class WholeStandardLibraryEditorTests
                 IntegerFormatting::TryFormatHex(42,digits,21,ref digitsWritten,8,false);
                 BufferWriter textOutput=new(digits,21); textOutput.TryWrite("ok");
                 uint parsed=0u; TryParseHexUInt("0x2a",&parsed);
+                bool enabled=false; TryParseBool("True",&enabled);
+                char[8] terminated; CString::TryCopy("ok",terminated,8);
                 Arena scratch=new(); scratch.AllocateZeroed(16,8);
                 File temporary=File::OpenTemporary(); temporary.Close();
                 int next=Console::PeekByte();
@@ -118,7 +120,7 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"Sqrt","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
+        foreach(string member in new[]{"TryParseBool","TryCopy","Sqrt","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {
             int offset=token.Start;

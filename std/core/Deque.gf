@@ -143,7 +143,25 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
     }
 
     public Enumerator GetEnumerator() => new Enumerator(data, capacity, head, count);
+
+    public Enumerable<T, Deque<T>::View, Deque<T>::Enumerator> AsEnumerable()
+        => new Enumerable<T, Deque<T>::View, Deque<T>::Enumerator>(new View(data, capacity, head, count));
+
     ~Deque() { this.Clear(); if (data != null) Memory::Free((void*)data); }
+
+    // Captures ring metadata, borrowing storage without copying the owning deque.
+    public struct View : IEnumerable<T, Deque<T>::Enumerator>
+    {
+        private T*? data;
+        private nuint capacity;
+        private nuint head;
+        private nuint count;
+        private View(T*? storage, nuint size, nuint start, nuint length)
+        {
+            data = storage; capacity = size; head = start; count = length;
+        }
+        public Deque<T>::Enumerator GetEnumerator() => new Deque<T>::Enumerator(data, capacity, head, count);
+    }
 
     public struct Enumerator
     {

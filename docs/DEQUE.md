@@ -40,6 +40,41 @@ Iteration borrows the deque. Structural changes invalidate borrowed element
 references and iterators; do not move or destroy the owner while using them.
 There is no runtime mutation counter or lifetime checking for these borrows.
 
+## Borrowed queries
+
+`deque.AsEnumerable()` creates the ordinary query wrapper over a small captured
+`Deque<T>::View`, without copying the owning deque or any elements. The view
+holds the storage address, capacity, head, and count at the time of the call.
+Each enumeration starts an independent existing `Deque<T>::Enumerator` at the
+captured front. Selective source-library builds also include
+`Collections/Enumerable.gf`; query operations live in the usual separate query
+extension sources.
+
+```csharp
+bool IsEven(int value) => value % 2 == 0;
+
+Deque<int> values = new();
+values.AddLast(1);
+values.AddLast(2);
+values.AddFirst(0);
+var evens = values.AsEnumerable().Where(&IsEven);
+```
+
+Replacing an existing element is visible to subsequent reads of that position;
+the view is not a snapshot of element values. Keep the deque alive and at the
+same address, and avoid structural mutations, moves, or destruction while using
+a query, its source view, or its iterators. This applies even when a mutation
+retains the same allocation. There is no mutation counter. Temporary owning
+deques must not supply queries that outlive the temporary, just as with borrowed
+vector spans.
+
+Only mutable owners expose this adapter. It is not callable through readonly or
+immutable deque receivers, since the existing iterator can return writable
+element references. Capturing a view and operations such as `Count()` and
+`Any()` do not copy elements, including noncopyable owners. Operations that
+consume `Current` by value retain their usual element-copy requirements. Early
+termination destroys iterator metadata without consuming or destroying elements.
+
 Insertion argument-copy failure, capacity overflow, and allocation failure leave
 existing contents unchanged. In particular, failed growth preserves the previous
 buffer and borrowed element addresses. Moving the deque transfers its allocation;

@@ -340,6 +340,21 @@ int main() {
         extralong batchAbsolute = Math::Abs(-batchWide - 7);
         if (batchMinimum != batchWide + 1 || batchMaximum != -batchWide - 1
             || batchClamped != batchWide + 2 || batchAbsolute != batchWide + 7) return 71;
+        if (Math::Truncate(-1.75f) != -1.0f || Math::Floor(-1.25) != -2.0
+            || Math::Ceiling(1.25f) != 2.0f || Math::Round(2.5) != 2.0 || Math::Round(3.5f) != 4.0f) return 72;
+        extralong batchParsed = ParseExtraLong("-170141183460469231731687303715884105728");
+        if (batchParsed != ((extralong)1 << 127)) return 73;
+        char[41] batchDecimal; nuint batchDecimalCount = 0;
+        if (!IntegerFormatting::TryFormat(batchParsed, batchDecimal, 40, ref batchDecimalCount)
+            || batchDecimalCount != 40) return 74;
+        batchDecimal[40] = '\0';
+        String batchInterpolated = s$"{batchParsed}";
+        if (!CString::Equals(batchDecimal, batchInterpolated.Data)) return 75;
+        byte[16] batchWideBytes;
+        if (!BinaryPrimitives::TryWriteExtraLongBigEndian(batchWideBytes, 16, batchParsed)) return 76;
+        extralong batchRoundtrip = (extralong)0;
+        if (!BinaryPrimitives::TryReadExtraLongBigEndian(batchWideBytes, 16, ref batchRoundtrip)
+            || batchRoundtrip != batchParsed) return 77;
     }
     return 0;
 }

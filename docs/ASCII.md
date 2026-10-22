@@ -20,6 +20,22 @@ All classification functions return false for bytes 128–255.
 other byte, including bytes above 127. Results do not depend on locale or the
 machine's signed `char` conventions.
 
+`ToLower(char* data, nuint count)` and `ToUpper(char* data, nuint count)` convert
+a caller-owned buffer in place using those same ASCII rules. Counts include
+embedded NULs; these operations continue past them and leave every non-letter
+byte unchanged. There is no null-terminated mutation overload.
+
+```csharp
+char[4] bytes = ['A', '\0', 'z', (char)255];
+std::Ascii::ToLower(bytes, 4); // ['a', '\0', 'z', 255]
+```
+
+The caller supplies `count` writable bytes. Only that region is modified, and
+aliases to it observe the changes immediately. A zero count performs no reads
+or writes through the pointer. Pointers to readonly or immutable characters
+cannot be passed implicitly. These overloads are `nothrow`, allocate nothing,
+and add no source dependencies. They do not perform Unicode case conversion.
+
 `TryHexValue(char input, byte* result)` recognizes one hexadecimal digit and
 writes its numerical value from 0 through 15. Invalid input returns false and
 writes zero. Use `std::Utf8` to decode Unicode scalar values before applying

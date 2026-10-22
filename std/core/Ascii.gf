@@ -30,6 +30,17 @@ char ToUpper(char value) nothrow
     return value;
 }
 
+// Counted in-place conversion includes null bytes; zero count touches no storage.
+void ToLower(char* data, nuint count) nothrow
+{
+    for (nuint i = 0; i < count; i++) data[i] = ToLower(data[i]);
+}
+
+void ToUpper(char* data, nuint count) nothrow
+{
+    for (nuint i = 0; i < count; i++) data[i] = ToUpper(data[i]);
+}
+
 // Returns a value in [0, 15]; failure writes zero.
 bool TryHexValue(char value, byte* result) nothrow
 {

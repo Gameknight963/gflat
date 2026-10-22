@@ -395,6 +395,26 @@ int main() {
         var batchPairs = new IntRange(1, 3).AsEnumerable().Zip(new IntRange(10, 2).AsEnumerable(),
             (int first, int second) => first + second);
         if (batchPairs.Aggregate(0, (int total, int value) => total + value) != 24) return 89;
+        if (Hashing::Combine(1, 2) != (nuint)2141140832u) return 90;
+        Span<readonly(char)> batchSetting = new("mode=fast=checked", 17);
+        Span<readonly(char)> batchSettingKey = new(); Span<readonly(char)> batchSettingValue = new();
+        if (!batchSetting.TrySplitOnce('=', ref batchSettingKey, ref batchSettingValue)
+            || batchSettingKey.Length != 4 || batchSettingValue.Length != 12
+            || !batchSettingValue.StartsWith("fast=checked")) return 91;
+        byte[16] batchVariableBytes; BinaryBufferWriter batchVariableOutput = new(batchVariableBytes, 16);
+        if (!batchVariableOutput.TryWriteVarUInt32(4294967295u)
+            || !batchVariableOutput.TryWriteVarUInt64(18446744073709551615ul)
+            || batchVariableOutput.Position != 15) return 92;
+        BinaryBufferReader batchVariableInput = new(batchVariableBytes, batchVariableOutput.Position);
+        uint batchVariableSmall = 0u; ulong batchVariableLarge = 0ul;
+        if (batchVariableInput.ReadVarUInt32(ref batchVariableSmall) != VarInt::Status::Done
+            || batchVariableSmall != 4294967295u
+            || batchVariableInput.ReadVarUInt64(ref batchVariableLarge) != VarInt::Status::Done
+            || batchVariableLarge != 18446744073709551615ul || batchVariableInput.Remaining != 0) return 93;
+        Deque<int> batchEnds = new(); batchEnds.Reserve(4);
+        batchEnds.AddLast(1); batchEnds.AddLast(2); batchEnds.AddLast(3); batchEnds.AddLast(4);
+        batchEnds.RemoveFirst(); batchEnds.RemoveFirst(); batchEnds.AddLast(5); batchEnds.AddLast(6);
+        if (batchEnds.AsEnumerable().Aggregate(0, (int total, int value) => total + value) != 18) return 94;
     }
     return 0;
 }

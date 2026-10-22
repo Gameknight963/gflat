@@ -86,6 +86,28 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         return Date::FromDayNumber((int)result);
     }
 
+    // Calendar arithmetic clamps the day when the destination month is shorter.
+    public immutable Date AddMonths(int months)
+    {
+        int year = 0; int month = 0; int day = 0;
+        this.GetParts(ref year, ref month, ref day);
+        long index = (long)(year - 1) * 12l + (long)(month - 1) + (long)months;
+        if (index < 0l || index >= 119988l) throw new Exception("Date addition is outside the supported range");
+        year = (int)(index / 12l) + 1;
+        month = (int)(index % 12l) + 1;
+        int limit = MonthLength(year, month);
+        if (day > limit) day = limit;
+        return new Date(year, month, day);
+    }
+
+    public immutable Date AddYears(int years)
+    {
+        // Any larger offset leaves the supported range, whatever the starting date.
+        // Check before multiplying so even extreme int arguments cannot overflow.
+        if (years < -9998 || years > 9998) throw new Exception("Date addition is outside the supported range");
+        return this.AddMonths(years * 12);
+    }
+
     public immutable bool Equals(immutable(Date)* other) nothrow => dayNumber == other.dayNumber;
     public immutable int CompareTo(immutable(Date)* other) nothrow => dayNumber - other.dayNumber;
     public immutable nuint GetHashCode() nothrow => (nuint)dayNumber;

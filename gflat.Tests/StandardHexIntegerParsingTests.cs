@@ -134,7 +134,9 @@ public sealed class StandardHexIntegerParsingTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = new[] { new SourceFile("HexIntegerParsing.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/HexIntegerParsing.gf"))), new SourceFile("main.gf", code) };
+        var sources = new[] { "HexIntegerParsing.gf", "HexIntegerParsingThrowing.gf" }
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
+            .Append(new SourceFile("main.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
     }
 }

@@ -1,7 +1,9 @@
 # Hexadecimal integer parsing
 
-`core/HexIntegerParsing.gf` provides unsigned hexadecimal parsing in `std` for
-`Byte`, `UShort`, `UInt`, `ULong`, and `NUInt`. Names follow the decimal parsers:
+`core/HexIntegerParsing.gf` provides unsigned hexadecimal `TryParseHex...`
+functions in `std` for `Byte`, `UShort`, `UInt`, `ULong`, and `NUInt`.
+`core/HexIntegerParsingThrowing.gf` adds the optional throwing `ParseHex...`
+wrappers. Names follow the decimal parsers:
 
 ```cpp
 bool TryParseHexULong(readonly(char)* text, ulong* result) nothrow;
@@ -39,6 +41,6 @@ output also changes any overlapping input bytes.
 
 Overflow is checked before multiplication and addition, including at the
 unsigned 64-bit maximum. The implementation depends on no libc functions and is
-independent of the decimal parsing source files. Including the complete file
-still requires the normal exception definitions and runtime for its throwing
-forms.
+independent of the decimal parsing source files. The Try-only source also works
+without the exception definitions or runtime; the separate throwing wrappers
+require those facilities.

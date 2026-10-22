@@ -204,6 +204,26 @@ public class FreestandingCoreUtilitiesTests
             if(std::IntegerFormatting::TryFormatHex(unsignedMaximum,&decimalText[1],19,ref length,20,false)||length!=0) return 119;
             for(nuint i=1;i<5;i++)if(decimalText[i]!='0') return 120;
             for(nuint i=5;i<21;i++)if(decimalText[i]!='f') return 121;
+            ulong parsedHex=0ul;
+            if(!std::TryParseHexULong(&decimalText[1],20,&parsedHex)||parsedHex!=unsignedMaximum) return 122;
+            decimalText[21]='\0';
+            if(!std::TryParseHexULong(&decimalText[1],&parsedHex)||parsedHex!=unsignedMaximum) return 123;
+            decimalText[20]='g';
+            if(std::TryParseHexULong(&decimalText[1],20,&parsedHex)||parsedHex!=0ul) return 124;
+            decimalText[20]='f';
+            uint hexadecimalWord=(uint)(runtimeInput>>32)|0x12345678u;
+            if(!std::IntegerFormatting::TryFormatHex(hexadecimalWord,&decimalText[1],20,ref length,8,true)||length!=8) return 125;
+            uint parsedWord=0u;
+            if(!std::TryParseHexUInt(&decimalText[1],length,&parsedWord)||parsedWord!=hexadecimalWord) return 126;
+            byte parsedByte=(byte)7;
+            if(std::TryParseHexByte(&decimalText[1],length,&parsedByte)||parsedByte!=(byte)0) return 127;
+            if(!std::TryParseHexByte("0xFf",&parsedByte)||parsedByte!=(byte)255) return 128;
+            ushort parsedShort=(ushort)0;
+            if(!std::TryParseHexUShort("0Xffff",6,&parsedShort)||parsedShort!=(ushort)65535) return 129;
+            nuint nativeHex=(nuint)runtimeInput|(nuint)255;
+            if(!std::IntegerFormatting::TryFormatHex(nativeHex,&decimalText[1],20,ref length)) return 130;
+            nuint parsedNative=0;
+            if(!std::TryParseHexNUInt(&decimalText[1],length,&parsedNative)||parsedNative!=nativeHex) return 131;
             return 42;
         }
         """;
@@ -219,7 +239,7 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
-            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "VarInt.gf" }
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "HexIntegerParsing.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

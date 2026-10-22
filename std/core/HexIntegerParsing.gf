@@ -45,17 +45,6 @@ bool TryParseHexByte(readonly(char)* text, nuint count, byte* result) nothrow
 bool TryParseHexByte(readonly(char)* text, byte* result) nothrow
     => TryParseHexByte(text, hex_integer_parsing_detail::Length(text), result);
 
-byte ParseHexByte(readonly(char)* text, nuint count)
-{
-    byte result = (byte)0;
-    if (!TryParseHexByte(text, count, &result))
-        throw new Exception("Invalid or out-of-range hexadecimal byte");
-    return result;
-}
-
-byte ParseHexByte(readonly(char)* text)
-    => ParseHexByte(text, hex_integer_parsing_detail::Length(text));
-
 bool TryParseHexUShort(readonly(char)* text, nuint count, ushort* result) nothrow
 {
     ulong magnitude = 0ul;
@@ -66,17 +55,6 @@ bool TryParseHexUShort(readonly(char)* text, nuint count, ushort* result) nothro
 
 bool TryParseHexUShort(readonly(char)* text, ushort* result) nothrow
     => TryParseHexUShort(text, hex_integer_parsing_detail::Length(text), result);
-
-ushort ParseHexUShort(readonly(char)* text, nuint count)
-{
-    ushort result = (ushort)0;
-    if (!TryParseHexUShort(text, count, &result))
-        throw new Exception("Invalid or out-of-range hexadecimal ushort");
-    return result;
-}
-
-ushort ParseHexUShort(readonly(char)* text)
-    => ParseHexUShort(text, hex_integer_parsing_detail::Length(text));
 
 bool TryParseHexUInt(readonly(char)* text, nuint count, uint* result) nothrow
 {
@@ -89,17 +67,6 @@ bool TryParseHexUInt(readonly(char)* text, nuint count, uint* result) nothrow
 bool TryParseHexUInt(readonly(char)* text, uint* result) nothrow
     => TryParseHexUInt(text, hex_integer_parsing_detail::Length(text), result);
 
-uint ParseHexUInt(readonly(char)* text, nuint count)
-{
-    uint result = (uint)0;
-    if (!TryParseHexUInt(text, count, &result))
-        throw new Exception("Invalid or out-of-range hexadecimal uint");
-    return result;
-}
-
-uint ParseHexUInt(readonly(char)* text)
-    => ParseHexUInt(text, hex_integer_parsing_detail::Length(text));
-
 bool TryParseHexULong(readonly(char)* text, nuint count, ulong* result) nothrow
 {
     ulong magnitude = 0ul;
@@ -111,17 +78,6 @@ bool TryParseHexULong(readonly(char)* text, nuint count, ulong* result) nothrow
 bool TryParseHexULong(readonly(char)* text, ulong* result) nothrow
     => TryParseHexULong(text, hex_integer_parsing_detail::Length(text), result);
 
-ulong ParseHexULong(readonly(char)* text, nuint count)
-{
-    ulong result = (ulong)0;
-    if (!TryParseHexULong(text, count, &result))
-        throw new Exception("Invalid or out-of-range hexadecimal ulong");
-    return result;
-}
-
-ulong ParseHexULong(readonly(char)* text)
-    => ParseHexULong(text, hex_integer_parsing_detail::Length(text));
-
 bool TryParseHexNUInt(readonly(char)* text, nuint count, nuint* result) nothrow
 {
     ulong magnitude = 0ul;
@@ -132,15 +88,4 @@ bool TryParseHexNUInt(readonly(char)* text, nuint count, nuint* result) nothrow
 
 bool TryParseHexNUInt(readonly(char)* text, nuint* result) nothrow
     => TryParseHexNUInt(text, hex_integer_parsing_detail::Length(text), result);
-
-nuint ParseHexNUInt(readonly(char)* text, nuint count)
-{
-    nuint result = (nuint)0;
-    if (!TryParseHexNUInt(text, count, &result))
-        throw new Exception("Invalid or out-of-range hexadecimal nuint");
-    return result;
-}
-
-nuint ParseHexNUInt(readonly(char)* text)
-    => ParseHexNUInt(text, hex_integer_parsing_detail::Length(text));
 

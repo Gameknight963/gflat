@@ -10,11 +10,22 @@ nuint Bytes(readonly(char)* data, nuint count) nothrow
     return (nuint)hash;
 }
 
-// Mix all 64 bits before folding into a target-independent 32-bit result.
-nuint Integer(ulong value) nothrow
+// Avalanche all 64 bits before combining or folding them.
+private ulong Mix64(ulong value) nothrow
 {
     value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ul;
     value = (value ^ (value >> 27)) * 0x94d049bb133111ebul;
     value = value ^ (value >> 31);
-    return (nuint)((uint)value ^ (uint)(value >> 32));
+    return value;
 }
+
+// Fold the mixed value into a target-independent 32-bit result.
+nuint Integer(ulong value) nothrow
+{
+    ulong mixed = Mix64(value);
+    return (nuint)((uint)mixed ^ (uint)(mixed >> 32));
+}
+
+// Ordered hash composition; keep both full-width inputs until the final fold.
+nuint Combine(nuint first, nuint second) nothrow
+    => Integer(Mix64((ulong)first + 0x9e3779b97f4a7c15ul) ^ (ulong)second);

@@ -45,3 +45,34 @@ it as `nuint`. `String.GetHashCode()` uses this function over its full length.
 as `nuint`. Neither operation allocates. Hash values are implementation details,
 not persistent identifiers, cryptographic digests, or protection against
 adversarial collision attacks.
+
+## Combining component hashes
+
+`Hashing::Combine(nuint first, nuint second) nothrow` combines two component
+hashes in order, without allocation. Both arguments retain their full
+pointer-sized width during mixing; the result is a 32-bit hash returned as
+`nuint`, like `Integer`. For example, a coordinate key can hash each field
+before combining:
+
+```csharp
+using std;
+struct Point : IHashable, IEquatable<Point> {
+    public int X;
+    public int Y;
+    public Point(int x, int y) { X = x; Y = y; }
+    public immutable bool Equals(immutable(Point)* other)
+        => X == other.X && Y == other.Y;
+    public immutable nuint GetHashCode() nothrow
+        => std::Hashing::Combine(std::Hashing::Integer((ulong)X),
+                                std::Hashing::Integer((ulong)Y));
+}
+```
+
+Equal component hashes produce equal combined hashes. Order participates in
+mixing, so `(x, y)` is not deliberately treated as `(y, x)`. Collisions are still
+possible, including between swapped pairs or different components. Combining
+cannot recover information already lost by a component's own hash.
+For more fields, nest `Combine` in a fixed order; it is not an associative
+operation or a serialized representation. As with the other helpers, results
+are implementation details, not persistent identifiers, cryptographic digests,
+or protection against adversarial keys. No pointers or objects are retained.

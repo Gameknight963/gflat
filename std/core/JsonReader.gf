@@ -124,6 +124,20 @@ public struct JsonReader
         }
     }
 
+    // Leave containers on their closing token, so the next Read reaches a sibling.
+    // A property name includes its value; other current tokens do not advance.
+    public void Skip()
+    {
+        if (failed) this.Fail("Reset JSON reader after a failed read", position);
+        if (kind == JsonTokenKind::PropertyName) this.Read();
+        if (kind != JsonTokenKind::StartObject && kind != JsonTokenKind::StartArray) return;
+        nuint startDepth = depth;
+        while (this.Read())
+        {
+            if (depth == startDepth && (kind == JsonTokenKind::EndObject || kind == JsonTokenKind::EndArray)) return;
+        }
+    }
+
     // false means the entire document, including trailing whitespace, was validated.
     public bool Read()
     {

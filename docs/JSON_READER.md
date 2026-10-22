@@ -33,6 +33,35 @@ restriction. `Depth` is the number of enclosing containers: a root opener and it
 closing delimiter both have depth zero; its immediate contents have depth one.
 `Kind` becomes `None` and `TokenLength` becomes zero on completion or error.
 
+## Skipping unknown values
+
+`Skip()` ignores the current value's children without decoding strings or
+building a DOM. On a `PropertyName`, it first reads the property's value. If
+that value, or the original current token, opens an object or array, it reads
+through the matching closing token. `Kind`, `TokenOffset`, `TokenLength`, and
+`Depth` then describe that closing token. On a scalar, it leaves that scalar
+current. The following `Read()` reaches the next sibling or containing delimiter.
+
+On end tokens or `None` (before the first read or after completion), `Skip()`
+does nothing. It does not finish the document or validate trailing data after
+the skipped value; continue calling `Read()` until it returns false.
+
+```cpp
+while (reader.Read()) {
+    if (reader.Kind == JsonTokenKind::PropertyName) {
+        // Decode/compare the name if needed. Ignore this unknown property's value.
+        reader.Skip();
+    }
+}
+```
+
+Skipped content is fully validated through the ordinary `Read()` path, including
+UTF-8, escapes, delimiters, and nested grammar. Malformed content still throws
+`JsonParseException` with its original byte offset. Skipping is iterative and
+uses the same nesting stack; growing it can throw `BadAllocException`. A failed
+reader rejects `Skip()` as well as `Read()` until `Reset()`. Scalar/no-op skips
+do not allocate or advance input.
+
 Pass a string token's raw range to `JsonString::TryGetUnquotedLength` and
 `JsonString::TryUnquote` to decode it into caller storage. The reader already
 validates every quoted token through that same helper. Strings therefore require
@@ -47,7 +76,7 @@ offset, possibly equal to the input count at unexpected EOF. Invalid string cont
 report the opening quote's offset; unterminated strings report EOF. Messages give
 a short reason, rather than a stable machine-readable error code.
 
-After **any** exception from `Read`, including allocation failure, call `Reset()`
+After **any** exception from `Read` or `Skip`, including allocation failure, call `Reset()`
 before reading again. A failed reader rejects further reads. `Reset()` returns to
 the beginning, clears token metadata, and retains stack capacity. Input is never
 modified, including on errors. Exception allocation follows normal runtime rules.
@@ -65,3 +94,5 @@ dependencies. The complete standard library includes them automatically.
 Grammar reference: [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259.html).
 The token/depth conventions follow the familiar shape of
 [.NET Utf8JsonReader](https://learn.microsoft.com/en-us/dotnet/api/system.text.json.utf8jsonreader).
+The skip positioning follows
+[Utf8JsonReader.Skip](https://learn.microsoft.com/en-us/dotnet/api/system.text.json.utf8jsonreader.skip).

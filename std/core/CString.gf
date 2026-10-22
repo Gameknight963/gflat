@@ -24,6 +24,23 @@ public static class CString
         return false;
     }
 
+    // Capacity includes the terminator. Preflight leaves output unchanged on
+    // failure; successful copies permit any overlap between the byte buffers.
+    public static bool TryCopy(readonly(char)* text, char* output, nuint capacity) nothrow
+    {
+        nuint length = 0;
+        if (!TryGetLength(text, capacity, ref length)) return false;
+        nuint count = length + 1;
+        if ((readonly(char)*)output > text && (readonly(char)*)output < text + count)
+        {
+            nuint i = count;
+            while (i != 0) { i--; output[i] = text[i]; }
+        }
+        else
+            for (nuint i = 0; i < count; i++) output[i] = text[i];
+        return true;
+    }
+
     public static int Compare(readonly(char)* left, readonly(char)* right) nothrow
     {
         nuint index = 0;

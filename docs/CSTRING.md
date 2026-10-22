@@ -8,7 +8,7 @@ Native optimization can introduce a libc call even when the source contains
 none: LLVM recognizes the unbounded length scan as `strlen`. A native build
 without libc therefore also needs `CompilationOptions.NoBuiltins = true` to
 disable introducing such library calls. The
-[freestanding executable test](FREESTANDING_CORE.md) verifies all six helpers at
+[freestanding executable test](FREESTANDING_CORE.md) verifies the scan/comparison helpers at
 O0 and O2 with that policy. Explicit memory intrinsics and other platform ABI helpers
 have separate lowering rules; source independence alone is not a proof that a
 final binary has no runtime imports.
@@ -21,8 +21,9 @@ bool prefix = std::CString::StartsWith("hello", "hell");
 bool suffix = std::CString::EndsWith("hello", "llo");
 ```
 
-All parameters are borrowed `readonly(char)*` pointers. These helpers neither
-own nor retain them, and do not free or modify their bytes. The caller keeps
+Input parameters are borrowed `readonly(char)*` pointers. These helpers neither
+own nor retain them, and do not free their bytes. Only `TryCopy` writes to its
+explicit destination buffer. The caller keeps
 each region alive for the duration of the call.
 
 `Length` counts bytes before the first zero byte. `Compare` returns -1, 0, or 1
@@ -53,3 +54,28 @@ The scalar output is written only after the scan completes. It may overlap the
 input when it is valid, naturally aligned `nuint` storage. That final store can
 overwrite bytes in the input region, including on failure when zero is stored;
 the method does not promise to preserve bytes overlapping its explicit output.
+
+## Bounded copy
+
+```csharp
+char[16] output;
+bool copied = std::CString::TryCopy("hello", output, 16);
+```
+
+`TryCopy(text, output, capacity)` copies through the first null, including that
+terminator. Capacity includes the terminator, so an empty string needs one byte.
+It scans at most `capacity` input bytes using `TryGetLength` before writing.
+If no terminator fits, it returns false without changing any output byte;
+capacity zero returns false without reading or writing either buffer.
+
+On success, exactly the string bytes and terminator are copied. Bytes beyond
+the copied terminator remain unchanged. Input and output may overlap in either
+direction or have the same address; copying follows `memmove` order. Embedded
+nulls end the input, so subsequent bytes are not part of the copy. Arbitrary
+nonzero byte values are preserved without encoding validation.
+
+Input must be readable through its first terminator, or for `capacity` bytes if
+there is no terminator in that range. Output must designate writable storage for
+the stated capacity. Keep both regions stable during validation and copying;
+the method retains no pointer. There is no allocation, exception, `strcpy`, or
+mandatory additional std source. The native-optimizer caveats above still apply.

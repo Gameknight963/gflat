@@ -138,6 +138,8 @@ public class WholeStandardLibraryEditorTests
                 Base64Url::TryEncode("x",1,urlText,3,ref urlCount);
                 Base64Url::TryGetDecodedLength(urlText,urlCount,ref urlCount);
                 Base64Url::TryDecode("eA",2,urlBytes,2,ref urlCount);
+                String ownedUrlText=Base64UrlText::Encode("x",1);
+                String ownedUrlBytes=Base64UrlText::Decode(ownedUrlText.Data,ownedUrlText.Length);
                 nuint encoded=0; VarInt::TryWriteUInt32(bytes,4,42u,ref encoded);
                 uint zigzag=VarInt::ZigZagEncode(-42); int signedNumber=VarInt::ZigZagDecode(zigzag);
                 byte[16] variableBytes; BinaryBufferWriter variableOutput=new(variableBytes,16);
@@ -272,6 +274,13 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(string member in new[]{"Encode","Decode"})
+        {
+            int call=text.IndexOf("Base64UrlText::"+member,StringComparison.Ordinal)+"Base64UrlText::".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("Base64UrlText.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         foreach(string member in new[]{"RawField","FieldOffset","ValueLength","IsQuoted","EndOfRecord","TryCopyValue"})
         {
             int call=sourceTokens.Single(token=>token.Text==member).Start;

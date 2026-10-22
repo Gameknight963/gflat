@@ -4627,7 +4627,7 @@ public partial class LlvmEmitter : IVisitor
         EndFunction();
     }
 
-    public void Visit(ThrowStatement node) => EmitNativeThrow(node);
+    public void Visit(ThrowStatement node) => EmitExpressionWithCleanup(() => EmitNativeThrow(node));
     public void Visit(TryStatement node) => EmitNativeTry(node);
 
     public void Visit(CatchClause node)

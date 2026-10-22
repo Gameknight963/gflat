@@ -124,7 +124,8 @@ public partial class LlvmEmitter
             EmitRuntimeCall(ExceptionRuntime.Allocate, $"i64 {bytes}, i8* (i64)* @{RuntimeMemorySymbol("Allocate")}", storage);
             GuardNonNull(storage, "i8*");
             Emit($"    {address} = bitcast i8* {storage} to {llvm}*");
-            _deferScopes.Add(new() { new ExceptionOnlyCleanup(new ExceptionAllocationCleanup(storage)) });
+            var allocationCleanup = new ExceptionOnlyCleanup(new ExceptionAllocationCleanup(storage));
+            _deferScopes[^1].Add(allocationCleanup);
             EmitValueForTarget(node.Expression, type);
             string value = Pop();
             EmitManagedStore(type, value, address, initialize: true);
@@ -135,7 +136,9 @@ public partial class LlvmEmitter
             string vtable = NewTemp();
             Emit($"    {vtable} = getelementptr {llvm}, {llvm}* {address}, i32 0, i32 0");
             Emit($"    store i8** bitcast ([{exceptionClass.VirtualMethods.Count} x i8*]* @{exceptionClass.Name}$vtable to i8**), i8*** {vtable}");
-            _deferScopes.RemoveAt(_deferScopes.Count - 1);
+            // Ownership transfers to the exception runtime. Keep the expression's
+            // receiver temporaries and managed roots alive until the unwind.
+            _deferScopes[^1].Remove(allocationCleanup);
             string arguments = $"i8* {storage}, void (i8*)* bitcast (void (%Exception*)* @gflat_destroy_exception to void (i8*)*)";
             if (_debugSymbols)
             {

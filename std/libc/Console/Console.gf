@@ -61,6 +61,9 @@ int PeekByte()
     return value;
 }
 
+// Reset sticky stdin EOF/error indicators without discarding buffered input.
+void ClearInputError() { clearerr(__gflat_stdio_stdin()); }
+
 // Consumes an available prefix before reporting unexpected EOF.
 void ReadExactly(char* data, nuint count)
 {
@@ -162,3 +165,4 @@ private extern int fflush(void* stream);
 private extern int fgetc(void* stream);
 private extern int ungetc(int value, void* stream);
 private extern int ferror(void* stream);
+private extern void clearerr(void* stream);

@@ -107,6 +107,11 @@ int main()
   allocation, and respects the existing stdin text mode described below.
   A peek and a following read are separate operations; callers sharing stdin
   between threads must coordinate them.
+- `ClearInputError()` clears stdin's sticky EOF and error indicators, like
+  `File.ClearError()`. It neither consumes/discards pending input nor repairs a
+  failed descriptor or changes the stream mode. Clear the state before retrying
+  after a recoverable error, or after more data becomes available on a stream
+  that had reached EOF. An unchanged underlying failure still fails on retry.
 - `ReadExactly(data, count)` throws `std::EndOfStreamException` if EOF arrives
   before the count is satisfied; the available prefix has already been consumed
   and written. Other input errors remain `std::IOException`.

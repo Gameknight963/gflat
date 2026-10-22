@@ -216,12 +216,17 @@ public sealed partial class EditorModel
             bool globalQualifier = qualifier.StartsWith("global::");
             if (globalQualifier) qualifier = qualifier[8..];
             if (qualifier == "global") qualifier = "";
-            string? namespacePath = snapshot.Checker?.ResolveVisibleNamespacePath(qualifier,
+            var resolved = Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier &&
+                (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration))
+                ?? symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == qualifier);
+            string head = qualifier.Split("::")[0];
+            bool typePrefix = resolved != null || Visible(path, offset, head).Any(s =>
+                s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration);
+            string? namespacePath = typePrefix ? null : snapshot.Checker?.ResolveVisibleNamespacePath(qualifier,
                 globalQualifier ? "" : Namespace(ContextParents(path, offset)),
                 globalQualifier ? [] : snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? []);
-            var resolved = namespacePath != null ? null : Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier &&
-                (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration || snapshot.Checker == null && s.Classification == "namespace"))
-                ?? symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == qualifier);
+            if (resolved == null && snapshot.Checker == null)
+                resolved = Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier && s.Classification == "namespace");
             if (resolved != null && ContractOwners(resolved, path, offset) is { } owners)
             {
                 return SymbolsNamed(name).Where(s => owners.Contains(s.Owner) && s.Static && Accessible(s, path, offset));

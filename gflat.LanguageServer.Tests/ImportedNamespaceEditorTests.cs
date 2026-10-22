@@ -8,6 +8,33 @@ public sealed class ImportedNamespaceEditorTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public void VisibleStaticTypesAndAliasesTakePrecedenceOverImportedNamespaces(bool alias)
+    {
+        var library = new SourceFile(Path.GetFullPath("namespace-shadow-library.gf"),
+            "namespace Library::Tools { int NamespaceOnly() => 1; }");
+        string declaration = alias
+            ? "static class ActualType { public static int Actual() => 42; } alias Tools = ActualType;"
+            : "static class Tools { public static int Actual() => 42; }";
+        var source = new SourceFile(Path.GetFullPath("namespace-shadow-main.gf"), $$"""
+            using Library;
+            namespace App { {{declaration}} int Run() => Tools::Actual(); }
+            int main() => App::Run();
+            """);
+        var sources = new[] { library, source };
+        var snapshot = new AnalysisSnapshot(sources, new() { NoStdLib = true });
+        Assert.DoesNotContain(snapshot.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var model = new EditorModel(snapshot, sources);
+        int offset = source.Text.IndexOf("Tools::Actual", StringComparison.Ordinal) + "Tools::".Length;
+        var completion = JsonSerializer.SerializeToElement(model.Completion(source.Path, offset), Protocol.JsonOptions);
+        var items = completion.GetProperty("items").EnumerateArray().ToArray();
+        Assert.Contains(items, item => item.GetProperty("label").GetString() == "Actual");
+        Assert.DoesNotContain(items, item => item.GetProperty("label").GetString() == "NamespaceOnly");
+        Assert.Contains("namespace-shadow-main.gf", JsonSerializer.Serialize(model.Definition(source.Path, offset), Protocol.JsonOptions));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void NamespaceCompletionUsesLexicalPrecedenceAndDoesNotGuessAmbiguousImports(bool localNamespace)
     {
         var library = new SourceFile(Path.GetFullPath("namespace-choices.gf"), """

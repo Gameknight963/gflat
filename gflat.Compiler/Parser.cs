@@ -105,7 +105,7 @@ namespace gflat
                 {
                     return new Token(kind, Current.Line, Current.Start, Current.Start);
                 }
-                if (kind == TokenKind.Identifier && Current.Kind is TokenKind.Semicolon or TokenKind.CloseParen or TokenKind.CloseBrace or TokenKind.CloseBracket or TokenKind.Comma or TokenKind.Equals)
+                if (kind == TokenKind.Identifier && Current.Kind is TokenKind.Semicolon or TokenKind.CloseParen or TokenKind.OpenBrace or TokenKind.CloseBrace or TokenKind.CloseBracket or TokenKind.Comma or TokenKind.Equals)
                 {
                     return new Token(TokenKind.Identifier, Current.Line, Current.Start, Current.Start, "<missing>");
                 }
@@ -1021,6 +1021,7 @@ namespace gflat
                     break;
                 }
                 parameters.Add(ParseParameter());
+                if (Check(TokenKind.OpenBrace)) break;
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -1040,6 +1041,7 @@ namespace gflat
             while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
             {
                 parameters.Add(ParseParameter());
+                if (Check(TokenKind.OpenBrace)) break;
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -1124,6 +1126,7 @@ namespace gflat
             while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
             {
                 parameters.Add(ParseParameter());
+                if (Check(TokenKind.OpenBrace)) break;
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }
@@ -1141,6 +1144,7 @@ namespace gflat
             while (!Check(TokenKind.CloseParen) && !Check(TokenKind.EndOfFile))
             {
                 parameters.Add(ParseParameter());
+                if (Check(TokenKind.OpenBrace)) break;
                 if (!Check(TokenKind.CloseParen))
                     Expect(TokenKind.Comma);
             }

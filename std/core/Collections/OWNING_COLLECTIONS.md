@@ -34,6 +34,8 @@ With `using std;`, `vector.AddRange(readonlySpan)` copies a range into the tail.
 A span borrowed from that same vector is supported, including across growth;
 the implementation preserves its offset and rebinds it after reserving storage.
 Empty ranges do nothing. Allocation failure before copying preserves contents.
+Growth uses the vector's geometric capacity policy, so repeated small range
+appends retain amortized growth rather than reallocating for each range.
 If an element's copy constructor throws, the successfully appended prefix stays
 in the vector and all earlier elements remain valid; capacity may have grown.
 Copy constructors must not mutate the vector or source through other aliases.

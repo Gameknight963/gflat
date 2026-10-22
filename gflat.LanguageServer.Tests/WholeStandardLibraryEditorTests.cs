@@ -102,7 +102,8 @@ public class WholeStandardLibraryEditorTests
                 uint reversed=BitOperations::ReverseEndianness(42u);
                 bool absolute=Paths::IsFullyQualified("/tmp/file",PathStyle::Unix);
                 bool localResult=Contains(42);
-                Deque<int> ends=new(); ends.AddFirst(1); ends.AddLast(2); int removed=ends.RemoveLast();
+                Deque<int> ends=new(); ends.AddFirst(1); ends.AddLast(2); int removed=ends.RemoveLast(); ends.ShrinkToFit();
+                Queue<int> pending=new(); pending.Enqueue(42); pending.ShrinkToFit();
                 TextLines lines=new(new Span<readonly(char)>("a\r\nb",4));
                 TextLines::Enumerator lineIterator=lines.GetEnumerator();
                 nuint cLength=0; CString::TryGetLength("text",5,ref cLength);

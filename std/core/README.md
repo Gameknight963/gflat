@@ -9,7 +9,7 @@ Lazy collection queries and their ownership rules are documented in
 
 Portable facilities use the replaceable `Memory` API. The default
 allocator delegates to libc; replacing it does not require changing these sources.
-SDK projects reference `std/std.gfproj` by default. Set `NoStdLib` to `true`
+Projects using the standard build rules reference `std/std.gfproj` by default. Set `NoStdLib` to `true`
 to supply your own library inputs or build std itself.
 
 ## Strings and formatting
@@ -231,7 +231,7 @@ contracts automatically. These sources ship beside the compiler and language
 server in `Std/`; explicit inputs with matching std-relative paths take precedence
 over the bundled copies.
 
-SDK projects instead use their evaluated source graph, including the default std
+Project builds instead use their evaluated source graph, including the default std
 project reference. `NoStdLib` disables that reference and automatic definitions;
 the compiler API and standalone CLI offer the same choice. See
 [project setup](../../docs/PROJECTS.md#standard-library-selection) for details.

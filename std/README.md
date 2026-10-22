@@ -20,6 +20,7 @@ implementation lives in `libc`.
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
 | Writer line helpers | `ITextWriter*` `WriteLine` overloads | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split`, Span `Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md) |
+| Borrowed text matching | Span `StartsWith`, `EndsWith` | [Counted and C-string patterns without copying](../docs/TEXT_MATCH_SPAN.md) |
 | Borrowed text lines | `TextLines` | [Counted LF and CRLF line views](../docs/TEXT_LINES.md) |
 | Joining text | `Span<immutable(String)>.Join` | [Borrowed owners, counted separators, and one output allocation](../docs/STRING_JOIN.md) |
 | Owning Unicode conversion | `UnicodeText` | [Strict counted UTF-16 and UTF-8 conversion](../docs/UNICODE_TEXT.md) |
@@ -44,8 +45,8 @@ implementation lives in `libc`.
 | UTF-16 and conversion | `Utf16`, incremental `Utf16Decoder`, borrowed `Utf16Scalars`, `UnicodeTranscoding` | [Code units and chunked decoding](../docs/UTF16.md), [scalar iteration](../docs/UTF16_SCALARS.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
 | ASCII bytes | `Ascii` classification and case conversion | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, unpadded `Base64Url`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
-| JSON strings | `JsonString`, writer `WriteJsonString` | [Strict UTF-8 quoting and unquoting in caller buffers, plus writer output](../docs/JSON_STRING.md) |
-| JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens over borrowed UTF-8 input](../docs/JSON_READER.md) |
+| JSON strings | `JsonString`, writer `WriteJsonString` | [Strict UTF-8 quoting, unquoting, and decoded comparison without allocation](../docs/JSON_STRING.md) |
+| JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens, borrowed raw lexemes, and decoded text comparison](../docs/JSON_READER.md) |
 | JSON text | `JsonText::Minify` | [Validate first and remove whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |
 | JSON output | `JsonWriter`, `JsonWriteException` | [Validated output through a borrowed text writer](../docs/JSON_WRITER.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |

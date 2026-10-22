@@ -51,6 +51,7 @@ public class WholeStandardLibraryEditorTests
                 Span<readonly(char)> textView=text.AsImmutable(); Span<char> writableText=text.AsSpan();
                 Span<readonly(char)> shallowTextView=text.AsReadOnly();
                 Span<readonly(char)> trimmedText=textView.Trim();
+                bool prefix=trimmedText.StartsWith("a"); bool suffix=trimmedText.EndsWith("d",1);
                 Span<char> trimmedWritable=writableText.TrimStart().TrimEnd();
                 immutable(TextParts) textParts=trimmedText.Split(',');
                 TextParts::Enumerator partIterator=textParts.GetEnumerator();
@@ -76,6 +77,7 @@ public class WholeStandardLibraryEditorTests
                     nuint offset=document.TokenOffset; nuint size=document.TokenLength;
                     nuint depth=document.Depth;
                     Span<readonly(char)> rawToken=document.RawToken;
+                    bool knownName=document.ValueTextEquals("ok",2);
                 }
                 document.Reset();
                 document.Read(); document.Skip();
@@ -97,6 +99,9 @@ public class WholeStandardLibraryEditorTests
                 BinaryBufferWriter binary=new(bytes,4); binary.TryWriteFloatBigEndian(number);
                 binary.Reset(); binary.TryWriteBytes(bytes,4);
                 BinaryBufferReader binaryInput=new(bytes,4); binaryInput.TryReadBytes(bytes,4);
+                byte[16] wideBytes; extralong wideNumber=(extralong)42;
+                BinaryBufferWriter wideOutput=new(wideBytes,16); wideOutput.TryWriteExtraLongBigEndian(wideNumber);
+                BinaryBufferReader wideInput=new(wideBytes,16); wideInput.TryReadExtraLongBigEndian(ref wideNumber);
                 char[3] urlText; char[2] urlBytes; nuint urlCount=0;
                 Base64Url::TryGetEncodedLength(1,ref urlCount);
                 Base64Url::TryEncode("x",1,urlText,3,ref urlCount);
@@ -204,7 +209,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim","IsNullOrEmpty","RawToken","ValueTextEquals","StartsWith","EndsWith","TryWriteExtraLongBigEndian","TryReadExtraLongBigEndian"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

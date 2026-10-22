@@ -298,6 +298,15 @@ int main() {
     pretty.WriteStartObject(); pretty.WritePropertyName("values"); pretty.WriteStartArray();
     pretty.WriteNumber(1); pretty.WriteNumber(2); pretty.WriteEndArray(); pretty.WriteEndObject(); pretty.Complete();
     if (!CString::Equals(indented.Data, "{\n  \"values\": [\n    1,\n    2\n  ]\n}")) return 60;
+    readonly(char)* spaced = " { \"escaped\" : \"\\u0061\\/\", \"number\" : 1.00e+03 } ";
+    String compactJson = new(); JsonText::Minify(spaced, CString::Length(spaced), &compactJson);
+    if (!CString::Equals(compactJson.Data, "{\"escaped\":\"\\u0061\\/\",\"number\":1.00e+03}")) return 61;
+    BitSet shifted = new(65); shifted[0] = true; shifted[33] = true;
+    shifted.ShiftLeft(31); shifted.ShiftRight(32);
+    if (shifted.CountSetBits() != 1 || !shifted[32]) return 62;
+    shifted.Resize(96); if (shifted.CountSetBits() != 1) return 63;
+    Date weekdayDate = new(2024, 2, 29);
+    if (weekdayDate.DayOfWeek != DayOfWeek::Thursday || weekdayDate.DayOfYear != 60) return 64;
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd

@@ -75,6 +75,7 @@ public class WholeStandardLibraryEditorTests
                 jsonOutput.WriteNumber(42); jsonOutput.WriteEndObject(); jsonOutput.Complete();
                 String prettyText=new(); JsonWriter pretty=new(&prettyText,true);
                 pretty.WriteStartArray(); pretty.WriteEndArray(); pretty.Complete();
+                String compactText=new(); JsonText::Minify(" [ true ] ",10,&compactText);
                 nuint last=text.LastIndexOf('d');
                 text.TrimStart(); text.TrimEnd(); text.PadLeft(8); text.PadRight(10);
                 HashSet<int> first=new(); HashSet<int> second=new();
@@ -88,6 +89,7 @@ public class WholeStandardLibraryEditorTests
                 uint zigzag=VarInt::ZigZagEncode(-42); int signedNumber=VarInt::ZigZagDecode(zigzag);
                 BitSet flags=new(65); flags.SetRange(1,63,true);
                 bool any=flags.HasAnySet(); bool all=flags.HasAllSet();
+                flags.ShiftLeft(1); flags.ShiftRight(32);
                 uint bits=BitConverter::FloatToUInt32Bits(1.0f);
                 int[3] numbers=[1,2,3]; Span<int> values=new(numbers,3);
                 int searchKey=2; nuint found=BinarySearch<int>(values.AsImmutable(),&searchKey,Comparer<int>::Compare);
@@ -100,6 +102,7 @@ public class WholeStandardLibraryEditorTests
                 float signed=Math::CopySign(root,-0.0f);
                 Date calendar=new(2024,2,29); Date tomorrow=calendar.AddDays(1);
                 Date anniversary=calendar.AddYears(1); Date nextMonth=calendar.AddMonths(1);
+                DayOfWeek weekday=calendar.DayOfWeek; int ordinalDay=calendar.DayOfYear;
                 int calendarDay=tomorrow.DayNumber; int monthDays=Date::DaysInMonth(2024,2);
                 String dated=s$"Next day: {tomorrow}";
                 Unique<int> owner=new(new* int(41));
@@ -168,7 +171,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

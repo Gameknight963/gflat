@@ -134,3 +134,7 @@ constructing or throwing an exception uses the ordinary exception runtime.
 For explicit source selection include `core/CsvReader.gf`,
 `core/CsvParseException.gf`, and `Span.gf` with its query-interface dependencies.
 The complete standard library includes these files automatically.
+
+See [CSV to JSON](../examples/csv-to-json/README.md) for a complete converter
+using a reusable decoded field buffer, and [CsvWriter](CSV_WRITER.md) for
+writing counted fields through an `ITextWriter`.

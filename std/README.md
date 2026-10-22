@@ -103,6 +103,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Sort lines](../examples/sort-lines/README.md): move owning strings into a vector, sort by unsigned byte order, and preserve counted output.
 - [Settings to JSON](../examples/settings-json/README.md): parse borrowed key/value slices, validate UTF-8, and retain accepted strings in an owning map.
 - [CSV column sums](../examples/csv-sum/README.md): validate quoted fields and sum one integer column without allocating field strings.
+- [CSV to JSON](../examples/csv-to-json/README.md): validate CSV and UTF-8 first, then write row arrays with one reusable field buffer.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

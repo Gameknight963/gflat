@@ -95,8 +95,19 @@ public class WholeStandardLibraryEditorTests
                 float root=Math::Sqrt(4.0f);
                 float signed=Math::CopySign(root,-0.0f);
                 Date calendar=new(2024,2,29); Date tomorrow=calendar.AddDays(1);
+                Date anniversary=calendar.AddYears(1); Date nextMonth=calendar.AddMonths(1);
                 int calendarDay=tomorrow.DayNumber; int monthDays=Date::DaysInMonth(2024,2);
                 String dated=s$"Next day: {tomorrow}";
+                Unique<int> owner=new(new* int(41));
+                readonly(Unique<int>)* ownerView=&owner; ownerView.Value++;
+                bool emptyOwner=owner.IsEmpty;
+                Vector<String> parts=new(); parts.Add(s"left"); parts.Add(s"right");
+                String joined=parts.AsImmutable().Join(",");
+                Date parsedDate=Date::Parse("2024-02-29");
+                Date::TryParse("2024-02-29",&parsedDate);
+                ushort[1] nativeText=[(ushort)65];
+                String utf8Text=UnicodeText::FromUtf16(nativeText,1);
+                Vector<ushort> utf16Text=UnicodeText::ToUtf16(utf8Text.Data,utf8Text.Length);
                 SortedMap<int,String> ordered=new(Comparer<int>::Compare);
                 ordered.Add(3,s"three"); int lookup=3; ordered.FindReadOnly(&lookup);
                 SortedMap<int,String>::Enumerator orderedItems=ordered.GetEnumerator();
@@ -151,6 +162,13 @@ public class WholeStandardLibraryEditorTests
             string signature=hover.GetProperty("contents").GetProperty("value").GetString()!;
             Assert.Contains(member,signature);
             Assert.DoesNotContain('$',signature);
+            Assert.NotNull(model.Definition(source.Path,offset));
+        }
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","Join","Parse","TryParse","FromUtf16","ToUtf16"})
+        {
+            int offset=sourceTokens.Last(token=>token.Text==member).Start;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.NotNull(model.Definition(source.Path,offset));
         }
         int localCall=sourceTokens.Last(token=>token.Text=="Contains").Start;

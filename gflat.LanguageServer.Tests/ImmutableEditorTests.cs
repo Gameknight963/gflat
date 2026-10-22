@@ -51,6 +51,25 @@ public sealed class ImmutableEditorTests
     }
 
     [Fact]
+    public void ExplicitShallowRefGetterHoverPreservesItsMutableReferenceResult()
+    {
+        var (model, source) = Model("""
+            struct Cell {
+                int* data;
+                public Cell(int* value){data=value;}
+                public ref int Value{readonly get=>*data;}
+            }
+            void Change(readonly(Cell)* cell){cell.Value=42;}
+            """);
+        int offset=source.Text.LastIndexOf("Value",StringComparison.Ordinal);
+        var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+        string signature=hover.GetProperty("contents").GetProperty("value").GetString()!;
+        Assert.Contains("ref int",signature);
+        Assert.DoesNotContain("ref readonly(int)",signature);
+        Assert.NotNull(model.Definition(source.Path,offset));
+    }
+
+    [Fact]
     public void CompletionOffersImmutableKeyword()
     {
         var (model, source) = Model("struct Buffer{}\n");

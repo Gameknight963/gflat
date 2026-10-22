@@ -50,6 +50,12 @@ public class WholeStandardLibraryEditorTests
                 String text=s"ad"; text.Insert(1,"bc");
                 Span<readonly(char)> textView=text.AsImmutable(); Span<char> writableText=text.AsSpan();
                 Span<readonly(char)> shallowTextView=text.AsReadOnly();
+                Span<readonly(char)> trimmedText=textView.Trim();
+                Span<char> trimmedWritable=writableText.TrimStart().TrimEnd();
+                immutable(TextParts) textParts=trimmedText.Split(',');
+                TextParts::Enumerator partIterator=textParts.GetEnumerator();
+                immutable(TextLines) textLines=new(trimmedText);
+                TextLines::Enumerator immutableLines=textLines.GetEnumerator();
                 HashMap<String,int> map=new(); map.Add(s"key",42);
                 String key=s"key"; map.Find(&key);
                 map.FindReadOnly(&key); map.FindImmutable(&key);
@@ -196,7 +202,7 @@ public class WholeStandardLibraryEditorTests
             Assert.DoesNotContain('$',signature);
             Assert.NotNull(model.Definition(source.Path,offset));
         }
-        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong"})
+        foreach(string member in new[]{"IsEmpty","AddMonths","AddYears","DayOfWeek","DayOfYear","Join","Parse","TryParse","FromUtf16","ToUtf16","Skip","IntersectWith","SymmetricExceptWith","Minify","ShiftLeft","ShiftRight","TryReadBytes","TryWriteBytes","Base64Url","TryGetEncodedLength","TryGetDecodedLength","Truncate","Round","Floor","Ceiling","ParseExtraLong","TryParseExtraLong","Trim"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);

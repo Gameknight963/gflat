@@ -224,6 +224,18 @@ public class FreestandingCoreUtilitiesTests
             if(!std::IntegerFormatting::TryFormatHex(nativeHex,&decimalText[1],20,ref length)) return 130;
             nuint parsedNative=0;
             if(!std::TryParseHexNUInt(&decimalText[1],length,&parsedNative)||parsedNative!=nativeHex) return 131;
+            char[6] booleanText=['T','r','U','e','\0','Z'];
+            booleanText[0]=(char)((runtimeInput>>63)+(ulong)'S');
+            bool parsedBoolean=false;
+            if(!std::TryParseBool(booleanText,4,&parsedBoolean)||!parsedBoolean) return 132;
+            if(!std::TryParseBool(booleanText,&parsedBoolean)||!parsedBoolean) return 133;
+            booleanText[0]=(char)((runtimeInput>>63)+(ulong)'e');
+            booleanText[1]='A';booleanText[2]='l';booleanText[3]='S';booleanText[4]='e';booleanText[5]='\0';
+            if(!std::TryParseBool(booleanText,5,&parsedBoolean)||parsedBoolean) return 134;
+            booleanText[4]=(char)(runtimeInput>>56);
+            if(std::TryParseBool(booleanText,5,&parsedBoolean)||parsedBoolean) return 135;
+            parsedBoolean=true;
+            if(std::TryParseBool((readonly(char)*)1,0,&parsedBoolean)||parsedBoolean) return 136;
             return 42;
         }
         """;
@@ -239,7 +251,7 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "BitOperations.gf", "Hashing.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
-            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "HexIntegerParsing.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "VarInt.gf" }
+            "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "HexIntegerParsing.gf", "BooleanParsing.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

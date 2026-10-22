@@ -3,7 +3,7 @@
 `Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`,
 `BinaryBufferWriter`, `IntegerFormatting`, the Try-only `HexIntegerParsing.gf`,
-`ByteSearch`, `CString`, `JsonString`, `VarInt`, and the raw
+`BooleanParsing.gf`, `ByteSearch`, `CString`, `JsonString`, `VarInt`, and the raw
 byte operations in `Memory/Bytes.gf` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
@@ -51,6 +51,9 @@ The same runtime-populated values round-trip through counted and C-string
 unsigned hexadecimal parsers, including a malformed final digit and narrowing
 overflow. This includes the complete Try-only source, without the optional
 throwing wrappers or exception definitions; executable import checks are unchanged.
+Boolean checks use runtime-populated input to distinguish valid mixed-case
+true/false words, an invalid non-ASCII suffix, and empty counted input, also
+through the complete Try-only source without exception definitions.
 Variable-length integer checks encode and decode runtime-populated 32-bit and
 64-bit values, including their maxima. They also check truncated input,
 overflow, noncanonical encodings, short output buffers, and unchanged output on

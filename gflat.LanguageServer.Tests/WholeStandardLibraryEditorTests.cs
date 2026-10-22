@@ -44,6 +44,7 @@ public class WholeStandardLibraryEditorTests
             using std;
             bool Contains(int value) => value == 42;
             bool RemoveZero(readonly(int)* value) => *value == 0;
+            Unique<int> FoldOwned(Unique<int> total,int value) { total.Value+=value; return move total; }
             int main() {
                 LinkedList<int> list=new();
                 LinkedList<int>::Node* node=list.AddLast(42);
@@ -233,6 +234,9 @@ public class WholeStandardLibraryEditorTests
                 uint roundedBits=BitOperations::RoundUpToPowerOfTwo(42u);
                 ulong roundedWideBits=BitOperations::RoundUpToPowerOfTwo(42ul);
                 bool absolute=Paths::IsFullyQualified("/tmp/file",PathStyle::Unix);
+                bool countedRooted=Paths::IsRooted(textView,PathStyle::Unix);
+                bool countedAbsolute=Paths::IsFullyQualified(textView,PathStyle::Unix);
+                String countedJoinedPath=Paths::Join(textView,trimmedText,PathStyle::Unix);
                 Span<readonly(char)> fileName=Paths::GetFileName(textView,PathStyle::Unix);
                 var directoryName=Paths::GetDirectoryName(textView,PathStyle::Unix);
                 var extension=Paths::GetExtension(textView,PathStyle::Unix);
@@ -243,6 +247,7 @@ public class WholeStandardLibraryEditorTests
                 var endQuery=ends.AsEnumerable().Where((int value) => value > 0);
                 int firstEnd=endQuery.ElementAt(0);
                 Queue<int> pending=new(); pending.Enqueue(42); pending.ShrinkToFit();
+                Unique<int> foldedOwner=pending.AsEnumerable().Aggregate(new Unique<int>(new* int(0)),FoldOwned);
                 var pendingQuery=pending.AsEnumerable().Take(1);
                 Stack<int> lifo=new(); lifo.Push(42);
                 var lifoQuery=lifo.AsEnumerable().Take(1);
@@ -280,6 +285,17 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        int aggregateCall=sourceTokens.Single(token=>token.Text=="Aggregate").Start;
+        var aggregateHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,aggregateCall),Protocol.JsonOptions);
+        Assert.Contains("Unique",aggregateHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,aggregateCall),Protocol.JsonOptions));
+        foreach(string marker in new[]{"Paths::IsRooted(textView","Paths::IsFullyQualified(textView","Paths::Join(textView"})
+        {
+            int call=text.IndexOf(marker,StringComparison.Ordinal)+"Paths::".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("Span",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("Paths.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         foreach(string member in new[]{"WriteField","WriteEndRecord"})
         {
             int call=sourceTokens.Single(token=>token.Text==member).Start;

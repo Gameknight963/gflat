@@ -80,6 +80,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 Operators are lazy until a terminal operation or `foreach` advances an iterator.
 For paired queries and their iteration/ownership rules, see [Zip](../../../docs/QUERY_ZIP.md).
 For positional access and projection behavior, see [ElementAt](../../../docs/QUERY_ELEMENT_AT.md).
+For overlapping borrowed views of contiguous data, see [span windows](../../../docs/SPAN_WINDOWS.md).
 Each enumeration starts a fresh iterator. Operator order matters:
 `Take(3).Where(test)` examines at most three input elements;
 `Where(test).Take(3)` looks for three matches.

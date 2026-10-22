@@ -91,6 +91,16 @@ public class WholeStandardLibraryEditorTests
                 char[8] jsonText; nuint jsonLength=0;
                 JsonString::TryUnquote("\"value\"",7,jsonText,8,ref jsonLength);
                 JsonReader document=new("{\"ok\":true}",11);
+                readonly(char)* csvText="\"a,b\",42\n";
+                CsvReader table=new(csvText,CString::Length(csvText));
+                char[16] csvValue; nuint csvWritten=0;
+                while(table.Read()) {
+                    Span<readonly(char)> rawField=table.RawField;
+                    nuint fieldOffset=table.FieldOffset; nuint fieldLength=table.ValueLength;
+                    bool quotedField=table.IsQuoted; bool recordEnd=table.EndOfRecord;
+                    table.TryCopyValue(csvValue,16,ref csvWritten);
+                }
+                table.Reset();
                 while(document.Read()) {
                     JsonTokenKind token=document.Kind;
                     nuint offset=document.TokenOffset; nuint size=document.TokenLength;
@@ -262,6 +272,13 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(string member in new[]{"RawField","FieldOffset","ValueLength","IsQuoted","EndOfRecord","TryCopyValue"})
+        {
+            int call=sourceTokens.Single(token=>token.Text==member).Start;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("CsvReader.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         foreach(string member in new[]{"GreatestCommonDivisor","TryLeastCommonMultiple"})
         {
             var calls=sourceTokens.Where(token=>token.Text==member).ToArray();

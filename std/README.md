@@ -53,6 +53,7 @@ implementation lives in `libc`.
 | JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens, borrowed raw lexemes, and decoded text comparison](../docs/JSON_READER.md) |
 | JSON text | `JsonText::Minify` | [Validate first and remove whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |
 | JSON output | `JsonWriter`, `JsonWriteException` | [Validated output through a borrowed text writer](../docs/JSON_WRITER.md) |
+| CSV input | `CsvReader`, `CsvParseException` | [Borrowed counted fields and caller-buffer decoding](../docs/CSV_READER.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |
@@ -100,6 +101,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Number statistics](../examples/number-stats/README.md): bounded stdin lines, borrowed ASCII trimming, strict integer parsing, and an exact 128-bit running sum.
 - [Sort lines](../examples/sort-lines/README.md): move owning strings into a vector, sort by unsigned byte order, and preserve counted output.
 - [Settings to JSON](../examples/settings-json/README.md): parse borrowed key/value slices, validate UTF-8, and retain accepted strings in an owning map.
+- [CSV column sums](../examples/csv-sum/README.md): validate quoted fields and sum one integer column without allocating field strings.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

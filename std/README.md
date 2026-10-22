@@ -39,6 +39,7 @@ implementation lives in `libc`.
 | Binary text | `Base64`, `Hex`, optional String conveniences | [Caller-buffer codecs](../docs/BINARY_CODECS.md) |
 | JSON strings | `JsonString`, writer `WriteJsonString` | [Strict UTF-8 quoting and unquoting in caller buffers, plus writer output](../docs/JSON_STRING.md) |
 | JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens over borrowed UTF-8 input](../docs/JSON_READER.md) |
+| JSON output | `JsonWriter`, `JsonWriteException` | [Validated output through a borrowed text writer](../docs/JSON_WRITER.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
 | Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |

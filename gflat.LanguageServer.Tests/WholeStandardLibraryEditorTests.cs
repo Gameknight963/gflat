@@ -64,6 +64,8 @@ public class WholeStandardLibraryEditorTests
                 Span<char> trimmedWritable=writableText.TrimStart().TrimEnd();
                 Span<readonly(char)> textKey=new(); Span<readonly(char)> textValue=new();
                 bool hasSeparator=trimmedText.TrySplitOnce('=',ref textKey,ref textValue);
+                SpanChunks<readonly(char)> textChunks=trimmedText.Chunks(2);
+                SpanChunks<readonly(char)>::Enumerator chunkIterator=textChunks.GetEnumerator();
                 immutable(TextParts) textParts=trimmedText.Split(',');
                 TextParts::Enumerator partIterator=textParts.GetEnumerator();
                 immutable(TextLines) textLines=new(trimmedText);
@@ -234,6 +236,7 @@ public class WholeStandardLibraryEditorTests
                 uint parsed=0u; TryParseHexUInt("0x2a",&parsed);
                 bool enabled=false; TryParseBool("True",&enabled);
                 char[8] terminated; CString::TryCopy("ok",terminated,8);
+                CString::TryAppend("!",terminated,8);
                 Arena scratch=new(); scratch.AllocateZeroed(16,8);
                 File temporary=File::OpenTemporary();
                 FileBinary::WriteDoubleBigEndian(&temporary,1.25);
@@ -271,6 +274,14 @@ public class WholeStandardLibraryEditorTests
                 Assert.Contains("Math.gf",JsonSerializer.Serialize(model.Definition(source.Path,call.Start),Protocol.JsonOptions));
             }
         }
+        int appendCall=sourceTokens.Last(token=>token.Text=="TryAppend").Start;
+        var appendHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,appendCall),Protocol.JsonOptions);
+        Assert.Contains("TryAppend",appendHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("CString.gf",JsonSerializer.Serialize(model.Definition(source.Path,appendCall),Protocol.JsonOptions));
+        int chunksCall=sourceTokens.Last(token=>token.Text=="Chunks").Start;
+        var chunksHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,chunksCall),Protocol.JsonOptions);
+        Assert.Contains("SpanChunks",chunksHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("SpanChunks.gf",JsonSerializer.Serialize(model.Definition(source.Path,chunksCall),Protocol.JsonOptions));
         foreach(string member in new[]{"AddDays","DayNumber","DaysInMonth","AsSpan","AsReadOnly","AsImmutable","RemoveAll","ShrinkToFit","ZigZagEncode","ZigZagDecode","WriteStartObject","WritePropertyName","WriteNumber","WriteEndObject","Complete","Kind","TokenOffset","TokenLength","Depth","Fill","RemoveRange","CopySign","TryParseBool","TryCopy","Sqrt","Min","Max","Clamp","Abs","NextFloat","TryWrite","AllocateZeroed","ClearInputError","TryParseHexUInt","BinarySearch","HasAnySet","HasAllSet","TryUnquote","TryFormatHex","TryReadFloatLittleEndian","TryWriteFloatBigEndian","Extract","PadLeft","PadRight","TryWriteUInt32","PeekByte","Rotate","TrimStart","TrimEnd","WriteJsonString","UnionWith","ExceptWith","AddFirst","RemoveLast","TryGetLength","LastIndexOf","AddLast","Insert","Find","Append","Read","Reset","ReverseEndianness","IsFullyQualified","GetEnumerator","Out","GetVariable","TryWriteUInt32BigEndian","SetRange","FloatToUInt32Bits","Shuffle","FindReadOnly","FindImmutable","ValueReadOnly","ValueImmutable","TryDecode","TryGetUtf16Length","TryFormat","OpenTemporary","Value"})
         foreach(var token in sourceTokens.Where(token=>token.Text==member))
         {

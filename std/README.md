@@ -28,6 +28,7 @@ implementation lives in `libc`.
 | Collections | `Queue<T>`, `Stack<T>`, `PriorityQueue<T>`, `BitSet` | [Owning collections](core/Collections/OWNING_COLLECTIONS.md) |
 | Double-ended storage | `Deque<T>` | [Owning ring buffer](../docs/DEQUE.md) |
 | Borrowed windows | `Span<T>.Windows` | [Overlapping full-width views and lazy queries](../docs/SPAN_WINDOWS.md) |
+| Borrowed chunks | `Span<T>.Chunks` | [Nonoverlapping views, including a shorter final chunk](../docs/SPAN_CHUNKS.md) |
 | Stable node storage | `LinkedList<T>` | [Owning linked lists and node handles](../docs/LINKED_LIST.md) |
 | Single-object ownership | `Unique<T>` | [Move-only ownership of one manual allocation](../docs/UNIQUE.md) |
 | Hash collections | `HashMap<K,V>`, `HashSet<T>` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md) |

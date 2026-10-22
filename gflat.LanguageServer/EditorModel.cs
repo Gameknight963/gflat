@@ -111,6 +111,7 @@ public sealed partial class EditorModel
             if (symbol.NameSpan.Source?.Path is { } path)
                 declarationsBySpan.TryAdd((path, symbol.NameSpan.Start, symbol.NameSpan.Length), symbol);
         IndexSourceTypeNames();
+        IndexTypeArgumentSeparators();
         IndexBoundCallables();
         IndexBoundProperties();
         IndexBoundFields();
@@ -619,7 +620,7 @@ public sealed partial class EditorModel
         {
             if (ts[i].Kind is TokenKind.OpenParen or TokenKind.OpenBracket or TokenKind.OpenBrace) stack.Push((i, 0));
             else if (ts[i].Kind is TokenKind.CloseParen or TokenKind.CloseBracket or TokenKind.CloseBrace) { if (stack.Count > 0) stack.Pop(); }
-            else if (ts[i].Kind == TokenKind.Comma && stack.Count > 0) { var frame = stack.Pop(); stack.Push((frame.Index, frame.Commas + 1)); }
+            else if (ts[i].Kind == TokenKind.Comma && !typeArgumentSeparators.Contains(ts[i]) && stack.Count > 0) { var frame = stack.Pop(); stack.Push((frame.Index, frame.Commas + 1)); }
         }
         var call = stack.FirstOrDefault(f => ts[f.Index].Kind == TokenKind.OpenParen &&
             (constructorArgumentLists.ContainsKey(ts[f.Index]) || CallableNameBeforeParenthesis(ts, f.Index) >= 0), (Index: -1, Commas: 0));

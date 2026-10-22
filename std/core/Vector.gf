@@ -107,6 +107,24 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return result;
     }
 
+    // Destroy a window and shift its suffix once; no copies or allocations.
+    public void RemoveRange(nuint start, nuint length)
+    {
+        if (start > count || length > count - start)
+            throw new Exception("Vector removal range out of bounds");
+        if (length == 0) return;
+        nuint end = start + length;
+        nuint remaining = end;
+        while (remaining > start)
+        {
+            remaining--;
+            (data! + remaining).~T();
+        }
+        for (nuint source = end; source < count; source++)
+            move *(data! + source) at data! + source - length;
+        count -= length;
+    }
+
     // Constant-time removal when preserving element order is unnecessary.
     public T SwapRemoveAt(nuint index)
     {

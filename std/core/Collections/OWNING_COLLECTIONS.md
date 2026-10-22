@@ -5,6 +5,12 @@ inserts before an existing element (or appends at `Count`), and `RemoveAt(index)
 transfers the removed value to the caller while preserving the order of survivors.
 Ignoring that return value destroys it normally. `Truncate(length)` destroys the
 tail and keeps capacity; it rejects lengths greater than the current count.
+`RemoveRange(start, length)` destroys a window in reverse order, shifts its
+surviving suffix once, and keeps capacity. For example, a token buffer can discard
+an already processed middle window without repeatedly shifting the same suffix
+with `RemoveAt`. It neither allocates nor copies elements, including noncopyable
+owners. The entire range is checked before destruction; an empty range is a
+no-op even at `Count`, while a start beyond `Count` is invalid.
 Middle insertion and removal relocate elements instead of invoking copy
 constructors. The insertion argument follows ordinary value semantics and is
 prepared before the vector changes, so inserting a copy of an existing element

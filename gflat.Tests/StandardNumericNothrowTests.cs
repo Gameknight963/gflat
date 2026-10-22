@@ -8,7 +8,7 @@ public class StandardNumericNothrowTests
     [
         ("Byte", "byte"), ("SByte", "sbyte"), ("Short", "short"), ("UShort", "ushort"),
         ("Int", "int"), ("UInt", "uint"), ("Long", "long"), ("ULong", "ulong"),
-        ("NInt", "nint"), ("NUInt", "nuint")
+        ("NInt", "nint"), ("NUInt", "nuint"), ("ExtraLong", "extralong")
     ];
 
     [Theory]
@@ -48,11 +48,12 @@ public class StandardNumericNothrowTests
         Assert.DoesNotContain("invoke", main);
         Assert.DoesNotContain("__gflat_eh_", main);
         Assert.Contains("call zeroext i1 @gflat$std$TryParseInt", main);
+        Assert.Contains("call zeroext i1 @gflat$std$TryParseExtraLong", main);
         Assert.Matches(@"call i32 @[^\r\n ]*\$Math\$Min", main);
 
         string[] definitions = Regex.Matches(ir, @"(?m)^define [^\r\n]+").Select(match => match.Value).ToArray();
         string[] attempts = definitions.Where(line => line.Contains("$TryParse")).ToArray();
-        Assert.Equal(20, attempts.Length);
+        Assert.Equal(22, attempts.Length);
         Assert.All(attempts, line => Assert.Contains("nounwind", line));
         string[] helpers = definitions.Where(line => line.Contains("$integer_parsing_detail$")).ToArray();
         Assert.Equal(2, helpers.Length);

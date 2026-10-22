@@ -455,6 +455,23 @@ int main() {
         Ascii::ToLower(batchCase, 4); Ascii::ToUpper(batchCase, 4);
         if (batchCase[0] != 'A' || batchCase[1] != 'B' || batchCase[2] != '\0'
             || batchCase[3] != (char)255) return 106;
+        ulong batchPeriod = 0ul;
+        if (Math::GreatestCommonDivisor(48u, 18u) != 6u
+            || !Math::TryLeastCommonMultiple(6ul, 8ul, ref batchPeriod)
+            || batchPeriod != 24ul) return 107;
+        char[8] batchCString;
+        if (!CString::TryCopy("ok", batchCString, 8)
+            || !CString::TryAppend("!", batchCString, 8)
+            || !CString::Equals(batchCString, "ok!")) return 108;
+        int[5] batchChunkData = [1, 2, 3, 4, 5];
+        Span<int> batchChunkView = new(batchChunkData, 5);
+        nuint batchChunkCount = 0; nuint batchChunkLength = 0; int batchChunkSum = 0;
+        foreach (Span<int> chunk in batchChunkView.Chunks(2))
+        {
+            batchChunkCount++; batchChunkLength = chunk.Length;
+            foreach (int value in chunk) batchChunkSum += value;
+        }
+        if (batchChunkCount != 3 || batchChunkLength != 1 || batchChunkSum != 15) return 109;
     }
     return 0;
 }

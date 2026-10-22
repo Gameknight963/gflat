@@ -40,12 +40,17 @@ public sealed class ParameterOwnerDelimiterRecoveryTests
         var methods=snapshot.Nodes.Select(n=>n.Node).OfType<CompilationUnit>().Single().Members.OfType<MethodDeclaration>().ToArray();
         Assert.Contains(methods,m=>m.Name=="Healthy");
         Assert.Contains(methods,m=>m.Name=="Companion");
+        var companionCall=Assert.Single(snapshot.Nodes.Where(node=>node.Span.SourceId==other.Id)
+            .Select(node=>node.Node).OfType<CallExpression>());
+        Assert.NotNull(snapshot.Checker!.GetResolvedCall(companionCall));
+        Assert.Equal("int",TypeChecker.TypeName(snapshot.Checker.GetType(companionCall)));
         var model=new EditorModel(snapshot,[source,other]);
         var read=model.Definition(source.Path,text.IndexOf("Read()",StringComparison.Ordinal));
         Assert.NotNull(read);
         Assert.Equal(read,model.Definition(source.Path,text.LastIndexOf("Read()",StringComparison.Ordinal)));
-        Assert.Equal(model.Definition(source.Path,text.IndexOf("Healthy()",StringComparison.Ordinal)),
-            model.Definition(other.Path,companion.IndexOf("Healthy()",StringComparison.Ordinal)));
+        var healthyDefinition=model.Definition(source.Path,text.IndexOf("Healthy()",StringComparison.Ordinal));
+        Assert.NotNull(healthyDefinition);
+        Assert.Equal(healthyDefinition,model.Definition(other.Path,companion.IndexOf("Healthy()",StringComparison.Ordinal)));
         Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Message.Contains("Unknown function 'Healthy'",StringComparison.Ordinal));
         Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Check([source,other],options:new(){NoStdLib=true}));
     }

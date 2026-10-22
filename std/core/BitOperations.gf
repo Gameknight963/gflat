@@ -69,6 +69,19 @@ public static class BitOperations
     public static bool IsPowerOfTwo(uint value) nothrow
         => value != 0u && (value & (value - 1u)) == 0u;
 
+    // Zero and an unrepresentable rounded result both return zero.
+    public static uint RoundUpToPowerOfTwo(uint value) nothrow
+    {
+        if (value == 0u) return 0u;
+        value = value - 1u;
+        value = value | (value >> 1);
+        value = value | (value >> 2);
+        value = value | (value >> 4);
+        value = value | (value >> 8);
+        value = value | (value >> 16);
+        return value + 1u;
+    }
+
     public static int PopCount(ulong value) nothrow
     {
         int count = 0;
@@ -109,5 +122,18 @@ public static class BitOperations
 
     public static bool IsPowerOfTwo(ulong value) nothrow
         => value != 0ul && (value & (value - 1ul)) == 0ul;
+
+    public static ulong RoundUpToPowerOfTwo(ulong value) nothrow
+    {
+        if (value == 0ul) return 0ul;
+        value = value - 1ul;
+        value = value | (value >> 1);
+        value = value | (value >> 2);
+        value = value | (value >> 4);
+        value = value | (value >> 8);
+        value = value | (value >> 16);
+        value = value | (value >> 32);
+        return value + 1ul;
+    }
 
 }

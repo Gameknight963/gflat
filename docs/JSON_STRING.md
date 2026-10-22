@@ -10,6 +10,26 @@ escape policy described below, and throw `Exception` for invalid input.
 Each operation also accepts a `Span<readonly(char)>`, for example
 `JsonStringText::Unquote(reader.RawToken)`.
 
+```csharp
+using std;
+
+int main()
+{
+    String source = s"line1\nline2\0";
+    String quoted = JsonStringText::Quote(source.AsReadOnly());
+    String decoded = JsonStringText::Unquote(quoted.AsReadOnly());
+    if (!decoded.Equals(&source)) return 1;
+
+    source.Clear();
+    quoted.Clear();
+    if (decoded.Length != 12 || decoded[0] != 'l' || decoded[11] != '\0') return 2;
+    return 0;
+}
+```
+
+The decoded owner keeps its bytes after both input strings change. Its final
+counted NUL is data; the String's terminator is a separate byte after `Length`.
+
 The complete input is validated before allocating result storage. Successful
 nonempty results use one allocation; unquoting `""` allocates nothing, while
 quoting empty input allocates its two quote bytes. The result has its normal

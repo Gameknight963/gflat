@@ -1244,11 +1244,14 @@ namespace gflat
         }
 
         private NamespaceScope? ResolveNamespaceByName(string nsName)
+            => ResolveNamespaceByName(nsName, _currentNamespace);
+
+        private NamespaceScope? ResolveNamespaceByName(string nsName, NamespaceScope? start)
         {
             if (nsName.Contains("::"))
             {
                 string[] parts = nsName.Split(new[] { "::" }, StringSplitOptions.RemoveEmptyEntries);
-                NamespaceScope? current = ResolveNamespaceByName(parts[0]);
+                NamespaceScope? current = ResolveNamespaceByName(parts[0], start);
                 for (int i = 1; i < parts.Length && current != null; i++)
                 {
                     if (!current.Children.TryGetValue(parts[i], out current))
@@ -1259,7 +1262,7 @@ namespace gflat
                 return current;
             }
 
-            NamespaceScope? scope = _currentNamespace;
+            NamespaceScope? scope = start;
             while (scope != null)
             {
                 if (scope.Children.TryGetValue(nsName, out NamespaceScope? child))

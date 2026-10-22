@@ -205,8 +205,40 @@ public partial class TypeChecker
                 ArrayTypeExpression a => new ArrayTypeExpression(Qualify(a.ElementType, allowMethodParameters), a.Size, a.Line),
                 FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(Qualify(f.ReturnType, allowMethodParameters),
                     f.ParameterTypes.Select(p => Qualify(p, allowMethodParameters)).ToList(), f.IsManaged, f.IsNullable, f.Line, f.IsSignature),
-                NamedTypeExpression n => QualifyNamed(n, allowMethodParameters), _ => t };
+                NamedTypeExpression n => QualifyNamed(n, allowMethodParameters),
+                NestedTypeExpression n => QualifyNamespaceMember(n, allowMethodParameters), _ => t };
             return result.WithQualifiersFrom(t);
+        }
+        TypeExpression QualifyNamespaceMember(NestedTypeExpression nested, bool allowMethodParameters)
+        {
+            var parent = NamespaceParent(nested.Parent, allowMethodParameters);
+            if (parent == null) return nested;
+            if (parent.Aliases.TryGetValue(nested.Member, out var target)) return ExpandAlias(parent, nested.Member, target);
+            if (!parent.TypeNames.TryGetValue(nested.Member, out var identity)) return nested;
+            return MarkResolvedNominal(new NamedTypeExpression(identity, null, nested.Line,
+                nested.TypeArguments.Select(t => Qualify(t, allowMethodParameters)).ToList()));
+        }
+        NamespaceScope? NamespaceParent(TypeExpression parent, bool allowMethodParameters)
+        {
+            // Parsed namespace qualification shares syntax with nested classes.
+            // Only walk existing namespaces; never resolve or specialize a type.
+            if (parent.IsReadOnlyValue) return null;
+            if (parent is NestedTypeExpression { TypeArguments.Count: 0 } nested)
+            {
+                var owner = NamespaceParent(nested.Parent, allowMethodParameters);
+                if (owner == null || owner.TypeNames.ContainsKey(nested.Member) || owner.Aliases.ContainsKey(nested.Member)) return null;
+                return owner.Children.GetValueOrDefault(nested.Member);
+            }
+            if (parent is not NamedTypeExpression { TypeArguments.Count: 0, Namespace: null, IsResolvedNominal: false } named ||
+                allowMethodParameters && names.Contains(named.Name)) return null;
+            for (var current = scope; current != null; current = current.Parent)
+                if (current.TypeNames.ContainsKey(named.Name) || current.Aliases.ContainsKey(named.Name)) return null;
+            var id = named.Span.SourceId ?? named.NameSpan.SourceId ?? method.Span.SourceId;
+            if (id is { } sourceId && _compilationUnit?.FileUsings.TryGetValue(sourceId, out var imports) == true)
+                foreach (string import in imports)
+                    if (ResolveNamespaceByName(import, scope) is { } imported &&
+                        (imported.TypeNames.ContainsKey(named.Name) || imported.Aliases.ContainsKey(named.Name))) return null;
+            return ResolveNamespaceByName(named.Name, scope);
         }
         TypeExpression QualifyNamed(NamedTypeExpression n, bool allowMethodParameters)
         {

@@ -4,6 +4,8 @@ A small binary-file reader that prints lines containing a literal byte substring
 It supports LF, CRLF, and a final line without a newline. A bare CR remains data.
 Strings grow for long
 lines; matching is case-sensitive and does not interpret regular expressions.
+Matching uses the standard String substring search. Removing a CRLF ending
+reuses the line's buffer instead of constructing another owning string.
 
 ```text
 gflat build examples/search/search.gfproj --run -- std/libc/File.gf IOException

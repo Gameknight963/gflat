@@ -22,11 +22,11 @@ int main(int argc, char** argv)
             decodingLine = true;
             nuint decoded = 0;
             if (line.Length < 2) throw new Exception("Expected one complete JSON string");
-            // Nonempty String owns writable storage. Data exposes a readonly
-            // borrow; this local cast never outlives the buffer or grows it.
-            char* data = (char*)line.Data;
-            if (!JsonString::TryUnquote(data, line.Length, data, line.Length, ref decoded))
-                throw new Exception("Expected one complete JSON string with valid UTF-8 and escapes");
+            {
+                Span<char> bytes = line.AsSpan();
+                if (!JsonString::TryUnquote(bytes.Data!, bytes.Length, bytes.Data!, bytes.Length, ref decoded))
+                    throw new Exception("Expected one complete JSON string with valid UTF-8 and escapes");
+            }
             line.Remove(decoded, line.Length - decoded);
             decodingLine = false;
             Console::Write(line.Data, line.Length);

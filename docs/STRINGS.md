@@ -20,6 +20,22 @@ Search, indexing, slicing, and removal use byte offsets. They do not split on
 Unicode character boundaries automatically. UTF-8 validation and scalar decoding
 are available separately through `std::Utf8`.
 
+The optional `StringSpan.gf` source adds `text.AsSpan()` and `text.AsReadOnly()`.
+Both borrow exactly `Length` bytes, including embedded zeros, without copying the
+owner or allocating. `AsSpan` requires a mutable `ref String` receiver and returns
+`Span<char>`; `AsReadOnly` accepts `ref readonly(String)` and returns
+`Span<readonly(char)>`. Temporary owners are rejected. Empty views have null data,
+even when the String retains an allocation; neither spare capacity nor the shared
+empty sentinel or trailing terminator is exposed through these views.
+
+Keep the owner alive and at a stable address. Growth, moving/destroying the owner,
+and structural changes invalidate views. Assigning individual bytes through a
+mutable span changes the String without changing its length; it does not validate
+UTF-8. Slice bounds remain byte bounds. End a view's use before calling `Remove`,
+`Append`, or another structural operation. These are raw borrows, without lifetime
+tracking. Explicit source selections also need the ordinary `Span` dependencies;
+`String.gf` alone does not acquire a dependency on Span.
+
 `IndexOf` and `LastIndexOf` return `String::NotFound` (the largest `nuint`) when
 no match exists. An empty needle matches at the search start for `IndexOf`,
 and at `Length` for `LastIndexOf`.

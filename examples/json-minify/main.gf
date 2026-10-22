@@ -4,12 +4,12 @@ void Decode(ref String scratch, readonly(char)* raw, nuint count)
 {
     scratch.Clear();
     scratch.Append(raw, count);
-    // Quoted tokens are nonempty: scratch owns writable storage. Neither decoding
-    // nor shrinking grows it, and the cast stays within this exclusive borrow.
-    char* data = (char*)scratch.Data;
     nuint decoded = 0;
-    if (!JsonString::TryUnquote(data, count, data, count, ref decoded))
-        throw new Exception("Validated JSON string could not be decoded");
+    {
+        Span<char> bytes = scratch.AsSpan();
+        if (!JsonString::TryUnquote(bytes.Data!, bytes.Length, bytes.Data!, bytes.Length, ref decoded))
+            throw new Exception("Validated JSON string could not be decoded");
+    }
     scratch.Remove(decoded, count - decoded);
 }
 

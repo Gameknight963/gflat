@@ -4256,7 +4256,9 @@ public partial class LlvmEmitter : IVisitor
         _deferScopes[^1].Add(new AstNodeDeferAction(node.Statement, _locals));
     }
 
-    public void Visit(DeleteStatement node)
+    public void Visit(DeleteStatement node) => EmitExpressionWithCleanup(() => EmitDelete(node));
+
+    private void EmitDelete(DeleteStatement node)
     {
         node.Target.Accept(this);
         string ptrVal = Pop();

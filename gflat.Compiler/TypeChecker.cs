@@ -4630,7 +4630,7 @@ namespace gflat
                 if (_currentClass != null && _currentClass.Methods.TryGetValue(funcName, out (MethodDeclaration Method, string DeclaringClass) mEntry))
                 {
                     method = SelectOverload(mEntry.Method, node);
-                    if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
+                    if (!method.IsStatic && TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
                     {
                         TypeExpression resThisType = ResolveAlias(thisType);
                         if (((resThisType is PointerTypeExpression p && p.IsReadOnly) || (resThisType is ManagedTypeExpression m && m.IsReadOnly)) && !method.IsReadOnly)
@@ -4647,7 +4647,7 @@ namespace gflat
                 else if (_currentStruct != null && _currentStruct.Methods.TryGetValue(funcName, out method))
                 {
                     method = SelectOverload(method, node);
-                    if (TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
+                    if (!method.IsStatic && TryLookupVariable("this", out TypeExpression? thisType) && thisType != null)
                     {
                         TypeExpression resThisType = ResolveAlias(thisType);
                         if (((resThisType is PointerTypeExpression p && p.IsReadOnly) || (resThisType is ManagedTypeExpression m && m.IsReadOnly)) && !method.IsReadOnly)

@@ -72,7 +72,7 @@ public partial class TypeChecker
         if (_scopes.Any(s => s.ContainsKey(name))) return null;
         var field = _currentClass?.FieldDeclarationsByName.GetValueOrDefault(name) ??
             _currentStruct?.FieldDeclarationsByName.GetValueOrDefault(name);
-        if (field != null) return field.IsStatic ? field : null;
+        if (field != null) return field.IsStatic || field.IsConst ? field : null;
         return ResolveGlobalField(name);
     }
 

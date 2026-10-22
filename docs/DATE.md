@@ -19,6 +19,11 @@ and `DayNumber` properties expose them. `Date::FromDayNumber(number)` accepts
 `0..3652058`. `Date::IsLeapYear(year)` and `Date::DaysInMonth(year, month)` validate
 the same year/month ranges. Invalid arguments throw `Exception`.
 
+`DayOfWeek` returns `std::DayOfWeek`: `Sunday = 0`, `Monday = 1`, through
+`Saturday = 6`. `DayOfYear` is one-based, from `1` on January 1 through `365`
+(or `366` in a leap year). Both properties are `immutable`, `nothrow`, and
+allocate nothing. These are calendar facts; neither consults a clock or timezone.
+
 `AddDays(int days)` returns a new date; it never mutates the original. It uses a
 64-bit intermediate and throws if the result leaves the supported range, including
 for extreme 32-bit offsets. It does not wrap, clamp, or normalize invalid dates.
@@ -87,8 +92,8 @@ if (Date::TryParse("2024-12-31", &parsed)) {
 }
 ```
 
-The source is `core/Date.gf`, with the normal equality/comparison/hash and text
-interface dependencies. The complete standard library includes them. No
+The sources are `core/Date.gf` and `core/DayOfWeek.gf`, with the normal
+equality/comparison/hash and text interface dependencies. The complete standard library includes them. No
 current-date lookup, custom formats, other calendars, or timezone conversion is
 provided by this API.
 

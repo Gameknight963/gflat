@@ -86,6 +86,20 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         immutable get nothrow { int year = 0; int month = 0; int day = 0; this.GetParts(ref year, ref month, ref day); return day; }
     }
 
+    public DayOfWeek DayOfWeek
+    {
+        immutable get nothrow => (DayOfWeek)((dayNumber + 1) % 7);
+    }
+    public int DayOfYear
+    {
+        immutable get nothrow
+        {
+            int year = 0; int month = 0; int day = 0;
+            this.GetParts(ref year, ref month, ref day);
+            return dayNumber - NumberFromParts(year, 1, 1) + 1;
+        }
+    }
+
     public immutable Date AddDays(int days)
     {
         long result = (long)dayNumber + (long)days;

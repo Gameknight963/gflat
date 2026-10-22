@@ -69,6 +69,15 @@ struct Arena
         return (void*)(data + padding);
     }
 
+    public void* AllocateZeroed(nuint bytes, nuint alignment = (nuint)alignof(nuint))
+    {
+        if (bytes == 0) bytes = 1;
+        void* result = this.Allocate(bytes, alignment);
+        byte* output = (byte*)result;
+        for (nuint i = 0; i < bytes; i++) output[i] = (byte)0;
+        return result;
+    }
+
     public void Reset()
     {
         while (head != null)

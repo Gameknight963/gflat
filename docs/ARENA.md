@@ -24,6 +24,10 @@ int main()
   including 256-byte alignment, are supported by padding within a backing block.
 - Zero-byte requests reserve one byte, so successful requests have distinct
   addresses before reset.
+- `AllocateZeroed(bytes, alignment)` has the same allocation and alignment rules
+  and clears the reserved bytes. It makes no additional backing allocation.
+  A zero-byte request still reserves one byte, which may also be cleared; callers
+  cannot infer any additional usable space beyond the requested reservation.
 - Invalid alignment and overflowing size calculations throw `Exception`.
   Backing allocation failure throws `BadAllocException`. Existing blocks and
   their free space remain usable after failure.
@@ -32,6 +36,16 @@ int main()
   ownership of its blocks.
 
 ## Object lifetimes
+
+For example, a scratch packet header can start with all reserved flag bytes clear:
+
+```csharp
+byte* header = (byte*)scratch.AllocateZeroed(24, 1);
+header[0] = (byte)1; // Protocol version; the remaining header bytes start at zero.
+```
+
+Zeroing raw bytes does not call a constructor or create an initialized object of
+an arbitrary type. Use placement construction for those objects.
 
 An arena owns **storage**, not the objects placed there. `Reset` and destruction
 do not run object destructors. Construct objects explicitly with placement

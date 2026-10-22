@@ -2,7 +2,7 @@
 
 `std/core/Utf16Scalars.gf` provides `std::Utf16Scalars`, a repeatable borrowed view
 of counted host `ushort` code units. Include `Utf16.gf`, `Collections/IEnumerable.gf`,
-and `Collections/IEnumerator.gf` alongside the view source.
+`Collections/IEnumerator.gf`, and `Collections/Enumerable.gf` alongside the view source.
 
 ```csharp
 ushort[4] units = [(ushort)65, (ushort)0, (ushort)0xd83d, (ushort)0xde00];
@@ -12,7 +12,7 @@ foreach (uint scalar in scalars) {
 }
 ```
 
-`CodeUnitLength` reports physical input length, not scalar count. Input is already
+`CodeUnitLength` is a `nothrow` getter reporting physical input length, not scalar count. Input is already
 host code-unit values, not an endian-specific byte buffer. There is no BOM
 processing, terminator handling, normalization, or grapheme-cluster grouping.
 Embedded U+0000, U+FEFF, and valid noncharacters are ordinary scalars.
@@ -30,6 +30,15 @@ the beginning. Copying an iterator copies its position and cached current scalar
 copies subsequently progress independently. Changes to unread borrowed input are
 visible on later reads. A successful `Current` is cached until the next
 `MoveNext()` and does not change when the underlying units change.
+
+`AsEnumerable()` exposes the concrete lazy-query wrapper for `Where`, `Select`,
+`Take`, and aggregates when their collection source files are included. Both it
+and `GetEnumerator()` accept mutable, shallow readonly, or immutable views.
+The adapter copies only borrowed pointer/count metadata; keep the same backing
+units live for every later enumeration. Repeating a query starts again from
+the beginning and observes subsequent changes to backing units. An early
+`Take` can stop before malformed input, preserving the iterator's existing lazy
+validation rules. See [lazy queries](../std/core/Collections/README.md).
 
 Like `Utf8Scalars`, this iterator validates lazily and throws on malformed input
 when `MoveNext()` reaches it. It does not replace isolated/truncated/incorrect

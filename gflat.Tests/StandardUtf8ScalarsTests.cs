@@ -151,7 +151,7 @@ public class StandardUtf8ScalarsTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = new[] { "Utf8.gf", "Utf8Scalars.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf" }
+        var sources = new[] { "Utf8.gf", "Utf8Scalars.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", AllocationCounters + program));
         string ir = Compiler.Emit(sources);

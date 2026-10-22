@@ -13,9 +13,12 @@ public struct Utf8Scalars : IEnumerable<uint, Utf8Scalars::Enumerator>
         data = text; length = count;
     }
 
-    public nuint ByteLength { immutable get => length; }
+    public nuint ByteLength { immutable get nothrow => length; }
     public immutable Utf8Scalars::Enumerator GetEnumerator()
         => new Utf8Scalars::Enumerator(data, length);
+
+    public immutable Enumerable<uint, Utf8Scalars, Utf8Scalars::Enumerator> AsEnumerable()
+        => new Enumerable<uint, Utf8Scalars, Utf8Scalars::Enumerator>(*this);
 
     public struct Enumerator : IEnumerator<uint>
     {

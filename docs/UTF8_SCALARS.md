@@ -13,6 +13,7 @@ foreach (uint scalar in text) {
 The pointer/count constructor accepts `readonly(char)*?` and `nuint`. Null is
 accepted only when count is zero. The parameterless constructor creates an
 empty view. `ByteLength` reports the captured byte count; it does not scan input.
+The length getter is `nothrow`.
 The view does not require String and does not own or retain an allocation.
 
 Keep the caller's bytes alive while using the view or any of its enumerators.
@@ -20,6 +21,15 @@ Copying the view or an enumerator copies its small state and borrows the same
 storage. Each `GetEnumerator()` starts independently at the first byte. Changes
 to bytes not yet read are visible when they are decoded. `Current` caches the
 last successful scalar, so editing those original bytes does not change it.
+
+`AsEnumerable()` exposes the concrete lazy-query wrapper. Both it and
+`GetEnumerator()` accept mutable, shallow readonly, or immutable views. The
+adapter copies only borrowed pointer/count metadata and retains the same input
+lifetime requirements. Queries can be enumerated repeatedly and see subsequent
+changes to unread backing bytes. For example,
+`text.AsEnumerable().Where(IsNonAscii).Take(10)` decodes only as far as needed
+to find ten matching scalar values. Early completion does not validate a
+malformed suffix. See [lazy queries](../std/core/Collections/README.md).
 
 ## Validation and errors
 
@@ -32,8 +42,9 @@ calling `MoveNext()` again on unchanged input throws again.
 
 `Current` throws before the first successful `MoveNext()`, after exhaustion,
 and after a decoding error. Valid enumeration allocates nothing; failures use
-the normal exception runtime. `Utf8.gf` and the generic enumeration interface
-definitions are dependencies of `Utf8Scalars.gf`.
+the normal exception runtime. `Utf8.gf`, the generic enumeration interface
+definitions, and `Collections/Enumerable.gf` are dependencies of `Utf8Scalars.gf`.
+Query operators additionally require their ordinary collection source files.
 
 Scalar values are not grapheme clusters or necessarily user-perceived
 characters. No normalization, replacement, or segmentation is performed.

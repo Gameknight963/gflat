@@ -2902,7 +2902,6 @@ namespace gflat
                 node.Initializer.Accept(this);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
                 fieldType = InferArrayStorageType(fieldType, node.Initializer, initType);
-                if (fieldType is ArrayTypeExpression) node.Type = fieldType;
                 if (!IsAssignable(fieldType, initType, node.Initializer))
                 {
                     throw new TypeCheckException($"Cannot assign expression of type '{DisplayTypeName(initType)}' to field '{node.Name}' of type '{DisplayTypeName(fieldType)}'", node.Initializer.Span);
@@ -2931,6 +2930,9 @@ namespace gflat
                 _constVariableNames.Add(node.Name);
             }
 
+            // Startup/cleanup selection revisits fields outside their source's
+            // import context. Keep the bound identity, including inferred arrays.
+            node.Type = fieldType;
             RecordType(node, fieldType);
             RecordStaticInitializer(node);
         }

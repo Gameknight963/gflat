@@ -355,6 +355,18 @@ int main() {
         extralong batchRoundtrip = (extralong)0;
         if (!BinaryPrimitives::TryReadExtraLongBigEndian(batchWideBytes, 16, ref batchRoundtrip)
             || batchRoundtrip != batchParsed) return 77;
+        String batchSpaced = s"  left , right  ";
+        immutable(TextParts) batchParts = batchSpaced.AsImmutable().Trim().Split(',');
+        nuint batchPartLength = 0; int batchPartCount = 0;
+        foreach (Span<readonly(char)> part in batchParts) {
+            batchPartLength += part.Trim().Length; batchPartCount++;
+        }
+        if (batchPartCount != 2 || batchPartLength != 9) return 78;
+        immutable(IntRange) batchRange = new(0, 10);
+        var batchQuery = batchRange.Where((int value) => value % 2 == 0).AsEnumerable().Take(2);
+        if (batchQuery.Aggregate(0, (int total, int value) => total + value) != 2) return 79;
+        if (!CString::IsNullOrEmpty(null) || CString::IsNullOrEmpty(batchSpaced.Data)) return 80;
+        if (std::Hashing::Integer(4294967297ul) == std::Hashing::Integer(0ul)) return 81;
     }
     return 0;
 }

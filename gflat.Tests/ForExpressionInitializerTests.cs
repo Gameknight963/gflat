@@ -69,4 +69,34 @@ public sealed class ForExpressionInitializerTests
             """));
         Assert.Contains("local", error.Description);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void DiscardedOwningIncrementIsDestroyedBeforeNextCondition(int optimization)
+    {
+        var result = CompilerTestHelper.Run("""
+            int destroyed = 0; int constructed = 0;
+            struct Owner {
+                public Owner() { constructed++; }
+                ~Owner() { destroyed++; }
+            }
+            Owner Advance(ref int index) { index++; return new Owner(); }
+            bool More(int index) {
+                if (destroyed != constructed) throw new Exception("increment cleanup delayed");
+                return index < 5;
+            }
+            int main() {
+                int index = 0;
+                for (; More(index); Advance(ref index)) {
+                    if (index == 2) continue;
+                }
+                if (index != 5 || constructed != 5 || destroyed != 5) return 1;
+                for (; true; Advance(ref index)) break;
+                if (constructed != 5 || destroyed != 5) return 2;
+                return 0;
+            }
+            """, optimization);
+        Assert.Equal(0, result.ExitCode);
+    }
 }

@@ -2423,7 +2423,7 @@ public partial class LlvmEmitter : IVisitor
 
         Emit($"{incLabel}:");
         if (node.Increment != null)
-            EmitExpressionWithCleanup(() => node.Increment.Accept(this));
+            EmitExpressionWithCleanup(() => EmitDiscardedExpression(node.Increment));
         Emit($"    br label %{condLabel}");
         Emit($"{exitLabel}:");
         EmitDefersDownTo(_deferScopes.Count - 1);
@@ -2574,16 +2574,16 @@ public partial class LlvmEmitter : IVisitor
             _deferScopes[scope].Add(RegisterOwner(resolvedVarType, ptr, node.Initializer != null));
     }
 
-    public void Visit(ExpressionStatement node) => EmitExpressionWithCleanup(() => EmitStatementExpression(node));
+    public void Visit(ExpressionStatement node) => EmitExpressionWithCleanup(() => EmitDiscardedExpression(node.Expression));
 
-    private void EmitStatementExpression(ExpressionStatement node)
+    private void EmitDiscardedExpression(AstNode expression)
     {
-        node.Expression.Accept(this);
+        expression.Accept(this);
         if (_valueStack.Count > 0)
         {
             string result = Pop();
-            TypeExpression type = _typeChecker.GetType(node.Expression);
-            if (_typeChecker.IsFreshValue(node.Expression) && _typeChecker.HasDestructor(type))
+            TypeExpression type = _typeChecker.GetType(expression);
+            if (_typeChecker.IsFreshValue(expression) && _typeChecker.HasDestructor(type))
             {
                 string slot = NewTemp();
                 string llvmType = EmitType(type);

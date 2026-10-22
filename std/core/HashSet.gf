@@ -20,6 +20,11 @@ struct HashSet<T : IHashable>
         Enumerator iterator = other.GetEnumerator();
         while (iterator.MoveNext()) this.Remove(iterator.Current);
     }
+
+    public void IntersectWith(immutable(HashSet<T>)* other)
+    {
+        storage.IntersectKeysWith(&other.storage);
+    }
     public immutable Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());
 
     public immutable bool SetEquals(immutable(HashSet<T>)* other)

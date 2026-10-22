@@ -85,6 +85,14 @@ are supported. Passing the same set clears it. It allocates no collection storag
 removed owners are destroyed normally. The implementation iterates the distinct
 source, rather than holding an iterator into its changing target.
 
+`IntersectWith(immutable(HashSet<T>)* other)` removes keys absent from the other
+set, retaining this set's existing owners for shared keys. It also supports
+noncopyable keys and allocates no collection storage. Self-intersection does
+nothing; intersection with an empty set clears the target. Its internal map
+helper scans private buckets directly and leaves tombstones for removed entries;
+it does not keep a public enumerator alive during structural mutation. Public
+enumerator invalidation rules remain unchanged.
+
 With `Collections/HashSetExtensions.gf` included and `using std;`,
 `target.UnionWith(&source)` copies missing keys into the target. Existing keys are
 checked before copying, and self-union does nothing. Added owning keys use their
@@ -92,8 +100,15 @@ normal copy constructors; the source stays unchanged. This is a separate
 ref-receiver extension so merely using `HashSet<T>` or `ExceptWith` does not
 require noncopyable keys to gain a copy constructor.
 
-Both operations can make partial progress if a later callback, copy, or allocation
-fails. Completed removals or additions remain; all surviving keys stay owned, and
+The same optional source adds `target.SymmetricExceptWith(&source)`: shared keys
+are removed, and keys found only in the source are copied into the target. Existing
+target-only owners are retained. Self-symmetric-difference clears the set. As with
+union, instantiating this copying extension requires a copyable element type;
+core intersection and difference remain available for noncopyable owners.
+
+These mutations can make partial progress if a later callback, copy, or allocation
+fails. A failing probe does not remove its current key; earlier completed removals
+or additions remain. All surviving keys stay owned, and
 a distinct source remains intact. Hash/equality/copy callbacks must not mutate either set
 through other aliases. Structural mutation invalidates target iterators and key
 borrows under the rules above. A borrowed source must stay alive for the call.

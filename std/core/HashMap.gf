@@ -173,6 +173,22 @@ struct HashMap<K : IHashable, V>
         return result;
     }
 
+    // Internal bucket mutation: never uses an enumerator over the changing map.
+    internal void IntersectKeysWith(immutable(HashMap<K, V>)* other)
+    {
+        if (count == 0 || (nuint)this == (nuint)other) return;
+        if (other.Count == 0) { this.Clear(); return; }
+        for (nuint slot = 0; slot < capacity; slot++)
+        {
+            if (states![slot] == 1 && !other.ContainsKey(&entries![slot].key))
+            {
+                (entries! + slot).~Entry();
+                states![slot] = 2;
+                count--;
+            }
+        }
+    }
+
     public void Clear()
     {
         for (nuint i = 0; i < capacity; i++)

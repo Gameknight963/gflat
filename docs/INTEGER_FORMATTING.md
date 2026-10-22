@@ -2,7 +2,8 @@
 
 `std/core/IntegerFormatting.gf` supplies `std::IntegerFormatting::TryFormat`
 overloads for `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`,
-`nint`, and `nuint`. The functions are `nothrow` and require no String, libc,
+`nint`, `nuint`, and signed 128-bit `extralong`. The functions are `nothrow` and
+require no String, libc,
 allocation, exception runtime, or writer interface.
 
 ```csharp
@@ -18,7 +19,8 @@ Signed minimum values are supported without signed negation overflow. Pointer
 integers use the target's pointer width.
 
 The result is counted bytes with **no null terminator**. A 20-byte buffer is
-sufficient for any supported integer. Callers needing a C string must reserve
+sufficient for the ten types through 64 bits; `extralong` needs 40 bytes.
+Callers needing a C string must reserve
 another byte and append the terminator themselves after success.
 
 Each call first counts decimal digits, then writes directly backwards into the
@@ -35,7 +37,7 @@ caller-buffer and freestanding code that does not need writer dispatch.
 
 ## Hexadecimal
 
-`TryFormatHex` supports the ten decimal integer types plus the signed 128-bit
+`TryFormatHex` supports all eleven decimal integer types, including the signed 128-bit
 `extralong` type:
 
 ```csharp
@@ -70,7 +72,13 @@ overflow. The decimal buffer lifetime and count-output separation rules above
 apply equally here. All hexadecimal overloads are `nothrow`, allocate nothing,
 and add no source or runtime dependencies.
 
-Decimal `TryFormat(extralong)` and writer-based `Format(extralong, writer)` are
-not supplied yet; calls are rejected rather than narrowing to 64 bits. Hexadecimal
-formatting uses shifts and masks, so adding this overload does not introduce
-128-bit division helpers or a compiler-runtime dependency for standard builds.
+Decimal `TryFormat(extralong)` uses four 32-bit limbs and 64-bit long division
+by ten. Its signed minimum is supported using complement and carry; it does not
+use 128-bit division or introduce a compiler-runtime dependency. Counting and
+writing use scalar locals, with no temporary-buffer copy.
+
+The optional `std/core/ExtraLongFormatting.gf` supplies writer-based
+`Format(extralong, ITextWriter*)`. Include `IntegerFormatting.gf` and the normal
+`ITextWriter` contract when selecting sources explicitly. It writes the counted
+result once using a 40-byte local buffer; destination exceptions propagate
+unchanged. Full standard-library builds include both sources automatically.

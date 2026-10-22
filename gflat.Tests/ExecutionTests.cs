@@ -2013,7 +2013,7 @@ namespace gflat.Tests
                     public int x;
                     public int y;
 
-                    Point(int x, int y)
+                    public Point(int x, int y)
                     {
                         this.x = x;
                         this.y = y;
@@ -2040,7 +2040,7 @@ namespace gflat.Tests
                     public int x;
                     public int y;
 
-                    Point(int x, int y)
+                    public Point(int x, int y)
                     {
                         this.x = x;
                         this.y = y;
@@ -2070,7 +2070,7 @@ namespace gflat.Tests
                     public int b = 20;
                     public int c = 30;
 
-                    Widget(int customB)
+                    public Widget(int customB)
                     {
                         this.b = customB;
                     }
@@ -2100,19 +2100,19 @@ namespace gflat.Tests
                     public int x;
                     public int y;
 
-                    Point()
+                    public Point()
                     {
                         this.x = 1;
                         this.y = 2;
                     }
 
-                    Point(int val)
+                    public Point(int val)
                     {
                         this.x = val;
                         this.y = val;
                     }
 
-                    Point(int x, int y)
+                    public Point(int x, int y)
                     {
                         this.x = x;
                         this.y = y;

@@ -10,6 +10,65 @@ public struct IpAddress : IEquatable<IpAddress>, IComparable<IpAddress>, IHashab
     public IpAddress() nothrow { high = 0ul; low = 0ul; ipv4 = true; }
     public bool IsIpv4 { immutable get nothrow => ipv4; }
 
+    public nuint ByteCount
+    {
+        immutable get nothrow { if (ipv4) return 4; return 16; }
+    }
+
+    // Network byte order, independent of native struct layout and endianness.
+    // Read every byte before storing result, which may overlap the input.
+    public static bool TryFromBytes(readonly(byte)* input, nuint count, IpAddress* result) nothrow
+    {
+        IpAddress parsed = new();
+        if (count != 4 && count != 16) { *result = parsed; return false; }
+        if (count == 4)
+        {
+            for (nuint i = 0; i < 4; i++) parsed.low = (parsed.low << 8) | (ulong)input[i];
+        }
+        else
+        {
+            for (nuint i = 0; i < 8; i++)
+            {
+                parsed.high = (parsed.high << 8) | (ulong)input[i];
+                parsed.low = (parsed.low << 8) | (ulong)input[i + 8];
+            }
+            parsed.ipv4 = false;
+        }
+        *result = parsed;
+        return true;
+    }
+
+    public static IpAddress FromBytes(readonly(byte)* input, nuint count)
+    {
+        IpAddress result = new();
+        if (!TryFromBytes(input, count, &result)) throw new Exception("IP address requires 4 or 16 bytes");
+        return result;
+    }
+
+    // written must be separate from both output and receiver storage.
+    public immutable bool TryWriteBytes(byte* output, nuint capacity, ref nuint written) nothrow
+    {
+        written = 0;
+        nuint count = this.ByteCount;
+        if (capacity < count) return false;
+        byte[16] buffer;
+        if (ipv4)
+        {
+            for (int i = 0; i < 4; i++) buffer[i] = (byte)(low >> ((3 - i) * 8));
+        }
+        else
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                buffer[i] = (byte)(high >> ((7 - i) * 8));
+                buffer[i + 8] = (byte)(low >> ((7 - i) * 8));
+            }
+        }
+        for (nuint i = 0; i < count; i++) output[i] = buffer[i];
+        written = count;
+        return true;
+    }
+
     private static int HexDigit(char value) nothrow
     {
         if (value >= '0' && value <= '9') return value - '0';

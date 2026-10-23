@@ -48,6 +48,36 @@ value or throw `Exception("Invalid IP address")`. Successful parsing allocates
 nothing. Supply readable input and writable, properly aligned result storage;
 the API retains no pointers.
 
+## Network bytes
+
+Immutable `ByteCount` is `4` for IPv4 and `16` for IPv6.
+`IpAddress::TryFromBytes(input, count, &result)` accepts exactly that many
+network-order bytes: the most significant address byte comes first. Every bit
+pattern is valid for those two lengths. Four bytes always create IPv4; sixteen
+always create IPv6, including IPv4-mapped addresses. An IPv4 address and its
+mapped IPv6 form remain distinct values with different byte counts.
+
+Any other length returns false and resets the result to IPv4 `0.0.0.0` without
+reading input. The complete input is read into a local value before the result
+is committed, so readable input may overlap properly aligned, writable result
+storage. The result store, including a failure reset, can overwrite overlapping
+input. `FromBytes(input, count)` returns that value or throws
+`Exception("IP address requires 4 or 16 bytes")` for an invalid length.
+
+`TryWriteBytes(output, capacity, ref written)` writes exactly `ByteCount`
+network-order bytes without a terminator or family tag. Extra capacity remains
+untouched. Insufficient capacity returns false, sets `written` to zero, and
+leaves output unchanged; zero capacity does not access output. The writer
+stages every output byte before committing, so output may overlap receiver
+storage when backed by enough writable bytes. Keep `written` separate from
+both output and receiver storage. Byte buffers remain caller-owned.
+
+`ByteCount`, `TryFromBytes`, and `TryWriteBytes` are `nothrow` and allocate
+nothing. Successful `FromBytes` also allocates nothing. This byte representation
+is independent of native endianness, struct padding, and native socket layouts.
+A surrounding serialization format must preserve whether the address has four
+or sixteen bytes; a padded sixteen-byte IPv4 field would instead decode as IPv6.
+
 ## Formatting and value contracts
 
 `TryFormat(output, capacity, ref written)` writes canonical ASCII without a null

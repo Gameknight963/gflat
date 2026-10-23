@@ -61,13 +61,54 @@ TimeSpan itself has no String dependency; ordinary interpolation can use its
 formatting interface. Allocating an interpolated String follows String's usual
 allocation behavior.
 
+## Parsing
+
+`TimeSpan::TryParse(text, count, &result)` accepts a complete invariant ASCII
+interval in the form `[-][days.]hh:mm:ss[.fraction]`. Hours, minutes, and seconds
+each require exactly two decimal digits. Hours range from `00` through `23`;
+minutes and seconds from `00` through `59`. Optional days contain one or more
+decimal digits, including leading zeros. An optional fractional second contains
+one through seven digits, padded on the right to seven tick digits:
+`00:00:01.5` is one and a half seconds. Formatting still emits seven fractional
+digits whenever the fraction is nonzero.
+
+Both signed tick endpoints are supported, including
+`-10675199.02:48:05.4775808`. Magnitudes outside the signed range fail;
+`10675199.02:48:05.4775808` is therefore invalid. A leading minus applies to the
+complete interval; negative zero becomes zero. A plus sign, whitespace, embedded
+NUL, trailing data, omitted clock components, and unit words are rejected.
+
+Counted input is at most 26 bytes, including any day-prefix leading zeros.
+Zero length or a length above 26 fails without reading input.
+`TryParse(cString, &result)` scans at most 27 bytes to check the terminator.
+The Try methods are `nothrow`, allocate nothing, and reset the result to zero on
+failure. All needed input is consumed before committing the result, so readable
+input may overlap properly aligned writable result storage. A failure reset can
+also overwrite overlapping input bytes. Input pointers are borrowed, not retained.
+
+`TimeSpan::Parse(text, count)` and `TimeSpan::Parse(cString)` return the parsed
+value or throw `Exception("Invalid time interval")`. Successful parsing allocates
+nothing. The grammar is an explicit serialization format, without locale,
+floating point conversion, or clock dependencies.
+
+```csharp
+using std;
+int main()
+{
+    TimeSpan interval = TimeSpan::Parse("-01.02:03:04.5");
+    String canonical = s$"{interval}";
+    if (!canonical.Equals("-1.02:03:04.5000000")) return 1;
+    return 0;
+}
+```
+
 ## Equality and ordering
 
 `IEquatable<TimeSpan>`, `IComparable<TimeSpan>`, and `IHashable` use the exact
 signed tick count. Comparison returns -1, 0, or 1 without subtracting the counts,
 so ordering works across the full range. Equal values have equal hashes.
 Hashes serve collections and are not a stable serialized representation.
-Use `Ticks` when persistence matters. No arithmetic operators, parsing, clocks,
+Use `Ticks` when persistence matters. No arithmetic operators, clocks,
 or calendar arithmetic are provided.
 
 For selective source use, include `core/TimeSpan.gf`, `core/Text.gf`,

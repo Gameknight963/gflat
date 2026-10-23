@@ -6,7 +6,9 @@ jobs:
   compiler-x64:
     name: compiler (${{ matrix.os }}, O${{ matrix.optimization }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    # The compiler suite takes about 14 minutes on hosted runners; leave room
+    # for restore, editor tests, and the bundled-toolchain checks afterward.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:

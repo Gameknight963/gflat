@@ -65,6 +65,7 @@ public class WholeStandardLibraryEditorTests
                 BigInteger arbitraryFactor=BigInteger::Parse("1000000000000000000000000000000");
                 BigInteger::TryParse("+00042",ref arbitraryInteger);
                 BigInteger arbitraryProduct=arbitraryInteger.Multiply(&arbitraryFactor);
+                BigInteger arbitraryPower=arbitraryInteger.Pow(3u);
                 BigInteger arbitrarySum=arbitraryProduct.Add(&arbitraryInteger);
                 BigInteger arbitraryDifference=arbitrarySum.Subtract(&arbitraryInteger);
                 int arbitraryRemainder=0;
@@ -354,6 +355,11 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("ref",bigIntegerParserHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,bigIntegerParser),Protocol.JsonOptions));
         int divisionCall=text.IndexOf("arbitraryDifference.DivRem",StringComparison.Ordinal)+"arbitraryDifference.".Length;
+        int powerCall=text.IndexOf("arbitraryInteger.Pow",StringComparison.Ordinal)+"arbitraryInteger.".Length;
+        var powerHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,powerCall),Protocol.JsonOptions);
+        Assert.Contains("BigInteger",powerHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("Pow",powerHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,powerCall),Protocol.JsonOptions));
         var divisionHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,divisionCall),Protocol.JsonOptions);
         Assert.Contains("DivRem",divisionHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("ref int remainder",divisionHover.GetProperty("contents").GetProperty("value").GetString());

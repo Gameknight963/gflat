@@ -1,4 +1,5 @@
 using gflat.CompileExceptions;
+using System.Text.RegularExpressions;
 
 namespace gflat.Tests;
 
@@ -7,6 +8,64 @@ public sealed class StandardArenaTests
     private static IEnumerable<SourceFile> Sources(string program) => new[] { "Memory/Arena.gf" }
         .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
         .Append(new SourceFile("main.gf", program));
+
+    [Fact]
+    public void ResetHasNonthrowingDefinitionAndUsesPlainCallFromNothrowCaller()
+    {
+        string ir = Compiler.Emit(Sources("""
+            using std;
+            void ResetOnly(Arena* arena) nothrow { arena.Reset(); }
+            int main() => 0;
+            """));
+        string caller = Regex.Match(ir, @"(?ms)^define [^\r\n]*@gflat\$ResetOnly\([^\r\n]*\{\r?\n(?<body>.*?)^\}")
+            .Groups["body"].Value;
+        Assert.NotEmpty(caller);
+        Assert.DoesNotContain("invoke", caller);
+        Match call = Regex.Match(caller, @"call void @(?<name>[^\s(]*\$Arena\$Reset[^\s(]*)\(");
+        Assert.True(call.Success, caller);
+        string name = call.Groups["name"].Value;
+        string definition = Assert.Single(ir.Split('\n'), line => line.StartsWith("define ") && line.Contains("@" + name + "("));
+        Assert.Contains("nounwind", definition);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void NonthrowingResetReleasesBlocksWithoutAllocationOrPlacementDestruction(int optimization)
+    {
+        var result = CompilerTestHelper.Run(Sources("""
+            using std;
+            int allocated=0;int released=0;int denied=0;int destroyed=0;bool deny=false;
+            extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            namespace Memory{
+                replace void*? Allocate(nuint bytes){
+                    if(deny){denied++;return null;}
+                    void*? result=malloc(bytes);if(result!=null)allocated++;return result;
+                }
+                replace void Free(void* pointer)nothrow{released++;free(pointer);}
+            }
+            struct Resource{
+                public Resource(){}
+                ~Resource(){destroyed++;}
+            }
+            void ResetOnly(Arena* arena)nothrow{arena.Reset();}
+            int main(){
+                {
+                    Arena arena=new(16);
+                    Resource* placed=new* Resource() at (Resource*)arena.Allocate((nuint)sizeof(Resource),(nuint)alignof(Resource));
+                    arena.Allocate(1000);arena.Allocate(2000);
+                    if(allocated!=3||released!=0)return 1;
+                    deny=true;ResetOnly(&arena);ResetOnly(&arena);
+                    if(released!=3||allocated!=3||denied!=0||destroyed!=0)return 2;
+                    deny=false;byte* reused=(byte*)arena.Allocate(1,1);*reused=(byte)42;
+                    if(*reused!=(byte)42||allocated!=4||released!=3)return 3;
+                }
+                if(allocated!=4||released!=4||denied!=0||destroyed!=0)return 4;
+                return 0;
+            }
+            """), optimization);
+        Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
+    }
 
     [Fact]
     public void AlignmentGrowthAndZeroLengthRequestsKeepEarlierStorageValid()

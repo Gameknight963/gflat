@@ -35,6 +35,12 @@ int main()
   performs the same cleanup. Copying an arena is prohibited; moving transfers
   ownership of its blocks.
 
+`Reset()` is `nothrow`: it only walks raw block headers and calls the
+nonthrowing `Memory::Free` contract. It allocates no storage and invokes no
+placement-object destructors. As with `Memory::Free`, `nothrow` means no
+exception escapes; it does not promise recovery if a deallocator violates its
+contract and terminates the process.
+
 ## Object lifetimes
 
 For example, a scratch packet header can start with all reserved flag bytes clear:

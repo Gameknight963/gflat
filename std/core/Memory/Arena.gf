@@ -78,7 +78,7 @@ struct Arena
         return result;
     }
 
-    public void Reset()
+    public void Reset() nothrow
     {
         while (head != null)
         {

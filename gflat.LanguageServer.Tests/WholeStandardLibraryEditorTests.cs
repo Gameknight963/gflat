@@ -66,6 +66,8 @@ public class WholeStandardLibraryEditorTests
                 BigInteger arbitraryProduct=arbitraryInteger.Multiply(&arbitraryFactor);
                 BigInteger arbitrarySum=arbitraryProduct.Add(&arbitraryInteger);
                 BigInteger arbitraryDifference=arbitrarySum.Subtract(&arbitraryInteger);
+                int arbitraryRemainder=0;
+                BigInteger arbitraryQuotient=arbitraryDifference.DivRem(7,ref arbitraryRemainder);
                 int arbitrarySign=arbitraryDifference.Sign;
                 bool prefix=trimmedText.StartsWith("a"); bool suffix=trimmedText.EndsWith("d",1);
                 Span<char> trimmedWritable=writableText.TrimStart().TrimEnd();
@@ -322,6 +324,11 @@ public class WholeStandardLibraryEditorTests
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
         int prefixCall=text.IndexOf("labelledOutput.Write",StringComparison.Ordinal)+"labelledOutput.".Length;
+        int divisionCall=text.IndexOf("arbitraryDifference.DivRem",StringComparison.Ordinal)+"arbitraryDifference.".Length;
+        var divisionHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,divisionCall),Protocol.JsonOptions);
+        Assert.Contains("DivRem",divisionHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("ref int remainder",divisionHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,divisionCall),Protocol.JsonOptions));
         foreach(string marker in new[]{"matchesCString=","matchesCountedText="})
         {
             int call=text.IndexOf("Equals",text.IndexOf(marker,StringComparison.Ordinal),StringComparison.Ordinal);

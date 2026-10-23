@@ -587,6 +587,13 @@ int SmokeHashesAndViews() {
         if (batchRemainder != -1 || !batchQuotientText.Equals("-1152921504606846976")) return 138;
     }
     {
+        BigInteger parsedInteger = new(9l);
+        if (!BigInteger::TryParse("+00018446744073709551616", ref parsedInteger)) return 155;
+        String parsedIntegerText = parsedInteger.ToString();
+        if (!parsedIntegerText.Equals("18446744073709551616")) return 156;
+        if (BigInteger::TryParse("12x", ref parsedInteger) || parsedInteger.Sign != 0) return 157;
+    }
+    {
         Unique<int> batchOwner = new(new* int(7));
         int*? batchReleased = batchOwner.Release();
         if (batchReleased == null || !batchOwner.IsEmpty) return 139;
@@ -640,6 +647,14 @@ int SmokeBoundedFiles(char* path) {
     try { Vector<byte> excess = FileBytes::ReadAll(path, 2); }
     catch (ref IOException error) { if (CString::Equals(error.GetMessage(), "File exceeds maximum byte count")) rejected++; }
     if (rejected != 2) return 144;
+    FileBytes::WriteAll(path, ref bytes);
+    FileBytes::AppendAll(path, ref bytes);
+    Vector<byte> appended = FileBytes::ReadAll(path, 6);
+    if (appended.Count != 6 || appended[3] != (byte)'a' || appended[4] != (byte)0 || appended[5] != (byte)'b') return 158;
+    Vector<byte> empty = new();
+    FileBytes::WriteAll(path, ref empty);
+    Vector<byte> cleared = FileBytes::ReadAll(path, 0);
+    if (cleared.Count != 0 || bytes.Count != 3) return 159;
     return 0;
 }
 int main(int argc, char** argv) {

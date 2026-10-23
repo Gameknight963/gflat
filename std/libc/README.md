@@ -379,6 +379,13 @@ requirement beyond the existing FileBinary dependencies. Truncated reads may
 consume an available prefix before throwing; writes can make partial progress
 before an IO failure. They do not rewind, flush, or close the borrowed file.
 
+`File/FileVarInt.gf` provides `FileVarInt::ReadUInt32/64` and `WriteUInt32/64`
+for canonical unsigned base-128 integers. These borrow an open File and reuse the
+core `VarInt` codec with at most ten stack bytes. Reads stop at a terminator or
+the width limit without consuming the next field; malformed and truncated input
+throw without rewinding. See [file varints](../../docs/FILE_VARINT.md) for the
+failure contracts and a complete read/write example.
+
 ## Managed memory
 
 `TracingCollector.gf` defines `std::TracingCollector`, a single-threaded,

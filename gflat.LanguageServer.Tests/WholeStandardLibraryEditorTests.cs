@@ -286,6 +286,10 @@ public class WholeStandardLibraryEditorTests
                 Arena scratch=new(); scratch.AllocateZeroed(16,8);
                 File temporary=File::OpenTemporary();
                 FileBinary::WriteDoubleBigEndian(&temporary,1.25);
+                FileVarInt::WriteUInt32(&temporary,300u);
+                FileVarInt::WriteUInt64(&temporary,300ul);
+                uint fileUnsigned=FileVarInt::ReadUInt32(&temporary);
+                ulong fileWide=FileVarInt::ReadUInt64(&temporary);
                 temporary.Close();
                 int next=Console::PeekByte();
                 Console::ClearInputError();
@@ -335,6 +339,13 @@ public class WholeStandardLibraryEditorTests
         var fileHashHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,fileHashCall),Protocol.JsonOptions);
         Assert.Contains("byte[32]",fileHashHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("FileHash.gf",JsonSerializer.Serialize(model.Definition(source.Path,fileHashCall),Protocol.JsonOptions));
+        foreach(string member in new[]{"ReadUInt32","ReadUInt64","WriteUInt32","WriteUInt64"})
+        {
+            int call=text.IndexOf("FileVarInt::"+member,StringComparison.Ordinal)+"FileVarInt::".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("FileVarInt.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         int distinctCall=sourceTokens.Single(token=>token.Text=="Distinct").Start;
         var distinctHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,distinctCall),Protocol.JsonOptions);
         Assert.Contains("DistinctSource",distinctHover.GetProperty("contents").GetProperty("value").GetString());

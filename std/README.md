@@ -81,7 +81,7 @@ their sources. Do not retain them across operations that invalidate storage.
 | Area | APIs |
 | --- | --- |
 | Console | `Console::Write`, `WriteLine`, `Read`, `ReadByte`, `PeekByte`, `ReadExactly`, `ReadLine`, `TryReadLine` into buffers, String, or a borrowed writer; `Out`, `Error`, flush operations |
-| Files | `File`, `FileText`, `FileBytes`, `FileLines`, `FileLineSequence`, `FileBinary`, [`FileHash`](../docs/FILE_HASH.md) |
+| Files | `File`, `FileText`, `FileBytes`, `FileLines`, `FileLineSequence`, `FileBinary`, [`FileHash`](../docs/FILE_HASH.md), [`FileVarInt`](../docs/FILE_VARINT.md) |
 | Allocation | Default replaceable `Memory::Allocate` and `Memory::Free` |
 | Managed storage | Replaceable collector selection and `TracingCollector` |
 | Exceptions | Default unhandled exception termination |

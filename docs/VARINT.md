@@ -9,6 +9,9 @@ For position-tracking buffers, optional `BinaryBufferVarInt.gf` adds
 to the existing binary cursors. It keeps the standalone codec independent of
 cursor and raw-memory sources.
 
+For borrowed file streams, optional [`FileVarInt`](FILE_VARINT.md) supplies
+UInt32/UInt64 reads and writes without reading ahead into the next field.
+
 Each byte contributes seven value bits, least-significant group first. Bit 7
 means another byte follows. For example, 0 is `00`, 127 is `7F`, 128 is
 `80 01`, and 300 is `AC 02`. UInt32 uses at most five bytes; UInt64 uses at

@@ -34,6 +34,14 @@ public sealed class SortLinesExampleTests
                 : [97, 0, 10, 97, 13, 10]; // Logical "a\0" sorts before "a\r".
             Assert.Equal(cornerOutput, Expected(carriageReturnCorner));
             cases.Add(carriageReturnCorner);
+            byte[] eofInsideLine = [122,10,97,98,26,105,103,110,111,114,101,100,10,97,10];
+            byte[] eofExpected = OperatingSystem.IsWindows()
+                ? [97,98,13,10,122,13,10] // Ctrl+Z ends input after the partial "ab" record.
+                : [97,10,97,98,26,105,103,110,111,114,101,100,10,122,10];
+            Assert.Equal(eofExpected, Expected(eofInsideLine));
+            cases.Add(eofInsideLine);
+            cases.Add([26,110,101,118,101,114,10]); // EOF before any Windows input; ordinary data elsewhere.
+            cases.Add([122,13,10,97,98,13,26,105,103,110,111,114,101,100,10]);
             var random = new Random(105032);
             using (var input = new MemoryStream())
             {
@@ -65,6 +73,8 @@ public sealed class SortLinesExampleTests
     {
         if (OperatingSystem.IsWindows())
         {
+            int endOfFile = Array.IndexOf(input, (byte)26);
+            if (endOfFile >= 0) input = input[..endOfFile];
             // The existing CRT text stream translates physical CRLF before the
             // library sees bytes. A remaining CR may then precede the logical LF.
             using var translated = new MemoryStream();

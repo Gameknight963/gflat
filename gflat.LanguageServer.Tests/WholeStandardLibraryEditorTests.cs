@@ -245,6 +245,8 @@ public class WholeStandardLibraryEditorTests
                 int*? releasedObject=owner.Release();
                 if(releasedObject!=null) delete releasedObject!;
                 int swapLeft=1; int swapRight=2; Swap(ref swapLeft,ref swapRight);
+                String limitedFileText=FileText::ReadAll("sample.txt",1024);
+                Vector<byte> limitedFileBytes=FileBytes::ReadAll("sample.bin",1024);
                 Vector<String> parts=new(); parts.Add(s"left"); parts.Add(s"right");
                 String joined=parts.AsImmutable().Join(",");
                 Date parsedDate=Date::Parse("2024-02-29");
@@ -421,6 +423,13 @@ public class WholeStandardLibraryEditorTests
         var swapHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,swapCall),Protocol.JsonOptions);
         Assert.Contains("ref int left",swapHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("Algorithms.gf",JsonSerializer.Serialize(model.Definition(source.Path,swapCall),Protocol.JsonOptions));
+        foreach(string fileApi in new[]{"FileText","FileBytes"})
+        {
+            int call=text.IndexOf(fileApi+"::ReadAll",StringComparison.Ordinal)+fileApi.Length+2;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("nuint maximumBytes",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains(fileApi+".gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         foreach(string marker in new[]{"Paths::IsRooted(textView","Paths::IsFullyQualified(textView","Paths::Join(textView"})
         {
             int call=text.IndexOf(marker,StringComparison.Ordinal)+"Paths::".Length;

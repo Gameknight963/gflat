@@ -40,6 +40,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `Add(immutable(BigInteger)* other)` | Return the exact sum. |
 | `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
 | `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
+| `Pow(uint exponent)` | Return an independent exact nonnegative integer power; zero to the zero power is one. |
 | `DivRem(int divisor, ref int remainder)` | Return a fresh quotient and the signed remainder for a 32-bit divisor. |
 | `Equals`, `CompareTo`, `GetHashCode` | Value equality, signed ordering, and an equality-compatible hash. |
 | `Format(ITextWriter*)` | Write canonical decimal bytes without an intermediate owning string. |
@@ -115,6 +116,35 @@ For explicit source selection include `core/BigInteger.gf`, `Vector`/`Span` and
 their query-interface dependencies, `Formatting.gf`, `Hashing.gf`, the implemented
 interface sources, and `String`/`ByteSearch`. Projects using the complete standard
 library already include these sources.
+
+## Nonnegative integer powers
+
+Immutable `Pow(uint exponent)` returns a fresh independent integer and leaves
+the receiver unchanged. The exponent is nonnegative; `Pow(0)` returns one for
+every base, including zero. Zero to a positive exponent is zero. Negative bases
+produce a negative result for odd exponents and a positive result for even ones.
+`Pow(1)` copies the receiver without sharing its limb allocation.
+
+The method uses left-to-right exponentiation by squaring through the existing
+`Multiply` operation, requiring O(log exponent) multiplications. This does not
+bound the size of the result: large powers can require substantial storage.
+Zero to a positive exponent allocates nothing. Results equal to one or minus one
+still require their own limb storage; those bases use a direct fast path even
+for the largest `uint` exponent. Allocation or size failures propagate normally,
+clean up intermediate owners, and preserve the receiver and any existing
+assignment target.
+
+```csharp
+using std;
+int main()
+{
+    BigInteger baseValue = new(-12l);
+    BigInteger power = baseValue.Pow(5u);
+    String canonical = power.ToString();
+    if (!canonical.Equals("-248832") || baseValue.Sign != -1) return 1;
+    return 0;
+}
+```
 
 ## Division by a 32-bit integer
 

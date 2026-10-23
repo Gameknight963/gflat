@@ -173,6 +173,32 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    public immutable BigInteger Pow(uint exponent)
+    {
+        if (exponent == 0u) return new BigInteger(1l);
+        if (sign == 0) return new BigInteger();
+        if (exponent == 1u) return *this;
+        if (limbs.Count == 1 && limbs[0] == 1u)
+        {
+            if (sign < 0 && (exponent & 1u) != 0u) return new BigInteger(-1l);
+            return new BigInteger(1l);
+        }
+
+        // Start at the leading one bit, already represented by this copy.
+        // Reuse Multiply's fresh-result ownership and self-aliasing behavior.
+        BigInteger result = *this;
+        uint bit = 1u;
+        while (bit <= exponent / 2u) bit = bit << 1;
+        bit = bit >> 1;
+        while (bit != 0u)
+        {
+            result = result.Multiply(&result);
+            if ((exponent & bit) != 0u) result = result.Multiply(this);
+            bit = bit >> 1;
+        }
+        return move result;
+    }
+
     // Signed 32-bit divisor. Quotient truncates toward zero; remainder has dividend sign.
     public immutable BigInteger DivRem(int divisor, ref int remainder)
     {

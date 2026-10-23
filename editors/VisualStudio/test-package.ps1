@@ -602,6 +602,16 @@ int SmokeHashesAndViews() {
         batchDuration.Format(&batchDurationSink);
         if (!CString::Equals(batchDurationText, "00:00:00.7500000")) return 142;
     }
+    {
+        IpAddress batchAddress = IpAddress::Parse("2001:0DB8:0000:0000:0:0:0:1");
+        IpAddress batchCanonical = IpAddress::Parse("2001:db8::1");
+        if (!batchAddress.Equals(&batchCanonical)) return 146;
+        char[40] batchAddressText; BufferWriter batchAddressSink = new(batchAddressText, 40);
+        batchAddress.Format(&batchAddressSink);
+        if (!CString::Equals(batchAddressText, "2001:db8::1")) return 147;
+        IpAddress batchZero = new();
+        if (IpAddress::TryParse("127.1", &batchAddress) || !batchAddress.Equals(&batchZero)) return 148;
+    }
     return 0;
 }
 int SmokeBoundedFiles(char* path) {

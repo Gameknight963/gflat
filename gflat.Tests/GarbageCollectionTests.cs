@@ -182,7 +182,7 @@ public sealed class GarbageCollectionTests
         extern int printf(immutable(char*) text, ...);
         namespace Memory {
             public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
-            public replace void Free(void* storage) { printf("F"); free(storage); }
+            public replace void Free(void* storage) nothrow { printf("F"); free(storage); }
         }
         void Allocate() { int^ value = new^ int(42); }
         int main() {
@@ -244,7 +244,7 @@ public sealed class GarbageCollectionTests
             extern int puts(immutable(char*) text);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => malloc(size);
-                public replace void Free(void* storage) {
+                public replace void Free(void* storage) nothrow {
                     if (*((int*)storage) == 42) puts("released object");
                     free(storage);
                 }
@@ -293,7 +293,7 @@ public sealed class GarbageCollectionTests
                     if (size == (nuint)sizeof(ManagedError)) return null;
                     return malloc(size);
                 }
-                public replace void Free(void* storage) { free(storage); }
+                public replace void Free(void* storage) nothrow { free(storage); }
             }
             class ManagedError : Exception {
                 public int^ value;
@@ -324,7 +324,7 @@ public sealed class GarbageCollectionTests
                 if (size == (nuint)sizeof(int) || size == (nuint)sizeof(std::BadAllocException)) return null;
                 return malloc(size);
             }
-            public replace void Free(void* storage) { free(storage); }
+            public replace void Free(void* storage) nothrow { free(storage); }
         }
         int main() {
             try { int^ value = new^ int(42); return 1; }
@@ -405,7 +405,7 @@ public sealed class GarbageCollectionTests
                 if (size == (nuint)4 && std::TracingCollector::ManagedCount != (nuint)0) return null;
                 return malloc(size);
             }
-            public replace void Free(void* storage) { free(storage); }
+            public replace void Free(void* storage) nothrow { free(storage); }
         }
         void Drop() { int^ value = new^ int(42); }
         int main() {

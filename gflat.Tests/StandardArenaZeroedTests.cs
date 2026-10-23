@@ -12,7 +12,7 @@ public sealed class StandardArenaZeroedTests
                 void*? result=malloc(bytes);if(result!=null){allocations++;byte* data=(byte*)result;for(nuint i=0;i<bytes;i++)data[i]=(byte)165;}
                 return result;
             }
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         """;
 

@@ -43,7 +43,7 @@ public sealed class ConsoleInputTests
             static class State { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint count) { State::Allocations++; return null; }
-                public replace void Free(void* data) { }
+                public replace void Free(void* data) nothrow { }
             }
             int main() {
                 char[6] data = ['Z','Z','Z','Z','Z','Z'];

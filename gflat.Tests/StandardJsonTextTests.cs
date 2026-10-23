@@ -60,7 +60,7 @@ public sealed class StandardJsonTextTests
             int live=0;bool deny=false;int allowance=-1;
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(deny||allowance==0)return null;if(allowance>0)allowance--;void*? result=malloc(count);if(result!=null)live++;return result;}
-                public replace void Free(void* pointer){live--;free(pointer);}
+                public replace void Free(void* pointer) nothrow{live--;free(pointer);}
             }
             struct Sink:ITextWriter{
                 public int Calls;public nuint Bytes;public bool Fail;

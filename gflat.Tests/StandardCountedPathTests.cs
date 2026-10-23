@@ -66,7 +66,7 @@ public sealed class StandardCountedPathTests
             using std;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
-                public replace void Free(void* storage){}
+                public replace void Free(void* storage) nothrow{}
             }
             bool ClassifyCounted(Span<readonly(char)> path,PathStyle style) nothrow{
                 return Paths::IsRooted(path,style)||Paths::IsFullyQualified(path,style);
@@ -140,7 +140,7 @@ public sealed class StandardCountedPathTests
                     attempts++;if(failAt!=0&&attempts==failAt)return null;
                     void*? result=malloc(bytes);if(result!=null)allocations++;return result;
                 }
-                public replace void Free(void* storage){releases++;free(storage);}
+                public replace void Free(void* storage) nothrow{releases++;free(storage);}
             }
             int main(){
                 char[1] left=['a'];char[4] right=['b','\0','c',(char)255];

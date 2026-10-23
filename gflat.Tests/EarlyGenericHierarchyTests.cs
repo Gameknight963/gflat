@@ -46,7 +46,7 @@ public sealed class EarlyGenericHierarchyTests
                             size == (nuint)sizeof(BadAllocException)) return null;
                         return malloc(size);
                     }
-                    public replace void Free(void* storage) { free(storage); }
+                    public replace void Free(void* storage) nothrow { free(storage); }
                 }
                 void Fill(Vector<int^>* values) { values.Add(new^ int(42)); }
                 int main() {

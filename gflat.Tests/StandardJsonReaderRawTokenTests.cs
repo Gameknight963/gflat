@@ -29,7 +29,7 @@ public sealed class StandardJsonReaderRawTokenTests
             int allocations=0;
             namespace Memory {
                 public replace void*? Allocate(nuint size){allocations++;return malloc(size);}
-                public replace void Free(void* storage){free(storage);}
+                public replace void Free(void* storage) nothrow{free(storage);}
             }
             int main(){
                 char[{{document.Length}}] input=[{{string.Join(",",document.Select(b=>$"(char){b}"))}}];

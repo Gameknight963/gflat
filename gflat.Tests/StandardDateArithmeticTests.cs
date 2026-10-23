@@ -80,7 +80,7 @@ public sealed class StandardDateArithmeticTests
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
-                public replace void Free(void* address){allocations++;}
+                public replace void Free(void* address) nothrow{allocations++;}
             }
             int main(){
                 immutable(Date) invoice=new(2024,1,31);

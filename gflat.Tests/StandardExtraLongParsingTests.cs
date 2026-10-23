@@ -48,7 +48,7 @@ public sealed class StandardExtraLongParsingTests
             using std;extern void*? malloc(nuint size);extern void free(void* pointer);bool deny=false;int calls=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny){calls++;return null;}return malloc(size);}
-                public replace void Free(void* pointer){free(pointer);}
+                public replace void Free(void* pointer) nothrow{free(pointer);}
             }
             int main(){
                 extralong[4] storage;char* text=(char*)storage;

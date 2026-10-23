@@ -80,7 +80,7 @@ public sealed class StandardVectorRangeTests
             extern void* malloc(nuint bytes); extern void free(void* address);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (bytes > 16) return null; return malloc(bytes); }
-                replace void Free(void* address) { free(address); }
+                replace void Free(void* address) nothrow { free(address); }
             }
             int main() {
                 Vector<int> values = new();

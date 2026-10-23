@@ -12,7 +12,7 @@ public sealed class StandardUtf16ScalarsTests
             public replace void*? Allocate(nuint count) {
                 void*? result = malloc(count); if (result != null) allocations++; return result;
             }
-            public replace void Free(void* storage) { releases++; free(storage); }
+            public replace void Free(void* storage) nothrow { releases++; free(storage); }
         }
         """;
 

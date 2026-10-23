@@ -63,7 +63,7 @@ public sealed class StandardArenaTests
             extern void* malloc(nuint bytes); extern void free(void* pointer);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (fail) return null; return malloc(bytes); }
-                replace void Free(void* pointer) { free(pointer); }
+                replace void Free(void* pointer) nothrow { free(pointer); }
             }
             int main() {
                 Arena arena = new(64);
@@ -91,7 +91,7 @@ public sealed class StandardArenaTests
                 replace void*? Allocate(nuint bytes) {
                     void*? result = malloc(bytes); if (result != null) allocated++; return result;
                 }
-                replace void Free(void* pointer) { released++; free(pointer); }
+                replace void Free(void* pointer) nothrow { released++; free(pointer); }
             }
             int main() {
                 {

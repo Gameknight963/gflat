@@ -45,7 +45,7 @@ public sealed class StandardStringSearchTests
             int allocations = 0;
             namespace Memory {
                 replace void*? Allocate(nuint count) { allocations++; return malloc(count); }
-                replace void Free(void* storage) { free(storage); }
+                replace void Free(void* storage) nothrow { free(storage); }
             }
             int main() {
                 char[65536] input; char[2048] pattern;

@@ -21,7 +21,7 @@ public sealed class StandardBufferWriterTryTests
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint count) { Calls::Allocations++; return null; }
-                public replace void Free(void* storage) { }
+                public replace void Free(void* storage) nothrow { }
             }
             int main() {
                 char[12] storage; char[12] before;

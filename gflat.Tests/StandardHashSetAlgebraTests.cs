@@ -53,7 +53,7 @@ public sealed class StandardHashSetAlgebraTests
             int allocations=0;int releases=0;int dead=0;int budget=-1;bool failHash=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}
-                public replace void Free(void* storage){releases++;free(storage);}
+                public replace void Free(void* storage) nothrow{releases++;free(storage);}
             }
             struct Key:IHashable,IEquatable<Key>{
                 public int Id;public Key(int id){Id=id;}
@@ -93,7 +93,7 @@ public sealed class StandardHashSetAlgebraTests
             extern void*? malloc(nuint count);extern void free(void* storage);
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(denyAlloc)return null;return malloc(count);}
-                public replace void Free(void* storage){free(storage);}
+                public replace void Free(void* storage) nothrow{free(storage);}
             }
             struct Key:IHashable,IEquatable<Key>{
                 public int Id;public Key(int id){Id=id;made++;}

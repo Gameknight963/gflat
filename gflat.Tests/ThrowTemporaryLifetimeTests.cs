@@ -8,7 +8,7 @@ public sealed class ThrowTemporaryLifetimeTests
         int allocations=0;int releases=0;int buffers=0;int bufferDead=0;int made=0;int dead=0;int holders=0;int copies=0;bool failCopy=false;
         namespace Memory{
             public replace void*? Allocate(nuint bytes){void*? result=malloc(bytes);if(result!=null)allocations++;return result;}
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         struct Buffer{
             public int* Data;

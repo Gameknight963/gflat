@@ -13,7 +13,7 @@ public sealed class StandardPriorityQueueFailureTests
                 if(failAllocation)return null;
                 void*? result=malloc(bytes);if(result!=null)allocations++;return result;
             }
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         struct Item {
             public int Priority;public String Text;

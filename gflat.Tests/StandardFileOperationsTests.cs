@@ -193,7 +193,7 @@ public sealed class StandardFileOperationsTests
                 using std;
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { return null; }
-                    public replace void Free(void* storage) { }
+                    public replace void Free(void* storage) nothrow { }
                 }
                 int main() {
                     try { String value = FileText::ReadAll({{Literal(path)}}); return 1; }

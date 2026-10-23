@@ -71,7 +71,7 @@ public sealed class StandardDequeTests
             int allocations=0;int releases=0;bool fail=false;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){if(fail)return null;void*? result=malloc(bytes);if(result!=null)allocations++;return result;}
-                public replace void Free(void* storage){releases++;free(storage);}
+                public replace void Free(void* storage) nothrow{releases++;free(storage);}
             }
             int main(){{
                 Deque<Owned> values=new();values.Reserve(2);values.AddLast(new Owned(1));values.AddLast(new Owned(2));

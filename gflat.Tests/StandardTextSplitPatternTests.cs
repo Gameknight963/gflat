@@ -34,7 +34,7 @@ public sealed class StandardTextSplitPatternTests
                 using std;int allocations=0;
                 namespace Memory{
                     public replace void*? Allocate(nuint bytes){allocations++;return null;}
-                    public replace void Free(void* value){}
+                    public replace void Free(void* value) nothrow{}
                 }
                 bool Check(Span<readonly(char)> text,Span<readonly(char)> separator,int expected,bool useSpan){
                     Span<readonly(char)> first=new("stale",5);Span<readonly(char)> rest=new("stale",5);
@@ -110,7 +110,7 @@ public sealed class StandardTextSplitPatternTests
             using std;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
-                public replace void Free(void* value){}
+                public replace void Free(void* value) nothrow{}
             }
             int main(){
                 Span<readonly(char)> empty=new();Span<readonly(char)> before=new("stale",5);Span<readonly(char)> after=new("stale",5);

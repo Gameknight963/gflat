@@ -62,7 +62,7 @@ public sealed class StandardSpanBooleanParsingTests
             using std;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
-                public replace void Free(void* storage){}
+                public replace void Free(void* storage) nothrow{}
             }
             bool CheckBooleanView(Span<readonly(char)> text,bool* result) nothrow=>text.TryParseBool(result);
             int main(){

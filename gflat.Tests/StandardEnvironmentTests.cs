@@ -106,7 +106,7 @@ public sealed class StandardEnvironmentTests
                     if (State::Fail && size == (nuint)18) return null;
                     return malloc(size);
                 }
-                public replace void Free(void* data) { free(data); }
+                public replace void Free(void* data) nothrow { free(data); }
             }
             int main() {
                 readonly(char)*? borrowed = Environment::GetVariable("GFLAT_STD_PRESENT");

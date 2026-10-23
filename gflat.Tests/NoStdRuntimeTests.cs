@@ -141,7 +141,7 @@ public sealed class NoStdRuntimeTests
     [Theory]
     [InlineData("struct Item {} void Run() { Item* value = new* Item(); }", "requires Memory::Allocate")]
     [InlineData("struct Item {} void Run(Item* value) { delete value; }", "requires Memory::Free")]
-    [InlineData("namespace Memory { int Allocate(int count) => count; void Free(void* storage) {} } struct Item {} void Run() { Item* value = new* Item(); }", "Allocate(nuint")]
+    [InlineData("namespace Memory { int Allocate(int count) => count; void Free(void* storage) nothrow {} } struct Item {} void Run() { Item* value = new* Item(); }", "Allocate(nuint")]
     [InlineData("namespace Memory { int Free(void* storage) => 0; } struct Item {} void Run(Item* value) { delete value; }", "void Free")]
     public void MissingOrMismatchedRuntimeServicesAreSourceErrors(string source, string diagnostic)
         => Assert.Contains(diagnostic, Assert.Throws<TypeCheckException>(() => Compiler.Check(source, options: Bare)).Message);

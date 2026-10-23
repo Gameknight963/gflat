@@ -13,7 +13,7 @@ public sealed class StandardQueryIteratorLifetimeTests
             public replace void*? Allocate(nuint bytes) {
                 void*? result = malloc(bytes); if (result != null) allocations++; return result;
             }
-            public replace void Free(void* storage) { releases++; free(storage); }
+            public replace void Free(void* storage) nothrow { releases++; free(storage); }
         }
         struct Source {
             public struct Iterator {

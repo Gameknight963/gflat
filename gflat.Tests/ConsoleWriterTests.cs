@@ -18,7 +18,7 @@ public sealed class ConsoleWriterTests
             extern void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint count) { printf("allocation"); return malloc(count); }
-                public replace void Free(void* storage) { free(storage); }
+                public replace void Free(void* storage) nothrow { free(storage); }
             }
             int main() {
                 Console::Writer output = new Console::Writer();

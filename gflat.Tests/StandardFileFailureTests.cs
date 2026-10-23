@@ -76,7 +76,7 @@ public sealed class StandardFileFailureTests
                         if (size == (nuint)4097) State::First = data;
                         return data;
                     }
-                    public replace void Free(void* data) {
+                    public replace void Free(void* data) nothrow {
                         if (data == State::First) State::Released++;
                         free(data);
                     }
@@ -136,7 +136,7 @@ public sealed class StandardFileFailureTests
                         if (State::Fail && size == (nuint)257) return null;
                         return malloc(size);
                     }
-                    public replace void Free(void* data) { free(data); }
+                    public replace void Free(void* data) nothrow { free(data); }
                 }
                 int main() {
                     File input = File::OpenRead({{Literal(path)}});

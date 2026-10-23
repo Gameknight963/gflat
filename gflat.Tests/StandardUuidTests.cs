@@ -43,7 +43,7 @@ public sealed class StandardUuidTests
                 bool deny=false;int allocations=0;
                 namespace Memory{
                     public replace void*? Allocate(nuint count){if(deny){allocations++;return null;}return malloc(count);}
-                    public replace void Free(void* pointer){free(pointer);}
+                    public replace void Free(void* pointer) nothrow{free(pointer);}
                 }
                 int main(){
                     void* file=fopen({{Literal(path)}},"rb");

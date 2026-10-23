@@ -20,7 +20,7 @@ public sealed class StandardQueryAggregateTransferTests
         int allocated=0;int released=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){void*? p=malloc(bytes);if(p!=null)allocated++;return p;}
-            public replace void Free(void* storage){released++;free(storage);}
+            public replace void Free(void* storage) nothrow{released++;free(storage);}
         }
         """;
 

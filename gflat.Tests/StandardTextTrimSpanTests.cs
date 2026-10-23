@@ -42,7 +42,7 @@ public sealed class StandardTextTrimSpanTests
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
-                public replace void Free(void* data){}
+                public replace void Free(void* data) nothrow{}
             }
             int main(){
                 Span<char> empty=new();Span<readonly(char)> readEmpty=new();

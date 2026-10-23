@@ -82,7 +82,7 @@ public sealed class StandardBooleanParsingTests
             using std;
             namespace Memory {
                 replace void*? Allocate(nuint count) => null;
-                replace void Free(void* storage) {}
+                replace void Free(void* storage) nothrow {}
             }
             bool Probe(char* text, nuint count, bool* result) nothrow => TryParseBool(text, count, result);
             int main() {

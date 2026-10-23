@@ -223,7 +223,7 @@ public class InterpolationTests
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
-                public replace void Free(void* pointer) { free((void*)pointer); }
+                public replace void Free(void* pointer) nothrow { free((void*)pointer); }
             }
             struct Counter : ITextWriter {
                 public nuint count = 0;

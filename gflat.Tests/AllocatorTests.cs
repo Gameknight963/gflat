@@ -44,7 +44,7 @@ namespace Memory { public replace void*? Allocate(nuint size)
     return (void*)(raw + 8UL);
 } }
 
-namespace Memory { public replace void Free(void* ptr)
+namespace Memory { public replace void Free(void* ptr) nothrow
 {
     byte* raw = (byte*)ptr - 8UL;
     ulong* header = (ulong*)raw;
@@ -91,7 +91,7 @@ extern void* malloc(nuint size);
 extern void free(void* ptr);
 
 namespace Memory { public replace void*? Allocate(nuint size) => malloc(size); }
-namespace Memory { public replace void Free(void* ptr) => free(ptr); }
+namespace Memory { public replace void Free(void* ptr) nothrow => free(ptr); }
 
 struct Data
 {
@@ -141,7 +141,7 @@ namespace Memory { public replace void*? Allocate(nuint size)
     return malloc(size);
 } }
 
-namespace Memory { public replace void Free(void* ptr)
+namespace Memory { public replace void Free(void* ptr) nothrow
 {
     free(ptr);
 } }
@@ -177,7 +177,7 @@ namespace Memory { public replace void*? Allocate(nuint size)
     return malloc(aligned);
 } }
 
-namespace Memory { public replace void Free(void* ptr)
+namespace Memory { public replace void Free(void* ptr) nothrow
 {
     free(ptr);
 } }
@@ -213,7 +213,7 @@ namespace Memory { public replace int Allocate(nuint size)
     return 0;
 } }
 
-namespace Memory { public replace void Free(void* ptr)
+namespace Memory { public replace void Free(void* ptr) nothrow
 {
 } }
 

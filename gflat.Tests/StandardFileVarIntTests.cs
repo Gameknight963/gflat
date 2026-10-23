@@ -34,7 +34,7 @@ public sealed class StandardFileVarIntTests
                 extern void free(void* value);
                 namespace Memory {
                     public replace void*? Allocate(nuint bytes){attempts++;return null;}
-                    public replace void Free(void* value){free(value);}
+                    public replace void Free(void* value) nothrow{free(value);}
                 }
                 int main(int argc,char** argv){
                     const uint[{{narrow.Count}}] narrow=[{{string.Join(",",narrow.Select(v=>v+"u"))}}];

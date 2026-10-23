@@ -12,7 +12,7 @@ public sealed class StandardStringSpanTests
             bool deny=false;int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(deny)return null;allocations++;return malloc(count);}
-                public replace void Free(void* storage){releases++;free(storage);}
+                public replace void Free(void* storage) nothrow{releases++;free(storage);}
             }
             bool Inspect(ref immutable(String) text){
                 Span<readonly(char)> view=text.AsImmutable();

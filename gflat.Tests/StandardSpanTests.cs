@@ -125,7 +125,7 @@ public class StandardSpanTests
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
-                public replace void Free(void* p) { printf("F"); free(p); }
+                public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             int main() {
                 {

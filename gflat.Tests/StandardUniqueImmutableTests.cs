@@ -13,7 +13,7 @@ public sealed class StandardUniqueImmutableTests
             int allocations=0;int dead=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}
-                public replace void Free(void* data){free(data);}
+                public replace void Free(void* data) nothrow{free(data);}
             }
             struct Payload{
                 public int* Data;public Payload(int* data){Data=data;}

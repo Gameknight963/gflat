@@ -39,7 +39,7 @@ public class ArrayCleanupTests
             extern void* malloc(nuint size);
             extern void free(void* ptr);
             namespace Memory { public replace void*? Allocate(nuint size) { return malloc(size); } }
-            namespace Memory { public replace void Free(void* ptr) { printf("F"); free(ptr); } }
+            namespace Memory { public replace void Free(void* ptr) nothrow { printf("F"); free(ptr); } }
             int main() {
                 Item[2]* items = (Item[2]*)malloc((nuint)sizeof(Item[2]));
                 (*items)[0].id = 1;

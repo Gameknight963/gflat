@@ -17,7 +17,7 @@ public sealed class ExceptionAllocatorReentrancyTests
                     putchar(65);
                     throw new Exception("allocator failed", 42);
                 }
-                public replace void Free(void* storage) { putchar(70); }
+                public replace void Free(void* storage) nothrow { putchar(70); }
             }
             int main() {
                 try {

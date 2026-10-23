@@ -11,7 +11,7 @@ public sealed class StandardStringTrimTests
         int allocations=0;int releases=0;
         namespace Memory {
             public replace void*? Allocate(nuint size){allocations++;return malloc(size);}
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         void Apply(String* value,int mode) nothrow {
             if(mode==0)value.TrimStart();

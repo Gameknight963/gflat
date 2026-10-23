@@ -31,6 +31,23 @@ copying resource-owning values can duplicate ownership, moving object bytes can
 break internal pointers, and copying managed-reference slots bypasses compiler
 notifications. Use the language's normal typed copying and movement for objects.
 
+## Allocator cleanup contract
+
+The allocator source provides `Memory::Allocate(nuint)` and
+`Memory::Free(void*) nothrow`. Replace both when supplying a custom allocator;
+the replacement `Free` must also declare `nothrow`. Allocator definitions supplied
+without std have the same requirement.
+
+`Allocate` can fail or throw before a container moves its existing values.
+`Free` must release valid storage without propagating an exception. Containers
+also use it after relocating values, when the old allocation no longer contains
+initialized objects. An escaping exception would leave that operation incomplete.
+
+This uses the ordinary `nothrow` contract: errors may be caught inside `Free`,
+but an exception escaping it reaches the unhandled-exception boundary instead
+of propagating to its caller. It does not prove that the allocator is correct or
+make invalid pointers safe to free. Freeing storage does not run object destructors.
+
 ## Native linking
 
 The source contains ordinary byte loops and no direct libc calls. **This does

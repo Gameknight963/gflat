@@ -14,7 +14,7 @@ public sealed class StandardTextPartsTests
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
-                public replace void Free(void* data){}
+                public replace void Free(void* data) nothrow{}
             }
             int main(){
                 char[3] bytes=['a',',','b'];TextParts parts=new(new Span<readonly(char)>(bytes,3),',');
@@ -128,7 +128,7 @@ public sealed class StandardTextPartsTests
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
-                public replace void Free(void* data) { }
+                public replace void Free(void* data) nothrow { }
             }
             int main() {
                 char[5] bytes = ['a', ',', 'b', ',', 'c'];
@@ -162,7 +162,7 @@ public sealed class StandardTextPartsTests
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
-                public replace void Free(void* data) { }
+                public replace void Free(void* data) nothrow { }
             }
             int main() {
                 Span<readonly(char)> input = new Span<readonly(char)>("a\0b\0", 4);
@@ -188,7 +188,7 @@ public sealed class StandardTextPartsTests
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return malloc(size); }
-                public replace void Free(void* data) { free(data); }
+                public replace void Free(void* data) nothrow { free(data); }
             }
             int main() {
                 String text = s"a\0b,c,";
@@ -230,7 +230,7 @@ public sealed class StandardTextPartsTests
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
-                public replace void Free(void* data) { }
+                public replace void Free(void* data) nothrow { }
             }
             int main() {
                 Span<readonly(char)> input = new Span<readonly(char)>("a,,b,", 5);

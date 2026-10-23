@@ -45,7 +45,7 @@ public sealed class StandardQueueStackQueryTests
         =>Run("""
             using std;extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int predicates=0;int selections=0;
-            namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer){free(pointer);}}
+            namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             bool Even(int value){predicates++;return value%2==0;}
             int Twice(int value){selections++;return value*2;}
             int Sum(int total,int value)=>total+value;
@@ -77,7 +77,7 @@ public sealed class StandardQueueStackQueryTests
         =>Run("""
             using std;extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int releases=0;bool deny=false;int dead=0;
-            namespace Memory{public replace void*? Allocate(nuint size){if(deny)return null;allocations++;return malloc(size);}public replace void Free(void* pointer){releases++;free(pointer);}}
+            namespace Memory{public replace void*? Allocate(nuint size){if(deny)return null;allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{releases++;free(pointer);}}
             struct Owner{public int Id;public Owner(int id){Id=id;}~Owner(){dead++;}}
             int main(){
                 {

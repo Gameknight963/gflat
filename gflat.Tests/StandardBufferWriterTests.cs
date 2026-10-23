@@ -137,7 +137,7 @@ public sealed class StandardBufferWriterTests
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
-                public replace void Free(void* storage) { }
+                public replace void Free(void* storage) nothrow { }
             }
             class Label : IFormattable {
                 public Label() { }

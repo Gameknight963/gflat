@@ -10,7 +10,7 @@ public sealed class StandardBitSetQueryTests
             using std;
             extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int predicates=0;int selections=0;
-            namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer){free(pointer);}}
+            namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             bool Odd(nuint index){predicates++;return index%2==1;}
             nuint Twice(nuint index){selections++;return index*2;}
             nuint Sum(nuint total,nuint index)=>total+index;

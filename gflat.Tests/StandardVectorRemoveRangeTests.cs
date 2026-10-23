@@ -61,7 +61,7 @@ public sealed class StandardVectorRemoveRangeTests
             bool deny=false; int allocationAttempts=0;
             namespace Memory {
                 replace void*? Allocate(nuint size) {allocationAttempts++;if(deny)return null;return malloc(size);}
-                replace void Free(void* pointer){free(pointer);}
+                replace void Free(void* pointer) nothrow{free(pointer);}
             }
             int[12] order; int dead=0;
             struct Owner {

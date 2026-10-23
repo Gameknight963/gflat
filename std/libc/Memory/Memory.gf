@@ -9,7 +9,7 @@ namespace Memory
         return malloc(size);
     }
 
-    public weak void Free(void* ptr)
+    public weak void Free(void* ptr) nothrow
     {
         free(ptr);
     }

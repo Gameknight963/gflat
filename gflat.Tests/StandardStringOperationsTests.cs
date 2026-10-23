@@ -165,7 +165,7 @@ public class StandardStringOperationsTests
                     if(size==7) return null;
                     printf("A"); return malloc(size);
                 }
-                public replace void Free(void* p) { printf("F"); free(p); }
+                public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             int main() {
                 String text=s"abc"; readonly(char)* old=text.Data;
@@ -226,7 +226,7 @@ public class StandardStringOperationsTests
                     if(size==9) return null;
                     return malloc(size);
                 }
-                public replace void Free(void* storage) { free(storage); }
+                public replace void Free(void* storage) nothrow { free(storage); }
             }
             int main() {
                 String text=s"abcabc"; readonly(char)* old=text.Data;
@@ -246,7 +246,7 @@ public class StandardStringOperationsTests
             extern int printf(readonly(char)* text,...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
-                public replace void Free(void* storage) { printf("F"); free(storage); }
+                public replace void Free(void* storage) nothrow { printf("F"); free(storage); }
             }
             int main() {
                 String text=s"ababa";

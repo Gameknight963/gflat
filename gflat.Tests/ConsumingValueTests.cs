@@ -143,7 +143,7 @@ public class ConsumingValueTests
             extern void free(void* p);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { return malloc(size); }
-                public replace void Free(void* p) { printf("F"); free(p); }
+                public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             struct Bad { public Bad(Exception* failure) { throw *failure; } }
             int main() {

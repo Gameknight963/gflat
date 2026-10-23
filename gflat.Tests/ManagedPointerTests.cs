@@ -61,7 +61,7 @@ public class ManagedPointerTests
     [Fact]
     public void ScopeExitDoesNotCallRawFree()
     {
-        var result = CompilerTestHelper.Run(Runtime + "namespace Memory { public replace void*? Allocate(nuint size) => malloc(size); } namespace Memory { public replace void Free(void* p) { printf(\"F\"); } } int main() { { int^ p = new^ int(7); } return 0; }");
+        var result = CompilerTestHelper.Run(Runtime + "namespace Memory { public replace void*? Allocate(nuint size) => malloc(size); } namespace Memory { public replace void Free(void* p) nothrow { printf(\"F\"); } } int main() { { int^ p = new^ int(7); } return 0; }");
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("A", result.StandardOutput);
     }
@@ -122,7 +122,7 @@ public class ManagedPointerTests
     {
         var result = CompilerTestHelper.Run(Runtime + """
             namespace Memory { public replace void*? Allocate(nuint size) { printf("R"); return malloc(size); } }
-            namespace Memory { public replace void Free(void* p) { printf("F"); } }
+            namespace Memory { public replace void Free(void* p) nothrow { printf("F"); } }
             struct S { public int value; }
             int main() { S* raw = new* S(); S^ managedReference = new^ S(); delete raw; return 0; }
             """);

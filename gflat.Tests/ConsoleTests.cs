@@ -46,7 +46,7 @@ public class ConsoleTests
         var result = Run("""
             namespace Memory {
                 public replace void*? Allocate(nuint size) => null;
-                public replace void Free(void* value) { }
+                public replace void Free(void* value) nothrow { }
             }
             int main() {
                 Console::Write("A"); Console::Write("B\0ignored");
@@ -71,7 +71,7 @@ public class ConsoleTests
         var result = Run("""
             namespace Memory {
                 public replace void*? Allocate(nuint size) => null;
-                public replace void Free(void* value) { }
+                public replace void Free(void* value) nothrow { }
             }
             int main() {
                 char[1024] buffer;
@@ -138,7 +138,7 @@ public class ConsoleTests
                     if (State::Fail && size == (nuint)257) return null;
                     return malloc(size);
                 }
-                public replace void Free(void* data) { free(data); }
+                public replace void Free(void* data) nothrow { free(data); }
             }
             int main() {
                 String line = new String();

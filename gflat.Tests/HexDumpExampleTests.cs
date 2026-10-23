@@ -14,7 +14,7 @@ public sealed class HexDumpExampleTests
             .Append(new SourceFile("hexdump.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Examples/hexdump.gf"))))
             .Append(new SourceFile("no-allocations.gf", """
                 replace void*? Memory::Allocate(nuint size) => null;
-                replace void Memory::Free(void* storage) {}
+                replace void Memory::Free(void* storage) nothrow {}
                 """));
         string directory = Path.Combine(Path.GetTempPath(), "gflat-hexdump-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);

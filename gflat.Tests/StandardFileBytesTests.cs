@@ -103,7 +103,7 @@ public sealed class StandardFileBytesTests
                         if (size == (nuint)4096) State::Last = result;
                         return result;
                     }
-                    public replace void Free(void* data) {
+                    public replace void Free(void* data) nothrow {
                         if (data == State::Last) State::Released++;
                         free(data);
                     }
@@ -149,7 +149,7 @@ public sealed class StandardFileBytesTests
                 static class State { public static int Calls; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { State::Calls++; return null; }
-                    public replace void Free(void* data) { }
+                    public replace void Free(void* data) nothrow { }
                 }
                 int main() {
                     Vector<byte> bytes = FileBytes::ReadAll({{Literal(empty)}});

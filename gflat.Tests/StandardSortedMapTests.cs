@@ -132,7 +132,7 @@ public sealed class StandardSortedMapTests
                     if (fail) return null;
                     void*? result = malloc(bytes); if (result != null) allocations++; return result;
                 }
-                public replace void Free(void* storage) { releases++; free(storage); }
+                public replace void Free(void* storage) nothrow { releases++; free(storage); }
             }
             int main() { {
                 SortedMap<Owned,Owned> map = new(Compare); map.Reserve(1);

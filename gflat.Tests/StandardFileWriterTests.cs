@@ -37,7 +37,7 @@ public sealed class StandardFileWriterTests
                 static class Calls { public static int Allocations; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
-                    public replace void Free(void* data) { }
+                    public replace void Free(void* data) nothrow { }
                 }
                 class Label : IFormattable {
                     public Label() { }
@@ -72,7 +72,7 @@ public sealed class StandardFileWriterTests
                 static class Calls { public static int Allocations; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
-                    public replace void Free(void* data) { }
+                    public replace void Free(void* data) nothrow { }
                 }
                 int main() {
                     File input = File::OpenRead({{Literal(path)}});
@@ -156,7 +156,7 @@ public sealed class StandardFileWriterTests
                         if (size == (nuint)4101) return null;
                         return malloc(size);
                     }
-                    public replace void Free(void* data) { free(data); }
+                    public replace void Free(void* data) nothrow { free(data); }
                 }
                 int main() {
                     File input = File::OpenRead({{Literal(path)}});

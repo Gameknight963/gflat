@@ -13,7 +13,7 @@ public class ExplicitDestructorTests
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
-                public replace void Free(void* p) { printf("F"); free(p); }
+                public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             struct Item {
                 public int value;

@@ -148,7 +148,7 @@ public sealed class StandardJsonWriterTests
             bool deny=false;
             namespace Memory{
                 replace void*? Allocate(nuint bytes){if(deny)return null;return malloc(bytes);}
-                replace void Free(void* pointer){free(pointer);}
+                replace void Free(void* pointer) nothrow{free(pointer);}
             }
             int main(){String text=s"";text.Reserve(128);JsonWriter writer=new(&text);int caught=0;
                 deny=true;try{writer.WriteStartArray();}catch(BadAllocException* error){caught++;}deny=false;

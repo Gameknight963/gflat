@@ -34,7 +34,7 @@ public sealed class StandardBinaryCursorVarIntTests
                 using std;extern void* fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* output,nuint size,nuint count,void* file);extern int fclose(void* file);
                 int allocations=0;
-                namespace Memory{public replace void*? Allocate(nuint size){allocations++;return null;}public replace void Free(void* pointer){} }
+                namespace Memory{public replace void*? Allocate(nuint size){allocations++;return null;}public replace void Free(void* pointer) nothrow{} }
                 int main(){void* file=fopen({{Literal(path)}},"rb");defer{fclose(file);}
                     byte[20] record;byte[14] data;int records=0;
                     while(fread((void*)&record[0],1,20,file)==20){

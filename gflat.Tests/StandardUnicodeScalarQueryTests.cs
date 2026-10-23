@@ -8,7 +8,7 @@ public sealed class StandardUnicodeScalarQueryTests
         using std;int allocations=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){allocations++;return null;}
-            public replace void Free(void* pointer){}
+            public replace void Free(void* pointer) nothrow{}
         }
         bool NonAscii(uint value)=>value>127u;
         uint Next(uint value)=>value+1u;

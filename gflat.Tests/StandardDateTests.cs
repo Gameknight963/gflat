@@ -56,7 +56,7 @@ public sealed class StandardDateTests
     public void CalendarAndCallerWriterFormattingNeedNoHeapAllocation(int optimization)
         => Run("""
             using std;int allocations=0;
-            namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;} public replace void Free(void* storage){allocations++;}}
+            namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;} public replace void Free(void* storage) nothrow{allocations++;}}
             int main(){Date value=new(2000,2,29);Date next=value.AddDays(1);
                 char[11] storage;BufferWriter output=new(storage,11);value.Format(&output);
                 if(output.Length!=10||!CString::Equals(output.Data,"2000-02-29"))return 1;

@@ -92,7 +92,7 @@ public class StandardHashingTests
             int allocations = 0; int releases = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { allocations++; return malloc(count); }
-                public replace void Free(void* data) { releases++; free(data); }
+                public replace void Free(void* data) nothrow { releases++; free(data); }
             }
             nuint Hash<T : IHashable>(ref immutable(T) value) => value.GetHashCode();
             bool Equal<T : IEquatable<T>>(ref immutable(T) a, ref immutable(T) b) => a.Equals(&b);

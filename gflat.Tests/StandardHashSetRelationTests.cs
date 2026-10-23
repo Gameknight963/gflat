@@ -13,7 +13,7 @@ public sealed class StandardHashSetRelationTests
         private extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes) { allocations++; return malloc(bytes); }
-            public replace void Free(void* storage) { releases++; free(storage); }
+            public replace void Free(void* storage) nothrow { releases++; free(storage); }
         }
         struct Key : IHashable, IEquatable<Key> {
             public int Value;

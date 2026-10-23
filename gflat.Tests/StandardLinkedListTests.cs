@@ -149,7 +149,7 @@ public sealed class StandardLinkedListTests
             extern void* malloc(nuint bytes); extern void free(void* pointer);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (fail) return null; return malloc(bytes); }
-                replace void Free(void* pointer) { free(pointer); }
+                replace void Free(void* pointer) nothrow { free(pointer); }
             }
             struct Unique {
                 private int* destroyed;
@@ -189,7 +189,7 @@ public sealed class StandardLinkedListTests
                     if (budget == 0) return null;
                     budget--; void*? result = malloc(bytes); if (result != null) allocated++; return result;
                 }
-                replace void Free(void* pointer) { released++; free(pointer); }
+                replace void Free(void* pointer) nothrow { released++; free(pointer); }
             }
             struct Unique {
                 private int* destroyed;

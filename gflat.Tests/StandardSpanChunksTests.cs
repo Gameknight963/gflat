@@ -44,7 +44,7 @@ public sealed class StandardSpanChunksTests
         => Run("""
             using std;extern void*? malloc(nuint size);extern void free(void* data);
             int allocations=0;int selections=0;
-            namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* data){free(data);}}
+            namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* data) nothrow{free(data);}}
             int SumChunk(Span<readonly(int)> chunk){selections++;int sum=0;for(nuint i=0;i<chunk.Length;i++)sum+=chunk[i];return sum;}
             int Add(int total,int value)=>total+value;
             SpanChunks<int> Capture(Span<int> source)=>source.Chunks(3);

@@ -58,7 +58,7 @@ public sealed class StandardBitSetRangeTests
             private extern void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { if (failAllocation) return null; allocations++; return malloc(bytes); }
-                public replace void Free(void* storage) { releases++; free(storage); }
+                public replace void Free(void* storage) nothrow { releases++; free(storage); }
             }
             int main() {
                 {

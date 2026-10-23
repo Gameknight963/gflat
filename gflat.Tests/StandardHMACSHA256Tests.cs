@@ -11,7 +11,7 @@ public sealed class StandardHMACSHA256Tests
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
-            public replace void Free(void* storage){free(storage);}
+            public replace void Free(void* storage) nothrow{free(storage);}
         }
         """;
 

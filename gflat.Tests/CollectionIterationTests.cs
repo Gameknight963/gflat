@@ -25,7 +25,7 @@ public sealed class CollectionIterationTests
             extern int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
-                public replace void Free(void* pointer) { free(pointer); }
+                public replace void Free(void* pointer) nothrow { free(pointer); }
             }
             int Sum(immutable(Vector<int>)* values) {
                 int sum = 0; foreach (int item in values.AsImmutable()) sum += item; return sum;
@@ -99,7 +99,7 @@ public sealed class CollectionIterationTests
             extern int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => malloc(size);
-                public replace void Free(void* pointer) { printf("F"); free(pointer); }
+                public replace void Free(void* pointer) nothrow { printf("F"); free(pointer); }
             }
             Vector<String> MakeWords() {
                 Vector<String> words = new Vector<String>(); words.Add(s"abc"); return words;

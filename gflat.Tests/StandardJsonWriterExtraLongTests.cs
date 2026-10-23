@@ -69,7 +69,7 @@ public sealed class StandardJsonWriterExtraLongTests
             int allocations=0;int calls=0;int fail=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}
-                public replace void Free(void* pointer){free(pointer);}
+                public replace void Free(void* pointer) nothrow{free(pointer);}
             }
             struct Sink:ITextWriter{
                 public nuint count;

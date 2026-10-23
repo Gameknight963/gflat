@@ -14,7 +14,7 @@ public class StandardQueryOwnershipTests
                 if (result != null) allocations++;
                 return result;
             }
-            public replace void Free(void* storage) { releases++; free(storage); }
+            public replace void Free(void* storage) nothrow { releases++; free(storage); }
         }
         String Join(String accumulated, String item) {
             accumulated.AppendLiteral(item.Data, item.Length);

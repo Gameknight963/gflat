@@ -175,7 +175,7 @@ public sealed class TargetTypedCreationTests
     public void RawAllocationFailureThrowsBeforeConstruction() => Succeeds("""
         namespace Memory {
             public replace void*? Allocate(nuint bytes) => null;
-            public replace void Free(void* address) {}
+            public replace void Free(void* address) nothrow {}
         }
         int main() {
             try { Thing* item = new(42); return 1; }

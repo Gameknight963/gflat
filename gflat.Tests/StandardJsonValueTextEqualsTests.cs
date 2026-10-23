@@ -75,7 +75,7 @@ public sealed class StandardJsonValueTextEqualsTests
             using std;
             extern void*? malloc(nuint size);extern void free(void* storage);
             int allocations=0;
-            namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* storage){free(storage);}}
+            namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* storage) nothrow{free(storage);}}
             int main(){
                 JsonReader unread=new((readonly(char)*)1,100);
                 if(unread.ValueTextEquals((readonly(char)*)1,100))return 1;

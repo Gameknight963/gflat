@@ -15,7 +15,7 @@ public sealed class StandardZipQueryTests
             using std;int allocations=0;int callbacks=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
-                public replace void Free(void* pointer){}
+                public replace void Free(void* pointer) nothrow{}
             }
             long Combine(short left,int right){callbacks++;return (long)left*1000l+(long)right;}
             long Sum(long total,long item)=>total+item;
@@ -47,7 +47,7 @@ public sealed class StandardZipQueryTests
         int starts=0;int advances=0;int callbacks=0;int failure=0;
         namespace Memory{
             public replace void*? Allocate(nuint bytes){void*? result=malloc(bytes);if(result!=null)allocations++;return result;}
-            public replace void Free(void* pointer){releases++;free(pointer);}
+            public replace void Free(void* pointer) nothrow{releases++;free(pointer);}
         }
         struct Source{
             private int tag;private int length;

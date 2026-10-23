@@ -78,7 +78,7 @@ public sealed class StandardVectorInsertRangeTests
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes) { if(deny)return null; allocations++;return malloc(bytes); }
-            public replace void Free(void* storage) { releases++;free(storage); }
+            public replace void Free(void* storage) nothrow { releases++;free(storage); }
         }
         struct Owner {
             public int Id; public String Text;

@@ -10,7 +10,7 @@ public sealed class StandardUnicodeTextTests
         int allocations=0;int releases=0;int largeAllocations=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){if(count>1024)largeAllocations++;if(deny)return null;allocations++;return malloc(count);}
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         """;
 

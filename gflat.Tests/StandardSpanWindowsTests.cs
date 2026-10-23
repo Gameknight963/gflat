@@ -42,7 +42,7 @@ public sealed class StandardSpanWindowsTests
         => Run("""
             using std;extern void*? malloc(nuint bytes);extern void free(void* pointer);
             int allocations=0;int selected=0;
-            namespace Memory{public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}public replace void Free(void* pointer){free(pointer);}}
+            namespace Memory{public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             int Average(Span<readonly(int)> window){selected++;return (window[0]+window[1]+window[2])/3;}
             int Sum(int total,int value)=>total+value;
             SpanWindows<int> Capture(Span<int> source)=>source.Windows(2);

@@ -56,7 +56,7 @@ public sealed class StandardSpanSearchTests
         int allocations=0; int releases=0; int destroyed=0; int calls=0; int failAt=0;
         namespace Memory {
             public replace void*? Allocate(nuint size) { allocations++; return malloc(size); }
-            public replace void Free(void* storage) { releases++; free(storage); }
+            public replace void Free(void* storage) nothrow { releases++; free(storage); }
         }
         struct Item {
             public int Key;

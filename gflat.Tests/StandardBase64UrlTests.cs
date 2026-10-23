@@ -122,7 +122,7 @@ public sealed class StandardBase64UrlTests
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
-                public replace void Free(void* data){}
+                public replace void Free(void* data) nothrow{}
             }
             int main(){
                 readonly(char)* unreadable=(readonly(char)*)1;char* unwritable=(char*)1;

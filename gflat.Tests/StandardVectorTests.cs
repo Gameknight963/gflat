@@ -11,7 +11,7 @@ public class StandardVectorTests
             extern void free(void* pointer);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size != (nuint)16) return null; return malloc(size); }
-                public replace void Free(void* pointer) { free(pointer); }
+                public replace void Free(void* pointer) nothrow { free(pointer); }
             }
             int main() {
                 Vector<int> values = new Vector<int>();
@@ -125,7 +125,7 @@ public class StandardVectorTests
                     if (size > (nuint)256) return null;
                     return malloc(size);
                 }
-                public replace void Free(void* pointer) { free(pointer); }
+                public replace void Free(void* pointer) nothrow { free(pointer); }
             }
             struct R {
                 int* released;

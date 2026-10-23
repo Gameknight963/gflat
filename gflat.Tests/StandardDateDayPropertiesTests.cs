@@ -46,7 +46,7 @@ public sealed class StandardDateDayPropertiesTests
             using std;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
-                public replace void Free(void* storage){allocations++;}
+                public replace void Free(void* storage) nothrow{allocations++;}
             }
             int Read(immutable(Date)* value)nothrow=>value.DayOfYear+(int)value.DayOfWeek;
             int main(){

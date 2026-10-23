@@ -9,7 +9,7 @@ public sealed class StandardStringJoinTests
         int allocations=0;int releases=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){if(deny)return null;allocations++;return malloc(count);}
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         """;
 

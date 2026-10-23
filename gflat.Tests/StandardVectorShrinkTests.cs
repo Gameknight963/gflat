@@ -21,7 +21,7 @@ public sealed class StandardVectorShrinkTests
                 if(deny)return null;
                 void*? result=malloc(bytes);if(result!=null){allocations++;lastSize=bytes;}return result;
             }
-            replace void Free(void* pointer){frees++;free(pointer);}
+            replace void Free(void* pointer) nothrow{frees++;free(pointer);}
         }
         """;
 

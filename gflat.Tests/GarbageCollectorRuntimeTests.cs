@@ -130,7 +130,7 @@ public sealed class GarbageCollectorRuntimeTests
                 AllocationProbe::Allocations++;
                 return probe_native::malloc(size);
             }
-            public replace void Free(void* address) {
+            public replace void Free(void* address) nothrow {
                 AllocationProbe::Frees++;
                 probe_native::free(address);
             }

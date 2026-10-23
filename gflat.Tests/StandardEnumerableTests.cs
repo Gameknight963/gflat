@@ -23,7 +23,7 @@ public sealed class StandardEnumerableTests
             int calls = 0; int allocations = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { allocations++; return null; }
-                public replace void Free(void* storage) {}
+                public replace void Free(void* storage) nothrow {}
             }
             bool Even(int value) { calls++; return value % 2 == 0; }
             int Square(int value) => value * value;
@@ -57,7 +57,7 @@ public sealed class StandardEnumerableTests
             extern int putchar(int c);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { putchar(65); return malloc(size); }
-                public replace void Free(void* p) { free(p); }
+                public replace void Free(void* p) nothrow { free(p); }
             }
             bool Even(int n) { putchar(48 + n); return n % 2 == 0; }
             int main() {
@@ -190,7 +190,7 @@ public sealed class StandardEnumerableTests
                     if (result != null) allocations++;
                     return result;
                 }
-                public replace void Free(void* p) { releases++; free(p); }
+                public replace void Free(void* p) nothrow { releases++; free(p); }
             }
             String Project(int n) {
                 if (n == 2) throw new Exception("projection failed");

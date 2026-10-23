@@ -78,7 +78,7 @@ public sealed class StandardBitSetOccupancyTests
             private extern void*? malloc(nuint bytes);private extern void free(void* storage);
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){if(fail)return null;void*? result=malloc(bytes);if(result!=null)allocations++;return result;}
-                public replace void Free(void* storage){releases++;free(storage);}
+                public replace void Free(void* storage) nothrow{releases++;free(storage);}
             }
             int main(){ {
                 BitSet original=new(33);original.SetAll(true);BitSet clone=original.Clone();

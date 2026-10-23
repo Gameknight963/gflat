@@ -73,7 +73,7 @@ public sealed class StandardExtensionTests
             extern int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
-                public replace void Free(void* storage) { free(storage); }
+                public replace void Free(void* storage) nothrow { free(storage); }
             }
             struct Writer : ITextWriter {
                 public nuint length;

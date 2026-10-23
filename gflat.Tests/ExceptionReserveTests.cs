@@ -80,7 +80,7 @@ public class ExceptionReserveTests
         string source = """
             namespace Memory {
                 public replace void*? Allocate(nuint size) => null;
-                public replace void Free(void* ptr) { }
+                public replace void Free(void* ptr) nothrow { }
             }
             int main() {
                 for (int i = 0; i < 100; i++) {
@@ -100,7 +100,7 @@ public class ExceptionReserveTests
             extern int printf(immutable(char*) format, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) => null;
-                public replace void Free(void* ptr) { }
+                public replace void Free(void* ptr) nothrow { }
             }
             class Widget { public Widget() { printf("constructed"); } }
             int main() {
@@ -125,7 +125,7 @@ public class ExceptionReserveTests
             extern int printf(immutable(char*) format, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A;"); return malloc(size); }
-                public replace void Free(void* ptr) { printf("F;"); free(ptr); }
+                public replace void Free(void* ptr) nothrow { printf("F;"); free(ptr); }
             }
             class Widget { public Widget() { throw new Exception(); } }
             int main() {
@@ -146,7 +146,7 @@ public class ExceptionReserveTests
                 class Exception { public int GetCode() => 1; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) => null;
-                    public replace void Free(void* ptr) { }
+                    public replace void Free(void* ptr) nothrow { }
                 }
                 struct Widget { int value; }
                 int main() {
@@ -184,7 +184,7 @@ public class ExceptionReserveTests
             File.WriteAllText(source, """
                 namespace Memory {
                     public replace void*? Allocate(nuint size) => null;
-                    public replace void Free(void* ptr) { }
+                    public replace void Free(void* ptr) nothrow { }
                 }
                 int main() {
                     try { throw new Exception(); }

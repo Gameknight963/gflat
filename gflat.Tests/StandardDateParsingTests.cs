@@ -113,7 +113,7 @@ public sealed class StandardDateParsingTests
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
-                public replace void Free(void* storage){allocations++;}
+                public replace void Free(void* storage) nothrow{allocations++;}
             }
             int main(){
                 long[4] aligned;

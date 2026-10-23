@@ -17,7 +17,7 @@ public class StandardHashMapTests
             private extern void free(void* address);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { allocations++; return malloc(bytes); }
-                public replace void Free(void* address) { releases++; free(address); }
+                public replace void Free(void* address) nothrow { releases++; free(address); }
             }
             int main() {
                 {
@@ -82,7 +82,7 @@ public class StandardHashMapTests
             private extern void free(void* address);
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { if(global::fail) return null; return malloc(bytes); }
-                public replace void Free(void* address) { free(address); }
+                public replace void Free(void* address) nothrow { free(address); }
             }
             struct Key : IHashable, IEquatable<Key> {
                 public int id; public Key(int n) { id=n; }

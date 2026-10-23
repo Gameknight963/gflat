@@ -101,7 +101,7 @@ public sealed class StandardBigIntegerTests
                 if(deny||failAfter==0)return null;if(failAfter>0)failAfter--;
                 allocations++;return malloc(bytes);
             }
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         bool TextEquals(immutable(BigInteger)* value,readonly(char)* text){
             String actual=value.ToString();String expected=String::From(text);return actual.Equals(&expected);

@@ -52,7 +52,7 @@ public sealed class StandardLinkedListQueryTests
             int allocations=0; int releases=0; int dead=0; bool deny=false;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if(deny)return null; allocations++; return malloc(size); }
-                public replace void Free(void* pointer) { releases++; free(pointer); }
+                public replace void Free(void* pointer) nothrow { releases++; free(pointer); }
             }
             struct Owner { public int Id; public Owner(int id){Id=id;} ~Owner(){dead++;} }
             int main() {

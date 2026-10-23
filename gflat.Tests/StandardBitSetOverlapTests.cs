@@ -26,7 +26,7 @@ public sealed class StandardBitSetOverlapTests
             bool deny=false;int attempts=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny){attempts++;return null;}return malloc(size);}
-                public replace void Free(void* value){free(value);}
+                public replace void Free(void* value) nothrow{free(value);}
             }
             bool Left(nuint i,nuint length,nuint mode) nothrow{
                 if(mode==0)return false;if(mode==1)return i%2==0;if(mode==2)return i%3==0;

@@ -49,7 +49,7 @@ public sealed class StandardSpanOrderTests
             int allocations=0;int releases=0;int made=0;int dead=0;int calls=0;int failAt=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){void*? result=malloc(bytes);if(result!=null)allocations++;return result;}
-                public replace void Free(void* storage){releases++;free(storage);}
+                public replace void Free(void* storage) nothrow{releases++;free(storage);}
             }
             struct Owner{public int Value;public String Token;public Owner(int value){Value=value;Token=s"owner";made++;}~Owner(){dead++;}}
             int Compare(immutable(Owner)* a,immutable(Owner)* b){calls++;if(calls==failAt)throw new Exception("compare");if(a.Value<b.Value)return -17;if(a.Value>b.Value)return 23;return 0;}

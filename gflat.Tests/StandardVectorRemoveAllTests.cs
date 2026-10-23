@@ -35,7 +35,7 @@ public sealed class StandardVectorRemoveAllTests
             bool deny=false;int attempts=0;int divisor=1;int calls=0;
             namespace Memory{
                 replace void*? Allocate(nuint bytes){attempts++;if(deny)return null;return malloc(bytes);}
-                replace void Free(void* pointer){free(pointer);}
+                replace void Free(void* pointer) nothrow{free(pointer);}
             }
             bool Matches(readonly(int)* value){calls++;return *value%divisor==0;}
             int main(){int[{{oracle.Count}}] oracle=[{{string.Join(',', oracle)}}];nuint cursor=0;

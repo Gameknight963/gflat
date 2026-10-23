@@ -10,7 +10,7 @@ public sealed class StandardJsonStringTextTests
         int allocations=0;int releases=0;int large=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint size){if(size>1024)large++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocations++;return result;}
-            public replace void Free(void* pointer){releases++;free(pointer);}
+            public replace void Free(void* pointer) nothrow{releases++;free(pointer);}
         }
         """;
 

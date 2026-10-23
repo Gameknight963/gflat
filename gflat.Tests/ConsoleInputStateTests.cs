@@ -43,7 +43,7 @@ public sealed class ConsoleInputStateTests
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
-                public replace void Free(void* data) { }
+                public replace void Free(void* data) nothrow { }
             }
             int main() {
                 void* stream = __gflat_stdio_stdin();

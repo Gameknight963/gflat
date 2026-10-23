@@ -13,7 +13,7 @@ public sealed class StandardTextLinesTests
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
-                public replace void Free(void* data){}
+                public replace void Free(void* data) nothrow{}
             }
             int main(){
                 char[3] bytes=['a','\n','b'];TextLines lines=new(new Span<readonly(char)>(bytes,3));
@@ -58,7 +58,7 @@ public sealed class StandardTextLinesTests
         for (int n = 1; n <= 40; n++) cases.Add(new string(Enumerable.Range(0, n).Select(_ => alphabet[random.Next(alphabet.Length)]).ToArray()));
         var program = new StringBuilder("""
             using std;
-            namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* data) {} }
+            namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* data) nothrow {} }
             bool Next(TextLines::Enumerator* iterator, readonly(char)* expected, nuint length) {
                 if(!iterator.MoveNext())return false;
                 Span<readonly(char)> line=iterator.Current;
@@ -132,7 +132,7 @@ public sealed class StandardTextLinesTests
             }
             namespace Memory {
                 replace void*? Allocate(nuint size) { Calls::Allocations++; return detail::malloc(size); }
-                replace void Free(void* data) { detail::free(data); }
+                replace void Free(void* data) nothrow { detail::free(data); }
             }
             bool Nonempty(Span<readonly(char)> line) => !line.IsEmpty;
             int main(){

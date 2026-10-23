@@ -49,7 +49,7 @@ public sealed class StandardTextMatchSpanTests
             using std;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
-                public replace void Free(void* pointer){}
+                public replace void Free(void* pointer) nothrow{}
             }
             int main(){
                 char[7] bytes=['!',(char)255,'\0','x','?',(char)128,'!'];

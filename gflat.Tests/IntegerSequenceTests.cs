@@ -46,7 +46,7 @@ public sealed class IntegerSequenceTests
             extern int printf(immutable(char*) text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint count) { printf("allocation"); return malloc(count); }
-                public replace void Free(void* storage) { free(storage); }
+                public replace void Free(void* storage) nothrow { free(storage); }
             }
             int main() {
                 FilteredIntRange query = new IntRange(0, 10).Where((int n) => n % 2 == 0).Skip(1).Take(2);

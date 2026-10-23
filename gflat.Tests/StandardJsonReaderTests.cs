@@ -76,7 +76,7 @@ public sealed class StandardJsonReaderTests
             bool deny=false;int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny)return null;allocations++;return malloc(size);}
-                public replace void Free(void* storage){releases++;free(storage);}
+                public replace void Free(void* storage) nothrow{releases++;free(storage);}
             }
             int main(){
                 {

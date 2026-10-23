@@ -58,7 +58,7 @@ public sealed class StandardJsonWriterIndentationTests
             using std;extern void*? malloc(nuint count);extern void free(void* pointer);int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}
-                public replace void Free(void* pointer){releases++;free(pointer);}
+                public replace void Free(void* pointer) nothrow{releases++;free(pointer);}
             }
             struct Sink:ITextWriter{public nuint Bytes;public Sink(){Bytes=0;}public void Write(readonly(char)* data,nuint count){Bytes+=count;}}
             int main(){nuint compact=0;
@@ -110,7 +110,7 @@ public sealed class StandardJsonWriterIndentationTests
             using std;extern void*? malloc(nuint count);extern void free(void* pointer);bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){if(deny)return null;return malloc(count);}
-                public replace void Free(void* pointer){free(pointer);}
+                public replace void Free(void* pointer) nothrow{free(pointer);}
             }
             int main(){String text=new();text.Reserve(512);JsonWriter writer=new(&text,true);writer.WriteStartArray();
                 nuint before=text.Length;char[1] invalid=[(char)255];int caught=0;

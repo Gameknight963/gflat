@@ -17,7 +17,7 @@ public sealed class StandardTextSplitOnceSpanTests
             using std;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
-                public replace void Free(void* pointer){}
+                public replace void Free(void* pointer) nothrow{}
             }
             int main(){char[34] data;
             """);
@@ -56,7 +56,7 @@ public sealed class StandardTextSplitOnceSpanTests
             int allocations=0;int releases=0;bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;if(deny)return null;return malloc(size);}
-                public replace void Free(void* pointer){releases++;free(pointer);}
+                public replace void Free(void* pointer) nothrow{releases++;free(pointer);}
             }
             int main(){
                 {

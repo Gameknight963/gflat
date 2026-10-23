@@ -12,7 +12,7 @@ public sealed class StandardMapQualifierViewTests
         extern void*? malloc(nuint bytes);extern void free(void* pointer);
         namespace Memory{
             public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}
-            public replace void Free(void* pointer){free(pointer);}
+            public replace void Free(void* pointer) nothrow{free(pointer);}
         }
         struct Cell{public int Value;public Cell(int value){Value=value;}}
         struct Payload{

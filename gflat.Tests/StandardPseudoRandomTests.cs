@@ -69,7 +69,7 @@ public class StandardPseudoRandomTests
             using std;
             int allocations = 0;
             replace void*? Memory::Allocate(nuint bytes) { allocations++; return null; }
-            replace void Memory::Free(void* storage) { allocations++; }
+            replace void Memory::Free(void* storage) nothrow { allocations++; }
             int main() {
                 PseudoRandom low = new({{zeroSeed}}ul);
                 float minimum = low.NextFloat();

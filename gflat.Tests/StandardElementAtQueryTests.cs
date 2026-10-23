@@ -63,7 +63,7 @@ public sealed class StandardElementAtQueryTests
             int moves=0;int reads=0;int mode=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){void*? result=malloc(size);if(result!=null)allocations++;return result;}
-                public replace void Free(void* pointer){releases++;free(pointer);}
+                public replace void Free(void* pointer) nothrow{releases++;free(pointer);}
             }
             struct Source{
                 public Source::Iterator GetEnumerator()=>new Source::Iterator();

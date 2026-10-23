@@ -56,7 +56,7 @@ public sealed class StandardRotationTests
             extern void* malloc(nuint size);extern void free(void* storage);
             int allocations=0;
             replace void*? Memory::Allocate(nuint bytes){allocations++;return malloc(bytes);}
-            replace void Memory::Free(void* storage){free(storage);}
+            replace void Memory::Free(void* storage) nothrow{free(storage);}
             struct Item{
                 private int* destroyed;public int Key;
                 public Item(int* counts,int key){destroyed=counts;Key=key;}

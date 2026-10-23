@@ -154,6 +154,8 @@ public partial class TypeChecker
         if (!_globalScope.Children.TryGetValue("Memory", out var scope)) return;
         var allocate = GetMemoryFunction("Allocate");
         var free = GetMemoryFunction("Free");
+        if (free != null && !free.IsNoThrow)
+            throw new TypeCheckException("Memory::Free must be declared nothrow", free.Span);
         if (allocate == null || free == null)
         {
             if (allocate?.ImplementationKind == FunctionImplementationKind.Replace || free?.ImplementationKind == FunctionImplementationKind.Replace)
@@ -170,7 +172,7 @@ public partial class TypeChecker
             throw new TypeCheckException($"This operation requires Memory::{name}; include a memory implementation or provide the function explicitly", use.Span);
         if (GetMemoryFunction(name) == null)
             throw new TypeCheckException($"Memory::{name} must provide the public non-generic signature " +
-                (name == "Allocate" ? "void*? Allocate(nuint bytes)" : "void Free(void* storage)"), use.Span);
+                (name == "Allocate" ? "void*? Allocate(nuint bytes)" : "void Free(void* storage) nothrow"), use.Span);
     }
 
     public bool HasMemoryFunction(string name) => _globalScope.Children.TryGetValue("Memory", out var scope) && scope.Functions.ContainsKey(name);

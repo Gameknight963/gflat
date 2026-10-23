@@ -108,7 +108,7 @@ public sealed class StandardHexIntegerParsingTests
             using std;
             namespace Memory {
                 replace void*? Allocate(nuint count) => null;
-                replace void Free(void* storage) {}
+                replace void Free(void* storage) nothrow {}
             }
             bool Probe(readonly(char)* input, nuint count) nothrow {
                 byte small = 0;

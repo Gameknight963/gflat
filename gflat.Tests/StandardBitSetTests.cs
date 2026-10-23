@@ -103,7 +103,7 @@ public sealed class StandardBitSetTests
             extern void free(void* address);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (bytes > 4) return null; return malloc(bytes); }
-                replace void Free(void* address) { free(address); }
+                replace void Free(void* address) nothrow { free(address); }
             }
             int main() {
                 BitSet bits = new(32); bits[31] = true;

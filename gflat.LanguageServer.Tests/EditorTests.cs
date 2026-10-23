@@ -256,10 +256,10 @@ public class EditorTests
     [Fact]
     public void SignatureHelpClassifiesMemoryFreeWhileTyping()
     {
-        var (model, path, offset, _) = Analyze("namespace Memory { public weak void Free(void* ptr) {} } void Use() { Memory::Free(|");
+        var (model, path, offset, _) = Analyze("namespace Memory { public weak void Free(void* ptr) nothrow {} } void Use() { Memory::Free(|");
         var help = Json(model.SignatureHelp(path, offset, visualStudio: true));
         var signature = help.GetProperty("signatures")[0];
-        Assert.Equal("public weak void Memory::Free(void* ptr)", signature.GetProperty("label").GetString());
+        Assert.Equal("public weak void Memory::Free(void* ptr) nothrow", signature.GetProperty("label").GetString());
         Assert.Equal("void* ptr", signature.GetProperty("parameters")[0].GetProperty("label").GetString());
         Assert.Equal(0, help.GetProperty("activeParameter").GetInt32());
         var runs = signature.GetProperty("_vs_colorizedLabel").GetProperty("Runs").EnumerateArray().ToArray();

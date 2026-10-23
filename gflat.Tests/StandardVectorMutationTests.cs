@@ -183,7 +183,7 @@ public sealed class StandardVectorMutationTests
             extern void* malloc(nuint bytes); extern void free(void* address);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (bytes > 64) return null; return malloc(bytes); }
-                replace void Free(void* address) { free(address); }
+                replace void Free(void* address) nothrow { free(address); }
             }
             struct Item {
                 private int* destroyed;

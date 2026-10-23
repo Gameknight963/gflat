@@ -12,7 +12,7 @@ public class PlacementConstructionTests
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
-                public replace void Free(void* p) { printf("F"); free(p); }
+                public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             struct Thing {
                 public int field = 7;
@@ -104,7 +104,7 @@ public class PlacementConstructionTests
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint n) { printf("A"); return malloc(n); }
-                public replace void Free(void* p) { printf("F"); free(p); }
+                public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             int main() {
                 Exception* storage = (Exception*)Memory::Allocate((nuint)sizeof(Exception));

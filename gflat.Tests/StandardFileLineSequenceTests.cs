@@ -11,7 +11,7 @@ public sealed class StandardFileLineSequenceTests
         int allocations=0;int releases=0;bool failAllocation=false;
         namespace Memory{
             public replace void*? Allocate(nuint bytes){if(failAllocation)return null;void*? result=malloc(bytes);if(result!=null)allocations++;return result;}
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         """;
 

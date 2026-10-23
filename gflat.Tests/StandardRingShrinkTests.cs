@@ -24,7 +24,7 @@ public sealed class StandardRingShrinkTests
         int allocations=0;int frees=0;bool deny=false;nuint lastSize=0;
         namespace Memory{
             replace void*? Allocate(nuint bytes){if(deny)return null;void*? result=malloc(bytes);if(result!=null){allocations++;lastSize=bytes;}return result;}
-            replace void Free(void* pointer){frees++;free(pointer);}
+            replace void Free(void* pointer) nothrow{frees++;free(pointer);}
         }
         """;
 

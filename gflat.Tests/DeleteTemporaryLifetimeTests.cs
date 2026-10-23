@@ -8,7 +8,7 @@ public sealed class DeleteTemporaryLifetimeTests
         void*? watched=null;int childDead=0;int holderDead=0;int freed=0;
         namespace Memory{
             public replace void*? Allocate(nuint bytes)=>malloc(bytes);
-            public replace void Free(void* storage){if(storage==watched){freed++;putchar(70);watched=null;}free(storage);}
+            public replace void Free(void* storage) nothrow{if(storage==watched){freed++;putchar(70);watched=null;}free(storage);}
         }
         struct Child{public int Value;public Child(){Value=0;}~Child(){childDead++;putchar(67);}}
         struct Holder{

@@ -12,7 +12,7 @@ public sealed class StandardUniqueTests
             void*? watched=null;int watchedFrees=0;int dead=0;
             namespace Memory {
                 public replace void*? Allocate(nuint size)=>malloc(size);
-                public replace void Free(void* ptr){if(ptr==watched){watchedFrees++;watched=null;}free(ptr);}
+                public replace void Free(void* ptr) nothrow{if(ptr==watched){watchedFrees++;watched=null;}free(ptr);}
             }
             struct Payload{public int Number;public Payload(int n){Number=n;}~Payload(){dead++;}}
             void Fail(Unique<Payload> item){if(item.Value.Number!=42)throw new Exception("wrong payload");throw new Exception("callee failure");}

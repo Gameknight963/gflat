@@ -23,7 +23,7 @@ public sealed class StandardTextWriterExtensionsTests
             static class State { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { State::Allocations++; return null; }
-                public replace void Free(void* data) { }
+                public replace void Free(void* data) nothrow { }
             }
             int main() {
                 char[32] buffer; BufferWriter storage = new BufferWriter(buffer, 32);

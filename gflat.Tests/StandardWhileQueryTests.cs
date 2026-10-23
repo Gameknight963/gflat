@@ -95,7 +95,7 @@ public sealed class StandardWhileQueryTests
             int allocations=0;int releases=0;int created=0;int destroyed=0;int calls=0;int failAt=0;
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { void*? result=malloc(bytes);if(result!=null)allocations++;return result; }
-                public replace void Free(void* storage) { releases++;free(storage); }
+                public replace void Free(void* storage) nothrow { releases++;free(storage); }
             }
             struct Source {
                 public struct Iterator {

@@ -72,7 +72,7 @@ public sealed class StandardStringAliasingTests
             extern void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size == 3) return null; return malloc(size); }
-                public replace void Free(void* storage) { free(storage); }
+                public replace void Free(void* storage) nothrow { free(storage); }
             }
             int main() {
                 String value = String::From("ab   ");

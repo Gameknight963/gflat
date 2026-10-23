@@ -99,7 +99,7 @@ public sealed class StandardStableSortTests
                 if(denyAfter==0)return null;if(denyAfter>0)denyAfter--;
                 allocations++;return malloc(bytes);
             }
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         struct Owner{
             public int Key;public int Id;public String Text;

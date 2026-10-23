@@ -14,7 +14,7 @@ public class StandardStringTests
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
-                public replace void Free(void* p) { printf("F"); free(p); }
+                public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             int main() {
                 String original = s"a\0b";
@@ -43,7 +43,7 @@ public class StandardStringTests
                     if (size == (nuint)7) return null;
                     return malloc(size);
                 }
-                public replace void Free(void* p) { free(p); }
+                public replace void Free(void* p) nothrow { free(p); }
             }
             int main() {
                 String text = s"abc";
@@ -68,7 +68,7 @@ public class StandardStringTests
             extern int printf(readonly(char)* text, ...);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { printf("A"); return malloc(size); }
-                public replace void Free(void* p) { printf("F"); free(p); }
+                public replace void Free(void* p) nothrow { printf("F"); free(p); }
             }
             int main() {
                 { String empty = new String(); empty.Clear(); }
@@ -183,7 +183,7 @@ public class StandardStringTests
             extern void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size == (nuint)101) return null; return malloc(size); }
-                public replace void Free(void* p) { free(p); }
+                public replace void Free(void* p) nothrow { free(p); }
             }
             int main() {
                 String text = s"abc";
@@ -209,7 +209,7 @@ public class StandardStringTests
             extern void free(void* storage);
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if (size != (nuint)4) return null; return malloc(size); }
-                public replace void Free(void* p) { free(p); }
+                public replace void Free(void* p) nothrow { free(p); }
             }
             int main() {
                 String text = s"abc";

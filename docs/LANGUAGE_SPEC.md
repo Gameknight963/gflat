@@ -428,19 +428,20 @@ extern void*? malloc(nuint size);
 extern void free(void* ptr);
 namespace Memory {
     public replace void*? Allocate(nuint size) { return malloc(size); }
-    public replace void Free(void* ptr) { free(ptr); }
+    public replace void Free(void* ptr) nothrow { free(ptr); }
 }
 ```
 
-The non-throwing requirement is a behavioral callback contract, not a `nothrow`
-modifier on these declarations. `Allocate` must report allocation failure by
-returning null; neither hook may let an exception escape. The exception runtime
-uses these same hooks for payload allocation and release. Throwing from an
-allocator can recursively request exception storage through that allocator, and
-throwing during release can fail while another exception is being cleaned up.
-Ordinary direct calls participate in unwinding, but this does not make throwing
-implementations safe runtime callbacks. Signature checking does not prove this
-behavioral requirement.
+`Memory::Free(void*)` must be declared `nothrow`, including selected replacements
+and declarations supplied without std. An exception reaching that boundary
+terminates rather than escaping into callers or runtime cleanup. This is the
+ordinary `nothrow` boundary behavior, not a promise that its body cannot call
+potentially throwing functions.
+
+`Allocate` can return null or throw; it has no `nothrow` requirement. The exception
+runtime uses these same hooks for payload allocation and release. Its allocation
+callback guard uses the emergency reserve for recursive exception storage rather
+than reentering the same allocator. An exhausted reserve can still terminate.
 
 `Allocate` must return suitably aligned storage or null. Compiler-generated `new*` throws `std::BadAllocException` on null before initialization; direct calls expose the nullable result. Default-runtime `new^` can collect and retry once before throwing that exception. The default extern declaration is `extern void*? malloc(nuint size)`. Allocation sizes and custom literal byte lengths use pointer-sized `nuint`, not fixed-width `ulong`; hook signatures must match that type even on a target where both have the same width. Extern declarations with stronger contracts are the programmer's responsibility. Libc remains a toolchain dependency for now; replacing these functions does not select a freestanding build. The old `__gflat_alloc`, `__gflat_free`, and `#no_default_allocator` interfaces are rejected with migration diagnostics.
 

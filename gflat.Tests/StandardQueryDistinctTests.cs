@@ -23,7 +23,7 @@ public sealed class StandardQueryDistinctTests
                 attempts++;if(failAt!=0&&attempts==failAt)return null;
                 void*? result=malloc(bytes);if(result!=null)allocations++;return result;
             }
-            public replace void Free(void* storage){releases++;free(storage);}
+            public replace void Free(void* storage) nothrow{releases++;free(storage);}
         }
         """;
 

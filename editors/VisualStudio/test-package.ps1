@@ -160,7 +160,7 @@ struct SmokeTemporary {
 SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
 bool SmokeRemove(readonly(int)* value) => *value == 9;
 Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
-int main() {
+int SmokeCore() {
     HashMap<String, int> map = new();
     map.Add(s"answer", 42);
     String key = s"answer";
@@ -308,6 +308,9 @@ int main() {
     shifted.Resize(96); if (shifted.CountSetBits() != 1) return 63;
     Date weekdayDate = new(2024, 2, 29);
     if (weekdayDate.DayOfWeek != DayOfWeek::Thursday || weekdayDate.DayOfYear != 60) return 64;
+    return 0;
+}
+int SmokeBinaryAndQueries() {
     {
         byte[4] batchPacket = [(byte)1, (byte)2, (byte)3, (byte)4];
         BinaryBufferWriter batchOutput = new(batchPacket, 4);
@@ -433,6 +436,11 @@ int main() {
             || !Paths::GetExtension(batchPath, PathStyle::Unix).StartsWith(".gz")) return 99;
         if (BitOperations::RoundUpToPowerOfTwo(9u) != 16u
             || BitOperations::RoundUpToPowerOfTwo(18446744073709551615ul) != 0ul) return 100;
+    }
+    return 0;
+}
+int SmokeTextAndOwners() {
+    {
         String batchResized = s"x"; batchResized.Resize(4, 'y');
         if (batchResized.Length != 4 || batchResized[0] != 'x' || batchResized[3] != 'y'
             || batchResized.Data[4] != '\0') return 101;
@@ -530,6 +538,11 @@ int main() {
         if (batchByteCount.Length != 3) return 124;
         batchByteCount.Clear();
         if (batchByteCount.Length != 0) return 125;
+    }
+    return 0;
+}
+int SmokeHashesAndViews() {
+    {
         int[5] batchRepeated = [3, 1, 3, 2, 1];
         Span<int> batchRepeatedView = new(batchRepeated, 5);
         Vector<int> batchOrderedUnique = batchRepeatedView.AsEnumerable().Distinct().ToVector();
@@ -567,6 +580,12 @@ int main() {
         if (!batchOverlapLeft.Overlaps(&batchOverlapRight)) return 137;
     }
     return 0;
+}
+int main() {
+    int result = SmokeCore(); if (result != 0) return result;
+    result = SmokeBinaryAndQueries(); if (result != 0) return result;
+    result = SmokeTextAndOwners(); if (result != 0) return result;
+    return SmokeHashesAndViews();
 }
 '@ | Set-Content -LiteralPath $expandedStd
     $allSources = @(Get-ChildItem -LiteralPath $std -Recurse -Filter '*.gf' -File | ForEach-Object FullName)

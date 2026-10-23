@@ -81,6 +81,10 @@ public class WholeStandardLibraryEditorTests
                 HashMap<String,int>::Entry detached=map.Extract(&key);
                 detached.ValueReadOnly; detached.ValueImmutable;
                 CRC32 checksum=new(); checksum.Append("123456789",9);
+                SHA256 contentHash=new();
+                bool hashed=contentHash.TryAppend(text.Data,text.Length);
+                byte[32] digest=contentHash.GetHash();
+                contentHash.Reset();
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
                 decoder.Read("a",1,true,&scalar,&consumed);
                 Utf8Scalars characters=new(text.Data,text.Length);
@@ -318,6 +322,14 @@ public class WholeStandardLibraryEditorTests
         var lineHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,lineCall),Protocol.JsonOptions);
         Assert.Contains("ITextWriter* output",lineHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("Console.gf",JsonSerializer.Serialize(model.Definition(source.Path,lineCall),Protocol.JsonOptions));
+        foreach(string member in new[]{"TryAppend","GetHash","Reset"})
+        {
+            int call=text.IndexOf("contentHash."+member,StringComparison.Ordinal)+"contentHash.".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("SHA256.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            if(member=="GetHash") Assert.Contains("byte[32]",hover.GetProperty("contents").GetProperty("value").GetString());
+        }
         int distinctCall=sourceTokens.Single(token=>token.Text=="Distinct").Start;
         var distinctHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,distinctCall),Protocol.JsonOptions);
         Assert.Contains("DistinctSource",distinctHover.GetProperty("contents").GetProperty("value").GetString());

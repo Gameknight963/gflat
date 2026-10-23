@@ -68,6 +68,7 @@ implementation lives in `libc`.
 | Byte searches | `ByteSearch` | [Counted binary substring search](../docs/BYTE_SEARCH.md) |
 | Binary buffers | `BinaryBufferReader`, `BinaryBufferWriter` | [Borrowed cursors and bounded payloads](../docs/BINARY_CURSORS.md) |
 | Streaming checksums | `CRC32`, `Adler32` | [Incremental byte checksums](../docs/CHECKSUMS.md) |
+| SHA-256 digests | `SHA256` | [Incremental hashing and fixed-buffer results](../docs/SHA256.md) |
 | Temporary storage | `Arena` | [Independent raw-storage arenas](../docs/ARENA.md) |
 | Raw memory | `Memory::Copy`, `Move`, `Fill`, `Compare`, `Equal` | [Byte operations and linking](../docs/MEMORY.md) |
 

@@ -42,3 +42,6 @@ for long streams.
 The gzip format stores its CRC32 little endian; the zlib format stores its
 Adler32 big endian. These checksums detect accidental byte corruption; they do
 not authenticate data.
+
+For SHA-256 file/content digests with copied fixed-buffer results, see
+[`SHA256`](SHA256.md).

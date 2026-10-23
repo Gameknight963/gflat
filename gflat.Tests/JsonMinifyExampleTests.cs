@@ -61,18 +61,7 @@ public sealed class JsonMinifyExampleTests
                 var usage=await Run(executable,args);Assert.Equal(2,usage.ExitCode);Assert.Empty(usage.Output);Assert.Contains("Usage:",usage.Error);
             }
         }
-        finally
-        {
-            // Windows may keep the just-exited executable mapped briefly. Retry
-            // deletion without suppressing a persistent cleanup failure.
-            for (int attempt = 0; ; attempt++)
-            {
-                try { Directory.Delete(directory, true); break; }
-                catch (Exception error) when (OperatingSystem.IsWindows() && attempt < 8 &&
-                    error is IOException or UnauthorizedAccessException)
-                { await Task.Delay(50 * (attempt + 1)); }
-            }
-        }
+        finally { await TestDirectoryCleanup.DeleteAsync(directory); }
     }
 
     private static List<(JsonTokenType Kind,string Value)> Tokens(byte[] bytes,bool requireCompact)

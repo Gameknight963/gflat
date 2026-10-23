@@ -60,7 +60,7 @@ public sealed class ConsoleLineWriterTests
                 await Run(executable,Encoding.UTF8.GetBytes(sample.Input),[expected]);
             }
         }
-        finally{await DeleteDirectory(directory);}
+        finally{await TestDirectoryCleanup.DeleteAsync(directory);}
     }
 
     [Theory]
@@ -83,7 +83,7 @@ public sealed class ConsoleLineWriterTests
                 """,optimization);
             await Run(executable,Encoding.ASCII.GetBytes(new string('a',1048576)+"\r\n\nlast\0byte\r"),[]);
         }
-        finally{await DeleteDirectory(directory);}
+        finally{await TestDirectoryCleanup.DeleteAsync(directory);}
     }
 
     [Theory]
@@ -121,26 +121,13 @@ public sealed class ConsoleLineWriterTests
                 """,optimization);
             await Run(executable,Encoding.ASCII.GetBytes(new string('x',4096)+"\nnext\n"),[]);
         }
-        finally{await DeleteDirectory(directory);}
+        finally{await TestDirectoryCleanup.DeleteAsync(directory);}
     }
 
     private static string TemporaryDirectory()
     {
         string directory=Path.Combine(Path.GetTempPath(),"gflat-console-writer-line-"+Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);return directory;
-    }
-
-    private static async Task DeleteDirectory(string directory)
-    {
-        // A just-exited executable can remain mapped briefly on Windows.
-        // Retry cleanup without hiding a persistent failure.
-        for(int attempt=0;;attempt++)
-        {
-            try{Directory.Delete(directory,true);return;}
-            catch(Exception error) when(OperatingSystem.IsWindows()&&attempt<8&&
-                error is IOException or UnauthorizedAccessException)
-            {await Task.Delay(50*(attempt+1));}
-        }
     }
 
     private static string Compile(string directory,string program,int optimization)

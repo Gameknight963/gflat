@@ -68,7 +68,7 @@ public sealed class SettingsJsonExampleTests
                 Assert.Equal(sample.Error + Environment.NewLine, result.Error);
             }
         }
-        finally { Directory.Delete(directory, true); }
+        finally { await TestDirectoryCleanup.DeleteAsync(directory); }
     }
 
     private static async Task<(int Code, string Output, string Error)> Run(string executable, byte[] input)
@@ -91,6 +91,7 @@ public sealed class SettingsJsonExampleTests
         catch (OperationCanceledException)
         {
             process.Kill(true);
+            await process.WaitForExitAsync();
             throw new TimeoutException("settings-json timed out.");
         }
         return (process.ExitCode, await output, await error);

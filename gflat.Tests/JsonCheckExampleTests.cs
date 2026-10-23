@@ -50,7 +50,7 @@ public sealed class JsonCheckExampleTests
                 var usage=await Run(executable,args);Assert.Equal(2,usage.ExitCode);Assert.Empty(usage.Output);Assert.Contains("Usage:",usage.Error);
             }
         }
-        finally{Directory.Delete(directory,true);}
+        finally{await TestDirectoryCleanup.DeleteAsync(directory);}
     }
 
     private static async Task<(int ExitCode,string Output,string Error)> Run(string executable,string[] arguments)

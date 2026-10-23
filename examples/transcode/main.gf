@@ -53,8 +53,7 @@ int main(int argc,char** argv)
         Vector<byte> output;
         if(CString::Equals(argv[1],"utf8-to-utf16le"))output=ToUtf16Le(ref input);
         else output=FromUtf16Le(ref input);
-        if(output.IsEmpty) { File empty=File::OpenWrite(argv[3]); empty.Close(); }
-        else FileBytes::WriteAll(argv[3],output.AsImmutable().Data!,output.Count);
+        FileBytes::WriteAll(argv[3],ref output);
     }
     catch(Exception* error) { Console::Error.WriteLine(error.GetMessage()); return 1; }
     return 0;

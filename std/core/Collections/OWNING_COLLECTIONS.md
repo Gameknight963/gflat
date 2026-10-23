@@ -1,5 +1,12 @@
 # Owning collections
 
+Default `Vector<T>()` construction is `nothrow`. It initializes an empty header
+with zero `Count` and `Capacity`, allocates no element storage, and constructs no
+elements of `T`. Destroying that empty vector destroys no elements. This applies
+to primitive, owning, and managed reference element types. The contract covers
+empty header initialization; operations on elements and collector hooks retain
+their own allocation and failure behavior.
+
 `Vector<T>` owns contiguous elements. `Add(value)` appends, `Insert(index, value)`
 inserts before an existing element (or appends at `Count`), and `RemoveAt(index)`
 transfers the removed value to the caller while preserving the order of survivors.

@@ -7,7 +7,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
     private nuint count;
     private nuint capacity;
 
-    public Vector() { data = null; count = 0; capacity = 0; }
+    public Vector() nothrow { data = null; count = 0; capacity = 0; }
 
     public nuint Count { immutable get nothrow => count; }
     public nuint Capacity { immutable get nothrow => capacity; }

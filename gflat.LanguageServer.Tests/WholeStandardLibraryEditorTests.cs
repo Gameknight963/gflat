@@ -238,6 +238,8 @@ public class WholeStandardLibraryEditorTests
                 TimeSpan budget=TimeSpan::FromSeconds(2l); TimeSpan remainingTime=budget.Subtract(elapsed);
                 long remainingTicks=remainingTime.Ticks; double remainingSeconds=remainingTime.TotalSeconds;
                 String durationText=s$"Remaining: {remainingTime}";
+                TimeSpan parsedDuration=TimeSpan::Parse("01:29:30.5");
+                TimeSpan::TryParse("00:00:01",&parsedDuration);
                 IpAddress networkAddress=IpAddress::Parse("2001:db8::1");
                 bool ipv4Address=networkAddress.IsIpv4; char[39] addressText; nuint addressWritten=0;
                 networkAddress.TryFormat(addressText,39,ref addressWritten);
@@ -448,6 +450,11 @@ public class WholeStandardLibraryEditorTests
         int durationSeconds=text.IndexOf("remainingTime.TotalSeconds",StringComparison.Ordinal)+"remainingTime.".Length;
         var secondsHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationSeconds),Protocol.JsonOptions);
         Assert.Contains("double",secondsHover.GetProperty("contents").GetProperty("value").GetString());
+        int durationParser=text.IndexOf("TimeSpan::TryParse",StringComparison.Ordinal)+"TimeSpan::".Length;
+        var durationParserHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationParser),Protocol.JsonOptions);
+        Assert.Contains("bool",durationParserHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("nothrow",durationParserHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("TimeSpan.gf",JsonSerializer.Serialize(model.Definition(source.Path,durationParser),Protocol.JsonOptions));
         int addressFactory=text.IndexOf("IpAddress::Parse",StringComparison.Ordinal)+"IpAddress::".Length;
         var addressHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,addressFactory),Protocol.JsonOptions);
         Assert.Contains("IpAddress",addressHover.GetProperty("contents").GetProperty("value").GetString());

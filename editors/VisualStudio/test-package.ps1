@@ -530,6 +530,15 @@ int main() {
         if (batchByteCount.Length != 3) return 124;
         batchByteCount.Clear();
         if (batchByteCount.Length != 0) return 125;
+        int[5] batchRepeated = [3, 1, 3, 2, 1];
+        Span<int> batchRepeatedView = new(batchRepeated, 5);
+        Vector<int> batchOrderedUnique = batchRepeatedView.AsEnumerable().Distinct().ToVector();
+        if (batchOrderedUnique.Count != 3 || batchOrderedUnique[0] != 3
+            || batchOrderedUnique[1] != 1 || batchOrderedUnique[2] != 2) return 126;
+        SHA256 batchHash = new();
+        if (!batchHash.TryAppend("abc", 3)) return 127;
+        byte[32] batchDigest = batchHash.GetHash();
+        if (batchDigest[0] != (byte)0xba || batchDigest[31] != (byte)0xad) return 128;
     }
     return 0;
 }

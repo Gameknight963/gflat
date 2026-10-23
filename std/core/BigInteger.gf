@@ -42,6 +42,66 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
 
     public int Sign { immutable get nothrow => sign; }
 
+    private immutable bool TryMagnitude(ulong limit, ref ulong result) nothrow
+    {
+        ulong magnitude = 0ul;
+        nuint index = limbs.Count;
+        while (index != 0)
+        {
+            index--;
+            ulong digit = (ulong)limbs[index];
+            if (digit > limit || magnitude > (limit - digit) / Radix)
+            {
+                result = 0ul;
+                return false;
+            }
+            magnitude = magnitude * Radix + digit;
+        }
+        result = magnitude;
+        return true;
+    }
+
+    // Output metadata must not overlap this owner or its limb storage.
+    public immutable bool TryToLong(ref long result) nothrow
+    {
+        ulong limit = 9223372036854775807ul;
+        if (sign < 0) limit++;
+        ulong magnitude = 0ul;
+        if (!this.TryMagnitude(limit, ref magnitude)) { result = 0l; return false; }
+        long converted = 0l;
+        if (sign < 0)
+        {
+            if (magnitude == 9223372036854775808ul) converted = -9223372036854775807l - 1l;
+            else converted = -(long)magnitude;
+        }
+        else converted = (long)magnitude;
+        result = converted;
+        return true;
+    }
+
+    public immutable bool TryToULong(ref ulong result) nothrow
+    {
+        if (sign < 0) { result = 0ul; return false; }
+        ulong converted = 0ul;
+        if (!this.TryMagnitude(18446744073709551615ul, ref converted)) { result = 0ul; return false; }
+        result = converted;
+        return true;
+    }
+
+    public immutable long ToLong()
+    {
+        long result = 0l;
+        if (!this.TryToLong(ref result)) throw new Exception("BigInteger does not fit in long");
+        return result;
+    }
+
+    public immutable ulong ToULong()
+    {
+        ulong result = 0ul;
+        if (!this.TryToULong(ref result)) throw new Exception("BigInteger does not fit in ulong");
+        return result;
+    }
+
     private void Normalize()
     {
         while (limbs.Count != 0 && limbs[limbs.Count - 1] == 0u) limbs.Truncate(limbs.Count - 1);

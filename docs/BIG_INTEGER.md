@@ -37,6 +37,8 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `BigInteger::TryParse(data, count, ref result)` | Parse counted decimal input into an initialized owning result; false resets it to zero. |
 | `BigInteger::TryParse(text, ref result)` | The same syntax and result contract for null-terminated input. |
 | `Sign` | -1, 0, or 1. |
+| `TryToLong(ref result)` / `TryToULong(ref result)` | Checked 64-bit conversion; false writes zero. |
+| `ToLong()` / `ToULong()` | Checked 64-bit conversion; throws when the value does not fit. |
 | `Add(immutable(BigInteger)* other)` | Return the exact sum. |
 | `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
 | `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
@@ -116,6 +118,39 @@ For explicit source selection include `core/BigInteger.gf`, `Vector`/`Span` and
 their query-interface dependencies, `Formatting.gf`, `Hashing.gf`, the implemented
 interface sources, and `String`/`ByteSearch`. Projects using the complete standard
 library already include these sources.
+
+## Checked primitive conversions
+
+Immutable `TryToLong(ref long result)` accepts the entire signed 64-bit range,
+including `long` minimum. `TryToULong(ref ulong result)` accepts zero through
+`ulong` maximum and rejects negative values. Both are `nothrow`, allocate nothing,
+and write zero to the output on failure. A failed conversion does not wrap,
+truncate, or preserve the previous output value. The receiver is unchanged.
+
+Results are staged before assignment. Output metadata must be separate from
+both the receiver object's storage and its owned limb allocation. These methods
+borrow the integer; they do not transfer ownership or allocate a decimal string.
+
+`ToLong()` and `ToULong()` return the same checked results or throw
+`Exception("BigInteger does not fit in long")` or
+`Exception("BigInteger does not fit in ulong")`, respectively. Successful calls
+allocate nothing; errors follow normal exception allocation rules. These named
+methods provide checked range conversion, independently of primitive casts'
+ordinary bit-truncation rules. No conversion operator or implicit conversion is
+introduced.
+
+```csharp
+using std;
+int main()
+{
+    BigInteger integer = BigInteger::Parse("18446744073709551615");
+    ulong unsignedValue = 0ul;
+    if (!integer.TryToULong(ref unsignedValue) || unsignedValue != 18446744073709551615ul) return 1;
+    long signedValue = 42l;
+    if (integer.TryToLong(ref signedValue) || signedValue != 0l) return 2;
+    return 0;
+}
+```
 
 ## Nonnegative integer powers
 

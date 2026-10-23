@@ -260,6 +260,8 @@ public class WholeStandardLibraryEditorTests
                 int swapLeft=1; int swapRight=2; Swap(ref swapLeft,ref swapRight);
                 String limitedFileText=FileText::ReadAll("sample.txt",1024);
                 Vector<byte> limitedFileBytes=FileBytes::ReadAll("sample.bin",1024);
+                FileBytes::WriteAll("copy.bin",ref limitedFileBytes);
+                FileBytes::AppendAll("copy.bin",ref limitedFileBytes);
                 Vector<String> parts=new(); parts.Add(s"left"); parts.Add(s"right");
                 String joined=parts.AsImmutable().Join(",");
                 Date parsedDate=Date::Parse("2024-02-29");
@@ -447,6 +449,10 @@ public class WholeStandardLibraryEditorTests
         var durationHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationFactory),Protocol.JsonOptions);
         Assert.Contains("TimeSpan",durationHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("TimeSpan.gf",JsonSerializer.Serialize(model.Definition(source.Path,durationFactory),Protocol.JsonOptions));
+        int binaryWrite=text.IndexOf("FileBytes::WriteAll",StringComparison.Ordinal)+"FileBytes::".Length;
+        var binaryWriteHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,binaryWrite),Protocol.JsonOptions);
+        Assert.Contains("Vector",binaryWriteHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("FileBytes.gf",JsonSerializer.Serialize(model.Definition(source.Path,binaryWrite),Protocol.JsonOptions));
         int durationSeconds=text.IndexOf("remainingTime.TotalSeconds",StringComparison.Ordinal)+"remainingTime.".Length;
         var secondsHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationSeconds),Protocol.JsonOptions);
         Assert.Contains("double",secondsHover.GetProperty("contents").GetProperty("value").GetString());

@@ -612,6 +612,22 @@ int SmokeHashesAndViews() {
         IpAddress batchZero = new();
         if (IpAddress::TryParse("127.1", &batchAddress) || !batchAddress.Equals(&batchZero)) return 148;
     }
+    {
+        TimeSpan parsedDuration = TimeSpan::Parse("-1.02:03:04.5");
+        if (parsedDuration.Ticks != -937845000000l) return 149;
+        if (!TimeSpan::TryParse("00:00:01.25", &parsedDuration) || parsedDuration.Ticks != 12500000l) return 150;
+        if (TimeSpan::TryParse("24:00:00", &parsedDuration) || parsedDuration.Ticks != 0l) return 151;
+    }
+    {
+        byte[4] networkBytes = [(byte)192, (byte)0, (byte)2, (byte)1];
+        IpAddress networkAddress = IpAddress::FromBytes(networkBytes, 4);
+        if (!networkAddress.IsIpv4 || networkAddress.ByteCount != (nuint)4) return 152;
+        byte[16] roundTrip; nuint byteCount = 0;
+        if (!networkAddress.TryWriteBytes(roundTrip, 16, ref byteCount) || byteCount != (nuint)4
+            || roundTrip[0] != (byte)192 || roundTrip[2] != (byte)2 || roundTrip[3] != (byte)1) return 153;
+        IpAddress restoredAddress = new();
+        if (!IpAddress::TryFromBytes(roundTrip, byteCount, &restoredAddress) || !restoredAddress.Equals(&networkAddress)) return 154;
+    }
     return 0;
 }
 int SmokeBoundedFiles(char* path) {

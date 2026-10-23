@@ -11,6 +11,7 @@
   <Project Path="hello/hello.gfproj" />
   <Project Path="hexdump/hexdump.gfproj" />
   <Project Path="interpolation/interpolation.gfproj" />
+  <Project Path="ip-count/ip-count.gfproj" />
   <Project Path="json-check/json-check.gfproj" />
   <Project Path="json-minify/json-minify.gfproj" />
   <Project Path="managed/managed.gfproj" />

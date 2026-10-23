@@ -68,5 +68,48 @@ owner alive while using the borrow. Raw-pointer aliases are not tracked; this is
 an explicit ownership convenience, not a memory-safety guarantee.
 
 Include `core/Unique.gf` with the ordinary exception and allocation runtime
-contracts, or use the complete standard library. No reset, release, shared-owner,
-or custom-deleter policy API is provided.
+contracts, or use the complete standard library. No reset, shared-owner, or
+custom-deleter policy API is provided.
+
+## Releasing a raw pointer
+
+`Release()` returns the stored `T*?` and empties the owner. It is a mutable,
+`nothrow` operation that does not allocate, free storage, or destroy the pointee.
+An empty owner returns null, including repeated releases. The owner remains
+usable: `IsEmpty` is true and its later destruction does nothing. Readonly and
+immutable owners cannot call `Release()`.
+
+The caller now owns the deletion responsibility. It can pass the pointer to an
+API that explicitly takes ownership, delete it, or construct a new Unique from
+its non-null value. Merely borrowing the released address does not dispose it;
+letting it go unowned leaks. Existing pointers and references keep the same object
+address, but its lifetime is controlled by whoever takes responsibility next.
+Releasing a base pointer retains ordinary dynamic-class destruction behavior.
+
+```csharp
+using std;
+
+class Widget
+{
+    public int Value;
+    public Widget(int value) { Value = value; }
+}
+
+int main()
+{
+    Widget*? raw = null;
+    {
+        Unique<Widget> owner = new(new* Widget(42));
+        raw = owner.Release();
+        // This empty owner can leave scope without deleting the released object.
+    }
+    Unique<Widget> receiver = new(raw!); // Explicitly take deletion responsibility.
+    return receiver.Value.Value - 42;
+}
+```
+
+Releasing does not provide automatic cleanup for the interval before a new owner
+adopts the pointer. Re-adopt before calling potentially throwing code when that
+code does not itself take ownership. The new owner then handles exception cleanup
+normally. `Release` does not reset the owner to another pointer or change its
+copy/move rules.

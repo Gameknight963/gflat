@@ -9,6 +9,14 @@ public struct Unique<T>
     public Unique() nothrow { storage = null; }
     public Unique(T* value) nothrow { storage = value; }
 
+    // Transfer deletion responsibility to the caller; keep this owner empty and usable.
+    public T*? Release() nothrow
+    {
+        T*? result = storage;
+        storage = null;
+        return result;
+    }
+
     public bool IsEmpty { immutable get nothrow => storage == null; }
 
     public ref T Value

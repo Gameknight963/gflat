@@ -238,6 +238,10 @@ public class WholeStandardLibraryEditorTests
                 TimeSpan budget=TimeSpan::FromSeconds(2l); TimeSpan remainingTime=budget.Subtract(elapsed);
                 long remainingTicks=remainingTime.Ticks; double remainingSeconds=remainingTime.TotalSeconds;
                 String durationText=s$"Remaining: {remainingTime}";
+                IpAddress networkAddress=IpAddress::Parse("2001:db8::1");
+                bool ipv4Address=networkAddress.IsIpv4; char[39] addressText; nuint addressWritten=0;
+                networkAddress.TryFormat(addressText,39,ref addressWritten);
+                String networkMessage=s$"Host: {networkAddress}";
                 Uuid identifier=Uuid::Parse("00112233-4455-6677-8899-aabbccddeeff");
                 ulong identifierHigh=identifier.High; ulong identifierLow=identifier.Low;
                 bool missingIdentifier=identifier.IsNil;
@@ -441,6 +445,10 @@ public class WholeStandardLibraryEditorTests
         int durationSeconds=text.IndexOf("remainingTime.TotalSeconds",StringComparison.Ordinal)+"remainingTime.".Length;
         var secondsHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationSeconds),Protocol.JsonOptions);
         Assert.Contains("double",secondsHover.GetProperty("contents").GetProperty("value").GetString());
+        int addressFactory=text.IndexOf("IpAddress::Parse",StringComparison.Ordinal)+"IpAddress::".Length;
+        var addressHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,addressFactory),Protocol.JsonOptions);
+        Assert.Contains("IpAddress",addressHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("IpAddress.gf",JsonSerializer.Serialize(model.Definition(source.Path,addressFactory),Protocol.JsonOptions));
         foreach(string marker in new[]{"Paths::IsRooted(textView","Paths::IsFullyQualified(textView","Paths::Join(textView"})
         {
             int call=text.IndexOf(marker,StringComparison.Ordinal)+"Paths::".Length;

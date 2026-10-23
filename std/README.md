@@ -49,6 +49,7 @@ implementation lives in `libc`.
 | Hexadecimal numbers | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Explicit hexadecimal parsing](../docs/HEX_INTEGER_PARSING.md) |
 | Boolean text | `TryParseBool`, `ParseBool` | [Strict ASCII Boolean parsing](../docs/BOOLEAN_PARSING.md) |
 | Identifiers | `Uuid` | [Canonical UUID parsing, formatting, comparison, and hashing](../docs/UUID.md) |
+| IP addresses | `IpAddress` | [IPv4 and IPv6 parsing, canonical formatting, comparison, and hashing](../docs/IP_ADDRESS.md) |
 | Calendar dates | `Date` | [Gregorian values, calendar arithmetic, strict ISO parsing, and formatting](../docs/DATE.md) |
 | Durations | `TimeSpan` | [Signed tick values, checked arithmetic, and invariant formatting](../docs/TIME_SPAN.md) |
 | Caller-buffer numbers | `IntegerFormatting::TryFormat`, `TryFormatHex` | [Decimal and hexadecimal formatting without a writer or allocation](../docs/INTEGER_FORMATTING.md) |
@@ -101,6 +102,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 ## Runnable examples
 
 - [Word count](../examples/word-count/README.md): streamed input and owning hash keys.
+- [IP address counts](../examples/ip-count/README.md): normalize equivalent IPv4/IPv6 spellings and count numeric keys from stdin.
 - [Task list](../examples/tasks/README.md): owning titles, reference-indexer updates, and reusable console input.
 - [File checksums](../examples/checksum/README.md): streaming CRC32 and Adler32, or SHA-256 with `--sha256`, over binary files.
 - [Hex dump](../examples/hexdump/README.md): byte offsets, hex columns, and printable ASCII with stack-backed formatting.

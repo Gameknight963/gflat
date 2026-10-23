@@ -63,6 +63,7 @@ public class WholeStandardLibraryEditorTests
                 String ownedUnquotedText=JsonStringText::Unquote(ownedQuotedText.AsReadOnly());
                 BigInteger arbitraryInteger=new(42l);
                 BigInteger arbitraryFactor=BigInteger::Parse("1000000000000000000000000000000");
+                BigInteger::TryParse("+00042",ref arbitraryInteger);
                 BigInteger arbitraryProduct=arbitraryInteger.Multiply(&arbitraryFactor);
                 BigInteger arbitrarySum=arbitraryProduct.Add(&arbitraryInteger);
                 BigInteger arbitraryDifference=arbitrarySum.Subtract(&arbitraryInteger);
@@ -344,6 +345,11 @@ public class WholeStandardLibraryEditorTests
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
         int prefixCall=text.IndexOf("labelledOutput.Write",StringComparison.Ordinal)+"labelledOutput.".Length;
+        int bigIntegerParser=text.IndexOf("BigInteger::TryParse",StringComparison.Ordinal)+"BigInteger::".Length;
+        var bigIntegerParserHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,bigIntegerParser),Protocol.JsonOptions);
+        Assert.Contains("bool",bigIntegerParserHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("ref",bigIntegerParserHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,bigIntegerParser),Protocol.JsonOptions));
         int divisionCall=text.IndexOf("arbitraryDifference.DivRem",StringComparison.Ordinal)+"arbitraryDifference.".Length;
         var divisionHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,divisionCall),Protocol.JsonOptions);
         Assert.Contains("DivRem",divisionHover.GetProperty("contents").GetProperty("value").GetString());

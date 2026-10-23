@@ -8,6 +8,14 @@ internal static class ExampleOutputFailure
 
     internal static void AssertReportedWithInput(string exampleName, int optimization, string diagnostic,
         string inputText, params string[] extraArguments)
+        => AssertReportedCore(exampleName, optimization, diagnostic, inputText, [], extraArguments);
+
+    internal static void AssertReportedWithLeadingArguments(string exampleName, int optimization, string diagnostic,
+        params string[] leadingArguments)
+        => AssertReportedCore(exampleName, optimization, diagnostic, "needle apple\npear needle\n", leadingArguments, []);
+
+    private static void AssertReportedCore(string exampleName, int optimization, string diagnostic,
+        string inputText, string[] leadingArguments, string[] extraArguments)
     {
         if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) return;
         string directory = Path.Combine(Path.GetTempPath(), "gflat-output-failure-" + Guid.NewGuid().ToString("N"));
@@ -45,7 +53,7 @@ internal static class ExampleOutputFailure
                 int main(int argc,char** argv){
                     void* stream=__gflat_stdio_stdout();char[4096] buffer;
                     if(argc==ARGCOUNT+1){
-                        if(freopen(argv[1],"rb",stream)==null)return 92;
+                        if(freopen(argv[INPUTINDEX],"rb",stream)==null)return 92;
                         int status=ExampleMain(ARGCOUNT,argv);fclose(stream);return status;
                     }
                     SETUP
@@ -54,7 +62,9 @@ internal static class ExampleOutputFailure
                     // returned status must detect the failure before this cleanup.
                     fclose(stream);return status;
                 }
-                """.Replace("SETUP", setup).Replace("ARGCOUNT", (2 + extraArguments.Length).ToString());
+                """.Replace("SETUP", setup)
+                .Replace("ARGCOUNT", (2 + leadingArguments.Length + extraArguments.Length).ToString())
+                .Replace("INPUTINDEX", (1 + leadingArguments.Length).ToString());
             var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("example-with-output-failure.gf", example + failure + wrapper));
@@ -64,7 +74,7 @@ internal static class ExampleOutputFailure
             Assert.True(compiled.ExitCode == 0, compiled.StandardError);
             string input = Path.Combine(directory, "input.txt");
             File.WriteAllText(input, inputText);
-            string[] arguments = [input, .. extraArguments];
+            string[] arguments = [.. leadingArguments, input, .. extraArguments];
             foreach (string[] mode in new[] { arguments, [.. arguments, "read-only-output"] })
             {
                 var run = NativeToolchain.Run(executable, mode, 30000);

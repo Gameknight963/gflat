@@ -32,19 +32,39 @@ void ReadChecksums(readonly(char)* path, ref uint crcValue, ref uint adlerValue)
 
 int main(int argc, char** argv)
 {
-    if (argc < 2)
+    bool sha256 = false;
+    int firstPath = 1;
+    while (firstPath < argc)
     {
-        Console::Error.WriteLine("Usage: checksum <file> [more files...]");
+        readonly(char)* argument = argv[firstPath];
+        if (CString::Equals(argument, "--")) { firstPath++; break; }
+        if (CString::Equals(argument, "--sha256") && !sha256)
+        { sha256 = true; firstPath++; continue; }
+        if (argument[0] == '-')
+        {
+            Console::Error.WriteLine("Usage: checksum [--sha256] [--] <file> [more files...]");
+            return 2;
+        }
+        break;
+    }
+    if (firstPath >= argc)
+    {
+        Console::Error.WriteLine("Usage: checksum [--sha256] [--] <file> [more files...]");
         return 2;
     }
     int status = 0;
     try
     {
-        for (int i = 1; i < argc; i++)
+        for (int i = firstPath; i < argc; i++)
         {
             uint crc = 0;
             uint adler = 0;
-            try { ReadChecksums(argv[i], ref crc, ref adler); }
+            byte[32] digest;
+            try
+            {
+                if (sha256) digest = FileHash::SHA256(argv[i]);
+                else ReadChecksums(argv[i], ref crc, ref adler);
+            }
             catch (IOException* error)
             {
                 Console::Error.Write("Unable to read: ", 16);
@@ -52,9 +72,19 @@ int main(int argc, char** argv)
                 status = 1;
                 continue;
             }
-            WriteChecksum(crc);
-            Console::Write(" ");
-            WriteChecksum(adler);
+            if (sha256)
+            {
+                char[64] hex;
+                nuint written = 0;
+                Hex::TryEncode((readonly(char)*)(byte*)digest, 32, hex, 64, ref written, false);
+                Console::Write(hex, written);
+            }
+            else
+            {
+                WriteChecksum(crc);
+                Console::Write(" ");
+                WriteChecksum(adler);
+            }
             Console::Write("  ");
             Console::WriteLine(argv[i]);
         }

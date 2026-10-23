@@ -39,3 +39,25 @@ bool TryWriteVarUInt64(this ref BinaryBufferWriter writer, ulong value) nothrow
     writer.TrySkip(written);
     return true;
 }
+
+VarInt::Status ReadZigZagInt32(this ref BinaryBufferReader reader, ref int value) nothrow
+{
+    uint encoded = 0u;
+    VarInt::Status status = reader.ReadVarUInt32(ref encoded);
+    if (status == VarInt::Status::Done) value = VarInt::ZigZagDecode(encoded);
+    return status;
+}
+
+VarInt::Status ReadZigZagInt64(this ref BinaryBufferReader reader, ref long value) nothrow
+{
+    ulong encoded = 0ul;
+    VarInt::Status status = reader.ReadVarUInt64(ref encoded);
+    if (status == VarInt::Status::Done) value = VarInt::ZigZagDecode(encoded);
+    return status;
+}
+
+bool TryWriteZigZagInt32(this ref BinaryBufferWriter writer, int value) nothrow
+    => writer.TryWriteVarUInt32(VarInt::ZigZagEncode(value));
+
+bool TryWriteZigZagInt64(this ref BinaryBufferWriter writer, long value) nothrow
+    => writer.TryWriteVarUInt64(VarInt::ZigZagEncode(value));

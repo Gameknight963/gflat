@@ -96,6 +96,10 @@ bool TryWriteVarUInt32(this ref BinaryBufferWriter writer, uint value) nothrow;
 bool TryWriteVarUInt64(this ref BinaryBufferWriter writer, ulong value) nothrow;
 VarInt::Status ReadVarUInt32(this ref BinaryBufferReader reader, ref uint value) nothrow;
 VarInt::Status ReadVarUInt64(this ref BinaryBufferReader reader, ref ulong value) nothrow;
+bool TryWriteZigZagInt32(this ref BinaryBufferWriter writer, int value) nothrow;
+bool TryWriteZigZagInt64(this ref BinaryBufferWriter writer, long value) nothrow;
+VarInt::Status ReadZigZagInt32(this ref BinaryBufferReader reader, ref int value) nothrow;
+VarInt::Status ReadZigZagInt64(this ref BinaryBufferReader reader, ref long value) nothrow;
 ```
 
 These use canonical unsigned base-128 encoding. Writers advance only after a
@@ -106,7 +110,14 @@ the enlarged buffer and position it at the same unfinished prefix. An existing
 reader's captured length does not grow when backing bytes are appended.
 Empty or exhausted readers return `NeedMore`, and writers
 return false, without accessing or calculating an address from their data pointer.
-All four methods allocate nothing and are `nothrow`.
+All eight methods allocate nothing and are `nothrow`.
+
+The signed helpers apply ZigZag before the same canonical unsigned base-128
+encoding: `0` becomes `0`, `-1` becomes `1`, and `1` becomes `2`. Both signed
+minima and maxima are supported. This is the ZigZag representation; negative
+values do not use a signed two's-complement 7-bit encoding. Signed reads preserve
+their previous output and position on `NeedMore` or `Invalid`, and signed writes
+leave every byte and position unchanged when capacity is insufficient.
 
 ```csharp
 byte[10] buffer;
@@ -122,5 +133,21 @@ The output reference must be separate from the cursor object's fields, but may
 overlap suitably aligned writable input storage. A successful result store can
 therefore change bytes observed by later reads. The codec's own temporary
 metadata remains separate from the buffer. Normal borrowed-storage lifetime
-and validity requirements still apply. For signed ZigZag values, explicitly
-compose `VarInt::ZigZagEncode`/`ZigZagDecode` with the unsigned methods.
+and validity requirements still apply. The signed helpers decode through local
+unsigned metadata before committing the signed result, with the same output
+alias restrictions as the unsigned helpers.
+
+```csharp
+using std;
+int main()
+{
+    byte[10] bytes;
+    BinaryBufferWriter writer = new(bytes, 10);
+    if (!writer.TryWriteZigZagInt64(-300l)) return 1;
+    BinaryBufferReader reader = new(bytes, writer.Position);
+    long value = 0l;
+    if (reader.ReadZigZagInt64(ref value) != VarInt::Status::Done) return 2;
+    if (value != -300l || reader.Remaining != 0) return 3;
+    return 0;
+}
+```

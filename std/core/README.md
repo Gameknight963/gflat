@@ -53,6 +53,9 @@ and checks bounds.
 - `String copy = text;` makes an independent owned copy and may throw on allocation failure.
 - `move text` transfers the buffer and leaves `text` uninitialized. Assign a new value before using it again.
 - `Equals(immutable(String)* other)` compares bytes.
+- `Equals(cString)` and `Equals(data, count)` compare borrowed text without an
+  intermediate String. The counted overload includes embedded nulls; the C-string
+  overload stops at its first null. Comparison is exact and does not allocate.
 
 Interpolation uses `IFormattable.Format(ITextWriter*)` and
 `ITextWriter.Write(readonly(char)*, nuint)`. The writer consumes bytes during the

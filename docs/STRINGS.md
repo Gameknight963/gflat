@@ -20,6 +20,14 @@ Search, indexing, slicing, and removal use byte offsets. They do not split on
 Unicode character boundaries automatically. UTF-8 validation and scalar decoding
 are available separately through `std::Utf8`.
 
+`Equals(&other)` compares another String. `Equals(text)` compares a C string,
+and `Equals(data, count)` compares exactly the counted bytes, including embedded
+zeros. All three compare byte values for equality without allocation
+or locale rules. A C string ends at its first zero, so `s"a\0b".Equals("a")`
+is false; use the counted overload to compare all three bytes. A counted length
+mismatch returns false without reading the input buffer. These methods also work
+through an immutable String pointer.
+
 The optional `StringSpan.gf` source adds `text.AsSpan()`, `text.AsReadOnly()`, and
 `text.AsImmutable()`. All borrow exactly `Length` bytes, including embedded zeros, without copying the
 owner or allocating. `AsSpan` requires a mutable `ref String` receiver and returns

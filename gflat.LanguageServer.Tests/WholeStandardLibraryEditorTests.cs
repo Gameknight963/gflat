@@ -50,6 +50,8 @@ public class WholeStandardLibraryEditorTests
                 LinkedList<int>::Node* node=list.AddLast(42);
                 var linkedQuery=list.AsEnumerable().Take(1);
                 String text=s"ad"; text.Insert(1,"bc");
+                bool matchesCString=text.Equals("abcd");
+                bool matchesCountedText=text.Equals("abcd",4);
                 Span<readonly(char)> textView=text.AsImmutable(); Span<char> writableText=text.AsSpan();
                 Span<readonly(char)> shallowTextView=text.AsReadOnly();
                 Span<readonly(char)> trimmedText=textView.Trim();
@@ -320,6 +322,13 @@ public class WholeStandardLibraryEditorTests
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
         int prefixCall=text.IndexOf("labelledOutput.Write",StringComparison.Ordinal)+"labelledOutput.".Length;
+        foreach(string marker in new[]{"matchesCString=","matchesCountedText="})
+        {
+            int call=text.IndexOf("Equals",text.IndexOf(marker,StringComparison.Ordinal),StringComparison.Ordinal);
+            var equalityHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("Equals",equalityHover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("String.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         int overlapCall=text.IndexOf("flags.Overlaps",StringComparison.Ordinal)+"flags.".Length;
         var overlapHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,overlapCall),Protocol.JsonOptions);
         Assert.Contains("Overlaps",overlapHover.GetProperty("contents").GetProperty("value").GetString());

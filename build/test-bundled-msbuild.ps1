@@ -24,8 +24,23 @@ function Invoke-Compiler {
     if ($LASTEXITCODE -ne 0) { throw "Bundled compiler failed ($LASTEXITCODE): $args" }
 }
 try {
+    # Unix MSBuild Exec starts sh by name. Keep only that shell available;
+    # retaining /bin or /usr/bin would also expose an installed dotnet/MSBuild.
+    if ([IO.Path]::DirectorySeparatorChar -ne '\') {
+        $shell = Get-Command sh -CommandType Application -ErrorAction Stop | Select-Object -First 1
+        [IO.File]::CreateSymbolicLink((Join-Path $scratch 'sh'), $shell.Source) | Out-Null
+    }
     # No dotnet, SDK, or installed MSBuild may be used by this process or its children.
     $env:PATH = $scratch
+    foreach ($command in @('dotnet', 'msbuild')) {
+        if (Get-Command $command -CommandType Application -ErrorAction SilentlyContinue) {
+            throw "Isolation test still exposes $command on PATH"
+        }
+    }
+    if ([IO.Path]::DirectorySeparatorChar -ne '\' -and
+        -not (Get-Command sh -CommandType Application -ErrorAction SilentlyContinue)) {
+        throw 'Isolation test removed the shell required by MSBuild Exec'
+    }
     $env:DOTNET_ROOT = Join-Path $scratch 'missing-dotnet'
     $env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
     $env:DOTNET_MULTILEVEL_LOOKUP = '0'

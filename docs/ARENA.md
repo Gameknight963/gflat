@@ -60,12 +60,18 @@ This includes compiler-generated cleanup for objects containing managed
 references, even when the type has no user-written destructor.
 
 ```csharp
-String* text = new* String()
-    at (String*)scratch.Allocate((nuint)sizeof(String), (nuint)alignof(String));
-text.Append("temporary");
-text.~String(); // Release String's separately owned character buffer.
+{
+    String* text = new* String()
+        at (String*)scratch.Allocate((nuint)sizeof(String), (nuint)alignof(String));
+    defer { text.~String(); } // Release the owned buffer on normal or exceptional exit.
+    text.Append("temporary");
+}
 scratch.Reset();
 ```
+
+The inner scope finishes the object's lifetime before `Reset` releases its
+storage. Register cleanup after construction succeeds, and keep the arena alive
+until that cleanup runs.
 
 Never `delete` an arena pointer or pass it to `Memory::Free`: it points inside a
 backing block. Every returned pointer becomes invalid on reset or destruction.

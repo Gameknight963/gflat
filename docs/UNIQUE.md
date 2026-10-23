@@ -58,8 +58,10 @@ there is no collector, shared counter, or per-owner allocation.
 
 `Vector<Unique<Widget>>` can store fresh owners or consume named ones with `move`.
 Growth relocates the owner values while their heap objects keep their addresses.
-Removing or clearing entries destroys those objects; `Pop()` transfers an owner
-to its caller instead of destroying its pointee.
+`Pop()`, `RemoveAt(index)`, and `SwapRemoveAt(index)` transfer the removed owner
+to their caller instead of destroying its pointee. Discarding that returned owner
+destroys it normally. `Clear`, `Truncate`, `RemoveRange`, and `RemoveAll` destroy
+the removed owners and their objects.
 
 Borrows never keep the owner alive. Destroying/reassigning the owner invalidates
 all pointers and references to its object. Moving the owner preserves the object's

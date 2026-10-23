@@ -66,9 +66,9 @@ public sealed class StandardEmptyVectorNoThrowTests
                 @"\bcall void @(?<symbol>[^\s(]+\$ctor\$default)\(").Cast<Match>());
             string symbol = call.Groups["symbol"].Value;
             Assert.Contains("Vector", symbol); Assert.True(constructors.Add(symbol));
-            string definition = Assert.Single(ir.Split('\n').Where(line =>
+            string definition = Assert.Single(ir.Split('\n'), line =>
                 line.StartsWith("define ", StringComparison.Ordinal) &&
-                line.Contains("@" + symbol + "(", StringComparison.Ordinal)));
+                line.Contains("@" + symbol + "(", StringComparison.Ordinal));
             Assert.Contains(" nounwind", definition);
         }
 

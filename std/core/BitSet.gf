@@ -178,6 +178,15 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
         return false;
     }
 
+    // Fixed-universe intersection test; matching lengths follow other set operations.
+    public immutable bool Overlaps(immutable(BitSet)* other)
+    {
+        if (length != other.length) throw new Exception("BitSet lengths differ");
+        for (nuint i = 0; i < words; i++)
+            if ((data![i] & other.data![i]) != (uint)0) return true;
+        return false;
+    }
+
     public immutable bool HasAllSet() nothrow
     {
         nuint complete = length / 32;

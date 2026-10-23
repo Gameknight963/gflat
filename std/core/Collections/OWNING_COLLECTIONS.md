@@ -232,6 +232,7 @@ int main()
     BitSet visited = new(100);
     visited[42] = true;
     visited.Flip(7);
+    if (!visited.Overlaps(&visited)) return 1;
     nuint sum = 0;
     foreach (nuint index in visited) sum += index; // 7, then 42
     return (int)sum - 49;
@@ -243,6 +244,13 @@ int main()
 length. `Clone()` explicitly makes an independent owned copy. `UnionWith`,
 `IntersectWith`, `ExceptWith`, and `SymmetricExceptWith` modify this set and
 require matching logical lengths; their argument is a borrowed immutable pointer.
+
+`Overlaps(&other)` tests whether two equal-length bitsets share any set bit.
+For matching lengths it copies no owner, allocates nothing, changes neither
+input, and scans packed words only until an intersection is found. Empty sets
+return false; self-comparison agrees with `HasAnySet()`. Like the set operations,
+different `Length` values throw `Exception` before inspecting word storage.
+It is an immutable observer and borrows its argument through an immutable pointer.
 
 `ShiftLeft(count)` moves each set bit toward a higher index; `ShiftRight(count)`
 moves it toward a lower index. Both keep `Length`, discard bits shifted past an

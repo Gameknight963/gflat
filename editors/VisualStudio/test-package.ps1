@@ -553,6 +553,18 @@ int main() {
         batchLabels.Write("a\n", 2); batchLabels.Write("\nb", 2);
         if (batchLabelledSink.Length != 10 || batchLabelled[0] != '>'
             || batchLabelled[4] != '>' || batchLabelled[7] != '>' || batchLabelled[9] != 'b') return 133;
+        Span<readonly(char)> batchDelimited = new("left::right", 11);
+        Span<readonly(char)> batchBefore = new(); Span<readonly(char)> batchAfter = new();
+        if (!batchDelimited.TrySplitOnce("::", 2, ref batchBefore, ref batchAfter)
+            || batchBefore.Length != 4 || batchAfter.Length != 5
+            || batchBefore[0] != 'l' || batchAfter[4] != 't') return 134;
+        String batchEquality = s"a\0b";
+        if (!batchEquality.Equals("a\0b", 3) || batchEquality.Equals("a")) return 135;
+        BitSet batchOverlapLeft = new(65); BitSet batchOverlapRight = new(65);
+        batchOverlapLeft.SetRange(64, 1, true);
+        if (batchOverlapLeft.Overlaps(&batchOverlapRight)) return 136;
+        batchOverlapRight.SetRange(64, 1, true);
+        if (!batchOverlapLeft.Overlaps(&batchOverlapRight)) return 137;
     }
     return 0;
 }

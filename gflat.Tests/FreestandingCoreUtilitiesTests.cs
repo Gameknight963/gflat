@@ -10,6 +10,18 @@ public class FreestandingCoreUtilitiesTests
     private const string ProgramSource = """
         extern ulong formatter_input() nothrow;
         extern void byte_search_input(byte* data) nothrow;
+        int Sha256Proof() nothrow {
+            std::SHA256 hash = new();
+            char[3] text = ['a', 'b', (char)(98ul + (formatter_input() >> 63))];
+            if (!hash.TryAppend(text, 3)) return 1;
+            byte[32] actual = hash.GetHash();
+            byte[32] expected = [(byte)0xba,(byte)0x78,(byte)0x16,(byte)0xbf,(byte)0x8f,(byte)0x01,(byte)0xcf,(byte)0xea,
+                (byte)0x41,(byte)0x41,(byte)0x40,(byte)0xde,(byte)0x5d,(byte)0xae,(byte)0x22,(byte)0x23,
+                (byte)0xb0,(byte)0x03,(byte)0x61,(byte)0xa3,(byte)0x96,(byte)0x17,(byte)0x7a,(byte)0x9c,
+                (byte)0xb4,(byte)0x10,(byte)0xff,(byte)0x61,(byte)0xf2,(byte)0x00,(byte)0x15,(byte)0xad];
+            for (nuint i = 0; i < 32; i++) if (actual[i] != expected[i]) return 2;
+            return 0;
+        }
         int main() {
             if (!std::Ascii::IsHexDigit('f')) return 1;
             if (std::Ascii::IsAscii((char)255)) return 2;
@@ -302,6 +314,7 @@ public class FreestandingCoreUtilitiesTests
             char[8] escaped=['"','\\','u','0','0','4',(char)(48ul+(runtimeInput>>63)),'"'];
             if(!std::JsonString::ValueTextEquals(escaped,8,"A",1)
                 ||std::JsonString::ValueTextEquals(escaped,8,"B",1)) return 179;
+            if (Sha256Proof() != 0) return 180;
             return 42;
         }
         """;
@@ -315,7 +328,7 @@ public class FreestandingCoreUtilitiesTests
         if (RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
-        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "Base64Url.gf", "BitOperations.gf", "Hashing.gf",
+        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "Base64Url.gf", "BitOperations.gf", "Hashing.gf", "SHA256.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
             "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "HexIntegerParsing.gf", "BooleanParsing.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

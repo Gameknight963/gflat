@@ -131,7 +131,15 @@ public static class Program
                 if (!run) return 0;
                 return NativeToolchain.RunProgram(outputPath, programArguments);
             }
-            finally { File.Delete(temporaryIr); }
+            finally
+            {
+                try { File.Delete(temporaryIr); }
+                catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException)
+                {
+                    // Cleanup must not replace a native diagnostic or the program's exit code.
+                    Console.Error.WriteLine($"Warning: could not delete temporary IR '{temporaryIr}': {cleanup.Message}");
+                }
+            }
         }
         catch (ProjectException ex)
         {

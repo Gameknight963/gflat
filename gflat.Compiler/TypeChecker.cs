@@ -940,7 +940,7 @@ namespace gflat
             RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
             ResolveSpecializedBaseTypes(genericDef, specialized);
             publish(NamedTypeExpression.Resolved(mangledName, line));
-            if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
+            if (_compilationUnit != null) PrepareOverloads(_compilationUnit, specialized);
             CheckSpecialization(genericDef, specialized);
 
             return NamedTypeExpression.Resolved(mangledName, line);
@@ -986,7 +986,7 @@ namespace gflat
             RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
             ResolveSpecializedBaseTypes(genericDef, specialized);
             publish(NamedTypeExpression.Resolved(mangledName, line));
-            if (_compilationUnit != null) PrepareOverloads(_compilationUnit);
+            if (_compilationUnit != null) PrepareOverloads(_compilationUnit, specialized);
             CheckSpecialization(genericDef, specialized);
 
             return NamedTypeExpression.Resolved(mangledName, line);

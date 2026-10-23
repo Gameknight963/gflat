@@ -47,15 +47,22 @@ public partial class TypeChecker
         return OverloadKey(method.Parameters);
     }
 
-    private void PrepareOverloads(CompilationUnit unit)
+    private void PrepareOverloads(CompilationUnit unit, AstNode? specialization = null)
     {
         var groups = new Dictionary<string, List<MethodDeclaration>>();
-        Walk(unit.Members, "");
-        foreach (var ns in unit.Namespaces) Walk(ns.Members, ns.Name + "::");
-        // Resolving a parameter alias can register another specialization.
-        // Preserve this pass's owner set while nested passes prepare new types.
-        var owners = _structs.Values.Select(s => (Owner: s.Name, IsClass: false, Constructors: s.Constructors.ToArray()))
-            .Concat(_classes.Values.Select(c => (Owner: c.Name, IsClass: true, Constructors: c.Constructors.ToArray()))).ToArray();
+        var ownerNames = new HashSet<string>();
+        if (specialization != null) Walk([specialization], "");
+        else
+        {
+            Walk(unit.Members, "");
+            foreach (var ns in unit.Namespaces) Walk(ns.Members, ns.Name + "::");
+        }
+        // A nested specialization prepares only its own declarations. Revisiting
+        // unrelated signatures here can reenter a type whose bases are resolving.
+        var owners = _structs.Values.Where(s => ownerNames.Contains(s.Name))
+            .Select(s => (Owner: s.Name, IsClass: false, Constructors: s.Constructors.ToArray()))
+            .Concat(_classes.Values.Where(c => ownerNames.Contains(c.Name))
+                .Select(c => (Owner: c.Name, IsClass: true, Constructors: c.Constructors.ToArray()))).ToArray();
         foreach (var owner in owners)
         {
             var keys = new Dictionary<string, ConstructorDeclaration>();
@@ -102,8 +109,10 @@ public partial class TypeChecker
                 switch (member)
                 {
                     case NamespaceDeclaration ns: Walk(ns.Members, scope + ns.Name + "::"); break;
-                    case ClassDeclaration c when !c.IsGeneric: Walk(c.Members, scope + c.Name + "."); break;
-                    case StructDeclaration s when !s.IsGeneric: Walk(s.Members, scope + s.Name + "."); break;
+                    case ClassDeclaration c when !c.IsGeneric:
+                        ownerNames.Add(c.Name); Walk(c.Members, scope + c.Name + "."); break;
+                    case StructDeclaration s when !s.IsGeneric:
+                        ownerNames.Add(s.Name); Walk(s.Members, scope + s.Name + "."); break;
                     case InterfaceDeclaration i: Walk(i.Members, scope + i.Name + "."); break;
                     case MethodDeclaration m when m.StringLiteralPrefix == null:
                         string key = scope + m.Name;

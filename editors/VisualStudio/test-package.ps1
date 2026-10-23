@@ -586,6 +586,15 @@ int SmokeHashesAndViews() {
         String batchQuotientText = batchQuotient.ToString();
         if (batchRemainder != -1 || !batchQuotientText.Equals("-1152921504606846976")) return 138;
     }
+    {
+        Unique<int> batchOwner = new(new* int(7));
+        int*? batchReleased = batchOwner.Release();
+        if (batchReleased == null || !batchOwner.IsEmpty) return 139;
+        Unique<int> batchReceiver = new(batchReleased!);
+        Unique<int> batchOther = new(new* int(9));
+        Swap(ref batchReceiver, ref batchOther);
+        if (batchReceiver.Value != 9 || batchOther.Value != 7) return 140;
+    }
     return 0;
 }
 int main() {

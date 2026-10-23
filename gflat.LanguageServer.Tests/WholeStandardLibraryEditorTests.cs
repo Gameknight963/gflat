@@ -66,6 +66,8 @@ public class WholeStandardLibraryEditorTests
                 BigInteger::TryParse("+00042",ref arbitraryInteger);
                 BigInteger arbitraryProduct=arbitraryInteger.Multiply(&arbitraryFactor);
                 BigInteger arbitraryPower=arbitraryInteger.Pow(3u);
+                long arbitraryLong=arbitraryInteger.ToLong(); ulong arbitraryULong=arbitraryInteger.ToULong();
+                arbitraryInteger.TryToLong(ref arbitraryLong); arbitraryInteger.TryToULong(ref arbitraryULong);
                 BigInteger arbitrarySum=arbitraryProduct.Add(&arbitraryInteger);
                 BigInteger arbitraryDifference=arbitrarySum.Subtract(&arbitraryInteger);
                 int arbitraryRemainder=0;
@@ -354,6 +356,13 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("bool",bigIntegerParserHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("ref",bigIntegerParserHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,bigIntegerParser),Protocol.JsonOptions));
+        foreach(string member in new[]{"ToLong","ToULong","TryToLong","TryToULong"})
+        {
+            int offset=text.IndexOf("arbitraryInteger."+member,StringComparison.Ordinal)+"arbitraryInteger.".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
+        }
         int divisionCall=text.IndexOf("arbitraryDifference.DivRem",StringComparison.Ordinal)+"arbitraryDifference.".Length;
         int powerCall=text.IndexOf("arbitraryInteger.Pow",StringComparison.Ordinal)+"arbitraryInteger.".Length;
         var powerHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,powerCall),Protocol.JsonOptions);

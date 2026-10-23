@@ -2217,7 +2217,9 @@ public partial class LlvmEmitter : IVisitor
         {
             if (_typeChecker.GetTransferredLocal(node) == null && _currentFunctionExpectedType != null && _typeChecker.CopiesValue(returned, _currentFunctionExpectedType))
                 EmitValueForTarget(returned, _currentFunctionExpectedType);
-            else if (_typeChecker.ResolveAlias(_typeChecker.GetType(returned)) is ArrayTypeExpression &&
+            else if (_currentFunctionExpectedType != null &&
+                _typeChecker.ResolveAlias(_currentFunctionExpectedType) is ArrayTypeExpression &&
+                _typeChecker.ResolveAlias(_typeChecker.GetType(returned)) is ArrayTypeExpression &&
                 returned is IdentifierExpression or MemberAccessExpression or IndexExpression)
             {
                 EmitAddress(returned);
@@ -3128,11 +3130,7 @@ public partial class LlvmEmitter : IVisitor
                 Emit($"    {loadedThis} = load %{_currentStruct.Name}*, %{_currentStruct.Name}** {thisPtr}");
                 string fieldPtr = NewTemp();
                 Emit($"    {fieldPtr} = getelementptr %{_currentStruct.Name}, %{_currentStruct.Name}* {loadedThis}, i32 0, i32 {idx}");
-                TypeExpression type = _typeChecker.GetType(node);
-                string llvmType = EmitType(type);
-                string temp = NewTemp();
-                Emit($"    {temp} = load {llvmType}, {llvmType}* {fieldPtr}");
-                PushManaged(node, temp);
+                EmitImplicitFieldRead(node, fieldPtr);
                 return;
             }
         }
@@ -3146,16 +3144,30 @@ public partial class LlvmEmitter : IVisitor
                 Emit($"    {loadedThis} = load %{_currentClass.Name}*, %{_currentClass.Name}** {classThisPtr}");
                 string fieldPtr = NewTemp();
                 Emit($"    {fieldPtr} = getelementptr %{_currentClass.Name}, %{_currentClass.Name}* {loadedThis}, i32 0, i32 {idx + 1}");
-                TypeExpression type = _typeChecker.GetType(node);
-                string llvmType = EmitType(type);
-                string temp = NewTemp();
-                Emit($"    {temp} = load {llvmType}, {llvmType}* {fieldPtr}");
-                PushManaged(node, temp);
+                EmitImplicitFieldRead(node, fieldPtr);
                 return;
             }
         }
 
         throw new Exception($"Unknown identifier '{node.Name}'");
+    }
+
+    private void EmitImplicitFieldRead(IdentifierExpression node, string address)
+    {
+        string type = EmitType(_typeChecker.GetType(node));
+        string value = NewTemp();
+        // Match local and explicit member reads: array expressions decay to
+        // their first element; whole-array value copies use EmitValueForTarget.
+        if (_typeChecker.ResolveAlias(_typeChecker.GetType(node)) is ArrayTypeExpression { Size: not null })
+        {
+            Emit($"    {value} = getelementptr {type}, {type}* {address}, i32 0, i32 0");
+            Push(value);
+        }
+        else
+        {
+            Emit($"    {value} = load {type}, {type}* {address}");
+            PushManaged(node, value);
+        }
     }
 
     public void Visit(DestructorCallExpression node)

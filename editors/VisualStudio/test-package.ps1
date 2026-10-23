@@ -595,17 +595,40 @@ int SmokeHashesAndViews() {
         Swap(ref batchReceiver, ref batchOther);
         if (batchReceiver.Value != 9 || batchOther.Value != 7) return 140;
     }
+    {
+        TimeSpan batchDuration = TimeSpan::FromSeconds(2l).Subtract(TimeSpan::FromMilliseconds(1250l));
+        if (batchDuration.Ticks != 7500000l || batchDuration.Milliseconds != 750) return 141;
+        char[27] batchDurationText; BufferWriter batchDurationSink = new(batchDurationText, 27);
+        batchDuration.Format(&batchDurationSink);
+        if (!CString::Equals(batchDurationText, "00:00:00.7500000")) return 142;
+    }
     return 0;
 }
-int main() {
+int SmokeBoundedFiles(char* path) {
+    String text = FileText::ReadAll(path, 3);
+    Vector<byte> bytes = FileBytes::ReadAll(path, 3);
+    if (!text.Equals("a\0b", 3) || bytes.Count != 3 || bytes[1] != (byte)0) return 143;
+    int rejected = 0;
+    try { String excess = FileText::ReadAll(path, 2); }
+    catch (ref IOException error) { if (CString::Equals(error.GetMessage(), "File exceeds maximum byte count")) rejected++; }
+    try { Vector<byte> excess = FileBytes::ReadAll(path, 2); }
+    catch (ref IOException error) { if (CString::Equals(error.GetMessage(), "File exceeds maximum byte count")) rejected++; }
+    if (rejected != 2) return 144;
+    return 0;
+}
+int main(int argc, char** argv) {
+    if (argc != 2) return 145;
     int result = SmokeCore(); if (result != 0) return result;
     result = SmokeBinaryAndQueries(); if (result != 0) return result;
     result = SmokeTextAndOwners(); if (result != 0) return result;
-    return SmokeHashesAndViews();
+    result = SmokeHashesAndViews(); if (result != 0) return result;
+    return SmokeBoundedFiles(argv[1]);
 }
 '@ | Set-Content -LiteralPath $expandedStd
     $allSources = @(Get-ChildItem -LiteralPath $std -Recurse -Filter '*.gf' -File | ForEach-Object FullName)
-    & $compiler $expandedStd @allSources --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe')
+    $boundedInput = Join-Path $extracted 'bounded input.bin'
+    [IO.File]::WriteAllBytes($boundedInput, [byte[]](97, 0, 98))
+    & $compiler $expandedStd @allSources --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
     if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }

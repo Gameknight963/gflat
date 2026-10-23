@@ -605,6 +605,15 @@ int SmokeHashesAndViews() {
         if (BigInteger::TryParse("12x", ref parsedInteger) || parsedInteger.Sign != 0) return 157;
     }
     {
+        BigInteger powerBase = new(-2l);
+        BigInteger powerValue = powerBase.Pow(65u);
+        String powerText = powerValue.ToString(); String baseText = powerBase.ToString();
+        if (!powerText.Equals("-36893488147419103232") || !baseText.Equals("-2")) return 162;
+        BigInteger zerothPower = powerBase.Pow(0u);
+        String zerothText = zerothPower.ToString();
+        if (!zerothText.Equals("1")) return 163;
+    }
+    {
         Unique<int> batchOwner = new(new* int(7));
         int*? batchReleased = batchOwner.Release();
         if (batchReleased == null || !batchOwner.IsEmpty) return 139;

@@ -34,6 +34,8 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `new BigInteger(long)` | Exact signed 64-bit value, including `long` minimum. |
 | `BigInteger::Parse(text)` | Strict, null-terminated decimal input. |
 | `BigInteger::Parse(data, count)` | Strict, counted decimal input; no terminator is required. |
+| `BigInteger::TryParse(data, count, ref result)` | Parse counted decimal input into an initialized owning result; false resets it to zero. |
+| `BigInteger::TryParse(text, ref result)` | The same syntax and result contract for null-terminated input. |
 | `Sign` | -1, 0, or 1. |
 | `Add(immutable(BigInteger)* other)` | Return the exact sum. |
 | `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
@@ -47,7 +49,7 @@ The type implements `IEquatable<BigInteger>`, `IComparable<BigInteger>`,
 `IHashable`, `IFormattable`, and `IStringConvertable`, so it works as a hash key,
 in generic comparisons, and in interpolation. There are currently no arithmetic
 operators, implicit primitive conversions, division by an arbitrary BigInteger, bitwise operations, alternate
-radices, locale formatting, or `TryParse` API.
+radices, or locale formatting.
 
 Parsing accepts an optional leading `+` or `-` followed by at least one ASCII
 digit. Whitespace, separators, decimal points, embedded nulls in counted input,
@@ -55,6 +57,36 @@ non-ASCII digits, and trailing data are rejected. The complete input is validate
 before allocating limb storage. Leading zeroes are accepted; all spellings of zero
 share one canonical value. Formatting emits `0` for zero and otherwise an optional
 minus sign followed by decimal digits without leading zeroes.
+
+`TryParse` accepts the same grammar as `Parse`. Its result must be an initialized
+mutable `BigInteger`, passed by `ref` so successful replacement transfers ownership
+without copying limbs. Malformed input returns false and replaces the old result
+with zero, releasing its previous storage. A zero counted length fails without
+reading input. The null-terminated overload scans to the first NUL, as `Parse`
+does; arbitrary-length integers have no fixed text-length limit.
+
+These Try methods are potentially throwing: allocation failure throws
+`BadAllocException`, and impossible storage sizes follow the existing size-error
+contract. They leave the previous result unchanged on those failures. All syntax
+is validated before allocating limbs; malformed input and valid zero spellings
+need no limb allocation. A fresh candidate is completely built before the old
+result is replaced. No input pointer is retained. Input must remain readable
+until that commit; readable input may borrow the old result's limb storage,
+which replacement can then release. This does not permit corrupting owner
+metadata or passing uninitialized result storage.
+
+```csharp
+using std;
+int main()
+{
+    BigInteger value = new(42l);
+    if (!BigInteger::TryParse("+00018446744073709551616", ref value)) return 1;
+    String canonical = value.ToString();
+    if (!canonical.Equals("18446744073709551616")) return 2;
+    if (BigInteger::TryParse("12x", ref value) || value.Sign != 0) return 3;
+    return 0;
+}
+```
 
 ## Ownership and failure
 

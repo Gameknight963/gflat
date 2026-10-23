@@ -203,27 +203,28 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
-    public static BigInteger Parse(readonly(char)* text)
+    // Validate the complete syntax before allocating or replacing an old owner.
+    private static bool ValidateDecimal(readonly(char)* text, nuint count, ref nuint start, ref int resultSign) nothrow
     {
-        nuint count = 0;
-        while (text[count] != '\0') count++;
-        return BigInteger::Parse(text, count);
-    }
-
-    public static BigInteger Parse(readonly(char)* text, nuint count)
-    {
-        BigInteger result = new();
-        if (count == 0) throw new Exception("Invalid BigInteger");
-        nuint start = 0;
-        int resultSign = 1;
+        start = 0;
+        resultSign = 1;
+        if (count == 0) return false;
         if (text[0] == '-' || text[0] == '+')
         {
             if (text[0] == '-') resultSign = -1;
             start++;
         }
-        if (start == count) throw new Exception("Invalid BigInteger");
-        for (nuint i = start; i < count; i++) if (text[i] < '0' || text[i] > '9') throw new Exception("Invalid BigInteger");
+        if (start == count) return false;
+        for (nuint i = start; i < count; i++) if (text[i] < '0' || text[i] > '9') return false;
         while (start < count && text[start] == '0') start++;
+        return true;
+    }
+
+    // Input was validated and leading zeroes skipped. All input reads finish
+    // before TryParse replaces output, including when old limb storage is input.
+    private static BigInteger BuildDecimal(readonly(char)* text, nuint count, nuint start, int resultSign)
+    {
+        BigInteger result = new();
         if (start == count) return move result;
         result.sign = resultSign;
         nuint digits = count - start;
@@ -241,6 +242,43 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
             end = beginning;
         }
         return move result;
+    }
+
+    public static BigInteger Parse(readonly(char)* text)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return BigInteger::Parse(text, count);
+    }
+
+    public static BigInteger Parse(readonly(char)* text, nuint count)
+    {
+        nuint start = 0;
+        int resultSign = 1;
+        if (!BigInteger::ValidateDecimal(text, count, ref start, ref resultSign)) throw new Exception("Invalid BigInteger");
+        return BigInteger::BuildDecimal(text, count, start, resultSign);
+    }
+
+    public static bool TryParse(readonly(char)* text, nuint count, ref BigInteger result)
+    {
+        nuint start = 0;
+        int resultSign = 1;
+        if (!BigInteger::ValidateDecimal(text, count, ref start, ref resultSign))
+        {
+            BigInteger zero = new();
+            result = move zero;
+            return false;
+        }
+        BigInteger parsed = BigInteger::BuildDecimal(text, count, start, resultSign);
+        result = move parsed;
+        return true;
+    }
+
+    public static bool TryParse(readonly(char)* text, ref BigInteger result)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return BigInteger::TryParse(text, count, ref result);
     }
 
     public immutable void Format(ITextWriter* output)

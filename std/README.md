@@ -21,7 +21,7 @@ implementation lives in `libc`.
 | Byte measurement | `CountingWriter` | [Count writer output without storing it](../docs/COUNTING_WRITER.md) |
 | Prefixed lines | `LinePrefixWriter` | [Prefix streamed lines without buffering them](../docs/LINE_PREFIX_WRITER.md) |
 | Writer line helpers | `ITextWriter*` `WriteLine` overloads | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
-| Borrowed text parts | `TextParts`, String/Span `Split`, Span `TrySplitOnce`/`Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md), [key/value views](../docs/TEXT_SPLIT_ONCE.md) |
+| Borrowed text parts | `TextParts`, String/Span `Split`, Span `TrySplitOnce`/`Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md), [key/value views](../docs/TEXT_SPLIT_ONCE.md), [multi-byte delimiters](../docs/TEXT_SPLIT_PATTERN.md) |
 | Borrowed text matching | Span `StartsWith`, `EndsWith` | [Counted and C-string patterns without copying](../docs/TEXT_MATCH_SPAN.md) |
 | Borrowed text lines | `TextLines` | [Counted LF and CRLF line views](../docs/TEXT_LINES.md) |
 | Joining text | `Span<immutable(String)>.Join` | [Borrowed owners, counted separators, and one output allocation](../docs/STRING_JOIN.md) |

@@ -69,6 +69,10 @@ public class WholeStandardLibraryEditorTests
                 Span<char> trimmedWritable=writableText.TrimStart().TrimEnd();
                 Span<readonly(char)> textKey=new(); Span<readonly(char)> textValue=new();
                 bool hasSeparator=trimmedText.TrySplitOnce('=',ref textKey,ref textValue);
+                bool hasSequenceCString=textView.TrySplitOnce("::",ref textKey,ref textValue);
+                bool hasSequenceCounted=textView.TrySplitOnce("::",2,ref textKey,ref textValue);
+                Span<readonly(char)> sequenceSeparator=new("::",2);
+                bool hasSequenceSpan=textView.TrySplitOnce(sequenceSeparator,ref textKey,ref textValue);
                 SpanChunks<readonly(char)> textChunks=trimmedText.Chunks(2);
                 SpanChunks<readonly(char)>::Enumerator chunkIterator=textChunks.GetEnumerator();
                 immutable(TextParts) textParts=trimmedText.Split(',');
@@ -315,6 +319,13 @@ public class WholeStandardLibraryEditorTests
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
         int prefixCall=text.IndexOf("labelledOutput.Write",StringComparison.Ordinal)+"labelledOutput.".Length;
+        foreach(string marker in new[]{"hasSequenceCString=","hasSequenceCounted=","hasSequenceSpan="})
+        {
+            int call=text.IndexOf("TrySplitOnce",text.IndexOf(marker,StringComparison.Ordinal),StringComparison.Ordinal);
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("TrySplitOnce",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("TextSplitOncePatternSpan.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         var prefixHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,prefixCall),Protocol.JsonOptions);
         Assert.Contains("Write",prefixHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("LinePrefixWriter.gf",JsonSerializer.Serialize(model.Definition(source.Path,prefixCall),Protocol.JsonOptions));

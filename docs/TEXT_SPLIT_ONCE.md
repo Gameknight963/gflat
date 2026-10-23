@@ -48,3 +48,7 @@ uses the optional `StringSpan.gf` view convenience.
 
 See [all-delimiter splitting and ASCII trimming](TEXT_PARTS.md) for enumerating
 every field rather than preserving the whole remainder.
+
+Optional [multi-byte separator overloads](TEXT_SPLIT_PATTERN.md) accept counted
+bytes, a C string, or a separator span. They reuse `ByteSearch` and have their own
+source file, leaving the single-character helper's dependencies unchanged.

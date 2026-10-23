@@ -57,7 +57,11 @@ from adding a fixed number of days.
 `yyyy-MM-dd` form, without a null terminator. It is `nothrow` and allocates nothing.
 Insufficient capacity returns false, sets `written` to zero, and leaves all output
 bytes unchanged. Zero capacity does not access output. Keep the `written` location
-disjoint from the output buffer, and supply writable storage for the stated capacity.
+disjoint from both the output buffer and receiver storage, and supply writable
+storage for the stated capacity. Output may overlap the receiver when backed by
+enough writable bytes: all calendar components are captured before output writes.
+A successful overlapping write replaces those receiver bytes with text; it does
+not preserve the date object stored there.
 
 `IFormattable.Format(writer)` sends that same ten-byte representation in one
 counted write using stack storage; it does not allocate a String or flush/close the

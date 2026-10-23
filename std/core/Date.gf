@@ -185,6 +185,8 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
     public immutable nuint GetHashCode() nothrow => (nuint)dayNumber;
 
     // Fixed invariant ISO spelling, counted bytes without a null terminator.
+    // written must be separate from output and this value's storage. Components
+    // are captured before output writes, so sufficiently backed output may overlap this value.
     public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
     {
         written = 0;

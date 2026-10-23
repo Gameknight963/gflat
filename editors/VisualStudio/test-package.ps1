@@ -415,6 +415,17 @@ int SmokeBinaryAndQueries() {
             || batchVariableSmall != 4294967295u
             || batchVariableInput.ReadVarUInt64(ref batchVariableLarge) != VarInt::Status::Done
             || batchVariableLarge != 18446744073709551615ul || batchVariableInput.Remaining != 0) return 93;
+        batchVariableOutput.Reset();
+        if (!batchVariableOutput.TryWriteZigZagInt32(-2147483647 - 1)
+            || !batchVariableOutput.TryWriteZigZagInt64(-9223372036854775807l - 1l)
+            || batchVariableOutput.Position != 15) return 160;
+        batchVariableInput = new(batchVariableBytes, batchVariableOutput.Position);
+        int batchVariableSignedSmall = 0; long batchVariableSignedLarge = 0l;
+        if (batchVariableInput.ReadZigZagInt32(ref batchVariableSignedSmall) != VarInt::Status::Done
+            || batchVariableSignedSmall != (-2147483647 - 1)
+            || batchVariableInput.ReadZigZagInt64(ref batchVariableSignedLarge) != VarInt::Status::Done
+            || batchVariableSignedLarge != (-9223372036854775807l - 1l)
+            || batchVariableInput.Remaining != 0) return 161;
         Deque<int> batchEnds = new(); batchEnds.Reserve(4);
         batchEnds.AddLast(1); batchEnds.AddLast(2); batchEnds.AddLast(3); batchEnds.AddLast(4);
         batchEnds.RemoveFirst(); batchEnds.RemoveFirst(); batchEnds.AddLast(5); batchEnds.AddLast(6);

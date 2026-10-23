@@ -234,6 +234,10 @@ public class WholeStandardLibraryEditorTests
                 DayOfWeek weekday=calendar.DayOfWeek; int ordinalDay=calendar.DayOfYear;
                 int calendarDay=tomorrow.DayNumber; int monthDays=Date::DaysInMonth(2024,2);
                 String dated=s$"Next day: {tomorrow}";
+                TimeSpan elapsed=TimeSpan::FromMilliseconds(1250l);
+                TimeSpan budget=TimeSpan::FromSeconds(2l); TimeSpan remainingTime=budget.Subtract(elapsed);
+                long remainingTicks=remainingTime.Ticks; double remainingSeconds=remainingTime.TotalSeconds;
+                String durationText=s$"Remaining: {remainingTime}";
                 Uuid identifier=Uuid::Parse("00112233-4455-6677-8899-aabbccddeeff");
                 ulong identifierHigh=identifier.High; ulong identifierLow=identifier.Low;
                 bool missingIdentifier=identifier.IsNil;
@@ -430,6 +434,13 @@ public class WholeStandardLibraryEditorTests
             Assert.Contains("nuint maximumBytes",hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.Contains(fileApi+".gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
+        int durationFactory=text.IndexOf("TimeSpan::FromMilliseconds",StringComparison.Ordinal)+"TimeSpan::".Length;
+        var durationHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationFactory),Protocol.JsonOptions);
+        Assert.Contains("TimeSpan",durationHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("TimeSpan.gf",JsonSerializer.Serialize(model.Definition(source.Path,durationFactory),Protocol.JsonOptions));
+        int durationSeconds=text.IndexOf("remainingTime.TotalSeconds",StringComparison.Ordinal)+"remainingTime.".Length;
+        var secondsHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,durationSeconds),Protocol.JsonOptions);
+        Assert.Contains("double",secondsHover.GetProperty("contents").GetProperty("value").GetString());
         foreach(string marker in new[]{"Paths::IsRooted(textView","Paths::IsFullyQualified(textView","Paths::Join(textView"})
         {
             int call=text.IndexOf(marker,StringComparison.Ordinal)+"Paths::".Length;

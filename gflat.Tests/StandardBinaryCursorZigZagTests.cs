@@ -19,7 +19,7 @@ public sealed class StandardBinaryCursorZigZagTests
         for(int shift=6;shift<63;shift+=7)
             foreach(long delta in new long[]{-1,0,1})
             {
-                long value=(1l<<shift)+delta;rows.Add((true,value));rows.Add((true,-value));
+                long value=(1L<<shift)+delta;rows.Add((true,value));rows.Add((true,-value));
                 if(value<=int.MaxValue){rows.Add((false,value));rows.Add((false,-value));}
             }
         var random=new Random(32764128);byte[] randomBytes=new byte[8];

@@ -182,9 +182,12 @@ public class WholeStandardLibraryEditorTests
                 uint zigzag=VarInt::ZigZagEncode(-42); int signedNumber=VarInt::ZigZagDecode(zigzag);
                 byte[16] variableBytes; BinaryBufferWriter variableOutput=new(variableBytes,16);
                 variableOutput.TryWriteVarUInt32(300u); variableOutput.TryWriteVarUInt64(300ul);
+                variableOutput.TryWriteZigZagInt32(-42); variableOutput.TryWriteZigZagInt64(-300l);
                 BinaryBufferReader variableInput=new(variableBytes,variableOutput.Position);
                 uint variableSmall=0u; ulong variableLarge=0ul;
                 variableInput.ReadVarUInt32(ref variableSmall); variableInput.ReadVarUInt64(ref variableLarge);
+                int variableSignedSmall=0; long variableSignedLarge=0l;
+                variableInput.ReadZigZagInt32(ref variableSignedSmall); variableInput.ReadZigZagInt64(ref variableSignedLarge);
                 BitSet flags=new(65); flags.SetRange(1,63,true);
                 bool any=flags.HasAnySet(); bool all=flags.HasAllSet();
                 bool overlappingBits=flags.Overlaps(&flags);
@@ -557,6 +560,14 @@ public class WholeStandardLibraryEditorTests
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.NotNull(model.Definition(source.Path,offset));
+        }
+        foreach(string member in new[]{"TryWriteZigZagInt32","TryWriteZigZagInt64","ReadZigZagInt32","ReadZigZagInt64"})
+        {
+            int offset=sourceTokens.Last(token=>token.Text==member).Start;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("nothrow",hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.NotNull(model.Definition(source.Path,offset));
         }
         int localCall=sourceTokens.Last(token=>token.Text=="Contains").Start;

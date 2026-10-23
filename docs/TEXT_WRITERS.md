@@ -28,3 +28,7 @@ writes, the caller supplies valid readable input storage.
 
 To measure emitted bytes without storing output, use
 [`CountingWriter`](COUNTING_WRITER.md). It also accepts these line helpers.
+
+[`LinePrefixWriter`](LINE_PREFIX_WRITER.md) adds a counted prefix to each
+LF-delimited input line as bytes arrive. It borrows its destination and prefix,
+preserves source bytes, and needs no intermediate String or completion call.

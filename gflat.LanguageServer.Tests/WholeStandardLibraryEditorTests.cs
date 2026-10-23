@@ -96,6 +96,8 @@ public class WholeStandardLibraryEditorTests
                 immutable(Utf16Scalars) wideCharacters=new(scalarUnits,2);
                 var wideScalarQuery=wideCharacters.AsEnumerable().Select((uint scalar) => (int)scalar);
                 ITextWriter* output=Console::Out;
+                LinePrefixWriter labelledOutput=new(output,"> ",2);
+                labelledOutput.Write(text.Data,text.Length);
                 Base64Encoder encodedOutput=new(output);
                 encodedOutput.Write(text.Data,text.Length);
                 encodedOutput.Complete();
@@ -308,6 +310,10 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        int prefixCall=text.IndexOf("labelledOutput.Write",StringComparison.Ordinal)+"labelledOutput.".Length;
+        var prefixHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,prefixCall),Protocol.JsonOptions);
+        Assert.Contains("Write",prefixHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("LinePrefixWriter.gf",JsonSerializer.Serialize(model.Definition(source.Path,prefixCall),Protocol.JsonOptions));
         foreach(var adapter in new[]{("encodedOutput","Base64Encoder.gf"),("decodedOutput","Base64Decoder.gf")})
         foreach(string member in new[]{"Write","Complete"})
         {

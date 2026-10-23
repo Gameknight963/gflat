@@ -43,6 +43,8 @@ public sealed class TasksExampleTests
             // Input/output uses counted String APIs. Embedded NUL is title data,
             // and a bare CR within a line is retained rather than discarded.
             await AssertSession(executable, "add a\0b\rc\nlist\n", banner + "Added.\n1. [ ] a\0b\rc\n");
+            await AssertSession(executable, "quit\0junk\nlist\0junk\nlist\nquit\nadd ignored\n",
+                banner + string.Concat(Enumerable.Repeat("Unknown command. Use add <title>, list, done <number>, or quit.\n", 2)) + "No tasks yet.\n");
             await AssertSession(executable, "", banner);
         }
         finally { Directory.Delete(directory, true); }

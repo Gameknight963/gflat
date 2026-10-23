@@ -23,11 +23,6 @@ struct Task
     }
 }
 
-bool IsCommand(immutable(String)* text, readonly(char)* command)
-{
-    return text.Length == CString::Length(command) && text.StartsWith(command);
-}
-
 bool Complete(Vector<Task>* tasks, immutable(String)* line)
 {
     int number = 0;
@@ -57,8 +52,8 @@ int main()
     Console::WriteLine("Tasks (in memory). Commands: add <title>, list, done <number>, quit");
     while (Console::TryReadLine(ref line))
     {
-        if (IsCommand(&line, "quit")) break;
-        if (IsCommand(&line, "list")) List(&tasks);
+        if (line.Equals("quit")) break;
+        if (line.Equals("list")) List(&tasks);
         else if (line.StartsWith("add "))
         {
             if (line.Length == 4) Console::WriteLine("A task needs a title.");

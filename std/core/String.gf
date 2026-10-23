@@ -400,6 +400,18 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return true;
     }
 
+    // Exact counted bytes, including embedded NUL. A length mismatch reads no input.
+    public immutable bool Equals(readonly(char)* text, nuint count) nothrow
+        => length == count && this.StartsWith(text, count);
+
+    // Null-terminated input. Stop on mismatch or its first terminator.
+    public immutable bool Equals(readonly(char)* text) nothrow
+    {
+        for (nuint i = 0; i < length; i++)
+            if (text[i] == '\0' || data[i] != text[i]) return false;
+        return text[length] == '\0';
+    }
+
     public immutable nuint GetHashCode() nothrow => Hashing::Bytes(data, length);
 
     // Ordinal UTF-8 byte order, independent of locale and null termination.

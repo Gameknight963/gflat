@@ -39,4 +39,26 @@ public static class FileBytes
         output.Write((readonly(char)*)data, count);
         output.Close();
     }
+
+    public static void WriteAll(immutable(char*) path, ref immutable(Vector<byte>) bytes)
+    {
+        File output = File::OpenWrite(path);
+        if (bytes.Count != 0)
+        {
+            Span<immutable(byte)> view = bytes.AsImmutable();
+            output.Write((readonly(char)*)view.Data!, view.Length);
+        }
+        output.Close();
+    }
+
+    public static void AppendAll(immutable(char*) path, ref immutable(Vector<byte>) bytes)
+    {
+        File output = File::OpenAppend(path);
+        if (bytes.Count != 0)
+        {
+            Span<immutable(byte)> view = bytes.AsImmutable();
+            output.Write((readonly(char)*)view.Data!, view.Length);
+        }
+        output.Close();
+    }
 }

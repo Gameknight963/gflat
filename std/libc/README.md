@@ -303,6 +303,13 @@ write errors. A write failure can leave partial output; these are not atomic
 file-replacement operations. Caller-buffer code can continue using `File::Read`
 and `File::Write` directly without the owning convenience source.
 
+`WriteAll(path, ref immutable(Vector<byte>) bytes)` and the matching `AppendAll`
+overload borrow the vector without copying elements or allocating gflat storage.
+They preserve its contents, count, and capacity, including on IO failure. An
+empty vector still opens and closes the file: writing creates or truncates it,
+and appending creates it or preserves existing contents. Both report delayed
+close failures and retain the counted overloads' partial-output behavior.
+
 `File/FileText.gf` adds `std::FileText`, requiring the core `String` facilities.
 `FileText::ReadAll(path)` returns an owning `String`; embedded zeros are retained.
 It reads raw bytes without validating UTF-8, removing a BOM, or translating

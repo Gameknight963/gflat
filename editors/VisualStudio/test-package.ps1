@@ -544,13 +544,22 @@ int main() {
             batchHashHex, 64, ref batchHashWritten, false)) return 129;
         if (batchHashWritten != 64 || batchHashHex[0] != 'b' || batchHashHex[1] != 'a'
             || batchHashHex[62] != 'a' || batchHashHex[63] != 'd') return 130;
+        HMACSHA256 batchAuthentication = new("Jefe", 4);
+        if (!batchAuthentication.TryAppend("what do ya want for nothing?", 28)) return 131;
+        byte[32] batchTag = batchAuthentication.GetHash();
+        if (batchTag[0] != (byte)0x5b || batchTag[31] != (byte)0x43) return 132;
+        char[11] batchLabelled; BufferWriter batchLabelledSink = new(batchLabelled, 11);
+        LinePrefixWriter batchLabels = new(&batchLabelledSink, "> ", 2);
+        batchLabels.Write("a\n", 2); batchLabels.Write("\nb", 2);
+        if (batchLabelledSink.Length != 10 || batchLabelled[0] != '>'
+            || batchLabelled[4] != '>' || batchLabelled[7] != '>' || batchLabelled[9] != 'b') return 133;
     }
     return 0;
 }
 '@ | Set-Content -LiteralPath $expandedStd
     $allSources = @(Get-ChildItem -LiteralPath $std -Recurse -Filter '*.gf' -File | ForEach-Object FullName)
     & $compiler $expandedStd @allSources --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe')
-    if ($LASTEXITCODE -ne 0) { throw 'Packaged expanded standard library smoke test failed' }
+    if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal

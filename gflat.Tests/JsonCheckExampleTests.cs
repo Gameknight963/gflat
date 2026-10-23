@@ -31,6 +31,9 @@ public sealed class JsonCheckExampleTests
                 Assert.Equal(0,result.ExitCode);Assert.Empty(result.Error);
                 Assert.Equal($"Tokens: {value.Tokens}{Environment.NewLine}Maximum nesting: {value.Depth}{Environment.NewLine}",result.Output);
                 Assert.Equal(original,File.ReadAllBytes(input));
+                var bounded=await Run(executable,["--max-bytes",original.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),input]);
+                Assert.Equal(0,bounded.ExitCode);Assert.Empty(bounded.Error);Assert.Equal(result.Output,bounded.Output);
+                Assert.Equal(original,File.ReadAllBytes(input));
             }
             (byte[] Bytes,int Offset,string Reason)[] invalid=[([],0,"Incomplete"),("[] x"u8.ToArray(),3,"Trailing"),
                 ("{\"a\":1,}"u8.ToArray(),7,"property name"),([34,0xff,34],0,"Invalid JSON string"),
@@ -45,7 +48,25 @@ public sealed class JsonCheckExampleTests
             string missing=Path.Combine(directory,"missing.json");var absent=await Run(executable,[missing]);
             Assert.Equal(1,absent.ExitCode);Assert.Empty(absent.Output);Assert.Contains(missing,absent.Error);
             Assert.DoesNotContain(": byte ",absent.Error);
-            foreach(string[] args in new string[][]{[],[input,input]})
+            byte[] large=Encoding.UTF8.GetBytes("\""+new string('x',9000)+"\"");File.WriteAllBytes(input,large);
+            foreach(string limit in new[]{"0","4096","9001"})
+            {
+                var tooLarge=await Run(executable,["--max-bytes",limit,input]);
+                Assert.Equal(1,tooLarge.ExitCode);Assert.Empty(tooLarge.Output);
+                Assert.Equal(input+": File exceeds maximum byte count"+Environment.NewLine,tooLarge.Error);
+                Assert.Equal(large,File.ReadAllBytes(input));
+            }
+            var exact=await Run(executable,["--max-bytes",large.Length.ToString(System.Globalization.CultureInfo.InvariantCulture),input]);
+            Assert.Equal(0,exact.ExitCode);Assert.Empty(exact.Error);
+            Assert.Equal($"Tokens: 1{Environment.NewLine}Maximum nesting: 0{Environment.NewLine}",exact.Output);
+            File.WriteAllBytes(input,[]);
+            var empty=await Run(executable,["--max-bytes","0",input]);
+            Assert.Equal(1,empty.ExitCode);Assert.Empty(empty.Output);Assert.Contains(": byte 0: ",empty.Error);Assert.Contains("Incomplete",empty.Error);
+            var limitedMissing=await Run(executable,["--max-bytes","0",missing]);
+            Assert.Equal(1,limitedMissing.ExitCode);Assert.Empty(limitedMissing.Output);Assert.Contains(missing,limitedMissing.Error);
+            foreach(string[] args in new string[][]{[],[input,input],["--max-bytes"],["--max-bytes","1"],
+                ["--max-bytes","-1",input],["--max-bytes","garbage",input],
+                ["--max-bytes","18446744073709551616",input],["--other","10",input]})
             {
                 var usage=await Run(executable,args);Assert.Equal(2,usage.ExitCode);Assert.Empty(usage.Output);Assert.Contains("Usage:",usage.Error);
             }

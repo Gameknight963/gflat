@@ -3,14 +3,26 @@ using std;
 // Keep the complete file alive while JsonReader borrows its counted bytes.
 int main(int argc, char** argv)
 {
-    if (argc != 2)
+    bool limited = argc > 1 && CString::Equals(argv[1], "--max-bytes");
+    if ((limited && argc != 4) || (!limited && argc != 2))
     {
-        Console::Error.WriteLine("Usage: json-check <input-file>");
+        Console::Error.WriteLine("Usage: json-check [--max-bytes count] <input-file>");
         return 2;
+    }
+    char* input = argv[1];
+    nuint maximumBytes = (nuint)0 - (nuint)1;
+    if (limited)
+    {
+        if (!TryParseNUInt(argv[2], &maximumBytes))
+        {
+            Console::Error.WriteLine("Usage: json-check [--max-bytes count] <input-file>");
+            return 2;
+        }
+        input = argv[3];
     }
     try
     {
-        String document = FileText::ReadAll(argv[1]);
+        String document = FileText::ReadAll(input, maximumBytes);
         JsonReader reader = new(document.Data, document.Length);
         nuint tokens = 0;
         nuint maximumNesting = 0;
@@ -29,14 +41,14 @@ int main(int argc, char** argv)
     }
     catch (ref JsonParseException error)
     {
-        Console::Error.Write(argv[1], CString::Length(argv[1])); Console::Error.Write(": byte ", 7);
+        Console::Error.Write(input, CString::Length(input)); Console::Error.Write(": byte ", 7);
         error.Offset.Format(Console::Error);
         Console::Error.Write(": ", 2); Console::Error.WriteLine(error.GetMessage());
         return 1;
     }
     catch (ref Exception error)
     {
-        Console::Error.Write(argv[1], CString::Length(argv[1])); Console::Error.Write(": ", 2);
+        Console::Error.Write(input, CString::Length(input)); Console::Error.Write(": ", 2);
         Console::Error.WriteLine(error.GetMessage());
         return 1;
     }

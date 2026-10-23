@@ -1,5 +1,8 @@
 # Standard library
 
+Open [std.slnx](std.slnx) in Visual Studio to work on the library separately from
+the compiler and examples.
+
 Projects include this source library by default. `NoStdLib` disables the default
 reference; applications can then select individual source files or provide their
 own runtime contracts. See [project setup](../docs/PROJECTS.md).

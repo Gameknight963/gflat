@@ -1,6 +1,5 @@
 <Solution>
   <Configurations>
-    <ProjectType Extension="gfproj" TypeId="6423f711-946a-41ab-b95b-0f9b5911f803" />
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
@@ -12,13 +11,4 @@
   <Project Path="gflat.Tests/gflat.Tests.csproj" />
   <Project Path="gflat.Projects/gflat.Projects.csproj" />
   <Project Path="gflat.Build.Tasks/gflat.Build.Tasks.csproj" />
-  <Project Path="std/std.gfproj">
-    <Build Project="false" />
-  </Project>
-  <Project Path="examples/hello/hello.gfproj">
-    <Build Project="true" />
-  </Project>
-  <Project Path="examples/values/values.gfproj">
-    <Build Project="false" />
-  </Project>
 </Solution>

@@ -134,8 +134,14 @@ dotnet test gflat.Tests/gflat.Tests.csproj
 dotnet test gflat.LanguageServer.Tests/gflat.LanguageServer.Tests.csproj
 ```
 
-Use the explicit test projects: the solution also contains `.gfproj` files, which
-are not .NET test projects. Set `GFLAT_OPT_LEVEL=2` to test optimized native output.
+The solutions separate compiler development from gflat programs:
+
+- [gflat.slnx](gflat.slnx): compiler, command-line tools, language server, and tests.
+- [std/std.slnx](std/std.slnx): the source standard library.
+- [examples/examples.slnx](examples/examples.slnx): runnable examples; choose a startup project in Visual Studio.
+- [editors/VisualStudio/gflat.VisualStudio.slnx](editors/VisualStudio/gflat.VisualStudio.slnx): the Visual Studio extension.
+
+Set `GFLAT_OPT_LEVEL=2` to test optimized native output.
 
 Build the VSIX on Windows using Visual Studio MSBuild:
 

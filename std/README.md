@@ -70,6 +70,7 @@ implementation lives in `libc`.
 | Binary buffers | `BinaryBufferReader`, `BinaryBufferWriter` | [Borrowed cursors and bounded payloads](../docs/BINARY_CURSORS.md) |
 | Streaming checksums | `CRC32`, `Adler32` | [Incremental byte checksums](../docs/CHECKSUMS.md) |
 | SHA-256 digests | `SHA256` | [Incremental hashing and fixed-buffer results](../docs/SHA256.md) |
+| Keyed digests | `HMACSHA256` | [Incremental HMAC-SHA256 with counted keys](../docs/HMAC_SHA256.md) |
 | Temporary storage | `Arena` | [Independent raw-storage arenas](../docs/ARENA.md) |
 | Raw memory | `Memory::Copy`, `Move`, `Fill`, `Compare`, `Equal` | [Byte operations and linking](../docs/MEMORY.md) |
 

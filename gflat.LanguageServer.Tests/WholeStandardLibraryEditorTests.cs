@@ -85,6 +85,10 @@ public class WholeStandardLibraryEditorTests
                 bool hashed=contentHash.TryAppend(text.Data,text.Length);
                 byte[32] digest=contentHash.GetHash();
                 contentHash.Reset();
+                HMACSHA256 authentication=new("key",3);
+                authentication.TryAppend(text.Data,text.Length);
+                byte[32] authenticationTag=authentication.GetHash();
+                authentication.Reset();
                 byte[32] fileDigest=FileHash::SHA256("input.bin");
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
                 decoder.Read("a",1,true,&scalar,&consumed);
@@ -342,6 +346,14 @@ public class WholeStandardLibraryEditorTests
             if(member=="GetHash") Assert.Contains("byte[32]",hover.GetProperty("contents").GetProperty("value").GetString());
         }
         int fileHashCall=text.IndexOf("FileHash::SHA256",StringComparison.Ordinal)+"FileHash::".Length;
+        foreach(string member in new[]{"TryAppend","GetHash","Reset"})
+        {
+            int call=text.IndexOf("authentication."+member,StringComparison.Ordinal)+"authentication.".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("HMACSHA256.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            if(member=="GetHash") Assert.Contains("byte[32]",hover.GetProperty("contents").GetProperty("value").GetString());
+        }
         var fileHashHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,fileHashCall),Protocol.JsonOptions);
         Assert.Contains("byte[32]",fileHashHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("FileHash.gf",JsonSerializer.Serialize(model.Definition(source.Path,fileHashCall),Protocol.JsonOptions));

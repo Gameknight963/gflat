@@ -5,6 +5,9 @@ Include `core/Collections/EnumerableHashSet.gf` alongside the usual query and
 immediately and returns a new owning `HashSet<T>`. Repeated calls enumerate
 again and produce independent sets. Results have unspecified iteration order.
 
+[`Distinct()`](QUERY_DISTINCT.md) provides lazy encounter-order enumeration with
+its hash storage owned by each iterator.
+
 ```csharp
 using std;
 

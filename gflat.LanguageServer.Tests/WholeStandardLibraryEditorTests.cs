@@ -260,6 +260,8 @@ public class WholeStandardLibraryEditorTests
                 Queue<int> pending=new(); pending.Enqueue(42); pending.ShrinkToFit();
                 Unique<int> foldedOwner=pending.AsEnumerable().Aggregate(new Unique<int>(new* int(0)),FoldOwned);
                 HashSet<int> uniquePending=pending.AsEnumerable().ToHashSet();
+                var distinctPending=pending.AsEnumerable().Distinct().Take(2);
+                nuint distinctCount=distinctPending.Count();
                 var pendingQuery=pending.AsEnumerable().Take(1);
                 Stack<int> lifo=new(); lifo.Push(42);
                 var lifoQuery=lifo.AsEnumerable().Take(1);
@@ -316,6 +318,11 @@ public class WholeStandardLibraryEditorTests
         var lineHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,lineCall),Protocol.JsonOptions);
         Assert.Contains("ITextWriter* output",lineHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("Console.gf",JsonSerializer.Serialize(model.Definition(source.Path,lineCall),Protocol.JsonOptions));
+        int distinctCall=sourceTokens.Single(token=>token.Text=="Distinct").Start;
+        var distinctHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,distinctCall),Protocol.JsonOptions);
+        Assert.Contains("DistinctSource",distinctHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.DoesNotContain('$',distinctHover.GetProperty("contents").GetProperty("value").GetString()!);
+        Assert.Contains("EnumerableDistinct.gf",JsonSerializer.Serialize(model.Definition(source.Path,distinctCall),Protocol.JsonOptions));
         int setCall=sourceTokens.Single(token=>token.Text=="ToHashSet").Start;
         var setHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,setCall),Protocol.JsonOptions);
         Assert.Contains("HashSet",setHover.GetProperty("contents").GetProperty("value").GetString());

@@ -72,13 +72,14 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | --- | --- |
 | `Where(predicate)` | Yield elements passing the predicate. |
 | `Select(selector)` | Project elements when their `Current` value is read. |
+| `Distinct()` | Yield distinct values in encounter order; each enumeration owns a hash set. |
 | `Zip(other, selector)` | Project pairs in order until either input ends. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements; counts are `nuint`. |
 | `TakeWhile(predicate)` | Yield the initial matching prefix; stop permanently at the first false result. |
 | `SkipWhile(predicate)` | Skip the initial matching prefix, then yield every remaining element without testing again. |
 | `Any()` | Test for at least one element, stopping immediately. |
 | `All(predicate)` | Stop at the first failure; true for an empty sequence. |
-| `Count()` | Count elements without reading `Current`; throw on count overflow. |
+| `Count()` | Count elements without reading the terminal iterator's `Current`; throw on count overflow. Upstream operators can still read their inputs. |
 | `First()` / `Last()` / `Single()` | Return a value; throw if empty. `Single` also rejects multiple elements. |
 | `ElementAt(index)` | Return the zero-based element; throw with code 3 if out of range. |
 | `TryFirst(ref result)` | Return false without changing `result` if empty. |
@@ -93,6 +94,7 @@ Operators are lazy until a terminal operation or `foreach` advances an iterator.
 For paired queries and their iteration/ownership rules, see [Zip](../../../docs/QUERY_ZIP.md).
 For positional access and projection behavior, see [ElementAt](../../../docs/QUERY_ELEMENT_AT.md).
 For owning distinct results, see [ToHashSet](../../../docs/QUERY_HASH_SET.md).
+For lazy distinct values in encounter order, see [Distinct](../../../docs/QUERY_DISTINCT.md).
 For overlapping borrowed views of contiguous data, see [span windows](../../../docs/SPAN_WINDOWS.md).
 For nonoverlapping views that retain a shorter final segment, see
 [span chunks](../../../docs/SPAN_CHUNKS.md).
@@ -117,8 +119,10 @@ the selector twice. `Any` and `Count` need not invoke a selector at all. This
 allows arbitrary result types without default construction or hidden storage
 allocation. Put effects in `ForEach`, rather than relying on a selector running.
 
-The built-in source views and operators do not allocate. A callback, a custom
-source or element's copy constructor, or materializing a vector can allocate.
+The built-in source views allocate no storage. `Where`, `Select`, `Zip`, and the
+skip/take operators allocate no internal storage. `Distinct` allocates a hash set
+as values are encountered; its iterator owns that storage. A callback, a custom
+source or element's copy constructor, or materializing a collection can allocate.
 Callback signatures use ordinary
 function pointers; capturing closures are not implemented. For owning value
 parameters such as `String`, use a named function: lambda parameters currently

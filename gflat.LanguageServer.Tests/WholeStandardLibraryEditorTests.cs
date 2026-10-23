@@ -244,6 +244,7 @@ public class WholeStandardLibraryEditorTests
                 bool emptyOwner=owner.IsEmpty;
                 int*? releasedObject=owner.Release();
                 if(releasedObject!=null) delete releasedObject!;
+                int swapLeft=1; int swapRight=2; Swap(ref swapLeft,ref swapRight);
                 Vector<String> parts=new(); parts.Add(s"left"); parts.Add(s"right");
                 String joined=parts.AsImmutable().Join(",");
                 Date parsedDate=Date::Parse("2024-02-29");
@@ -416,6 +417,10 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("Release",releaseHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("nothrow",releaseHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("Unique.gf",JsonSerializer.Serialize(model.Definition(source.Path,releaseCall),Protocol.JsonOptions));
+        int swapCall=sourceTokens.Single(token=>token.Text=="Swap").Start;
+        var swapHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,swapCall),Protocol.JsonOptions);
+        Assert.Contains("ref int left",swapHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("Algorithms.gf",JsonSerializer.Serialize(model.Definition(source.Path,swapCall),Protocol.JsonOptions));
         foreach(string marker in new[]{"Paths::IsRooted(textView","Paths::IsFullyQualified(textView","Paths::Join(textView"})
         {
             int call=text.IndexOf(marker,StringComparison.Ordinal)+"Paths::".Length;

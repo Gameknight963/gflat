@@ -1,10 +1,8 @@
 using std;
 
-private extern int strcmp(immutable(char*) left, immutable(char*) right);
-
 int main(int argc, char** argv)
 {
-    if (argc < 3 || argc > 4 || argc == 4 && strcmp(argv[3], "--even") != 0)
+    if (argc < 3 || argc > 4 || argc == 4 && !CString::Equals(argv[3], "--even"))
     {
         Console::WriteLine("Usage: seq <start> <count> [--even]");
         return 2;

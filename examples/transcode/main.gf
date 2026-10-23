@@ -1,15 +1,5 @@
 using std;
 
-bool IsMode(readonly(char)* argument, readonly(char)* expected)
-{
-    nuint index=0;
-    while(argument[index]==expected[index]) {
-        if(expected[index]=='\0')return true;
-        index++;
-    }
-    return false;
-}
-
 Vector<byte> ToUtf16Le(ref immutable(Vector<byte>) input)
 {
     if(input.IsEmpty)return new Vector<byte>();
@@ -54,14 +44,14 @@ Vector<byte> FromUtf16Le(ref immutable(Vector<byte>) input)
 
 int main(int argc,char** argv)
 {
-    if(argc!=4||(!IsMode(argv[1],"utf8-to-utf16le")&&!IsMode(argv[1],"utf16le-to-utf8"))) {
+    if(argc!=4||(!CString::Equals(argv[1],"utf8-to-utf16le")&&!CString::Equals(argv[1],"utf16le-to-utf8"))) {
         Console::Error.WriteLine("Usage: transcode <utf8-to-utf16le|utf16le-to-utf8> <input> <output>");
         return 2;
     }
     try {
         Vector<byte> input=FileBytes::ReadAll(argv[2]);
         Vector<byte> output;
-        if(IsMode(argv[1],"utf8-to-utf16le"))output=ToUtf16Le(ref input);
+        if(CString::Equals(argv[1],"utf8-to-utf16le"))output=ToUtf16Le(ref input);
         else output=FromUtf16Le(ref input);
         if(output.IsEmpty) { File empty=File::OpenWrite(argv[3]); empty.Close(); }
         else FileBytes::WriteAll(argv[3],output.AsImmutable().Data!,output.Count);

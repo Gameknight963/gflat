@@ -6,7 +6,8 @@ examples/transcode/bin/Debug/transcode.exe utf8-to-utf16le input.txt output.txt
 examples/transcode/bin/Debug/transcode.exe utf16le-to-utf8 output.txt roundtrip.txt
 ```
 
-On Linux, omit `.exe`. Conversion is strict: malformed UTF-8, isolated UTF-16
+The default project output uses `.exe` on both Windows and Linux; on Linux,
+prefix the executable paths above with `./`. Conversion is strict: malformed UTF-8, isolated UTF-16
 surrogates, and odd UTF-16 byte counts are errors. Embedded nulls and Unicode
 noncharacters are preserved. No byte-order mark is added or removed: a BOM in
 the input remains the same U+FEFF scalar in the output.

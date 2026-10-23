@@ -311,6 +311,24 @@ storage. `WriteAll` truncates and `AppendAll` appends; both accept a C string,
 counted bytes, or `ref immutable(String)`. These helpers explicitly close the
 file so final flush/close failures are reported. They are not atomic updates.
 
+`FileText::ReadAll(path, maximumBytes)` and
+`FileBytes::ReadAll(path, maximumBytes)` limit the number of content bytes accepted
+into the returned String or Vector. A zero limit permits only an empty file;
+exactly the limit is accepted after checking for EOF. A larger file throws
+`IOException("File exceeds maximum byte count")`, without returning a truncated
+prefix. The unbounded one-argument forms remain available.
+
+These are byte limits, not limits on physical allocation or IO. String terminator
+storage, geometric spare capacity, and CRT buffering can use additional memory;
+the file reader may inspect one extra content byte to detect overflow. No file
+length snapshot or seek is performed, and concurrent changes can affect observed
+bytes. Embedded NUL/high bytes, CRLF, and BOM bytes remain unchanged; FileText
+still performs no decoding or validation.
+
+The owned File closes before a successful return and during exception cleanup.
+Limit/read/allocation failures clean partial results and leave an existing
+assignment target unchanged. Allocation failure remains `BadAllocException`.
+
 ### File digests
 
 `File/FileHash.gf` provides `FileHash::SHA256(path)` and borrowed `File*`

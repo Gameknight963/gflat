@@ -4,14 +4,21 @@ namespace std;
 public static class FileBytes
 {
     public static Vector<byte> ReadAll(immutable(char*) path)
+        => FileBytes::ReadAll(path, (nuint)0 - (nuint)1);
+
+    public static Vector<byte> ReadAll(immutable(char*) path, nuint maximumBytes)
     {
         File input = File::OpenRead(path);
         Vector<byte> bytes = new Vector<byte>();
         char[4096] buffer;
         while (true)
         {
-            nuint count = input.Read(buffer, 4096);
+            nuint remaining = maximumBytes - bytes.Count;
+            nuint request = 4096;
+            if (remaining < 4096) request = remaining + 1;
+            nuint count = input.Read(buffer, request);
             if (count == 0) break;
+            if (count > remaining) throw new IOException("File exceeds maximum byte count");
             // Vector grows geometrically; do not reserve the exact size per chunk.
             for (nuint i = 0; i < count; i++) bytes.Add((byte)buffer[i]);
         }

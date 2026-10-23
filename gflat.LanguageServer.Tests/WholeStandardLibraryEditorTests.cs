@@ -85,6 +85,7 @@ public class WholeStandardLibraryEditorTests
                 bool hashed=contentHash.TryAppend(text.Data,text.Length);
                 byte[32] digest=contentHash.GetHash();
                 contentHash.Reset();
+                byte[32] fileDigest=FileHash::SHA256("input.bin");
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
                 decoder.Read("a",1,true,&scalar,&consumed);
                 Utf8Scalars characters=new(text.Data,text.Length);
@@ -330,6 +331,10 @@ public class WholeStandardLibraryEditorTests
             Assert.Contains("SHA256.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
             if(member=="GetHash") Assert.Contains("byte[32]",hover.GetProperty("contents").GetProperty("value").GetString());
         }
+        int fileHashCall=text.IndexOf("FileHash::SHA256",StringComparison.Ordinal)+"FileHash::".Length;
+        var fileHashHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,fileHashCall),Protocol.JsonOptions);
+        Assert.Contains("byte[32]",fileHashHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("FileHash.gf",JsonSerializer.Serialize(model.Definition(source.Path,fileHashCall),Protocol.JsonOptions));
         int distinctCall=sourceTokens.Single(token=>token.Text=="Distinct").Start;
         var distinctHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,distinctCall),Protocol.JsonOptions);
         Assert.Contains("DistinctSource",distinctHover.GetProperty("contents").GetProperty("value").GetString());

@@ -311,6 +311,16 @@ storage. `WriteAll` truncates and `AppendAll` appends; both accept a C string,
 counted bytes, or `ref immutable(String)`. These helpers explicitly close the
 file so final flush/close failures are reported. They are not atomic updates.
 
+### File digests
+
+`File/FileHash.gf` provides `FileHash::SHA256(path)` and borrowed `File*`
+overloads returning an independent `byte[32]` digest. Borrowed calls hash from
+the current position to EOF, leaving the file open. Supply scratch storage or
+use the overload with a 4096-byte stack buffer; no owning input buffer is needed.
+The path overload opens in binary mode and closes explicitly before returning.
+See [file hashing](../../docs/FILE_HASH.md) for an executable hex-output example
+and the IO failure contracts. The underlying core `SHA256` does not require libc.
+
 ### Reading lines
 
 `File/FileLines.gf` provides `std::FileLines`, borrowing a `File*` without closing

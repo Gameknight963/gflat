@@ -143,7 +143,7 @@ public sealed class StandardBigIntegerConversionTests
                     byte[] text=Encoding.ASCII.GetBytes(value.ToString(CultureInfo.InvariantCulture));writer.Write(text.Length);writer.Write(text);
                     bool fitsLong=value>=long.MinValue&&value<=long.MaxValue;
                     bool fitsULong=value>=0&&value<=ulong.MaxValue;
-                    writer.Write(fitsLong?1:0);writer.Write(fitsLong?(long)value:0l);
+                    writer.Write(fitsLong?1:0);writer.Write(fitsLong?(long)value:0L);
                     writer.Write(fitsULong?1:0);writer.Write(fitsULong?(ulong)value:0ul);
                 }
             }

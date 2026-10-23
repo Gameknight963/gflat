@@ -241,6 +241,9 @@ public class WholeStandardLibraryEditorTests
                 IpAddress networkAddress=IpAddress::Parse("2001:db8::1");
                 bool ipv4Address=networkAddress.IsIpv4; char[39] addressText; nuint addressWritten=0;
                 networkAddress.TryFormat(addressText,39,ref addressWritten);
+                byte[16] addressBytes; nuint addressByteCount=0;
+                networkAddress.TryWriteBytes(addressBytes,16,ref addressByteCount);
+                IpAddress restoredNetworkAddress=IpAddress::FromBytes(addressBytes,addressByteCount);
                 String networkMessage=s$"Host: {networkAddress}";
                 Uuid identifier=Uuid::Parse("00112233-4455-6677-8899-aabbccddeeff");
                 ulong identifierHigh=identifier.High; ulong identifierLow=identifier.Low;
@@ -449,6 +452,10 @@ public class WholeStandardLibraryEditorTests
         var addressHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,addressFactory),Protocol.JsonOptions);
         Assert.Contains("IpAddress",addressHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("IpAddress.gf",JsonSerializer.Serialize(model.Definition(source.Path,addressFactory),Protocol.JsonOptions));
+        int binaryAddressFactory=text.IndexOf("IpAddress::FromBytes",StringComparison.Ordinal)+"IpAddress::".Length;
+        var binaryAddressHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,binaryAddressFactory),Protocol.JsonOptions);
+        Assert.Contains("nuint count",binaryAddressHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("IpAddress.gf",JsonSerializer.Serialize(model.Definition(source.Path,binaryAddressFactory),Protocol.JsonOptions));
         foreach(string marker in new[]{"Paths::IsRooted(textView","Paths::IsFullyQualified(textView","Paths::Join(textView"})
         {
             int call=text.IndexOf(marker,StringComparison.Ordinal)+"Paths::".Length;

@@ -182,6 +182,7 @@ public class WholeStandardLibraryEditorTests
                 variableInput.ReadVarUInt32(ref variableSmall); variableInput.ReadVarUInt64(ref variableLarge);
                 BitSet flags=new(65); flags.SetRange(1,63,true);
                 bool any=flags.HasAnySet(); bool all=flags.HasAllSet();
+                bool overlappingBits=flags.Overlaps(&flags);
                 flags.ShiftLeft(1); flags.ShiftRight(32);
                 immutable(BitSet)* protectedFlags=&flags;
                 var selectedBits=protectedFlags.AsEnumerable().Where((nuint bit) => bit > 1).Take(2);
@@ -319,6 +320,10 @@ public class WholeStandardLibraryEditorTests
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
         int prefixCall=text.IndexOf("labelledOutput.Write",StringComparison.Ordinal)+"labelledOutput.".Length;
+        int overlapCall=text.IndexOf("flags.Overlaps",StringComparison.Ordinal)+"flags.".Length;
+        var overlapHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,overlapCall),Protocol.JsonOptions);
+        Assert.Contains("Overlaps",overlapHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("BitSet.gf",JsonSerializer.Serialize(model.Definition(source.Path,overlapCall),Protocol.JsonOptions));
         foreach(string marker in new[]{"hasSequenceCString=","hasSequenceCounted=","hasSequenceSpan="})
         {
             int call=text.IndexOf("TrySplitOnce",text.IndexOf(marker,StringComparison.Ordinal),StringComparison.Ordinal);

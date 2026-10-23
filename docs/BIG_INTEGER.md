@@ -38,6 +38,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `Add(immutable(BigInteger)* other)` | Return the exact sum. |
 | `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
 | `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
+| `DivRem(int divisor, ref int remainder)` | Return a fresh quotient and the signed remainder for a 32-bit divisor. |
 | `Equals`, `CompareTo`, `GetHashCode` | Value equality, signed ordering, and an equality-compatible hash. |
 | `Format(ITextWriter*)` | Write canonical decimal bytes without an intermediate owning string. |
 | `ToString()` | Return an independent owning decimal `String`. |
@@ -45,7 +46,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 The type implements `IEquatable<BigInteger>`, `IComparable<BigInteger>`,
 `IHashable`, `IFormattable`, and `IStringConvertable`, so it works as a hash key,
 in generic comparisons, and in interpolation. There are currently no arithmetic
-operators, implicit primitive conversions, division, bitwise operations, alternate
+operators, implicit primitive conversions, division by an arbitrary BigInteger, bitwise operations, alternate
 radices, locale formatting, or `TryParse` API.
 
 Parsing accepts an optional leading `+` or `-` followed by at least one ASCII
@@ -82,3 +83,58 @@ For explicit source selection include `core/BigInteger.gf`, `Vector`/`Span` and
 their query-interface dependencies, `Formatting.gf`, `Hashing.gf`, the implemented
 interface sources, and `String`/`ByteSearch`. Projects using the complete standard
 library already include these sources.
+
+## Division by a 32-bit integer
+
+`DivRem(divisor, ref remainder)` truncates the quotient toward zero. A nonzero
+remainder has the dividend's sign and an absolute value smaller than the absolute
+divisor. Negative divisors and `int` minimum are supported. The quotient is a
+BigInteger, so dividing a large negative value by -1 has no fixed-width overflow.
+
+A zero divisor throws `Exception` before allocating the quotient or changing the
+remainder. Quotient construction completes before the remainder is assigned; a
+failed allocation leaves the source, remainder, and an existing assignment target
+unchanged. The output integer must not overlap the source object or its owned
+storage through unsafe aliases. The quotient owns independent storage.
+
+The method makes one linear pass over base-1,000,000,000 limbs. Its `ulong`
+intermediate is at most 2147483647999999999, even for an `int` minimum divisor.
+A zero input requires no quotient allocation. A nonzero input can reserve storage
+even when its quotient is zero; normalization need not release that capacity.
+There is no arbitrary BigInteger-divisor API yet.
+
+For example, repeated division can implement base conversion using existing
+String and collection operations; this is an ordinary helper, not a built-in
+formatting mode:
+
+```csharp
+using std;
+
+String ToRadix(immutable(BigInteger)* input, int radix)
+{
+    if (radix < 2 || radix > 36) throw new Exception("Radix must be between 2 and 36");
+    readonly(char)* digits = "0123456789abcdefghijklmnopqrstuvwxyz";
+    BigInteger remaining = *input;
+    bool negative = remaining.Sign < 0;
+    String text = new();
+    while (remaining.Sign != 0)
+    {
+        int remainder = 0;
+        remaining = remaining.DivRem(radix, ref remainder);
+        if (remainder < 0) remainder = -remainder;
+        text.Append(digits[remainder]);
+    }
+    if (text.IsEmpty) text.Append('0');
+    if (negative) text.Append('-');
+    Reverse<char>(text.AsSpan());
+    return move text;
+}
+
+int main()
+{
+    BigInteger value = BigInteger::Parse("18446744073709551616");
+    String hex = ToRadix(&value, 16);
+    if (!hex.Equals("10000000000000000")) return 1;
+    return 0;
+}
+```

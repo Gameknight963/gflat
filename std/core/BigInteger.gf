@@ -173,6 +173,36 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    // Signed 32-bit divisor. Quotient truncates toward zero; remainder has dividend sign.
+    public immutable BigInteger DivRem(int divisor, ref int remainder)
+    {
+        if (divisor == 0) throw new Exception("BigInteger divisor is zero");
+        long widened = (long)divisor;
+        if (widened < 0) widened = -widened;
+        ulong magnitude = (ulong)widened;
+        BigInteger result = new();
+        result.sign = sign;
+        if (divisor < 0) result.sign = -result.sign;
+        nuint count = limbs.Count;
+        result.limbs.Reserve(count);
+        for (nuint i = 0; i < count; i++) result.limbs.Add(0u);
+        ulong carry = 0ul;
+        nuint index = count;
+        while (index != 0)
+        {
+            index--;
+            // carry < abs(divisor) <= 2^31, so current <= 2147483647999999999.
+            ulong current = carry * Radix + (ulong)limbs[index];
+            result.limbs[index] = (uint)(current / magnitude);
+            carry = current % magnitude;
+        }
+        result.Normalize();
+        int rest = (int)carry;
+        if (sign < 0) rest = -rest;
+        remainder = rest;
+        return move result;
+    }
+
     public static BigInteger Parse(readonly(char)* text)
     {
         nuint count = 0;

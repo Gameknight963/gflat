@@ -579,6 +579,13 @@ int SmokeHashesAndViews() {
         batchOverlapRight.SetRange(64, 1, true);
         if (!batchOverlapLeft.Overlaps(&batchOverlapRight)) return 137;
     }
+    {
+        BigInteger batchDividend = BigInteger::Parse("-18446744073709551617");
+        int batchRemainder = 0;
+        BigInteger batchQuotient = batchDividend.DivRem(16, ref batchRemainder);
+        String batchQuotientText = batchQuotient.ToString();
+        if (batchRemainder != -1 || !batchQuotientText.Equals("-1152921504606846976")) return 138;
+    }
     return 0;
 }
 int main() {

@@ -926,6 +926,9 @@ public partial class LlvmEmitter : IVisitor
     {
         srcType = _typeChecker.ResolveAlias(srcType);
         dstType = _typeChecker.ResolveAlias(dstType);
+        // Array-to-pointer conversion receives an already-decayed element address.
+        if (srcType is ArrayTypeExpression arraySource && dstType is PointerTypeExpression)
+            srcType = new PointerTypeExpression(arraySource.ElementType, false, srcType.Line);
 
         if (srcType is NamedTypeExpression srcNamed && _typeChecker.ResolveEnum(srcNamed) is { } srcEnum)
         {
@@ -2220,9 +2223,9 @@ public partial class LlvmEmitter : IVisitor
             else if (_currentFunctionExpectedType != null &&
                 _typeChecker.ResolveAlias(_currentFunctionExpectedType) is ArrayTypeExpression &&
                 _typeChecker.ResolveAlias(_typeChecker.GetType(returned)) is ArrayTypeExpression &&
-                returned is IdentifierExpression or MemberAccessExpression or IndexExpression)
+                returned is IdentifierExpression or MemberAccessExpression or IndexExpression or NamespaceAccessExpression)
             {
-                EmitAddress(returned);
+                EmitArrayReadAddress(returned);
                 string address = Pop();
                 string arrayType = EmitType(_typeChecker.GetType(returned));
                 string value = NewTemp();
@@ -4197,7 +4200,7 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (_typeChecker.ResolveAlias(_typeChecker.GetType(argument)) is ArrayTypeExpression)
         {
-            EmitAddress(argument);
+            EmitArrayReadAddress(argument);
             string address = Pop();
             string type = EmitType(_typeChecker.GetType(argument));
             string first = NewTemp();
@@ -4214,8 +4217,25 @@ public partial class LlvmEmitter : IVisitor
         }
     }
 
+    // Reading/decaying static array storage must retain its startup guard.
+    // Raw address-taking remains distinct and does not read the stored value.
+    private void EmitArrayReadGuard(AstNode expression)
+    {
+        if (_typeChecker.GetStaticStorage(expression) is { IsConst: false } field)
+            EmitStaticReadGuard(field);
+    }
+
+    private void EmitArrayReadAddress(AstNode expression)
+    {
+        EmitArrayReadGuard(expression);
+        EmitAddress(expression);
+    }
+
     private void EmitValueForTarget(AstNode expression, TypeExpression target)
     {
+        if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression &&
+            _typeChecker.ResolveAlias(_typeChecker.GetType(expression)) is ArrayTypeExpression)
+            EmitArrayReadGuard(expression);
         if (TryContextualIntegerLiteral(expression, target, out string integerLiteral)) Push(integerLiteral);
         else if (_typeChecker.CopiesValue(expression, target)) EmitCopyValue(expression, target);
         else if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression targetArray && expression is ArrayLiteralExpression literalArray &&
@@ -4228,7 +4248,7 @@ public partial class LlvmEmitter : IVisitor
             Push("[" + string.Join(", ", Enumerable.Range(0, array.Size.Value).Select(i => "i8 " + (i < bytes.Length ? bytes[i] : 0))) + "]");
         }
         else if (_typeChecker.ResolveAlias(target) is ArrayTypeExpression &&
-            expression is IdentifierExpression or MemberAccessExpression or IndexExpression)
+            expression is IdentifierExpression or MemberAccessExpression or IndexExpression or NamespaceAccessExpression)
         {
             EmitAddress(expression);
             string address = Pop();
@@ -4238,8 +4258,14 @@ public partial class LlvmEmitter : IVisitor
             ProtectManagedValue(target, value);
             Push(value);
         }
-        else if (expression is ArrayLiteralExpression && _typeChecker.ResolveAlias(target) is PointerTypeExpression)
-            EmitArgument(expression);
+        else if (_typeChecker.ResolveAlias(_typeChecker.GetType(expression)) is ArrayTypeExpression &&
+            _typeChecker.ResolveAlias(target) is PointerTypeExpression)
+        {
+            EmitArrayReadAddress(expression);
+            string address = Pop(), type = EmitType(_typeChecker.GetType(expression)), first = NewTemp();
+            Emit($"    {first} = getelementptr {type}, {type}* {address}, i32 0, i32 0");
+            Push(first);
+        }
         else expression.Accept(this);
     }
 

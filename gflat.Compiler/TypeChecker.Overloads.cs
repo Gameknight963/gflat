@@ -47,7 +47,7 @@ public partial class TypeChecker
         return OverloadKey(method.Parameters);
     }
 
-    private void PrepareOverloads(CompilationUnit unit, AstNode? specialization = null)
+    private void PrepareOverloads(CompilationUnit unit, AstNode? specialization = null, bool resolveSignatures = true)
     {
         var groups = new Dictionary<string, List<MethodDeclaration>>();
         var ownerNames = new HashSet<string>();
@@ -57,6 +57,22 @@ public partial class TypeChecker
             Walk(unit.Members, "");
             foreach (var ns in unit.Namespaces) Walk(ns.Members, ns.Name + "::");
         }
+        var families = groups.Values.Where(g => g.Count > 1).ToArray();
+        foreach (var family in families)
+        {
+            using var context = SourceContext.Enter(family[0].Span);
+            if (family.Any(m => m.IsGeneric))
+                throw new TypeCheckException("Overloaded generic function families are not yet supported", family[0].Line);
+            if (family.Select(m => m.IsStatic).Distinct().Count() > 1)
+                throw new TypeCheckException("An overload family cannot mix static and instance methods", family[0].Line);
+            // Existing virtual tables use names as slots.
+            if (family.Any(m => m.IsVirtual || m.IsOverride || m.IsAbstract || m.Body == null))
+                throw new TypeCheckException("Overloaded virtual and interface methods are not yet supported", family[0].Line);
+            foreach (var method in family) overloadFamilies[method] = family;
+        }
+        // Generic bodies can be checked while declaration signatures bind. They
+        // need all ordinary call candidates before semantic key validation starts.
+        if (!resolveSignatures) return;
         // A nested specialization prepares only its own declarations. Revisiting
         // unrelated signatures here can reenter a type whose bases are resolving.
         var owners = _structs.Values.Where(s => ownerNames.Contains(s.Name))
@@ -78,17 +94,9 @@ public partial class TypeChecker
                 });
             }
         }
-        foreach (var family in groups.Values.Where(g => g.Count > 1))
+        foreach (var family in families)
         {
             using var context = SourceContext.Enter(family[0].Span);
-            if (family.Any(m => m.IsGeneric))
-                throw new TypeCheckException("Overloaded generic function families are not yet supported", family[0].Line);
-            if (family.Select(m => m.IsStatic).Distinct().Count() > 1)
-                throw new TypeCheckException("An overload family cannot mix static and instance methods", family[0].Line);
-            // Existing virtual tables use names as slots. Diagnose unsupported
-            // families rather than selecting one overload by declaration order.
-            if (family.Any(m => m.IsVirtual || m.IsOverride || m.IsAbstract || m.Body == null))
-                throw new TypeCheckException("Overloaded virtual and interface methods are not yet supported", family[0].Line);
             var keys = new Dictionary<string, MethodDeclaration>();
             foreach (var method in family)
             {
@@ -98,7 +106,6 @@ public partial class TypeChecker
                     if (keys.TryGetValue(key, out var first))
                         DuplicateDeclaration(first, method, $"Overloads of '{method.Name}' cannot differ only by readonly, immutable, return type, or declaration modifiers");
                     keys[key] = method;
-                    overloadFamilies[method] = family;
                 });
             }
         }

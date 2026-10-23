@@ -2061,6 +2061,7 @@ namespace gflat
             collectionPass.Execute(node);
             ResolveFunctionReplacements(node);
             collectionPass.Execute(node);
+            PrepareOverloads(node, resolveSignatures: false);
 
             ResolveDeclaredBaseTypes(node);
             // Signature resolution can specialize generic bodies. Their exception

@@ -1,6 +1,7 @@
-# Span algorithms
+# Value and span algorithms
 
-Algorithms borrow a span and never copy or own the source collection.
+`Swap` borrows two initialized values. The collection algorithms borrow a span
+and never copy or own the source collection.
 Import `std` and call them as ordinary functions:
 
 ```csharp
@@ -15,8 +16,11 @@ int Compare(readonly(int)* left, readonly(int)* right)
 
 int main()
 {
+    int first = 9;
+    int second = 2;
+    Swap(ref first, ref second);
     Vector<int> values = new();
-    values.Add(9); values.Add(2); values.Add(5);
+    values.Add(second); values.Add(first); values.Add(5);
     Sort<int>(values.AsSpan(), Compare);
     int key = 5;
     nuint index = LowerBound<int>(values.AsImmutable(), &key, Compare);
@@ -26,6 +30,7 @@ int main()
 
 | Function | Behavior |
 | --- | --- |
+| `Swap<T>(ref T left, ref T right)` | Exchange two initialized mutable values by relocation; the same storage is a no-op. |
 | `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
 | `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/StableSort.gf`; see [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
@@ -44,6 +49,24 @@ int main()
 | `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. |
 | `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
 | `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
+
+`Swap` supports ordinary values and noncopyable owners such as `Unique<T>`.
+It copies no owned buffers, invokes no user copy constructor or destructor, and
+does not allocate for ordinary values. Managed references use the existing root
+tracking operations. Both values remain initialized after the call. The two
+arguments can be the same storage or distinct fields/elements; partially
+overlapping storage created through unsafe aliases is unsupported. Ref arguments
+are evaluated before the function starts, so a failing argument expression does
+not begin a swap.
+
+The storage addresses do not change. Pointers to the value slots still point to
+those slots and now observe exchanged contents. Pointers into separately owned
+buffers or pointees keep their addresses, with lifetime responsibility now held
+by the opposite owner. Raw aliases and pointers stored inside values are not
+retargeted. Keep both argument locations valid throughout the operation.
+Readonly/immutable values, temporaries, ordinary value properties, uninitialized
+storage, and fields inside managed objects cannot be passed as mutable refs under
+the existing language rules. Native managed-reference slots can be swapped.
 
 Both bounds return the span length if no such element exists, including zero
 for an empty span. Input must already be sorted under the same comparator.

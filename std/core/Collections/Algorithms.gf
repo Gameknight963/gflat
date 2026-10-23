@@ -25,6 +25,10 @@ namespace detail
     }
 }
 
+// Exchange initialized values without copying their owned resources.
+public void Swap<T>(ref T left, ref T right)
+    => std::detail::SwapElements<T>(&left, &right);
+
 // Allocation-free heapsort. Equal elements need not retain their relative order.
 // A throwing comparator can leave a partial ordering, but all values remain owned.
 public void Sort<T>(Span<T> values, int(immutable(T)*, immutable(T)*)* compare)

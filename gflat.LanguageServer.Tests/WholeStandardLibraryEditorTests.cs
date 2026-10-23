@@ -242,6 +242,8 @@ public class WholeStandardLibraryEditorTests
                 readonly(Unique<int>)* ownerView=&owner; ownerView.Value++;
                 immutable(Unique<int>)* ownerDeep=&owner; int protectedValue=ownerDeep.ValueImmutable;
                 bool emptyOwner=owner.IsEmpty;
+                int*? releasedObject=owner.Release();
+                if(releasedObject!=null) delete releasedObject!;
                 Vector<String> parts=new(); parts.Add(s"left"); parts.Add(s"right");
                 String joined=parts.AsImmutable().Join(",");
                 Date parsedDate=Date::Parse("2024-02-29");
@@ -409,6 +411,11 @@ public class WholeStandardLibraryEditorTests
         var aggregateHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,aggregateCall),Protocol.JsonOptions);
         Assert.Contains("Unique",aggregateHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,aggregateCall),Protocol.JsonOptions));
+        int releaseCall=text.IndexOf("owner.Release",StringComparison.Ordinal)+"owner.".Length;
+        var releaseHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,releaseCall),Protocol.JsonOptions);
+        Assert.Contains("Release",releaseHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("nothrow",releaseHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("Unique.gf",JsonSerializer.Serialize(model.Definition(source.Path,releaseCall),Protocol.JsonOptions));
         foreach(string marker in new[]{"Paths::IsRooted(textView","Paths::IsFullyQualified(textView","Paths::Join(textView"})
         {
             int call=text.IndexOf(marker,StringComparison.Ordinal)+"Paths::".Length;

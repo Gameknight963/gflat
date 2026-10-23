@@ -539,6 +539,11 @@ int main() {
         if (!batchHash.TryAppend("abc", 3)) return 127;
         byte[32] batchDigest = batchHash.GetHash();
         if (batchDigest[0] != (byte)0xba || batchDigest[31] != (byte)0xad) return 128;
+        char[64] batchHashHex; nuint batchHashWritten = 0;
+        if (!Hex::TryEncode((readonly(char)*)batchHash.GetHash(), 32,
+            batchHashHex, 64, ref batchHashWritten, false)) return 129;
+        if (batchHashWritten != 64 || batchHashHex[0] != 'b' || batchHashHex[1] != 'a'
+            || batchHashHex[62] != 'a' || batchHashHex[63] != 'd') return 130;
     }
     return 0;
 }

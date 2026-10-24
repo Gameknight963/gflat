@@ -9,6 +9,15 @@ namespace monotonic_clock_detail
         public nint Nanoseconds;
     }
     private extern int clock_gettime(int clock, Timespec* result);
+
+    // Share this exact native signature and timespec identity with SystemClock.
+    internal Timespec Read(int clock)
+    {
+        Timespec value = new();
+        if (clock_gettime(clock, &value) != 0)
+            throw new Exception("clock_gettime failed");
+        return value;
+    }
 }
 
 public static class MonotonicClock : std::IMonotonicClock
@@ -22,10 +31,8 @@ public static class MonotonicClock : std::IMonotonicClock
     {
         if (!HasCompatibleLayout())
             throw new Exception("MonotonicClock requires Linux LP64");
-        monotonic_clock_detail::Timespec value = new();
         // Linux UAPI defines CLOCK_MONOTONIC as 1.
-        if (monotonic_clock_detail::clock_gettime(1, &value) != 0)
-            throw new Exception("clock_gettime failed");
+        monotonic_clock_detail::Timespec value = monotonic_clock_detail::Read(1);
         long seconds = (long)value.Seconds;
         long nanoseconds = (long)value.Nanoseconds;
         if (seconds < 0l || nanoseconds < 0l || nanoseconds >= 1000000000l)

@@ -112,6 +112,10 @@ See [host APIs](libc/README.md). File and console operations accept caller-owned
 character buffers; `String` methods are conveniences rather than a requirement.
 Explicit file `Close` can report errors; destruction closes without throwing.
 
+[Optional platform libraries](../libraries/README.md) provide monotonic clocks
+for `Stopwatch<C>` and `SystemClock::GetUtcNow()` for UTC calendar timestamps.
+Applications reference the Windows or Linux source project explicitly.
+
 ## Runnable examples
 
 - [Word count](../examples/word-count/README.md): streamed input and owning hash keys.

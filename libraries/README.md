@@ -5,12 +5,16 @@ distributed alongside std, without becoming part of its default source set.
 
 | Project | Provider | Target |
 | --- | --- | --- |
-| [Windows](platform/windows/Windows.gfproj) | `Windows::PerformanceCounter` | Windows x64 |
-| [Linux](platform/linux/Linux.gfproj) | `Linux::MonotonicClock` | Linux LP64 |
+| [Windows](platform/windows/Windows.gfproj) | `Windows::PerformanceCounter`, `Windows::SystemClock` | Windows x64 |
+| [Linux](platform/linux/Linux.gfproj) | `Linux::MonotonicClock`, `Linux::SystemClock` | Linux LP64 |
 
-The clock providers implement std's static `IMonotonicClock` contract. A program
+The monotonic providers implement std's static `IMonotonicClock` contract. A program
 can use `std::Stopwatch<Windows::PerformanceCounter>`, for example, or define a
 local alias for that specialization. See [interval timing](../docs/STOPWATCH.md).
+
+Each platform's `SystemClock::GetUtcNow()` returns a `std::DateTime` interpreted
+as UTC. Wall-clock time can jump when adjusted; use the monotonic providers for
+intervals. The project READMEs describe platform requirements and precision.
 
 Reference the appropriate project after importing Gflat.props:
 

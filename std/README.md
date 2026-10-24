@@ -19,6 +19,7 @@ implementation lives in `libc`.
 | Area | APIs | Details |
 | --- | --- | --- |
 | Text | `String`, `ITextWriter`, `IFormattable`, `IStringConvertable` | [Strings](../docs/STRINGS.md), [formatting](core/README.md#strings-and-formatting) |
+| Owning text conversion | Primitive and borrowed `IFormattable` `ToString()` extensions | [Owned results and receiver rules](../docs/STRING_CONVERSION.md) |
 | C strings | `CString` | [Borrowed null-terminated byte utilities](../docs/CSTRING.md) |
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
 | Byte measurement | `CountingWriter` | [Count writer output without storing it](../docs/COUNTING_WRITER.md) |

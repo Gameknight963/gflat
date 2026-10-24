@@ -69,6 +69,11 @@ including embedded nulls. Primitive `std::Format(value, writer)` overloads use
 stack buffers or literal text, without allocating intermediate strings.
 With `using std;`, primitive values also support `value.Format(writer)`.
 Floating-point overloads live in `../libc/Formatting.gf`.
+Explicit `ToString()` extensions collect the same formatting into an owning
+`String`. Primitive receivers use value parameters; the generic `IFormattable`
+extension borrows existing storage, including noncopyable values. Existing
+instance methods keep precedence. See [owning conversions](../../docs/STRING_CONVERSION.md)
+for receiver restrictions and selective source dependencies.
 Signed 128-bit `extralong` uses `ExtraLongFormatting.gf` together with
 `IntegerFormatting.gf`, including for interpolation. It supports the whole
 signed range without allocating an intermediate string or requiring a

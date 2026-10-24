@@ -842,6 +842,14 @@ int SmokeHashesAndViews() {
         String anyByteText = s"a\0b,."; char[2] anyByteSet = [',', '\0'];
         if (anyByteText.IndexOfAny(anyByteSet, 2) != 1 || anyByteText.LastIndexOfAny(anyByteSet, 2) != 3) return 224;
         if (anyByteText.IndexOfAny(",.") != 3 || anyByteText.LastIndexOfAny(",.") != 4) return 225;
+        TimeOfDay batchClockValue = new(12, 34, 56, 789);
+        char[17] clockText; nuint clockCount = 0;
+        if (!batchClockValue.TryFormat(clockText, 16, ref clockCount) || clockCount != 16) return 226;
+        clockText[clockCount] = '\0';
+        if (!CString::Equals(clockText, "12:34:56.7890000")) return 227;
+        TimeOfDay batchParsedClock = new();
+        if (!TimeOfDay::TryParse("23:59:59.9999999", &batchParsedClock) || batchParsedClock.Ticks != 863999999999l) return 228;
+        if (TimeOfDay::TryParse("24:00:00", &batchParsedClock) || batchParsedClock.Ticks != 0l) return 229;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

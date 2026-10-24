@@ -79,6 +79,16 @@ any mutation, so allocation failure or an impossible width preserves the origina
 storage, capacity, and contents. The trailing zero byte is maintained separately
 from any counted zero padding.
 
+`ShrinkToFit()` sets `Capacity` to `Length` while preserving every counted byte
+and the trailing null byte. An already-tight String is unchanged. For an empty
+String, it frees retained storage without allocating and restores empty storage.
+For a nonempty String with spare capacity, it allocates `Length + 1` bytes before
+replacing the old buffer. Allocation failure leaves the existing storage,
+capacity, length, and bytes unchanged. Successful shrinking invalidates borrowed
+data pointers and spans like growth; failed shrinking preserves them. `Clear`,
+`Resize`, `Remove`, and trimming continue to retain spare capacity unless the
+caller explicitly requests shrinking.
+
 `Resize(length, fill = '\0')` sets the counted byte length, preserving the prefix.
 Growing initializes every new byte with `fill`; shrinking keeps capacity and
 writes a terminator at the new end. Resizing to the current length does nothing,

@@ -41,7 +41,9 @@ and checks bounds.
   Allocation failure throws `BadAllocException` and preserves the existing storage
   and contents; overflow remains a separate error.
   Appending from the same string works, including across growth.
-- `Clear` retains capacity. `Clone` and `ToString()` make independent owned copies.
+- `Clear` retains capacity. `ShrinkToFit()` explicitly reduces capacity to length,
+  releasing empty storage; allocation failure preserves the buffer. `Clone` and
+  `ToString()` make independent owned copies.
 - `Resize(length, fill = '\0')` changes the counted byte length. Growing initializes
   every new byte with `fill`, retaining the existing prefix; shrinking retains
   capacity. The trailing terminator is maintained in either case. A null fill

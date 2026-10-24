@@ -66,6 +66,27 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         capacity = requested;
     }
 
+    public void ShrinkToFit()
+    {
+        if (length == capacity) return;
+        if (length == 0)
+        {
+            if (capacity != 0) Memory::Free((void*)data);
+            data = (char*)"";
+            capacity = 0;
+            return;
+        }
+        // Existing String invariants guarantee length < nuint maximum.
+        void*? allocation = Memory::Allocate(length + 1);
+        if (allocation == null) throw new BadAllocException("String allocation failed");
+        char* replacement = (char*)allocation;
+        for (nuint i = 0; i < length; i++) replacement[i] = data[i];
+        replacement[length] = '\0';
+        if (capacity != 0) Memory::Free((void*)data);
+        data = replacement;
+        capacity = length;
+    }
+
     // Length is counted bytes: a null fill does not shorten the string.
     public void Resize(nuint requested, char fill = '\0')
     {

@@ -95,6 +95,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `TryLast(ref result)` | Return the last value, or false without changing `result` if empty. |
 | `TrySingle(ref result)` | Return the only value, or false without changing `result` if empty or multiple. |
 | `Aggregate(seed, function)` | Fold values into an accumulator, returning the seed if empty. |
+| `Aggregate(function)` | Fold from the first value; throws if empty. |
 | `ForEach(action)` | Visit every element. |
 | `ToVector()` | Copy values into a new owning vector. |
 | `ToHashSet()` | Copy distinct values into a new owning hash set. |
@@ -173,6 +174,27 @@ returns its owning parameter should return `move accumulator`. This avoids
 copying the accumulator on every step; source elements still follow ordinary
 callback argument copying rules. An empty sequence returns the supplied seed.
 Iterator or callback exceptions clean up the current accumulator and iterator.
+
+Without a seed, `Aggregate(function)` starts with the first element and folds
+the remaining elements from left to right. It throws `"Sequence is empty"` on
+an empty sequence. One element needs no callback; otherwise there is one
+callback per remaining element. Each element's `Current` is read once. The
+accumulator is transferred to the callback and back using the same ownership
+rules as the seeded overload; the source's elements are read normally.
+
+```csharp
+using std;
+
+int Subtract(int accumulated, int next) => accumulated - next;
+
+int main()
+{
+    int[3] data = [12, 3, 2];
+    Span<int> values = new(data, 3);
+    // Left fold: (12 - 3) - 2.
+    return values.AsEnumerable().Aggregate(Subtract) - 7;
+}
+```
 
 For example, a fold can update one uniquely owned integer without reallocating it:
 

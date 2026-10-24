@@ -132,6 +132,15 @@ public U Aggregate<T, U, S, E>(this Enumerable<T, S, E> source, U seed, U(U, T)*
     return move seed;
 }
 
+public T Aggregate<T, S, E>(this Enumerable<T, S, E> source, T(T, T)* accumulate)
+{
+    E iterator = source.GetEnumerator();
+    if (!iterator.MoveNext()) throw new Exception("Sequence is empty");
+    T result = iterator.Current;
+    while (iterator.MoveNext()) result = accumulate(move result, iterator.Current);
+    return move result;
+}
+
 public Enumerable<T, WhereSource<T, S, E>, WhereSource<T, S, E>::Enumerator> Where<T, S, E>(this Enumerable<T, S, E> source, bool(T)* predicate)
     => new Enumerable<T, WhereSource<T, S, E>, WhereSource<T, S, E>::Enumerator>(new WhereSource<T, S, E>(source.SourceView(), predicate));
 

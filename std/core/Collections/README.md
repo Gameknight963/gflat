@@ -58,6 +58,9 @@ adapters accept immutable receivers. A filtered range remains lazy and can enter
 the general query operators with `.AsEnumerable().Select(...)`; constructing
 that adapter does not evaluate its predicate or allocate storage. Each
 enumeration starts again from the captured range, filter, skip, and take state.
+Skipping filtered matches evaluates the predicate while consuming them, even
+when the skip exhausts an earlier take limit. A subsequent `Take(0)` suppresses
+that work, as with the general query operators.
 
 Text and Unicode scalar adapters copy small views that borrow the caller's
 storage. BitSet's adapter captures its packed storage and bit length, yielding

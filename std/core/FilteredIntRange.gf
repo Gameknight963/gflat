@@ -43,12 +43,19 @@ struct FilteredIntRange : IEnumerable<int, FilteredIntRange::Enumerator>
         public inline bool MoveNext()
         {
             valid = false;
-            if (take == 0) return false;
+            // A Skip after Take can exhaust output while leaving input to
+            // consume. An outer Take(0) clears both counters instead.
+            if (take == 0 && skip == 0) return false;
             while (source.MoveNext())
             {
                 int value = source.Current;
                 if (!predicate(value)) continue;
-                if (skip != 0) { skip--; continue; }
+                if (skip != 0)
+                {
+                    skip--;
+                    if (skip == 0 && take == 0) return false;
+                    continue;
+                }
                 current = value;
                 take--;
                 valid = true;
@@ -76,6 +83,7 @@ struct FilteredIntRange : IEnumerable<int, FilteredIntRange::Enumerator>
     public immutable FilteredIntRange Take(int count)
     {
         if (count < 0) throw new Exception("Take count must be nonnegative");
+        if (count == 0) return new FilteredIntRange(source, predicate, 0, 0);
         if (explicitLimit && count > take) count = take;
         return new FilteredIntRange(source, predicate, skip, count);
     }

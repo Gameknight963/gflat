@@ -1,10 +1,11 @@
 namespace std;
 
-// Borrows both the sink and counted prefix. LF alone starts the next input line.
+// Borrows the sink and a counted or formatted prefix. LF starts each input line.
 public struct LinePrefixWriter : ITextWriter
 {
     private ITextWriter* output;
-    private readonly(char)* prefix;
+    private readonly(char)*? prefix;
+    private immutable(IFormattable)*? formattedPrefix;
     private nuint prefixLength;
     private bool lineStart;
     private bool failed;
@@ -13,7 +14,18 @@ public struct LinePrefixWriter : ITextWriter
     {
         output = destination;
         this.prefix = prefix;
+        formattedPrefix = null;
         prefixLength = count;
+        lineStart = true;
+        failed = false;
+    }
+
+    public LinePrefixWriter(ITextWriter* destination, immutable(IFormattable)* prefix)
+    {
+        output = destination;
+        this.prefix = null;
+        formattedPrefix = prefix;
+        prefixLength = 0;
         lineStart = true;
         failed = false;
     }
@@ -26,7 +38,11 @@ public struct LinePrefixWriter : ITextWriter
         nuint start = 0;
         while (start < count)
         {
-            if (lineStart && prefixLength != 0) output.Write(prefix, prefixLength);
+            if (lineStart)
+            {
+                if (formattedPrefix != null) formattedPrefix!.Format(output);
+                else if (prefixLength != 0) output.Write(prefix!, prefixLength);
+            }
             nuint end = start;
             while (end < count && data[end] != '\n') end++;
             if (end < count) end++;

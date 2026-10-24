@@ -139,7 +139,7 @@ public class WholeStandardLibraryEditorTests
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
                 Rune unicodeScalar=new(0x1f600u); nuint scalarUtf8=unicodeScalar.Utf8Length;
                 nuint scalarUtf16=unicodeScalar.Utf16Length; String scalarText=unicodeScalar.ToString();
-                String hexOutput=new(); ITextWriter* hexWriter=&hexOutput; hexWriter.WriteHex(text.Data,text.Length);
+                String hexOutput=new(); ITextWriter* hexWriter=&hexOutput; hexWriter.WriteHex(text.Data,text.Length); hexWriter.WriteRepeated('-',3);
                 decoder.Read("a",1,true,&scalar,&consumed);
                 Utf8Scalars characters=new(text.Data,text.Length);
                 Utf8Scalars::Enumerator iterator=characters.GetEnumerator();
@@ -421,6 +421,10 @@ public class WholeStandardLibraryEditorTests
             Assert.Contains("nuint",hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.Contains("ByteSearch.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
+        int repeatedCall=text.IndexOf("hexWriter.WriteRepeated",StringComparison.Ordinal)+"hexWriter.".Length;
+        var repeatedHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,repeatedCall),Protocol.JsonOptions);
+        Assert.Contains("WriteRepeated",repeatedHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("TextWriterExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,repeatedCall),Protocol.JsonOptions));
         int popCall=text.IndexOf("popValues.TryPop",StringComparison.Ordinal)+"popValues.".Length;
         var popHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,popCall),Protocol.JsonOptions);
         Assert.Contains("bool",popHover.GetProperty("contents").GetProperty("value").GetString());

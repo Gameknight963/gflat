@@ -77,7 +77,7 @@ public class WholeStandardLibraryEditorTests
                 bool booleanValue=false;
                 bool booleanParsed=trimmedText.TryParseBool(&booleanValue);
                 bool requiredBoolean=trimmedText.ParseBool();
-                String resizedText=new(); resizedText.Resize(4,'x');
+                String resizedText=new(); resizedText.Resize(4,'x'); resizedText.Reserve(64); resizedText.ShrinkToFit();
                 String ownedQuotedText=JsonStringText::Quote(trimmedText);
                 String ownedUnquotedText=JsonStringText::Unquote(ownedQuotedText.AsReadOnly());
                 BigInteger arbitraryInteger=new(42l);

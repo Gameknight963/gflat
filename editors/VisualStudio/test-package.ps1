@@ -36,6 +36,9 @@ try {
     foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
+    foreach ($source in @('std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
+    }
     $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $extracted 'BUILD-INFO.json') | ConvertFrom-Json
     if ($buildInfo.commit -notmatch '^[0-9a-f]{40}$') { throw 'VSIX source commit is missing' }
     # Exercise the grammar and configuration actually shipped in the archive.
@@ -209,6 +212,11 @@ int main() {
     @'
 using std;
 int smokeDestroyed = 0;
+long smokeTimestamp = 0l;
+static class SmokeClock : IMonotonicClock {
+    public static long GetTimestamp() => smokeTimestamp;
+    public static long GetFrequency() => 3l;
+}
 Vector<int>*? smokeVector = null;
 struct SmokeTemporary {
     public int Value;
@@ -937,6 +945,12 @@ int SmokeHashesAndViews() {
             || groupView.SizeOf(5) != 2) return 254;
         DisjointSet transferredGroups = move groups;
         if (transferredGroups.SetCount != 4 || transferredGroups.Find(4) != transferredGroups.Find(5)) return 255;
+        Stopwatch<SmokeClock> timer = new(); timer.Start(); smokeTimestamp = 6l; timer.Stop();
+        TimeSpan timerElapsed = timer.Elapsed;
+        if (timer.IsRunning || timer.ElapsedTicks != 6l || timer.ElapsedSeconds != 2d
+            || timerElapsed.Ticks != 20000000l) return 257;
+        timer.Reset();
+        if (timer.ElapsedTicks != 0l || timer.IsRunning) return 258;
     }
     {
         Unique<int> batchOwner = new(new* int(7));
@@ -1016,6 +1030,22 @@ int main(int argc, char** argv) {
     [IO.File]::WriteAllBytes($boundedInput, [byte[]](97, 0, 98))
     & $compiler $expandedStd @allSources --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
     if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
+    foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj')) {
+        & $compiler check (Join-Path $extracted "Sdk/libraries/platform/$project")
+        if ($LASTEXITCODE -ne 0) { throw "Packaged optional clock project check failed: $project" }
+    }
+    $clockProbe = Join-Path $extracted 'clock-provider.gf'
+    @'
+alias Timer = std::Stopwatch<Windows::PerformanceCounter>;
+int main() {
+    Timer timer = Timer::StartNew(); timer.Stop();
+    std::TimeSpan elapsed = timer.Elapsed;
+    if (timer.IsRunning || timer.ElapsedTicks < 0l || elapsed.Ticks < 0l) return 1;
+    return 0;
+}
+'@ | Set-Content -LiteralPath $clockProbe
+    & $compiler $clockProbe @allSources (Join-Path $extracted 'Sdk/libraries/platform/windows/PerformanceCounter.gf') --optimization 2 --run -o (Join-Path $extracted 'clock-provider.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged optional Windows clock provider failed to link or run' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal

@@ -35,7 +35,7 @@ foreach ($file in @('LICENSE.TXT', 'THIRD-PARTY-NOTICES.TXT')) {
     Copy-Item -LiteralPath (Join-Path $runtimePath $file) -Destination $notices
 }
 # Copy tracked distribution files only, never local builds, editor state, or notes.
-$files = & git -C $repo ls-files -- std build examples docs editors/shared LICENSES README.md LICENSE THIRD_PARTY_NOTICES.md
+$files = & git -C $repo ls-files -- std libraries build examples docs editors/shared LICENSES README.md LICENSE THIRD_PARTY_NOTICES.md
 if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate distribution files' }
 foreach ($file in $files) {
     if ($file -like 'build/*.ps1') { continue }

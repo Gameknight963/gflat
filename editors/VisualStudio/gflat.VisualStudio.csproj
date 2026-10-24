@@ -128,6 +128,10 @@
       <Link>Sdk/std/libc/%(RecursiveDir)%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Content Include="../../libraries/platform/**/*.gf;../../libraries/platform/**/*.gfproj;../../libraries/platform/**/README.md">
+      <Link>Sdk/libraries/platform/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="obj/items/*.zip">
       <Link>ItemTemplates/%(Filename)%(Extension)</Link>
       <IncludeInVSIX>true</IncludeInVSIX>

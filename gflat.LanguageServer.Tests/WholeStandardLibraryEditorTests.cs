@@ -52,6 +52,7 @@ public class WholeStandardLibraryEditorTests
                 var backwardsQuery=linkedQuery.Reverse(); bool backwardsAny=backwardsQuery.Any();
                 bool queryHasAny=linkedQuery.Any(Contains);
                 nuint queryCount=linkedQuery.Count(Contains);
+                int foldedValue=linkedQuery.Aggregate((int left,int right)=>left+right);
                 int queryElement=0; bool queryIndexed=linkedQuery.TryElementAt(0,ref queryElement);
                 bool querySame=linkedQuery.SequenceEqual(linkedQuery);
                 bool querySameCustom=linkedQuery.SequenceEqual(linkedQuery,(immutable(int)* left,immutable(int)* right)=>*left==*right);
@@ -529,10 +530,16 @@ public class WholeStandardLibraryEditorTests
         var setHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,setCall),Protocol.JsonOptions);
         Assert.Contains("HashSet",setHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("EnumerableHashSet.gf",JsonSerializer.Serialize(model.Definition(source.Path,setCall),Protocol.JsonOptions));
-        int aggregateCall=sourceTokens.Single(token=>token.Text=="Aggregate").Start;
+        int aggregateCall=text.IndexOf(".Aggregate",text.IndexOf("foldedOwner",StringComparison.Ordinal),StringComparison.Ordinal)+1;
         var aggregateHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,aggregateCall),Protocol.JsonOptions);
         Assert.Contains("Unique",aggregateHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,aggregateCall),Protocol.JsonOptions));
+        int seedlessCall=text.IndexOf(".Aggregate",text.IndexOf("foldedValue",StringComparison.Ordinal),StringComparison.Ordinal)+1;
+        var seedlessHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,seedlessCall),Protocol.JsonOptions);
+        Assert.Contains("public int",seedlessHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
+        var aggregateHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',seedlessCall)+1),Protocol.JsonOptions);
+        Assert.Equal(2,aggregateHelp.GetProperty("signatures").GetArrayLength());
         int releaseCall=text.IndexOf("owner.Release",StringComparison.Ordinal)+"owner.".Length;
         var releaseHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,releaseCall),Protocol.JsonOptions);
         Assert.Contains("Release",releaseHover.GetProperty("contents").GetProperty("value").GetString());

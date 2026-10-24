@@ -83,6 +83,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Any()` | Test for at least one element, stopping immediately. |
 | `Any(predicate)` | Stop at the first element passing the predicate; false for an empty sequence. |
 | `Contains(&key)` / `Contains(&key, equal)` | Search using default equality or an explicit borrowed-value comparer; stop at the first match. |
+| `SequenceEqual(other)` / `SequenceEqual(other, equal)` | Compare two sequences with the same element type in order; stop at the first unequal pair or length mismatch. |
 | `All(predicate)` | Stop at the first failure; true for an empty sequence. |
 | `Count()` | Count elements without reading the terminal iterator's `Current`; throw on count overflow. Upstream operators can still read their inputs. |
 | `Count(predicate)` | Count matching elements by testing every value; return zero for an empty sequence and throw on count overflow. |
@@ -95,6 +96,9 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `ForEach(action)` | Visit every element. |
 | `ToVector()` | Copy values into a new owning vector. |
 | `ToHashSet()` | Copy distinct values into a new owning hash set. |
+
+See [sequence equality](../../../docs/QUERY_SEQUENCE_EQUAL.md) for paired
+advancement order, equality contracts, and temporary element ownership.
 
 Operators are lazy until a terminal operation or `foreach` advances an iterator.
 For paired queries and their iteration/ownership rules, see [Zip](../../../docs/QUERY_ZIP.md).

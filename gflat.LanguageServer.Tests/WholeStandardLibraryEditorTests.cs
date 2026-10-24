@@ -49,6 +49,7 @@ public class WholeStandardLibraryEditorTests
                 LinkedList<int> list=new();
                 LinkedList<int>::Node* node=list.AddLast(42);
                 var linkedQuery=list.AsEnumerable().Take(1);
+                var endpointQuery=linkedQuery.Prepend(0).Append(100);
                 var backwardsQuery=linkedQuery.Reverse(); bool backwardsAny=backwardsQuery.Any();
                 bool queryHasAny=linkedQuery.Any(Contains);
                 nuint queryCount=linkedQuery.Count(Contains);
@@ -543,6 +544,15 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
         var aggregateHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',seedlessCall)+1),Protocol.JsonOptions);
         Assert.Equal(2,aggregateHelp.GetProperty("signatures").GetArrayLength());
+        foreach(string member in new[]{"Prepend","Append"})
+        {
+            int call=text.IndexOf("."+member,text.IndexOf("endpointQuery",StringComparison.Ordinal),StringComparison.Ordinal)+1;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("EndpointSource",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("EnumerableEndpoint.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            var help=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',call)+1),Protocol.JsonOptions);
+            Assert.Single(help.GetProperty("signatures").EnumerateArray());
+        }
         foreach(var query in new[]{("queryMinimum","Min"),("queryMaximum","Max"),
             ("queryMinimumCustom","Min"),("queryMaximumCustom","Max")})
         {

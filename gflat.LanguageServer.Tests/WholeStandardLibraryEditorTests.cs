@@ -280,6 +280,11 @@ public class WholeStandardLibraryEditorTests
                 TimeSpan parsedDuration=TimeSpan::Parse("01:29:30.5");
                 TimeSpan::TryParse("00:00:01",&parsedDuration);
                 IpAddress networkAddress=IpAddress::Parse("2001:db8::1");
+                IpNetwork subnet=IpNetwork::FromAddress(networkAddress,32);
+                IpNetwork parsedSubnet=IpNetwork::Parse("2001:db8::/032");
+                IpNetwork::TryParse("2001:db8::/32",&parsedSubnet);
+                bool insideSubnet=subnet.Contains(&networkAddress);
+                int subnetPrefix=subnet.PrefixLength; IpAddress subnetBase=subnet.NetworkAddress;
                 bool ipv4Address=networkAddress.IsIpv4; char[39] addressText; nuint addressWritten=0;
                 networkAddress.TryFormat(addressText,39,ref addressWritten);
                 byte[16] addressBytes; nuint addressByteCount=0;
@@ -557,6 +562,14 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
         var aggregateHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',seedlessCall)+1),Protocol.JsonOptions);
         Assert.Equal(2,aggregateHelp.GetProperty("signatures").GetArrayLength());
+        foreach(string expression in new[]{"IpNetwork::FromAddress","IpNetwork::Parse","IpNetwork::TryParse",
+            "subnet.Contains","subnet.PrefixLength","subnet.NetworkAddress"})
+        {
+            int offset=text.IndexOf(expression,StringComparison.Ordinal)+expression.LastIndexOfAny([':', '.'])+1;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(expression[(expression.LastIndexOfAny([':', '.'])+1)..],hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("IpNetwork.gf",JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
+        }
         var prettyCalls=sourceTokens.Where(token=>token.Text=="PrettyPrint").ToArray();
         Assert.Equal(2,prettyCalls.Length);
         foreach(var token in prettyCalls)

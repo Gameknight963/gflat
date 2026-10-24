@@ -51,6 +51,44 @@ Clamping does not remember an original end-of-month preference. Calling
 the original date when that distinction matters. These calendar shifts differ
 from adding a fixed number of days.
 
+## ISO week dates
+
+Immutable `IsoWeekYear` and `IsoWeekOfYear` expose ISO week numbering without
+changing the stored Gregorian date. ISO weeks begin on Monday; week 1 contains
+January 4, equivalently the year's first Thursday. Dates near New Year can
+belong to an adjacent ISO year: `2021-01-01` is week 53 of ISO year 2020.
+Both properties are `nothrow` and allocate nothing. Default Date is Gregorian
+`0001-01-01`, also Monday in ISO year 1, week 1.
+
+`Date::GetIsoWeeksInYear(year)` accepts ISO years `1..9999` and returns 52 or 53.
+`Date::FromIsoWeek(year, week, weekday)` returns the corresponding Gregorian date.
+It requires a week from 1 through that ISO year's actual week count and a valid
+`DayOfWeek` value. The existing enum keeps its values: Sunday is 0, Monday is 1,
+through Saturday 6. Sunday is the final day of an ISO week.
+
+Invalid years, nonexistent week 53, invalid weekday values, and results outside
+the supported Gregorian Date range throw `Exception`. In particular, Saturday
+and Sunday of ISO year 9999's final week lie beyond `9999-12-31` and are rejected.
+Successful factories and week-count lookup allocate nothing. These methods
+perform calendar calculations without a clock, locale, or timezone.
+
+```csharp
+using std;
+int main()
+{
+    Date holiday = Date::FromIsoWeek(2020, 53, DayOfWeek::Friday);
+    if (holiday.Year != 2021 || holiday.Month != 1 || holiday.Day != 1) return 1;
+    if (holiday.IsoWeekYear != 2020 || holiday.IsoWeekOfYear != 53) return 2;
+    if (Date::GetIsoWeeksInYear(2021) != 52) return 3;
+    return 0;
+}
+```
+
+The ISO fields and valid conversions can be checked against Microsoft's
+[ISOWeek API](https://learn.microsoft.com/en-us/dotnet/api/system.globalization.isoweek).
+The factory here explicitly validates that the requested week exists in
+the selected ISO year, in addition to validating the resulting Gregorian range.
+
 ## Formatting
 
 `TryFormat(output, capacity, ref written)` emits exactly ten ASCII bytes in

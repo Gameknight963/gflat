@@ -100,6 +100,48 @@ public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattabl
         }
     }
 
+    // Monday of the ISO year's first week: the week containing January 4.
+    // Internal year 10000 is used only for the upper boundary calculation;
+    // its day-number arithmetic still fits int and creates no Date value.
+    private static int IsoWeekStart(int year) nothrow
+    {
+        int january4 = NumberFromParts(year, 1, 4);
+        return january4 - january4 % 7;
+    }
+
+    private immutable int GetIsoYear() nothrow
+    {
+        int year = 0; int month = 0; int day = 0;
+        this.GetParts(ref year, ref month, ref day);
+        if (dayNumber < IsoWeekStart(year)) return year - 1;
+        if (dayNumber >= IsoWeekStart(year + 1)) return year + 1;
+        return year;
+    }
+
+    public int IsoWeekYear { immutable get nothrow => this.GetIsoYear(); }
+    public int IsoWeekOfYear
+    {
+        immutable get nothrow => (dayNumber - IsoWeekStart(this.GetIsoYear())) / 7 + 1;
+    }
+
+    public static int GetIsoWeeksInYear(int year)
+    {
+        // Reuse Gregorian year validation; ISO years have the same public range.
+        IsLeapYear(year);
+        return (IsoWeekStart(year + 1) - IsoWeekStart(year)) / 7;
+    }
+
+    public static Date FromIsoWeek(int year, int week, DayOfWeek weekday)
+    {
+        int weeks = GetIsoWeeksInYear(year);
+        if (week < 1 || week > weeks) throw new Exception("Date ISO week is outside the selected year");
+        int day = (int)weekday;
+        if (day < 0 || day > 6) throw new Exception("Date weekday must be between Sunday and Saturday");
+        int offset = day - 1;
+        if (day == 0) offset = 6;
+        return FromDayNumber(IsoWeekStart(year) + (week - 1) * 7 + offset);
+    }
+
     public immutable Date AddDays(int days)
     {
         long result = (long)dayNumber + (long)days;

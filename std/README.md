@@ -68,6 +68,7 @@ implementation lives in `libc`.
 | JSON strings | `JsonString`, `JsonStringText`, writer `WriteJsonString` | [Strict UTF-8 buffer codecs and owning String conveniences](../docs/JSON_STRING.md) |
 | JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens, borrowed raw lexemes, and decoded text comparison](../docs/JSON_READER.md) |
 | JSON text | `JsonText::Minify`, `JsonText::PrettyPrint` | [Validate first and format whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |
+| JSON lookup | `JsonPointer::TryResolve` | [Borrowed raw values selected by plain JSON Pointer](../docs/JSON_POINTER.md) |
 | JSON output | `JsonWriter`, `JsonWriteException` | [Validated output through a borrowed text writer](../docs/JSON_WRITER.md) |
 | CSV input | `CsvReader`, `CsvReaderText`, `CsvParseException` | [Borrowed fields and reusable String decoding](../docs/CSV_READER.md) |
 | CSV output | `CsvWriter` | [Streaming counted fields and CRLF records](../docs/CSV_WRITER.md) |
@@ -123,6 +124,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Settings to JSON](../examples/settings-json/README.md): parse borrowed key/value slices, validate UTF-8, and retain accepted strings in an owning map.
 - [CSV column sums](../examples/csv-sum/README.md): validate quoted fields and sum one integer column without allocating field strings.
 - [CSV to JSON](../examples/csv-to-json/README.md): validate CSV and UTF-8 first, then write row arrays with one reusable field buffer.
+- [JSON get](../examples/json-get/README.md): select a raw value with a plain pointer or a counted UTF-8 pointer file.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.

@@ -1,5 +1,8 @@
 # JSON reader
 
+For path-based lookup returning a borrowed raw value, see
+[JSON Pointer](JSON_POINTER.md).
+
 `std::JsonReader` reads one complete JSON document from a borrowed counted UTF-8
 buffer. It emits tokens without allocating strings, converting numbers, or building
 a DOM. Its `Vector<byte>` nesting stack grows as needed; there is no recursive

@@ -1,9 +1,10 @@
 using System.Text.Json;
 using gflat.diagnostics;
+using Xunit.Abstractions;
 
 namespace gflat.LanguageServer.Tests;
 
-public class WholeStandardLibraryEditorTests
+public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
 {
     [Fact]
     public void BuildingTheLibraryEditorIndexStaysWithinAnAllocationBudget()
@@ -26,6 +27,7 @@ public class WholeStandardLibraryEditorTests
         var model = new EditorModel(snapshot, sources);
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         GC.KeepAlive(model);
+        output.WriteLine($"Editor index allocated {allocated:N0} bytes.");
         // The previous index allocated almost 900 MB through repeated symbol
         // sorting and qualified-name construction. Leave ample room for runtime
         // differences and library growth without using a wall-clock assertion.

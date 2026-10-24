@@ -44,15 +44,19 @@ public sealed partial class EditorModel
             if (syntax.Node is NewExpression creation && syntax.Span.Source?.Path is { } creationPath)
             {
                 var creationToken = tokens[creationPath].FirstOrDefault(t => t.Start == syntax.Span.Start && t.Kind == TokenKind.New);
-                string? creationOwner = TypeOwner(creation.Type, creationPath, syntax.Span.Start);
-                var creationFamily = symbols.Where(s => s.Syntax.Node is ConstructorDeclaration && s.Owner == creationOwner && Accessible(s, creationPath, syntax.Span.Start)).ToArray();
-                if (creation.Type is NamedTypeExpression creationType)
+                Symbol[] creationFamily;
+                if (creation.Type is NamedTypeExpression creationType &&
+                    (checker.GetClassByIdentity(creationType.Name)?.Constructors ?? checker.GetStructByIdentity(creationType.Name)?.Constructors) is { } constructors)
                 {
-                    var constructors = checker.GetClassByIdentity(creationType.Name)?.Constructors ?? checker.GetStructByIdentity(creationType.Name)?.Constructors;
-                    if (constructors != null)
-                        creationFamily = constructors.Select(ctor => SourceCallable(ctor) is { } sourceCtor
-                            ? sourceCtor with { Owner = checker.DisplayName(creationType.Name), BoundParameters = ctor.Parameters } : null)
-                            .OfType<Symbol>().Where(s => Accessible(s, creationPath, syntax.Span.Start)).ToArray();
+                    creationFamily = constructors.Select(ctor => SourceCallable(ctor) is { } sourceCtor
+                        ? sourceCtor with { Owner = checker.DisplayName(creationType.Name), BoundParameters = ctor.Parameters } : null)
+                        .OfType<Symbol>().Where(s => Accessible(s, creationPath, syntax.Span.Start)).ToArray();
+                }
+                else
+                {
+                    // Recover source names only when checked constructors are unavailable.
+                    string? creationOwner = TypeOwner(creation.Type, creationPath, syntax.Span.Start);
+                    creationFamily = symbols.Where(s => s.Syntax.Node is ConstructorDeclaration && s.Owner == creationOwner && Accessible(s, creationPath, syntax.Span.Start)).ToArray();
                 }
                 if (creationToken != null && creationFamily.Length > 0)
                 {

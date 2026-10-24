@@ -66,10 +66,11 @@ public sealed partial class EditorModel
         foreach (var entry in snapshot.Nodes)
         {
             var (name, kind, classification, type) = Describe(entry.Node);
+            if (name == null) continue;
             var parents = Parents(entry).ToArray();
             if (entry.Node is ConstructorDeclaration)
                 name = parents.Where(parent => IsType(parent.Node)).Select(parent => SourceName(parent.Node)).FirstOrDefault() ?? name;
-            if (name == null || name.Contains('$')) continue;
+            if (name.Contains('$')) continue;
             string ns = snapshot.Checker?.DeclarationNamespace(entry.Node) ?? Namespace(parents);
             string? owner = Owner(parents);
             if (owner == null && entry.Node is MethodDeclaration qualified && snapshot.Checker != null &&

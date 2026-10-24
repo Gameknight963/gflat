@@ -24,8 +24,9 @@ array. Quoted commas, quotes, and embedded line endings retain their decoded
 values. Embedded NUL is counted data and is escaped in JSON.
 
 The complete file is loaded into an owning `String`. `CsvReader` borrows its
-bytes and decodes fields into one reusable `String`, retaining capacity between
-fields. A first pass validates the entire CSV and every decoded field's UTF-8
+bytes and uses `CsvReaderText::CopyValue` to decode fields into one reusable
+`String`, retaining capacity between fields. A first pass validates the entire CSV
+and every decoded field's UTF-8
 before any stdout output. A second pass writes row arrays through `JsonWriter`.
 This avoids a table of allocated field strings while keeping malformed CSV and
 invalid UTF-8 from producing partial JSON. It does not stream an unbounded file;

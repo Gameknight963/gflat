@@ -1,15 +1,5 @@
 using std;
 
-void DecodeField(immutable(CsvReader)* reader, ref String field)
-{
-    field.Resize(reader.ValueLength);
-    if (field.Length == 0) return;
-    Span<char> output = field.AsSpan();
-    nuint written = 0;
-    if (!reader.TryCopyValue(output.Data!, output.Length, ref written))
-        throw new Exception("Unable to decode CSV field");
-}
-
 int main(int argc, char** argv)
 {
     if (argc != 2)
@@ -26,7 +16,7 @@ int main(int argc, char** argv)
         // Validate every record and decoded text before sending any JSON to stdout.
         while (reader.Read())
         {
-            DecodeField(&reader, ref field);
+            CsvReaderText::CopyValue(&reader, ref field);
             if (!Utf8::IsValid(field.Data, field.Length))
                 throw new Exception("CSV field is not valid UTF-8", 2);
         }
@@ -39,7 +29,7 @@ int main(int argc, char** argv)
         while (reader.Read())
         {
             if (startRecord) writer.WriteStartArray();
-            DecodeField(&reader, ref field);
+            CsvReaderText::CopyValue(&reader, ref field);
             writer.WriteString(field.Data, field.Length);
             startRecord = reader.EndOfRecord;
             if (startRecord) writer.WriteEndArray();

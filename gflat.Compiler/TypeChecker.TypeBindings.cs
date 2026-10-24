@@ -54,6 +54,7 @@ public partial class TypeChecker
             TypeExpression qualified = CanonicalizeBoundScalarProtection(identity.WithQualifiersFrom(source));
             if (source.InterfaceConstraints.Count > 0) qualified = qualified.WithInterfaceConstraints(source.InterfaceConstraints);
             if (source.GenericUse != null) qualified = qualified.WithGenericUse(source.GenericUse);
+            if ((source.GenericParameterView ?? identity.GenericParameterView) is { } view) qualified = qualified.WithGenericParameterView(view);
             if (aliasContracts.TryGetValue(identity, out var contract)) aliasContracts[qualified] = contract;
             binding.Publish(qualified);
         }

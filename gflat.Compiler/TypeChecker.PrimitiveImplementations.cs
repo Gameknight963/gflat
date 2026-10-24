@@ -135,15 +135,24 @@ public partial class TypeChecker
         List<TypeExpression> arguments)
     {
         var map = parameters.Zip(arguments).ToDictionary(p => p.First.Name,
-            p => SetPrimitiveConstraints(p.Second, Array.Empty<TypeExpression>()));
+            p => ClearIncomingGenericContracts(SetPrimitiveConstraints(p.Second, Array.Empty<TypeExpression>())));
+        var contracts = parameters.ToDictionary(parameter => parameter.Name, _ => new List<TypeExpression>());
+        for (int index = 0; index < parameters.Count; index++)
+        {
+            var parameter = parameters[index];
+            var actual = map[parameter.Name];
+            map[parameter.Name] = actual.WithGenericParameterView(new GenericParameterContractView(
+                GenericParameterOrigin(definition, index), definition, parameter.Name, actual, contracts[parameter.Name]));
+        }
         foreach (var parameter in parameters)
         {
             if (parameter.Constraint == null) continue;
             var argument = map[parameter.Name];
-            var leaf = argument switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, _ => argument };
-            if (leaf is not NamedTypeExpression primitive || !IsPrimitive(primitive.Name)) continue;
             using var context = EnterSignatureContext(definition, null, false);
             var constraint = ResolveAlias(new AstCloner(map).CloneType(parameter.Constraint));
+            contracts[parameter.Name].Add(constraint);
+            var leaf = argument switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, _ => argument };
+            if (leaf is not NamedTypeExpression primitive || !IsPrimitive(primitive.Name)) continue;
             if (constraint is NamedTypeExpression named && GetInterface(named.Name) is { IsStaticContract: false })
                 map[parameter.Name] = SetPrimitiveConstraints(argument, new[] { constraint });
         }
@@ -152,7 +161,6 @@ public partial class TypeChecker
 
     private void BindPrimitiveCallResult(CallExpression call, MethodDeclaration definition, List<TypeExpression> arguments)
     {
-        if (primitiveImplementationSources.Count == 0) return;
         using var context = EnterMethodSignatureContext(definition);
         var map = definition.GenericParameters.Zip(arguments).ToDictionary(p => p.First.Name, p => p.Second);
         primitiveCallArguments[call] = map;
@@ -161,47 +169,99 @@ public partial class TypeChecker
 
     private TypeExpression BindPrimitiveGenericUse(TypeExpression type, List<TypeExpression> arguments)
     {
-        if (primitiveImplementationSources.Count == 0 || type is not NamedTypeExpression named ||
+        if (type is not NamedTypeExpression named ||
             !extensionGenericTypeOrigins.TryGetValue(named.Name, out var origin)) return type;
         return type.WithGenericUse(new NamedTypeExpression(origin.Name, null, type.Line, arguments));
     }
 
-    private (List<AstNode> Members, Dictionary<string, TypeExpression> Bindings)? PrimitiveGenericMembers(TypeExpression receiver)
+    private (AstNode Definition, List<AstNode> Members, Dictionary<string, TypeExpression> Bindings)? PrimitiveGenericMembers(
+        TypeExpression receiver, string? declaringOwner = null)
     {
         receiver = ResolveAlias(receiver);
-        receiver = receiver switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, _ => receiver };
-        if (receiver.GenericUse is not { } use) return null;
-        var definition = (AstNode?)_genericStructs.GetValueOrDefault(use.Name) ?? _genericClasses.GetValueOrDefault(use.Name);
-        var parameters = definition switch { StructDeclaration s => s.GenericParameters, ClassDeclaration c => c.GenericParameters, _ => null };
-        var members = definition switch { StructDeclaration s => s.Members, ClassDeclaration c => c.Members, _ => null };
-        return parameters == null || members == null ? null : (members, parameters.Zip(use.TypeArguments).ToDictionary(p => p.First.Name, p => p.Second));
+        receiver = receiver switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner,
+            ReferenceTypeExpression r => r.Inner, _ => receiver };
+        var visited = new HashSet<string>();
+        while (receiver is NamedTypeExpression named && visited.Add(named.Name))
+        {
+            var use = named.GenericUse ?? extensionGenericTypeOrigins.GetValueOrDefault(named.Name);
+            var cls = GetClassByIdentity(named.Name);
+            AstNode? definition = use == null ? cls?.Declaration :
+                (AstNode?)_genericStructs.GetValueOrDefault(use.Name) ?? _genericClasses.GetValueOrDefault(use.Name);
+            var parameters = definition switch { StructDeclaration s => s.GenericParameters, ClassDeclaration c => c.GenericParameters, _ => null };
+            var members = definition switch { StructDeclaration s => s.Members, ClassDeclaration c => c.Members, _ => null };
+            if (definition == null || parameters == null || members == null ||
+                parameters.Count != (use?.TypeArguments.Count ?? 0)) return null;
+            var bindings = parameters.Zip(use?.TypeArguments ?? []).ToDictionary(pair => pair.First.Name, pair => pair.Second);
+            if (declaringOwner == null || named.Name == declaringOwner)
+                return parameters.Count == 0 ? null : (definition, members, bindings);
+            if (cls?.BaseClass == null) return null;
+
+            // The checked hierarchy identifies the actual base. Rebind that
+            // original declaration edge to retain this use's argument provenance.
+            List<TypeExpression> bases = definition switch { ClassDeclaration c => c.BaseTypes, _ => [] };
+            string originalName = ((ClassDeclaration)definition).Name;
+            TypeExpression? parent = null;
+            using (EnterSignatureContext(definition, named.Name, true))
+            {
+                foreach (var syntax in bases)
+                {
+                    var projected = ResolveAlias(new AstCloner(bindings, originalName, named.Name).CloneType(syntax));
+                    if (projected is NamedTypeExpression candidate && candidate.Name == cls.BaseClass)
+                    { parent = projected; break; }
+                }
+            }
+            if (parent == null) return null;
+            receiver = parent;
+        }
+        return null;
     }
 
     private TypeExpression PrimitiveCallResult(CallExpression call, MethodDeclaration method)
     {
-        if (primitiveImplementationSources.Count == 0) return method.ReturnType;
-        if (call.Callee is MemberAccessExpression member && PrimitiveGenericMembers(GetType(member.Object)) is { } generic &&
+        if (call.Callee is MemberAccessExpression member && TryGetMethodOwner(method, out var declaringOwner, out _) &&
+            PrimitiveGenericMembers(GetType(member.Object), declaringOwner) is { } generic &&
             generic.Members.OfType<MethodDeclaration>().FirstOrDefault(m => m.Span == method.Span && m.Name == method.Name) is { } definition)
         {
             if (primitiveCallArguments.TryGetValue(call, out var methodArguments))
                 foreach (var pair in methodArguments) generic.Bindings[pair.Key] = pair.Value;
-            using var context = EnterMethodSignatureContext(method);
-            return ResolveAlias(new AstCloner(generic.Bindings).CloneType(definition.ReturnType));
+            return ProjectGenericMemberType(definition.ReturnType, generic.Definition, declaringOwner, generic.Bindings);
         }
         if (call.Callee is IdentifierExpression && TryGetMethodOwner(method, out var owner, out _) &&
             owner == (_currentClass?.Name ?? _currentStruct?.Name) && !primitiveCallResults.ContainsKey(call)) return method.ReturnType;
-        return primitiveCallResults.GetValueOrDefault(call) ?? SetPrimitiveConstraints(method.ReturnType, Array.Empty<TypeExpression>());
+        return primitiveCallResults.GetValueOrDefault(call) ?? ClearIncomingGenericContracts(
+            SetPrimitiveConstraints(method.ReturnType, Array.Empty<TypeExpression>()), preserveAliases: true);
     }
 
     private TypeExpression PrimitiveFieldType(MemberAccessExpression access, TypeExpression fallback)
     {
-        if (primitiveImplementationSources.Count == 0 || PrimitiveGenericMembers(GetType(access.Object)) is not { } generic ||
-            generic.Members.OfType<FieldDeclaration>().FirstOrDefault(f => f.Name == access.Member) is not { } definition) return fallback;
         var receiver = ResolveAlias(GetType(access.Object));
         receiver = receiver switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, _ => receiver };
         string? owner = (receiver as NamedTypeExpression)?.Name;
-        using var context = EnterSignatureContext(definition, owner, owner != null && GetClassByIdentity(owner) != null);
-        return ResolveAlias(new AstCloner(generic.Bindings).CloneType(definition.Type));
+        if (owner != null && GetClassByIdentity(owner) is { } cls && cls.FieldIndex(access.Member) is int index && index >= 0)
+            owner = cls.Fields[index].DeclaringClass;
+        if (PrimitiveGenericMembers(receiver, owner) is not { } generic ||
+            generic.Members.OfType<FieldDeclaration>().FirstOrDefault(f => f.Name == access.Member) is not { } definition)
+            return owner == (_currentClass?.Name ?? _currentStruct?.Name) ? fallback :
+                ClearIncomingGenericContracts(fallback, preserveAliases: true);
+        return ProjectGenericMemberType(definition.Type, generic.Definition, owner!, generic.Bindings);
+    }
+
+    private TypeExpression ProjectGenericMemberType(TypeExpression type, AstNode definition, string owner,
+        Dictionary<string, TypeExpression> bindings)
+    {
+        string name = definition switch { StructDeclaration structure => structure.Name,
+            ClassDeclaration cls => cls.Name, _ => owner };
+        // Fields do not independently own namespace/import context. Resolve their
+        // original syntax in the generic owner's declaration scope, including self.
+        using var context = EnterSignatureContext(definition, owner, GetClassByIdentity(owner) != null);
+        var projected = ResolveAlias(new AstCloner(bindings, name, owner).CloneType(type));
+        if (projected is NamedTypeExpression named && named.Name == owner)
+        {
+            List<GenericParameter> parameters = definition switch { StructDeclaration structure => structure.GenericParameters,
+                ClassDeclaration cls => cls.GenericParameters, _ => [] };
+            projected = BindPrimitiveGenericUse(projected, parameters.Select(parameter => bindings[parameter.Name]).ToList());
+        }
+        return projected;
     }
 
     private TypeExpression SetPrimitiveConstraints(TypeExpression type, IReadOnlyList<TypeExpression> constraints)
@@ -228,6 +288,7 @@ public partial class TypeChecker
         if (!ReferenceEquals(result, type))
         {
             result = result.WithQualifiersFrom(type);
+            if (type.GenericParameterView != null) result = result.WithGenericParameterView(type.GenericParameterView);
             if (aliasContracts.TryGetValue(type, out var contract)) aliasContracts[result] = contract;
         }
         return result;

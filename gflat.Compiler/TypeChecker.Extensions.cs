@@ -88,7 +88,8 @@ public partial class TypeChecker
     // Signature-only preview: no generic specialization, body checking, or symbol registration.
     public IReadOnlyList<ExtensionMethodCandidate> GetVisibleExtensions(string namespaceName,
         IEnumerable<string> usingNamespaces, TypeExpression receiverType, bool receiverIsStorage,
-        bool receiverIsReadOnly, string? memberName = null, TypeExpression? receiverStorageType = null)
+        bool receiverIsReadOnly, string? memberName = null, TypeExpression? receiverStorageType = null,
+        IReadOnlyList<TypeExpression>? explicitTypeArguments = null)
     {
         if (extensions.Count == 0) return [];
         var visible = new HashSet<NamespaceScope>();
@@ -114,6 +115,8 @@ public partial class TypeChecker
         void TryPreview(MethodDeclaration method, TypeExpression source, bool storage, bool readOnly,
             ExtensionReceiverAdaptation adaptation)
         {
+            if (explicitTypeArguments is { Count: > 0 } &&
+                (!method.IsGeneric || method.GenericParameters.Count != explicitTypeArguments.Count)) return;
             var formal = ExtensionFormalType(method, method.Parameters[0].Type);
             bool reference = formal is ReferenceTypeExpression;
             if (reference && !storage) return;
@@ -124,22 +127,28 @@ public partial class TypeChecker
             var bindings = new Dictionary<string, TypeExpression>();
             if (method.IsGeneric)
             {
-                InferExtensionBindings(formal, source, method.GenericParameters.Select(p => p.Name).ToHashSet(), bindings);
+                var names = method.GenericParameters.Select(parameter => parameter.Name).ToHashSet();
+                if (explicitTypeArguments is { Count: > 0 })
+                {
+                    foreach (var pair in method.GenericParameters.Zip(explicitTypeArguments)) bindings[pair.First.Name] = pair.Second;
+                }
+                else if (!InferCallableBindings(formal, source, names, bindings)) return;
                 // An unbound receiver cannot be offered honestly. Other parameters may infer remaining T's.
                 var substituted = SubstituteExtensionType(formal, bindings);
-                if (HasUnboundExtensionType(substituted, method.GenericParameters.Select(p => p.Name).ToHashSet())) return;
+                if (HasUnboundExtensionType(substituted, names)) return;
                 formal = substituted;
                 foreach (var parameter in method.GenericParameters)
                     if (parameter.Constraint != null && bindings.TryGetValue(parameter.Name, out var bound))
                     {
                         var constraint = SubstituteExtensionType(ExtensionFormalType(method, parameter.Constraint), bindings);
-                        if (!HasUnboundExtensionType(constraint, method.GenericParameters.Select(p => p.Name).ToHashSet()) &&
-                            !ExtensionConstraintSatisfied(bound, KnownExtensionType(constraint))) return;
+                        if (!HasUnboundExtensionType(constraint, names) &&
+                            !ExtensionConstraintSatisfied(bound, KnownExtensionType(constraint),
+                                overloadFamilies.TryGetValue(method, out var family) && family.Count > 1)) return;
                     }
             }
-            formal = KnownExtensionType(formal);
+            formal = KnownExtensionType(OverloadArgumentType(formal));
             if (formal == null) return;
-            var knownSource = KnownExtensionType(source);
+            var knownSource = KnownExtensionType(OverloadArgumentType(source));
             if (knownSource != null && IsAssignable(formal, knownSource)) result.Add(new(method, adaptation, reference, bindings));
         }
     }
@@ -147,9 +156,10 @@ public partial class TypeChecker
     private TypeExpression SubstituteExtensionType(TypeExpression type, IReadOnlyDictionary<string, TypeExpression> bindings)
         => new AstCloner(bindings.ToDictionary(p => p.Key, p => p.Value)).CloneType(type);
 
-    private bool ExtensionConstraintSatisfied(TypeExpression argument, TypeExpression? constraint)
+    private bool ExtensionConstraintSatisfied(TypeExpression argument, TypeExpression? constraint, bool strictDeclared)
     {
         if (constraint == null) return false;
+        if (strictDeclared && DeclaredConstraintSatisfied(argument, constraint) is { } declared) return declared;
         if (aliasContracts.TryGetValue(argument, out var alias) &&
             (!boundAliasConstraints.TryGetValue(alias, out var exposed) ||
                 !exposed.Any(type => KnownExtensionConstraintSatisfied(type, constraint, allowInterfaceIdentity: true)))) return false;
@@ -180,19 +190,19 @@ public partial class TypeChecker
     {
         // Type arguments have already been checked in the caller. Constraint
         // names and imports belong to the definition, like its specialized body.
-        using var context = SourceContext.Enter(definition.Span);
-        var previousNamespace = _currentNamespace;
-        var previousPath = _currentNamespacePath;
-        string path = GetFunctionNamespace(definition).Replace("$", "::");
-        _currentNamespace = ExtensionNamespace(path) ?? _globalScope;
-        _currentNamespacePath = path;
-        try { return TypeSatisfiesConstraint(argument, constraint); }
-        finally { _currentNamespace = previousNamespace; _currentNamespacePath = previousPath; }
+        using var context = EnterMethodSignatureContext(definition);
+        return TypeSatisfiesConstraint(argument, constraint);
     }
 
     private TypeExpression ExtensionFormalType(MethodDeclaration method, TypeExpression type)
+        => GenericFormalType(method, type);
+
+    // Bind names in a declaration's signature without specializing generic types
+    // or checking bodies. Both ordinary and extension overloads use this view.
+    private TypeExpression GenericFormalType(MethodDeclaration method, TypeExpression type)
     {
-        var scope = extensions.First(e => ReferenceEquals(e.Definition, method)).Scope;
+        using var context = EnterMethodSignatureContext(method);
+        var scope = _currentNamespace;
         var names = method.GenericParameters.Select(p => p.Name).ToHashSet();
         var expandingAliases = new HashSet<(NamespaceScope, string)>();
         return Qualify(type, allowMethodParameters: true);
@@ -208,17 +218,23 @@ public partial class TypeChecker
                 ReferenceTypeExpression r => new ReferenceTypeExpression(Qualify(r.Inner, allowMethodParameters), r.Line),
                 PointerTypeExpression p => new PointerTypeExpression(Qualify(p.Inner, allowMethodParameters), p.IsNullable, p.Line, p.IsReadOnly),
                 ManagedTypeExpression m => new ManagedTypeExpression(Qualify(m.Inner, allowMethodParameters), m.IsNullable, m.Line, m.IsReadOnly, m.Collector == null ? null : Qualify(m.Collector, allowMethodParameters)) { UsesDefaultCollector = m.UsesDefaultCollector },
-                ArrayTypeExpression a => new ArrayTypeExpression(Qualify(a.ElementType, allowMethodParameters), a.Size, a.Line),
+                ArrayTypeExpression a => new ArrayTypeExpression(Qualify(a.ElementType, allowMethodParameters), a.Size, a.Line, a.SizeExpression),
                 FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(Qualify(f.ReturnType, allowMethodParameters),
                     f.ParameterTypes.Select(p => Qualify(p, allowMethodParameters)).ToList(), f.IsManaged, f.IsNullable, f.Line, f.IsSignature),
                 NamedTypeExpression n => QualifyNamed(n, allowMethodParameters),
                 NestedTypeExpression n => QualifyNamespaceMember(n, allowMethodParameters), _ => t };
-            return result.WithQualifiersFrom(t);
+            result = result.WithQualifiersFrom(t);
+            if (t.GenericParameterView != null) result = result.WithGenericParameterView(t.GenericParameterView);
+            if (t.GenericUse is { } use) result = result.WithGenericUse(CopyNamed(use,
+                use.TypeArguments.Select(argument => Qualify(argument, allowMethodParameters)).ToList()));
+            return result;
         }
         TypeExpression QualifyNamespaceMember(NestedTypeExpression nested, bool allowMethodParameters)
         {
             var parent = NamespaceParent(nested.Parent, allowMethodParameters);
-            if (parent == null) return nested;
+            if (parent == null) return new NestedTypeExpression(Qualify(nested.Parent, allowMethodParameters), nested.Member,
+                nested.TypeArguments.Select(t => Qualify(t, allowMethodParameters)).ToList(), nested.Line)
+                { Span = nested.Span, NameSpan = nested.NameSpan };
             if (parent.Aliases.TryGetValue(nested.Member, out var target)) return ExpandAlias(parent, nested.Member, target);
             if (!parent.TypeNames.TryGetValue(nested.Member, out var identity)) return nested;
             return MarkResolvedNominal(new NamedTypeExpression(identity, null, nested.Line,
@@ -237,6 +253,8 @@ public partial class TypeChecker
             }
             if (parent is not NamedTypeExpression { TypeArguments.Count: 0, Namespace: null, IsResolvedNominal: false } named ||
                 allowMethodParameters && names.Contains(named.Name)) return null;
+            if (_localAliases.Any(aliases => aliases.ContainsKey(named.Name)) || ResolveEnclosingNestedTypeName(named.Name) != null)
+                return null;
             for (var current = scope; current != null; current = current.Parent)
                 if (current.TypeNames.ContainsKey(named.Name) || current.Aliases.ContainsKey(named.Name)) return null;
             var imports = Imports(named);
@@ -248,6 +266,9 @@ public partial class TypeChecker
         TypeExpression QualifyNamed(NamedTypeExpression n, bool allowMethodParameters)
         {
             if (n.IsResolvedNominal || allowMethodParameters && n.Namespace == null && names.Contains(n.Name)) return n;
+            if (n.Namespace == null)
+                foreach (var aliases in _localAliases)
+                    if (aliases.TryGetValue(n.Name, out var target)) return ExpandAlias(scope, n.Name, target);
             string identity = n.Name;
             if (n.Namespace != null)
             {
@@ -260,7 +281,12 @@ public partial class TypeChecker
             else
             {
                 bool found = false;
-                for (var current = scope; current != null; current = current.Parent)
+                if (ResolveEnclosingNestedTypeName(n.Name) is { } nestedIdentity)
+                {
+                    identity = nestedIdentity;
+                    found = true;
+                }
+                for (var current = found ? null : scope; current != null; current = current.Parent)
                 {
                     if (current.Aliases.TryGetValue(n.Name, out var target)) return ExpandAlias(current, n.Name, target);
                     if (current.TypeNames.TryGetValue(n.Name, out var qualified)) { identity = qualified; found = true; break; }
@@ -299,7 +325,10 @@ public partial class TypeChecker
                 pair.Value.Name == named.Name &&
                 pair.Value.TypeArguments.Count == named.TypeArguments.Count &&
                 pair.Value.TypeArguments.Zip(named.TypeArguments).All(p => TypesMatchPublic(p.First, p.Second)));
-            return known.Key == null ? null : NamedTypeExpression.Resolved(known.Key, type.Line).WithQualifiersFrom(type);
+            // The nominal specialization is shared, but the requested use may
+            // carry a different declared-parameter view than its first use.
+            return known.Key == null ? null : NamedTypeExpression.Resolved(known.Key, type.Line)
+                .WithGenericUse(named).WithQualifiersFrom(type);
         }
         if (type is ReferenceTypeExpression r)
             return KnownExtensionType(r.Inner) is { } inner ? new ReferenceTypeExpression(inner, r.Line).WithQualifiersFrom(r) : null;
@@ -321,27 +350,6 @@ public partial class TypeChecker
         // its parent. Nongeneric signatures have already resolved these nodes.
         if (type is NestedTypeExpression) return resolvedSourceTypes.GetValueOrDefault(type);
         return type;
-    }
-
-    private void InferExtensionBindings(TypeExpression formal, TypeExpression source, HashSet<string> names,
-        Dictionary<string, TypeExpression> bindings)
-    {
-        if (IsCreationPlaceholder(source)) return;
-        switch (formal, source)
-        {
-            case (ReferenceTypeExpression f, ReferenceTypeExpression s): InferExtensionBindings(f.Inner, s.Inner, names, bindings); return;
-            case (PointerTypeExpression f, PointerTypeExpression s): InferExtensionBindings(f.Inner, s.Inner, names, bindings); return;
-            case (ManagedTypeExpression f, ManagedTypeExpression s):
-                InferExtensionBindings(f.Inner, s.Inner, names, bindings);
-                InferExtensionBindings(ResolveCollectorType(f.Collector, f.Line), ResolveCollectorType(s.Collector, s.Line), names, bindings); return;
-            case (ArrayTypeExpression f, ArrayTypeExpression s): InferExtensionBindings(f.ElementType, s.ElementType, names, bindings); return;
-            case (NamedTypeExpression f, NamedTypeExpression s) when f.TypeArguments.Count > 0:
-                var origin = extensionGenericTypeOrigins.GetValueOrDefault(s.Name) ?? s;
-                if (origin.Name == f.Name && origin.TypeArguments.Count == f.TypeArguments.Count)
-                    foreach (var pair in f.TypeArguments.Zip(origin.TypeArguments)) InferExtensionBindings(pair.First, pair.Second, names, bindings);
-                return;
-        }
-        InferTypeParameter(formal, source, names, bindings);
     }
 
     private bool HasUnboundExtensionType(TypeExpression type, ISet<string> names) => type switch {
@@ -387,9 +395,10 @@ public partial class TypeChecker
         if (!checkedPrimitiveReceivers.Contains(member.Object)) member.Object.Accept(this);
         var receiverType = ResolveAlias(GetType(member.Object));
         if (HasCallableMember(receiverType, member.Member)) return false;
+        var explicitTypes = call.TypeArguments.Select(ResolveAlias).ToList();
         var candidates = GetVisibleExtensions(_currentNamespacePath, CurrentUsings, receiverType,
             IsReferenceStorage(member.Object) && !IsPropertyValueStorage(member.Object) && !IsManagedStorage(member.Object),
-            IsExpressionReadOnly(member.Object), member.Member, GetExtensionReceiverStorageType(member.Object)).ToList();
+            IsExpressionReadOnly(member.Object), member.Member, GetExtensionReceiverStorageType(member.Object), explicitTypes).ToList();
         if (candidates.Any(c => c.Adaptation == ExtensionReceiverAdaptation.Exact))
             candidates.RemoveAll(c => c.Adaptation != ExtensionReceiverAdaptation.Exact);
         if (candidates.Count == 0) return false;
@@ -418,23 +427,16 @@ public partial class TypeChecker
         foreach (var argument in call.Arguments) CheckNullableArgument(argument);
         var lowered = new CallExpression(new IdentifierExpression(member.Member, member.Line) { Span = member.Span },
             new[] { receiver }.Concat(call.Arguments).ToList(), call.Line, new List<TypeExpression>(call.TypeArguments)) { Span = call.Span };
-        MethodDeclaration selected;
-        if (candidates.Any(c => c.Definition.IsGeneric))
+        var bindings = candidates.ToDictionary(candidate => candidate.Definition, candidate => candidate.GenericBindings);
+        var selection = SelectCallableOverload(candidates.Select(candidate => candidate.Definition), lowered,
+            member.Member, bindings);
+        MethodDeclaration selected = selection.Definition;
+        lowered.TypeArguments.Clear();
+        if (selected.IsGeneric)
         {
-            if (candidates.Count != 1) throw new TypeCheckException($"Generic extension call '{member.Member}' is ambiguous", call.Span);
-            selected = candidates[0].Definition;
-            if (lowered.TypeArguments.Count == 0)
-            {
-                var inferred = candidates[0].GenericBindings.ToDictionary(p => p.Key, p => p.Value);
-                var names = selected.GenericParameters.Select(p => p.Name).ToHashSet();
-                for (int i = 1; i < Math.Min(lowered.Arguments.Count, selected.Parameters.Count); i++)
-                    InferExtensionBindings(ExtensionFormalType(selected, selected.Parameters[i].Type),
-                        GetType(lowered.Arguments[i]), names, inferred);
-                lowered.TypeArguments.AddRange(selected.GenericParameters.Select(p => inferred.TryGetValue(p.Name, out var type) ? type :
-                    throw new TypeCheckException($"Could not infer type parameter '{p.Name}' for extension '{selected.Name}'", call.Span)));
-            }
+            lowered.TypeArguments.AddRange(selection.TypeArguments);
+            selectedGenericCallArguments[lowered] = selection.TypeArguments;
         }
-        else selected = SelectBestOverload(candidates.Select(c => c.Definition), m => m.Parameters, lowered.Arguments, member.Member, call.Line);
         extensionTargets[lowered] = selected;
         checkedExtensionArguments.Add(lowered);
         lowered.Accept(this);

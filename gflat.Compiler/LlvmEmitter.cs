@@ -1285,6 +1285,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitClassMethod(string className, MethodDeclaration node)
     {
+        if (node.IsGeneric) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -1818,6 +1819,7 @@ public partial class LlvmEmitter : IVisitor
 
     private void EmitStructMethod(string structName, MethodDeclaration node)
     {
+        if (node.IsGeneric) return;
         _locals.Clear();
         _parameterOwners.Clear();
         _ownerLiveFlags.Clear();
@@ -2117,6 +2119,22 @@ public partial class LlvmEmitter : IVisitor
     public void Visit(MethodDeclaration node)
     {
         if (node.IsGeneric) return;
+        if (!node.IsStatic && _typeChecker.TryGetMethodOwner(node, out string receiverOwner, out bool receiverIsClass))
+        {
+            var previousClass = _currentClass;
+            var previousStruct = _currentStruct;
+            string previousNamespace = _currentNamespacePath;
+            _currentClass = receiverIsClass ? _typeChecker.GetClassByIdentity(receiverOwner) : null;
+            _currentStruct = receiverIsClass ? null : _typeChecker.GetStructByIdentity(receiverOwner);
+            _currentNamespacePath = _typeChecker.GetFunctionNamespace(node);
+            try
+            {
+                if (receiverIsClass) EmitClassMethod(receiverOwner, node);
+                else EmitStructMethod(receiverOwner, node);
+            }
+            finally { _currentClass = previousClass; _currentStruct = previousStruct; _currentNamespacePath = previousNamespace; }
+            return;
+        }
 
         _locals.Clear();
         _parameterOwners.Clear();
@@ -3514,7 +3532,8 @@ public partial class LlvmEmitter : IVisitor
             if (_typeChecker.IsClassByIdentity(rawName))
             {
                 TypeChecker.ClassInfo cInfo = _typeChecker.GetClassByIdentity(rawName)!;
-                string declaringClass = cInfo.Methods[structMethod.Name].DeclaringClass;
+                string declaringClass = _typeChecker.TryGetMethodOwner(structMethod, out var methodOwner, out bool ownerIsClass) && ownerIsClass
+                    ? methodOwner : cInfo.Methods[((MemberAccessExpression)node.Callee).Member].DeclaringClass;
                 typeName = declaringClass;
                 if (rawName != declaringClass)
                 {

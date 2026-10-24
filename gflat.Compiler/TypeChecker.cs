@@ -788,18 +788,18 @@ namespace gflat
             }
             if (type is PointerTypeExpression ptr)
             {
-                return $"{GetTypeMangledName(ptr.Inner)}Ptr";
+                return $"{GetTypeMangledName(ptr.Inner)}{(ptr.IsReadOnly ? "ReadOnlyPtr" : "Ptr")}{(ptr.IsNullable ? "Nullable" : "")}";
             }
             if (type is ManagedTypeExpression mgd)
             {
-                return $"{GetTypeMangledName(mgd.Inner)}Managed${GetTypeMangledName(ResolveCollectorType(mgd.Collector, mgd.Line))}${(mgd.IsNullable ? "Nullable" : "NonNull")}";
+                return $"{GetTypeMangledName(mgd.Inner)}{(mgd.IsReadOnly ? "ReadOnlyManaged" : "Managed")}${GetTypeMangledName(ResolveCollectorType(mgd.Collector, mgd.Line))}${(mgd.IsNullable ? "Nullable" : "NonNull")}";
             }
             if (type is ArrayTypeExpression arr)
             {
-                return $"{GetTypeMangledName(arr.ElementType)}Arr";
+                return $"{GetTypeMangledName(arr.ElementType)}Arr{(arr.Size is { } size ? size.ToString(System.Globalization.CultureInfo.InvariantCulture) : "Unsized")}";
             }
             if (type is FunctionPointerTypeExpression function)
-                return (function.IsSignature ? "Signature$" : "FunctionPointer$") + GetTypeMangledName(function.ReturnType) +
+                return (function.IsSignature ? "Signature$" : function.IsManaged ? "ManagedFunctionPointer$" : "FunctionPointer$") + GetTypeMangledName(function.ReturnType) +
                     "$Params" + function.ParameterTypes.Count + "$" + string.Join("$", function.ParameterTypes.Select(GetTypeMangledName)) +
                     (function.IsNullable ? "$Nullable" : "");
             return type.ToString() ?? "Unknown";
@@ -935,6 +935,7 @@ namespace gflat
 
             AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
             StructDeclaration specialized = cloner.CloneStruct(genericDef);
+            RegisterAliasSpecialization(genericDef, typeArgs, specialized);
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
@@ -942,6 +943,7 @@ namespace gflat
             publish(NamedTypeExpression.Resolved(mangledName, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit, specialized);
             CheckSpecialization(genericDef, specialized);
+            ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
 
             return NamedTypeExpression.Resolved(mangledName, line);
         }
@@ -981,6 +983,7 @@ namespace gflat
 
             AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
             ClassDeclaration specialized = cloner.CloneClass(genericDef);
+            RegisterAliasSpecialization(genericDef, typeArgs, specialized);
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
@@ -988,6 +991,7 @@ namespace gflat
             publish(NamedTypeExpression.Resolved(mangledName, line));
             if (_compilationUnit != null) PrepareOverloads(_compilationUnit, specialized);
             CheckSpecialization(genericDef, specialized);
+            ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
 
             return NamedTypeExpression.Resolved(mangledName, line);
         }
@@ -1014,7 +1018,8 @@ namespace gflat
             string definitionNamespace = GetFunctionNamespace(genericDef);
             bool ownedMethod = TryGetMethodOwner(genericDef, out string methodOwner, out bool ownerIsClass);
             string ownerPrefix = ownedMethod ? methodOwner + "$" : "";
-            string mangledName = (definitionNamespace.Length > 0 ? definitionNamespace + "$" : "") + ownerPrefix + $"{genericDef.Name}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
+            string mangledName = (definitionNamespace.Length > 0 ? definitionNamespace + "$" : "") + ownerPrefix +
+                $"{genericDef.Name}{GenericOverloadDefinitionSuffix(genericDef)}${string.Join("$", typeArgs.Select(GetTypeMangledName))}";
             _displayNames[mangledName] = (definitionNamespace.Length > 0 ? definitionNamespace + "::" : "") + DisplayName(genericDef.Name) + "<" + string.Join(", ", typeArgs.Select(DisplayTypeName)) + ">";
             CheckFailedFunctionSpecialization(mangledName, line);
             if (_globalScope.Functions.TryGetValue(mangledName, out MethodDeclaration? existing))
@@ -1027,11 +1032,13 @@ namespace gflat
 
             AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
             MethodDeclaration specialized = cloner.CloneMethod(genericDef);
+            RegisterAliasSpecialization(genericDef, typeArgs, specialized);
 
             _compilationUnit?.Members.Add(specialized);
             RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
             if (ownedMethod) specializedMethodOwners[specialized] = (methodOwner, ownerIsClass);
             CheckSpecialization(genericDef, specialized);
+            ValidateAliasSpecialization(genericDef, genericDef.GenericParameters, typeArgs);
 
             return specialized;
         }
@@ -1124,7 +1131,7 @@ namespace gflat
                         if (nested.TypeArguments.Count > 0)
                         {
                             List<TypeExpression> resolvedArgs = nested.TypeArguments.Select(ResolveAlias).ToList();
-                            return ResolveGenericType(nested.Member, parentNs, resolvedArgs, nested.Line, publish);
+                            return BindPrimitiveGenericUse(ResolveGenericType(nested.Member, parentNs, resolvedArgs, nested.Line, publish), resolvedArgs);
                         }
                         return ResolveAlias(new NamedTypeExpression(nested.Member, parentNs, nested.Line), publish);
                     }
@@ -1133,7 +1140,7 @@ namespace gflat
                     if (nested.TypeArguments.Count > 0)
                     {
                         List<TypeExpression> resolvedArgs = nested.TypeArguments.Select(ResolveAlias).ToList();
-                        return ResolveGenericTypeByIdentity(candidate, resolvedArgs, nested.Line, publish);
+                        return BindPrimitiveGenericUse(ResolveGenericTypeByIdentity(candidate, resolvedArgs, nested.Line, publish), resolvedArgs);
                     }
                     return ResolveAlias(new NamedTypeExpression(candidate, namedParent.Namespace, nested.Line), publish);
                 }
@@ -2561,6 +2568,7 @@ namespace gflat
                     }
                     else if (member is MethodDeclaration method)
                     {
+                        if (method.IsGeneric) continue;
                         ValidatePropertyAccessor(method);
                         if (method.IsStatic)
                         {
@@ -2758,6 +2766,7 @@ namespace gflat
                     }
                     else if (member is MethodDeclaration method)
                     {
+                        if (method.IsGeneric) continue;
                         ValidatePropertyAccessor(method);
                         if (method.IsStatic)
                         {
@@ -3007,6 +3016,12 @@ namespace gflat
             {
                 ValidateReturnType(node.ReturnType, node.Line);
                 PushScope();
+                if (!node.IsStatic && specializedMethodOwners.TryGetValue(node, out var receiver))
+                {
+                    TypeExpression owner = NamedTypeExpression.Resolved(receiver.Owner, node.Line);
+                    if (node.IsImmutable) owner = TypeQualifiers.Immutable(owner);
+                    DeclareVariable("this", new PointerTypeExpression(owner, false, node.Line, isReadOnly: node.IsReadOnly), node.Line);
+                }
                 foreach (Parameter p in node.Parameters)
                 {
                     ValidateParameterType(p.Type, p.Line);
@@ -3107,7 +3122,7 @@ namespace gflat
                         string argTypes = string.Join(", ", node.BaseArguments.Select(a => TypeName(GetType(a))));
                         throw new TypeCheckException($"No matching base constructor found for '{baseClass.Name}' with arguments ({argTypes})", node.Line);
                     }
-                    var selectedBase = SelectBestOverload(matches, c => c.Parameters, node.BaseArguments, baseClass.Name, node.Line);
+                    var selectedBase = SelectBestOverload(matches, c => c.Parameters, node.BaseArguments, baseClass.Name, node.Line, useDeclaredTypes: false);
                     ValidateConstructorAccess(selectedBase, baseClass.Name, ownerName, node.Span);
                     _resolvedBaseConstructors[node] = selectedBase;
                     AddDefaultArguments(node.BaseArguments, selectedBase.Parameters, node);
@@ -3123,7 +3138,7 @@ namespace gflat
                     if (baseClass.Constructors.Count > 0)
                     {
                         var arguments = new List<AstNode>();
-                        var selectedBase = SelectBestOverload(baseClass.Constructors, c => c.Parameters, arguments, baseClass.Name, node.Line);
+                        var selectedBase = SelectBestOverload(baseClass.Constructors, c => c.Parameters, arguments, baseClass.Name, node.Line, useDeclaredTypes: false);
                         ValidateConstructorAccess(selectedBase, baseClass.Name, ownerName, node.Span);
                         _resolvedBaseConstructors[node] = selectedBase;
                         AddDefaultArguments(arguments, selectedBase.Parameters, node);
@@ -3853,63 +3868,8 @@ namespace gflat
                 throw new TypeCheckException("Cannot take the address of a property", node.Line);
             if (node.Operator == TokenKind.Ampersand)
             {
-                if (node.Operand is IdentifierExpression identOperand && !TryLookupVariable(identOperand.Name, out _))
-                {
-                    MethodDeclaration? method = ResolveFunction(identOperand.Name);
-                    ExternDeclaration? ext = method == null ? ResolveExtern(identOperand.Name) : null;
-                    if (method != null)
-                    {
-                        var paramTypes = method.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
-                        var fnType = new FunctionPointerTypeExpression(ResolveAlias(method.ReturnType), paramTypes, false, false, node.Line);
-                        RecordType(node, fnType);
-                        ValidateFunctionAddress(method, node.Line);
-                        _functionAddressTargets[node] = method;
-                        return;
-                    }
-                    if (ext != null)
-                    {
-                        var paramTypes = ext.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
-                        var fnType = new FunctionPointerTypeExpression(ResolveAlias(ext.ReturnType), paramTypes, false, false, node.Line);
-                        RecordType(node, fnType);
-                        ValidateFunctionAddress(ext, node.Line);
-                        _functionAddressTargets[node] = ext;
-                        return;
-                    }
-                }
-                else if (node.Operand is NamespaceAccessExpression nsAccess)
-                {
-                    MethodDeclaration? staticMethod = ResolveStaticMethod(nsAccess, deferSelection: true);
-                    if (staticMethod != null)
-                    {
-                        var parameters = staticMethod.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
-                        RecordType(node, new FunctionPointerTypeExpression(ResolveAlias(staticMethod.ReturnType), parameters, false, false, node.Line));
-                        ValidateFunctionAddress(staticMethod, node.Line);
-                        _functionAddressTargets[node] = staticMethod;
-                        return;
-                    }
-                    NamespaceScope? scope = ResolveNamespace(nsAccess.Left);
-                    if (scope != null)
-                    {
-                        if (scope.Functions.TryGetValue(nsAccess.Member, out MethodDeclaration? m))
-                        {
-                            var paramTypes = m.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
-                            var fnType = new FunctionPointerTypeExpression(ResolveAlias(m.ReturnType), paramTypes, false, false, node.Line);
-                            RecordType(node, fnType);
-                            ValidateFunctionAddress(m, node.Line);
-                        _functionAddressTargets[node] = m;
-                            return;
-                        }
-                        if (scope.Externs.TryGetValue(nsAccess.Member, out ExternDeclaration? e))
-                        {
-                            var paramTypes = e.Parameters.Select(p => ResolveAlias(p.Type)).ToList();
-                            var fnType = new FunctionPointerTypeExpression(ResolveAlias(e.ReturnType), paramTypes, false, false, node.Line);
-                            RecordType(node, fnType);
-                            ValidateFunctionAddress(e, node.Line);
-                        _functionAddressTargets[node] = e;
-                            return;
-                        }
-                    }
-                }
+                if ((node.Operand is IdentifierExpression id && !TryLookupVariable(id.Name, out _) ||
+                    node.Operand is NamespaceAccessExpression) && TryBindFunctionValue(node)) return;
 
                 CheckNullableStorage(node.Operand, escape: true);
                 TypeExpression operandType = GetType(node.Operand);
@@ -4700,24 +4660,15 @@ namespace gflat
                 }
                 else if (ResolveGenericFunction(funcName) is MethodDeclaration genericMethod)
                 {
-                    List<TypeExpression> typeArgs = node.TypeArguments.Select(ResolveAlias).ToList();
-                    if (typeArgs.Count == 0)
-                    {
-                        Dictionary<string, TypeExpression> inferred = new();
-                        HashSet<string> genericParamNames = genericMethod.GenericParameters.Select(p => p.Name).ToHashSet();
-                        for (int i = 0; i < Math.Min(node.Arguments.Count, genericMethod.Parameters.Count); i++)
-                        {
-                            InferTypeParameter(genericMethod.Parameters[i].Type, GetType(node.Arguments[i]), genericParamNames, inferred);
-                        }
-                        typeArgs = genericMethod.GenericParameters.Select(p => inferred.TryGetValue(p.Name, out TypeExpression? t) ? t : throw new TypeCheckException($"Could not infer type parameter '{p.Name}' for generic function '{funcName}'", node.Line)).ToList();
-                    }
-                    BindPrimitiveCallResult(node, genericMethod, typeArgs);
-                    method = MonomorphizeFunction(genericMethod, typeArgs, node.Line);
+                    // Resolve the complete family before inferring or checking a
+                    // specialization; the representative is not the chosen overload.
+                    method = genericMethod;
                 }
                 else
                 {
                     method = ResolveFunction(funcName);
-                    if (method != null && node.TypeArguments.Count > 0)
+                    if (method != null && node.TypeArguments.Count > 0 &&
+                        !method.IsGeneric && !(overloadFamilies.TryGetValue(method, out var callableFamily) && callableFamily.Any(m => m.IsGeneric)))
                     {
                         throw new TypeCheckException($"Function '{funcName}' is not generic", node.Line);
                     }
@@ -4792,9 +4743,11 @@ namespace gflat
             if (method == null)
                 throw new TypeCheckException($"Unknown function '{funcName}'", node.Line);
 
+            RecordAliasCallTarget(node, method);
             if (method.IsGeneric)
             {
-                var arguments = node.TypeArguments.Select(ResolveAlias).ToList();
+                var arguments = selectedGenericCallArguments.TryGetValue(node, out var selectedArguments)
+                    ? selectedArguments : node.TypeArguments.Select(ResolveAlias).ToList();
                 if (arguments.Count == 0)
                 {
                     var inferred = new Dictionary<string, TypeExpression>();
@@ -4804,11 +4757,12 @@ namespace gflat
                     arguments = method.GenericParameters.Select(p => inferred.TryGetValue(p.Name, out var type) ? type : throw new TypeCheckException($"Could not infer type parameter '{p.Name}'", node.Line)).ToList();
                 }
                 BindPrimitiveCallResult(node, method, arguments);
+                RecordAliasGenericDependency(node, method, arguments);
                 method = MonomorphizeFunction(method, arguments, node.Line);
             }
             ValidateNamespaceFunctionAccess(method, node.Callee.Span);
             _resolvedCalls[node] = method;
-            AddDefaultArguments(node.Arguments, method.Parameters, node);
+            AddDefaultArguments(node.Arguments, declaredMemberParameters.GetValueOrDefault(node) ?? method.Parameters, node);
 
             if (!method.IsNoThrow)
             {
@@ -4826,7 +4780,7 @@ namespace gflat
             for (int i = 0; i < node.Arguments.Count; i++)
             {
                 TypeExpression argType = GetType(node.Arguments[i]);
-                TypeExpression paramType = method.Parameters[i].Type;
+                TypeExpression paramType = ClearIncomingGenericContracts(method.Parameters[i].Type);
                 if (!IsAssignable(paramType, argType, node.Arguments[i]))
                 {
                     string callable = method.PropertyName == null ? $"'{funcName}'" : DescribeSourceCallable(method);
@@ -4853,11 +4807,13 @@ namespace gflat
                 }
             }
 
-            RecordType(node, PrimitiveCallResult(node, method));
+            RecordType(node, BindCallableOwnerType(method, node.Callee, PrimitiveCallResult(node, method)));
         }
 
         private void CheckIndirectCall(CallExpression node, FunctionPointerTypeExpression fnPtr)
         {
+            if (node.TypeArguments.Count != 0)
+                throw new TypeCheckException("A function pointer call cannot specify generic type arguments", node.Callee.Span);
             if (fnPtr.IsNullable)
                 throw new TypeCheckException("Cast a nullable function pointer to non-null before calling", node.Line);
             _indirectCalls.Add(node);
@@ -5214,6 +5170,14 @@ namespace gflat
                 return;
             }
 
+            TypeExpression ConstructedValueType(string identity)
+            {
+                TypeExpression value = NamedTypeExpression.Resolved(identity, node.Line);
+                if (resolvedType.GenericUse is { } use) value = value.WithGenericUse(use);
+                if (resolvedType.GenericParameterView is { } view) value = value.WithGenericParameterView(view);
+                return value;
+            }
+
             if (_classes.TryGetValue(named.Name, out ClassInfo? cInfo))
             {
                 if (cInfo.IsStatic)
@@ -5284,7 +5248,7 @@ namespace gflat
                         string argTypes = string.Join(", ", node.Arguments.Select(a => DisplayTypeName(GetType(a))));
                         throw new TypeCheckException($"No matching constructor found for '{DisplayName(cInfo.Name)}' with arguments ({argTypes})", node.Line);
                     }
-                    matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line);
+                    matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line, useDeclaredTypes: false);
                     if (!matchedCtor.IsCopy) ValidateConstructorAccess(matchedCtor, cInfo.Name, _currentClass?.Name ?? _currentStruct?.Name, node.Span);
                     _resolvedConstructors[node] = matchedCtor;
                     AddDefaultArguments(node.Arguments, matchedCtor.Parameters, node);
@@ -5303,9 +5267,9 @@ namespace gflat
                 CheckPlacementDestination(node, resolvedType);
                 TypeExpression resultType = node.Kind switch
                 {
-                    AllocationKind.Value => NamedTypeExpression.Resolved(cInfo.Name, node.Line),
-                    AllocationKind.Pointer => new PointerTypeExpression(NamedTypeExpression.Resolved(cInfo.Name, node.Line), false, node.Line),
-                    AllocationKind.Managed => new ManagedTypeExpression(NamedTypeExpression.Resolved(cInfo.Name, node.Line), false, node.Line, collector: node.Collector),
+                    AllocationKind.Value => ConstructedValueType(cInfo.Name),
+                    AllocationKind.Pointer => new PointerTypeExpression(ConstructedValueType(cInfo.Name), false, node.Line),
+                    AllocationKind.Managed => new ManagedTypeExpression(ConstructedValueType(cInfo.Name), false, node.Line, collector: node.Collector),
                     _ => throw new Exception($"Unknown allocation kind {node.Kind}")
                 };
 
@@ -5381,7 +5345,7 @@ namespace gflat
                     string argTypes = string.Join(", ", node.Arguments.Select(a => DisplayTypeName(GetType(a))));
                     throw new TypeCheckException($"No matching constructor found for '{DisplayName(sInfo.Name)}' with arguments ({argTypes})", node.Line);
                 }
-                matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line);
+                matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line, useDeclaredTypes: false);
                 if (!matchedStructCtor.IsCopy) ValidateConstructorAccess(matchedStructCtor, sInfo.Name, _currentClass?.Name ?? _currentStruct?.Name, node.Span);
                 _resolvedConstructors[node] = matchedStructCtor;
                 AddDefaultArguments(node.Arguments, matchedStructCtor.Parameters, node);
@@ -5400,9 +5364,9 @@ namespace gflat
             CheckPlacementDestination(node, resolvedType);
             TypeExpression structResultType = node.Kind switch
             {
-                AllocationKind.Value => NamedTypeExpression.Resolved(sInfo.Name, node.Line),
-                AllocationKind.Pointer => new PointerTypeExpression(NamedTypeExpression.Resolved(sInfo.Name, node.Line), false, node.Line),
-                AllocationKind.Managed => new ManagedTypeExpression(NamedTypeExpression.Resolved(sInfo.Name, node.Line), false, node.Line, collector: node.Collector),
+                AllocationKind.Value => ConstructedValueType(sInfo.Name),
+                AllocationKind.Pointer => new PointerTypeExpression(ConstructedValueType(sInfo.Name), false, node.Line),
+                AllocationKind.Managed => new ManagedTypeExpression(ConstructedValueType(sInfo.Name), false, node.Line, collector: node.Collector),
                 _ => throw new Exception($"Unknown allocation kind {node.Kind}")
             };
 

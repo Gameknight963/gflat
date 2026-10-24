@@ -4,6 +4,10 @@ using System.Text;
 
 namespace gflat.ast
 {
+    // A compile-time view of one declaration parameter, never nominal identity.
+    internal sealed record GenericParameterContractView(string OriginIdentity, AstNode DeclaringDefinition,
+        string ParameterName, TypeExpression ActualType, IReadOnlyList<TypeExpression> Constraints);
+
     public abstract class TypeExpression : AstNode
     {
         // Qualification of this value's storage, distinct from a pointer's pointee.
@@ -12,6 +16,13 @@ namespace gflat.ast
         // Per-use constraints survive monomorphization; they are not part of type identity.
         internal IReadOnlyList<TypeExpression> InterfaceConstraints { get; private set; } = Array.Empty<TypeExpression>();
         internal NamedTypeExpression? GenericUse { get; private set; }
+        internal GenericParameterContractView? GenericParameterView { get; private set; }
+        internal TypeExpression WithGenericParameterView(GenericParameterContractView? view)
+        {
+            var copy = (TypeExpression)MemberwiseClone();
+            copy.GenericParameterView = view;
+            return copy;
+        }
         internal TypeExpression WithGenericUse(NamedTypeExpression use)
         {
             var copy = (TypeExpression)MemberwiseClone();

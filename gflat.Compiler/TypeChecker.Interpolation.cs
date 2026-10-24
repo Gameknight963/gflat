@@ -11,6 +11,7 @@ public partial class TypeChecker
         CallExpression? Conversion = null, IdentifierExpression? Converted = null);
     private readonly Dictionary<InterpolatedStringExpression, InterpolationPlan> _interpolations = new();
     private int _interpolationTemporary;
+    private readonly HashSet<CallExpression> primitiveInterpolationCalls = new();
     public InterpolationPlan GetInterpolation(InterpolatedStringExpression node) => _interpolations[node];
 
     private void CheckInterpolation(InterpolatedStringExpression node)
@@ -71,6 +72,7 @@ public partial class TypeChecker
                             throw new TypeCheckException($"Primitive interpolation requires std::Format({primitive.Name}, ITextWriter*); include {source}", part.Line);
                         }
                         action = new(new NamespaceAccessExpression(new NamespaceAccessExpression(new GlobalExpression(part.Line), "std", part.Line), "Format", part.Line), new() { part, destination }, part.Line) { Span = part.Span };
+                        primitiveInterpolationCalls.Add(action);
                     }
                     else if (TypeImplementsInterface(type, "IStringConvertable") || valueType is NamedTypeExpression { Name: "IStringConvertable" })
                     {

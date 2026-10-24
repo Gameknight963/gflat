@@ -29,9 +29,9 @@ public partial class TypeChecker
         var identity = NamedTypeExpression.Resolved(name, line);
         if (_interfaces.ContainsKey(name)) { publish(identity); return identity; }
         using var specialization = EnterTypeSpecialization(name, line);
-        var substitutions = definition.GenericParameters.Select((p, i) => (p.Name, Type: arguments[i]))
-            .ToDictionary(p => p.Name, p => p.Type);
+        var substitutions = ConstrainedTypeArguments(definition, definition.GenericParameters, arguments);
         var specialized = new AstCloner(substitutions, definition.Name, name).CloneInterface(definition);
+        RegisterAliasSpecialization(definition, arguments, specialized);
         _compilationUnit?.Members.Add(specialized);
         RegisterMemberInScope(specialized, _globalScope, "", namespaceVisible: false);
         declarationNamespaces[specialized] = declarationNamespaces.GetValueOrDefault(definition) ?? "";

@@ -10,24 +10,65 @@ public partial class TypeChecker
     private readonly Dictionary<TypeExpression, AliasDeclaration> aliasContracts = new();
     private readonly Dictionary<AliasDeclaration, List<TypeExpression>> boundAliasConstraints = new();
     private readonly HashSet<TypeExpression> selectedAliasTargets = new();
-    private readonly HashSet<string> validatingAliasSpecializations = new();
+    private readonly HashSet<(AstNode Definition, string Arguments)> validatingAliasSpecializations = new();
+    private AstNode? currentSpecializationDefinition;
+    private AstNode? currentSpecializationBody;
+    private sealed record GenericCallDependency(MethodDeclaration Definition, List<TypeExpression> TypeArguments);
+    private readonly Dictionary<(AstNode Body, SourceSpan Call), GenericCallDependency> selectedGenericDependencies = new();
+    private readonly Dictionary<(AstNode Body, SourceSpan Call), MethodDeclaration> selectedAliasCallTargets = new();
+    private readonly Dictionary<(AstNode Definition, string Arguments), AstNode> aliasSpecializationBodies = new();
+    private readonly HashSet<AstNode> unfinishedAliasProofBodies = new();
+    private readonly Dictionary<AstNode, List<(AstNode Definition, List<GenericParameter> Parameters, List<TypeExpression> Arguments)>> pendingAliasProofs = new();
+
+    private string AliasNominalArguments(IEnumerable<TypeExpression> arguments) => string.Join(";", arguments.Select(GetTypeMangledName));
+
+    private void RegisterAliasSpecialization(AstNode definition, List<TypeExpression> arguments, AstNode body)
+    {
+        aliasSpecializationBodies[(definition, AliasNominalArguments(arguments))] = body;
+        unfinishedAliasProofBodies.Add(body);
+    }
+
+    private void RecordAliasCallTarget(CallExpression call, MethodDeclaration method)
+    {
+        if (currentSpecializationBody != null) selectedAliasCallTargets[(currentSpecializationBody, call.Span)] = method;
+    }
+
+    private void RecordAliasGenericDependency(CallExpression call, MethodDeclaration method, List<TypeExpression> arguments)
+    {
+        if (currentSpecializationBody != null)
+            selectedGenericDependencies[(currentSpecializationBody, call.Span)] = new(method, arguments.ToList());
+    }
+
+    private void CompleteAliasSpecializationBody(AstNode body, bool completed)
+    {
+        if (!unfinishedAliasProofBodies.Remove(body)) return;
+        if (!pendingAliasProofs.Remove(body, out var pending) || !completed) return;
+        foreach (var request in pending)
+            AnalyzeSafely(() => ValidateAliasSpecialization(request.Definition, request.Parameters, request.Arguments));
+    }
 
     // A previously emitted specialization may have been reached first through the
     // concrete provider. Check the contract view on every use before reusing it.
     private void ValidateAliasSpecialization(AstNode definition, List<GenericParameter> parameters, List<TypeExpression> arguments)
     {
-        if (!arguments.Any(aliasContracts.ContainsKey) || parameters.Count != arguments.Count) return;
-        string key = definition.Span.SourceId + ":" + definition.Span.Start + ":" +
-            string.Join(";", arguments.Select(a => GetTypeMangledName(a) + (aliasContracts.TryGetValue(a, out var c) ? ":" + c.Name : "")));
+        if (!arguments.Any(ContainsAliasContract) || parameters.Count != arguments.Count) return;
+        var proof = aliasSpecializationBodies.GetValueOrDefault((definition, AliasNominalArguments(arguments)));
+        if (proof != null && unfinishedAliasProofBodies.Contains(proof))
+        {
+            if (!pendingAliasProofs.TryGetValue(proof, out var pending)) pendingAliasProofs[proof] = pending = new();
+            pending.Add((definition, parameters, arguments.ToList()));
+            return;
+        }
+        var key = (definition, string.Join(";", arguments.Select(AliasContractArgumentKey)));
         if (!validatingAliasSpecializations.Add(key)) return;
         using var source = SourceContext.Enter(definition.Span);
         using var locals = IsolateDeclarationContext();
         var previous = _currentNamespace;
         string ns = declarationNamespaces.GetValueOrDefault(definition) ?? "";
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
+        var map = parameters.Zip(arguments).ToDictionary(p => p.First.Name, p => p.Second);
         try
         {
-            var map = parameters.Zip(arguments).ToDictionary(p => p.First.Name, p => p.Second);
             string name = definition switch {
                 MethodDeclaration method => method.Name,
                 ClassDeclaration cls => cls.Name,
@@ -55,16 +96,29 @@ public partial class TypeChecker
                 return;
             }
             if (node is NamespaceAccessExpression access) ValidateAliasMember(access);
-            if (node is CallExpression { TypeArguments.Count: > 0 } call)
+            if (node is CallExpression call)
             {
-                MethodDeclaration? target = call.Callee switch {
-                    IdentifierExpression id => ResolveGenericFunction(id.Name),
-                    NamespaceAccessExpression qualified when ResolveNamespace(qualified.Left) is { } scope
-                        => scope.GenericFunctions.GetValueOrDefault(qualified.Member),
-                    _ => null
-                };
-                if (target is { IsGeneric: true })
-                    ValidateAliasSpecialization(target, target.GenericParameters, call.TypeArguments);
+                var selected = proof == null ? null : selectedGenericDependencies.GetValueOrDefault((proof, call.Span));
+                if (proof != null && call.Callee is NamespaceAccessExpression provider &&
+                    selectedAliasCallTargets.TryGetValue((proof, call.Span), out var selectedMethod))
+                    ValidateAliasMember(provider, selectedMethod);
+                // Follow only dependencies of the checked emitted body. Guessing
+                // a declaration here can inspect a loser or recursively expand
+                // a generic call before normal specialization limits apply.
+                MethodDeclaration? target = selected?.Definition;
+                var dependencyArguments = call.TypeArguments.Count > 0 ? call.TypeArguments :
+                    selected?.TypeArguments.Select(RebindDependencyArgument).ToList() ?? [];
+                if (target is { IsGeneric: true } && target.GenericParameters.Count == dependencyArguments.Count)
+                {
+                    for (int i = 0; i < target.GenericParameters.Count; i++)
+                    {
+                        var parameter = target.GenericParameters[i];
+                        if (parameter.Constraint != null && !FunctionConstraintSatisfied(target, dependencyArguments[i],
+                            BindGenericConstraint(target.GenericParameters, dependencyArguments, parameter.Constraint)))
+                            throw new TypeCheckException($"Type '{DisplayTypeName(dependencyArguments[i])}' does not satisfy constraint '{DisplayTypeName(parameter.Constraint)}' for type parameter '{parameter.Name}' on function '{DisplayName(target.Name)}'", call.Span);
+                    }
+                    ValidateAliasSpecialization(target, target.GenericParameters, dependencyArguments);
+                }
             }
             foreach (var property in node.GetType().GetProperties().Where(p => p.GetIndexParameters().Length == 0))
             {
@@ -73,6 +127,73 @@ public partial class TypeChecker
                     foreach (var childNode in children) Walk(childNode);
             }
         }
+
+        TypeExpression RebindDependencyArgument(TypeExpression type)
+        {
+            if (type.GenericParameterView is { } view && ReferenceEquals(view.DeclaringDefinition, definition) &&
+                map.TryGetValue(view.ParameterName, out var replacement)) return replacement.WithQualifiersFrom(type);
+            var rebound = type switch
+            {
+                PointerTypeExpression p => new PointerTypeExpression(RebindDependencyArgument(p.Inner), p.IsNullable, p.Line, p.IsReadOnly),
+                ManagedTypeExpression p => new ManagedTypeExpression(RebindDependencyArgument(p.Inner), p.IsNullable, p.Line,
+                    p.IsReadOnly, p.Collector == null ? null : RebindDependencyArgument(p.Collector)) { UsesDefaultCollector = p.UsesDefaultCollector },
+                ReferenceTypeExpression r => new ReferenceTypeExpression(RebindDependencyArgument(r.Inner), r.Line),
+                ArrayTypeExpression a => new ArrayTypeExpression(RebindDependencyArgument(a.ElementType), a.Size, a.Line, a.SizeExpression),
+                FunctionPointerTypeExpression f => new FunctionPointerTypeExpression(RebindDependencyArgument(f.ReturnType),
+                    f.ParameterTypes.Select(RebindDependencyArgument).ToList(), f.IsManaged, f.IsNullable, f.Line, f.IsSignature),
+                NamedTypeExpression n when n.GenericUse is { } use => new NamedTypeExpression(use.Name, use.Namespace, n.Line,
+                    use.TypeArguments.Select(RebindDependencyArgument).ToList()),
+                NamedTypeExpression n when n.TypeArguments.Count > 0 => new NamedTypeExpression(n.Name, n.Namespace, n.Line,
+                    n.TypeArguments.Select(RebindDependencyArgument).ToList()),
+                _ => type
+            };
+            return rebound.WithQualifiersFrom(type);
+        }
+    }
+
+    private string AliasContractArgumentKey(TypeExpression type)
+    {
+        var aliases = new List<string>();
+        Visit(type);
+        return GetTypeMangledName(type) + "[" + string.Join(",", aliases) + "]";
+        void Visit(TypeExpression child)
+        {
+            if (aliasContracts.TryGetValue(child, out var alias)) aliases.Add(
+                (alias.Span.SourceId?.Path ?? "") + ":" + alias.Span.Start + ":" + alias.Name);
+            switch (child)
+            {
+                case PointerTypeExpression pointer: Visit(pointer.Inner); break;
+                case ManagedTypeExpression managed:
+                    Visit(managed.Inner);
+                    if (managed.Collector != null) Visit(managed.Collector);
+                    break;
+                case ReferenceTypeExpression reference: Visit(reference.Inner); break;
+                case ArrayTypeExpression array: Visit(array.ElementType); break;
+                case FunctionPointerTypeExpression function:
+                    Visit(function.ReturnType);
+                    foreach (var parameter in function.ParameterTypes) Visit(parameter);
+                    break;
+                case NamedTypeExpression named:
+                    foreach (var argument in named.GenericUse?.TypeArguments ?? named.TypeArguments) Visit(argument);
+                    break;
+            }
+        }
+    }
+
+    private bool ContainsAliasContract(TypeExpression type)
+    {
+        if (aliasContracts.ContainsKey(type)) return true;
+        return type switch
+        {
+            PointerTypeExpression p => ContainsAliasContract(p.Inner),
+            ManagedTypeExpression p => ContainsAliasContract(p.Inner) || p.Collector != null && ContainsAliasContract(p.Collector),
+            ReferenceTypeExpression r => ContainsAliasContract(r.Inner),
+            ArrayTypeExpression a => ContainsAliasContract(a.ElementType),
+            FunctionPointerTypeExpression f => ContainsAliasContract(f.ReturnType) || f.ParameterTypes.Any(ContainsAliasContract),
+            NamedTypeExpression n => n.TypeArguments.Any(ContainsAliasContract) ||
+                n.GenericUse != null && n.GenericUse.TypeArguments.Any(ContainsAliasContract),
+            _ => false
+        };
     }
 
     private TypeExpression ResolveGlobalAliasBinding(string name)
@@ -205,7 +326,9 @@ public partial class TypeChecker
                 var resolved = ResolveAlias(constraint);
                 IEnumerable<MethodDeclaration> methods = resolved is NamedTypeExpression type
                     ? GetInterface(type.Name)?.Methods ??
-                        GetClassByIdentity(type.Name)?.Methods.Values.Select(m => m.Method).Where(m => m.IsStatic && m.Accessibility == TokenKind.Public) ?? []
+                        GetClassByIdentity(type.Name)?.Methods.Values.SelectMany(m =>
+                            overloadFamilies.GetValueOrDefault(m.Method) ?? [m.Method])
+                            .Where(m => m.IsStatic && m.Accessibility == TokenKind.Public) ?? []
                     : [];
                 if (methods.Any(m => (m.Name == access.Member || m.PropertyName == access.Member) &&
                         (selectedMethod == null || m.Name == selectedMethod.Name &&

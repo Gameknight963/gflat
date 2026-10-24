@@ -73,7 +73,7 @@ public sealed class ProviderBindingTests
             weak alias Selected : IProvider = Answer;
             int main() => Selected::Read(1);
             """));
-        Assert.Contains("not exposed", error.Message);
+        Assert.Contains("No matching overload for 'Read'", error.Message);
     }
 
     [Fact]

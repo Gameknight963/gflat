@@ -147,6 +147,7 @@ namespace gflat.ast
             result = result.WithQualifiersFrom(type);
             if (type.InterfaceConstraints.Count > 0) result = result.WithInterfaceConstraints(type.InterfaceConstraints);
             if (type.GenericUse != null) result = result.WithGenericUse((NamedTypeExpression)CloneType(type.GenericUse));
+            if (type.GenericParameterView != null) result = result.WithGenericParameterView(type.GenericParameterView);
             result.Span = type.Span;
             return result;
         }

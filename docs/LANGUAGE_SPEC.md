@@ -342,7 +342,7 @@ function call when an explicit choice is needed.
 
 An extension receiver must be first and cannot be const or optional. Only
 namespace functions support the marker. Generic extensions use existing generic
-constraints and inference; overloaded generic families remain unsupported.
+constraints and inference, including overloaded generic families.
 Extensions do not add properties, operators, bound method groups, or static
 type calls such as `int.Parse()`. Replacements must preserve the receiver marker.
 
@@ -352,7 +352,42 @@ Ordinary free functions, static methods, and concrete instance methods support o
 
 Namespace functions cannot be `abstract`; use an `expect` declaration for an implementation supplied through `replace`.
 
-Overloaded generic function families and overloaded virtual/interface declarations are not yet supported and are diagnosed. An ordinary overloaded implementation can satisfy an interface's matching signature. An overloaded function group can be used with or without `&` when the expected function-pointer signature selects one overload unambiguously; a wrapper is unnecessary in that context. Function addresses cannot discard const-parameter requirements or a variadic calling convention; those forms are rejected until callable types can express them. Lambda parameters cannot be `const` for the same reason.
+Generic functions may overload one another and ordinary functions. Each candidate
+infers its own type arguments; repeated occurrences of a type parameter must infer
+the same type. Explicit type arguments select matching generic arities and allow
+the normal argument conversions. Constraints determine applicability, but cannot
+distinguish declarations or break a ranking tie. After argument conversion and
+default-argument ranking, an ordinary candidate wins an otherwise equal tie;
+between generic candidates, a more specific parameter pattern wins, such as `T*`
+over `T`. Incomparable patterns remain ambiguous. Losing function bodies are not
+instantiated. Return types, generic parameter names, constraints, and defaults do
+not distinguish otherwise identical declarations.
+
+Overload selection inside a generic body preserves its declared parameter types.
+Substituting a concrete type does not reveal additional interfaces for overload
+applicability or make that parameter match a concrete-only overload. Member
+overloads on a constrained receiver use the signatures of its declared contract.
+Existing single-target template instantiation and unconstrained member lookup
+continue to validate their requirements against the actual type; this is not a
+requirement that every generic body type-check without specialization.
+
+```gflat
+int Choose<T>(T value) => 1;
+int Choose(int value) => 2;
+int Forward<T>(T value) => Choose(value);
+int main() => Forward(0) + Choose(0); // 1 + 2
+```
+
+Overloaded virtual/interface declarations are not yet supported and are diagnosed.
+An ordinary overloaded implementation can satisfy an interface's matching
+signature. A function group can be used with or without `&` when the expected
+function-pointer signature selects one overload unambiguously. A known signature
+can also infer a generic function's type arguments. An unresolved method group or
+target-typed `new()` cannot itself infer an enclosing call's type parameters;
+another argument or explicit type arguments must supply them. Function addresses
+cannot discard const-parameter requirements or a variadic calling convention;
+those forms are rejected until callable types can express them. Lambda parameters
+cannot be `const` for the same reason.
 
 `weak` marks a function's default implementation. `replace` explicitly selects a different body for that function in the same namespace or containing type. Declaration order does not matter; reopened namespace blocks share the same scope.
 
@@ -1541,6 +1576,10 @@ An `expect alias` has no initializer. Missing implementations, multiple defaults
 multiple replacements, and replacement of an ordinary alias are errors. Alias
 constraints follow `:`. They validate the selected implementation and limit
 static member access through the alias to the declared contract.
+Overload selection through a constrained alias considers only signatures exposed
+by that contract; extra overloads on the selected implementation cannot hijack a
+call. The alias retains its implementation's nominal type identity, including
+when used as a generic argument.
 Provider aliases are namespace declarations; nested provider aliases inside types
 are not supported yet. Ordinary local aliases retain a constrained provider's
 contract, and generic forwarding does not expose implementation-only members.

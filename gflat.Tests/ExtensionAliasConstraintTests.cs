@@ -116,7 +116,7 @@ public sealed class ExtensionAliasConstraintTests
             }
             """;
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Emit(source,options:new(){NoStdLib=true}));
-        Assert.Contains(extension ? "has no field or method 'Hidden'" : "not exposed",error.Message);
+        Assert.Contains(extension ? "has no field or method 'Hidden'" : "does not satisfy constraint",error.Message);
     }
 
     private static TypeExpression Receiver(TypeChecker checker)=>checker.ResolveAlias(

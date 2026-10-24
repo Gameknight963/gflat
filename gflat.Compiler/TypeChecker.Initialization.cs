@@ -44,7 +44,7 @@ public partial class TypeChecker
                 else
                 {
                     var arguments = new List<AstNode>();
-                    var constructor = SelectBestOverload(parent.Constructors, c => c.Parameters, arguments, parent.Name, line);
+                    var constructor = SelectBestOverload(parent.Constructors, c => c.Parameters, arguments, parent.Name, line, useDeclaredTypes: false);
                     // The generated constructor belongs to this derived type,
                     // independently of who called new on it.
                     ValidateConstructorAccess(constructor, parent.Name, name, SourceContext.ForLine(line));

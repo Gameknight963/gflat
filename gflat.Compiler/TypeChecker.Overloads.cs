@@ -7,44 +7,47 @@ namespace gflat;
 public partial class TypeChecker
 {
     private readonly Dictionary<MethodDeclaration, List<MethodDeclaration>> overloadFamilies = new();
+    private readonly Dictionary<CallExpression, List<TypeExpression>> selectedGenericCallArguments = new();
 
     public string GetOverloadSuffix(MethodDeclaration method) =>
         overloadFamilies.TryGetValue(method, out var family) && family.Count > 1
-            ? "$overload$" + Convert.ToHexString(Encoding.UTF8.GetBytes(OverloadKey(method))) : "";
+            ? "$overload$" + Convert.ToHexString(Encoding.UTF8.GetBytes(method.IsGeneric ? GenericOverloadKey(method) : OverloadKey(method))) : "";
 
     public MethodDeclaration InterfaceImplementation(MethodDeclaration representative, MethodDeclaration contract)
     {
         if (!overloadFamilies.TryGetValue(representative, out var family)) return representative;
-        string contractKey = OverloadKey(contract);
-        return family.FirstOrDefault(m => OverloadKey(m) == contractKey) ?? representative;
+        string contractKey = OverloadKey(contract, useDeclaredTypes: false);
+        return family.FirstOrDefault(m => OverloadKey(m, useDeclaredTypes: false) == contractKey) ?? representative;
     }
 
     // Readonly and immutable are not overload discriminators, at any pointer depth.
-    private string OverloadTypeKey(TypeExpression type)
+    private string OverloadTypeKey(TypeExpression type, bool useDeclaredTypes = true)
     {
         type = ResolveAlias(type);
+        if (useDeclaredTypes) type = OverloadArgumentType(type);
+        string Child(TypeExpression inner) => OverloadTypeKey(inner, useDeclaredTypes);
         return type switch
         {
             NamedTypeExpression n => n.Name,
-            ReferenceTypeExpression r => "ref " + OverloadTypeKey(r.Inner),
-            PointerTypeExpression p => OverloadTypeKey(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
-            ManagedTypeExpression p => OverloadTypeKey(p.Inner) + "^" + TypeName(ResolveCollectorType(p.Collector, p.Line)) + (p.IsNullable ? "?" : ""),
-            ArrayTypeExpression a => OverloadTypeKey(a.ElementType) + $"[{a.Size}]",
-            FunctionPointerTypeExpression f => OverloadTypeKey(f.ReturnType) + "(" + string.Join(",", f.ParameterTypes.Select(OverloadTypeKey)) + ")*" + (f.IsNullable ? "?" : ""),
+            ReferenceTypeExpression r => "ref " + Child(r.Inner),
+            PointerTypeExpression p => Child(p.Inner) + "*" + (p.IsNullable ? "?" : ""),
+            ManagedTypeExpression p => Child(p.Inner) + "^" + Child(ResolveCollectorType(p.Collector, p.Line)) + (p.IsNullable ? "?" : ""),
+            ArrayTypeExpression a => Child(a.ElementType) + $"[{a.Size}]",
+            FunctionPointerTypeExpression f => Child(f.ReturnType) + "(" + string.Join(",", f.ParameterTypes.Select(Child)) + ")*" + (f.IsNullable ? "?" : ""),
             _ => TypeName(type)
         };
     }
 
-    private string OverloadKey(List<Parameter> parameters) => string.Join(",", parameters.Select(p => OverloadTypeKey(p.Type)));
+    private string OverloadKey(List<Parameter> parameters, bool useDeclaredTypes = true) => string.Join(",", parameters.Select(p => OverloadTypeKey(p.Type, useDeclaredTypes)));
 
-    private string OverloadKey(MethodDeclaration method)
+    private string OverloadKey(MethodDeclaration method, bool useDeclaredTypes = true)
     {
         // Reserved primitive names cannot depend on a declaration's aliases or
         // owner. Most already-bound overloads need no temporary lookup scope.
         if (method.Parameters.All(p => p.Type is NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } named && IsPrimitive(named.Name)))
-            return OverloadKey(method.Parameters);
+            return OverloadKey(method.Parameters, useDeclaredTypes);
         using var context = EnterMethodSignatureContext(method);
-        return OverloadKey(method.Parameters);
+        return OverloadKey(method.Parameters, useDeclaredTypes);
     }
 
     private void PrepareOverloads(CompilationUnit unit, AstNode? specialization = null, bool resolveSignatures = true)
@@ -61,8 +64,6 @@ public partial class TypeChecker
         foreach (var family in families)
         {
             using var context = SourceContext.Enter(family[0].Span);
-            if (family.Any(m => m.IsGeneric))
-                throw new TypeCheckException("Overloaded generic function families are not yet supported", family[0].Line);
             if (family.Select(m => m.IsStatic).Distinct().Count() > 1)
                 throw new TypeCheckException("An overload family cannot mix static and instance methods", family[0].Line);
             // Existing virtual tables use names as slots.
@@ -102,7 +103,7 @@ public partial class TypeChecker
             {
                 AnalyzeSafely(() =>
                 {
-                    string key = OverloadKey(method);
+                    string key = family.Any(m => m.IsGeneric) ? GenericOverloadKey(method) : OverloadKey(method);
                     if (keys.TryGetValue(key, out var first))
                         DuplicateDeclaration(first, method, $"Overloads of '{method.Name}' cannot differ only by readonly, immutable, return type, or declaration modifiers");
                     keys[key] = method;
@@ -133,19 +134,46 @@ public partial class TypeChecker
 
     private MethodDeclaration SelectOverload(MethodDeclaration method, CallExpression call)
     {
-        if (!overloadFamilies.TryGetValue(method, out var family)) return method;
-        return SelectBestOverload(family, m => m.Parameters, call.Arguments, method.Name, call.Line);
+        if (SelectDeclaredMemberOverload(method, call) is { } declaredMember) return declaredMember;
+        overloadFamilies.TryGetValue(method, out var family);
+        if (method.IsGeneric || family?.Any(candidate => candidate.IsGeneric) == true)
+        {
+            var selected = SelectCallableOverload(family ?? [method], call, method.Name);
+            if (selected.Definition.IsGeneric) selectedGenericCallArguments[call] = selected.TypeArguments;
+            else selectedGenericCallArguments.Remove(call);
+            return selected.Definition;
+        }
+        if (family == null) return method;
+        var candidates = family.Select(definition => new CallableOverloadCandidate(definition, [], definition.Parameters.Select(parameter =>
+            new Parameter(parameter.Name, BindCallableOwnerType(definition, call.Callee, parameter.Type), parameter.Line,
+                parameter.IsConst, parameter.DefaultValue)).ToList())).ToList();
+        return SelectBestOverload(candidates, candidate => candidate.Parameters, call.Arguments, method.Name, call.Line,
+            useDeclaredTypes: !primitiveInterpolationCalls.Contains(call) && !HasUnconstrainedGenericReceiver(call)).Definition;
+    }
+
+    private bool HasUnconstrainedGenericReceiver(CallExpression call)
+    {
+        if (call.Callee is not MemberAccessExpression member || !_types.TryGetValue(member.Object, out var type)) return false;
+        while (type.GenericParameterView == null)
+        {
+            type = type switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression p => p.Inner,
+                ReferenceTypeExpression r => r.Inner, _ => null };
+            if (type == null) return false;
+        }
+        return type.GenericParameterView.Constraints.Count == 0;
     }
 
     private T SelectBestOverload<T>(IEnumerable<T> candidates, Func<T, List<Parameter>> parameters,
-        List<AstNode> arguments, string name, int line)
+        List<AstNode> arguments, string name, int line, Func<T, T, bool>? preferWhenTied = null,
+        bool bindContextualArguments = true, bool useDeclaredTypes = true)
     {
         foreach (var arg in arguments) if (!_types.ContainsKey(arg)) arg.Accept(this);
         TypeExpression ArgumentType(AstNode arg) => arg is DefaultExpression { TargetType: null }
-            ? new NamedTypeExpression("default", null, arg.Line) : GetType(arg);
+            ? new NamedTypeExpression("default", null, arg.Line) : useDeclaredTypes ? OverloadArgumentType(GetType(arg)) : GetType(arg);
+        TypeExpression ParameterType(TypeExpression type) => useDeclaredTypes ? OverloadArgumentType(type) : type;
         bool ArgumentMatches(TypeExpression expected, AstNode argument) => NeedsCreationTarget(argument) || (IsOverloadedFunctionValue(argument)
             ? CanSelectFunctionValue(argument, expected)
-            : IsAssignable(expected, ArgumentType(argument), argument is DefaultExpression { TargetType: null } ? null : argument));
+            : IsAssignable(ParameterType(expected), ArgumentType(argument), argument is DefaultExpression { TargetType: null } ? null : argument));
         var viable = candidates.Where(c => AcceptsArgumentCount(parameters(c), arguments.Count) &&
             parameters(c).Take(arguments.Count).Select((p, i) => ArgumentMatches(p.Type, arguments[i])).All(v => v)).ToList();
         bool Better(T first, T second)
@@ -153,8 +181,8 @@ public partial class TypeChecker
             bool strictly = false;
             for (int i = 0; i < arguments.Count; i++)
             {
-                var a = parameters(first)[i].Type;
-                var b = parameters(second)[i].Type;
+                var a = ParameterType(parameters(first)[i].Type);
+                var b = ParameterType(parameters(second)[i].Type);
                 // A method group has no independently selected function type.
                 // Both viable target signatures are equally good conversions;
                 // ranking must not use a declaration-order representative.
@@ -175,13 +203,17 @@ public partial class TypeChecker
             }
             // When supplied arguments have identical types, prefer the overload
             // requiring no defaults. Other ties stay ambiguous.
-            return strictly || parameters(first).Count == arguments.Count && parameters(second).Count > arguments.Count;
+            if (strictly) return true;
+            bool firstNeedsNoDefaults = parameters(first).Count == arguments.Count;
+            bool secondNeedsNoDefaults = parameters(second).Count == arguments.Count;
+            if (firstNeedsNoDefaults != secondNeedsNoDefaults) return firstNeedsNoDefaults;
+            return preferWhenTied?.Invoke(first, second) == true;
         }
         var best = viable.Where(c => !viable.Any(other => !ReferenceEquals(c, other) && Better(other, c))).ToList();
         if (best.Count == 0) throw new TypeCheckException($"No matching overload for '{name}'", line);
         if (best.Count > 1) throw new TypeCheckException($"Call to '{name}' is ambiguous", line);
         for (int i = 0; i < arguments.Count; i++)
-            if (IsOverloadedFunctionValue(arguments[i]) || NeedsCreationTarget(arguments[i]))
+            if (bindContextualArguments && (IsOverloadedFunctionValue(arguments[i]) || NeedsCreationTarget(arguments[i])))
                 IsAssignable(parameters(best[0])[i].Type, ArgumentType(arguments[i]), arguments[i]);
         return best[0];
     }

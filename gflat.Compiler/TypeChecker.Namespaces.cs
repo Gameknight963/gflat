@@ -241,6 +241,11 @@ public partial class TypeChecker
 
     private void CheckSpecialization(AstNode definition, AstNode specialized)
     {
+        var previousSpecializationDefinition = currentSpecializationDefinition;
+        var previousSpecializationBody = currentSpecializationBody;
+        currentSpecializationDefinition = definition;
+        currentSpecializationBody = specialized;
+        bool completed = false;
         using var nullableScope = IsolateNullableFlow();
         using var exceptionScope = IsolateExceptionHandlers();
         using var declarationContext = IsolateDeclarationContext();
@@ -259,8 +264,11 @@ public partial class TypeChecker
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
         _currentNamespacePath = ns;
         declarationNamespaces[specialized] = ns;
-        try { AnalyzeSafely(() => specialized.Accept(this)); }
-        finally { _currentNamespace = previousNamespace; _currentNamespacePath = previousPath; _currentClass = previousClass; _currentStruct = previousStruct; }
+        try { AnalyzeSafely(() => specialized.Accept(this)); completed = true; }
+        finally { _currentNamespace = previousNamespace; _currentNamespacePath = previousPath; _currentClass = previousClass; _currentStruct = previousStruct;
+            currentSpecializationDefinition = previousSpecializationDefinition;
+            currentSpecializationBody = previousSpecializationBody;
+            CompleteAliasSpecializationBody(specialized, completed); }
     }
 
     private void ResolveDeclarationSignatures(CompilationUnit unit)

@@ -62,6 +62,22 @@ No allocation, retained pointer, input mutation, or additional source dependency
 is introduced. Both operations are `nothrow`. The membership-mask implementation
 is original code; the existing substring search and its attribution are unchanged.
 
+## String searches
+
+`String.IndexOfAny(values, count, start = 0)` and
+`String.LastIndexOfAny(values, count)` use these counted set searches over the
+String's bytes. They return `String::NotFound` when nothing matches, including
+for an empty set or an empty String. `IndexOfAny` returns an absolute byte offset
+and rejects `start > Length`; `start == Length` returns `NotFound`.
+
+The one-argument overloads treat `values` as a C string: its first NUL terminates
+the set. Use the counted overloads to search for NUL itself. Sets can borrow the
+String's own bytes. No allocation or mutation occurs, and both overload families
+accept immutable String receivers. `LastIndexOfAny` is also `nothrow`.
+
+These are byte-set searches, without Unicode decoding, case folding, or substring
+matching. A byte can match anywhere in the set, regardless of order or duplicates.
+
 ## Attribution
 
 The factorization and matching loops are adapted from musl's

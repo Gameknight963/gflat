@@ -58,6 +58,9 @@ and checks bounds.
 - `Equals(cString)` and `Equals(data, count)` compare borrowed text without an
   intermediate String. The counted overload includes embedded nulls; the C-string
   overload stops at its first null. Comparison is exact and does not allocate.
+- `IndexOfAny` and `LastIndexOfAny` search for any byte in a supplied set and return
+  `String::NotFound` on a miss. Counted sets can include NUL; C-string sets stop at
+  it. See [byte-set searches](../../docs/BYTE_SEARCH.md#string-searches).
 
 Interpolation uses `IFormattable.Format(ITextWriter*)` and
 `ITextWriter.Write(readonly(char)*, nuint)`. The writer consumes bytes during the

@@ -253,6 +253,37 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         return this.LastIndexOf(text, count);
     }
 
+    // Search individual bytes from a set, including embedded nulls when counted.
+    public immutable nuint IndexOfAny(readonly(char)* values, nuint count, nuint start = 0)
+    {
+        if (start > length) throw new Exception("String search start out of range");
+        nuint remaining = length - start;
+        nuint found = ByteSearch::IndexOfAny((readonly(byte)*)(data + start), remaining, (readonly(byte)*)values, count);
+        if (found == remaining) return NotFound;
+        return start + found;
+    }
+
+    public immutable nuint IndexOfAny(readonly(char)* values)
+    {
+        nuint count = 0;
+        while (values[count] != '\0') count++;
+        return this.IndexOfAny(values, count, 0);
+    }
+
+    public immutable nuint LastIndexOfAny(readonly(char)* values, nuint count) nothrow
+    {
+        nuint found = ByteSearch::LastIndexOfAny((readonly(byte)*)data, length, (readonly(byte)*)values, count);
+        if (found == length) return NotFound;
+        return found;
+    }
+
+    public immutable nuint LastIndexOfAny(readonly(char)* values) nothrow
+    {
+        nuint count = 0;
+        while (values[count] != '\0') count++;
+        return this.LastIndexOfAny(values, count);
+    }
+
     public immutable bool Contains(char value) => this.IndexOf(value) != NotFound;
     public immutable bool Contains(readonly(char)* text) => this.IndexOf(text) != NotFound;
     public immutable bool Contains(readonly(char)* text, nuint count) => this.IndexOf(text, count, 0) != NotFound;

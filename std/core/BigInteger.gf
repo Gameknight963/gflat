@@ -180,6 +180,20 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    public immutable BigInteger Abs()
+    {
+        BigInteger result = *this;
+        if (result.sign < 0) result.sign = 1;
+        return move result;
+    }
+
+    public immutable BigInteger Negate()
+    {
+        BigInteger result = *this;
+        result.sign = -result.sign;
+        return move result;
+    }
+
     public immutable BigInteger Add(immutable(BigInteger)* other)
     {
         if (sign == 0) return *other;

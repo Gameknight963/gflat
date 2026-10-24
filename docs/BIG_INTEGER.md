@@ -39,6 +39,8 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `Sign` | -1, 0, or 1. |
 | `TryToLong(ref result)` / `TryToULong(ref result)` | Checked 64-bit conversion; false writes zero. |
 | `ToLong()` / `ToULong()` | Checked 64-bit conversion; throws when the value does not fit. |
+| `Abs()` | Return an independent nonnegative integer with the same magnitude. |
+| `Negate()` | Return an independent integer with the opposite sign. |
 | `Add(immutable(BigInteger)* other)` | Return the exact sum. |
 | `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
 | `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
@@ -103,6 +105,14 @@ zero. A failed allocation throws `BadAllocException`; invalid syntax or impossib
 storage sizes throw `Exception`. Partial results are cleaned up normally, and
 failed result construction leaves its source operands unchanged. The normal value
 assignment rules prepare a copied or computed result before replacing the target.
+
+`Abs()` and `Negate()` borrow the receiver and return independent owners using
+the existing value-copy operation. Even a positive value's `Abs()` owns its own
+limb storage. Only the copied sign changes; zero stays canonical and copying it
+requires no allocation. Both methods accept immutable receivers. Nonzero results
+copy limbs in linear time and can throw on allocation failure, leaving the
+receiver unchanged. Assignments such as `value = value.Negate()` prepare the
+complete result before releasing the old owner. Neither method is `nothrow`.
 
 `Format` uses a small stack buffer and borrows limbs while writing. The writer must
 consume each byte span during the call, keep the source alive, and must not mutate

@@ -37,6 +37,15 @@ public sealed partial class EditorModel
     private string DisplayType(TypeExpression type) => snapshot.Checker?.DisplayTypeName(type) ?? TypeChecker.TypeName(type).Replace(".", "::");
     private string Detail(Symbol symbol) => string.Concat(Signature(symbol).Select(p => p.Text));
 
+    private static TypeExpression ArrayDisplayShape(TypeExpression declared, TypeExpression actual)
+    {
+        if (declared is not ArrayTypeExpression syntax || actual is not ArrayTypeExpression checkedArray)
+            return declared;
+        return new ArrayTypeExpression(ArrayDisplayShape(syntax.ElementType, checkedArray.ElementType),
+            checkedArray.Size ?? syntax.Size, syntax.Line, syntax.SizeExpression) { Span = syntax.Span }
+            .WithQualifiersFrom(syntax);
+    }
+
     private DisplayPart[] Signature(Symbol symbol, bool navigable = false, string? hoverPath = null, int hoverOffset = 0)
     {
         var parts = new List<DisplayPart>();
@@ -154,7 +163,13 @@ public sealed partial class EditorModel
         else
         {
             if (IsType(symbol.Syntax.Node) || symbol.Syntax.Node is NamespaceDeclaration) Keyword(symbol.Classification);
-            else if (symbol.Type != null) { Type(symbol.BoundType ?? (symbol.BoundParameters != null ? symbol.Type : snapshot.DeclaredTypes.GetValueOrDefault(symbol.Syntax.Node) ?? symbol.Type)); Add(" "); }
+            else if (symbol.Type != null)
+            {
+                var display = symbol.BoundType ?? (symbol.BoundParameters != null ? symbol.Type : snapshot.DeclaredTypes.GetValueOrDefault(symbol.Syntax.Node) ?? symbol.Type);
+                if (symbol.Syntax.Node is VariableDeclaration && snapshot.Checker is { } checker)
+                    display = ArrayDisplayShape(display, checker.GetType(symbol.Syntax.Node));
+                Type(display); Add(" ");
+            }
             Name();
         }
         if (symbol.Parameters is { } parameters)

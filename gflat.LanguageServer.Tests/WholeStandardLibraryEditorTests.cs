@@ -47,6 +47,11 @@ public class WholeStandardLibraryEditorTests
             Unique<int> FoldOwned(Unique<int> total,int value) { total.Value+=value; return move total; }
             int main() {
                 LinkedList<int> list=new();
+                nuint nativeCount=2; nuint[3] nativeCounts=[0,1,nativeCount];
+                byte[3] byteValues=[0,127,255];
+                alias NativeCount=nuint;
+                NativeCount[] aliasedCounts=[0,nativeCount];
+                NativeCount[2][] countGrid=[[0,nativeCount],[nativeCount,1]];
                 LinkedList<int>::Node* node=list.AddLast(42);
                 var linkedQuery=list.AsEnumerable().Take(1);
                 var endpointQuery=linkedQuery.Prepend(0).Append(100);
@@ -562,6 +567,13 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
         var aggregateHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',seedlessCall)+1),Protocol.JsonOptions);
         Assert.Equal(2,aggregateHelp.GetProperty("signatures").GetArrayLength());
+        foreach(var array in new[]{("nativeCounts","nuint[3]"),("byteValues","byte[3]"),
+            ("aliasedCounts","NativeCount[2]"),("countGrid","NativeCount[2][2]")})
+        {
+            int offset=text.IndexOf(array.Item1,StringComparison.Ordinal);
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(array.Item2,hover.GetProperty("contents").GetProperty("value").GetString());
+        }
         foreach(string expression in new[]{"IpNetwork::FromAddress","IpNetwork::Parse","IpNetwork::TryParse",
             "subnet.Contains","subnet.PrefixLength","subnet.NetworkAddress"})
         {

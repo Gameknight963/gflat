@@ -112,6 +112,8 @@ public class WholeStandardLibraryEditorTests
                 authentication.Reset();
                 byte[32] fileDigest=FileHash::SHA256("input.bin");
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
+                Rune unicodeScalar=new(0x1f600u); nuint scalarUtf8=unicodeScalar.Utf8Length;
+                nuint scalarUtf16=unicodeScalar.Utf16Length; String scalarText=unicodeScalar.ToString();
                 decoder.Read("a",1,true,&scalar,&consumed);
                 Utf8Scalars characters=new(text.Data,text.Length);
                 Utf8Scalars::Enumerator iterator=characters.GetEnumerator();
@@ -364,6 +366,14 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(string member in new[]{"Utf8Length","Utf16Length"})
+        {
+            int offset=sourceTokens.Last(token=>token.Text==member).Start;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("nuint",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("Rune.gf",JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
+        }
         foreach(string member in new[]{"IsoWeekYear","IsoWeekOfYear","GetIsoWeeksInYear","FromIsoWeek","TryRemoveFirst","TryRemoveLast","TryElementAt","Reverse"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;

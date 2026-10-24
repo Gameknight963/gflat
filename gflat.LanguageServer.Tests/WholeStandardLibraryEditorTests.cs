@@ -181,6 +181,8 @@ public class WholeStandardLibraryEditorTests
                 String prettyText=new(); JsonWriter pretty=new(&prettyText,true);
                 pretty.WriteStartArray(); pretty.WriteEndArray(); pretty.Complete();
                 String compactText=new(); JsonText::Minify(" [ true ] ",10,&compactText);
+                JsonText::PrettyPrint("[true]",6,&compactText);
+                JsonText::PrettyPrint("{}",2,&compactText,0);
                 nuint last=text.LastIndexOf('d');
                 text.TrimStart(); text.TrimEnd(); text.PadLeft(8); text.PadRight(10);
                 HashSet<int> first=new(); HashSet<int> second=new();
@@ -544,6 +546,16 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
         var aggregateHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',seedlessCall)+1),Protocol.JsonOptions);
         Assert.Equal(2,aggregateHelp.GetProperty("signatures").GetArrayLength());
+        var prettyCalls=sourceTokens.Where(token=>token.Text=="PrettyPrint").ToArray();
+        Assert.Equal(2,prettyCalls.Length);
+        foreach(var token in prettyCalls)
+        {
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,token.Start),Protocol.JsonOptions);
+            Assert.Contains("indentSpaces",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("JsonText.gf",JsonSerializer.Serialize(model.Definition(source.Path,token.Start),Protocol.JsonOptions));
+            var help=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',token.Start)+1),Protocol.JsonOptions);
+            Assert.Single(help.GetProperty("signatures").EnumerateArray());
+        }
         foreach(string member in new[]{"Prepend","Append"})
         {
             int call=text.IndexOf("."+member,text.IndexOf("endpointQuery",StringComparison.Ordinal),StringComparison.Ordinal)+1;

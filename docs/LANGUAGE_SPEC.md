@@ -1016,6 +1016,11 @@ are equivalent. A private extern is accessible throughout its source file, inclu
 from other namespaces in that file, but cannot be called or addressed from another
 file. Its native linker symbol is unchanged. Namespace extern declarations accept only accessibility modifiers before the return type; `static` and `protected` are not supported.
 
+Private externs still participate in ordinary namespace declaration uniqueness.
+Repeating the same qualified declaration name in multiple source files is rejected;
+privacy restricts access rather than creating a file-local declaration namespace.
+Different gflat namespaces may independently declare the same native C symbol,
+provided their native signatures and `nothrow` contracts agree.
 An extern may declare a trailing `nothrow` contract, for example
 `private extern int abs(int value) nothrow;`. This promises that the foreign
 implementation never unwinds through the call. The compiler emits an LLVM

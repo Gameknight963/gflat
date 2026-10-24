@@ -24,6 +24,7 @@ public sealed class StandardToStringExtensionTests
         }
         bool Matches(ref immutable(String) text){if(text.Length!=257||text.Data[0]!='x'||text.Data[1]!='\0'||(byte)text.Data[2]!=(byte)255)return false;for(nuint i=3;i<257;i++)if(text.Data[i]!='x')return false;return text.Data[257]=='\0';}
         String FromBorrow(ref immutable(Payload) value)=>value.ToString();
+        String FromGenericBorrow<T:IFormattable>(ref immutable(T) value)=>value.ToString();
         """;
 
     [Theory]
@@ -91,7 +92,8 @@ public sealed class StandardToStringExtensionTests
                     Payload source=new();readonly(Payload) readOnly=new();immutable(Payload) frozen=new();readonly(char)* storage=source.Data;
                     int before=formats;
                     String first=source.ToString();String second=readOnly.ToString();String third=frozen.ToString();String borrowed=FromBorrow(ref source);
-                    if(formats!=before+4||owners!=3||!Matches(ref first)||!Matches(ref second)||!Matches(ref third)||!Matches(ref borrowed))return 1;
+                    String generic=FromGenericBorrow(ref source);
+                    if(formats!=before+5||owners!=3||!Matches(ref first)||!Matches(ref second)||!Matches(ref third)||!Matches(ref borrowed)||!Matches(ref generic))return 1;
                     if(first.Data==source.Data||first.Data==second.Data||first.Data==third.Data||source.Data!=storage)return 2;
                     first.Clear();first.Append("changed",7);if(!Matches(ref borrowed)||source.Data[0]!='x'||source.Data[1]!='\0'||(byte)source.Data[2]!=(byte)255)return 3;
                     Existing existing=new();String chosen=existing.ToString();if(!chosen.Equals("member")||memberCalls!=1||memberFormats!=0||existing.Marker!=17)return 4;

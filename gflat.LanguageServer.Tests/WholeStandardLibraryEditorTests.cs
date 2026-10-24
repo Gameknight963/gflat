@@ -79,6 +79,10 @@ public class WholeStandardLibraryEditorTests
                 arbitraryInteger.TryToLong(ref arbitraryLong); arbitraryInteger.TryToULong(ref arbitraryULong);
                 BigInteger arbitrarySum=arbitraryProduct.Add(&arbitraryInteger);
                 BigInteger arbitraryDifference=arbitrarySum.Subtract(&arbitraryInteger);
+                BigInteger arbitraryLargeRemainder=new();
+                BigInteger arbitraryLargeQuotient=arbitraryProduct.DivRem(&arbitraryFactor,ref arbitraryLargeRemainder);
+                BigInteger arbitraryDivided=arbitraryProduct.Divide(&arbitraryFactor);
+                BigInteger arbitraryResidual=arbitraryProduct.Remainder(&arbitraryFactor);
                 int arbitraryRemainder=0;
                 BigInteger arbitraryQuotient=arbitraryDifference.DivRem(7,ref arbitraryRemainder);
                 int arbitrarySign=arbitraryDifference.Sign;
@@ -367,6 +371,20 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        int largeDivision=text.IndexOf(".DivRem",text.IndexOf("arbitraryLargeQuotient",StringComparison.Ordinal),StringComparison.Ordinal)+1;
+        var largeDivisionHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,largeDivision),Protocol.JsonOptions);
+        Assert.Contains("BigInteger",largeDivisionHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("ref",largeDivisionHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,largeDivision),Protocol.JsonOptions));
+        var divisionHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',largeDivision)+1),Protocol.JsonOptions);
+        Assert.Equal(2,divisionHelp.GetProperty("signatures").GetArrayLength());
+        foreach(string member in new[]{"Divide","Remainder"})
+        {
+            int offset=sourceTokens.Last(token=>token.Text==member).Start;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
+        }
         int hexWrite=sourceTokens.Last(token=>token.Text=="WriteHex").Start;
         var hexHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,hexWrite),Protocol.JsonOptions);
         Assert.Contains("uppercase = true",hexHover.GetProperty("contents").GetProperty("value").GetString());

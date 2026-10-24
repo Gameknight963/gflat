@@ -44,6 +44,8 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
 | `Pow(uint exponent)` | Return an independent exact nonnegative integer power; zero to the zero power is one. |
 | `DivRem(int divisor, ref int remainder)` | Return a fresh quotient and the signed remainder for a 32-bit divisor. |
+| `DivRem(immutable(BigInteger)* divisor, ref BigInteger remainder)` | Return a fresh quotient and replace initialized output with the exact remainder. |
+| `Divide(immutable(BigInteger)* divisor)` / `Remainder(immutable(BigInteger)* divisor)` | Return the quotient or remainder of arbitrary-precision division. |
 | `Equals`, `CompareTo`, `GetHashCode` | Value equality, signed ordering, and an equality-compatible hash. |
 | `Format(ITextWriter*)` | Write canonical decimal bytes without an intermediate owning string. |
 | `ToString()` | Return an independent owning decimal `String`. |
@@ -51,7 +53,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 The type implements `IEquatable<BigInteger>`, `IComparable<BigInteger>`,
 `IHashable`, `IFormattable`, and `IStringConvertable`, so it works as a hash key,
 in generic comparisons, and in interpolation. There are currently no arithmetic
-operators, implicit primitive conversions, division by an arbitrary BigInteger, bitwise operations, alternate
+operators, implicit primitive conversions, bitwise operations, alternate
 radices, or locale formatting.
 
 Parsing accepts an optional leading `+` or `-` followed by at least one ASCII
@@ -114,10 +116,55 @@ largest multiplication accumulator is `base*base - 1`, safely within `ulong`.
 This initial implementation favors straightforward decimal arithmetic; it does
 not use advanced multiplication algorithms.
 
+Arbitrary-precision division uses a linear single-limb fast path and normalized
+schoolbook long division for larger divisors. For an m-limb dividend and n-limb
+divisor with m >= n, it takes O((m-n+1)*n + m+n) work and O(m+n) storage. Its
+scratch vectors are reserved once, with no allocation per quotient digit.
+
 For explicit source selection include `core/BigInteger.gf`, `Vector`/`Span` and
 their query-interface dependencies, `Formatting.gf`, `Hashing.gf`, the implemented
 interface sources, and `String`/`ByteSearch`. Projects using the complete standard
 library already include these sources.
+
+## Division and remainder
+
+Both `DivRem` overloads truncate the quotient toward zero. A nonzero remainder
+has the dividend's sign, with magnitude less than the divisor's, and satisfies
+`dividend = quotient * divisor + remainder`. A zero divisor throws
+`Exception("BigInteger divisor is zero")` without changing the remainder output.
+
+The BigInteger-divisor overload borrows its operands and returns an independent
+quotient. Its `ref BigInteger remainder` must refer to an initialized mutable
+owner. Both new results are complete before that owner is replaced. Allocation
+or size failures preserve both operands and the previous remainder value.
+Partial results are cleaned up normally.
+
+The output may be the same object as the dividend or divisor, including when
+both operands are that object. A successful call then replaces the aliased
+operand with the remainder; the returned quotient is independent. All operand
+reads finish before this commit. This permits ordinary complete owning objects,
+not fabricated output references inside owner metadata or limb storage.
+
+```csharp
+using std;
+int main()
+{
+    BigInteger dividend = BigInteger::Parse("-100000000000000000001");
+    BigInteger divisor = BigInteger::Parse("10000000001");
+    BigInteger remainder = new(42l);
+    BigInteger quotient = dividend.DivRem(&divisor, ref remainder);
+    String q = quotient.ToString();
+    String r = remainder.ToString();
+    if (!q.Equals("-9999999999") || !r.Equals("-2")) return 1;
+    return 0;
+}
+```
+
+`Divide` and `Remainder` return the corresponding independent value with the
+same rules. They share `DivRem`'s algorithm and currently compute both results
+before discarding the unused one. Division adds no GC, compiler arithmetic
+support, or external dependency. Like the other arithmetic, it is not constant
+time and makes no cryptographic timing guarantee.
 
 ## Checked primitive conversions
 
@@ -198,7 +245,6 @@ The method makes one linear pass over base-1,000,000,000 limbs. Its `ulong`
 intermediate is at most 2147483647999999999, even for an `int` minimum divisor.
 A zero input requires no quotient allocation. A nonzero input can reserve storage
 even when its quotient is zero; normalization need not release that capacity.
-There is no arbitrary BigInteger-divisor API yet.
 
 For example, repeated division can implement base conversion using existing
 String and collection operations; this is an ordinary helper, not a built-in

@@ -289,6 +289,155 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    // Scale magnitude into fresh storage. Dividend needs a leading carry slot.
+    private static Vector<uint> ScaleForDivision(immutable(BigInteger)* source, uint scale, bool leadingSlot)
+    {
+        Vector<uint> result = new();
+        nuint count = source.limbs.Count;
+        if (count == (nuint)0 - (nuint)1) throw new Exception("BigInteger size overflow");
+        result.Reserve(count + 1);
+        ulong carry = 0ul;
+        for (nuint i = 0; i < count; i++)
+        {
+            ulong product = (ulong)source.limbs[i] * (ulong)scale + carry;
+            result.Add((uint)(product % Radix));
+            carry = product / Radix;
+        }
+        if (leadingSlot || carry != 0ul) result.Add((uint)carry);
+        return move result;
+    }
+
+    // Requires dividend magnitude > divisor magnitude and at least two divisor limbs.
+    private static BigInteger DivideMagnitude(immutable(BigInteger)* dividend,
+        immutable(BigInteger)* divisor, ref BigInteger remainder)
+    {
+        nuint n = divisor.limbs.Count;
+        nuint count = dividend.limbs.Count - n + 1;
+        uint scale = (uint)(Radix / ((ulong)divisor.limbs[n - 1] + 1ul));
+        Vector<uint> normalized = BigInteger::ScaleForDivision(divisor, scale, false);
+        BigInteger work = new();
+        work.limbs = BigInteger::ScaleForDivision(dividend, scale, true);
+        work.sign = 1;
+        BigInteger quotient = new();
+        quotient.sign = 1;
+        quotient.limbs.Reserve(count);
+        for (nuint i = 0; i < count; i++) quotient.limbs.Add(0u);
+        ulong top = (ulong)normalized[n - 1];
+        nuint position = count;
+        while (position != 0)
+        {
+            position--;
+            // Two radix digits and all products are below B^2 = 10^18.
+            ulong numerator = (ulong)work.limbs[position + n] * Radix
+                + (ulong)work.limbs[position + n - 1];
+            ulong trial = numerator / top;
+            ulong residual = numerator % top;
+            if (trial >= Radix)
+            {
+                trial = Radix - 1ul;
+                residual = numerator - trial * top;
+            }
+            // A normalized divisor needs at most two estimate corrections.
+            while (residual < Radix && trial * (ulong)normalized[n - 2]
+                > residual * Radix + (ulong)work.limbs[position + n - 2])
+            {
+                trial--;
+                residual += top;
+            }
+
+            ulong carry = 0ul;
+            for (nuint i = 0; i < n; i++)
+            {
+                // trial <= B-1 and carry <= B-1, so product <= B^2-B.
+                ulong product = trial * (ulong)normalized[i] + carry;
+                ulong digit = product % Radix;
+                carry = product / Radix;
+                ulong current = (ulong)work.limbs[position + i];
+                if (current < digit)
+                {
+                    work.limbs[position + i] = (uint)(current + Radix - digit);
+                    carry++;
+                }
+                else work.limbs[position + i] = (uint)(current - digit);
+            }
+            ulong leading = (ulong)work.limbs[position + n];
+            bool borrowed = leading < carry;
+            if (borrowed) work.limbs[position + n] = (uint)(leading + Radix - carry);
+            else work.limbs[position + n] = (uint)(leading - carry);
+            if (borrowed)
+            {
+                // Estimate remained one too large: restore divisor once.
+                trial--;
+                carry = 0ul;
+                for (nuint i = 0; i < n; i++)
+                {
+                    ulong sum = (ulong)work.limbs[position + i] + (ulong)normalized[i] + carry;
+                    work.limbs[position + i] = (uint)(sum % Radix);
+                    carry = sum / Radix;
+                }
+                work.limbs[position + n] = (uint)(((ulong)work.limbs[position + n] + carry) % Radix);
+            }
+            quotient.limbs[position] = (uint)trial;
+        }
+        // Reuse dividend storage for the remainder, dividing out normalization.
+        work.limbs.Truncate(n);
+        ulong rest = 0ul;
+        nuint index = n;
+        while (index != 0)
+        {
+            index--;
+            ulong current = rest * Radix + (ulong)work.limbs[index];
+            work.limbs[index] = (uint)(current / (ulong)scale);
+            rest = current % (ulong)scale;
+        }
+        work.Normalize();
+        quotient.Normalize();
+        remainder = move work;
+        return move quotient;
+    }
+
+    // Both owners are complete before output is replaced, even if it is an operand.
+    public immutable BigInteger DivRem(immutable(BigInteger)* divisor, ref BigInteger remainder)
+    {
+        if (divisor.sign == 0) throw new Exception("BigInteger divisor is zero");
+        int dividendSign = sign;
+        int quotientSign = sign * divisor.sign;
+        BigInteger quotient = new();
+        BigInteger rest = new();
+        if (sign != 0)
+        {
+            int comparison = BigInteger::CompareMagnitude(this, divisor);
+            if (comparison < 0) rest = *this;
+            else if (comparison == 0) quotient = new BigInteger(1l);
+            else if (divisor.limbs.Count == 1)
+            {
+                int smallRemainder = 0;
+                int smallDivisor = (int)divisor.limbs[0];
+                if (divisor.sign < 0) smallDivisor = -smallDivisor;
+                quotient = this.DivRem(smallDivisor, ref smallRemainder);
+                rest = new BigInteger((long)smallRemainder);
+            }
+            else quotient = BigInteger::DivideMagnitude(this, divisor, ref rest);
+        }
+        if (quotient.limbs.Count != 0) quotient.sign = quotientSign;
+        if (rest.limbs.Count != 0) rest.sign = dividendSign;
+        remainder = move rest;
+        return move quotient;
+    }
+
+    public immutable BigInteger Divide(immutable(BigInteger)* divisor)
+    {
+        BigInteger remainder = new();
+        return this.DivRem(divisor, ref remainder);
+    }
+
+    public immutable BigInteger Remainder(immutable(BigInteger)* divisor)
+    {
+        BigInteger remainder = new();
+        BigInteger quotient = this.DivRem(divisor, ref remainder);
+        return move remainder;
+    }
+
     // Validate the complete syntax before allocating or replacing an old owner.
     private static bool ValidateDecimal(readonly(char)* text, nuint count, ref nuint start, ref int resultSign) nothrow
     {

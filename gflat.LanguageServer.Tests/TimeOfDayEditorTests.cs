@@ -62,6 +62,34 @@ public sealed class TimeOfDayEditorTests
         Assert.NotEqual(model.Definition(source.Path,counted),model.Definition(source.Path,terminated));
     }
 
+    [Fact]
+    public void ImmutableArithmeticSelectsBothAddOverloadsAndNavigatesToTheirDeclarations()
+    {
+        const string text="using std;void Probe(){TimeOfDay value=new(23,30);immutable(TimeOfDay)* view=&value;TimeSpan duration=TimeSpan::FromHours(2);int days=99;TimeOfDay first=view.Add(duration);TimeOfDay second=view.Add(duration,ref days);bool inside=view.IsBetween(first,second);}";
+        var (model,source,library,snapshot)=Analyze(text);
+        int first=text.IndexOf("Add(duration)",StringComparison.Ordinal),second=text.IndexOf("Add(duration,",StringComparison.Ordinal);
+        foreach(var row in new[]{(Use:first,Arity:1),(Use:second,Arity:2)})
+        {
+            string hover=Hover(model,source,row.Use);
+            Assert.Contains("TimeOfDay",hover);Assert.Contains("Add",hover);Assert.Contains("immutable",hover);Assert.Contains("nothrow",hover);Assert.DoesNotContain('$',hover);
+            var method=Assert.Single(snapshot.Nodes.Where(node=>node.Span.SourceId==library.Id).Select(node=>node.Node).OfType<MethodDeclaration>(),declaration=>declaration.Name=="Add"&&declaration.Parameters.Count==row.Arity);
+            int declaration=library.Text.IndexOf("Add(",method.Span.Start,StringComparison.Ordinal);
+            Definition(model,source,row.Use,library,declaration);
+            int argument=row.Arity==1?text.IndexOf("duration",row.Use,StringComparison.Ordinal):text.IndexOf("days",row.Use,StringComparison.Ordinal);
+            var help=Json(model.SignatureHelp(source.Path,argument));var signatures=help.GetProperty("signatures");
+            Assert.Equal(2,signatures.GetArrayLength());Assert.Equal(row.Arity-1,help.GetProperty("activeParameter").GetInt32());
+            var selected=signatures[help.GetProperty("activeSignature").GetInt32()];Assert.Equal(row.Arity,selected.GetProperty("parameters").GetArrayLength());
+            string label=selected.GetProperty("label").GetString()!;Assert.Contains("TimeSpan value",label);Assert.Contains("nothrow",label);Assert.DoesNotContain('$',label);
+            if(row.Arity==2)Assert.Contains("ref int wrappedDays",label);
+        }
+        Assert.NotEqual(model.Definition(source.Path,first),model.Definition(source.Path,second));
+        int between=text.IndexOf("IsBetween",StringComparison.Ordinal);
+        string betweenHover=Hover(model,source,between);Assert.Contains("bool",betweenHover);Assert.Contains("immutable",betweenHover);Assert.Contains("nothrow",betweenHover);
+        Definition(model,source,between,library,library.Text.IndexOf("IsBetween(",StringComparison.Ordinal));
+        Assert.Single(Json(model.Completion(source.Path,between)).GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="IsBetween");
+    }
+
+
     private static (EditorModel Model,SourceFile Source,SourceFile Library,AnalysisSnapshot Snapshot) Analyze(string text)
     {
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)

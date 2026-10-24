@@ -49,6 +49,9 @@ public class WholeStandardLibraryEditorTests
                 LinkedList<int> list=new();
                 nuint nativeCount=2; nuint[3] nativeCounts=[0,1,nativeCount];
                 byte[3] byteValues=[0,127,255];
+                byte[1] delimiterBytes=[255];
+                nuint firstDelimiter=ByteSearch::IndexOfAny(byteValues,3,delimiterBytes,1);
+                nuint lastDelimiter=ByteSearch::LastIndexOfAny(byteValues,3,delimiterBytes,1);
                 char[8] base32Encoded; char[3] base32Decoded; nuint base32Written=0;
                 Base32::TryGetEncodedLength(3,ref base32Written);
                 Base32::TryEncode("foo",3,base32Encoded,8,ref base32Written);
@@ -411,6 +414,13 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("PseudoRandom.gf",JsonSerializer.Serialize(model.Definition(source.Path,randomCall),Protocol.JsonOptions));
         var randomHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',randomCall)+1),Protocol.JsonOptions);
         Assert.Equal(3,randomHelp.GetProperty("signatures").GetArrayLength());
+        foreach(string method in new[]{"IndexOfAny","LastIndexOfAny"})
+        {
+            int call=text.IndexOf("ByteSearch::"+method,StringComparison.Ordinal)+"ByteSearch::".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("nuint",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("ByteSearch.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         int popCall=text.IndexOf("popValues.TryPop",StringComparison.Ordinal)+"popValues.".Length;
         var popHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,popCall),Protocol.JsonOptions);
         Assert.Contains("bool",popHover.GetProperty("contents").GetProperty("value").GetString());

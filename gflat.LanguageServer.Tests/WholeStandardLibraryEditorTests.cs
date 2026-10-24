@@ -243,6 +243,9 @@ public class WholeStandardLibraryEditorTests
                 Date calendar=new(2024,2,29); Date tomorrow=calendar.AddDays(1);
                 Date anniversary=calendar.AddYears(1); Date nextMonth=calendar.AddMonths(1);
                 DayOfWeek weekday=calendar.DayOfWeek; int ordinalDay=calendar.DayOfYear;
+                int isoYear=calendar.IsoWeekYear; int isoWeek=calendar.IsoWeekOfYear;
+                int isoWeeks=Date::GetIsoWeeksInYear(isoYear);
+                Date isoRoundtrip=Date::FromIsoWeek(isoYear,isoWeek,weekday);
                 int calendarDay=tomorrow.DayNumber; int monthDays=Date::DaysInMonth(2024,2);
                 String dated=s$"Next day: {tomorrow}";
                 TimeSpan elapsed=TimeSpan::FromMilliseconds(1250l);
@@ -354,6 +357,13 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(string member in new[]{"IsoWeekYear","IsoWeekOfYear","GetIsoWeeksInYear","FromIsoWeek"})
+        {
+            int offset=sourceTokens.Last(token=>token.Text==member).Start;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("Date.gf",JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
+        }
         foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),
             ("queryHasKey","Contains","EnumerableContains.gf"),("queryHasCustomKey","Contains","EnumerableContains.gf")})
         {

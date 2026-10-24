@@ -54,13 +54,16 @@ public sealed class GenericOverloadEditorTests
         int argumentOffset=program.IndexOf('(',use)+1;
         var help=Json(model.SignatureHelp(caller.Path,argumentOffset));
         var signatures=help.GetProperty("signatures");
-        Assert.Equal(2,signatures.GetArrayLength());
+        // The non-generic extension requires ref int and cannot borrow long storage.
+        bool onlyGenericReceiver=context=="extension"&&generic;
+        Assert.Equal(onlyGenericReceiver?1:2,signatures.GetArrayLength());
         Assert.Equal(0,help.GetProperty("activeParameter").GetInt32());
         string selected=signatures[help.GetProperty("activeSignature").GetInt32()].GetProperty("label").GetString()!;
         Assert.Contains(generic?$"{name}<long>":name+"(",selected);
         Assert.Contains(generic?"long ":"Word ",selected);
         Assert.Contains(signatures.EnumerateArray(),item=>item.GetProperty("label").GetString()!.Contains(name+"<",StringComparison.Ordinal));
-        Assert.Contains(signatures.EnumerateArray(),item=>item.GetProperty("label").GetString()!.Contains(name+"(",StringComparison.Ordinal));
+        if(!onlyGenericReceiver)
+            Assert.Contains(signatures.EnumerateArray(),item=>item.GetProperty("label").GetString()!.Contains(name+"(",StringComparison.Ordinal));
 
         var rich=Json(model.Hover(caller.Path,use,new VisualStudioHover(Json(new{}))));
         var runs=rich.GetProperty("_vs_rawContent").GetProperty("Elements")[0].GetProperty("Elements")[0].GetProperty("Runs");

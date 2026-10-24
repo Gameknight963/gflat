@@ -95,8 +95,21 @@ public sealed partial class EditorModel
             if (extension != null) selected = extension;
             else if (!bound.TryGetValue(target, out selected!)) bound[target] = selected = BindCallable(source, target, interfaceOwner);
             boundCallableReferences[token] = selected;
-            boundCallableFamilies[token] = BoundCallableFamily(source, selected, target, path, token.Start);
+            boundCallableFamilies[token] = selected.BoundExtension && call?.Callee is MemberAccessExpression member
+                ? BoundExtensionCallableFamily(source, selected, member, path, token.Start)
+                : BoundCallableFamily(source, selected, target, path, token.Start);
         }
+    }
+
+    private Symbol[] BoundExtensionCallableFamily(Symbol source, Symbol selected, MemberAccessExpression member, string path, int offset)
+    {
+        var family = ExtensionMembers(path, offset, member.Object,
+                ExpressionType(member.Object, path, offset), source.Name)
+            .Where(candidate => candidate.Name == source.Name && candidate.Namespace == source.Namespace &&
+                candidate.Owner == source.Owner && candidate.Scope == source.Scope)
+            .DistinctBy(candidate => candidate.Syntax)
+            .Select(candidate => candidate.Syntax == selected.Syntax ? selected : candidate).ToArray();
+        return family.Any(candidate => candidate.Syntax == selected.Syntax) ? family : [selected];
     }
 
     private Symbol[] BoundCallableFamily(Symbol source, Symbol selected, MethodDeclaration target, string path, int offset)

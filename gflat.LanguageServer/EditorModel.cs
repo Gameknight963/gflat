@@ -326,7 +326,7 @@ public sealed partial class EditorModel
         if (left.Text == "this") owner = ScopeAt(path, offset).Owner;
         var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset) && ReceiverAllowsMember(s, type))
             .Select(member => BindInstanceMember(member, type)).ToArray();
-        return members.Concat(ExtensionMembers(path, offset, expression?.Node, type)
+        return members.Concat(ExtensionMembers(path, offset, expression?.Node, type, name)
             .Where(extension => name == null || extension.Name == name)
             .Where(extension => !members.Any(member => member.Name == extension.Name && IsCallableMember(member))));
     }

@@ -32,7 +32,7 @@ public sealed partial class EditorModel
         };
     }
 
-    private IEnumerable<Symbol> ExtensionMembers(string path, int offset, AstNode? receiver, TypeExpression? receiverType)
+    private IEnumerable<Symbol> ExtensionMembers(string path, int offset, AstNode? receiver, TypeExpression? receiverType, string? memberName = null)
     {
         if (snapshot.Checker is not { } checker || receiverType == null) return [];
         string ns = ScopeAt(path, offset).Namespace;
@@ -40,7 +40,7 @@ public sealed partial class EditorModel
         bool storage = receiver != null && ExtensionReceiverStorage(receiver, path, offset);
         bool readOnly = receiverType.IsReadOnlyValue || receiver != null && ExtensionReceiverReadOnly(receiver, path, offset);
         var storageType = receiver == null ? null : checker.GetExtensionReceiverStorageType(receiver);
-        return checker.GetVisibleExtensions(ns, imports, receiverType, storage, readOnly, receiverStorageType: storageType)
+        return checker.GetVisibleExtensions(ns, imports, receiverType, storage, readOnly, memberName: memberName, receiverStorageType: storageType)
             .GroupBy(candidate => candidate.Definition.Name)
             .SelectMany(group => group.Any(candidate => candidate.Adaptation == TypeChecker.ExtensionReceiverAdaptation.Exact)
                 ? group.Where(candidate => candidate.Adaptation == TypeChecker.ExtensionReceiverAdaptation.Exact) : group)

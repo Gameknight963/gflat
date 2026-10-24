@@ -5,6 +5,7 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="big-calc/big-calc.gfproj" />
   <Project Path="checksum/checksum.gfproj" />
   <Project Path="csv-sum/csv-sum.gfproj" />
   <Project Path="csv-to-json/csv-to-json.gfproj" />

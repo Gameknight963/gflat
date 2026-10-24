@@ -115,6 +115,7 @@ library projects and optimization settings, or try the [line-search utility](exa
 The [word-count tool](examples/word-count/README.md) and
 [weighted pathfinding example](examples/pathfinding/README.md) exercise the newer collections.
 The [tail tool](examples/tail/README.md) combines file line iteration with a bounded owning queue.
+The [big-calc tool](examples/big-calc/README.md) performs exact arbitrary-precision arithmetic and GCD calculations.
 
 If setup fails, run `gflat doctor --native` to check SDK discovery, MSBuild,
 Clang, and native exception runtime linking.

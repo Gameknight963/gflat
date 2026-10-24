@@ -14,8 +14,14 @@ internal static class ExampleOutputFailure
         params string[] leadingArguments)
         => AssertReportedCore(exampleName, optimization, diagnostic, "needle apple\npear needle\n", leadingArguments, []);
 
+    internal static void AssertReportedWithArguments(string exampleName, int optimization,
+        string bufferedFailureDiagnostic, string readOnlyFailureDiagnostic, params string[] arguments)
+        => AssertReportedCore(exampleName, optimization, bufferedFailureDiagnostic, "", [], [],
+            arguments, readOnlyFailureDiagnostic);
+
     private static void AssertReportedCore(string exampleName, int optimization, string diagnostic,
-        string inputText, string[] leadingArguments, string[] extraArguments)
+        string inputText, string[] leadingArguments, string[] extraArguments,
+        string[]? exactArguments = null, string? readOnlyDiagnostic = null)
     {
         if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) return;
         string directory = Path.Combine(Path.GetTempPath(), "gflat-output-failure-" + Guid.NewGuid().ToString("N"));
@@ -45,6 +51,9 @@ internal static class ExampleOutputFailure
                 if(!BreakOutput(stream))return 91;
                 if(setvbuf(stream,buffer,0,4096)!=0)return 90;
                 """;
+            int argumentCount = exactArguments == null
+                ? 2 + leadingArguments.Length + extraArguments.Length : 1 + exactArguments.Length;
+            int readOnlyPathIndex = exactArguments == null ? 1 + leadingArguments.Length : argumentCount;
             string wrapper = """
                 extern void* __gflat_stdio_stdout();
                 extern int setvbuf(void* stream,char* buffer,int mode,nuint count);
@@ -63,8 +72,8 @@ internal static class ExampleOutputFailure
                     fclose(stream);return status;
                 }
                 """.Replace("SETUP", setup)
-                .Replace("ARGCOUNT", (2 + leadingArguments.Length + extraArguments.Length).ToString())
-                .Replace("INPUTINDEX", (1 + leadingArguments.Length).ToString());
+                .Replace("ARGCOUNT", argumentCount.ToString())
+                .Replace("INPUTINDEX", readOnlyPathIndex.ToString());
             var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
                 .Append(new SourceFile("example-with-output-failure.gf", example + failure + wrapper));
@@ -74,13 +83,20 @@ internal static class ExampleOutputFailure
             Assert.True(compiled.ExitCode == 0, compiled.StandardError);
             string input = Path.Combine(directory, "input.txt");
             File.WriteAllText(input, inputText);
-            string[] arguments = [.. leadingArguments, input, .. extraArguments];
-            foreach (string[] mode in new[] { arguments, [.. arguments, "read-only-output"] })
+            string[] arguments = exactArguments ?? [.. leadingArguments, input, .. extraArguments];
+            // Exact-argument tools do not consume an input-file operand. Append
+            // a private stdout path solely for wrapper setup, and pass the
+            // original argument count to the unchanged example body.
+            string[] readOnlyArguments = exactArguments == null
+                ? [.. arguments, "read-only-output"] : [.. arguments, input];
+            foreach (var (mode, expectedDiagnostic) in new[] {
+                (arguments, diagnostic), (readOnlyArguments, readOnlyDiagnostic ?? diagnostic)
+            })
             {
                 var run = NativeToolchain.Run(executable, mode, 30000);
                 Assert.Equal(1, run.ExitCode);
                 Assert.Equal("", run.StandardOutput);
-                Assert.Equal(diagnostic, run.StandardError.TrimEnd('\r', '\n'));
+                Assert.Equal(expectedDiagnostic, run.StandardError.TrimEnd('\r', '\n'));
                 Assert.DoesNotContain("Unable to read", run.StandardError);
             }
         }

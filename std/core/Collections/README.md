@@ -75,6 +75,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | --- | --- |
 | `Where(predicate)` | Yield elements passing the predicate. |
 | `Select(selector)` | Project elements when their `Current` value is read. |
+| `Reverse()` | Yield in reverse order, buffering the complete input on each iterator's first move. |
 | `Distinct()` | Yield distinct values in encounter order; each enumeration owns a hash set. |
 | `Zip(other, selector)` | Project pairs in order until either input ends. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements; counts are `nuint`. |
@@ -108,6 +109,7 @@ For paired queries and their iteration/ownership rules, see [Zip](../../../docs/
 For positional access and projection behavior, see [ElementAt](../../../docs/QUERY_ELEMENT_AT.md).
 For owning distinct results, see [ToHashSet](../../../docs/QUERY_HASH_SET.md).
 For lazy distinct values in encounter order, see [Distinct](../../../docs/QUERY_DISTINCT.md).
+For deferred full-input buffering in reverse order, see [Reverse](../../../docs/QUERY_REVERSE.md).
 For overlapping borrowed views of contiguous data, see [span windows](../../../docs/SPAN_WINDOWS.md).
 For nonoverlapping views that retain a shorter final segment, see
 [span chunks](../../../docs/SPAN_CHUNKS.md).
@@ -140,7 +142,9 @@ semantics; see [query searches](../../../docs/QUERY_SEARCH.md).
 
 The built-in source views allocate no storage. `Where`, `Select`, `Zip`, and the
 skip/take operators allocate no internal storage. `Distinct` allocates a hash set
-as values are encountered; its iterator owns that storage. A callback, a custom
+as values are encountered; its iterator owns that storage. `Reverse` buffers all
+input values in a vector on its first move and retains that buffer until its
+iterator is destroyed. A callback, a custom
 source or element's copy constructor, or materializing a collection can allocate.
 Callback signatures use ordinary
 function pointers; capturing closures are not implemented. For owning value
@@ -153,6 +157,12 @@ Elements follow ordinary value semantics. Reading a `String` element copies it;
 `ToVector()` creates independent owning strings. Reading a pointer copies its
 address. Pointer elements do not confer ownership: the query and the resulting
 vector do **not** delete a pointee merely because they contain its address.
+
+`ToVector()` requires an element type accepted by `Vector<T>`. An element type
+with outer `readonly` or `immutable` qualification currently fails its writable
+indexer check. Choose an ordinary stored value explicitly, for example
+`.Select((readonly(int) value) => (int)value).ToVector()` for readonly integers.
+The same restriction applies to buffering with query `Reverse()`.
 Managed pointer elements keep their normal collector behavior.
 
 `Aggregate` owns its seed parameter. Passing a named seed normally copies it at

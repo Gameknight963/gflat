@@ -14,6 +14,7 @@
   <Project Path="interpolation/interpolation.gfproj" />
   <Project Path="ip-count/ip-count.gfproj" />
   <Project Path="json-check/json-check.gfproj" />
+  <Project Path="json-get/json-get.gfproj" />
   <Project Path="json-minify/json-minify.gfproj" />
   <Project Path="managed/managed.gfproj" />
   <Project Path="number-stats/number-stats.gfproj" />

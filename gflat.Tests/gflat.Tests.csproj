@@ -37,6 +37,7 @@
     <None Include="..\examples\json-check\main.gf" Link="Examples\json-check.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\ip-count\main.gf" Link="Examples\ip-count.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\json-minify\main.gf" Link="Examples\json-minify.gf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\examples\json-get\main.gf" Link="Examples\json-get.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\number-stats\main.gf" Link="Examples\number-stats.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\sort-lines\main.gf" Link="Examples\sort-lines.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\settings-json\main.gf" Link="Examples\settings-json.gf" CopyToOutputDirectory="PreserveNewest" />

@@ -15,6 +15,9 @@ int main()
     if (!text.Equals("192.0.2.0/24")) return 2;
     IpNetwork normalized = IpNetwork::FromAddress(host, 24);
     if (!network.Equals(&normalized)) return 3;
+    IpNetwork child = IpNetwork::Parse("192.0.2.128/25");
+    IpNetwork neighbor = IpNetwork::Parse("192.0.3.0/24");
+    if (!network.Contains(&child) || !network.Overlaps(&child) || network.Overlaps(&neighbor)) return 4;
     return 0;
 }
 ```
@@ -38,6 +41,14 @@ return false even for `/0`. IPv4-mapped IPv6 remains IPv6, with no automatic
 conversion. A `/32` IPv4 or `/128` IPv6 prefix contains exactly its own address.
 Normalization below the mapped marker's prefix can clear that marker while
 still retaining IPv6 family. IPv4 and IPv6 `/0` cover their own families only.
+
+`Contains(&otherNetwork)` tests whether the complete other prefix is inside this
+one, including equality. Sharing a base address alone is insufficient when the
+other prefix is broader. `Overlaps(&otherNetwork)` tests whether the two prefixes
+share any address. Overlap is symmetric; same-family CIDR prefixes either nest
+or are disjoint. Different families return false for both operations, including
+IPv4 versus mapped IPv6 and either family's `/0`. Both methods accept immutable
+receivers and inputs, are `nothrow`, and allocate nothing.
 
 ## Parsing
 

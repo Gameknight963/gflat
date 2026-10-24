@@ -72,6 +72,17 @@ public struct IpNetwork : IEquatable<IpNetwork>, IHashable, IFormattable
         return true;
     }
 
+    public immutable bool Contains(immutable(IpNetwork)* other) nothrow
+    {
+        return prefixLength <= other.prefixLength && this.Contains(&other.networkAddress);
+    }
+
+    public immutable bool Overlaps(immutable(IpNetwork)* other) nothrow
+    {
+        if (prefixLength <= other.prefixLength) return this.Contains(&other.networkAddress);
+        return other.Contains(&networkAddress);
+    }
+
     private static bool ParseFailure(IpNetwork* result) nothrow
     {
         *result = new IpNetwork();

@@ -150,6 +150,10 @@ Use `IntRange.AsEnumerable()` to access those operators. The range types impleme
 Callbacks can call other functions but cannot capture local variables. The
 sequence and iterator values own no heap storage and need no manual disposal.
 
+For repeated copies of one value, use [`Repeated<T>`](../../docs/REPEATED_VALUES.md).
+Its cursors own captured copies rather than borrowing the sequence's address;
+`AsEnumerable()` exposes the generic query operators.
+
 ## Vectors
 
 `Vector<T>` owns contiguous elements. It supports primitives and owning values:

@@ -705,6 +705,11 @@ int SmokeHashesAndViews() {
         nuint[3] nativeLiteral = [0, 1, literalValue];
         byte[3] byteLiteral = [0, 127, 255];
         if (nativeLiteral[2] != 7 || sizeof(nativeLiteral) != 3 * sizeof(nuint) || byteLiteral[2] != 255) return 189;
+        String compactOwner = s"a\0b";
+        compactOwner.Reserve(64); compactOwner.ShrinkToFit();
+        if (compactOwner.Capacity != 3 || compactOwner.Length != 3 || compactOwner.Data[2] != 'b' || compactOwner.Data[3] != '\0') return 190;
+        Vector<int> poppedValues = new(); poppedValues.Add(42); int poppedResult = -1;
+        if (!poppedValues.TryPop(ref poppedResult) || poppedResult != 42 || poppedValues.TryPop(ref poppedResult) || poppedResult != 42) return 191;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

@@ -123,6 +123,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [Number statistics](../examples/number-stats/README.md): bounded stdin lines, borrowed ASCII trimming, strict integer parsing, and an exact 128-bit running sum.
 - [Sort lines](../examples/sort-lines/README.md): move owning strings into a vector, sort by unsigned byte order, and preserve counted output.
 - [Settings to JSON](../examples/settings-json/README.md): parse borrowed key/value slices, validate UTF-8, and retain accepted strings in an owning map.
+- [Extract a CSV column](../examples/csv-column/README.md): validate first, then preserve counted field bytes in a binary one-column CSV file.
 - [CSV column sums](../examples/csv-sum/README.md): validate quoted fields and sum one integer column without allocating field strings.
 - [CSV to JSON](../examples/csv-to-json/README.md): validate CSV and UTF-8 first, then write row arrays with one reusable field buffer.
 - [JSON get](../examples/json-get/README.md): select a raw value with a plain pointer or a counted UTF-8 pointer file.

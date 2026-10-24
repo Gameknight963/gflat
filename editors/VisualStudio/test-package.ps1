@@ -786,6 +786,11 @@ int SmokeHashesAndViews() {
         IpNetwork separateRange = IpNetwork::Parse("192.0.3.0/24");
         if (!parentRange.Contains(&childRange) || childRange.Contains(&parentRange) || !childRange.Overlaps(&parentRange)) return 212;
         if (parentRange.Overlaps(&separateRange) || separateRange.Overlaps(&childRange)) return 213;
+        Repeated<int> repeatedValues = new(7, 4);
+        if (repeatedValues.Count != 4 || repeatedValues.IsEmpty || repeatedValues.AsEnumerable().Take(2).Count() != 2) return 214;
+        int repeatedSum = 0;
+        foreach (int entry in repeatedValues) repeatedSum += entry;
+        if (repeatedSum != 28) return 215;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

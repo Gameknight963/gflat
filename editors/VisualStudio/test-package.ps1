@@ -644,6 +644,11 @@ int SmokeHashesAndViews() {
         var reversedQuery = searchedQuery.Reverse();
         if (reversedQuery.ElementAt(0) != 4
             || !reversedQuery.SequenceEqual(searchedQuery.Select((int value) => 5 - value))) return 173;
+        Rune face = new(0x1f600u); String glyph = s$"{face}";
+        if (face.IsAscii || face.Utf8Length != 4 || face.Utf16Length != 2 || glyph.Length != 4
+            || (byte)glyph[0] != (byte)240 || (byte)glyph[3] != (byte)128) return 174;
+        Rune zero = new(); String nulGlyph = zero.ToString();
+        if (!zero.IsAscii || nulGlyph.Length != 1 || nulGlyph[0] != '\0') return 175;
     }
     {
         Date isoDate = Date::FromIsoWeek(2020, 53, DayOfWeek::Friday);

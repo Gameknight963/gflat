@@ -49,6 +49,11 @@ public class WholeStandardLibraryEditorTests
                 LinkedList<int> list=new();
                 nuint nativeCount=2; nuint[3] nativeCounts=[0,1,nativeCount];
                 byte[3] byteValues=[0,127,255];
+                char[8] base32Encoded; char[3] base32Decoded; nuint base32Written=0;
+                Base32::TryGetEncodedLength(3,ref base32Written);
+                Base32::TryEncode("foo",3,base32Encoded,8,ref base32Written);
+                Base32::TryGetDecodedLength(base32Encoded,8,ref base32Written);
+                Base32::TryDecode(base32Encoded,8,base32Decoded,3,ref base32Written);
                 Vector<int> popValues=new(); popValues.Add(42); int poppedValue=0; bool popped=popValues.TryPop(ref poppedValue);
                 alias NativeCount=nuint;
                 NativeCount[] aliasedCounts=[0,nativeCount];
@@ -393,6 +398,13 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(string method in new[]{"TryGetEncodedLength","TryEncode","TryGetDecodedLength","TryDecode"})
+        {
+            int call=text.IndexOf("Base32::"+method,StringComparison.Ordinal)+"Base32::".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("bool",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("Base32.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+        }
         int popCall=text.IndexOf("popValues.TryPop",StringComparison.Ordinal)+"popValues.".Length;
         var popHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,popCall),Protocol.JsonOptions);
         Assert.Contains("bool",popHover.GetProperty("contents").GetProperty("value").GetString());

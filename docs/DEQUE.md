@@ -12,7 +12,8 @@ int main()
     pending.AddLast(s"second");
     pending.AddFirst(s"first");
     pending.AddLast(s"third");
-    String next = pending.RemoveFirst();
+    String next = s"keep";
+    if (!pending.TryRemoveFirst(ref next)) return 1;
     return (int)next.Length - 5;
 }
 ```
@@ -22,6 +23,26 @@ arguments copy normally; `move value` transfers an existing owner. The deque
 relocates elements during growth instead of invoking copy constructors.
 `RemoveFirst()` and `RemoveLast()` transfer the removed value to the caller;
 ignoring that return destroys it normally. Both throw on an empty deque.
+
+`TryRemoveFirst(ref result)` and `TryRemoveLast(ref result)` instead return false
+for an empty deque and leave the initialized result unchanged. On success they
+transfer the selected endpoint into the result without copying and destroy its
+previous owned value normally. They retain the deque's capacity and require no
+new storage. Pointer-valued elements retain ordinary borrowed-pointer semantics.
+
+The output must not refer to the deque's backing storage. For a nonempty deque,
+both methods check its address against the whole allocation, including unused
+ring slots, and throw `Exception("Deque output must not refer to its storage")`
+before removing anything if it aliases that region. This rejects `ref deque.Front`,
+`ref deque.Back`, indexed elements, and iterator borrows. Empty deques return
+false without inspecting or changing output. Keep output storage separate from
+the deque object's own fields as well.
+
+Replacement follows ordinary owning assignment, as with `Queue.TryDequeue`
+and `Stack.TryPop`: the endpoint is removed and ring metadata updated before
+the previous output value is destroyed. Destructors follow the language's
+termination-boundary rule if an exception escapes; the Try methods do not catch
+such a failure or roll the deque back.
 
 `Front`, `Back`, and `this[index]` are checked ref properties: they borrow the
 stored element rather than copying it. Index zero is the front. Mutable receivers

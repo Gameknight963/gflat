@@ -104,6 +104,34 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
         return result;
     }
 
+    // Call only for a nonempty deque. Check the entire allocation, including
+    // unused ring slots, before transferring an owner or changing position.
+    private void CheckRemovalOutput(T* output)
+    {
+        nuint start = (nuint)data!;
+        nuint address = (nuint)output;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        if (address >= start && address - start < capacity * stride)
+            throw new Exception("Deque output must not refer to its storage");
+    }
+
+    public bool TryRemoveFirst(ref T result)
+    {
+        if (count == 0) return false;
+        this.CheckRemovalOutput(&result);
+        result = this.RemoveFirst();
+        return true;
+    }
+
+    public bool TryRemoveLast(ref T result)
+    {
+        if (count == 0) return false;
+        this.CheckRemovalOutput(&result);
+        result = this.RemoveLast();
+        return true;
+    }
+
     public ref T this[nuint index]
     {
         immutable get

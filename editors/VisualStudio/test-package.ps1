@@ -917,6 +917,18 @@ int SmokeHashesAndViews() {
         Span<readonly(char)> splitAnyBinaryView = new(splitAnyBinary, 3);
         if (splitAnyBinaryView.SplitAny(new Span<readonly(char)>(splitAnyZero, 1)).AsEnumerable().Count() != 2
             || splitAnyBinaryView.SplitAny("").AsEnumerable().Count() != 1) return 249;
+        DateTime calendar = DateTime::Parse("2024-02-29T23:30:00");
+        DateTime calendarNext = calendar.Add(TimeSpan::FromHours(2));
+        if (calendarNext.Date.Month != 3 || calendarNext.Date.Day != 1
+            || calendarNext.TimeOfDay.Hour != 1
+            || calendarNext.Difference(calendar).Ticks != TimeSpan::FromHours(2).Ticks) return 250;
+        DateTime calendarClamped = calendar.AddYears(1);
+        if (calendarClamped.Date.Day != 28 || calendarClamped.TimeOfDay.Ticks != calendar.TimeOfDay.Ticks) return 251;
+        char[28] calendarOutput; calendarOutput[19] = '?'; nuint calendarWritten = 0;
+        if (!calendarNext.TryFormat(calendarOutput, 19, ref calendarWritten)
+            || calendarWritten != 19 || calendarOutput[19] != '?') return 252;
+        calendarOutput[19] = '\0';
+        if (!CString::Equals(calendarOutput, "2024-03-01T01:30:00")) return 252;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

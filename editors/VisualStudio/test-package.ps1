@@ -649,6 +649,10 @@ int SmokeHashesAndViews() {
             || (byte)glyph[0] != (byte)240 || (byte)glyph[3] != (byte)128) return 174;
         Rune zero = new(); String nulGlyph = zero.ToString();
         if (!zero.IsAscii || nulGlyph.Length != 1 || nulGlyph[0] != '\0') return 175;
+        String streamedHex = s"prefix:"; ITextWriter* hexSink = &streamedHex;
+        char[2] rawHex = ['\0', (char)255];
+        hexSink.WriteHex(rawHex, 2); hexSink.WriteHex(rawHex, 2, false);
+        if (!streamedHex.Equals("prefix:00FF00ff")) return 176;
     }
     {
         Date isoDate = Date::FromIsoWeek(2020, 53, DayOfWeek::Friday);

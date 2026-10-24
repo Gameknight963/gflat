@@ -739,6 +739,11 @@ int SmokeHashesAndViews() {
         readonly(char)* repeatedAddress = repeatedText.Data;
         repeatedWriter.WriteRepeated('x', 0);
         if (repeatedText.Length != 67 || repeatedText.Data != repeatedAddress) return 198;
+        LinkedList<int> filteredNodes = new(); filteredNodes.AddLast(9);
+        LinkedList<int>::Node* survivorNode = filteredNodes.AddLast(7); filteredNodes.AddLast(9);
+        if (filteredNodes.RemoveAll(SmokeRemove) != 2 || filteredNodes.Count != 1 || filteredNodes.First != survivorNode || survivorNode.Value != 7) return 199;
+        filteredNodes.Clear();
+        if (filteredNodes.RemoveAll(SmokeRemove) != 0 || !filteredNodes.IsEmpty) return 200;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

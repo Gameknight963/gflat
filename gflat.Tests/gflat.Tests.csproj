@@ -46,6 +46,7 @@
     <None Include="..\examples\csv-column\main.gf" Link="Examples\csv-column.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\components\main.gf" Link="Examples\components.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/sort-bench/*.gf" Link="Examples/sort-bench/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../examples/stamp-lines/main.gf" Link="Examples/stamp-lines.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\csv-sum\main.gf" Link="Examples\csv-sum.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\csv-to-json\main.gf" Link="Examples\csv-to-json.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\checksum\main.gf" Link="Examples\checksum.gf" CopyToOutputDirectory="PreserveNewest" />

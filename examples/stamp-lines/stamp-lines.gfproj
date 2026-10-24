@@ -1,0 +1,16 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == '' and '$(GflatDefaultSdkRoot)' != ''">$(GflatDefaultSdkRoot)</GflatSdkRoot>
+    <GflatSdkRoot Condition="'$(GflatSdkRoot)' == ''">../..</GflatSdkRoot>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
+  <ItemGroup>
+    <Compile Include="main.gf" />
+    <Compile Include="Clock.Windows.gf" Condition="'$(OS)' == 'Windows_NT'" />
+    <Compile Include="Clock.Linux.gf" Condition="'$(OS)' != 'Windows_NT'" />
+    <ProjectReference Include="$(GflatSdkRoot)/libraries/platform/windows/Windows.gfproj" Condition="'$(OS)' == 'Windows_NT'" />
+    <ProjectReference Include="$(GflatSdkRoot)/libraries/platform/linux/Linux.gfproj" Condition="'$(OS)' != 'Windows_NT'" />
+  </ItemGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
+</Project>

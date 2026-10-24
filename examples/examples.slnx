@@ -24,6 +24,7 @@
   <Project Path="seq/seq.gfproj" />
   <Project Path="settings-json/settings-json.gfproj" />
   <Project Path="sort-lines/sort-lines.gfproj" />
+  <Project Path="tail/tail.gfproj" />
   <Project Path="tasks/tasks.gfproj" />
   <Project Path="transcode/transcode.gfproj" />
   <Project Path="unquote-lines/unquote-lines.gfproj" />

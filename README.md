@@ -114,6 +114,7 @@ Create a project with `gflat new MyApp`, then run
 library projects and optimization settings, or try the [line-search utility](examples/search/README.md).
 The [word-count tool](examples/word-count/README.md) and
 [weighted pathfinding example](examples/pathfinding/README.md) exercise the newer collections.
+The [tail tool](examples/tail/README.md) combines file line iteration with a bounded owning queue.
 
 If setup fails, run `gflat doctor --native` to check SDK discovery, MSBuild,
 Clang, and native exception runtime linking.

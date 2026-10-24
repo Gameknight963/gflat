@@ -40,6 +40,7 @@ implementation lives in `libc`.
 | Hash collections | `HashMap<K,V>`, `HashSet<T>`, query `ToHashSet` | [Borrowed lookup and ownership](../docs/HASH_COLLECTIONS.md), [query materialization](../docs/QUERY_HASH_SET.md) |
 | Ordered maps | `SortedMap<K,V>` | [Sorted contiguous entries and explicit comparison](../docs/SORTED_MAP.md) |
 | Ordered sets | `SortedSet<T>` | [Sorted unique owning values with explicit comparison](../docs/SORTED_SET.md) |
+| Connected components | `DisjointSet` | [Fixed-index groups and allocation-free unions and queries](../docs/DISJOINT_SET.md) |
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
 | Algorithms | `Sort`, `StableSort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |

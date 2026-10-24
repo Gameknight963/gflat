@@ -781,6 +781,11 @@ int SmokeHashesAndViews() {
         BigInteger lcmLeft = new(-84l); BigInteger lcmRight = new(126l);
         BigInteger commonMultiple = BigInteger::LeastCommonMultiple(&lcmLeft, &lcmRight);
         if (commonMultiple.ToLong() != 252l || lcmLeft.ToLong() != -84l || lcmRight.ToLong() != 126l) return 211;
+        IpNetwork parentRange = IpNetwork::Parse("192.0.2.0/24");
+        IpNetwork childRange = IpNetwork::Parse("192.0.2.128/25");
+        IpNetwork separateRange = IpNetwork::Parse("192.0.3.0/24");
+        if (!parentRange.Contains(&childRange) || childRange.Contains(&parentRange) || !childRange.Overlaps(&parentRange)) return 212;
+        if (parentRange.Overlaps(&separateRange) || separateRange.Overlaps(&childRange)) return 213;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

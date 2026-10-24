@@ -744,6 +744,9 @@ int SmokeHashesAndViews() {
         if (filteredNodes.RemoveAll(SmokeRemove) != 2 || filteredNodes.Count != 1 || filteredNodes.First != survivorNode || survivorNode.Value != 7) return 199;
         filteredNodes.Clear();
         if (filteredNodes.RemoveAll(SmokeRemove) != 0 || !filteredNodes.IsEmpty) return 200;
+        BinaryBufferReader peekInput = new(delimiterData, 4); byte peekValue = 0;
+        if (!peekInput.TryPeekByte(ref peekValue) || peekValue != 255 || peekInput.Position != 0) return 201;
+        if (!peekInput.TrySkip(4) || peekInput.TryPeekByte(ref peekValue) || peekValue != 0 || peekInput.Position != 4) return 202;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

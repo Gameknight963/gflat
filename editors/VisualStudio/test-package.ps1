@@ -39,6 +39,11 @@ try {
     foreach ($source in @('std/core/Collections/EnumerableExtremaBy.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
+    foreach ($platform in @('windows', 'linux')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/libraries/platform/$platform/SystemClock.gf"))) {
+            throw "Packaged SDK is missing the $platform UTC clock"
+        }
+    }
     $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $extracted 'BUILD-INFO.json') | ConvertFrom-Json
     if ($buildInfo.commit -notmatch '^[0-9a-f]{40}$') { throw 'VSIX source commit is missing' }
     # Exercise the grammar and configuration actually shipped in the archive.
@@ -1046,10 +1051,12 @@ int main() {
     Timer timer = Timer::StartNew(); timer.Stop();
     std::TimeSpan elapsed = timer.Elapsed;
     if (timer.IsRunning || timer.ElapsedTicks < 0l || elapsed.Ticks < 0l) return 1;
+    std::DateTime utc = Windows::SystemClock::GetUtcNow();
+    if (utc.Ticks < 504911232000000000l || utc.Ticks > 3155378975999999999l) return 2;
     return 0;
 }
 '@ | Set-Content -LiteralPath $clockProbe
-    & $compiler $clockProbe @allSources (Join-Path $extracted 'Sdk/libraries/platform/windows/PerformanceCounter.gf') --optimization 2 --run -o (Join-Path $extracted 'clock-provider.exe')
+    & $compiler $clockProbe @allSources (Join-Path $extracted 'Sdk/libraries/platform/windows/PerformanceCounter.gf') (Join-Path $extracted 'Sdk/libraries/platform/windows/SystemClock.gf') --optimization 2 --run -o (Join-Path $extracted 'clock-provider.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged optional Windows clock provider failed to link or run' }
     $clockConsumer = Join-Path $extracted 'clock consumer'
     New-Item -ItemType Directory -Force -Path $clockConsumer | Out-Null

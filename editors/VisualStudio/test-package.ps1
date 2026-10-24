@@ -111,6 +111,21 @@ int main() { int value = 21; IHash* view = &value; return Hash(ref value) + view
 '@ | Set-Content -LiteralPath $primitive
     & $compiler $primitive --optimization 2 --run -o (Join-Path $extracted 'primitive-interface.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged primitive interface smoke test failed' }
+    $imports = Join-Path $extracted 'private-native-imports.gf'
+    @'
+private extern void*? malloc(nuint bytes);
+private extern void free(void* storage);
+int main() {
+    void*? own = malloc(8); if (own == null) return 1; free(own!);
+    void*? normal = Memory::Allocate(8); if (normal == null) return 2;
+    ((byte*)normal!)[0] = (byte)42;
+    if (((byte*)normal!)[0] != (byte)42) return 3;
+    Memory::Free(normal!); return 0;
+}
+'@ | Set-Content -LiteralPath $imports
+    & $compiler $imports --optimization 2 --run -o (Join-Path $extracted 'private-native-imports.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged private/native allocator import coexistence failed' }
+
     $console = Join-Path $extracted 'console.gf'
     'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
     $std = Join-Path $extracted 'Sdk/std'

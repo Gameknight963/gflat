@@ -36,7 +36,7 @@ try {
     foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
-    foreach ($source in @('std/core/Collections/EnumerableExtremaBy.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+    foreach ($source in @('std/core/Version.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
     foreach ($platform in @('windows', 'linux')) {
@@ -961,6 +961,10 @@ int SmokeHashesAndViews() {
         Span<int> projectedView = new(projectedValues, 4);
         if (projectedView.AsEnumerable().MinBy(SmokeMagnitude) != 3
             || projectedView.AsEnumerable().MaxBy(SmokeMagnitude) != -7) return 259;
+        Version numericVersion = Version::Parse("001.02");
+        Version extendedVersion = new(1, 2, 0);
+        if (numericVersion.Major != 1 || numericVersion.Minor != 2 || numericVersion.Build != -1
+            || numericVersion.CompareTo(&extendedVersion) >= 0) return 260;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

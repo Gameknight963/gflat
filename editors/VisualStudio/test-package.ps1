@@ -638,6 +638,12 @@ int SmokeHashesAndViews() {
         try { new IntRange(0, 5).Where(SmokeRangeFailure).Take(1).Skip(1).Any(); }
         catch (ref Exception error) { rangeFailure = error.GetCode() == 77; }
         if (!rangeFailure) return 171;
+        int indexedValue = 0;
+        if (!searchedQuery.TryElementAt(2, ref indexedValue) || indexedValue != 3
+            || searchedQuery.TryElementAt(4, ref indexedValue) || indexedValue != 3) return 172;
+        var reversedQuery = searchedQuery.Reverse();
+        if (reversedQuery.ElementAt(0) != 4
+            || !reversedQuery.SequenceEqual(searchedQuery.Select((int value) => 5 - value))) return 173;
     }
     {
         Date isoDate = Date::FromIsoWeek(2020, 53, DayOfWeek::Friday);

@@ -1,7 +1,7 @@
 namespace std;
 
 // Owns a resizable sequence of packed bits. New bits start clear.
-struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
+struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHashable
 {
     private uint*? data;
     private nuint length;
@@ -9,6 +9,12 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
 
     public BitSet() { data = null; length = 0; words = 0; }
     public BitSet(nuint size) { data = null; length = 0; words = 0; this.Resize(size); }
+    public copy BitSet(immutable(BitSet)* source)
+    {
+        data = null; length = 0; words = 0;
+        this.Resize(source.length);
+        for (nuint i = 0; i < words; i++) data![i] = source.data![i];
+    }
     public nuint Length { immutable get nothrow => length; }
 
     public bool this[nuint index]
@@ -200,9 +206,24 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>
 
     public immutable BitSet Clone()
     {
-        BitSet result = new BitSet(length);
-        for (nuint i = 0; i < words; i++) result.data![i] = data![i];
-        return result;
+        BitSet result = *this;
+        return move result;
+    }
+
+    public immutable bool Equals(immutable(BitSet)* other) nothrow
+    {
+        if (length != other.length) return false;
+        for (nuint i = 0; i < words; i++)
+            if (data![i] != other.data![i]) return false;
+        return true;
+    }
+
+    public immutable nuint GetHashCode() nothrow
+    {
+        nuint hash = Hashing::Integer((ulong)length);
+        for (nuint i = 0; i < words; i++)
+            hash = Hashing::Combine(hash, Hashing::Integer((ulong)data![i]));
+        return hash;
     }
 
     public void UnionWith(immutable(BitSet)* other)

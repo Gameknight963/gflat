@@ -248,9 +248,38 @@ int main()
 
 `Resize` preserves the shared prefix, discards removed bits, and clears new bits.
 `SetAll(bool)` fills the logical range; `Clear()` clears it without changing
-length. `Clone()` explicitly makes an independent owned copy. `UnionWith`,
+length. Ordinary copying and `Clone()` make independent owned copies. Copying
+allocates packed storage for nonempty sets; an empty copy requires no allocation.
+Allocation failure leaves the source and an existing assignment target unchanged.
+Moving still transfers ownership without copying. `UnionWith`,
 `IntersectWith`, `ExceptWith`, and `SymmetricExceptWith` modify this set and
 require matching logical lengths; their argument is a borrowed immutable pointer.
+
+`BitSet` implements `IEquatable<BitSet>` and `IHashable`. Immutable `Equals(&other)`
+compares the fixed universe as well as its set bits: equal values must have the
+same `Length` and every logical bit equal. Different lengths return false instead
+of throwing. `GetHashCode()` includes the length and packed words, so equal sets
+have equal hashes. Both observers are `nothrow` and allocate nothing. Padding
+remains canonical zero through all owning mutation operations. Hashes are not
+persistent identifiers, and unequal values can have the same hash. These contracts
+allow independently copied bitsets to be ordinary hash keys. As with other mutable
+keys, do not change a stored key through an alias while a collection relies on it.
+
+```csharp
+using std;
+int main()
+{
+    BitSet flags = new(65);
+    flags[64] = true;
+    HashMap<BitSet, int> snapshots = new();
+    snapshots.Add(flags, 7); // The stored key is an independent copy.
+    flags.Clear();
+    BitSet key = new(65);
+    key[64] = true;
+    if (!snapshots.ContainsKey(&key) || snapshots[&key] != 7) return 1;
+    return 0;
+}
+```
 
 `Overlaps(&other)` tests whether two equal-length bitsets share any set bit.
 For matching lengths it copies no owner, allocates nothing, changes neither
@@ -293,7 +322,8 @@ accepts caller-owned words; null is valid only for zero length, otherwise provid
 at least `ceil(bitLength / 32)` readable words for every later enumeration.
 
 Explicit source selection now requires `Collections/Enumerable.gf` alongside
-`BitSet.gf` and `Collections/IEnumerable.gf`; query operators additionally use
+`BitSet.gf`, `Collections/IEnumerable.gf`, `IEquatable.gf`, `IHashable.gf`, and
+`Hashing.gf`; query operators additionally use
 their ordinary collection source files. Failed allocation during `Resize`
 preserves both the original bits and length. Padding bits outside the logical
 length are always kept clear.

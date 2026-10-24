@@ -850,6 +850,13 @@ int SmokeHashesAndViews() {
         TimeOfDay batchParsedClock = new();
         if (!TimeOfDay::TryParse("23:59:59.9999999", &batchParsedClock) || batchParsedClock.Ticks != 863999999999l) return 228;
         if (TimeOfDay::TryParse("24:00:00", &batchParsedClock) || batchParsedClock.Ticks != 0l) return 229;
+        Uuid binaryUuid = Uuid::Parse("00112233-4455-6677-8899-aabbccddeeff");
+        byte[16] uuidNetworkBytes; nuint uuidByteCount = 0;
+        if (!binaryUuid.TryWriteBytes(uuidNetworkBytes, 16, ref uuidByteCount) || uuidByteCount != 16
+            || uuidNetworkBytes[0] != 0 || uuidNetworkBytes[8] != 136 || uuidNetworkBytes[15] != 255) return 230;
+        Uuid recoveredUuid = Uuid::FromBytes(uuidNetworkBytes, 16);
+        if (!recoveredUuid.Equals(&binaryUuid)) return 231;
+        if (Uuid::TryFromBytes(uuidNetworkBytes, 15, &recoveredUuid) || !recoveredUuid.IsNil) return 232;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

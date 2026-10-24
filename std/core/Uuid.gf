@@ -12,6 +12,43 @@ public struct Uuid : IEquatable<Uuid>, IComparable<Uuid>, IHashable, IFormattabl
     public ulong Low { immutable get nothrow => low; }
     public bool IsNil { immutable get nothrow => high == 0ul && low == 0ul; }
 
+    // Canonical/network bytes: High first, then Low, most significant byte first.
+    public static bool TryFromBytes(readonly(byte)* data, nuint count, Uuid* result) nothrow
+    {
+        Uuid parsed = new();
+        if (count != 16) { *result = parsed; return false; }
+        for (nuint i = 0; i < 8; i++)
+        {
+            parsed.high = (parsed.high << 8) | (ulong)data[i];
+            parsed.low = (parsed.low << 8) | (ulong)data[i + 8];
+        }
+        *result = parsed;
+        return true;
+    }
+
+    public static Uuid FromBytes(readonly(byte)* data, nuint count)
+    {
+        Uuid result = new();
+        if (!TryFromBytes(data, count, &result)) throw new Exception("UUID requires 16 bytes");
+        return result;
+    }
+
+    // Output may overlap this value; written is separate from output and receiver.
+    public immutable bool TryWriteBytes(byte* output, nuint capacity, ref nuint written) nothrow
+    {
+        written = 0;
+        if (capacity < 16) return false;
+        byte[16] buffer;
+        for (int i = 0; i < 8; i++)
+        {
+            buffer[i] = (byte)(high >> ((7 - i) * 8));
+            buffer[i + 8] = (byte)(low >> ((7 - i) * 8));
+        }
+        for (nuint i = 0; i < 16; i++) output[i] = buffer[i];
+        written = 16;
+        return true;
+    }
+
     private static int Digit(char value) nothrow
     {
         if (value >= '0' && value <= '9') return value - '0';

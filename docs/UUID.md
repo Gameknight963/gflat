@@ -49,6 +49,27 @@ propagate normally and may leave partial destination output. No String is
 required by these value operations; interpolation can format directly into its
 own destination.
 
+## Canonical bytes
+
+`TryFromBytes(data, count, &result)` accepts exactly 16 bytes, placing the first
+eight in `High` and the remaining eight in `Low`, most significant byte first.
+For example, bytes `00 11 22 33 44 55 66 77 88 99 aa bb cc dd ee ff` represent
+`00112233-4455-6677-8899-aabbccddeeff`. This is an explicit serialized order,
+independent of native struct layout.
+
+A count other than 16 returns false and resets the result to Nil without reading
+input. `FromBytes(data, count)` returns the same value or throws `Exception`.
+Both read the complete input before committing the result, permitting suitably
+aligned result storage to overlap input.
+
+`TryWriteBytes(output, capacity, ref written)` writes those 16 canonical bytes
+without allocating. Capacity below 16 returns false, sets `written` to zero,
+and leaves output unchanged. Success writes exactly 16 bytes and leaves any
+remaining capacity untouched. All bytes are staged before output is changed,
+so output may overlap a receiver backed by at least 16 writable bytes. The
+written count must be separate from output and receiver storage. Both `Try`
+operations are `nothrow` and retain no pointers.
+
 ## Identity and ordering
 
 `Uuid` implements `IEquatable<Uuid>`, `IComparable<Uuid>`, and `IHashable`.
@@ -64,8 +85,8 @@ Try operations allocate nothing and are `nothrow` under their pointer-storage
 preconditions. Buffers remain caller-owned; no pointers are retained.
 
 For selective source use, include `Uuid.gf`, `Text.gf`, `IEquatable.gf`,
-`IComparable.gf`, `IHashable.gf`, and `Hashing.gf`. Throwing Parse methods require
-the ordinary Exception/runtime contracts. This API generates no identifiers and
+`IComparable.gf`, `IHashable.gf`, and `Hashing.gf`. Throwing Parse and FromBytes
+methods require the ordinary Exception/runtime contracts. This API generates no identifiers and
 uses no clock, operating-system generator, or random source.
 
 The representation and canonical hexadecimal form follow

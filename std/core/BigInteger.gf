@@ -194,6 +194,19 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    public static BigInteger GreatestCommonDivisor(immutable(BigInteger)* first, immutable(BigInteger)* second)
+    {
+        BigInteger a = first.Abs();
+        BigInteger b = second.Abs();
+        while (b.sign != 0)
+        {
+            BigInteger remainder = a.Remainder(&b);
+            a = move b;
+            b = move remainder;
+        }
+        return move a;
+    }
+
     public immutable BigInteger Add(immutable(BigInteger)* other)
     {
         if (sign == 0) return *other;

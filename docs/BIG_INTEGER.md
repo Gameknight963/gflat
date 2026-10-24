@@ -41,6 +41,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `ToLong()` / `ToULong()` | Checked 64-bit conversion; throws when the value does not fit. |
 | `Abs()` | Return an independent nonnegative integer with the same magnitude. |
 | `Negate()` | Return an independent integer with the opposite sign. |
+| `BigInteger::GreatestCommonDivisor(first, second)` | Borrow two integer pointers and return their independent nonnegative greatest common divisor. |
 | `Add(immutable(BigInteger)* other)` | Return the exact sum. |
 | `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
 | `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
@@ -135,6 +136,23 @@ For explicit source selection include `core/BigInteger.gf`, `Vector`/`Span` and
 their query-interface dependencies, `Formatting.gf`, `Hashing.gf`, the implemented
 interface sources, and `String`/`ByteSearch`. Projects using the complete standard
 library already include these sources.
+
+## Greatest common divisor
+
+Static `GreatestCommonDivisor(immutable(BigInteger)* first,
+immutable(BigInteger)* second)` returns an independent nonnegative integer.
+Signs do not affect the result. For one zero operand it returns the other
+operand's absolute value; for two zero operands it returns canonical zero
+without allocating limb storage. Both pointers may refer to the same integer.
+
+The implementation uses Euclid's algorithm with `Abs()` and `Remainder()`.
+It owns its intermediate values and moves them between iterations, leaving
+both borrowed operands unchanged. Allocation or size failures propagate and
+clean up intermediate owners. An existing assignment target is not replaced
+until the result is complete. The returned nonzero owner has independent limb
+storage even when the input values already equal their greatest common divisor.
+This method can allocate and is not `nothrow`. The fixed-width unsigned overloads
+on `Math::GreatestCommonDivisor` remain available for primitive integers.
 
 ## Division and remainder
 

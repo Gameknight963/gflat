@@ -51,8 +51,14 @@ public sealed partial class EditorModel
         var parts = new List<DisplayPart>();
         void Add(string text, string kind = "text", Location? target = null) { if (text.Length > 0) parts.Add(new(kind, text, Target: target)); }
         void Keyword(string word) { Add(word, "keyword"); Add(" "); }
-        void Type(TypeExpression type) => TypeText(ShortType(DisplayType(type), hoverPath, hoverOffset));
-        void TypeText(string text, Symbol? finalType = null)
+        void Type(TypeExpression type) => ShortTypeText(DisplayType(type));
+        void ShortTypeText(string original, Symbol? finalType = null)
+        {
+            Dictionary<int, Symbol>? shortened = navigable ? new() : null;
+            string text = ShortType(original, hoverPath, hoverOffset, shortened);
+            TypeText(text, finalType, shortened);
+        }
+        void TypeText(string text, Symbol? finalType = null, IReadOnlyDictionary<int, Symbol>? shortened = null)
         {
             var tokens = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
             int finalTypeName = -1;
@@ -81,7 +87,10 @@ public sealed partial class EditorModel
                     int first = i;
                     while (first >= 2 && tokens[first - 1].Kind == TokenKind.DoubleColon) first -= 2;
                     string name = string.Concat(tokens[first..(i + 1)].Select(t => t.Text));
-                    var declaration = TypeSymbol(name, symbol);
+                    // Only names actually shortened at this caller location
+                    // use its proven unique declaration. Untouched aliases and
+                    // generic parameters retain their declaring-source identity.
+                    var declaration = shortened?.GetValueOrDefault(token.Start) ?? TypeSymbol(name, symbol);
                     target = SymbolLocation(declaration);
                     if (declaration != null) kind = declaration.Classification;
                 }
@@ -104,7 +113,7 @@ public sealed partial class EditorModel
             // Keep the original symbol for source navigation and glyph identity.
             if (IsType(symbol.Syntax.Node) && symbol.BoundType is { } boundName)
             {
-                TypeText(ShortType(DisplayType(boundName), hoverPath, hoverOffset), symbol);
+                ShortTypeText(DisplayType(boundName), symbol);
                 return;
             }
             string name = symbol.Qualified;
@@ -320,7 +329,7 @@ public sealed partial class EditorModel
 
     // Shorten only if the visible type name uniquely denotes this declaration.
     // Use the request location: imports at the declaration can differ from the caller's.
-    private string ShortType(string text, string? path, int offset)
+    private string ShortType(string text, string? path, int offset, Dictionary<int, Symbol>? shortened = null)
     {
         if (path == null) return text;
         var visible = Visible(path, offset).Where(s => IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration).ToArray();
@@ -332,11 +341,15 @@ public sealed partial class EditorModel
             InterfaceDeclaration i => i.GenericParameters.Select(p => p.Name),
             _ => Enumerable.Empty<string>()
         }).ToHashSet();
+        int delta = 0;
         return System.Text.RegularExpressions.Regex.Replace(text, @"\b[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)+", match =>
         {
             string simple = match.Value.Split("::").Last();
             var matches = visible.Where(s => s.Name == simple).DistinctBy(s => s.Qualified).ToArray();
-            return !typeParameters.Contains(simple) && matches.Length == 1 && matches[0].Qualified == match.Value ? simple : match.Value;
+            if (typeParameters.Contains(simple) || matches.Length != 1 || matches[0].Qualified != match.Value) return match.Value;
+            shortened?.Add(match.Index + delta, matches[0]);
+            delta += simple.Length - match.Length;
+            return simple;
         });
     }
 

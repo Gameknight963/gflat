@@ -132,6 +132,27 @@ public sealed partial class EditorModel
     private static IEnumerable<Syntax> Parents(Syntax node) { for (var p = node.Parent; p != null; p = p.Parent) yield return p; }
     private void IndexScopeEnvironments()
     {
+        // Containers retain source parents; their member lists reflect qualified
+        // binding and weak replacement selection.
+        var methodScopes = new Dictionary<MethodDeclaration, (string Namespace, string? Owner, bool HasNamespace)>(ReferenceEqualityComparer.Instance);
+        foreach (var container in snapshot.Nodes)
+        {
+            IEnumerable<AstNode>? members = container.Node switch
+            {
+                CompilationUnit unit => unit.Members,
+                NamespaceDeclaration declaration => declaration.Members,
+                ClassDeclaration cls => cls.Members,
+                StructDeclaration structure => structure.Members,
+                _ => null
+            };
+            if (members == null) continue;
+            var ancestry = Parents(container).Prepend(container).ToArray();
+            string containerNamespace = Namespace(ancestry);
+            string? containerOwner = Owner(ancestry);
+            bool containerHasNamespace = ancestry.Any(parent => parent.Node is NamespaceDeclaration);
+            foreach (var method in members.OfType<MethodDeclaration>())
+                methodScopes[method] = (containerNamespace, containerOwner, containerHasNamespace);
+        }
         scopeEnvironments.EnsureCapacity(snapshot.Nodes.Count);
         var pending = new Stack<Syntax>();
         foreach (var syntax in snapshot.Nodes)
@@ -158,6 +179,15 @@ public sealed partial class EditorModel
                 else if (IsType(entry.Node))
                     owner = owner != null ? owner + "::" + SourceName(entry.Node)
                         : hasNamespace ? ns + "::" + SourceName(entry.Node) : SourceName(entry.Node);
+                else if (entry.Parent?.Node is MethodDeclaration declaringMethod &&
+                    methodScopes.TryGetValue(declaringMethod, out var boundMethodScope))
+                {
+                    // The method entry keeps its owner prefix lexical; its type,
+                    // parameter and body children use the bound containing scope.
+                    ns = boundMethodScope.Namespace;
+                    owner = boundMethodScope.Owner;
+                    hasNamespace = boundMethodScope.HasNamespace;
+                }
                 environment = new(ns, owner, hasNamespace,
                     entry.Node is MethodDeclaration method ? method.IsStatic : environment.IsStatic);
                 scopeEnvironments.Add(entry, environment);

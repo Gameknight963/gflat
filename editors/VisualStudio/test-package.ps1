@@ -701,6 +701,10 @@ int SmokeHashesAndViews() {
         if (!subnet.Contains(&subnetHost) || !subnet.Equals(&parsedSubnet)) return 187;
         IpAddress mappedHost = IpAddress::Parse("::ffff:192.0.2.37");
         if (subnet.Contains(&mappedHost)) return 188;
+        nuint literalValue = 7;
+        nuint[3] nativeLiteral = [0, 1, literalValue];
+        byte[3] byteLiteral = [0, 127, 255];
+        if (nativeLiteral[2] != 7 || sizeof(nativeLiteral) != 3 * sizeof(nuint) || byteLiteral[2] != 255) return 189;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

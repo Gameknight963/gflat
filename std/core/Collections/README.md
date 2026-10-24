@@ -82,6 +82,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Contains(&key)` / `Contains(&key, equal)` | Search using default equality or an explicit borrowed-value comparer; stop at the first match. |
 | `All(predicate)` | Stop at the first failure; true for an empty sequence. |
 | `Count()` | Count elements without reading the terminal iterator's `Current`; throw on count overflow. Upstream operators can still read their inputs. |
+| `Count(predicate)` | Count matching elements by testing every value; return zero for an empty sequence and throw on count overflow. |
 | `First()` / `Last()` / `Single()` | Return a value; throw if empty. `Single` also rejects multiple elements. |
 | `ElementAt(index)` | Return the zero-based element; throw with code 3 if out of range. |
 | `TryFirst(ref result)` | Return false without changing `result` if empty. |
@@ -123,7 +124,8 @@ allocation. Put effects in `ForEach`, rather than relying on a selector running.
 
 `Any(predicate)` and both `Contains` overloads read terminal `Current` once for
 each element tested. They stop before reading a later element after a successful
-match. Query membership borrows the search key but follows ordinary element-copy
+match. `Count(predicate)` reads each terminal value once and scans the whole
+sequence. Query membership borrows the search key but follows ordinary element-copy
 semantics; see [query searches](../../../docs/QUERY_SEARCH.md).
 
 The built-in source views allocate no storage. `Where`, `Select`, `Zip`, and the

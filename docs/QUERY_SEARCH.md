@@ -5,6 +5,15 @@ passing the predicate. Empty sequences return false without invoking it.
 Parameterless `Any()` retains its existing behavior: it only advances once and
 does not read the terminal iterator's `Current`.
 
+`Count(predicate)` counts matching elements and returns a `nuint`. It advances
+through the whole sequence, calling the predicate once for every element; an
+empty sequence returns zero without invoking it. It has the same ordinary
+enumeration and callback behavior as `Where(predicate).Count()`, without creating
+that adapter. Before incrementing a maximum-sized result, it throws
+`Exception("Sequence count overflow")`, matching parameterless `Count()`.
+Parameterless `Count()` retains its existing behavior and does not read terminal
+`Current`; the predicate overload must read it to test each element.
+
 `Contains(immutable(T)* key)` searches with `EqualityComparer<T>::Equals` and
 requires `T : IEquatable<T>`. The key is borrowed rather than copied. The overload
 `Contains(key, equal)` accepts a callback of type
@@ -30,6 +39,7 @@ int main()
     Span<int> view = new(values, 4);
     var query = view.AsEnumerable();
     if (!query.Any(Even)) return 1;
+    if (query.Count(Even) != 2) return 5;
     int key = 3;
     if (!query.Contains(&key)) return 2;
     int equivalent = 5;
@@ -39,8 +49,9 @@ int main()
 }
 ```
 
-These operations start a fresh iterator and short-circuit. They read terminal
-`Current` once per tested element. Upstream operators retain their usual rules:
+These operations start a fresh iterator and read terminal `Current` once per
+tested element. `Any(predicate)` and `Contains` short-circuit at a match;
+`Count(predicate)` continues through the sequence. Upstream operators retain their usual rules:
 for example, `Where` may read its own source to evaluate its predicate before
 the terminal reads an accepted value. An early match does not validate a
 malformed suffix of a lazy Unicode source.
@@ -65,7 +76,7 @@ contiguous spans, the existing `Contains<T>(Span<immutable(T)>, key, equal)`
 algorithm borrows elements directly; query searching intentionally follows the
 normal value semantics of sequence enumeration.
 
-Selective source users need `Collections/EnumerableExtensions.gf` for `Any`,
+Selective source users need `Collections/EnumerableExtensions.gf` for `Any` and `Count`,
 and `Collections/EnumerableContains.gf` plus `EqualityComparer.gf` and
 `IEquatable.gf` for default query membership, alongside the sequence's ordinary
 source and enumeration dependencies. Explicit-comparer calls do not require an

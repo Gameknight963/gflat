@@ -79,6 +79,7 @@ public class WholeStandardLibraryEditorTests
                 arbitraryInteger.TryToLong(ref arbitraryLong); arbitraryInteger.TryToULong(ref arbitraryULong);
                 BigInteger arbitrarySum=arbitraryProduct.Add(&arbitraryInteger);
                 BigInteger arbitraryDifference=arbitrarySum.Subtract(&arbitraryInteger);
+                BigInteger arbitraryAbsolute=arbitraryDifference.Abs(); BigInteger arbitraryNegative=arbitraryDifference.Negate();
                 BigInteger arbitraryLargeRemainder=new();
                 BigInteger arbitraryLargeQuotient=arbitraryProduct.DivRem(&arbitraryFactor,ref arbitraryLargeRemainder);
                 BigInteger arbitraryDivided=arbitraryProduct.Divide(&arbitraryFactor);
@@ -371,6 +372,13 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(var signCall in new[]{("arbitraryAbsolute","Abs"),("arbitraryNegative","Negate")})
+        {
+            int offset=text.IndexOf("."+signCall.Item2,text.IndexOf(signCall.Item1,StringComparison.Ordinal),StringComparison.Ordinal)+1;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
+            Assert.Contains(signCall.Item2,hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
+        }
         int largeDivision=text.IndexOf(".DivRem",text.IndexOf("arbitraryLargeQuotient",StringComparison.Ordinal),StringComparison.Ordinal)+1;
         var largeDivisionHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,largeDivision),Protocol.JsonOptions);
         Assert.Contains("BigInteger",largeDivisionHover.GetProperty("contents").GetProperty("value").GetString());

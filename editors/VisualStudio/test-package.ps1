@@ -36,7 +36,7 @@ try {
     foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
-    foreach ($source in @('std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+    foreach ($source in @('std/core/Collections/EnumerableExtremaBy.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
     $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $extracted 'BUILD-INFO.json') | ConvertFrom-Json
@@ -225,6 +225,7 @@ struct SmokeTemporary {
 }
 SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
 bool SmokeRemove(readonly(int)* value) => *value == 9;
+long SmokeMagnitude(int value) { if (value < 0) return -(long)value; return (long)value; }
 bool SmokeRangeFailure(int value) { throw new Exception("Range predicate evaluated", 77); }
 Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
 int SmokeCore() {
@@ -951,6 +952,10 @@ int SmokeHashesAndViews() {
             || timerElapsed.Ticks != 20000000l) return 257;
         timer.Reset();
         if (timer.ElapsedTicks != 0l || timer.IsRunning) return 258;
+        int[4] projectedValues = [-7, 3, -3, 5];
+        Span<int> projectedView = new(projectedValues, 4);
+        if (projectedView.AsEnumerable().MinBy(SmokeMagnitude) != 3
+            || projectedView.AsEnumerable().MaxBy(SmokeMagnitude) != -7) return 259;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

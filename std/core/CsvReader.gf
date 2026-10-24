@@ -30,6 +30,7 @@ public struct CsvReader
         endOfRecord = false;
     }
 
+    public bool HasValue { immutable get nothrow => valid; }
     public nuint FieldOffset { immutable get nothrow => offset; }
     public nuint ValueLength { immutable get nothrow => valueLength; }
     public bool IsQuoted { immutable get nothrow => quoted; }

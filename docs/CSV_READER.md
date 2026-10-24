@@ -91,6 +91,7 @@ The final record need not have a line ending.
 
 After a successful `Read()`:
 
+- `HasValue` is true, including for a valid empty field.
 - `FieldOffset` is the raw field's byte offset in the original input.
 - `RawField` is a borrowed `Span<readonly(char)>` over the exact lexeme, including
   surrounding quotes and doubled quotes. It excludes the following separator.
@@ -110,7 +111,39 @@ Before the first read, after completion, after `Reset`, and after a failed read,
 there is no current field. `TryCopyValue` then returns false with `written` zero.
 Metadata is cleared: offsets and lengths are zero, booleans false, and `RawField`
 is a canonical empty span with null `Data`. A valid empty unquoted field also has
-an empty `RawField`; the successful `Read()` distinguishes it from no current field.
+an empty `RawField`; `HasValue` distinguishes it from no current field.
+
+## Reusable owning output
+
+The optional `CsvReaderText` convenience decodes into an initialized `String`,
+reusing its capacity between fields:
+
+```csharp
+using std;
+int main()
+{
+    readonly(char)* input = "first,\"two\"\"quotes\"";
+    CsvReader reader = new(input, CString::Length(input));
+    String field = new();
+    int count = 0;
+    while (reader.Read())
+    {
+        CsvReaderText::CopyValue(&reader, ref field);
+        count++;
+    }
+    return count - 2;
+}
+```
+
+`CopyValue` does not advance the reader or validate an encoding. It preserves
+embedded NUL bytes and maintains the String's trailing terminator. Empty fields
+clear the string while retaining capacity. Calls without a current field throw
+before changing the output; allocation failure during growth also preserves its
+old bytes, length, capacity, and allocation. Output storage must be separate from
+the reader and its entire borrowed input, as with `TryCopyValue`.
+
+Include `CsvReaderText.gf` and the normal String dependencies only when using
+this convenience. `CsvReader.gf` itself still needs no String implementation.
 
 ## Lifetimes, aliases, and errors
 
@@ -128,7 +161,7 @@ reader: mutating input would invalidate borrowed fields and repeated decoding.
 Malformed CSV throws `CsvParseException`, whose readonly `Offset` identifies the
 unexpected byte or EOF. A failed read clears the current field and latches failure;
 another `Read` throws until `Reset()` restarts the same input. `Reset` does not
-change its storage or contents. Successful reads and copies allocate nothing;
+change its storage or contents. Successful `Read` and `TryCopyValue` calls allocate nothing;
 constructing or throwing an exception uses the ordinary exception runtime.
 
 For explicit source selection include `core/CsvReader.gf`,

@@ -16,9 +16,9 @@ public sealed class BigCalcExampleTests
     {
         var cases=new List<(string Left,string Operator,string Right,Integer Expected)>();
         void Pair(Integer left,Integer right){
-            foreach(string operation in new[]{"+","-","*","/","%","gcd"}){
+            foreach(string operation in new[]{"+","-","*","/","%","gcd","lcm"}){
                 if(right.IsZero&&operation is "/" or "%")continue;
-                Integer expected=operation switch{"+"=>left+right,"-"=>left-right,"*"=>left*right,"/"=>left/right,"%"=>left%right,_=>Integer.GreatestCommonDivisor(left,right)};
+                Integer expected=operation switch{"+"=>left+right,"-"=>left-right,"*"=>left*right,"/"=>left/right,"%"=>left%right,"gcd"=>Integer.GreatestCommonDivisor(left,right),_=>left.IsZero||right.IsZero?Integer.Zero:Integer.Abs(left/Integer.GreatestCommonDivisor(left,right)*right)};
                 cases.Add((left.ToString(CultureInfo.InvariantCulture),operation,right.ToString(CultureInfo.InvariantCulture),expected));
             }
         }
@@ -31,7 +31,7 @@ public sealed class BigCalcExampleTests
             byte[] a=new byte[random.Next(1,193)],b=new byte[random.Next(1,193)];random.NextBytes(a);random.NextBytes(b);
             Integer right=new(b);if(right.IsZero)right=1;Pair(new Integer(a),right);
         }
-        cases.AddRange([("+000","+","-00",Integer.Zero),("-000","gcd","+000",Integer.Zero),
+        cases.AddRange([("+000","+","-00",Integer.Zero),("-000","gcd","+000",Integer.Zero),("-000","lcm","+000",Integer.Zero),("-00084","lcm","+00126",new Integer(252)),
             ("+00123","/","-0007",new Integer(-17)),("-00123","%","+0007",new Integer(-4)),("000","*","-0001",Integer.Zero)]);
 
         var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)
@@ -49,8 +49,8 @@ public sealed class BigCalcExampleTests
             }
             foreach(string[] arguments in new[]{Array.Empty<string>(),new[]{"1"},new[]{"1","+"},new[]{"1","+","2","extra"}})
                 await Error(executable,arguments,2,"Usage: big-calc <left> <operator> <right>");
-            foreach(string operation in new[]{"","^","GCD","Gcd"," +","gcd ","/ ","**","÷"})
-                await Error(executable,["1",operation,"2"],2,"big-calc: expected operator +, -, *, /, %, or gcd");
+            foreach(string operation in new[]{"","^","GCD","Gcd","LCM","Lcm","lcm "," +","gcd ","/ ","**","÷"})
+                await Error(executable,["1",operation,"2"],2,"big-calc: expected operator +, -, *, /, %, gcd, or lcm");
             foreach(string invalid in new[]{"","+","-"," 1","1 ","\t1","1\n","1_0","0x10","1.0","1a","١","++1","--1","+-1","-+1"}){
                 await Error(executable,[invalid,"+","1"],2,"big-calc: operands must be decimal integers");
                 await Error(executable,["1","+",invalid],2,"big-calc: operands must be decimal integers");

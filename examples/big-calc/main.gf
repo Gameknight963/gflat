@@ -15,9 +15,10 @@ int main(int argc, char** argv)
     else if (CString::Equals(token, "/")) operation = 3;
     else if (CString::Equals(token, "%")) operation = 4;
     else if (CString::Equals(token, "gcd")) operation = 5;
+    else if (CString::Equals(token, "lcm")) operation = 6;
     if (operation < 0)
     {
-        Console::Error.WriteLine("big-calc: expected operator +, -, *, /, %, or gcd");
+        Console::Error.WriteLine("big-calc: expected operator +, -, *, /, %, gcd, or lcm");
         return 2;
     }
 
@@ -37,7 +38,8 @@ int main(int argc, char** argv)
         else if (operation == 2) result = left.Multiply(&right);
         else if (operation == 3) result = left.Divide(&right);
         else if (operation == 4) result = left.Remainder(&right);
-        else result = BigInteger::GreatestCommonDivisor(&left, &right);
+        else if (operation == 5) result = BigInteger::GreatestCommonDivisor(&left, &right);
+        else result = BigInteger::LeastCommonMultiple(&left, &right);
         result.Format(Console::Out);
         Console::WriteLine();
         Console::Flush();

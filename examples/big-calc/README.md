@@ -1,7 +1,7 @@
 # Calculate with large integers
 
 `big-calc <left> <operator> <right>` performs one exact integer operation. It
-accepts `+`, `-`, `*`, `/`, `%`, or lowercase `gcd`. This is a direct command-line
+accepts `+`, `-`, `*`, `/`, `%`, or lowercase `gcd` and `lcm`. This is a direct command-line
 example of the owning BigInteger arithmetic APIs, without an expression parser.
 
 ```powershell
@@ -14,6 +14,8 @@ gflat build examples/big-calc/big-calc.gfproj -o artifacts/big-calc.exe
 # -9999999999
 ./artifacts/big-calc.exe -48 gcd 18
 # 6
+./artifacts/big-calc.exe -84 lcm 126
+# 252
 ```
 
 Quote `'*'` in both PowerShell and Bash so the shell passes a literal operator
@@ -25,6 +27,8 @@ Shell argument-size and memory limits still apply.
 Division truncates toward zero. A nonzero `%` remainder has the left operand's
 sign; division or remainder by zero fails. `gcd` ignores signs and returns a
 nonnegative result, with `gcd(0, 0)` equal to zero.
+`lcm` also ignores signs and returns a nonnegative result; either zero operand
+gives zero. It divides out the GCD before multiplying.
 
 The tool streams canonical decimal output directly through `Format`, followed
 by a platform newline and an explicit flush. It creates no intermediate owning

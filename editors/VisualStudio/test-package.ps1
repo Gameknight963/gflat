@@ -826,6 +826,11 @@ int SmokeHashesAndViews() {
         SortedMap<int, int> transferSorted = new(Comparer<int>::Compare); transferSorted.Add(1, 42);
         int transferredValue = 9;
         if (!transferSorted.Remove(&transferKey, ref transferredValue) || transferredValue != 42 || !transferSorted.IsEmpty) return 218;
+        Span<int> fallbackEmpty = new();
+        if (fallbackEmpty.AsEnumerable().DefaultIfEmpty(42).Single() != 42) return 219;
+        int[2] fallbackData = [7, 9]; Span<int> fallbackInput = new(fallbackData, 2);
+        var fallbackQuery = fallbackInput.AsEnumerable().DefaultIfEmpty(42);
+        if (fallbackQuery.Count() != 2 || fallbackQuery.First() != 7 || fallbackQuery.Last() != 9) return 220;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

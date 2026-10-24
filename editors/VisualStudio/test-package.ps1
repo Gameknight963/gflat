@@ -156,6 +156,19 @@ int main() {
         throw 'Packaged compiler did not locate the reserved local name after its type'
     }
 
+    $scopedCast = Join-Path $extracted 'imported-cast.gf'
+    @'
+using PackageCast;
+namespace PackageCast {
+    public struct Box<T> {
+        public struct Item { public T Value; public Item(T value){Value=move value;} }
+    }
+}
+int main(){Box<int>::Item item=new(42);void* raw=(void*)&item;Box<int>::Item* result=(Box<int>::Item*)raw;return result.Value-42;}
+'@ | Set-Content -LiteralPath $scopedCast
+    & $compiler $scopedCast --optimization 2 --run -o (Join-Path $extracted 'imported-cast.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler lost the checked imported nested cast target' }
+
     $console = Join-Path $extracted 'console.gf'
     'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
     $std = Join-Path $extracted 'Sdk/std'
@@ -806,6 +819,13 @@ int SmokeHashesAndViews() {
         int repeatedSum = 0;
         foreach (int entry in repeatedValues) repeatedSum += entry;
         if (repeatedSum != 28) return 215;
+        HashMap<int, String> transferMap = new(); transferMap.Add(1, s"kept");
+        int transferKey = 1; String transferValue = s"old";
+        if (!transferMap.Remove(&transferKey, ref transferValue) || !transferValue.Equals("kept") || !transferMap.IsEmpty) return 216;
+        if (transferMap.Remove(&transferKey, ref transferValue) || !transferValue.Equals("kept")) return 217;
+        SortedMap<int, int> transferSorted = new(Comparer<int>::Compare); transferSorted.Add(1, 42);
+        int transferredValue = 9;
+        if (!transferSorted.Remove(&transferKey, ref transferredValue) || transferredValue != 42 || !transferSorted.IsEmpty) return 218;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

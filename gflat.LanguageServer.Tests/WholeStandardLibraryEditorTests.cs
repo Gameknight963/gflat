@@ -114,6 +114,7 @@ public class WholeStandardLibraryEditorTests
                 Utf8Decoder decoder=new(); uint scalar=0u; nuint consumed=0;
                 Rune unicodeScalar=new(0x1f600u); nuint scalarUtf8=unicodeScalar.Utf8Length;
                 nuint scalarUtf16=unicodeScalar.Utf16Length; String scalarText=unicodeScalar.ToString();
+                String hexOutput=new(); ITextWriter* hexWriter=&hexOutput; hexWriter.WriteHex(text.Data,text.Length);
                 decoder.Read("a",1,true,&scalar,&consumed);
                 Utf8Scalars characters=new(text.Data,text.Length);
                 Utf8Scalars::Enumerator iterator=characters.GetEnumerator();
@@ -366,6 +367,10 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        int hexWrite=sourceTokens.Last(token=>token.Text=="WriteHex").Start;
+        var hexHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,hexWrite),Protocol.JsonOptions);
+        Assert.Contains("uppercase = true",hexHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("HexWriter.gf",JsonSerializer.Serialize(model.Definition(source.Path,hexWrite),Protocol.JsonOptions));
         foreach(string member in new[]{"Utf8Length","Utf16Length"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;

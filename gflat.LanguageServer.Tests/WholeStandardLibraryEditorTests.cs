@@ -49,6 +49,10 @@ public class WholeStandardLibraryEditorTests
                 LinkedList<int> list=new();
                 LinkedList<int>::Node* node=list.AddLast(42);
                 var linkedQuery=list.AsEnumerable().Take(1);
+                bool queryHasAny=linkedQuery.Any(Contains);
+                int queryKey=42;
+                bool queryHasKey=linkedQuery.Contains(&queryKey);
+                bool queryHasCustomKey=linkedQuery.Contains(&queryKey,(immutable(int)* left,immutable(int)* right)=>*left==*right);
                 String text=s"ad"; text.Insert(1,"bc");
                 bool matchesCString=text.Equals("abcd");
                 bool matchesCountedText=text.Equals("abcd",4);
@@ -350,6 +354,17 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),
+            ("queryHasKey","Contains","EnumerableContains.gf"),("queryHasCustomKey","Contains","EnumerableContains.gf")})
+        {
+            int call=text.IndexOf("."+query.Item2,text.IndexOf(query.Item1,StringComparison.Ordinal),StringComparison.Ordinal)+1;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("bool",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.DoesNotContain('$',hover.GetProperty("contents").GetProperty("value").GetString()!);
+            Assert.Contains(query.Item3,JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            var help=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',call)+1),Protocol.JsonOptions);
+            Assert.Equal(2,help.GetProperty("signatures").GetArrayLength());
+        }
         int prefixCall=text.IndexOf("labelledOutput.Write",StringComparison.Ordinal)+"labelledOutput.".Length;
         int bigIntegerParser=text.IndexOf("BigInteger::TryParse",StringComparison.Ordinal)+"BigInteger::".Length;
         var bigIntegerParserHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,bigIntegerParser),Protocol.JsonOptions);

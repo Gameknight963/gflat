@@ -896,6 +896,15 @@ int SmokeHashesAndViews() {
         Span<readonly(char)> noPathEnding = new();
         if (!Paths::EndsInDirectorySeparator(pathEndingView, PathStyle::Unix)
             || Paths::EndsInDirectorySeparator(noPathEnding, PathStyle::Windows)) return 243;
+        BigInteger bufferFormattedInteger = BigInteger::Parse("-123456789012345678901234567890");
+        char[32] bigIntegerOutput; for (nuint i = 0; i < 32; i++) bigIntegerOutput[i] = '?';
+        nuint bigIntegerWritten = 99;
+        if (bufferFormattedInteger.TryFormat(bigIntegerOutput, 30, ref bigIntegerWritten)
+            || bigIntegerWritten != 0 || bigIntegerOutput[0] != '?') return 244;
+        if (!bufferFormattedInteger.TryFormat(bigIntegerOutput, 31, ref bigIntegerWritten)
+            || bigIntegerWritten != 31 || bigIntegerOutput[31] != '?') return 245;
+        bigIntegerOutput[31] = '\0';
+        if (!CString::Equals(bigIntegerOutput, "-123456789012345678901234567890")) return 246;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

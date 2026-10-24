@@ -718,6 +718,12 @@ int SmokeHashesAndViews() {
         byte[4] delimiterData = [255, 0, 255, 1]; byte[1] delimiterMembers = [255];
         if (ByteSearch::IndexOfAny(delimiterData, 4, delimiterMembers, 1) != 0 || ByteSearch::LastIndexOfAny(delimiterData, 4, delimiterMembers, 1) != 2) return 195;
         if (ByteSearch::IndexOfAny(delimiterData, 4, delimiterMembers, 0) != 4) return 196;
+        String repeatedText = new(); ITextWriter* repeatedWriter = &repeatedText;
+        repeatedWriter.WriteRepeated('x', 65); repeatedWriter.WriteRepeated('\0', 2);
+        if (repeatedText.Length != 67 || repeatedText.Data[64] != 'x' || repeatedText.Data[65] != '\0') return 197;
+        readonly(char)* repeatedAddress = repeatedText.Data;
+        repeatedWriter.WriteRepeated('x', 0);
+        if (repeatedText.Length != 67 || repeatedText.Data != repeatedAddress) return 198;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

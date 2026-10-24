@@ -965,6 +965,13 @@ int SmokeHashesAndViews() {
         Version extendedVersion = new(1, 2, 0);
         if (numericVersion.Major != 1 || numericVersion.Minor != 2 || numericVersion.Build != -1
             || numericVersion.CompareTo(&extendedVersion) >= 0) return 260;
+        char[32] formattedLineBytes;
+        BufferWriter formattedLineOutput = new(formattedLineBytes, 32);
+        DateTime formattedLinePrefix = DateTime::Parse("2000-01-01T00:00:00");
+        LinePrefixWriter formattedLines = new(&formattedLineOutput, &formattedLinePrefix);
+        formattedLines.Write("x", 1);
+        if (formattedLineOutput.Length != 20 || formattedLineBytes[0] != '2'
+            || formattedLineBytes[18] != '0' || formattedLineBytes[19] != 'x') return 261;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

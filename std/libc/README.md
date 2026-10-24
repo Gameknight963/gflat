@@ -232,6 +232,12 @@ int main()
   dependent. Creation can fail due to permissions, runtime limits, or storage.
   The current File API does not expose seeking/rewinding, including on temporary
   streams; writing advances the position as usual.
+  Temporary streams retain libc's direction rules: call `Flush()` before changing
+  from output to input, including `ReadByte` and `PeekByte`. Changing from input
+  to output requires positioning unless the preceding input reached EOF; only
+  that EOF transition is available with the current API. Flushing does not rewind
+  or make earlier bytes available for readback. `EndOfFile` is an observed stream
+  indicator, rather than a prediction of the next read.
 - `Read(data, capacity)` returns the bytes read. Zero at EOF is normal; IO
   failures throw `IOException`. Reads do not add a null terminator.
 - `ReadExactly(data, count)` fills the requested region or throws

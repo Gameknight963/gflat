@@ -78,6 +78,11 @@ is optional and is never selected implicitly for interpolation.
 Only C-string consumers stop at the first null; counted operations and interpolation
 preserve it. Constructors and factory methods follow ordinary exception propagation.
 
+`Rune` represents a validated Unicode scalar. Formatting and interpolation write
+its UTF-8 encoding, while its `Value` property exposes the numeric `uint`.
+Its default U+0000 remains a counted byte in an owning string. See
+[Unicode scalar values](../../docs/RUNE.md).
+
 ## Integer parsing
 
 `TryParseInt(text, &value)` parses a null-terminated decimal integer.

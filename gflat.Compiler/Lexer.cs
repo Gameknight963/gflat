@@ -425,14 +425,14 @@ public class Lexer
             return new Token(hexKind, line, startIndex, i - 1, source[startIndex..i]);
         }
 
-        while (i < source.Length && (char.IsDigit(source[i]) || source[i] == '_')) i++;
+        while (i < source.Length && (char.IsAsciiDigit(source[i]) || source[i] == '_')) i++;
 
         bool hasDecimalPoint = false;
-        if (i < source.Length && source[i] == '.' && i + 1 < source.Length && char.IsDigit(source[i + 1]))
+        if (i < source.Length && source[i] == '.' && i + 1 < source.Length && char.IsAsciiDigit(source[i + 1]))
         {
             i++;
             hasDecimalPoint = true;
-            while (i < source.Length && (char.IsDigit(source[i]) || source[i] == '_')) i++;
+            while (i < source.Length && (char.IsAsciiDigit(source[i]) || source[i] == '_')) i++;
         }
 
         TokenKind kind = TokenKind.IntLiteral;

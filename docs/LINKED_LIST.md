@@ -31,6 +31,8 @@ int main()
 - `First` and `Last` return nullable borrowed node pointers. A node's `Next` and
   `Previous` traverse the list; `Value` is a ref property borrowing its element.
 - `Count` and `IsEmpty` inspect the sequence without copying elements.
+- `RemoveAll(predicate)` removes matching nodes in first-to-last order and
+  returns their count, borrowing each value through `immutable(T)*`.
 - `Clear()` destroys all values and frees all nodes. Destruction does the same
   and releases the list's state block.
 
@@ -45,6 +47,25 @@ a small state block, then a node; subsequent insertions allocate one node each.
 may leave this state allocated, but the list remains empty and reusable.
 Allocation failure preserves existing values and links and cleans the incoming
 argument normally.
+
+`RemoveAll(bool(immutable(T)*)* predicate)` tests each original node once, from
+first to last. It copies no elements and allocates no list storage. A matching
+node is unlinked and `Count` updated before its value is destroyed and its node
+freed. Cleanup is immediate for each match, so later predicate calls can observe
+completed earlier removals. This differs from Vector's deferred matched-owner
+cleanup. Survivors keep their order and addresses; existing handles to removed
+nodes become invalid. An empty result retains the state block for reuse, and a
+never-populated list remains allocation-free.
+
+If the predicate throws, its original exception propagates. Earlier removals
+remain committed; the current node and unvisited suffix stay in the list with
+valid links and values. Predicates must not structurally mutate, move or destroy
+the list, invoke `RemoveAll` recursively, or retain the current value borrow.
+Element cleanup follows its normal destructor contract and must not invalidate
+the remaining chain through another alias. The method is not `nothrow`: user
+predicates can allocate or throw, and destructor termination boundaries remain
+unchanged. These callback limits do not prevent inspecting the list's current
+count, endpoints or valid surviving nodes.
 
 The list and its identity-bearing nodes cannot be copied as values. Moving the
 list transfers its state and nodes, leaving the source uninitialized. Existing

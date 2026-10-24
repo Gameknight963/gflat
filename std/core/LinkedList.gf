@@ -162,6 +162,25 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
         return this.Remove(state!.Last!);
     }
 
+    public nuint RemoveAll(bool(immutable(T)*)* predicate)
+    {
+        nuint removed = 0;
+        Node*? current = this.First;
+        while (current != null)
+        {
+            Node* node = current!;
+            Node*? next = node.next;
+            if (predicate(&node.value))
+            {
+                this.Unlink(node);
+                delete node;
+                removed++;
+            }
+            current = next;
+        }
+        return removed;
+    }
+
     public void Clear()
     {
         while (state != null && state!.First != null)

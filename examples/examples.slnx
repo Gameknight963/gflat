@@ -7,6 +7,7 @@
   </Configurations>
   <Project Path="big-calc/big-calc.gfproj" />
   <Project Path="checksum/checksum.gfproj" />
+  <Project Path="components/components.gfproj" />
   <Project Path="csv-column/csv-column.gfproj" />
   <Project Path="csv-sum/csv-sum.gfproj" />
   <Project Path="csv-to-json/csv-to-json.gfproj" />

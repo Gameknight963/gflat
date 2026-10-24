@@ -131,6 +131,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [CSV to JSON](../examples/csv-to-json/README.md): validate CSV and UTF-8 first, then write row arrays with one reusable field buffer.
 - [JSON get](../examples/json-get/README.md): select a raw value with a plain pointer or a counted UTF-8 pointer file.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
+- [Connected components](../examples/components/README.md): stream undirected edges and report graph partitions.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.
 

@@ -49,6 +49,7 @@ public class WholeStandardLibraryEditorTests
                 LinkedList<int> list=new();
                 nuint nativeCount=2; nuint[3] nativeCounts=[0,1,nativeCount];
                 byte[3] byteValues=[0,127,255];
+                Vector<int> popValues=new(); popValues.Add(42); int poppedValue=0; bool popped=popValues.TryPop(ref poppedValue);
                 alias NativeCount=nuint;
                 NativeCount[] aliasedCounts=[0,nativeCount];
                 NativeCount[2][] countGrid=[[0,nativeCount],[nativeCount,1]];
@@ -392,6 +393,10 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        int popCall=text.IndexOf("popValues.TryPop",StringComparison.Ordinal)+"popValues.".Length;
+        var popHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,popCall),Protocol.JsonOptions);
+        Assert.Contains("bool",popHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("Vector.gf",JsonSerializer.Serialize(model.Definition(source.Path,popCall),Protocol.JsonOptions));
         int gcdCall=text.IndexOf("GreatestCommonDivisor",text.IndexOf("arbitraryGcd",StringComparison.Ordinal),StringComparison.Ordinal);
         var gcdHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,gcdCall),Protocol.JsonOptions);
         Assert.Contains("GreatestCommonDivisor",gcdHover.GetProperty("contents").GetProperty("value").GetString());

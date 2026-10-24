@@ -100,6 +100,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Aggregate(seed, function)` | Fold values into an accumulator, returning the seed if empty. |
 | `Aggregate(function)` | Fold from the first value; throws if empty. |
 | `Min()` / `Max()` / `Min(compare)` / `Max(compare)` | Select the first least or greatest value; throw if empty. |
+| `MinBy(selector)` / `MaxBy(selector)` | Select the first element with the least or greatest key; optional key comparer; throw if empty. |
 | `Append(value)` / `Prepend(value)` | Lazily add one captured value after or before the source. |
 | `DefaultIfEmpty(value)` | Yield the source, or one captured value if the source is empty. |
 | `ForEach(action)` | Visit every element. |
@@ -276,3 +277,70 @@ and terminal cleanup. Built-in borrowed views satisfy this when the original
 owner remains alive. Owning sources can also work, for example with independently
 copied value outputs or shared backing owners whose storage remains alive.
 There is no automatic lifetime tracking for raw pointer results.
+
+## Select an element by its key
+
+`MinBy(selector)` and `MaxBy(selector)` select the first element with the least
+or greatest projected key. They return the original element type, not the key.
+An explicit comparer is accepted as `MinBy(selector, compare)` or
+`MaxBy(selector, compare)`. The selector has type `K(T)*`; the comparer has type
+`int(immutable(K)*, immutable(K)*)*`. Default comparison requires the exact
+`IComparable<K>` contract and forwards through `Comparer<K>::Compare`.
+
+```csharp
+using std;
+
+long Magnitude(int value)
+{
+    if (value < 0) return -(long)value;
+    return (long)value;
+}
+
+int main()
+{
+    int[4] data = [-7, 3, -3, 5];
+    Span<int> values = new(data, 4);
+    if (values.AsEnumerable().MinBy(Magnitude) != 3) return 1;
+    if (values.AsEnumerable().MaxBy(Magnitude) != -7) return 2;
+    return 0;
+}
+```
+
+The source is enumerated once. Each element's `Current` is read once, then
+its key is computed once. For N nonempty elements there are N selector calls
+and N-1 comparer calls. Comparisons receive the current key first and the best
+key second. Equal keys retain the first element. A singleton still computes its
+key but does not compare. An empty source throws `Exception("Sequence is empty")`
+without reading Current or invoking either callback.
+
+Elements and keys follow ordinary value semantics. Reading a borrowed owning
+source element copies it; passing that local to the by-value selector follows
+ordinary callback argument copying rules too. A returned owning key is stored
+as an ordinary value. A new winner moves both element and key into the retained
+locals. Non-winning locals and replaced winners are cleaned up normally. The
+result element is moved to the caller, and the retained key is destroyed.
+No sequence buffer, sorting, interface erasure, or managed allocation is added.
+Iterator, element/key copies, and user callbacks can allocate or throw.
+
+Callbacks must not invalidate iteration through another alias. A comparer may
+borrow its two key arguments only during the call and must not retain those
+addresses or mutate the keys. A key containing raw pointers must keep its
+pointees valid throughout the scan: returning an address into a selector's
+by-value parameter does not extend that parameter's lifetime. Pointer elements
+and keys do not acquire ownership or lifetime tracking.
+
+Exceptions propagate with ordinary cleanup of the iterator and initialized
+current/best elements and keys. An assignment target in the caller is replaced
+only after the terminal returns its completed result. Callback side effects
+through other aliases are outside that guarantee.
+
+As for Min/Max, retained element and key locals must permit ordinary assignment;
+outer readonly/immutable types do not become writable automatically. Default
+comparison preserves the key type's existing ordering, including its floating
+NaN/signed-zero policy. Explicit comparers must define a consistent ordering.
+
+Selective source users add Collections/EnumerableExtremaBy.gf with the ordinary
+sequence contracts. Default comparison additionally uses Comparer.gf and
+IComparable.gf. No Vector, String, or direct libc dependency is introduced by
+the scan itself; selected element, iterator, callback, and exception dependencies
+still apply.

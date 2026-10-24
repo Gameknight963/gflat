@@ -58,7 +58,15 @@ captured endpoint remains available for another enumeration. Usual source view
 lifetime and mutation rules still apply.
 
 The endpoint type is the sequence's existing `T`; these operators do not widen
-types or remove element qualification. Selective source users add
+types or remove element qualification. The factories transfer their value
+parameter using `move`, which cannot consume outer `readonly` or `immutable`
+storage. Project to an
+ordinary value before capturing endpoints, for example
+`.Select((readonly(int) value) => (int)value).Append(3)` for a readonly integer
+view. This is the same qualified-storage limitation that affects buffering and
+some other query terminals.
+
+Selective source users add
 `Collections/EndpointSource.gf` and `Collections/EnumerableEndpoint.gf` with the
 normal sequence contracts. The wrapper makes no direct libc or collector calls
 and needs no Vector or String implementation. Dependencies of its element,

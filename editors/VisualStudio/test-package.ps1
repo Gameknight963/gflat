@@ -713,6 +713,8 @@ int SmokeHashesAndViews() {
         char[8] base32Encoded; char[3] base32Decoded; nuint base32Written = 0;
         if (!Base32::TryEncode("foo", 3, base32Encoded, 8, ref base32Written) || base32Written != 8 || base32Encoded[0] != 'M' || base32Encoded[7] != '=') return 192;
         if (!Base32::TryDecode(base32Encoded, 8, base32Decoded, 3, ref base32Written) || base32Written != 3 || base32Decoded[0] != 'f' || base32Decoded[2] != 'o') return 193;
+        PseudoRandom fullSignedRandom = new(0ul);
+        if (fullSignedRandom.NextInt() != (int)0xe220a839u) return 194;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

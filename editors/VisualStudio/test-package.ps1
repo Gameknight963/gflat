@@ -868,6 +868,15 @@ int SmokeHashesAndViews() {
         readonly(char)* pointerDuplicate = "{\"x\":1,\"x\":2}";
         if (JsonPointer::TryResolve(new(pointerDuplicate, CString::Length(pointerDuplicate)), new("/x", 2), ref pointerValue)
             || pointerValue.Data != pointerPrevious) return 235;
+        int[2] wideSumData = [2147483647, 1]; Span<int> wideSumInput = new(wideSumData, 2);
+        if (wideSumInput.AsEnumerable().Sum() != 2147483648l) return 236;
+        if (wideSumInput.AsReadOnly().AsEnumerable().Sum() != 2147483648l
+            || wideSumInput.AsImmutable().AsEnumerable().Take(0).Sum() != 0l) return 237;
+        long[3] overflowingSumData = [9223372036854775807l, 1l, -1l];
+        Span<long> overflowingSum = new(overflowingSumData, 3); bool sumRejected = false;
+        try { overflowingSum.AsEnumerable().Sum(); }
+        catch (ref Exception error) { sumRejected = CString::Equals(error.GetMessage(), "Sequence sum overflow"); }
+        if (!sumRejected) return 238;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

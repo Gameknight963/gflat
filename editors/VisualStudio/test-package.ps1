@@ -126,6 +126,21 @@ int main() {
     & $compiler $imports --optimization 2 --run -o (Join-Path $extracted 'private-native-imports.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged private/native allocator import coexistence failed' }
 
+    $invalidNumber = Join-Path $extracted 'invalid-unicode-number.gf'
+    [IO.File]::WriteAllText($invalidNumber, 'int main(){float value=1' + [char]0x0662 + 'f;return 0;}')
+    $oldNumericErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $numericDiagnostics = & $compiler $invalidNumber --emit-ir -o (Join-Path $extracted 'invalid-unicode-number.ll') 2>&1
+        $numericExitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $oldNumericErrorAction }
+    $numericDiagnosticText = $numericDiagnostics -join "`n"
+    if ($numericExitCode -ne 1 -or $numericDiagnosticText -notmatch 'error GF1000:' -or
+        $numericDiagnosticText -notmatch 'Unexpected character' -or $numericDiagnosticText -match 'FormatException') {
+        throw 'Packaged compiler did not report malformed Unicode numeric text as a source error'
+    }
+
     $console = Join-Path $extracted 'console.gf'
     'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
     $std = Join-Path $extracted 'Sdk/std'

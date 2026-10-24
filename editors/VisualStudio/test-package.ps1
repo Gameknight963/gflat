@@ -857,6 +857,17 @@ int SmokeHashesAndViews() {
         Uuid recoveredUuid = Uuid::FromBytes(uuidNetworkBytes, 16);
         if (!recoveredUuid.Equals(&binaryUuid)) return 231;
         if (Uuid::TryFromBytes(uuidNetworkBytes, 15, &recoveredUuid) || !recoveredUuid.IsNil) return 232;
+        readonly(char)* pointerDocument = "{\"a/b\":[0,{\"name\":\"ok\"}]}";
+        Span<readonly(char)> pointerInput = new(pointerDocument, CString::Length(pointerDocument));
+        Span<readonly(char)> pointerValue = new();
+        if (!JsonPointer::TryResolve(pointerInput, new("/a~1b/1/name", 12), ref pointerValue)
+            || pointerValue.Length != 4 || pointerValue[1] != 'o' || pointerValue[2] != 'k') return 233;
+        readonly(char)* pointerPrevious = pointerValue.Data!;
+        if (JsonPointer::TryResolve(pointerInput, new("/missing", 8), ref pointerValue)
+            || pointerValue.Data != pointerPrevious || pointerValue.Length != 4) return 234;
+        readonly(char)* pointerDuplicate = "{\"x\":1,\"x\":2}";
+        if (JsonPointer::TryResolve(new(pointerDuplicate, CString::Length(pointerDuplicate)), new("/x", 2), ref pointerValue)
+            || pointerValue.Data != pointerPrevious) return 235;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

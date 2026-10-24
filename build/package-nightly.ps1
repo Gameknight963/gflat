@@ -55,13 +55,15 @@ $compilerName = if ($Runtime -eq 'win-x64') { 'gflat.exe' } else { 'gflat' }
 $compiler = Join-Path $output "compiler/$compilerName"
 & $compiler --help
 if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler failed to start' }
-foreach ($example in @('hello', 'interpolation', 'managed')) {
+foreach ($example in @('hello', 'interpolation', 'managed', 'sort-bench')) {
     $smokeArguments = @()
     if ($env:GFLAT_TEST_OUTPUT_ROOT) {
         [IO.Directory]::CreateDirectory($env:GFLAT_TEST_OUTPUT_ROOT) | Out-Null
         $smokeArguments = @('-o', (Join-Path $env:GFLAT_TEST_OUTPUT_ROOT ("nightly-$example-" + [Guid]::NewGuid().ToString('N') + '.exe')))
     }
-    & $compiler build (Join-Path $output "examples/$example/$example.gfproj") @smokeArguments --run
+    $runArguments = @()
+    if ($example -eq 'sort-bench') { $runArguments = @('--', '257') }
+    & $compiler build (Join-Path $output "examples/$example/$example.gfproj") @smokeArguments --run @runArguments
     if ($LASTEXITCODE -ne 0) { throw "Packaged $example project failed" }
     & $compiler clean (Join-Path $output "examples/$example/$example.gfproj")
     if ($LASTEXITCODE -ne 0) { throw "Packaged $example cleanup failed" }

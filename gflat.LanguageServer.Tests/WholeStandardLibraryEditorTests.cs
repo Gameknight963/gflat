@@ -66,6 +66,7 @@ public class WholeStandardLibraryEditorTests
                 NativeCount[] aliasedCounts=[0,nativeCount];
                 NativeCount[2][] countGrid=[[0,nativeCount],[nativeCount,1]];
                 LinkedList<int>::Node* node=list.AddLast(42);
+                list.AddLast(0); nuint removedLinked=list.RemoveAll(RemoveZero);
                 var linkedQuery=list.AsEnumerable().Take(1);
                 var endpointQuery=linkedQuery.Prepend(0).Append(100);
                 var backwardsQuery=linkedQuery.Reverse(); bool backwardsAny=backwardsQuery.Any();
@@ -434,6 +435,10 @@ public class WholeStandardLibraryEditorTests
         Assert.DoesNotContain("Memory.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeCall),Protocol.JsonOptions));
         int nativeAddress=text.IndexOf("&malloc",StringComparison.Ordinal)+1;
         Assert.Contains("complete.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeAddress),Protocol.JsonOptions));
+        int linkedRemoval=text.IndexOf("list.RemoveAll",StringComparison.Ordinal)+"list.".Length;
+        var linkedRemovalHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,linkedRemoval),Protocol.JsonOptions);
+        Assert.Contains("nuint",linkedRemovalHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("LinkedList.gf",JsonSerializer.Serialize(model.Definition(source.Path,linkedRemoval),Protocol.JsonOptions));
         int popCall=text.IndexOf("popValues.TryPop",StringComparison.Ordinal)+"popValues.".Length;
         var popHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,popCall),Protocol.JsonOptions);
         Assert.Contains("bool",popHover.GetProperty("contents").GetProperty("value").GetString());

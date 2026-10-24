@@ -53,6 +53,9 @@ public class WholeStandardLibraryEditorTests
                 bool queryHasAny=linkedQuery.Any(Contains);
                 nuint queryCount=linkedQuery.Count(Contains);
                 int foldedValue=linkedQuery.Aggregate((int left,int right)=>left+right);
+                int queryMinimum=linkedQuery.Min(); int queryMaximum=linkedQuery.Max();
+                int queryMinimumCustom=linkedQuery.Min((immutable(int)* left,immutable(int)* right)=>*left-*right);
+                int queryMaximumCustom=linkedQuery.Max((immutable(int)* left,immutable(int)* right)=>*left-*right);
                 int queryElement=0; bool queryIndexed=linkedQuery.TryElementAt(0,ref queryElement);
                 bool querySame=linkedQuery.SequenceEqual(linkedQuery);
                 bool querySameCustom=linkedQuery.SequenceEqual(linkedQuery,(immutable(int)* left,immutable(int)* right)=>*left==*right);
@@ -540,6 +543,16 @@ public class WholeStandardLibraryEditorTests
         Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
         var aggregateHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',seedlessCall)+1),Protocol.JsonOptions);
         Assert.Equal(2,aggregateHelp.GetProperty("signatures").GetArrayLength());
+        foreach(var query in new[]{("queryMinimum","Min"),("queryMaximum","Max"),
+            ("queryMinimumCustom","Min"),("queryMaximumCustom","Max")})
+        {
+            int call=text.IndexOf("."+query.Item2,text.IndexOf(query.Item1,StringComparison.Ordinal),StringComparison.Ordinal)+1;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("public int",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("EnumerableExtrema.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            var help=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',call)+1),Protocol.JsonOptions);
+            Assert.Equal(2,help.GetProperty("signatures").GetArrayLength());
+        }
         int releaseCall=text.IndexOf("owner.Release",StringComparison.Ordinal)+"owner.".Length;
         var releaseHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,releaseCall),Protocol.JsonOptions);
         Assert.Contains("Release",releaseHover.GetProperty("contents").GetProperty("value").GetString());

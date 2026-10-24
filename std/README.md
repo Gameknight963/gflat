@@ -51,6 +51,7 @@ implementation lives in `libc`.
 | Boolean text | `TryParseBool`, `ParseBool` | [Strict ASCII Boolean parsing](../docs/BOOLEAN_PARSING.md) |
 | Identifiers | `Uuid` | [Canonical UUID parsing, formatting, comparison, and hashing](../docs/UUID.md) |
 | IP addresses | `IpAddress` | [IPv4 and IPv6 parsing, canonical formatting, network-byte conversion, comparison, and hashing](../docs/IP_ADDRESS.md) |
+| IP networks | `IpNetwork` | [CIDR prefixes, explicit normalization, and family-specific containment](../docs/IP_NETWORK.md) |
 | Calendar dates | `Date` | [Gregorian values, calendar arithmetic, strict ISO parsing, and formatting](../docs/DATE.md) |
 | Durations | `TimeSpan` | [Signed tick values, checked arithmetic, invariant parsing and formatting](../docs/TIME_SPAN.md) |
 | Caller-buffer numbers | `IntegerFormatting::TryFormat`, `TryFormatHex` | [Decimal and hexadecimal formatting without a writer or allocation](../docs/INTEGER_FORMATTING.md) |

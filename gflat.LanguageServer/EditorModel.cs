@@ -535,9 +535,24 @@ public sealed partial class EditorModel
             int first = index;
             while (first >= 2 && tokens[path][first - 1].Kind == TokenKind.DoubleColon) first -= 2;
             string qualified = string.Concat(tokens[path][first..(index + 1)].Select(t => t.Text));
-            if (qualified.StartsWith("global::", StringComparison.Ordinal)) qualified = qualified[8..];
-            var qualifier = symbols.FirstOrDefault(s => s.Syntax.Node is NamespaceDeclaration &&
-                (s.Qualified == qualified || s.Name == qualified && s.Namespace.Length == 0));
+            bool globalQualifier = qualified.StartsWith("global::", StringComparison.Ordinal);
+            if (globalQualifier) qualified = qualified[8..];
+            // Match member lookup: visible types and aliases take precedence
+            // over namespaces with the same spelling.
+            var typeQualifier = globalQualifier
+                ? symbols.FirstOrDefault(s => s.Scope == null && s.Qualified == qualified &&
+                    (IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration))
+                : Candidates(path, token.Start, index, token.Text).FirstOrDefault(s =>
+                    s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration);
+            if (typeQualifier != null) return typeQualifier;
+            string head = qualified.Split("::")[0];
+            bool typePrefix = !globalQualifier && Visible(path, token.Start, head).Any(s =>
+                s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration);
+            string? namespacePath = typePrefix ? null : snapshot.Checker?.ResolveVisibleNamespacePath(qualified,
+                globalQualifier ? "" : ScopeAt(path, token.Start).Namespace,
+                globalQualifier ? [] : snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? []);
+            var qualifier = typePrefix ? null : symbols.FirstOrDefault(s => s.Syntax.Node is NamespaceDeclaration &&
+                s.Qualified == (namespacePath ?? qualified));
             if (qualifier != null) return qualifier;
         }
         var candidates = Candidates(path, token.Start, index, token.Text);

@@ -35,7 +35,7 @@ public sealed partial class EditorModel
     private IEnumerable<Symbol> ExtensionMembers(string path, int offset, AstNode? receiver, TypeExpression? receiverType)
     {
         if (snapshot.Checker is not { } checker || receiverType == null) return [];
-        string ns = Namespace(ContextParents(path, offset));
+        string ns = ScopeAt(path, offset).Namespace;
         var imports = snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? [];
         bool storage = receiver != null && ExtensionReceiverStorage(receiver, path, offset);
         bool readOnly = receiverType.IsReadOnlyValue || receiver != null && ExtensionReceiverReadOnly(receiver, path, offset);

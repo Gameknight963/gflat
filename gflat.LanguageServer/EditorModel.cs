@@ -38,10 +38,13 @@ public sealed partial class EditorModel
     private readonly Dictionary<AstNode, Symbol> declarations = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Token, Symbol?> references = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<Syntax, int> scopeEnds = new(ReferenceEqualityComparer.Instance);
+    private readonly record struct ScopeEnvironment(string Namespace, string? Owner, bool HasNamespace, bool IsStatic);
+    private readonly Dictionary<Syntax, ScopeEnvironment> scopeEnvironments = new(ReferenceEqualityComparer.Instance);
 
     public EditorModel(AnalysisSnapshot snapshot, IEnumerable<SourceFile> files)
     {
         this.snapshot = snapshot;
+        IndexScopeEnvironments();
         var allFiles = files.Concat(snapshot.Nodes.Select(n => n.Span.Source).OfType<SourceFile>())
             .DistinctBy(s => s.Path, Workspace.Paths).ToArray();
         sources = allFiles.ToDictionary(s => s.Path, Workspace.Paths);
@@ -127,6 +130,40 @@ public sealed partial class EditorModel
         (p.DefaultValue == null ? "" : " = " + ParameterDefaultText(p));
     private static string Join(string left, string right) => left.Length == 0 ? right : left + "::" + right;
     private static IEnumerable<Syntax> Parents(Syntax node) { for (var p = node.Parent; p != null; p = p.Parent) yield return p; }
+    private void IndexScopeEnvironments()
+    {
+        scopeEnvironments.EnsureCapacity(snapshot.Nodes.Count);
+        var pending = new Stack<Syntax>();
+        foreach (var syntax in snapshot.Nodes)
+        {
+            Syntax? current = syntax;
+            ScopeEnvironment environment = new("", null, false, false);
+            while (current != null)
+            {
+                if (scopeEnvironments.TryGetValue(current, out environment)) break;
+                pending.Push(current); current = current.Parent;
+            }
+            if (current == null) environment = new("", null, false, false);
+            while (pending.TryPop(out var entry))
+            {
+                string ns = environment.Namespace;
+                string? owner = environment.Owner;
+                bool hasNamespace = environment.HasNamespace;
+                if (entry.Node is NamespaceDeclaration declaration)
+                {
+                    ns = hasNamespace ? ns + "::" + declaration.Name : declaration.Name;
+                    if (owner != null) owner += "::" + declaration.Name;
+                    hasNamespace = true;
+                }
+                else if (IsType(entry.Node))
+                    owner = owner != null ? owner + "::" + SourceName(entry.Node)
+                        : hasNamespace ? ns + "::" + SourceName(entry.Node) : SourceName(entry.Node);
+                environment = new(ns, owner, hasNamespace,
+                    entry.Node is MethodDeclaration method ? method.IsStatic : environment.IsStatic);
+                scopeEnvironments.Add(entry, environment);
+            }
+        }
+    }
     private static bool IsType(AstNode node) => node is ClassDeclaration or StructDeclaration or InterfaceDeclaration or EnumDeclaration;
     private static string SourceName(AstNode node) => node switch { ClassDeclaration c => c.SourceName, StructDeclaration s => s.SourceName, InterfaceDeclaration i => i.SourceName, EnumDeclaration e => e.SourceName, _ => "" };
     private static string Namespace(IEnumerable<Syntax> parents) => string.Join("::", parents.Reverse().Where(p => p.Node is NamespaceDeclaration).Select(p => ((NamespaceDeclaration)p.Node).Name));
@@ -180,13 +217,17 @@ public sealed partial class EditorModel
 
     private bool Contains(Syntax node, int offset) => offset >= node.Span.Start && offset < scopeEnds.GetValueOrDefault(node, node.Span.Start + node.Span.Length);
     private Syntax? Context(string path, int offset) => nodes.GetValueOrDefault(path)?.Where(n => Contains(n, offset)).MinBy(n => scopeEnds.GetValueOrDefault(n, n.Span.Start + n.Span.Length) - n.Span.Start);
-    private IEnumerable<Symbol> Visible(string path, int offset, string? name = null)
+    private ScopeEnvironment ScopeAt(string path, int offset)
     {
         var context = Context(path, offset);
-        var parents = context == null ? [] : new[] { context }.Concat(Parents(context)).ToArray();
-        string ns = Namespace(parents);
-        string? owner = Owner(parents);
-        bool isStatic = parents.Select(p => p.Node).OfType<MethodDeclaration>().FirstOrDefault()?.IsStatic == true;
+        return context == null ? new ScopeEnvironment("", null, false, false) : scopeEnvironments[context];
+    }
+    private IEnumerable<Symbol> Visible(string path, int offset, string? name = null)
+    {
+        var environment = ScopeAt(path, offset);
+        string ns = environment.Namespace;
+        string? owner = environment.Owner;
+        bool isStatic = environment.IsStatic;
         var imports = snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? [];
         var inheritedOrder = owner == null ? Array.Empty<Symbol>() : TypeMembers(owner)
             .Where(s => (name == null || s.Name == name) && Accessible(s, path, offset)).ToArray();
@@ -224,7 +265,7 @@ public sealed partial class EditorModel
             bool typePrefix = resolved != null || Visible(path, offset, head).Any(s =>
                 s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration);
             string? namespacePath = typePrefix ? null : snapshot.Checker?.ResolveVisibleNamespacePath(qualifier,
-                globalQualifier ? "" : Namespace(ContextParents(path, offset)),
+                globalQualifier ? "" : ScopeAt(path, offset).Namespace,
                 globalQualifier ? [] : snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? []);
             if (resolved == null && snapshot.Checker == null)
                 resolved = Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier && s.Classification == "namespace");
@@ -246,7 +287,7 @@ public sealed partial class EditorModel
         if (type == null)
             type = Visible(path, offset, left.Text).FirstOrDefault(s => s.Name == left.Text)?.Type;
         string? owner = TypeOwner(type, path, offset);
-        if (left.Text == "this") owner = Owner(ContextParents(path, offset));
+        if (left.Text == "this") owner = ScopeAt(path, offset).Owner;
         var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset) && ReceiverAllowsMember(s, type))
             .Select(member => BindInstanceMember(member, type)).ToArray();
         return members.Concat(ExtensionMembers(path, offset, expression?.Node, type)
@@ -337,7 +378,7 @@ public sealed partial class EditorModel
         if ((s.Syntax.Node is ExternDeclaration || s.Syntax.Node is PropertyDeclaration or FieldDeclaration && s.Owner == null) && s.Access == TokenKind.Private)
             return Workspace.Paths.Equals(s.Syntax.Span.Source?.Path, path);
         if (s.Access is TokenKind.Public or TokenKind.Internal || s.Owner == null) return true;
-        string? owner = Owner(ContextParents(path, offset));
+        string? owner = ScopeAt(path, offset).Owner;
         return s.Owner == owner ||
             s.Access == TokenKind.Protected && owner != null && TypeMembers(owner).Any(m => m.Owner == s.Owner);
     }

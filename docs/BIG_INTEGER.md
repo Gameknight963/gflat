@@ -42,6 +42,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `Abs()` | Return an independent nonnegative integer with the same magnitude. |
 | `Negate()` | Return an independent integer with the opposite sign. |
 | `BigInteger::GreatestCommonDivisor(first, second)` | Borrow two integer pointers and return their independent nonnegative greatest common divisor. |
+| `BigInteger::LeastCommonMultiple(first, second)` | Return an independent nonnegative least common multiple; either zero operand gives zero. |
 | `Add(immutable(BigInteger)* other)` | Return the exact sum. |
 | `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
 | `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
@@ -153,6 +154,20 @@ until the result is complete. The returned nonzero owner has independent limb
 storage even when the input values already equal their greatest common divisor.
 This method can allocate and is not `nothrow`. The fixed-width unsigned overloads
 on `Math::GreatestCommonDivisor` remain available for primitive integers.
+
+## Least common multiple
+
+Static `LeastCommonMultiple(immutable(BigInteger)* first,
+immutable(BigInteger)* second)` ignores operand signs and returns an independent
+nonnegative result. If either operand is zero, it returns canonical zero without
+allocating. Both pointers may refer to the same integer.
+
+It divides out the greatest common divisor before multiplying, avoiding an
+unnecessarily large intermediate product. Neither input changes. Nonzero results
+can allocate and throw; temporary owners are cleaned up, and an existing
+assignment target is preserved if construction fails, including when that target
+is one of the operands. Fixed-width callers can instead use the checked
+`Math::TryLeastCommonMultiple` overloads.
 
 ## Division and remainder
 

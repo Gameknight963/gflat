@@ -207,6 +207,16 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move a;
     }
 
+    public static BigInteger LeastCommonMultiple(immutable(BigInteger)* first, immutable(BigInteger)* second)
+    {
+        if (first.sign == 0 || second.sign == 0) return new BigInteger();
+        BigInteger divisor = BigInteger::GreatestCommonDivisor(first, second);
+        BigInteger reduced = first.Divide(&divisor);
+        BigInteger product = reduced.Multiply(second);
+        product.sign = 1;
+        return move product;
+    }
+
     public immutable BigInteger Add(immutable(BigInteger)* other)
     {
         if (sign == 0) return *other;

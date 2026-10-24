@@ -686,6 +686,7 @@ int SmokeHashesAndViews() {
         if (queryValues.AsEnumerable().Aggregate((int left, int right) => left - right) != 7) return 181;
         if (queryValues.AsEnumerable().Min() != 2 || queryValues.AsEnumerable().Max() != 12) return 182;
         if (queryValues.AsEnumerable().Min((immutable(int)* left, immutable(int)* right) => *left - *right) != 2) return 183;
+        if (queryValues.AsEnumerable().Prepend(1).Append(4).Aggregate((int left, int right) => left + right) != 22) return 184;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

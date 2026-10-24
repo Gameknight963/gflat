@@ -123,6 +123,43 @@ succeeds. `std/core/HexText.gf` adds owning `std::HexText::Encode(data, count,
 uppercase = true)` and `Decode(text, count)` conveniences. Decoded strings retain
 embedded zeros and report malformed input through an exception.
 
+The optional `std/core/HexWriter.gf` adapter adds
+`WriteHex(this ITextWriter* output, readonly(char)* data, nuint count,
+bool uppercase = true)`. It writes two digits per input byte with no prefix,
+separator, whitespace, newline, or terminator. Uppercase is the default, matching
+`Hex::TryEncode` and `HexText::Encode`; pass `false` for lowercase.
+
+```csharp
+using std;
+int main()
+{
+    char[3] bytes = [(char)0, (char)0xab, (char)0xff];
+    String text = new();
+    ITextWriter* output = &text;
+    output.WriteHex(bytes, 3);
+    if (text.Length != 6 || text.Data[0] != '0' || text.Data[2] != 'A'
+        || text.Data[5] != 'F') return 1;
+    return 0;
+}
+```
+
+Input is counted binary data, including embedded NUL bytes. Empty input makes
+no writer calls. The adapter checks the total encoded length for pointer-sized
+overflow before reading input or calling the writer, throwing `Exception` with
+`Hex length overflow` on failure. It then reuses `Hex::TryEncode` for chunks of
+at most 128 input bytes, writing each encoded chunk from a 256-byte stack buffer.
+It allocates no intermediate owning string or other heap storage. The writer
+can allocate according to its own contract.
+
+The writer is borrowed and is never closed or destroyed. Writer exceptions
+propagate and can leave an output prefix; retrying the entire call can duplicate
+that prefix. Input must remain valid and unchanged throughout the call, separate
+from writer state and destination storage. Each `Write` consumes its supplied
+span immediately and must not retain its pointer to temporary stack storage.
+Include `HexWriter.gf` with `Hex.gf` and the normal text/exception contracts;
+the adapter uses no `String` type and makes no libc calls. Its writer and the
+language's exception runtime retain their existing dependency requirements.
+
 # Component percent encoding
 
 `std/core/PercentEncoding.gf` defines `std::PercentEncoding`. This encodes

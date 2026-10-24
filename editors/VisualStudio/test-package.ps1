@@ -695,6 +695,12 @@ int SmokeHashesAndViews() {
         HashMap<BitSet, int> bitMap = new(); bitMap.Add(bitKey, 7);
         bitKey.Clear();
         if (!bitMap.ContainsKey(&bitCopy) || bitMap[&bitCopy] != 7 || bitKey.Equals(&bitCopy)) return 186;
+        IpAddress subnetHost = IpAddress::Parse("192.0.2.37");
+        IpNetwork subnet = IpNetwork::FromAddress(subnetHost, 24);
+        IpNetwork parsedSubnet = IpNetwork::Parse("192.0.2.0/024");
+        if (!subnet.Contains(&subnetHost) || !subnet.Equals(&parsedSubnet)) return 187;
+        IpAddress mappedHost = IpAddress::Parse("::ffff:192.0.2.37");
+        if (subnet.Contains(&mappedHost)) return 188;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

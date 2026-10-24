@@ -246,6 +246,8 @@ public class WholeStandardLibraryEditorTests
                 int isoYear=calendar.IsoWeekYear; int isoWeek=calendar.IsoWeekOfYear;
                 int isoWeeks=Date::GetIsoWeeksInYear(isoYear);
                 Date isoRoundtrip=Date::FromIsoWeek(isoYear,isoWeek,weekday);
+                Deque<int> endpoints=new(); endpoints.AddFirst(42); int endpoint=0;
+                endpoints.TryRemoveFirst(ref endpoint); endpoints.TryRemoveLast(ref endpoint);
                 int calendarDay=tomorrow.DayNumber; int monthDays=Date::DaysInMonth(2024,2);
                 String dated=s$"Next day: {tomorrow}";
                 TimeSpan elapsed=TimeSpan::FromMilliseconds(1250l);
@@ -357,12 +359,13 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"IsoWeekYear","IsoWeekOfYear","GetIsoWeeksInYear","FromIsoWeek"})
+        foreach(string member in new[]{"IsoWeekYear","IsoWeekOfYear","GetIsoWeeksInYear","FromIsoWeek","TryRemoveFirst","TryRemoveLast"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
-            Assert.Contains("Date.gf",JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
+            string definition=member.StartsWith("TryRemove",StringComparison.Ordinal)?"Deque.gf":"Date.gf";
+            Assert.Contains(definition,JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
         }
         foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),
             ("queryHasKey","Contains","EnumerableContains.gf"),("queryHasCustomKey","Contains","EnumerableContains.gf")})

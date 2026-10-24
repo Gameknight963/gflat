@@ -65,13 +65,6 @@ public sealed class Compilation
                 if (member is not ExternDeclaration ext || !unit.Members.OfType<ExternDeclaration>().Any(e => e.Name == ext.Name))
                     unit.Members.Add(member);
         }
-        // Match the automatic-inclusion behavior when a project explicitly includes Memory.gf.
-        // A user extern declaration may intentionally supply a stronger foreign contract.
-        var userExterns = unit.Members.OfType<ExternDeclaration>()
-            .Where(e => !StandardLibrary.IsSource(e.Span.Source?.Path, "libc/Memory/Memory.gf"))
-            .Select(e => e.Name).ToHashSet();
-        unit.Members.RemoveAll(m => m is ExternDeclaration e && userExterns.Contains(e.Name) &&
-            StandardLibrary.IsSource(e.Span.Source?.Path, "libc/Memory/Memory.gf"));
         // Keep library type definitions ahead of user constants, as the embedded
         // prelude did. LLVM aggregate constants require their concrete type layout.
         var libraryMembers = unit.Members.Where(m => StandardLibrary.AutomaticFiles.Any(relative =>

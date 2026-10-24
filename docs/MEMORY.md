@@ -48,6 +48,12 @@ but an exception escaping it reaches the unhandled-exception boundary instead
 of propagating to its caller. It does not prove that the allocator is correct or
 make invalid pointers safe to free. Freeing storage does not run object destructors.
 
+The default allocator keeps its private C imports in an implementation namespace.
+Application files may declare their own global `malloc` and `free` imports,
+including private declarations, without changing the default wrappers' lookup.
+Replacement hooks may continue calling their own imports normally. All declarations
+for the same native C symbol still need compatible native signatures and matching
+`nothrow` contracts; the allocator does not override that general rule.
 ## Native linking
 
 The source contains ordinary byte loops and no direct libc calls. **This does

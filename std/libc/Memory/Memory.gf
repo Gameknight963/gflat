@@ -1,16 +1,20 @@
 // Default memory hooks. Replace both functions to supply a custom allocator.
-private extern void*? malloc(nuint size);
-private extern void free(void* ptr);
-
 namespace Memory
 {
+    // Keep native import names out of both global and replacement-hook lookup.
+    namespace NativeImports
+    {
+        private extern void*? malloc(nuint size);
+        private extern void free(void* ptr);
+    }
+
     public weak void*? Allocate(nuint size)
     {
-        return malloc(size);
+        return NativeImports::malloc(size);
     }
 
     public weak void Free(void* ptr) nothrow
     {
-        free(ptr);
+        NativeImports::free(ptr);
     }
 }

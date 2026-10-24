@@ -201,6 +201,19 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return result;
     }
 
+    public bool TryPop(ref T result)
+    {
+        if (count == 0) return false;
+        nuint start = (nuint)data!;
+        nuint output = (nuint)&result;
+        nuint stride = (nuint)sizeof(T);
+        if (stride == 0) stride = 1;
+        if (output >= start && output - start < capacity * stride)
+            throw new Exception("Vector output must not refer to its storage");
+        result = this.Pop();
+        return true;
+    }
+
     public void Truncate(nuint length)
     {
         if (length > count) throw new Exception("Vector truncation length out of range");

@@ -42,6 +42,17 @@ constructors. The insertion argument follows ordinary value semantics and is
 prepared before the vector changes, so inserting a copy of an existing element
 works even when insertion grows the buffer. An explicit move source must not
 refer to an element still owned by that vector.
+`Pop()` transfers the last element, throwing if empty. `TryPop(ref result)`
+returns false for an empty vector without touching the initialized output.
+On success it moves the last owner into that output, updates `Count` before
+destroying the output's previous value, and retains `Capacity`. No element copy
+or container allocation is needed. Normal element cleanup effects still apply.
+For nonempty vectors, output inside any part of the backing allocation, including
+spare capacity, throws `Exception("Vector output must not refer to its storage")`
+before removing or destroying anything. Output must be a separate complete
+initialized value, not a reference into the vector's header or owned storage.
+The empty check precedes the alias check, matching `Stack.TryPop`.
+
 `SwapRemoveAt(index)` also returns the removed owner, but fills its slot with
 the last element in constant time. It changes survivor order and is useful when
 that order does not matter.

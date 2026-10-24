@@ -62,7 +62,7 @@ implementation lives in `libc`.
 | Streaming Base64 | `Base64Encoder`, `Base64Decoder` | [Encoding](../docs/BASE64_ENCODER.md), [strict decoding](../docs/BASE64_DECODER.md) through borrowed writers |
 | JSON strings | `JsonString`, `JsonStringText`, writer `WriteJsonString` | [Strict UTF-8 buffer codecs and owning String conveniences](../docs/JSON_STRING.md) |
 | JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens, borrowed raw lexemes, and decoded text comparison](../docs/JSON_READER.md) |
-| JSON text | `JsonText::Minify` | [Validate first and remove whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |
+| JSON text | `JsonText::Minify`, `JsonText::PrettyPrint` | [Validate first and format whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |
 | JSON output | `JsonWriter`, `JsonWriteException` | [Validated output through a borrowed text writer](../docs/JSON_WRITER.md) |
 | CSV input | `CsvReader`, `CsvParseException` | [Borrowed counted fields and caller-buffer decoding](../docs/CSV_READER.md) |
 | CSV output | `CsvWriter` | [Streaming counted fields and CRLF records](../docs/CSV_WRITER.md) |

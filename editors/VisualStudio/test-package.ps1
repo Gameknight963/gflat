@@ -972,6 +972,11 @@ int SmokeHashesAndViews() {
         formattedLines.Write("x", 1);
         if (formattedLineOutput.Length != 20 || formattedLineBytes[0] != '2'
             || formattedLineBytes[18] != '0' || formattedLineBytes[19] != 'x') return 261;
+        Version ownedTextValue = new(2, 3);
+        String ownedText = ownedTextValue.ToString();
+        int ownedTextNumber = 42;
+        String ownedNumberText = ownedTextNumber.ToString();
+        if (!ownedText.Equals("2.3") || !ownedNumberText.Equals("42")) return 262;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

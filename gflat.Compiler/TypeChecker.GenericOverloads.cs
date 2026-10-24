@@ -110,12 +110,14 @@ public partial class TypeChecker
         if (formal is NamedTypeExpression { IsResolvedNominal: false, Namespace: null, TypeArguments.Count: 0 } variable && names.Contains(variable.Name))
         {
             if (!pattern && actual is ReferenceTypeExpression) return false;
-            var inferred = pattern ? actual : ResolveAlias(actual);
+            var resolved = pattern ? actual : ResolveAlias(actual);
+            var inferred = resolved;
             if (variable.IsImmutableValue) inferred = inferred.WithoutValueProtection();
             else if (variable.IsReadOnlyValue) inferred = inferred.WithReadOnlyValue(false);
             if (bindings.TryGetValue(variable.Name, out var previous))
                 return pattern ? CallableSymbolicTypeKey(previous, EmptyCallableTypeNames, evaluateBounds: false).Equals(CallableSymbolicTypeKey(inferred, EmptyCallableTypeNames, evaluateBounds: false), StringComparison.Ordinal)
-                    : TypesMatch(OverloadArgumentType(previous), OverloadArgumentType(inferred));
+                    : TypesMatch(OverloadArgumentType(previous.WithQualifiersFrom(variable)),
+                        OverloadArgumentType(resolved.WithQualifiersFrom(variable)));
             bindings[variable.Name] = inferred;
             return true;
         }

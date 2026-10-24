@@ -9,6 +9,9 @@ public static class TypeQualifiers
         TypeExpression qualified = type is ArrayTypeExpression a
             ? new ArrayTypeExpression(ReadOnly(a.ElementType), a.Size, a.Line, a.SizeExpression) : type;
         qualified = qualified.WithReadOnlyValue(true);
+        if (type.GenericParameterView != null) qualified = qualified.WithGenericParameterView(type.GenericParameterView);
+        if (type.GenericUse != null) qualified = qualified.WithGenericUse(type.GenericUse);
+        if (type.InterfaceConstraints.Count > 0) qualified = qualified.WithInterfaceConstraints(type.InterfaceConstraints);
         qualified.Span = type.Span;
         return qualified;
     }
@@ -27,6 +30,9 @@ public static class TypeQualifiers
             _ => type
         };
         qualified = qualified.WithImmutableValue(true);
+        if (type.GenericParameterView != null) qualified = qualified.WithGenericParameterView(type.GenericParameterView);
+        if (type.GenericUse != null) qualified = qualified.WithGenericUse(type.GenericUse);
+        if (type.InterfaceConstraints.Count > 0) qualified = qualified.WithInterfaceConstraints(type.InterfaceConstraints);
         qualified.Span = type.Span;
         return qualified;
     }

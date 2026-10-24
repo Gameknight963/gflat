@@ -173,7 +173,9 @@ public partial class TypeChecker
         TypeExpression ParameterType(TypeExpression type) => useDeclaredTypes ? OverloadArgumentType(type) : type;
         bool ArgumentMatches(TypeExpression expected, AstNode argument) => NeedsCreationTarget(argument) || (IsOverloadedFunctionValue(argument)
             ? CanSelectFunctionValue(argument, expected)
-            : IsAssignable(ParameterType(expected), ArgumentType(argument), argument is DefaultExpression { TargetType: null } ? null : argument));
+            : IsAssignable(ParameterType(expected), ArgumentType(argument),
+                argument is DefaultExpression { TargetType: null } || _functionAddressTargets.ContainsKey(argument)
+                    ? null : argument));
         var viable = candidates.Where(c => AcceptsArgumentCount(parameters(c), arguments.Count) &&
             parameters(c).Take(arguments.Count).Select((p, i) => ArgumentMatches(p.Type, arguments[i])).All(v => v)).ToList();
         bool Better(T first, T second)

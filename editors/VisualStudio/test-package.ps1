@@ -690,6 +690,11 @@ int SmokeHashesAndViews() {
         String prettyJson = new();
         JsonText::PrettyPrint("[1,{}]", 6, &prettyJson);
         if (!prettyJson.Equals("[\n  1,\n  {}\n]")) return 185;
+        BitSet bitKey = new(65); bitKey[64] = true;
+        BitSet bitCopy = bitKey;
+        HashMap<BitSet, int> bitMap = new(); bitMap.Add(bitKey, 7);
+        bitKey.Clear();
+        if (!bitMap.ContainsKey(&bitCopy) || bitMap[&bitCopy] != 7 || bitKey.Equals(&bitCopy)) return 186;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

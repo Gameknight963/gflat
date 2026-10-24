@@ -214,7 +214,7 @@ public class WholeStandardLibraryEditorTests
                 float number=0.0f; BinaryPrimitives::TryReadFloatLittleEndian(bytes,4,ref number);
                 BinaryBufferWriter binary=new(bytes,4); binary.TryWriteFloatBigEndian(number);
                 binary.Reset(); binary.TryWriteBytes(bytes,4);
-                BinaryBufferReader binaryInput=new(bytes,4); binaryInput.TryReadBytes(bytes,4);
+                BinaryBufferReader binaryInput=new(bytes,4); byte binaryPeek=0; bool hasBinaryByte=binaryInput.TryPeekByte(ref binaryPeek); binaryInput.TryReadBytes(bytes,4);
                 byte[16] wideBytes; extralong wideNumber=(extralong)42;
                 BinaryBufferWriter wideOutput=new(wideBytes,16); wideOutput.TryWriteExtraLongBigEndian(wideNumber);
                 BinaryBufferReader wideInput=new(wideBytes,16); wideInput.TryReadExtraLongBigEndian(ref wideNumber);
@@ -439,6 +439,10 @@ public class WholeStandardLibraryEditorTests
         var linkedRemovalHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,linkedRemoval),Protocol.JsonOptions);
         Assert.Contains("nuint",linkedRemovalHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("LinkedList.gf",JsonSerializer.Serialize(model.Definition(source.Path,linkedRemoval),Protocol.JsonOptions));
+        int peekCall=text.IndexOf("binaryInput.TryPeekByte",StringComparison.Ordinal)+"binaryInput.".Length;
+        var peekHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,peekCall),Protocol.JsonOptions);
+        Assert.Contains("bool",peekHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("BinaryBufferReader.gf",JsonSerializer.Serialize(model.Definition(source.Path,peekCall),Protocol.JsonOptions));
         int popCall=text.IndexOf("popValues.TryPop",StringComparison.Ordinal)+"popValues.".Length;
         var popHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,popCall),Protocol.JsonOptions);
         Assert.Contains("bool",popHover.GetProperty("contents").GetProperty("value").GetString());

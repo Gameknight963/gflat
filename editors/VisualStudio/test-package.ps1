@@ -672,6 +672,13 @@ int SmokeHashesAndViews() {
         if (generalQuotient.ToLong() != 999999997l || generalRemainder.ToLong() != 3999999997l) return 177;
         BigInteger aliasedQuotient = generalDividend.DivRem(&generalDivisor, ref generalDivisor);
         if (!aliasedQuotient.Equals(&generalQuotient) || generalDivisor.ToLong() != 3999999997l) return 178;
+        BigInteger negative = new(-48l);
+        BigInteger positive = negative.Abs();
+        BigInteger negated = positive.Negate();
+        if (positive.ToLong() != 48l || negated.ToLong() != -48l || negative.ToLong() != -48l) return 179;
+        BigInteger other = new(18l);
+        BigInteger gcd = BigInteger::GreatestCommonDivisor(&negative, &other);
+        if (gcd.ToLong() != 6l || other.ToLong() != 18l) return 180;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

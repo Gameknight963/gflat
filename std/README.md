@@ -133,6 +133,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 - [JSON get](../examples/json-get/README.md): select a raw value with a plain pointer or a counted UTF-8 pointer file.
 - [Pathfinding](../examples/pathfinding/README.md): weighted shortest paths using a priority queue.
 - [Connected components](../examples/components/README.md): stream undirected edges and report graph partitions.
+- [Timed sorting](../examples/sort-bench/README.md): select a platform clock, time two sorting algorithms, and verify their results.
 - [Search](../examples/search/README.md): chunked file processing.
 - [Queries](../examples/queries/main.gf): lazy, allocation-free collection pipelines.
 

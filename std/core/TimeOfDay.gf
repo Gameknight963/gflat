@@ -27,6 +27,29 @@ public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashab
     public int Second { immutable get nothrow => (int)(ticks / 10000000l % 60l); }
     public int Millisecond { immutable get nothrow => (int)(ticks / 10000l % 1000l); }
 
+    public immutable TimeOfDay Add(TimeSpan value) nothrow
+    {
+        int wrappedDays = 0;
+        return this.Add(value, ref wrappedDays);
+    }
+    public immutable TimeOfDay Add(TimeSpan value, ref int wrappedDays) nothrow
+    {
+        long delta = value.Ticks;
+        long days = delta / TicksPerDay;
+        // Remainder magnitude is less than a day, avoiding ticks+delta overflow.
+        long shifted = ticks + delta % TicksPerDay;
+        if (shifted < 0l) { shifted += TicksPerDay; days--; }
+        else if (shifted >= TicksPerDay) { shifted -= TicksPerDay; days++; }
+        TimeOfDay result = new(); result.ticks = shifted;
+        wrappedDays = (int)days;
+        return result;
+    }
+    public immutable bool IsBetween(TimeOfDay start, TimeOfDay end) nothrow
+    {
+        if (start.ticks <= end.ticks) return ticks >= start.ticks && ticks < end.ticks;
+        return ticks >= start.ticks || ticks < end.ticks;
+    }
+
     public static bool TryParse(readonly(char)* text, nuint count, TimeOfDay* result) nothrow
     {
         TimeOfDay parsed = new();

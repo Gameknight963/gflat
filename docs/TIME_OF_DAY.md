@@ -13,6 +13,10 @@ int main()
     if (opening.CompareTo(&closing) >= 0) return 1;
     String label = s$"{opening} - {closing}";
     if (!label.Equals("09:30:00 - 17:45:00.1250000")) return 2;
+    int days = 0;
+    TimeOfDay next = closing.Add(TimeSpan::FromHours(8), ref days);
+    if (days != 1 || next.Hour != 1 || next.Minute != 45) return 3;
+    if (!next.IsBetween(new TimeOfDay(23, 0), new TimeOfDay(2, 0))) return 4;
     return 0;
 }
 ```
@@ -26,6 +30,25 @@ Immutable, `nothrow` properties expose `Ticks`, `Hour`, `Minute`, `Second`, and
 `Millisecond`. The value implements equality, ordering, hashing, and direct
 writer formatting. Ordering compares times within the same day; no date or
 time zone is attached. Use [TimeSpan](TIME_SPAN.md) for signed durations.
+
+## Arithmetic and ranges
+
+Immutable `Add(TimeSpan value)` returns the time after a positive or negative
+duration, wrapping within one day. `Add(value, ref int wrappedDays)` also reports
+the signed day crossings. For example, adding minus one tick to midnight returns
+`23:59:59.9999999` with `wrappedDays = -1`; the last tick plus one tick returns
+midnight with `wrappedDays = 1`. Whole days contribute to this count even when
+the time itself is unchanged. Every signed-long TimeSpan tick count is accepted,
+including its minimum and maximum. Both overloads are `nothrow` and allocate
+nothing; no date, time zone, daylight-saving or clock operation is implied.
+
+Immutable, `nothrow` `IsBetween(start, end)` includes `start` and excludes `end`.
+When start is later than end, the interval crosses midnight. Equal endpoints
+describe an empty interval and return false. The operation compares times only
+and does not infer dates or a full-day interval from equality.
+
+These contracts follow [TimeOnly.Add](https://learn.microsoft.com/en-us/dotnet/api/system.timeonly.add)
+and [TimeOnly.IsBetween](https://learn.microsoft.com/en-us/dotnet/api/system.timeonly.isbetween).
 
 ## Text
 

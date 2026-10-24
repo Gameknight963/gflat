@@ -4443,17 +4443,19 @@ public partial class LlvmEmitter : IVisitor
 
     public void Visit(CastExpression node)
     {
-        if (TryContextualIntegerLiteral(node.Operand, node.TargetType, out string integerLiteral))
+        // The checker already bound imports, aliases and generic arguments in
+        // the cast's lexical scope. Emission must use that checked identity.
+        TypeExpression dstType = _typeChecker.GetType(node);
+        if (TryContextualIntegerLiteral(node.Operand, dstType, out string integerLiteral))
         {
             // The literal already has the destination representation. Converting
             // again through its default integer type would truncate wide values.
             Push(integerLiteral);
             return;
         }
-        EmitValueForTarget(node.Operand, node.TargetType);
+        EmitValueForTarget(node.Operand, dstType);
         string val = Pop();
         TypeExpression srcType = _typeChecker.GetType(node.Operand);
-        TypeExpression dstType = node.TargetType;
         string castVal = EmitCast(val, srcType, dstType);
         if (_typeChecker.ResolveAlias(dstType) is PointerTypeExpression { IsNullable: false } or FunctionPointerTypeExpression { IsNullable: false } or ManagedTypeExpression { IsNullable: false })
             GuardNonNull(castVal, EmitType(dstType));

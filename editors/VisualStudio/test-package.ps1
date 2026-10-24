@@ -710,6 +710,9 @@ int SmokeHashesAndViews() {
         if (compactOwner.Capacity != 3 || compactOwner.Length != 3 || compactOwner.Data[2] != 'b' || compactOwner.Data[3] != '\0') return 190;
         Vector<int> poppedValues = new(); poppedValues.Add(42); int poppedResult = -1;
         if (!poppedValues.TryPop(ref poppedResult) || poppedResult != 42 || poppedValues.TryPop(ref poppedResult) || poppedResult != 42) return 191;
+        char[8] base32Encoded; char[3] base32Decoded; nuint base32Written = 0;
+        if (!Base32::TryEncode("foo", 3, base32Encoded, 8, ref base32Written) || base32Written != 8 || base32Encoded[0] != 'M' || base32Encoded[7] != '=') return 192;
+        if (!Base32::TryDecode(base32Encoded, 8, base32Decoded, 3, ref base32Written) || base32Written != 3 || base32Decoded[0] != 'f' || base32Decoded[2] != 'o') return 193;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

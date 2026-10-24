@@ -131,8 +131,7 @@ public static class NativeToolchain
         // do not by themselves require Clang's compiler-rt library.
         if (OperatingSystem.IsWindows() && RequiresWideIntegerRuntime(ir))
             args.Add("--rtlib=compiler-rt");
-        bool exceptions = ir.Contains("@__gflat_eh_", StringComparison.Ordinal);
-        bool stdio = ir.Contains("@__gflat_stdio_", StringComparison.Ordinal);
+        var (exceptions, stdio) = RequiredNativeRuntimes(ir);
         if (exceptions || stdio)
         {
             // Keep the selected LLVM version, including names such as clang-18.
@@ -146,6 +145,48 @@ public static class NativeToolchain
         if (OperatingSystem.IsLinux() && System.Text.RegularExpressions.Regex.IsMatch(ir, @"(?m)^\s*%[^\r\n]*=\s*frem\b"))
             args.Add("-lm");
         return Run(compiler, args, 60000);
+    }
+
+    internal static (bool Exceptions, bool Stdio) RequiredNativeRuntimes(string ir)
+    {
+        if (!ir.Contains("__gflat_", StringComparison.Ordinal)) return default;
+        // Keep line boundaries and quoted global identifiers, but hide metadata,
+        // string constants, inline assembly text and comments from header matching.
+        char[] code = ir.ToCharArray();
+        for (int at = 0; at < ir.Length; at++)
+        {
+            if (ir[at] == ';')
+            {
+                while (at < ir.Length && ir[at] != '\n') code[at++] = ' ';
+            }
+            else if (ir[at] == '"')
+            {
+                bool globalSymbol = at > 0 && ir[at - 1] == '@';
+                if (!globalSymbol) code[at] = ' ';
+                for (at++; at < ir.Length; at++)
+                {
+                    if (!globalSymbol && ir[at] is not ('\r' or '\n')) code[at] = ' ';
+                    if (ir[at] == '\\' && at + 1 < ir.Length)
+                    {
+                        at++;
+                        if (!globalSymbol) code[at] = ' ';
+                        continue;
+                    }
+                    if (ir[at] == '"') break;
+                }
+            }
+        }
+        // The first @ in an emitted function header names that function. Do not
+        // skip a different name to find a reserved-looking name in its body.
+        const string header = "(?m)^[\\t ]*(?:declare|define)\\b[^@{}=]*@(?:\"__gflat_(?<runtime>eh|stdio)_[A-Za-z0-9_]+\"|__gflat_(?<runtime>eh|stdio)_[A-Za-z0-9_]+)\\s*\\(";
+        bool exceptions = false, stdio = false;
+        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(new string(code), header))
+        {
+            if (match.Groups["runtime"].Value == "eh") exceptions = true;
+            else stdio = true;
+            if (exceptions && stdio) break;
+        }
+        return (exceptions, stdio);
     }
 
     internal static bool RequiresWideIntegerRuntime(string ir)

@@ -681,6 +681,13 @@ int SmokeHashesAndViews() {
         if (gcd.ToLong() != 6l || other.ToLong() != 18l) return 180;
     }
     {
+        int[3] queryData = [12, 3, 2];
+        Span<int> queryValues = new(queryData, 3);
+        if (queryValues.AsEnumerable().Aggregate((int left, int right) => left - right) != 7) return 181;
+        if (queryValues.AsEnumerable().Min() != 2 || queryValues.AsEnumerable().Max() != 12) return 182;
+        if (queryValues.AsEnumerable().Min((immutable(int)* left, immutable(int)* right) => *left - *right) != 2) return 183;
+    }
+    {
         Unique<int> batchOwner = new(new* int(7));
         int*? batchReleased = batchOwner.Release();
         if (batchReleased == null || !batchOwner.IsEmpty) return 139;

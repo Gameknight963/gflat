@@ -236,6 +236,28 @@ public static class Math
         return *((float*)&bits);
     }
 
+    public static float BitIncrement(float value) nothrow
+    {
+        uint bits = *((uint*)&value);
+        uint magnitude = bits & 0x7fffffffu;
+        if (magnitude > 0x7f800000u || bits == 0x7f800000u) return value;
+        if (magnitude == 0u) bits = 1u;
+        else if ((bits & 0x80000000u) != 0u) bits--;
+        else bits++;
+        return *((float*)&bits);
+    }
+
+    public static float BitDecrement(float value) nothrow
+    {
+        uint bits = *((uint*)&value);
+        uint magnitude = bits & 0x7fffffffu;
+        if (magnitude > 0x7f800000u || bits == 0xff800000u) return value;
+        if (magnitude == 0u) bits = 0x80000001u;
+        else if ((bits & 0x80000000u) != 0u) bits++;
+        else bits--;
+        return *((float*)&bits);
+    }
+
     public static float Truncate(float value) nothrow
     {
         uint bits = *((uint*)&value);
@@ -333,6 +355,28 @@ public static class Math
     public static double CopySign(double magnitude, double sign) nothrow
     {
         ulong bits = (*((ulong*)&magnitude) & 9223372036854775807ul) | (*((ulong*)&sign) & 9223372036854775808ul);
+        return *((double*)&bits);
+    }
+
+    public static double BitIncrement(double value) nothrow
+    {
+        ulong bits = *((ulong*)&value);
+        ulong magnitude = bits & 0x7ffffffffffffffful;
+        if (magnitude > 0x7ff0000000000000ul || bits == 0x7ff0000000000000ul) return value;
+        if (magnitude == 0ul) bits = 1ul;
+        else if ((bits & 0x8000000000000000ul) != 0ul) bits--;
+        else bits++;
+        return *((double*)&bits);
+    }
+
+    public static double BitDecrement(double value) nothrow
+    {
+        ulong bits = *((ulong*)&value);
+        ulong magnitude = bits & 0x7ffffffffffffffful;
+        if (magnitude > 0x7ff0000000000000ul || bits == 0xfff0000000000000ul) return value;
+        if (magnitude == 0ul) bits = 0x8000000000000001ul;
+        else if ((bits & 0x8000000000000000ul) != 0ul) bits++;
+        else bits--;
         return *((double*)&bits);
     }
 

@@ -49,8 +49,8 @@ in `Math.gf` still require their normal exception support.
 
 ## Floating point
 
-`float` and `double` each have `Sqrt`, `CopySign`, `IsNaN`, `IsFinite`, `Abs`,
-`Min`, `Max`, `Truncate`, `Floor`, `Ceiling`, and `Round` overloads.
+`float` and `double` each have `Sqrt`, `CopySign`, `BitIncrement`, `BitDecrement`,
+`IsNaN`, `IsFinite`, `Abs`, `Min`, `Max`, `Truncate`, `Floor`, `Ceiling`, and `Round` overloads.
 `IsFinite` excludes both infinities and all NaNs, and includes zeros
 and subnormals. `Abs` clears the sign bit, including for negative zero and NaNs.
 All floating-point helpers are `nothrow`; the signed-integer `Abs` overloads
@@ -61,6 +61,24 @@ by the second argument's sign bit. It preserves every other bit, including NaN
 payloads and signaling bits. Negative zero and negative NaNs supply a negative
 sign even though comparing them with zero would not detect it. Both overloads
 use ordinary integer bit operations and allocate nothing.
+
+`BitIncrement(value)` returns the next representable value toward positive
+infinity; `BitDecrement(value)` steps toward negative infinity. These are not
+additions or subtractions of a fixed epsilon: spacing changes with magnitude.
+Both positive and negative zero increment to the smallest positive subnormal
+and decrement to the smallest negative subnormal. A step back from those
+subnormals retains the corresponding zero sign.
+
+Positive infinity stays unchanged when incremented; negative infinity stays
+unchanged when decremented. Stepping either infinity in the opposite direction
+returns the largest finite value of that sign. NaNs retain their exact bits,
+including sign, payload and signaling bit. Both operations are `nothrow`, use
+integer bit operations and add no runtime or C math dependency.
+
+```csharp
+float above = Math::BitIncrement(1.0f); // Smallest float greater than 1.
+double below = Math::BitDecrement(1.0); // Largest double less than 1.
+```
 
 `Min` and `Max` propagate a NaN input rather than silently selecting the numeric
 input. When both inputs are NaN the first is returned. When comparing positive

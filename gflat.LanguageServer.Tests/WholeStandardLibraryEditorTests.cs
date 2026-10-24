@@ -247,7 +247,7 @@ public class WholeStandardLibraryEditorTests
                 var windowQuery=neighborWindows.AsEnumerable();
                 PseudoRandom random=new(42ul); Shuffle<int>(values,ref random);
                 values.Fill(7);
-                float fraction=random.NextFloat();
+                float fraction=random.NextFloat(); int signedRandomValue=random.NextInt();
                 float root=Math::Sqrt(4.0f);
                 uint divisor=Math::GreatestCommonDivisor(48u,18u);
                 ulong wideDivisor=Math::GreatestCommonDivisor(48ul,18ul);
@@ -405,6 +405,12 @@ public class WholeStandardLibraryEditorTests
             Assert.Contains("bool",hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.Contains("Base32.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
+        int randomCall=text.IndexOf("random.NextInt",StringComparison.Ordinal)+"random.".Length;
+        var randomHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,randomCall),Protocol.JsonOptions);
+        Assert.Contains("int",randomHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("PseudoRandom.gf",JsonSerializer.Serialize(model.Definition(source.Path,randomCall),Protocol.JsonOptions));
+        var randomHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',randomCall)+1),Protocol.JsonOptions);
+        Assert.Equal(3,randomHelp.GetProperty("signatures").GetArrayLength());
         int popCall=text.IndexOf("popValues.TryPop",StringComparison.Ordinal)+"popValues.".Length;
         var popHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,popCall),Protocol.JsonOptions);
         Assert.Contains("bool",popHover.GetProperty("contents").GetProperty("value").GetString());

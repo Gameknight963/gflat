@@ -80,6 +80,7 @@ public class WholeStandardLibraryEditorTests
                 BigInteger arbitrarySum=arbitraryProduct.Add(&arbitraryInteger);
                 BigInteger arbitraryDifference=arbitrarySum.Subtract(&arbitraryInteger);
                 BigInteger arbitraryAbsolute=arbitraryDifference.Abs(); BigInteger arbitraryNegative=arbitraryDifference.Negate();
+                BigInteger arbitraryGcd=BigInteger::GreatestCommonDivisor(&arbitraryInteger,&arbitraryFactor);
                 BigInteger arbitraryLargeRemainder=new();
                 BigInteger arbitraryLargeQuotient=arbitraryProduct.DivRem(&arbitraryFactor,ref arbitraryLargeRemainder);
                 BigInteger arbitraryDivided=arbitraryProduct.Divide(&arbitraryFactor);
@@ -372,6 +373,10 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
+        int gcdCall=text.IndexOf("GreatestCommonDivisor",text.IndexOf("arbitraryGcd",StringComparison.Ordinal),StringComparison.Ordinal);
+        var gcdHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,gcdCall),Protocol.JsonOptions);
+        Assert.Contains("GreatestCommonDivisor",gcdHover.GetProperty("contents").GetProperty("value").GetString());
+        Assert.Contains("BigInteger.gf",JsonSerializer.Serialize(model.Definition(source.Path,gcdCall),Protocol.JsonOptions));
         foreach(var signCall in new[]{("arbitraryAbsolute","Abs"),("arbitraryNegative","Negate")})
         {
             int offset=text.IndexOf("."+signCall.Item2,text.IndexOf(signCall.Item1,StringComparison.Ordinal),StringComparison.Ordinal)+1;
@@ -605,7 +610,7 @@ public class WholeStandardLibraryEditorTests
         }
         foreach(string member in new[]{"GreatestCommonDivisor","TryLeastCommonMultiple"})
         {
-            var calls=sourceTokens.Where(token=>token.Text==member).ToArray();
+            var calls=sourceTokens.Where(token=>token.Text==member&&token.Start>=6&&text.AsSpan(token.Start-6,6).SequenceEqual("Math::")).ToArray();
             Assert.Equal(3,calls.Length);
             string[] widths=["uint","ulong","nuint"];
             for(int i=0;i<calls.Length;i++)

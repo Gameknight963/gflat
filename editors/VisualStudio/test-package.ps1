@@ -778,6 +778,9 @@ int SmokeHashesAndViews() {
         if (!owningBase32.Equals("MEAGE===", 8)) return 209;
         String decodedBase32 = Base32Text::Decode(owningBase32.Data, owningBase32.Length);
         if (!decodedBase32.Equals("a\0b", 3)) return 210;
+        BigInteger lcmLeft = new(-84l); BigInteger lcmRight = new(126l);
+        BigInteger commonMultiple = BigInteger::LeastCommonMultiple(&lcmLeft, &lcmRight);
+        if (commonMultiple.ToLong() != 252l || lcmLeft.ToLong() != -84l || lcmRight.ToLong() != 126l) return 211;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

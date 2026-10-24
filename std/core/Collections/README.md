@@ -89,6 +89,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Count(predicate)` | Count matching elements by testing every value; return zero for an empty sequence and throw on count overflow. |
 | `First()` / `Last()` / `Single()` | Return a value; throw if empty. `Single` also rejects multiple elements. |
 | `ElementAt(index)` | Return the zero-based element; throw with code 3 if out of range. |
+| `TryElementAt(index, ref result)` | Return the selected element through initialized output, or false with output unchanged if out of range. |
 | `TryFirst(ref result)` | Return false without changing `result` if empty. |
 | `TryLast(ref result)` | Return the last value, or false without changing `result` if empty. |
 | `TrySingle(ref result)` | Return the only value, or false without changing `result` if empty or multiple. |
@@ -99,6 +100,8 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 
 See [sequence equality](../../../docs/QUERY_SEQUENCE_EQUAL.md) for paired
 advancement order, equality contracts, and temporary element ownership.
+The ref-output `Try` methods currently require writable element storage types;
+see the [qualified-element limitation](../../../docs/QUERY_ELEMENT_AT.md).
 
 Operators are lazy until a terminal operation or `foreach` advances an iterator.
 For paired queries and their iteration/ownership rules, see [Zip](../../../docs/QUERY_ZIP.md).

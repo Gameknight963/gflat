@@ -31,7 +31,7 @@ public sealed partial class EditorModel
         if (snapshot.Checker?.GetSourceTypeBinding(source) is NamedTypeExpression bound &&
             snapshot.Checker.GetTypeDeclaration(bound.Name) is { } declaration &&
             sourceTypeDeclarations.TryGetValue((declaration.GetType(), declaration.Span), out var symbol))
-            return symbol;
+            return source is NestedTypeExpression ? symbol with { BoundType = bound } : symbol;
         // Generic bodies need not have been specialized. Resolve the source
         // type's containing scope instead of treating the token after `>::`
         // as an unqualified name (or a constructor call).

@@ -52,9 +52,21 @@ public sealed partial class EditorModel
         void Add(string text, string kind = "text", Location? target = null) { if (text.Length > 0) parts.Add(new(kind, text, Target: target)); }
         void Keyword(string word) { Add(word, "keyword"); Add(" "); }
         void Type(TypeExpression type) => TypeText(ShortType(DisplayType(type), hoverPath, hoverOffset));
-        void TypeText(string text)
+        void TypeText(string text, Symbol? finalType = null)
         {
             var tokens = Lexer.Tokenize(text).Where(t => t.Kind != TokenKind.EndOfFile).ToArray();
+            int finalTypeName = -1;
+            if (finalType != null)
+            {
+                int depth = 0;
+                for (int i = 0; i < tokens.Length; i++)
+                {
+                    if (tokens[i].Kind == TokenKind.Less) depth++;
+                    else if (tokens[i].Kind == TokenKind.Greater) depth--;
+                    else if (tokens[i].Kind == TokenKind.GreaterGreater) depth -= 2;
+                    else if (depth == 0 && tokens[i].Kind == TokenKind.Identifier) finalTypeName = i;
+                }
+            }
             int cursor = 0;
             for (int i = 0; i < tokens.Length; i++)
             {
@@ -73,6 +85,14 @@ public sealed partial class EditorModel
                     target = SymbolLocation(declaration);
                     if (declaration != null) kind = declaration.Classification;
                 }
+                // `>::Nested` is not an ordinary qualified-name token chain.
+                // Its checked source symbol is already known; do not recover it
+                // from the display spelling or mistake a generic argument for it.
+                if (navigable && i == finalTypeName && finalType != null)
+                {
+                    kind = finalType.Classification;
+                    target = SymbolLocation(finalType);
+                }
                 Add(text[token.Start..(token.End + 1)], kind, target);
                 cursor = token.End + 1;
             }
@@ -80,6 +100,13 @@ public sealed partial class EditorModel
         }
         void Name()
         {
+            // A nested type use retains its checked enclosing specialization.
+            // Keep the original symbol for source navigation and glyph identity.
+            if (IsType(symbol.Syntax.Node) && symbol.BoundType is { } boundName)
+            {
+                TypeText(ShortType(DisplayType(boundName), hoverPath, hoverOffset), symbol);
+                return;
+            }
             string name = symbol.Qualified;
             if (hoverPath != null && symbol.Scope == null && symbol.Owner != null && !IsType(symbol.Syntax.Node))
             {
@@ -256,11 +283,12 @@ public sealed partial class EditorModel
         // visited later declarations after an error, or specialized a template.
         if ((!IsType(symbol.Syntax.Node) && symbol.Syntax.Node is not AliasDeclaration) ||
             snapshot.Checker is not { } checker || snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error) ||
-            symbol.Syntax.Node is ClassDeclaration { IsGeneric: true } or ClassDeclaration { IsStatic: true } or StructDeclaration { IsGeneric: true }) return [];
-        TypeExpression? type = IsType(symbol.Syntax.Node) ? new NamedTypeExpression(symbol.Qualified, null, 0) : symbol.Type;
+            symbol.Syntax.Node is ClassDeclaration { IsStatic: true } ||
+            symbol.BoundType == null && (symbol.Syntax.Node is ClassDeclaration { IsGeneric: true } or StructDeclaration { IsGeneric: true })) return [];
+        TypeExpression? type = symbol.BoundType ?? (IsType(symbol.Syntax.Node) ? new NamedTypeExpression(symbol.Qualified, null, 0) : symbol.Type);
         if (type == null) return [];
         var recorded = checker.GetType(symbol.Syntax.Node);
-        if (TypeChecker.TypeName(recorded) != "<error>") type = recorded;
+        if (symbol.BoundType == null && TypeChecker.TypeName(recorded) != "<error>") type = recorded;
         return TypeLayoutDetails(type);
     }
 

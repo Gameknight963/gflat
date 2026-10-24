@@ -141,6 +141,21 @@ int main() {
         throw 'Packaged compiler did not report malformed Unicode numeric text as a source error'
     }
 
+    $invalidLocal = Join-Path $extracted 'reserved-local-name.gf'
+    [IO.File]::WriteAllText($invalidLocal, 'int main(){int* alias=null;return 0;}')
+    $oldLocalErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $localDiagnostics = & $compiler $invalidLocal --check 2>&1
+        $localExitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $oldLocalErrorAction }
+    $localDiagnosticText = $localDiagnostics -join "`n"
+    if ($localExitCode -ne 1 -or $localDiagnosticText -notmatch '\(1,17\): error GF0005:' -or
+        $localDiagnosticText -notmatch 'Expected Identifier' -or $localDiagnosticText -match "Unexpected token 'int'") {
+        throw 'Packaged compiler did not locate the reserved local name after its type'
+    }
+
     $console = Join-Path $extracted 'console.gf'
     'int main() { Console::Write("console"); Console::WriteLine(); Console::Flush(); return 0; }' | Set-Content -LiteralPath $console
     $std = Join-Path $extracted 'Sdk/std'

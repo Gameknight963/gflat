@@ -762,6 +762,12 @@ int SmokeHashesAndViews() {
         BinaryBufferReader peekInput = new(delimiterData, 4); byte peekValue = 0;
         if (!peekInput.TryPeekByte(ref peekValue) || peekValue != 255 || peekInput.Position != 0) return 201;
         if (!peekInput.TrySkip(4) || peekInput.TryPeekByte(ref peekValue) || peekValue != 0 || peekInput.Position != 4) return 202;
+        LinkedList<int> reversedNodes = new();
+        LinkedList<int>::Node* originalFirst = reversedNodes.AddLast(1);
+        LinkedList<int>::Node* originalLast = reversedNodes.AddLast(2);
+        reversedNodes.Reverse();
+        if (reversedNodes.First != originalLast || reversedNodes.Last != originalFirst || originalLast.Next != originalFirst || originalFirst.Previous != originalLast) return 203;
+        if (originalLast.Previous != null || originalFirst.Next != null || originalFirst.Value != 1 || originalLast.Value != 2 || reversedNodes.Count != 2) return 204;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

@@ -19,6 +19,9 @@ struct PseudoRandom
 
     public uint NextUInt() nothrow => (uint)(this.NextULong() >> 32);
 
+    // All 32 signed bits, including negative values; consumes one complete word.
+    public int NextInt() nothrow => (int)this.NextUInt();
+
     // Rejection removes the modulo bias when the range does not divide 2^64.
     public ulong NextULong(ulong exclusiveMax)
     {

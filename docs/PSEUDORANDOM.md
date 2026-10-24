@@ -17,6 +17,7 @@ random.Fill(bytes, 32);
 | --- | --- |
 | `NextULong()` | A full-width 64-bit value. |
 | `NextUInt()` | The high 32 bits of a newly generated 64-bit value. |
+| `NextInt()` | A full signed 32-bit value from those same high bits, including negative values and both integer extremes. |
 | `NextULong(exclusiveMax)` | A value from zero through `exclusiveMax - 1`. |
 | `NextUInt(exclusiveMax)` | A value from zero through `exclusiveMax - 1`. |
 | `NextInt(exclusiveMax)` | An integer from zero through `exclusiveMax - 1`. |
@@ -24,6 +25,12 @@ random.Fill(bytes, 32);
 | `NextDouble()` | A double in `[0, 1)`, constructed from 53 random bits. |
 | `NextFloat()` | A float in `[0, 1)`, constructed from 24 random bits. |
 | `Fill(char* output, nuint count)` | Exactly `count` bytes written into caller-owned storage. |
+
+`NextInt()` returns the full signed `int` domain, including `int` minimum and
+maximum. Unlike .NET's `Random.Next()`, it can return negative values. It uses
+the high 32 bits of one newly generated 64-bit word, like `NextUInt()`, then
+interprets those bits as signed. Use `NextInt(exclusiveMax)` when a nonnegative
+half-open range is wanted. Existing bounded overloads keep their sequences.
 
 Bounded integer methods use rejection sampling to avoid modulo bias. Zero upper
 bounds and empty/reversed signed intervals throw `Exception` before advancing

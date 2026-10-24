@@ -102,6 +102,57 @@ public class StandardPseudoRandomTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void SignedDrawsUseHighBitsCoverBothExtremesAndConsumeOneWord(int optimization)
+    {
+        static string Signed(int value) => value == int.MinValue ? "(-2147483647-1)" :
+            value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var code = new System.Text.StringBuilder("""
+            using std;
+            int allocations=0;
+            replace void*? Memory::Allocate(nuint bytes){allocations++;return null;}
+            replace void Memory::Free(void* storage)nothrow{allocations++;}
+            int main(){
+            """);
+        int failure = 1;
+        // Different low halves ensure a wrong low-32-bit implementation cannot pass.
+        (ulong Output, int Expected)[] endpoints = [
+            (0x00000000ffffffffUL, 0),
+            (0x7fffffffffffffffUL, int.MaxValue),
+            (0x8000000000000000UL, int.MinValue),
+            (0xffffffff00000000UL, -1)
+        ];
+        foreach (var endpoint in endpoints)
+        {
+            ulong seed = SeedForOutput(endpoint.Output), state = seed;
+            Assert.Equal(endpoint.Output, Next(ref state));
+            ulong nextWord = Next(ref state);
+            code.AppendLine($$"""
+                {PseudoRandom random=new({{seed}}ul);
+                 if(random.NextInt()!={{Signed(endpoint.Expected)}})return {{failure++}};
+                 if(random.NextULong()!={{nextWord}}ul)return {{failure++}};}
+                """);
+        }
+        foreach (ulong seed in new[] { 0UL, 42UL, ulong.MaxValue })
+        {
+            ulong state = seed;
+            int[] expected = Enumerable.Range(0, 16)
+                .Select(_ => unchecked((int)(Next(ref state) >> 32))).ToArray();
+            ulong nextWord = Next(ref state);
+            code.AppendLine("{int[16] expected=[" + string.Join(",", expected.Select(Signed)) + "];");
+            code.AppendLine($"PseudoRandom random=new({seed}ul);");
+            code.AppendLine($"for(int i=0;i<16;i++)if(random.NextInt()!=expected[i])return {failure++};");
+            code.AppendLine($"if(random.NextULong()!={nextWord}ul)return {failure++};}}");
+        }
+        code.AppendLine($"if(allocations!=0)return {failure};return 0;}}");
+        var randomSource = new SourceFile("PseudoRandom.gf",
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/PseudoRandom.gf")));
+        var result = CompilerTestHelper.Run([randomSource, new SourceFile("signed-draws.gf", code.ToString())], optimization);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Theory]
     [InlineData(1UL)]
     [InlineData(3UL)]
     [InlineData(0x8000000000000001UL)]

@@ -51,6 +51,7 @@ public class WholeStandardLibraryEditorTests
                 var linkedQuery=list.AsEnumerable().Take(1);
                 bool queryHasAny=linkedQuery.Any(Contains);
                 nuint queryCount=linkedQuery.Count(Contains);
+                int queryElement=0; bool queryIndexed=linkedQuery.TryElementAt(0,ref queryElement);
                 bool querySame=linkedQuery.SequenceEqual(linkedQuery);
                 bool querySameCustom=linkedQuery.SequenceEqual(linkedQuery,(immutable(int)* left,immutable(int)* right)=>*left==*right);
                 int queryKey=42;
@@ -362,12 +363,12 @@ public class WholeStandardLibraryEditorTests
         else Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
         var sourceTokens=Lexer.Tokenize(source);
-        foreach(string member in new[]{"IsoWeekYear","IsoWeekOfYear","GetIsoWeeksInYear","FromIsoWeek","TryRemoveFirst","TryRemoveLast"})
+        foreach(string member in new[]{"IsoWeekYear","IsoWeekOfYear","GetIsoWeeksInYear","FromIsoWeek","TryRemoveFirst","TryRemoveLast","TryElementAt"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
-            string definition=member.StartsWith("TryRemove",StringComparison.Ordinal)?"Deque.gf":"Date.gf";
+            string definition=member=="TryElementAt"?"EnumerableElementAt.gf":member.StartsWith("TryRemove",StringComparison.Ordinal)?"Deque.gf":"Date.gf";
             Assert.Contains(definition,JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
         }
         foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),("queryCount","Count","EnumerableExtensions.gf"),

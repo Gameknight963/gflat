@@ -3,9 +3,21 @@ using std;
 // Keep owned address values as keys; the input buffer is reused for every line.
 int main(int argc, char** argv)
 {
-    if (argc != 1)
+    if (argc != 1 && argc != 3)
     {
-        Console::Error.WriteLine("Usage: ip-count < addresses.txt");
+        Console::Error.WriteLine("Usage: ip-count [--network <CIDR>] < addresses.txt");
+        return 2;
+    }
+    bool filtered = argc == 3;
+    if (filtered && !CString::Equals(argv[1], "--network"))
+    {
+        Console::Error.WriteLine("Usage: ip-count [--network <CIDR>] < addresses.txt");
+        return 2;
+    }
+    IpNetwork network = new();
+    if (filtered && !IpNetwork::TryParse(argv[2], &network))
+    {
+        Console::Error.WriteLine("ip-count: invalid IP network");
         return 2;
     }
     HashMap<IpAddress, ulong> counts = new();
@@ -31,6 +43,7 @@ int main(int argc, char** argv)
                 Console::Error.WriteLine(": invalid IP address");
                 return 2;
             }
+            if (filtered && !network.Contains(&address)) continue;
             ulong*? existing = counts.Find(&address);
             if (existing == null)
             {

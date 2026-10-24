@@ -71,6 +71,111 @@ public sealed class IpCountExampleTests
         finally{await TestDirectoryCleanup.DeleteAsync(directory);}
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task ActualToolFiltersNetworksWithoutSkippingAddressValidation(int optimization)
+    {
+        string directory=Path.Combine(Path.GetTempPath(),"gflat-ip-count-network-"+Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string source=File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Examples/ip-count.gf"));
+            string executable=Compile(directory,"tool",source,optimization);
+            var lines=new List<string>{"", "  ","2001:0DB8:0:0:0:0:0:1","192.0.2.1",
+                "::FFFF:C000:0201","2001:db8::1","::ffff:192.0.2.1"," 192.0.2.1 ",
+                "192.0.2.0","192.0.2.255","192.0.3.0","192.0.1.255","0.0.0.0","255.255.255.255",
+                "::","ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff","2001:db8:ffff:ffff:ffff:ffff:ffff:ffff",
+                "2001:db9::","2001:db7:ffff:ffff:ffff:ffff:ffff:ffff","::ffff:192.0.2.0",
+                "::ffff:192.0.2.255","::ffff:192.0.3.0","::ffff:0.0.0.0","::ffff:255.255.255.255"};
+            var random=new Random(50418);
+            for(int i=0;i<48;i++)
+            {
+                byte[] v4=new byte[4],v6=new byte[16];random.NextBytes(v4);random.NextBytes(v6);
+                lines.Add(new IPAddress(v4).ToString());lines.Add(new IPAddress(v6).ToString());
+                lines.Add(new IPAddress(v4).MapToIPv6().ToString());
+            }
+            string input=string.Join("\n",lines)+"\n";
+            foreach(var filter in new (string Text,string Address,int Prefix)[]{
+                ("0.0.0.0/0","0.0.0.0",0),("192.0.2.0/24","192.0.2.0",24),
+                ("192.0.2.0/024","192.0.2.0",24),("192.0.2.1/32","192.0.2.1",32),
+                ("::/0","::",0),("2001:db8::/32","2001:db8::",32),("2001:db8::1/128","2001:db8::1",128),
+                ("::ffff:0.0.0.0/96","::ffff:0.0.0.0",96),
+                ("::ffff:192.0.2.0/120","::ffff:192.0.2.0",120),
+                ("203.0.113.99/32","203.0.113.99",32),
+                ("2001:db8:abcd::1/128","2001:db8:abcd::1",128)})
+            {
+                var result=await Run(executable,Encoding.UTF8.GetBytes(input),["--network",filter.Text]);
+                Assert.True(result.Code==0,$"{filter.Text}: {result.Error}");Assert.Empty(result.Error);
+                Assert.Equal(ExpectedNetwork(input,IPAddress.Parse(filter.Address).GetAddressBytes(),filter.Prefix),result.Output);
+            }
+            // Fixed expectations pin family separation, canonical spelling, count and first-seen order
+            // independently of the shared byte-mask oracle.
+            const string repeated="::FFFF:C000:0201\n192.0.2.1\n::ffff:192.0.2.1\n2001:0db8::1\n2001:db8::1\n192.0.2.1\n";
+            foreach(var row in new (string Network,string Expected)[]{
+                ("0.0.0.0/0","192.0.2.1\t2"+Environment.NewLine),
+                ("::/0","::ffff:192.0.2.1\t2"+Environment.NewLine+"2001:db8::1\t2"+Environment.NewLine),
+                ("::ffff:0.0.0.0/96","::ffff:192.0.2.1\t2"+Environment.NewLine),
+                ("203.0.113.99/32","")})
+            {
+                var result=await Run(executable,Encoding.UTF8.GetBytes(repeated),["--network",row.Network]);
+                Assert.Equal(0,result.Code);Assert.Empty(result.Error);Assert.Equal(row.Expected,result.Output);
+            }
+            foreach(string cidr in new[]{"","192.0.2.1/24","2001:db8::1/32","192.0.2.0/33","::/129",
+                "192.0.2.0","192.0.2.0/-1","192.0.2.0/+24","192.0.2.0/0024","192.0.2.0/24x","192.0.2.0/ 24"})
+            {
+                var result=await Run(executable,[],["--network",cidr],closeInput:false);
+                Assert.Equal(2,result.Code);Assert.Empty(result.Output);
+                Assert.Equal("ip-count: invalid IP network"+Environment.NewLine,result.Error);
+            }
+            foreach(string[] args in new[]{new[]{"--network"},new[]{"--unknown","0.0.0.0/0"},
+                new[]{"--network","0.0.0.0/0","extra"},new[]{"unexpected"}})
+            {
+                var result=await Run(executable,[],args,closeInput:false);
+                Assert.Equal(2,result.Code);Assert.Empty(result.Output);
+                Assert.Equal("Usage: ip-count [--network <CIDR>] < addresses.txt"+Environment.NewLine,result.Error);
+            }
+            // A malformed address is still diagnosed rather than discarded by the filter;
+            // an earlier matching line must not have produced any output yet.
+            foreach(string malformed in new[]{"198.51.100.999","2001:::1","192.0.2.1/24"})
+            {
+                string invalidInput="192.0.2.1\n\n "+malformed+" \n198.51.100.1\n";
+                var result=await Run(executable,Encoding.UTF8.GetBytes(invalidInput),["--network","192.0.2.0/24"]);
+                Assert.Equal(2,result.Code);Assert.Empty(result.Output);
+                Assert.Equal("Line 3: invalid IP address"+Environment.NewLine,result.Error);
+            }
+        }
+        finally{await TestDirectoryCleanup.DeleteAsync(directory);}
+    }
+
+    private static string ExpectedNetwork(string input,byte[] network,int prefix)
+    {
+        var counts=new Dictionary<string,ulong>(StringComparer.Ordinal);var order=new List<string>();
+        using var reader=new StringReader(input);
+        while(reader.ReadLine() is string line)
+        {
+            line=line.Trim();if(line.Length==0)continue;
+            IPAddress address=IPAddress.Parse(line);byte[] bytes=address.GetAddressBytes();
+            if(bytes.Length!=network.Length)continue;
+            bool matches=true;
+            for(int bit=0;bit<prefix;bit++)
+                if((bytes[bit/8]&(1<<(7-bit%8)))!=(network[bit/8]&(1<<(7-bit%8)))){matches=false;break;}
+            if(!matches)continue;
+            string canonical=Canonical(address);
+            if(counts.TryGetValue(canonical,out ulong count))counts[canonical]=count+1;
+            else{counts.Add(canonical,1);order.Add(canonical);}
+        }
+        return string.Concat(order.Select(address=>address+"\t"+counts[address].ToString(CultureInfo.InvariantCulture)+Environment.NewLine));
+    }
+
+    // gflat always uses a dotted tail for mapped IPv6, including ::ffff:0.0.0.0.
+    // IPAddress.ToString has special cases for low mapped values on some runtimes.
+    private static string Canonical(IPAddress address)
+    {
+        if(!address.IsIPv4MappedToIPv6)return address.ToString();
+        byte[] bytes=address.GetAddressBytes();
+        return "::ffff:"+new IPAddress(bytes[12..]).ToString();
+    }
     private static string Expected(string input)
     {
         var counts=new Dictionary<string,ulong>(StringComparer.Ordinal);var order=new List<string>();
@@ -78,7 +183,7 @@ public sealed class IpCountExampleTests
         while(reader.ReadLine() is string line)
         {
             line=line.Trim();if(line.Length==0)continue;
-            string address=IPAddress.Parse(line).ToString();
+            string address=Canonical(IPAddress.Parse(line));
             if(counts.TryGetValue(address,out ulong count))counts[address]=count+1;
             else{counts.Add(address,1);order.Add(address);}
         }
@@ -95,7 +200,7 @@ public sealed class IpCountExampleTests
         Assert.True(compiled.ExitCode==0,compiled.StandardError);return executable;
     }
 
-    private static async Task<(int Code,string Output,string Error)> Run(string executable,byte[] input,string[] arguments)
+    private static async Task<(int Code,string Output,string Error)> Run(string executable,byte[] input,string[] arguments,bool closeInput=true)
     {
         var start=new ProcessStartInfo(executable){UseShellExecute=false,CreateNoWindow=true,
             RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true,
@@ -106,7 +211,7 @@ public sealed class IpCountExampleTests
         using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(30));
         try
         {
-            await process.StandardInput.BaseStream.WriteAsync(input,timeout.Token);process.StandardInput.Close();
+            await process.StandardInput.BaseStream.WriteAsync(input,timeout.Token);if(closeInput)process.StandardInput.Close();
             await process.WaitForExitAsync(timeout.Token);
         }
         catch(OperationCanceledException)

@@ -105,7 +105,7 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 ## Runnable examples
 
 - [Word count](../examples/word-count/README.md): streamed input and owning hash keys.
-- [IP address counts](../examples/ip-count/README.md): normalize equivalent IPv4/IPv6 spellings and count numeric keys from stdin.
+- [IP address counts](../examples/ip-count/README.md): normalize equivalent IPv4/IPv6 spellings, optionally filter by CIDR, and count numeric keys from stdin.
 - [Task list](../examples/tasks/README.md): owning titles, reference-indexer updates, and reusable console input.
 - [File checksums](../examples/checksum/README.md): streaming CRC32 and Adler32, or SHA-256 with `--sha256`, over binary files.
 - [Hex dump](../examples/hexdump/README.md): byte offsets, hex columns, and printable ASCII with stack-backed formatting.

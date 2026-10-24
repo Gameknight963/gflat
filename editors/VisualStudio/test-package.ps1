@@ -614,6 +614,25 @@ int SmokeHashesAndViews() {
         if (!zerothText.Equals("1")) return 163;
     }
     {
+        BigInteger nativeLimit = BigInteger::Parse("18446744073709551615");
+        ulong nativeUnsigned = 0ul;
+        if (!nativeLimit.TryToULong(ref nativeUnsigned) || nativeUnsigned != 18446744073709551615ul
+            || nativeLimit.ToULong() != nativeUnsigned) return 164;
+        long nativeSigned = 9l;
+        if (nativeLimit.TryToLong(ref nativeSigned) || nativeSigned != 0l) return 164;
+    }
+    {
+        int[4] queryValues = [1, 2, 3, 4];
+        Span<int> queryView = new(queryValues, 4);
+        var searchedQuery = queryView.AsEnumerable();
+        int searchKey = 3; int absentKey = 9;
+        if (!searchedQuery.Any((int value) => value == 3) || !searchedQuery.Contains(&searchKey)
+            || searchedQuery.Contains(&absentKey)) return 165;
+        if (!searchedQuery.Contains(&absentKey, (immutable(int)* left, immutable(int)* right) => *left % 2 == *right % 2)) return 165;
+        if (!queryView.AsImmutable().AsEnumerable().Contains(&searchKey,
+            (immutable(int)* left, immutable(int)* right) => *left == *right)) return 166;
+    }
+    {
         Unique<int> batchOwner = new(new* int(7));
         int*? batchReleased = batchOwner.Release();
         if (batchReleased == null || !batchOwner.IsEmpty) return 139;

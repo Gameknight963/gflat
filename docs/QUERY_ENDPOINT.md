@@ -5,6 +5,9 @@
 repeatable queries without changing the source collection. An empty source still
 yields the one endpoint. An infinite source never reaches an appended endpoint.
 
+Use [DefaultIfEmpty(value)](QUERY_DEFAULT_IF_EMPTY.md) when the captured value
+should be yielded only if the source is empty.
+
 ```csharp
 using std;
 int main()

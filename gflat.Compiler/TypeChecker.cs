@@ -3609,6 +3609,10 @@ namespace gflat
             }
 
             if (CheckFloatingBinary(node, left, right)) return;
+            // Integer arithmetic produces a value, not a view of operand storage.
+            // Keep the operands' recorded types so writes through them stay checked.
+            if (IsInteger(left)) left = ResolveAlias(left).WithoutValueProtection();
+            if (IsInteger(right)) right = ResolveAlias(right).WithoutValueProtection();
             if (!CheckBuiltinOperatorOperands(node, node.Operator, left, right)) return;
 
             bool isComparison = node.Operator is
@@ -3921,7 +3925,7 @@ namespace gflat
                 case TokenKind.Minus:
                     if (!IsNumeric(operand))
                         throw new TypeCheckException("'-' requires numeric operand", node.Line);
-                    RecordType(node, operand);
+                    RecordType(node, ResolveAlias(operand).WithoutValueProtection());
                     break;
                 case TokenKind.PlusPlus:
                 case TokenKind.MinusMinus:

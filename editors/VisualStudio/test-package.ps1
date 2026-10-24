@@ -665,6 +665,15 @@ int SmokeHashesAndViews() {
             || endpoints.TryRemoveLast(ref endpoint) || !endpoint.Equals("first")) return 168;
     }
     {
+        BigInteger generalDividend = BigInteger::Parse("499999999500000000000000000");
+        BigInteger generalDivisor = BigInteger::Parse("500000000999999999");
+        BigInteger generalRemainder = new();
+        BigInteger generalQuotient = generalDividend.DivRem(&generalDivisor, ref generalRemainder);
+        if (generalQuotient.ToLong() != 999999997l || generalRemainder.ToLong() != 3999999997l) return 177;
+        BigInteger aliasedQuotient = generalDividend.DivRem(&generalDivisor, ref generalDivisor);
+        if (!aliasedQuotient.Equals(&generalQuotient) || generalDivisor.ToLong() != 3999999997l) return 178;
+    }
+    {
         Unique<int> batchOwner = new(new* int(7));
         int*? batchReleased = batchOwner.Release();
         if (batchReleased == null || !batchOwner.IsEmpty) return 139;

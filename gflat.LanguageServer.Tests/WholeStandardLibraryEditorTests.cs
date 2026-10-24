@@ -51,6 +51,8 @@ public class WholeStandardLibraryEditorTests
                 var linkedQuery=list.AsEnumerable().Take(1);
                 bool queryHasAny=linkedQuery.Any(Contains);
                 nuint queryCount=linkedQuery.Count(Contains);
+                bool querySame=linkedQuery.SequenceEqual(linkedQuery);
+                bool querySameCustom=linkedQuery.SequenceEqual(linkedQuery,(immutable(int)* left,immutable(int)* right)=>*left==*right);
                 int queryKey=42;
                 bool queryHasKey=linkedQuery.Contains(&queryKey);
                 bool queryHasCustomKey=linkedQuery.Contains(&queryKey,(immutable(int)* left,immutable(int)* right)=>*left==*right);
@@ -369,6 +371,7 @@ public class WholeStandardLibraryEditorTests
             Assert.Contains(definition,JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
         }
         foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),("queryCount","Count","EnumerableExtensions.gf"),
+            ("querySame","SequenceEqual","EnumerableSequenceEqual.gf"),("querySameCustom","SequenceEqual","EnumerableSequenceEqual.gf"),
             ("queryHasKey","Contains","EnumerableContains.gf"),("queryHasCustomKey","Contains","EnumerableContains.gf")})
         {
             int call=text.IndexOf("."+query.Item2,text.IndexOf(query.Item1,StringComparison.Ordinal),StringComparison.Ordinal)+1;

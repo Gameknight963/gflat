@@ -45,6 +45,7 @@ implementation lives in `libc`.
 | Lazy uniqueness | `Distinct` | [First-occurrence order with scoped hash storage](../docs/QUERY_DISTINCT.md) |
 | Query endpoints | `Append`, `Prepend` | [Captured values and repeatable enumeration](../docs/QUERY_ENDPOINT.md) |
 | Empty-query fallback | `DefaultIfEmpty(value)` | [Explicit fallback and capture ownership](../docs/QUERY_DEFAULT_IF_EMPTY.md) |
+| Integer query totals | `Sum()` | [Checked long totals through mutable and protected views](../docs/QUERY_SUM.md) |
 | Integer sequences | `IntRange`, `FilteredIntRange` | [Allocation-free ranges and specialized aggregates](core/README.md#integer-sequences) |
 | Repeated values | `Repeated<T>` | [Captured values and independent query cursors](../docs/REPEATED_VALUES.md) |
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |

@@ -90,6 +90,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `All(predicate)` | Stop at the first failure; true for an empty sequence. |
 | `Count()` | Count elements without reading the terminal iterator's `Current`; throw on count overflow. Upstream operators can still read their inputs. |
 | `Count(predicate)` | Count matching elements by testing every value; return zero for an empty sequence and throw on count overflow. |
+| `Sum()` | Reduce elements implicitly convertible to `long`, checking each signed 64-bit addition; zero for empty input. |
 | `First()` / `Last()` / `Single()` | Return a value; throw if empty. `Single` also rejects multiple elements. |
 | `ElementAt(index)` | Return the zero-based element; throw with code 3 if out of range. |
 | `TryElementAt(index, ref result)` | Return the selected element through initialized output, or false with output unchanged if out of range. |
@@ -119,6 +120,7 @@ For deferred full-input buffering in reverse order, see [Reverse](../../../docs/
 For comparison, ties, and value ownership in `Min` and `Max`, see [query extrema](../../../docs/QUERY_EXTREMA.md).
 For captured values and iterator behavior in `Append` and `Prepend`, see [query endpoints](../../../docs/QUERY_ENDPOINT.md).
 For an explicit fallback and its capture lifetime, see [DefaultIfEmpty](../../../docs/QUERY_DEFAULT_IF_EMPTY.md).
+For widened integer totals, readonly views, and overflow behavior, see [Sum](../../../docs/QUERY_SUM.md).
 For overlapping borrowed views of contiguous data, see [span windows](../../../docs/SPAN_WINDOWS.md).
 For nonoverlapping views that retain a shorter final segment, see
 [span chunks](../../../docs/SPAN_CHUNKS.md).

@@ -877,6 +877,15 @@ int SmokeHashesAndViews() {
         try { overflowingSum.AsEnumerable().Sum(); }
         catch (ref Exception error) { sumRejected = CString::Equals(error.GetMessage(), "Sequence sum overflow"); }
         if (!sumRejected) return 238;
+        int clockDays = 99;
+        TimeOfDay clockMidnight = new();
+        TimeOfDay clockPrevious = clockMidnight.Add(TimeSpan::FromTicks(-1l), ref clockDays);
+        if (clockDays != -1 || clockPrevious.Ticks != 863999999999l
+            || clockMidnight.Ticks != 0l) return 239;
+        TimeOfDay clockNext = clockPrevious.Add(TimeSpan::FromTicks(1l));
+        if (clockNext.Ticks != 0l
+            || !clockNext.IsBetween(new TimeOfDay(23, 0), new TimeOfDay(1, 0))
+            || clockNext.IsBetween(clockNext, clockNext)) return 240;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

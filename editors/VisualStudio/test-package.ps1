@@ -929,6 +929,14 @@ int SmokeHashesAndViews() {
             || calendarWritten != 19 || calendarOutput[19] != '?') return 252;
         calendarOutput[19] = '\0';
         if (!CString::Equals(calendarOutput, "2024-03-01T01:30:00")) return 252;
+        DisjointSet groups = new(6);
+        if (!groups.Union(0, 1) || !groups.Union(4, 5) || groups.Union(1, 0)) return 253;
+        immutable(DisjointSet)* groupView = &groups;
+        if (groupView.SetCount != 4 || groupView.ElementCount != 6
+            || !groupView.Connected(0, 1) || groupView.Connected(0, 4)
+            || groupView.SizeOf(5) != 2) return 254;
+        DisjointSet transferredGroups = move groups;
+        if (transferredGroups.SetCount != 4 || transferredGroups.Find(4) != transferredGroups.Find(5)) return 255;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

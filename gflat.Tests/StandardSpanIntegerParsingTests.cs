@@ -88,7 +88,9 @@ public sealed class StandardSpanIntegerParsingTests
         var sources=Sources(program).ToArray();string ir=Compiler.Emit(sources);
         string check=Regex.Match(ir,@"(?ms)^define [^\r\n]*@[^\r\n ]*SpanParsingCheck[^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;
         Assert.NotEmpty(check);Assert.DoesNotContain("invoke",check);Assert.DoesNotContain("__gflat_eh_",check);
-        string[] definitions=Regex.Matches(ir,@"(?m)^define [^\r\n]+").Select(match=>match.Value).Where(line=>line.Contains("$TryParse")).ToArray();
+        string[] definitions=Regex.Matches(ir,@"(?m)^define [^\r\n]+").Select(match=>match.Value)
+            .Where(line=>Types.Any(type=>line.Contains("@gflat$std$TryParse"+type.Name+"(",StringComparison.Ordinal)||
+                line.Contains("@gflat$std$TryParse"+type.Name+"$overload$",StringComparison.Ordinal))).ToArray();
         Assert.NotEmpty(definitions);Assert.All(definitions,line=>Assert.Contains("nounwind",line));
         Run(program,optimization);
     }

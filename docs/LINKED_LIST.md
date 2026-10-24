@@ -31,6 +31,7 @@ int main()
 - `First` and `Last` return nullable borrowed node pointers. A node's `Next` and
   `Previous` traverse the list; `Value` is a ref property borrowing its element.
 - `Count` and `IsEmpty` inspect the sequence without copying elements.
+- `Reverse()` reverses the stored node order without allocating or moving values.
 - `RemoveAll(predicate)` removes matching nodes in first-to-last order and
   returns their count, borrowing each value through `immutable(T)*`.
 - `Clear()` destroys all values and frees all nodes. Destruction does the same
@@ -74,8 +75,8 @@ as an independent empty list.
 
 ## Borrowing and iteration
 
-Node handles and element references remain valid across insertion and list
-moves, provided the current owning list remains alive. Removing a node invalidates
+Node handles and element references remain valid across insertion, reversal and
+list moves, provided the current owning list remains alive. Removing a node invalidates
 its handle and references to its value. `Clear` and destruction invalidate all
 node handles and element references. Other nodes retain their addresses after a
 removal.
@@ -88,7 +89,8 @@ or stale pointer cannot safely be inspected or validated.
 `foreach` uses the nested borrowing `Enumerator` and visits values from first to
 last. It creates no allocations and does not copy the list. Reading a value
 follows normal value semantics; its `Current` property itself returns a ref.
-Do not mutate the list during enumeration. Moving its owner alone preserves
+Do not mutate the list during enumeration. Recreate cursors after `Reverse()`.
+Moving its owner alone preserves
 the captured node addresses, so iteration can continue while the new owner
 remains alive. `Current` throws before the first successful `MoveNext` and after
 enumeration finishes.
@@ -96,7 +98,7 @@ enumeration finishes.
 `AsEnumerable()` exposes the same first-to-last order to lazy queries. Its nested
 `View` captures only the first node pointer, without copying the list or its
 values. Each enumeration creates a fresh cursor; edits through valid element
-references remain visible. Do not insert or remove nodes while using the view.
+references remain visible. Do not insert, remove or reverse nodes while using the view.
 Moving the owner preserves the node chain, so existing queries remain usable
 while the destination owner lives. Reinitializing the moved-from variable creates
 an independent list and does not retarget existing views.
@@ -109,3 +111,9 @@ terminals retain their ordinary allocation and exception behavior.
 
 For explicit source selection, include `Collections/Enumerable.gf` alongside
 `Collections/IEnumerable.gf` and `LinkedList.gf`, plus the operator sources used.
+
+`Reverse()` takes O(n) time and O(1) extra storage and is `nothrow`. Each node
+keeps its original value and address; `Count` stays unchanged. Empty and singleton
+lists are no-ops. Recreate views after reversal to capture the new first node.
+This changes the list itself; `list.AsEnumerable().Reverse()` instead creates a
+buffered reversed query and leaves the list unchanged.

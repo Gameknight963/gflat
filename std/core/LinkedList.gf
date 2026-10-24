@@ -181,6 +181,24 @@ struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>
         return removed;
     }
 
+    // Relink nodes without moving their values or invalidating node addresses.
+    public void Reverse() nothrow
+    {
+        if (state == null) return;
+        Node*? current = state!.First;
+        while (current != null)
+        {
+            Node* node = current!;
+            Node*? next = node.next;
+            node.next = node.previous;
+            node.previous = next;
+            current = next;
+        }
+        Node*? first = state!.First;
+        state!.First = state!.Last;
+        state!.Last = first;
+    }
+
     public void Clear()
     {
         while (state != null && state!.First != null)

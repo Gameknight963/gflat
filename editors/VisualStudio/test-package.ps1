@@ -886,6 +886,16 @@ int SmokeHashesAndViews() {
         if (clockNext.Ticks != 0l
             || !clockNext.IsBetween(new TimeOfDay(23, 0), new TimeOfDay(1, 0))
             || clockNext.IsBetween(clockNext, clockNext)) return 240;
+        String trimmedPathEnding = Paths::TrimEndingDirectorySeparator("dir//", PathStyle::Unix);
+        if (!trimmedPathEnding.Equals("dir/")) return 241;
+        char[4] pathEndingBytes = ['a', '\0', 'b', '/'];
+        Span<readonly(char)> pathEndingView = new(pathEndingBytes, 4);
+        Span<readonly(char)> pathEndingTrimmed = Paths::TrimEndingDirectorySeparator(pathEndingView, PathStyle::Unix);
+        if (pathEndingTrimmed.Length != 3 || pathEndingTrimmed.Data != pathEndingView.Data
+            || pathEndingTrimmed[1] != '\0') return 242;
+        Span<readonly(char)> noPathEnding = new();
+        if (!Paths::EndsInDirectorySeparator(pathEndingView, PathStyle::Unix)
+            || Paths::EndsInDirectorySeparator(noPathEnding, PathStyle::Windows)) return 243;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

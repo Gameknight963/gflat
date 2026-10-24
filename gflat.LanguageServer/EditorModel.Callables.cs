@@ -70,7 +70,7 @@ public sealed partial class EditorModel
             }
             CallExpression? call = syntax.Node as CallExpression;
             AstNode expression = call?.Callee ?? (syntax.Node is UnaryExpression { Operator: TokenKind.Ampersand } address ? address.Operand : syntax.Node);
-            if (call != null && checker.GetExtensionDefinition(call) != null) continue;
+            var extension = call == null ? null : ExtensionCallSymbol(call);
             string? interfaceOwner = null;
             var target = (call != null ? checker.GetResolvedCall(call) : checker.GetFunctionAddressTarget(syntax.Node)) as MethodDeclaration;
             // Interface dispatch has its own checker binding. Its method carries
@@ -87,17 +87,43 @@ public sealed partial class EditorModel
             int memberStart = expression switch { NamespaceAccessExpression access => access.Left.Span.Start + access.Left.Span.Length, MemberAccessExpression access => access.Object.Span.Start + access.Object.Span.Length, _ => expression.Span.Start };
             var token = fileTokens.FirstOrDefault(token => token.Kind == TokenKind.Identifier && token.Text == name && token.Start >= memberStart && token.End < expression.Span.Start + expression.Span.Length);
             if (token == null) continue;
-            if (!bound.TryGetValue(target, out var selected)) bound[target] = selected = BindCallable(source, target, interfaceOwner);
+            Symbol selected;
+            if (extension != null) selected = extension;
+            else if (!bound.TryGetValue(target, out selected!)) bound[target] = selected = BindCallable(source, target, interfaceOwner);
             boundCallableReferences[token] = selected;
-            if (ReferenceEquals(target, definition)) continue;
-            IEnumerable<MethodDeclaration> methods = [target];
-            if (checker.TryGetMethodOwner(target, out var owner, out _))
-                methods = checker.GetClassByIdentity(owner)?.AllMethods ?? checker.GetStructByIdentity(owner)?.AllMethods ?? [target];
-            var family = methods.Where(method => !method.IsGeneric && SourceCallable(method) is { } original &&
-                    original.Name == source.Name && original.Owner == source.Owner)
-                .Select(method => ReferenceEquals(method, target) ? selected : BindCallable(SourceCallable(method)!, method)).ToArray();
-            boundCallableFamilies[token] = family.Contains(selected) ? family : [selected];
+            boundCallableFamilies[token] = BoundCallableFamily(source, selected, target, path, token.Start);
         }
+    }
+
+    private Symbol[] BoundCallableFamily(Symbol source, Symbol selected, MethodDeclaration target, string path, int offset)
+    {
+        IEnumerable<MethodDeclaration> ownerMethods = [];
+        if (snapshot.Checker is { } checker && checker.TryGetMethodOwner(target, out var owner, out _))
+            ownerMethods = checker.GetClassByIdentity(owner)?.AllMethods ?? checker.GetStructByIdentity(owner)?.AllMethods ?? [];
+        var closedOwners = ownerMethods.Select(method => (Method: method, Source: SourceCallable(method)))
+            .Where(pair => pair.Source != null).ToArray();
+        var primitiveImplementation = Parents(source.Syntax).FirstOrDefault(parent => parent.Node is PrimitiveImplementationDeclaration)?.Node;
+        // Present the declared family, including generic siblings that were never
+        // instantiated. The selected callable alone has argument-derived bindings.
+        // Looking up existing closed owner declarations also substitutes owner type
+        // parameters without checking a sibling's body or changing checker state.
+        var family = SymbolsNamed(source.Name).Where(candidate => candidate.Syntax.Node is MethodDeclaration method &&
+                (!selected.BoundExtension || method.Parameters.FirstOrDefault()?.IsExtensionReceiver == true) &&
+                candidate.Namespace == source.Namespace && candidate.Owner == source.Owner && candidate.Scope == source.Scope &&
+                ReferenceEquals(primitiveImplementation, Parents(candidate.Syntax).FirstOrDefault(parent => parent.Node is PrimitiveImplementationDeclaration)?.Node) &&
+                Accessible(candidate, path, offset))
+            .DistinctBy(candidate => candidate.Syntax).Select(candidate =>
+            {
+                if (candidate.Syntax == selected.Syntax) return selected;
+                var definition = (MethodDeclaration)candidate.Syntax.Node;
+                var method = closedOwners.FirstOrDefault(pair => pair.Source!.Syntax == candidate.Syntax &&
+                    pair.Method.IsGeneric == definition.IsGeneric).Method;
+                var sibling = method == null ? candidate : BindCallable(candidate, method);
+                return selected.BoundExtension ? sibling with {
+                    BoundParameters = sibling.Parameters!.Skip(1).ToArray(), BoundExtension = true
+                } : sibling;
+            }).ToArray();
+        return family.Any(candidate => candidate.Syntax == selected.Syntax) ? family : [selected];
     }
 
     private Symbol BindInstanceMember(Symbol source, TypeExpression? receiver)

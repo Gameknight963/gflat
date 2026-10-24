@@ -42,10 +42,14 @@ public class WholeStandardLibraryEditorTests
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         const string text="""
             using std;
+            private extern void*? malloc(nuint bytes);
+            private extern void free(void* storage);
             bool Contains(int value) => value == 42;
             bool RemoveZero(readonly(int)* value) => *value == 0;
             Unique<int> FoldOwned(Unique<int> total,int value) { total.Value+=value; return move total; }
             int main() {
+                void*? localNative=malloc(8); if(localNative!=null) free(localNative!);
+                void*?(nuint)* localMalloc=&malloc;
                 LinkedList<int> list=new();
                 nuint nativeCount=2; nuint[3] nativeCounts=[0,1,nativeCount];
                 byte[3] byteValues=[0,127,255];
@@ -425,6 +429,11 @@ public class WholeStandardLibraryEditorTests
         var repeatedHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,repeatedCall),Protocol.JsonOptions);
         Assert.Contains("WriteRepeated",repeatedHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("TextWriterExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,repeatedCall),Protocol.JsonOptions));
+        int nativeCall=text.IndexOf("malloc(8)",StringComparison.Ordinal);
+        Assert.Contains("complete.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeCall),Protocol.JsonOptions));
+        Assert.DoesNotContain("Memory.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeCall),Protocol.JsonOptions));
+        int nativeAddress=text.IndexOf("&malloc",StringComparison.Ordinal)+1;
+        Assert.Contains("complete.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeAddress),Protocol.JsonOptions));
         int popCall=text.IndexOf("popValues.TryPop",StringComparison.Ordinal)+"popValues.".Length;
         var popHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,popCall),Protocol.JsonOptions);
         Assert.Contains("bool",popHover.GetProperty("contents").GetProperty("value").GetString());

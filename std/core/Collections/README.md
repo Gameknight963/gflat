@@ -78,6 +78,8 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `TakeWhile(predicate)` | Yield the initial matching prefix; stop permanently at the first false result. |
 | `SkipWhile(predicate)` | Skip the initial matching prefix, then yield every remaining element without testing again. |
 | `Any()` | Test for at least one element, stopping immediately. |
+| `Any(predicate)` | Stop at the first element passing the predicate; false for an empty sequence. |
+| `Contains(&key)` / `Contains(&key, equal)` | Search using default equality or an explicit borrowed-value comparer; stop at the first match. |
 | `All(predicate)` | Stop at the first failure; true for an empty sequence. |
 | `Count()` | Count elements without reading the terminal iterator's `Current`; throw on count overflow. Upstream operators can still read their inputs. |
 | `First()` / `Last()` / `Single()` | Return a value; throw if empty. `Single` also rejects multiple elements. |
@@ -115,9 +117,14 @@ each enumeration and never advance their input again after they finish. Their
 the selector separately, as with `Where`.
 
 `Select` does not cache projected values. Reading its `Current` twice invokes
-the selector twice. `Any` and `Count` need not invoke a selector at all. This
+the selector twice. `Any()` and `Count()` need not invoke a selector at all. This
 allows arbitrary result types without default construction or hidden storage
 allocation. Put effects in `ForEach`, rather than relying on a selector running.
+
+`Any(predicate)` and both `Contains` overloads read terminal `Current` once for
+each element tested. They stop before reading a later element after a successful
+match. Query membership borrows the search key but follows ordinary element-copy
+semantics; see [query searches](../../../docs/QUERY_SEARCH.md).
 
 The built-in source views allocate no storage. `Where`, `Select`, `Zip`, and the
 skip/take operators allocate no internal storage. `Distinct` allocates a hash set

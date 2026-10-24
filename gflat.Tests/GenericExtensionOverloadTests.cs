@@ -92,16 +92,11 @@ public sealed class GenericExtensionOverloadTests
     [InlineData(false,2)]
     [InlineData(true,0)]
     [InlineData(true,2)]
-    public void ExistingStdAnyAndTestLocalPredicateOverloadRetainDifferentSpecializations(bool predicateFirst,int optimization)
+    public void ProductionStdAnyOverloadsRetainDifferentSpecializations(bool predicateFirst,int optimization)
     {
         string first=predicateFirst?"if(!source.AsEnumerable().Any(&IsTwo)||calls!=2)return 1;calls=0;":"if(!source.AsEnumerable().Any()||calls!=0)return 1;";
         Run($$"""
             using std;
-            namespace std{
-                public bool Any<T,S,E>(this Enumerable<T,S,E> source,bool(T)* predicate){
-                    E iterator=source.GetEnumerator();while(iterator.MoveNext())if(predicate(iterator.Current))return true;return false;
-                }
-            }
             int calls=0;
             bool IsTwo(int value){calls++;return value==2;}
             bool Missing(int value){calls++;return false;}

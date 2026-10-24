@@ -202,14 +202,18 @@ public sealed partial class EditorModel
                 if (property.Getter.Accessibility != symbol.Access) Keyword(property.Getter.Accessibility.ToString().ToLowerInvariant());
                 if (property.Getter.IsImmutable) Keyword("immutable");
                 else if (property.Getter.IsReadOnly) Keyword("readonly");
-                Add("get", "keyword"); Add("; ", "punctuation");
+                Add("get", "keyword");
+                if (property.Getter.IsNoThrow) { Add(" "); Add("nothrow", "keyword"); }
+                Add("; ", "punctuation");
             }
             if (property.Setter != null)
             {
                 if (property.Setter.Accessibility != symbol.Access) Keyword(property.Setter.Accessibility.ToString().ToLowerInvariant());
                 if (property.Setter.IsImmutable) Keyword("immutable");
                 else if (property.Setter.IsReadOnly) Keyword("readonly");
-                Add("set", "keyword"); Add("; ", "punctuation");
+                Add("set", "keyword");
+                if (property.Setter.IsNoThrow) { Add(" "); Add("nothrow", "keyword"); }
+                Add("; ", "punctuation");
             }
             Add("}", "punctuation");
         }

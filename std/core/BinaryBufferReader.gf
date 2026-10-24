@@ -42,6 +42,13 @@ public struct BinaryBufferReader
         position += count; return true;
     }
 
+    public immutable bool TryPeekByte(ref byte value) nothrow
+    {
+        if (position == length) { value = (byte)0; return false; }
+        byte result = data![position];
+        value = result; return true;
+    }
+
     public bool TryReadByte(ref byte value) nothrow
     {
         if (position == length) { value = (byte)0; return false; }

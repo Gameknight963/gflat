@@ -33,6 +33,14 @@ counted API, such as UTF-8 decoding, without copying the payload or adding a Spa
 dependency. Direct pointer use requires the caller to respect `Length` or
 `Capacity`; it does not advance the cursor or perform bounds checks.
 
+`TryPeekByte(ref byte value)` observes the next byte without advancing. It returns
+true with that byte, or false with output zero for an empty or exhausted reader.
+Its immutable, `nothrow` receiver permits mutable, readonly and immutable views.
+Neither result changes position, and repeated peeks observe the same position
+(with any caller edits to backing bytes still visible). It allocates nothing and
+retains no output reference. The initialized writable output must not overlap the
+reader's fields. A default empty reader accesses no input storage.
+
 `TryReadByte` / `TryWriteByte` handle one byte. Fixed-width methods use
 `TryRead` / `TryWrite` followed by `Int16`, `UInt16`, `Int32`, `UInt32`, `Int64`,
 `UInt64`, `ExtraLong`, `Float`, or `Double`, and `LittleEndian` or `BigEndian`, matching

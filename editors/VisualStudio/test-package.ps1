@@ -715,6 +715,9 @@ int SmokeHashesAndViews() {
         if (!Base32::TryDecode(base32Encoded, 8, base32Decoded, 3, ref base32Written) || base32Written != 3 || base32Decoded[0] != 'f' || base32Decoded[2] != 'o') return 193;
         PseudoRandom fullSignedRandom = new(0ul);
         if (fullSignedRandom.NextInt() != (int)0xe220a839u) return 194;
+        byte[4] delimiterData = [255, 0, 255, 1]; byte[1] delimiterMembers = [255];
+        if (ByteSearch::IndexOfAny(delimiterData, 4, delimiterMembers, 1) != 0 || ByteSearch::LastIndexOfAny(delimiterData, 4, delimiterMembers, 1) != 2) return 195;
+        if (ByteSearch::IndexOfAny(delimiterData, 4, delimiterMembers, 0) != 4) return 196;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

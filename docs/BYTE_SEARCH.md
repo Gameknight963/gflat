@@ -19,7 +19,7 @@ Results are byte offsets relative to `data`. A missing pattern returns
 pattern matches at zero for `IndexOf` and at `length` for `LastIndexOf`.
 Overlapping matches count: the last occurrence of `[1,1]` in `[1,1,1]` is one.
 
-The implementation uses the Two-Way algorithm: preprocessing factors the
+The substring searches use the Two-Way algorithm: preprocessing factors the
 pattern into two parts and establishes its period, then matching reuses that
 information to avoid repeatedly checking long equal prefixes. Worst-case time
 is linear in `length + count`, with constant extra storage and no pattern-size
@@ -28,6 +28,39 @@ views of the input and pattern; it does not copy or reverse their bytes.
 
 This is deliberately a search primitive, not Unicode text matching: it performs
 no decoding, case folding, or normalization.
+
+## Searching for any member of a byte set
+
+`IndexOfAny(data, length, pattern, count)` returns the first data byte found
+anywhere in the counted pattern set. `LastIndexOfAny` returns the last such byte.
+They return `length` if there is no match. The pattern is a set of individual
+bytes, not a substring: duplicates and order do not affect membership.
+
+```csharp
+using std;
+int main()
+{
+    byte[6] data = [7, 0, 255, 3, 255, 8];
+    byte[3] members = [255, 0, 255];
+    if (ByteSearch::IndexOfAny(data, 6, members, 3) != 1) return 1;
+    if (ByteSearch::LastIndexOfAny(data, 6, members, 3) != 4) return 2;
+    if (ByteSearch::IndexOfAny(data, 6, members, 0) != 6) return 3;
+    return 0;
+}
+```
+
+If either length is zero, both methods return `length` before reading either
+pointer. This differs from substring `IndexOf`'s empty-pattern result of zero.
+All 256 byte values, including embedded NUL, participate normally. Both regions
+are read-only and can overlap. The result is a byte offset, not a Unicode scalar
+or character position; there is no text decoding or normalization.
+
+A fixed four-word membership mask uses 32 bytes of stack storage. The pattern
+is visited once, then the data is scanned in the selected direction until a
+match. Worst-case work is O(`length + count`), independent of duplicate members.
+No allocation, retained pointer, input mutation, or additional source dependency
+is introduced. Both operations are `nothrow`. The membership-mask implementation
+is original code; the existing substring search and its attribution are unchanged.
 
 ## Attribution
 

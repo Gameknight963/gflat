@@ -75,7 +75,7 @@ implementation lives in `libc`.
 | Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |
 | Binary scalars | `BinaryPrimitives` | [Checked byte-order integer and IEEE floating-point reads and writes](../docs/BINARY_PRIMITIVES.md) |
 | Variable-length integers | `VarInt` | [Canonical unsigned base-128 encoding and signed ZigZag transforms](../docs/VARINT.md) |
-| Byte searches | `ByteSearch` | [Counted binary substring search](../docs/BYTE_SEARCH.md) |
+| Byte searches | `ByteSearch` | [Counted substring and byte-set searches](../docs/BYTE_SEARCH.md) |
 | Binary buffers | `BinaryBufferReader`, `BinaryBufferWriter` | [Borrowed cursors and bounded payloads](../docs/BINARY_CURSORS.md) |
 | Streaming checksums | `CRC32`, `Adler32` | [Incremental byte checksums](../docs/CHECKSUMS.md) |
 | SHA-256 digests | `SHA256` | [Incremental hashing and fixed-buffer results](../docs/SHA256.md) |

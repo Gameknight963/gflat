@@ -41,6 +41,49 @@ public static class ByteSearch
         return length-count-found;
     }
 
+    // Match any member of a counted byte set, rather than a substring.
+    public static nuint IndexOfAny(readonly(byte)* data, nuint length,
+        readonly(byte)* pattern, nuint count) nothrow
+        => SearchAny(data, length, pattern, count, false);
+
+    public static nuint LastIndexOfAny(readonly(byte)* data, nuint length,
+        readonly(byte)* pattern, nuint count) nothrow
+        => SearchAny(data, length, pattern, count, true);
+
+    private static nuint SearchAny(readonly(byte)* data, nuint length,
+        readonly(byte)* pattern, nuint count, bool reverse) nothrow
+    {
+        if (length == 0 || count == 0) return length;
+        ulong[4] membership = [0ul, 0ul, 0ul, 0ul];
+        for (nuint i = 0; i < count; i++)
+        {
+            uint value = (uint)pattern[i];
+            nuint word = (nuint)(value / 64u);
+            membership[word] = membership[word] | (1ul << (int)(value % 64u));
+        }
+        if (reverse)
+        {
+            nuint end = length;
+            while (end != 0)
+            {
+                end--;
+                uint value = (uint)data[end];
+                if ((membership[(nuint)(value / 64u)] & (1ul << (int)(value % 64u))) != 0ul)
+                    return end;
+            }
+        }
+        else
+        {
+            for (nuint i = 0; i < length; i++)
+            {
+                uint value = (uint)data[i];
+                if ((membership[(nuint)(value / 64u)] & (1ul << (int)(value % 64u))) != 0ul)
+                    return i;
+            }
+        }
+        return length;
+    }
+
     // Reverse views let both public searches share the same proven invariants.
     private static byte At(readonly(byte)* data,nuint length,nuint index,bool reverse) nothrow
     {

@@ -768,6 +768,16 @@ int SmokeHashesAndViews() {
         reversedNodes.Reverse();
         if (reversedNodes.First != originalLast || reversedNodes.Last != originalFirst || originalLast.Next != originalFirst || originalFirst.Previous != originalLast) return 203;
         if (originalLast.Previous != null || originalFirst.Next != null || originalFirst.Value != 1 || originalLast.Value != 2 || reversedNodes.Count != 2) return 204;
+        float adjacentFloat = Math::BitIncrement(1.0f);
+        if (adjacentFloat <= 1.0f || Math::BitDecrement(adjacentFloat) != 1.0f) return 205;
+        double adjacentDouble = Math::BitDecrement(1.0);
+        if (adjacentDouble >= 1.0 || Math::BitIncrement(adjacentDouble) != 1.0) return 206;
+        if (BitConverter::FloatToUInt32Bits(Math::BitIncrement(-0.0f)) != 1u || BitConverter::FloatToUInt32Bits(Math::BitDecrement(0.0f)) != 0x80000001u) return 207;
+        if (BitConverter::DoubleToUInt64Bits(Math::BitDecrement(BitConverter::UInt64BitsToDouble(0x7ff0000000000000ul))) != 0x7feffffffffffffful) return 208;
+        String owningBase32 = Base32Text::Encode("a\0b", 3);
+        if (!owningBase32.Equals("MEAGE===", 8)) return 209;
+        String decodedBase32 = Base32Text::Decode(owningBase32.Data, owningBase32.Length);
+        if (!decodedBase32.Equals("a\0b", 3)) return 210;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

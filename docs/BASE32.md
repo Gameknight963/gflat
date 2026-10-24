@@ -50,5 +50,32 @@ canonical shapes, so each byte sequence has one accepted representation.
 
 Include `core/Base32.gf` for selective use. The implementation needs no other
 standard source, String, libc, GC, exception allocation, or compiler feature.
+
+## Owning results
+
+`Base32Text::Encode(data, count)` and `Base32Text::Decode(text, count)` return
+owning `String` values. Encoding checks length overflow before reading input;
+decoding validates the whole encoding before allocating result storage. Invalid
+input throws `Exception`; result allocation failure follows the usual
+`BadAllocException` contract. Input stays readable and unchanged during the call.
+
+Decoded strings contain counted binary bytes, including embedded NUL. Use
+`Length` when passing that data onward; a C-string consumer would stop at the
+first NUL. Empty input produces an empty String without allocating result storage.
+
+```csharp
+using std;
+int main()
+{
+    String encoded = Base32Text::Encode("a\0b", 3);
+    String decoded = Base32Text::Decode(encoded.Data, encoded.Length);
+    if (!decoded.Equals("a\0b", 3)) return 1;
+    return 0;
+}
+```
+
+For selective use, include `core/Base32Text.gf` plus the normal String
+dependencies. The owning conveniences are separate from `core/Base32.gf`.
+
 Official [RFC test vectors](https://www.rfc-editor.org/rfc/rfc4648.html#section-10)
 include `f → MY======`, `fo → MZXQ====`, and `foo → MZXW6===`.

@@ -633,6 +633,16 @@ int SmokeHashesAndViews() {
             (immutable(int)* left, immutable(int)* right) => *left == *right)) return 166;
     }
     {
+        Date isoDate = Date::FromIsoWeek(2020, 53, DayOfWeek::Friday);
+        if (isoDate.Year != 2021 || isoDate.IsoWeekYear != 2020 || isoDate.IsoWeekOfYear != 53
+            || Date::GetIsoWeeksInYear(2021) != 52) return 167;
+        Deque<String> endpoints = new(); endpoints.AddLast(s"first"); endpoints.AddLast(s"last");
+        String endpoint = s"old";
+        if (!endpoints.TryRemoveLast(ref endpoint) || !endpoint.Equals("last")
+            || !endpoints.TryRemoveFirst(ref endpoint) || !endpoint.Equals("first")
+            || endpoints.TryRemoveLast(ref endpoint) || !endpoint.Equals("first")) return 168;
+    }
+    {
         Unique<int> batchOwner = new(new* int(7));
         int*? batchReleased = batchOwner.Release();
         if (batchReleased == null || !batchOwner.IsEmpty) return 139;

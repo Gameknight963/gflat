@@ -170,6 +170,32 @@ public sealed class StandardDateTimeTests
             """,optimization);
     }
 
+    [Fact]
+    public void SelectedPureSourcesNeedNoStringAndTryObserversHaveNoExceptionBoundary()
+    {
+        string[] names=["DateTime.gf","Date.gf","DayOfWeek.gf","TimeOfDay.gf","TimeSpan.gf","Text.gf",
+            "IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","Exception.gf"];
+        var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+            .Append(new SourceFile("date-time-contract.gf","""
+                namespace Memory{
+                    public void*? Allocate(nuint count){return null;}
+                    public void Free(void* storage)nothrow{}
+                }
+                bool Observe(immutable(std::DateTime)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
+                    std::DateTime parsed=new();
+                    return std::DateTime::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
+                }
+                """));
+        string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
+        string body=System.Text.RegularExpressions.Regex.Match(ir,
+            @"(?ms)^define [^\r\n]*@gflat\$Observe\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;
+        Assert.NotEmpty(body);Assert.DoesNotContain("invoke ",body);Assert.DoesNotContain("__gflat_eh_",body);
+        Assert.DoesNotContain("$String",ir);
+        // These known CRT imports cannot be supplied by an accidental full-std load.
+        // Whole-module EH declarations remain allowed: checked factories also emit.
+        Assert.DoesNotMatch(@"(?m)^declare\s+[^\r\n]*@(?:malloc|free|memcpy|memmove|memset|strlen|printf|puts|fwrite|fflush)\(",ir);
+    }
+
     private static List<System.DateTime> Values()
     {
         long[] fixedTicks=[0,1,9999999,10000000,Day-1,Day,Maximum-1,Maximum,

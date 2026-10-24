@@ -61,6 +61,7 @@ implementation lives in `libc`.
 | Durations | `TimeSpan` | [Signed tick values, checked arithmetic, invariant parsing and formatting](../docs/TIME_SPAN.md) |
 | Times of day | `TimeOfDay` | [Clock-face values, midnight-wrapping arithmetic, and strict invariant text](../docs/TIME_OF_DAY.md) |
 | Calendar date and time | `DateTime` | [Combined civil values without a time zone](../docs/DATE_TIME.md) |
+| Interval timing | `Stopwatch<C>`, `IMonotonicClock` | [Value timers and explicit clock providers](../docs/STOPWATCH.md) |
 | Caller-buffer numbers | `IntegerFormatting::TryFormat`, `TryFormatHex` | [Decimal and hexadecimal formatting without a writer or allocation](../docs/INTEGER_FORMATTING.md) |
 | Unicode | `Utf8`, incremental `Utf8Decoder`, borrowed `Utf8Scalars` | [UTF-8 buffers](../docs/UTF8.md), [chunked decoding](../docs/UTF8_DECODER.md), [scalar iteration](../docs/UTF8_SCALARS.md) |
 | Unicode scalar values | `Rune` | [Validated scalars and UTF-8 formatting](../docs/RUNE.md) |

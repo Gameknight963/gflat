@@ -132,7 +132,7 @@ public partial class TypeChecker
                 {
                     foreach (var pair in method.GenericParameters.Zip(explicitTypeArguments)) bindings[pair.First.Name] = pair.Second;
                 }
-                else if (!InferCallableBindings(formal, source, names, bindings)) return;
+                else if (!InferCallableBindings(formal, source, names, bindings, signaturePreview: true)) return;
                 // An unbound receiver cannot be offered honestly. Other parameters may infer remaining T's.
                 var substituted = SubstituteExtensionType(formal, bindings);
                 if (HasUnboundExtensionType(substituted, names)) return;
@@ -317,6 +317,9 @@ public partial class TypeChecker
 
     private TypeExpression? KnownExtensionType(TypeExpression type)
     {
+        // These uses are already bound. Rebuilding a pointer or other wrapper
+        // would discard its declared-parameter or restricted-alias contract.
+        if (type.GenericParameterView != null || aliasContracts.ContainsKey(type)) return type;
         // Never instantiate a type merely to offer a completion. An applicable
         // generic receiver's concrete layout must already have been checked.
         if (type is NamedTypeExpression { TypeArguments.Count: > 0 } named)

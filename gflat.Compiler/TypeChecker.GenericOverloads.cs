@@ -104,26 +104,33 @@ public partial class TypeChecker
     }
 
     private bool InferCallableBindings(TypeExpression formal, TypeExpression actual, ISet<string> names,
-        Dictionary<string, TypeExpression> bindings, bool pattern = false)
+        Dictionary<string, TypeExpression> bindings, bool pattern = false, bool signaturePreview = false)
     {
         if (IsCreationPlaceholder(actual)) return true;
         if (formal is NamedTypeExpression { IsResolvedNominal: false, Namespace: null, TypeArguments.Count: 0 } variable && names.Contains(variable.Name))
         {
             if (!pattern && actual is ReferenceTypeExpression) return false;
-            var resolved = pattern ? actual : ResolveAlias(actual);
+            // Editor previews cannot bind open syntax in the checker's idle scope
+            // or create a specialization just to offer an extension candidate.
+            var resolved = pattern ? actual : signaturePreview ? KnownExtensionType(actual) : ResolveAlias(actual);
+            if (resolved == null) return false;
             var inferred = resolved;
             if (variable.IsImmutableValue) inferred = inferred.WithoutValueProtection();
             else if (variable.IsReadOnlyValue) inferred = inferred.WithReadOnlyValue(false);
             if (bindings.TryGetValue(variable.Name, out var previous))
                 return pattern ? CallableSymbolicTypeKey(previous, EmptyCallableTypeNames, evaluateBounds: false).Equals(CallableSymbolicTypeKey(inferred, EmptyCallableTypeNames, evaluateBounds: false), StringComparison.Ordinal)
-                    : TypesMatch(OverloadArgumentType(previous.WithQualifiersFrom(variable)),
-                        OverloadArgumentType(resolved.WithQualifiersFrom(variable)));
+                    : signaturePreview
+                        ? TypesMatchPublic(OverloadArgumentType(previous.WithQualifiersFrom(variable)).WithoutValueProtection(),
+                            OverloadArgumentType(resolved.WithQualifiersFrom(variable)).WithoutValueProtection())
+                        : TypesMatch(OverloadArgumentType(previous.WithQualifiersFrom(variable)),
+                            OverloadArgumentType(resolved.WithQualifiersFrom(variable)));
             bindings[variable.Name] = inferred;
             return true;
         }
         if (!HasUnboundExtensionType(formal, names))
             return !pattern || CallableSymbolicTypeKey(formal, EmptyCallableTypeNames, evaluateBounds: false).Equals(CallableSymbolicTypeKey(actual, EmptyCallableTypeNames, evaluateBounds: false), StringComparison.Ordinal);
-        bool Child(TypeExpression first, TypeExpression second) => InferCallableBindings(first, second, names, bindings, pattern);
+        bool Child(TypeExpression first, TypeExpression second)
+            => InferCallableBindings(first, second, names, bindings, pattern, signaturePreview);
         switch (formal, actual)
         {
             case (ReferenceTypeExpression first, ReferenceTypeExpression second): return Child(first.Inner, second.Inner);

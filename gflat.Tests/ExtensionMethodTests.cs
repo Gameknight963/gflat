@@ -344,4 +344,41 @@ public sealed class ExtensionMethodTests
         Assert.Empty(checker.GetVisibleExtensions("", [], source, false, false, "Unused"));
         Assert.Equal(count, ast.Members.Count);
     }
+
+    [Theory]
+    [InlineData("T", false)]
+    [InlineData("int", false)]
+    [InlineData("int", true)]
+    public void BroadRefReceiverPreviewUsesOnlyPreviouslyCheckedGenericTypes(string argument, bool checkedReceiver)
+    {
+        string declaration = checkedReceiver ? "Box<int> value = new();" : "";
+        var (ast, checker) = Compiler.Check($$$"""
+            struct Box<T> { public T value; }
+            int Inspect<T>(this ref immutable(T) value) => MissingFunction();
+            int main() { {{{declaration}}} return 0; }
+            """);
+        int count = ast.Members.Count;
+        var receiver = new NamedTypeExpression("Box", null, 1, [new NamedTypeExpression(argument, null, 1)]);
+        var candidates = checker.GetVisibleExtensions("", [], receiver, true, false, "Inspect");
+        if (checkedReceiver) Assert.Single(candidates);
+        else Assert.Empty(candidates);
+        Assert.Equal(count, ast.Members.Count);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void PreviewPreservesDeclaredPointerReceiverBeforeConsideringPointeeOverloads(int optimization)
+        => Assert.Equal(0, CompilerTestHelper.Run("""
+            interface IMark { void Mark(); }
+            struct Item : IMark { public void Mark() {} }
+            int Touch<S>(this ref S value, long tag) => 1;
+            int Touch<S : IMark>(this ref S value, int tag) => 2;
+            int Forward<P>(P value) => value.Touch(0);
+            int main() {
+                Item value = new();
+                Item* pointer = &value;
+                return Forward<Item*>(pointer) - 1;
+            }
+            """, optimization).ExitCode);
 }

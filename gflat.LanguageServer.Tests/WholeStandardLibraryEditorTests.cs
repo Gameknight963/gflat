@@ -217,6 +217,8 @@ public class WholeStandardLibraryEditorTests
                 int variableSignedSmall=0; long variableSignedLarge=0l;
                 variableInput.ReadZigZagInt32(ref variableSignedSmall); variableInput.ReadZigZagInt64(ref variableSignedLarge);
                 BitSet flags=new(65); flags.SetRange(1,63,true);
+                BitSet copiedFlags=flags;
+                bool equalFlags=flags.Equals(&copiedFlags); nuint flagHash=flags.GetHashCode();
                 bool any=flags.HasAnySet(); bool all=flags.HasAllSet();
                 bool overlappingBits=flags.Overlaps(&flags);
                 flags.ShiftLeft(1); flags.ShiftRight(32);
@@ -471,6 +473,15 @@ public class WholeStandardLibraryEditorTests
         var overlapHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,overlapCall),Protocol.JsonOptions);
         Assert.Contains("Overlaps",overlapHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.Contains("BitSet.gf",JsonSerializer.Serialize(model.Definition(source.Path,overlapCall),Protocol.JsonOptions));
+        foreach(string member in new[]{"Equals","GetHashCode"})
+        {
+            int call=text.IndexOf("flags."+member,StringComparison.Ordinal)+"flags.".Length;
+            var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
+            Assert.Contains("nothrow",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains("BitSet.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            var help=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',call)+1),Protocol.JsonOptions);
+            Assert.Single(help.GetProperty("signatures").EnumerateArray());
+        }
         foreach(string marker in new[]{"hasSequenceCString=","hasSequenceCounted=","hasSequenceSpan="})
         {
             int call=text.IndexOf("TrySplitOnce",text.IndexOf(marker,StringComparison.Ordinal),StringComparison.Ordinal);

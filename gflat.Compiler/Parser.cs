@@ -1448,14 +1448,7 @@ namespace gflat
                 return ParseVariableDeclaration(isConst: true);
             }
 
-            // variable declaration or expression statement
-            // if it starts with a type keyword or identifier followed by identifier, it's a declaration
-            if (IsTypeStart() && IsVariableDeclaration())
-                return ParseVariableDeclaration();
-
-            AstNode expr = ParseExpression();
-            Expect(TokenKind.Semicolon);
-            return new ExpressionStatement(expr, line);
+            return ParseVariableOrExpressionStatement();
         }
 
         private bool IsTypeStart() =>
@@ -1465,8 +1458,51 @@ namespace gflat
             TokenKind.Char or TokenKind.ExtraLong or
             TokenKind.Void or TokenKind.Managed or TokenKind.Identifier or TokenKind.Readonly or TokenKind.Immutable;
 
-        private bool IsVariableDeclaration()
+        private AstNode ParseVariableOrExpressionStatement()
         {
+            int line = Current.Line;
+            Token? missingName = null;
+            if (IsTypeStart() && IsVariableDeclaration(out missingName))
+                return ParseVariableDeclaration();
+
+            int saved = _pos;
+            var savedTokens = _tokens;
+            bool savedCopyTokensOnSplit = _copyTokensOnSplit;
+            int mark = _diagnostics.Count;
+            AstNode? expression = null;
+            TypeCheckException? failure = null;
+            _copyTokensOnSplit = savedCopyTokensOnSplit || missingName != null;
+            try
+            {
+                expression = ParseExpression();
+                Expect(TokenKind.Semicolon);
+            }
+            catch (TypeCheckException error) { failure = error; }
+            finally { _copyTokensOnSplit = savedCopyTokensOnSplit; }
+
+            // A valid expression always wins over the speculative type probe.
+            // Otherwise prefer a missing name beyond the first expression error.
+            if (missingName != null && (_diagnostics.Count > mark || failure != null))
+            {
+                Diagnostic? firstError = _diagnostics.Items.Skip(mark)
+                    .FirstOrDefault(error => error.Severity == DiagnosticSeverity.Error);
+                int failureStart = firstError?.Span.Start ?? failure?.Span.Start ?? int.MaxValue;
+                if (missingName.Start > failureStart)
+                {
+                    _diagnostics.ClearSince(mark);
+                    _pos = saved;
+                    _tokens = savedTokens;
+                    return ParseVariableDeclaration();
+                }
+            }
+            if (failure != null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+            return new ExpressionStatement(expression!, line) { Span = expression!.Span };
+        }
+
+        private bool IsVariableDeclaration(out Token? missingName)
+        {
+            missingName = null;
             if (Check(TokenKind.Identifier) && Current.Text == "move") return false;
             // look ahead to see if this is "type name" or "type* name" etc
             int saved = _pos;
@@ -1477,6 +1513,8 @@ namespace gflat
             try
             {
                 ParseTypeExpression();
+                if (_diagnostics.Count == diagMark && !Check(TokenKind.Identifier))
+                    missingName = Current;
                 bool isVar = _diagnostics.Count == diagMark && Check(TokenKind.Identifier);
                 if (!isVar)
                 {
@@ -1684,13 +1722,7 @@ namespace gflat
                 }
                 else
                 {
-                    if (IsVariableDeclaration()) initializer = ParseVariableDeclaration();
-                    else
-                    {
-                        AstNode expression = ParseExpression();
-                        Expect(TokenKind.Semicolon);
-                        initializer = new ExpressionStatement(expression, expression.Line) { Span = expression.Span };
-                    }
+                    initializer = ParseVariableOrExpressionStatement();
                 }
             }
             else

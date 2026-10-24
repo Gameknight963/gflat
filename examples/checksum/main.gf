@@ -5,11 +5,8 @@ void WriteChecksum(uint value)
 {
     byte[4] storage;
     byte* bytes = storage;
-    char[8] hex;
-    nuint written = 0;
     BinaryPrimitives::TryWriteUInt32BigEndian(bytes, 4, value);
-    Hex::TryEncode((readonly(char)*)bytes, 4, hex, 8, ref written, false);
-    Console::Write(hex, written);
+    Console::Out.WriteHex((readonly(char)*)bytes, 4, false);
 }
 
 void ReadChecksums(readonly(char)* path, ref uint crcValue, ref uint adlerValue)
@@ -74,10 +71,7 @@ int main(int argc, char** argv)
             }
             if (sha256)
             {
-                char[64] hex;
-                nuint written = 0;
-                Hex::TryEncode((readonly(char)*)(byte*)digest, 32, hex, 64, ref written, false);
-                Console::Write(hex, written);
+                Console::Out.WriteHex((readonly(char)*)(byte*)digest, 32, false);
             }
             else
             {

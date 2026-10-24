@@ -50,6 +50,7 @@ public class WholeStandardLibraryEditorTests
                 LinkedList<int>::Node* node=list.AddLast(42);
                 var linkedQuery=list.AsEnumerable().Take(1);
                 bool queryHasAny=linkedQuery.Any(Contains);
+                nuint queryCount=linkedQuery.Count(Contains);
                 int queryKey=42;
                 bool queryHasKey=linkedQuery.Contains(&queryKey);
                 bool queryHasCustomKey=linkedQuery.Contains(&queryKey,(immutable(int)* left,immutable(int)* right)=>*left==*right);
@@ -367,12 +368,12 @@ public class WholeStandardLibraryEditorTests
             string definition=member.StartsWith("TryRemove",StringComparison.Ordinal)?"Deque.gf":"Date.gf";
             Assert.Contains(definition,JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
         }
-        foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),
+        foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),("queryCount","Count","EnumerableExtensions.gf"),
             ("queryHasKey","Contains","EnumerableContains.gf"),("queryHasCustomKey","Contains","EnumerableContains.gf")})
         {
             int call=text.IndexOf("."+query.Item2,text.IndexOf(query.Item1,StringComparison.Ordinal),StringComparison.Ordinal)+1;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
-            Assert.Contains("bool",hover.GetProperty("contents").GetProperty("value").GetString());
+            Assert.Contains(query.Item2=="Count"?"nuint":"bool",hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.DoesNotContain('$',hover.GetProperty("contents").GetProperty("value").GetString()!);
             Assert.Contains(query.Item3,JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
             var help=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',call)+1),Protocol.JsonOptions);

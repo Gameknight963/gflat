@@ -1,4 +1,5 @@
 using gflat.ast;
+using gflat.CompileExceptions;
 using gflat.diagnostics;
 
 namespace gflat.Tests;
@@ -48,6 +49,15 @@ public sealed class TypedLocalDiagnosticTests
             var expression=Assert.IsType<ExpressionStatement>(method.Body.Statements[0]);
             Assert.IsType<CallExpression>(expression.Expression);
         }
+    }
+
+    [Theory]
+    [InlineData("p->~S();")]
+    [InlineData("for(p->~S();false;){}")]
+    public void ExplicitExpressionErrorsKeepTheirSpecificMessages(string statement)
+    {
+        var error=Assert.Throws<TypeCheckException>(()=>Parser.Parse(Lexer.Tokenize("int F(){"+statement+"}")));
+        Assert.Contains("Use '.'",error.Description);
     }
 
     [Theory]

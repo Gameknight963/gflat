@@ -1469,25 +1469,23 @@ namespace gflat
             var savedTokens = _tokens;
             bool savedCopyTokensOnSplit = _copyTokensOnSplit;
             int mark = _diagnostics.Count;
-            AstNode? expression = null;
-            TypeCheckException? failure = null;
+            AstNode expression;
             _copyTokensOnSplit = savedCopyTokensOnSplit || missingName != null;
             try
             {
                 expression = ParseExpression();
                 Expect(TokenKind.Semicolon);
             }
-            catch (TypeCheckException error) { failure = error; }
             finally { _copyTokensOnSplit = savedCopyTokensOnSplit; }
 
             // A valid expression always wins over the speculative type probe.
-            // Otherwise prefer a missing name beyond the first expression error.
-            if (missingName != null && (_diagnostics.Count > mark || failure != null))
+            // Explicit parser exceptions retain their specific messages. Only
+            // reported syntax errors compete with the missing-name candidate.
+            if (missingName != null && _diagnostics.Count > mark)
             {
                 Diagnostic? firstError = _diagnostics.Items.Skip(mark)
                     .FirstOrDefault(error => error.Severity == DiagnosticSeverity.Error);
-                int failureStart = firstError?.Span.Start ?? failure?.Span.Start ?? int.MaxValue;
-                if (missingName.Start > failureStart)
+                if (firstError != null && missingName.Start > firstError.Span.Start)
                 {
                     _diagnostics.ClearSince(mark);
                     _pos = saved;
@@ -1495,9 +1493,7 @@ namespace gflat
                     return ParseVariableDeclaration();
                 }
             }
-            if (failure != null)
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
-            return new ExpressionStatement(expression!, line) { Span = expression!.Span };
+            return new ExpressionStatement(expression, line) { Span = expression.Span };
         }
 
         private bool IsVariableDeclaration(out Token? missingName)

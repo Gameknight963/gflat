@@ -6,8 +6,8 @@ filesystem. Every operation takes an explicit `PathStyle::Unix` or
 `PathStyle::Windows`, so a program can manipulate paths from either platform
 regardless of where it runs.
 
-The pointer overloads take null-terminated strings. Their results are independent
-owning `String` values. Bytes are preserved: there is no Unicode conversion, case folding,
+The pointer overloads take null-terminated strings. Path-producing pointer overloads
+return independent owning `String` values. Bytes are preserved: there is no Unicode conversion, case folding,
 validation, existence check, or resolution of `.` and `..`.
 
 The five `Get...` operations also accept `Span<readonly(char)>`, returning a
@@ -57,6 +57,22 @@ projects including the standard library already include these sources.
 - `GetRoot(path, style)` returns `/` for a Unix absolute path; Windows paths can
   have drive roots (`C:\`), drive-relative prefixes (`C:`), rooted separators,
   or UNC server/share roots. A root's existing trailing separator is preserved.
+- `EndsInDirectorySeparator(path, style)` checks the final byte, returning false
+  for an empty path. Both C-string and counted-span overloads are `nothrow` and
+  allocate nothing.
+- `TrimEndingDirectorySeparator(path, style)` removes exactly one trailing
+  separator beyond the root, using the existing `GetRoot` rules. Unix `/` stays
+  `/`, `dir//` becomes `dir/`, and `//` becomes `/`. Windows `C:\` stays `C:\`.
+  All other bytes remain unchanged. The C-string overload returns an independent
+  owning String; the counted-span overload borrows the same starting address for
+  a nonempty result and returns a canonical empty span for empty input. The span
+  overload allocates nothing, reads no terminator, and preserves counted NUL and
+  high bytes. Keep its input owner alive and stable while using the result.
+  Existing lexical UNC roots, including incomplete spellings, remain roots;
+  these methods add no special parsing for Windows device prefixes. The operation
+  follows the single-separator contract of
+  [Path.TrimEndingDirectorySeparator](https://learn.microsoft.com/en-us/dotnet/api/system.io.path.trimendingdirectoryseparator),
+  with this library's explicit styles and root rules.
 - `Join(left, right, style)` concatenates two components. It inserts `/` for
   Unix or `\` for Windows when neither boundary has a separator, and removes
   one duplicated separator when both do. Other separators and dot segments are

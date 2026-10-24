@@ -6,6 +6,33 @@ public static class Paths
     public static bool IsSeparator(char value, PathStyle style) nothrow
         => value == '/' || (style == PathStyle::Windows && value == '\\');
 
+    public static bool EndsInDirectorySeparator(immutable(char*) path, PathStyle style) nothrow
+    {
+        nuint length = Paths::Length(path);
+        return length != 0 && Paths::IsSeparator(path[length - 1], style);
+    }
+
+    public static bool EndsInDirectorySeparator(Span<readonly(char)> path, PathStyle style) nothrow
+        => !path.IsEmpty && Paths::IsSeparator(path.Data![path.Length - 1], style);
+
+    // Remove one separator only, preserving roots under the existing lexical rules.
+    public static String TrimEndingDirectorySeparator(immutable(char*) path, PathStyle style)
+    {
+        nuint length = Paths::Length(path);
+        if (length != 0 && Paths::IsSeparator(path[length - 1], style)
+            && length > Paths::RootLength(path, length, style)) length--;
+        return String::From(path, length);
+    }
+
+    public static Span<readonly(char)> TrimEndingDirectorySeparator(Span<readonly(char)> path, PathStyle style)
+    {
+        if (path.IsEmpty) return new Span<readonly(char)>();
+        nuint length = path.Length;
+        if (Paths::IsSeparator(path.Data![length - 1], style)
+            && length > Paths::RootLength(path.Data!, length, style)) length--;
+        return path.Slice(0, length);
+    }
+
     // A rooted Windows path can still depend on the current drive or its directory.
     public static bool IsRooted(immutable(char*) path, PathStyle style) nothrow
         => Paths::IsRootedCore(path, Paths::PrefixLength(path, 2), style);
@@ -174,7 +201,7 @@ public static class Paths
         return move result;
     }
 
-    private static nuint Length(immutable(char*) text)
+    private static nuint Length(immutable(char*) text) nothrow
     {
         nuint length = 0;
         while (text[length] != '\0') length++;

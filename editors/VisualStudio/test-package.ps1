@@ -159,6 +159,7 @@ struct SmokeTemporary {
 }
 SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
 bool SmokeRemove(readonly(int)* value) => *value == 9;
+bool SmokeRangeFailure(int value) { throw new Exception("Range predicate evaluated", 77); }
 Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
 int SmokeCore() {
     HashMap<String, int> map = new();
@@ -631,6 +632,12 @@ int SmokeHashesAndViews() {
         if (!searchedQuery.Contains(&absentKey, (immutable(int)* left, immutable(int)* right) => *left % 2 == *right % 2)) return 165;
         if (!queryView.AsImmutable().AsEnumerable().Contains(&searchKey,
             (immutable(int)* left, immutable(int)* right) => *left == *right)) return 166;
+        if (searchedQuery.Count((int value) => value % 2 == 0) != 2) return 169;
+        if (!searchedQuery.SequenceEqual(searchedQuery) || searchedQuery.SequenceEqual(searchedQuery.Take(3))) return 170;
+        bool rangeFailure = false;
+        try { new IntRange(0, 5).Where(SmokeRangeFailure).Take(1).Skip(1).Any(); }
+        catch (ref Exception error) { rangeFailure = error.GetCode() == 77; }
+        if (!rangeFailure) return 171;
     }
     {
         Date isoDate = Date::FromIsoWeek(2020, 53, DayOfWeek::Friday);

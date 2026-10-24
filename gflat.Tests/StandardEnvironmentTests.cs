@@ -4,7 +4,7 @@ namespace gflat.Tests;
 
 public sealed class StandardEnvironmentTests
 {
-    private static void Run(string program, bool strings = false)
+    private static void Run(string program, bool strings = false, int? optimization = null)
     {
         string directory = Path.Combine(Path.GetTempPath(), "gflat-environment-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -24,7 +24,7 @@ public sealed class StandardEnvironmentTests
             }
             string llvm = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
             File.WriteAllText(llvm, ir);
-            var compiled = NativeToolchain.Compile(llvm, exe);
+            var compiled = NativeToolchain.Compile(llvm, exe, optimizationLevel: optimization);
             Assert.True(compiled.ExitCode == 0, compiled.StandardError);
             var start = new ProcessStartInfo(exe)
             {
@@ -44,6 +44,36 @@ public sealed class StandardEnvironmentTests
             Assert.True(process.ExitCode == 0, $"Exit {process.ExitCode}: {errors.GetAwaiter().GetResult()} {output.GetAwaiter().GetResult()}");
         }
         finally { Directory.Delete(directory, true); }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void TryLookupAllowsNameBorrowedFromItsAssignmentDestination(int optimization)
+    {
+        Run("""
+            using std;
+            int main() {
+                String output = s"GFLAT_STD_PRESENT";
+                if (!EnvironmentText::TryGetVariable(output.ToCString(), ref output)
+                    || !output.Equals("value with spaces") || output.Length != 17) return 1;
+                readonly(char)*? original = Environment::GetVariable("GFLAT_STD_PRESENT");
+                if (original == null) return 2;
+                for (nuint i = 0; i < 17; i++) if (original![i] != output.Data[i]) return 3;
+                if (original![17] != '\0') return 4;
+                output[0] = 'X';
+                original = Environment::GetVariable("GFLAT_STD_PRESENT");
+                if (original == null || original![0] != 'v') return 5;
+
+                output = s"GFLAT_STD_EMPTY";
+                if (!EnvironmentText::TryGetVariable(output.ToCString(), ref output)
+                    || !output.IsEmpty || output.Data[0] != '\0') return 6;
+                output = s"GFLAT_STD_MISSING";
+                if (EnvironmentText::TryGetVariable(output.ToCString(), ref output)
+                    || !output.IsEmpty || output.Data[0] != '\0') return 7;
+                return 0;
+            }
+            """, strings: true, optimization: optimization);
     }
 
     [Fact]

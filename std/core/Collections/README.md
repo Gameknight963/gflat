@@ -1,9 +1,11 @@
 # Enumeration and queries
 
 `Vector`, `Deque`, `Queue`, `Stack`, `LinkedList`, `Span`, `IntRange`,
-`FilteredIntRange`, `TextParts`, `TextLines`, `Utf8Scalars`, `Utf16Scalars`, and
+`FilteredIntRange`, `Repeated<T>`, `TextParts`, `TextLines`, `Utf8Scalars`, `Utf16Scalars`, and
 `BitSet` provide an `AsEnumerable()` adapter
 for lazy queries.
+[`Repeated<T>`](../../../docs/REPEATED_VALUES.md) captures a value; its query and
+cursor copies use that value's ordinary ownership rules.
 Import `std` to make the query extensions visible:
 
 ```csharp

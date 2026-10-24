@@ -38,7 +38,41 @@ still permit changes to their targets. `FindImmutable` returns `immutable(V)*?`
 and protects those targets too. Both views borrow the stored value without copies
 or allocation; keys remain immutable under either contract.
 The ref indexer throws when the key is absent and allows changing an existing
-value. `Remove` destroys an entry; `Clear` destroys every entry but retains storage.
+value. `Remove(key)` destroys an entry and returns false when absent;
+`Clear` destroys every entry but retains storage.
+
+`Remove(key, ref output)` instead transfers the mapped value into an initialized
+output, destroys its previous value and the removed key, and returns true. A
+missing key returns false without changing output. It copies no owners and
+allocates no storage; noncopyable mapped values are supported. Capacity is
+retained. Output remains valid independently of the map.
+
+```csharp
+using std;
+int main()
+{
+    HashMap<int, String> names = new();
+    names.Add(1, s"kept");
+    int key = 1;
+    String removed = s"old";
+    if (!names.Remove(&key, ref removed) || !removed.Equals("kept") || !names.IsEmpty) return 1;
+    if (names.Remove(&key, ref removed) || !removed.Equals("kept")) return 2;
+    return 0;
+}
+```
+
+Hashing and lookup complete once before movement. A lookup exception leaves the
+map and output unchanged. The query key may borrow an independently stored part
+of the previous output until lookup finishes. Lookup callbacks must not mutate
+the map, key, or output through another alias. Output must not refer anywhere
+inside the map's backing allocation, including unused buckets and state bytes;
+a successful lookup rejects such addresses before moving any value. A missing
+lookup does not inspect output storage.
+
+On success, the tombstone, `Count`, and replacement output are committed before
+the removed key and old output are destroyed. Cleanup may inspect that resulting
+state, but must not structurally mutate, move, or destroy the involved map or
+output through another alias. Destructors retain their normal exception contract.
 
 `Extract(key)` removes an entry and transfers its owning `HashMap<K,V>::Entry`
 to the caller. Missing keys throw. Its `Key`, `Value`, `ValueReadOnly`, and `ValueImmutable` members

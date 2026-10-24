@@ -170,6 +170,26 @@ struct HashMap<K : IHashable, V>
         return true;
     }
 
+    // Transfer the mapped owner; remove its key and destroy the previous output.
+    public bool Remove(immutable(K)* key, ref V output)
+    {
+        nuint slot = this.Locate(key, key.GetHashCode());
+        if (slot == capacity) return false;
+        nuint start = (nuint)entries!;
+        nuint address = (nuint)&output;
+        nuint stride = (nuint)sizeof(Entry);
+        if (stride == 0) stride = 1;
+        if (address >= start && address - start < capacity * (stride + 1))
+            throw new Exception("HashMap output must not refer to its storage");
+        V removed = move *(&entries![slot].value);
+        move *(&output) at &entries![slot].value;
+        move removed at &output;
+        states![slot] = 2;
+        count--;
+        (entries! + slot).~Entry();
+        return true;
+    }
+
     // Transfer both owners out of the occupied slot, leaving a probe tombstone.
     public Entry Extract(immutable(K)* key)
     {

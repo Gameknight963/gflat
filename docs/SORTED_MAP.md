@@ -44,7 +44,8 @@ int main()
   returns `immutable(V)*?`, and protects those targets too. Neither copies or
   allocates. An extracted `Entry` exposes the same contracts through
   `ValueReadOnly` and `ValueImmutable`; its `Key` always remains immutable.
-- `Remove` destroys a matching key/value pair and shifts later entries left.
+- `Remove(key)` destroys a matching key/value pair and shifts later entries left,
+  returning false when absent.
   `Clear` destroys all entries but retains capacity. `Reserve` reserves entry
   capacity; `Count`, `Capacity`, and `IsEmpty` report collection metadata.
 - `Extract(key)` removes and returns the matching `Entry`, transferring both key
@@ -57,6 +58,27 @@ The map supports noncopyable owning keys and values: buffer growth and shifts
 relocate entries rather than invoking their copy constructors. Moving the map
 transfers its buffer; it has no implicit deep copy. Raw pointer elements do not
 own their pointees. Managed references retain their normal collector behavior.
+
+`Remove(key, ref output)` transfers the mapped value into initialized output and
+returns true; it destroys the removed key and the previous output. A missing key
+returns false with output unchanged. The operation copies no owners, allocates
+no storage, and retains capacity. All comparisons finish before any movement,
+so comparison failure preserves the map and output. The lookup key may borrow
+an independently stored part of the previous output until comparisons finish.
+Lookup callbacks must not mutate the map, key, or output through another alias.
+
+Output must not refer inside the backing allocation, including spare capacity.
+For a zero-sized mapped type, its exact end address is also excluded: the last
+entry's zero-sized value can have that address. This is a conservative address
+restriction, rather than a proof of allocation identity. A successful lookup
+rejects those output addresses before mutation; an absent lookup does not
+inspect output storage.
+
+Survivors are shifted, `Count` updated, and output replaced before the removed
+key and old output are destroyed. Cleanup may inspect that resulting state,
+but must not structurally mutate, move, or destroy the map/output or invalidate
+its remaining storage through another alias. Destructor exceptions follow their
+normal contract. Successful removal invalidates entry borrows as described below.
 
 Comparisons finish before any insertion, replacement, or removal changes the
 map. A throwing comparer, failing argument copy, or failed allocation leaves

@@ -112,6 +112,26 @@ struct SortedMap<K, V>
     }
 
     // Transfer both owners without copying; the lookup borrow is not used after removal.
+    public bool Remove(immutable(K)* key, ref V output)
+    {
+        nuint index = this.LowerBound(key);
+        if (!this.Matches(index, key)) return false;
+        Span<Entry> entries = storage.AsSpan();
+        nuint start = (nuint)entries.Data!;
+        nuint address = (nuint)&output;
+        nuint stride = (nuint)sizeof(Entry);
+        if (stride == 0) stride = 1;
+        nuint bytes = storage.Capacity * stride;
+        if (address >= start && (address - start < bytes
+            || ((nuint)sizeof(V) == 0 && address - start == bytes)))
+            throw new Exception("SortedMap output must not refer to its storage");
+        V removed = move *(&entries[index].value);
+        move *(&output) at &entries[index].value;
+        move removed at &output;
+        storage.RemoveAt(index);
+        return true;
+    }
+
     public Entry Extract(immutable(K)* key)
     {
         nuint index = this.LowerBound(key);

@@ -905,6 +905,18 @@ int SmokeHashesAndViews() {
             || bigIntegerWritten != 31 || bigIntegerOutput[31] != '?') return 245;
         bigIntegerOutput[31] = '\0';
         if (!CString::Equals(bigIntegerOutput, "-123456789012345678901234567890")) return 246;
+        char[5] splitAnyBytes = ['a', ',', 'b', ';', 'c'];
+        char[2] splitAnySeparators = [',', ';'];
+        Span<char> splitAnyText = new(splitAnyBytes, 5);
+        TextPartsAny splitAnyParts = splitAnyText.SplitAny(new Span<readonly(char)>(splitAnySeparators, 2));
+        splitAnySeparators[0] = 'x'; splitAnySeparators[1] = 'y';
+        if (splitAnyParts.AsEnumerable().Count() != 3) return 247;
+        String splitAnyOwner = s"a,,b;";
+        if (splitAnyOwner.SplitAny(",;", true).AsEnumerable().Count() != 2) return 248;
+        char[3] splitAnyBinary = ['a', '\0', 'b']; char[1] splitAnyZero = ['\0'];
+        Span<readonly(char)> splitAnyBinaryView = new(splitAnyBinary, 3);
+        if (splitAnyBinaryView.SplitAny(new Span<readonly(char)>(splitAnyZero, 1)).AsEnumerable().Count() != 2
+            || splitAnyBinaryView.SplitAny("").AsEnumerable().Count() != 1) return 249;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

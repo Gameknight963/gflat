@@ -2527,7 +2527,7 @@ namespace gflat
                         }
                         if (field.Initializer != null)
                         {
-                            field.Initializer.Accept(this);
+                            CheckTypedDeclarationInitializer(field.Initializer, fieldType);
                             TypeExpression initType = ResolveAlias(GetType(field.Initializer));
                             fieldType = InferArrayStorageType(fieldType, field.Initializer, initType);
                             if (fieldType is ArrayTypeExpression)
@@ -2725,7 +2725,7 @@ namespace gflat
                         }
                         if (field.Initializer != null)
                         {
-                            field.Initializer.Accept(this);
+                            CheckTypedDeclarationInitializer(field.Initializer, fieldType);
                             TypeExpression initType = ResolveAlias(GetType(field.Initializer));
                             fieldType = InferArrayStorageType(fieldType, field.Initializer, initType);
                             if (fieldType is ArrayTypeExpression)
@@ -2947,7 +2947,7 @@ namespace gflat
             }
             if (node.Initializer != null)
             {
-                node.Initializer.Accept(this);
+                CheckTypedDeclarationInitializer(node.Initializer, fieldType);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
                 fieldType = InferArrayStorageType(fieldType, node.Initializer, initType);
                 if (!IsAssignable(fieldType, initType, node.Initializer))
@@ -3534,7 +3534,8 @@ namespace gflat
                 throw new TypeCheckException("An array with destructor-bearing elements requires an initializer; use default(Type) for zero-initialized elements", node.Line);
             if (node.Initializer != null)
             {
-                if (!inferredInitializer && !precheckedForeachInitializers.Remove(node)) node.Initializer.Accept(this);
+                if (!inferredInitializer && !precheckedForeachInitializers.Remove(node))
+                    CheckTypedDeclarationInitializer(node.Initializer, varType);
                 TypeExpression initType = ResolveAlias(GetType(node.Initializer));
 
                 varType = InferArrayStorageType(varType, node.Initializer, initType);
@@ -5447,6 +5448,9 @@ namespace gflat
         public void Visit(ArrayTypeExpression node) {
             using var sourceContext = SourceContext.Enter(node.Span); }
         public void Visit(ArrayLiteralExpression node)
+            => CheckArrayLiteral(node, null);
+
+        private void CheckArrayLiteral(ArrayLiteralExpression node, ArrayTypeExpression? target)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
             if (node.Elements.Count == 0)
@@ -5454,17 +5458,27 @@ namespace gflat
             TypeExpression? elementType = null;
             foreach (var element in node.Elements)
             {
-                CheckNullableArgument(element);
+                if (target != null && element is ArrayLiteralExpression nested &&
+                    ResolveAlias(target.ElementType) is ArrayTypeExpression nestedTarget)
+                    CheckArrayLiteral(nested, nestedTarget);
+                else CheckNullableArgument(element);
                 TypeExpression type = ResolveAlias(GetType(element));
                 if (type is NamedTypeExpression { Name: "void" })
                     throw new TypeCheckException("Array elements cannot have type void", element.Line);
+                if (target != null)
+                {
+                    if (!IsAssignable(target.ElementType, type, element))
+                        throw new TypeCheckException($"Cannot initialize array element of type '{DisplayTypeName(target.ElementType)}' with '{DisplayTypeName(type)}'", element.Span);
+                    continue;
+                }
                 elementType ??= type;
                 if (!NeedsCreationTarget(node) && TypeName(elementType) != TypeName(type))
                     throw new TypeCheckException("Array literal elements must have matching types and dimensions", element.Line);
                 if (!ValidateCopyUse(element, type))
                     throw new TypeCheckException("Array literals cannot copy destructor-bearing elements; use fresh values", element.Line);
             }
-            RecordType(node, new ArrayTypeExpression(elementType!, node.Elements.Count, node.Line));
+            // A target supplies the element type, never the literal's length.
+            RecordType(node, new ArrayTypeExpression(target?.ElementType ?? elementType!, node.Elements.Count, node.Line));
         }
         public void Visit(IndexExpression node)
         {

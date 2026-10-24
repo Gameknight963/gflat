@@ -676,7 +676,9 @@ function pointers and compile-time managed allocation remain unsupported.
 
 ### Array literals
 
-`[expression, ...]` creates a fixed-size array. Elements evaluate from left to right and must have the same resolved type, including nested array dimensions. A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected; use explicit casts when elements need a different numeric type. A local or field declaration can infer its outer array bound from an array literal or a string literal. Local declarations can also infer that bound from another fixed-size array value. Nested bounds must be explicit. Incomplete array types can still be described by `typeof` or named behind opaque pointers; reading, constructing, or measuring such a value, or using its size for pointer arithmetic, requires a complete shape.
+`[expression, ...]` creates a fixed-size array. Elements evaluate from left to right. A local or field declaration supplies its declared element type to the literal, and each element follows ordinary scalar assignment rules. Nested literals use the corresponding declared child type and must match its dimensions. Without a declared element target, literal elements must have the same resolved type, including nested dimensions; numeric overloads do not supply a common element type. This does not permit converting an existing array to another numeric element type.
+
+A trailing comma is allowed. Empty literals and mismatched destination sizes are rejected. A local or field declaration can infer its outer array bound from an array literal or a string literal. Local declarations can also infer that bound from another fixed-size array value. Nested bounds must be explicit. Incomplete array types can still be described by `typeof` or named behind opaque pointers; reading, constructing, or measuring such a value, or using its size for pointer arithmetic, requires a complete shape.
 
 ```csharp
 int main()
@@ -684,6 +686,10 @@ int main()
     int[3] values = [1, 2, 3];
     int[] more = [4, 5, 6,];
     int[2][2] grid = [[1, 2], [3, 4]];
+    nuint count = 5;
+    nuint[3] nativeValues = [0, 1, count];
+    byte[3] bytes = [0, 127, 255];
+    if (nativeValues[2] != count || bytes[2] != 255) return 1;
     return values[1] + more[0] + grid[1][1];
 }
 ```

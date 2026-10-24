@@ -34,9 +34,9 @@ public class ArrayLiteralTests
 
     [Theory]
     [InlineData("int[] a = [];", "at least one")]
-    [InlineData("int[] a = [1, true];", "matching types")]
+    [InlineData("int[] a = [1, true];", "Cannot initialize array element of type 'int' with 'bool'")]
     [InlineData("int[3] a = [1, 2];", "Cannot assign")]
-    [InlineData("int[2][2] a = [[1], [2, 3]];", "dimensions")]
+    [InlineData("int[2][2] a = [[1], [2, 3]];", "'int[2]' with 'int[1]'")]
     [InlineData("int x; int[] a = [x, 2];", "assigned")]
     public void InvalidLiteralsAreDiagnosed(string body, string message)
     {

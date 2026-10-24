@@ -47,7 +47,7 @@ public partial class TypeChecker
             using var nullableScope = IsolateNullableFlow();
             using var exceptionScope = IsolateExceptionHandlers();
             using var declarationContext = IsolateDeclarationContext();
-            field.Initializer.Accept(this);
+            CheckTypedDeclarationInitializer(field.Initializer, ResolveAlias(field.Type));
             if (!new ConstEvaluator(this).TryEvaluate(field.Initializer, field.Type, out value, out _)) return false;
             _constValues[field] = value!;
             return true;

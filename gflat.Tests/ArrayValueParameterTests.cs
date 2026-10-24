@@ -39,7 +39,7 @@ public sealed class ArrayValueParameterTests
 
     [Theory]
     [InlineData("void F(int[] a) {} int main() => 0;")]
-    [InlineData("int main() { long[2] a = [1, 2]; return 0; }")]
+    [InlineData("int main() { int[2] source = [1, 2]; long[2] destination = source; return 0; }")]
     [InlineData("void F(int*[1] a) {} int main() { int n = 1; immutable(int*[1]) a = [&n]; F(a); return 0; }")]
     public void UnsupportedOrUnsafeArrayConversionsAreRejected(string source)
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(source));

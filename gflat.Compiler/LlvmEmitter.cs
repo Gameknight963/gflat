@@ -4194,6 +4194,7 @@ public partial class LlvmEmitter : IVisitor
             var element = node.Elements[i];
             EmitValueForTarget(element, type.ElementType);
             string value = Pop();
+            value = EmitImplicitCast(value, _typeChecker.GetType(element), type.ElementType, element);
             string address = NewTemp();
             Emit($"    {address} = getelementptr {arrayType}, {arrayType}* {storage}, i32 0, i32 {i}");
             EmitManagedStore(type.ElementType, value, address);

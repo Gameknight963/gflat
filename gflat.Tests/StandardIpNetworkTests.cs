@@ -139,7 +139,7 @@ public sealed class StandardIpNetworkTests
                     IpNetwork zero=new();IpAddress zeroAddress=zero.NetworkAddress;if(!zeroAddress.IsIpv4||zero.PrefixLength!=0)return 1;
                     IpNetwork original=IpNetwork::Parse("2001:db8::/032");IpNetwork saved=original;
                     IpNetwork[8] backing;char* storage=(char*)&backing[0];nuint extent=(nuint)sizeof(IpNetwork)*8;if(extent<128||extent>512)return 2;
-                    nuint[3] offsets=[(nuint)0,(nuint)1,(nuint)sizeof(IpNetwork)-1];readonly(char)* text="2001:db8::/032";nuint count=0;while(text[count]!='\0')count++;
+                    nuint[3] offsets=[0,1,(nuint)sizeof(IpNetwork)-1];readonly(char)* text="2001:db8::/032";nuint count=0;while(text[count]!='\0')count++;
                     int before=attempts;deny=true;
                     for(nuint sample=0;sample<3;sample++){
                         nuint offset=offsets[sample];for(nuint i=0;i<extent;i++)storage[i]='Z';for(nuint i=0;i<count;i++)storage[offset+i]=text[i];
@@ -152,7 +152,7 @@ public sealed class StandardIpNetworkTests
                         backing[0]=original;for(nuint i=0;i<extent;i++)snapshot[i]=storage[i];written=99;
                         if(backing[0].TryFormat(storage+offset,12,ref written)||written!=0)return 8;for(nuint i=0;i<extent;i++)if(storage[i]!=snapshot[i])return 9;
                     }
-                    nuint[3] badCounts=[(nuint)0,(nuint)50,(nuint)0-(nuint)1];
+                    nuint[3] badCounts=[0,50,(nuint)0-(nuint)1];
                     for(nuint i=0;i<3;i++){IpNetwork result=original;if(IpNetwork::TryParse((readonly(char)*)1,badCounts[i],&result)||!result.Equals(&zero))return 10;}
                     readonly(char)* invalid="192.0.2.1/24";nuint invalidCount=0;while(invalid[invalidCount]!='\0')invalidCount++;
                     for(nuint i=0;i<invalidCount;i++)storage[i]=invalid[i];if(IpNetwork::TryParse(storage,invalidCount,&backing[0])||!backing[0].Equals(&zero))return 11;

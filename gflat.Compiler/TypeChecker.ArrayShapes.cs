@@ -31,6 +31,13 @@ public partial class TypeChecker
         ValidateArrayValueShape(type, line);
     }
 
+    private void CheckTypedDeclarationInitializer(AstNode initializer, TypeExpression target)
+    {
+        if (initializer is ArrayLiteralExpression literal && ResolveAlias(target) is ArrayTypeExpression array)
+            CheckArrayLiteral(literal, array);
+        else initializer.Accept(this);
+    }
+
     private TypeExpression InferArrayStorageType(TypeExpression type, AstNode initializer, TypeExpression? initializerType = null)
     {
         if (ResolveAlias(type) is not ArrayTypeExpression { Size: null } array) return type;

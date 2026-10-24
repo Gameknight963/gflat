@@ -553,6 +553,44 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return BigInteger::TryParse(text, count, ref result);
     }
 
+    // Output and written must be disjoint from this owner, its limbs, and each other.
+    public immutable bool TryFormat(char* output, nuint capacity, ref nuint written) nothrow
+    {
+        written = 0;
+        nuint count = limbs.Count;
+        int valueSign = sign;
+        if (count == 0)
+        {
+            if (capacity == 0) return false;
+            output[0] = '0'; written = 1; return true;
+        }
+        uint top = limbs[count - 1];
+        nuint topDigits = 1;
+        for (uint value = top; value >= 10u; value /= 10u) topDigits++;
+        nuint prefix = topDigits;
+        if (valueSign < 0) prefix++;
+        nuint tail = count - 1;
+        // Bound the total by capacity before multiplying the lower-limb count.
+        if (capacity < prefix || tail > (capacity - prefix) / 9) return false;
+        nuint required = tail * 9 + prefix;
+        nuint position = required;
+        for (nuint index = 0; index < count; index++)
+        {
+            uint value = limbs[index];
+            nuint digits = 9;
+            if (index == tail) digits = topDigits;
+            while (digits != 0)
+            {
+                position--;
+                output[position] = (char)('0' + value % 10u);
+                value /= 10u; digits--;
+            }
+        }
+        if (valueSign < 0) output[0] = '-';
+        written = required;
+        return true;
+    }
+
     public immutable void Format(ITextWriter* output)
     {
         if (sign == 0)

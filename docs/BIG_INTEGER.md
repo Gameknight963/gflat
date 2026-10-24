@@ -15,8 +15,10 @@ int main()
         BigInteger operand = new BigInteger(factor);
         factorial = factorial.Multiply(&operand);
     }
-    factorial.Format(Console::Out);
-    Console::WriteLine();
+    char[256] buffer;
+    nuint written = 0;
+    if (!factorial.TryFormat(buffer, 256, ref written)) return 1;
+    Console::WriteLine(buffer, written);
     Console::Flush();
     return 0;
 }
@@ -51,6 +53,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `DivRem(immutable(BigInteger)* divisor, ref BigInteger remainder)` | Return a fresh quotient and replace initialized output with the exact remainder. |
 | `Divide(immutable(BigInteger)* divisor)` / `Remainder(immutable(BigInteger)* divisor)` | Return the quotient or remainder of arbitrary-precision division. |
 | `Equals`, `CompareTo`, `GetHashCode` | Value equality, signed ordering, and an equality-compatible hash. |
+| `TryFormat(output, capacity, ref written)` | Write canonical decimal bytes into a caller buffer without allocation or a terminator; false writes zero to `written` and preserves the buffer. |
 | `Format(ITextWriter*)` | Write canonical decimal bytes without an intermediate owning string. |
 | `ToString()` | Return an independent owning decimal `String`. |
 
@@ -115,6 +118,16 @@ requires no allocation. Both methods accept immutable receivers. Nonzero results
 copy limbs in linear time and can throw on allocation failure, leaving the
 receiver unchanged. Assignments such as `value = value.Negate()` prepare the
 complete result before releasing the old owner. Neither method is `nothrow`.
+
+`TryFormat(char* output, nuint capacity, ref nuint written)` is an immutable,
+`nothrow` operation. It writes the same canonical decimal bytes without a
+terminating NUL or an intermediate allocation. Insufficient capacity returns false,
+sets `written` to zero, and leaves every output byte unchanged; success sets
+`written` to the exact byte count. Zero requires one byte. A zero capacity needs
+no writable output storage. The output buffer and `written` must be disjoint from
+each other, the receiver, and its private owned limb storage. The receiver remains
+unchanged. This buffer API does not alter the streaming `Format` failure contract.
+
 
 `Format` uses a small stack buffer and borrows limbs while writing. The writer must
 consume each byte span during the call, keep the source alive, and must not mutate

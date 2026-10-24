@@ -77,6 +77,34 @@ public sealed class AliasSpecializationProofTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ExplicitLocalAliasesRetainResolvedDependencyProvenance(bool warmConcrete)
+    {
+        string source = $$"""
+            interface IProvider { static int Read(); }
+            interface IExtra { static int Extra(); }
+            static class Answer : IProvider, IExtra {
+                public static int Read() => 42;
+                public static int Extra() => 7;
+            }
+            weak alias Selected : IProvider = Answer;
+            int Hidden<P>() => P::Extra();
+            int Forward<P>() {
+                alias Local = P;
+                return Hidden<Local>();
+            }
+            int main() {
+                {{(warmConcrete ? "Forward<Answer>();" : "")}}
+                return Forward<Selected>();
+            }
+            """;
+        var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(source));
+        Assert.Contains("Extra", error.Message);
+        Assert.Contains("not exposed", error.Message);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(2)]
     public void ClassAliasContractsExcludePrivateOverloadsBeforeRanking(int optimization)

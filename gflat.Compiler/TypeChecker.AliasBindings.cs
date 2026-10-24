@@ -106,8 +106,7 @@ public partial class TypeChecker
                 // a declaration here can inspect a loser or recursively expand
                 // a generic call before normal specialization limits apply.
                 MethodDeclaration? target = selected?.Definition;
-                var dependencyArguments = call.TypeArguments.Count > 0 ? call.TypeArguments :
-                    selected?.TypeArguments.Select(RebindDependencyArgument).ToList() ?? [];
+                var dependencyArguments = selected?.TypeArguments.Select(RebindDependencyArgument).ToList() ?? [];
                 if (target is { IsGeneric: true } && target.GenericParameters.Count == dependencyArguments.Count)
                 {
                     for (int i = 0; i < target.GenericParameters.Count; i++)

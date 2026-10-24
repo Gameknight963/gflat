@@ -831,6 +831,17 @@ int SmokeHashesAndViews() {
         int[2] fallbackData = [7, 9]; Span<int> fallbackInput = new(fallbackData, 2);
         var fallbackQuery = fallbackInput.AsEnumerable().DefaultIfEmpty(42);
         if (fallbackQuery.Count() != 2 || fallbackQuery.First() != 7 || fallbackQuery.Last() != 9) return 220;
+        readonly(char)* owningCsvInput = "\"a\"\"b\",";
+        CsvReader owningCsvReader = new(owningCsvInput, CString::Length(owningCsvInput));
+        String owningCsvField = s"old";
+        if (owningCsvReader.HasValue || !owningCsvReader.Read() || !owningCsvReader.HasValue) return 221;
+        CsvReaderText::CopyValue(&owningCsvReader, ref owningCsvField);
+        if (!owningCsvField.Equals("a\"b", 3) || !owningCsvReader.Read()) return 222;
+        CsvReaderText::CopyValue(&owningCsvReader, ref owningCsvField);
+        if (!owningCsvField.IsEmpty || owningCsvReader.Read() || owningCsvReader.HasValue) return 223;
+        String anyByteText = s"a\0b,."; char[2] anyByteSet = [',', '\0'];
+        if (anyByteText.IndexOfAny(anyByteSet, 2) != 1 || anyByteText.LastIndexOfAny(anyByteSet, 2) != 3) return 224;
+        if (anyByteText.IndexOfAny(",.") != 3 || anyByteText.LastIndexOfAny(",.") != 4) return 225;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

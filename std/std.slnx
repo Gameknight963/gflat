@@ -6,4 +6,8 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="std.gfproj" />
+  <Folder Name="/Platform providers/">
+    <Project Path="../libraries/platform/windows/Windows.gfproj" />
+    <Project Path="../libraries/platform/linux/Linux.gfproj" />
+  </Folder>
 </Solution>

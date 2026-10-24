@@ -97,6 +97,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Aggregate(seed, function)` | Fold values into an accumulator, returning the seed if empty. |
 | `Aggregate(function)` | Fold from the first value; throws if empty. |
 | `Min()` / `Max()` / `Min(compare)` / `Max(compare)` | Select the first least or greatest value; throw if empty. |
+| `Append(value)` / `Prepend(value)` | Lazily add one captured value after or before the source. |
 | `ForEach(action)` | Visit every element. |
 | `ToVector()` | Copy values into a new owning vector. |
 | `ToHashSet()` | Copy distinct values into a new owning hash set. |
@@ -113,6 +114,7 @@ For owning distinct results, see [ToHashSet](../../../docs/QUERY_HASH_SET.md).
 For lazy distinct values in encounter order, see [Distinct](../../../docs/QUERY_DISTINCT.md).
 For deferred full-input buffering in reverse order, see [Reverse](../../../docs/QUERY_REVERSE.md).
 For comparison, ties, and value ownership in `Min` and `Max`, see [query extrema](../../../docs/QUERY_EXTREMA.md).
+For captured values and iterator behavior in `Append` and `Prepend`, see [query endpoints](../../../docs/QUERY_ENDPOINT.md).
 For overlapping borrowed views of contiguous data, see [span windows](../../../docs/SPAN_WINDOWS.md).
 For nonoverlapping views that retain a shorter final segment, see
 [span chunks](../../../docs/SPAN_CHUNKS.md).

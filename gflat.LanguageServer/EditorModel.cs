@@ -266,7 +266,13 @@ public sealed partial class EditorModel
             ? s.NameSpan.Source?.Path == path && Contains(s.Scope, offset) && (s.IsTypeParameter || s.Syntax.Node is Parameter || s.NameSpan.Start <= offset)
             : s.Owner != null ? inherited.Contains(s) && (!isStatic || s.Static || IsType(s.Syntax.Node))
             : s.Namespace.Length == 0 || ns == s.Namespace || ns.StartsWith(s.Namespace + "::", StringComparison.Ordinal) || imports.Contains(s.Namespace))
-            .Where(s => s.Syntax.Node is not (ExternDeclaration or PropertyDeclaration or FieldDeclaration) || Accessible(s, path, offset))
+            .Where(s => s.Syntax.Node switch
+            {
+                // Owning-type members were checked in inheritedOrder above.
+                MethodDeclaration => s.Owner != null || Accessible(s, path, offset),
+                ExternDeclaration or PropertyDeclaration or FieldDeclaration => Accessible(s, path, offset),
+                _ => true
+            })
             .OrderBy(s => s.Scope == null ? int.MaxValue : s.Scope.Span.Length)
             .ThenBy(s => inherited.Contains(s) ? Array.IndexOf(inheritedOrder, s) : int.MaxValue)
             .ThenByDescending(s => s.NameSpan.Start);
@@ -405,7 +411,7 @@ public sealed partial class EditorModel
     }
     private bool Accessible(Symbol s, string path, int offset)
     {
-        if ((s.Syntax.Node is ExternDeclaration || s.Syntax.Node is PropertyDeclaration or FieldDeclaration && s.Owner == null) && s.Access == TokenKind.Private)
+        if ((s.Syntax.Node is ExternDeclaration || s.Syntax.Node is MethodDeclaration or PropertyDeclaration or FieldDeclaration && s.Owner == null) && s.Access == TokenKind.Private)
             return Workspace.Paths.Equals(s.Syntax.Span.Source?.Path, path);
         if (s.Access is TokenKind.Public or TokenKind.Internal || s.Owner == null) return true;
         string? owner = ScopeAt(path, offset).Owner;

@@ -1070,6 +1070,12 @@ int SmokeHashesAndViews() {
         String borrowedComparison = s"a\0b";
         if (borrowedComparison.CompareTo("a") <= 0
             || borrowedComparison.CompareTo("a\0b", 3) != 0) return 285;
+        int[2] concatPrefix = [1, 2];
+        Span<int> concatView = new(concatPrefix, 2);
+        int concatSum = 0;
+        foreach (int concatValue in concatView.AsEnumerable().Concat(new IntRange(3, 2).AsEnumerable()))
+            concatSum += concatValue;
+        if (concatSum != 10) return 286;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

@@ -610,7 +610,7 @@ public partial class LlvmEmitter : IVisitor
         string body = OrderedGlobals() + "\n" + llvmFunctions + "\n" + _lambdaFunctions + "\n" + _output;
         return "target datalayout = \"" + TargetInfo.Default.DataLayout + "\"\n" +
             "target triple = \"" + TargetInfo.Default.Triple + "\"\n" + "declare void @llvm.trap()\n" +
-            NativeDeclarations + body + DebugMetadata();
+            PlainArrayCopyDeclaration + NativeDeclarations + body + DebugMetadata();
     }
 
     private enum EmitMode { RValue, LValue }
@@ -2577,7 +2577,7 @@ public partial class LlvmEmitter : IVisitor
         EmitDebugVariable(node.Name, resolvedVarType, ptr, node);
         InitializeManagedLocal(resolvedVarType, ptr, scope);
 
-        if (node.Initializer != null)
+        if (node.Initializer != null && !TryEmitPlainArrayLocalInitializer(node.Initializer, resolvedVarType, ptr))
         {
             EmitValueForTarget(node.Initializer, resolvedVarType);
             string val = Pop();
@@ -2585,7 +2585,7 @@ public partial class LlvmEmitter : IVisitor
             val = EmitImplicitCast(val, initType, resolvedVarType, node.Initializer);
             EmitManagedStore(resolvedVarType, val, ptr);
         }
-        else
+        else if (node.Initializer == null)
         {
             TypeExpression unwrappedInit = _typeChecker.ResolveAlias(resolvedVarType);
             if (unwrappedInit is NamedTypeExpression namedInit && _typeChecker.GetClassByIdentity(namedInit.Name) != null)

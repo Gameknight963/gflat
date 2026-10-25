@@ -42,10 +42,35 @@ uint period = 0u;
 bool fits = Math::TryLeastCommonMultiple(6u, 8u, ref period); // true, 24
 ```
 
-The result may alias a caller variable passed as either input: input values are
-captured before the result is written. These operations are `nothrow`, allocate
-nothing, and add no library or runtime dependencies. Existing throwing methods
-in `Math.gf` still require their normal exception support.
+For `TryLeastCommonMultiple`, the result may alias a caller variable passed as
+either input: input values are captured before the result is written. The GCD
+and Try overloads are `nothrow`, allocate nothing, and add no library or runtime
+dependencies. Existing throwing methods in `Math.gf` still require their normal
+exception support.
+
+`LeastCommonMultiple(a, b)` is the checked value-returning companion, with the
+same `uint`, `ulong`, and `nuint` overloads. It returns the exact value when it
+fits, including zero if either operand is zero, and throws
+`Exception("Least common multiple overflow")` otherwise. It delegates to the
+same checked calculation as `TryLeastCommonMultiple`, so a common factor is
+removed before multiplication. Successful calls allocate nothing; throwing uses
+ordinary exception support. These overloads are not `nothrow`.
+
+Use the value-returning form when a combined period must fit, or the Try form
+when overflow is an expected outcome:
+
+```csharp
+using std;
+int main()
+{
+    uint period = Math::LeastCommonMultiple(6u, 8u);
+    ulong cycle = Math::LeastCommonMultiple(1000ul, 1500ul);
+    if (period != 24u || cycle != 3000ul) return 1;
+    nuint ticks = Math::LeastCommonMultiple((nuint)12, (nuint)18);
+    if (ticks != (nuint)36) return 2;
+    return 0;
+}
+```
 
 ## Floating point
 

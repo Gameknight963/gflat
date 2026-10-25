@@ -166,6 +166,27 @@ public static class Math
         return true;
     }
 
+    public static uint LeastCommonMultiple(uint a, uint b)
+    {
+        uint result = 0u;
+        if (!TryLeastCommonMultiple(a, b, ref result)) throw new Exception("Least common multiple overflow");
+        return result;
+    }
+
+    public static ulong LeastCommonMultiple(ulong a, ulong b)
+    {
+        ulong result = 0ul;
+        if (!TryLeastCommonMultiple(a, b, ref result)) throw new Exception("Least common multiple overflow");
+        return result;
+    }
+
+    public static nuint LeastCommonMultiple(nuint a, nuint b)
+    {
+        nuint result = (nuint)0;
+        if (!TryLeastCommonMultiple(a, b, ref result)) throw new Exception("Least common multiple overflow");
+        return result;
+    }
+
     public static sbyte Abs(sbyte value)
     {
         sbyte minimum = (sbyte)-128;

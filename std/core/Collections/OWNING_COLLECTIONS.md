@@ -75,6 +75,41 @@ It is instantiated only when called; merely including it does not prevent using
 `Vector<T>` with noncopyable owning elements. The vector's instance operations
 continue to support those elements through explicit movement.
 
+`vector.Resize(count, fill)` changes the number of initialized elements. Include
+`Collections/VectorResize.gf`. It preserves the shared prefix, destroys the tail
+when shrinking, and appends ordinary copies of `fill` when growing. Capacity is
+retained on shrink; growth follows `Add`'s geometric capacity policy.
+
+The by-value fill argument is prepared before the call, including for an equal
+or smaller count. A fill copied from an existing vector element is therefore
+captured before growth can relocate storage or shrink can destroy that element.
+Do not explicitly move an element that is still owned by the vector.
+
+A failing argument copy leaves the vector unchanged. If a later element copy or
+allocation fails during growth, the successfully appended prefix remains valid;
+capacity may have grown and existing borrows may have been invalidated. Copy
+constructors must not structurally mutate the target through another alias.
+`Resize` requires copying even when a particular call shrinks. Noncopyable vectors
+can continue to use `Truncate`, `Add(move value)`, and their other instance methods.
+No default construction of `T` is involved.
+The fill argument participates in type inference: for `Vector<nuint>`, use a
+typed `(nuint)0` fill or call `Resize<nuint>(count, 0)` explicitly.
+
+```cpp
+using std;
+int main()
+{
+    Vector<nuint> row = new();
+    row.Resize(8, (nuint)0);
+    row[0] = 7;
+    row.Resize(12, (nuint)0);
+    if (row.Count != 12 || row[0] != 7 || row[11] != 0) return 1;
+    row.Resize(3, (nuint)0);
+    if (row.Count != 3) return 2;
+    return 0;
+}
+```
+
 `vector.InsertRange(index, immutableSpan)` copies a range before `index`, which
 may equal `Count`. Include `Collections/VectorInsertRange.gf` together with
 `Collections/VectorExtensions.gf` and `Collections/Algorithms.gf`. Like `AddRange`,

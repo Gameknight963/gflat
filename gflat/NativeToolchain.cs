@@ -109,10 +109,19 @@ public static class NativeToolchain
         return Run(compiler, args, 60000);
     }
 
-    public static ProcessResult Compile(string irPath, string outputPath, string? clang = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int? optimizationLevel = null)
+    public static ProcessResult Compile(string irPath, string outputPath, string? clang = null, int exceptionReserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes, int? optimizationLevel = null, gflat.Projects.NativeLinkInputs? nativeLibraries = null)
     {
         string optimization = optimizationLevel?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? Environment.GetEnvironmentVariable("GFLAT_OPT_LEVEL") ?? "0";
         gflat.Projects.OptimizationLevel.Parse(optimization);
+        var linkInputs = (nativeLibraries ?? gflat.Projects.NativeLinkInputs.Empty).Normalize(Environment.CurrentDirectory);
+        var paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+        string fullOutput = Path.GetFullPath(outputPath);
+        string ir = File.ReadAllText(irPath);
+        bool debug = ir.Contains("!llvm.dbg.cu", StringComparison.Ordinal);
+        if (linkInputs.Libraries.Any(library => library.Kind == "File" &&
+            (paths.Equals(library.Value, fullOutput) ||
+             (debug && OperatingSystem.IsWindows() && paths.Equals(library.Value, Path.ChangeExtension(fullOutput, ".pdb"))))))
+            throw new ArgumentException("Output must differ from native library files.");
         var args = new List<string> { irPath, "-O" + optimization, "-o", outputPath };
         AddUnusedCodeElimination(args);
         if (OperatingSystem.IsWindows() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LIB")))
@@ -120,8 +129,7 @@ public static class NativeToolchain
             if (LibraryDirectory.Value is string lib) args.AddRange(["-Xlinker", "/libpath:" + lib]);
         }
         string compiler = FindClang(clang);
-        string ir = File.ReadAllText(irPath);
-        if (ir.Contains("!llvm.dbg.cu", StringComparison.Ordinal))
+        if (debug)
         {
             args.Add("-g");
             if (OperatingSystem.IsWindows()) args.AddRange(["-gcodeview", "-Xlinker", "/DEBUG:FULL", "-Xlinker", "/PDB:" + Path.ChangeExtension(Path.GetFullPath(outputPath), ".pdb")]);
@@ -140,11 +148,21 @@ public static class NativeToolchain
             if (stdio) args.Add(NativeRuntime.GetStdioObject(compiler));
             args.AddRange(NativeRuntime.HostArguments());
         }
+        AddNativeLibraries(args, linkInputs);
         // LLVM may lower floating remainder to fmod/fmodf. A bare program uses
         // the C driver, which doesn't add libm as the C++ driver does on Linux.
         if (OperatingSystem.IsLinux() && System.Text.RegularExpressions.Regex.IsMatch(ir, @"(?m)^\s*%[^\r\n]*=\s*frem\b"))
             args.Add("-lm");
         return Run(compiler, args, 60000);
+    }
+
+    internal static void AddNativeLibraries(List<string> arguments, gflat.Projects.NativeLinkInputs inputs)
+    {
+        foreach (string directory in inputs.Directories) arguments.Add("-L" + directory);
+        // Static archives are searched in order. Preserve repeats and interleaved
+        // named/file inputs rather than treating these as a set of dependencies.
+        foreach (var library in inputs.Libraries)
+            arguments.Add(library.Kind == "Name" ? "-l" + library.Value : library.Value);
     }
 
     internal static (bool Exceptions, bool Stdio) RequiredNativeRuntimes(string ir)

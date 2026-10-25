@@ -5,6 +5,7 @@
     <GflatBuildTasksPath Condition="'$(GflatBuildTasksPath)' == ''">$(MSBuildThisFileDirectory)tasks/$(_GflatTaskFramework)/gflat.Build.Tasks.dll</GflatBuildTasksPath>
   </PropertyGroup>
   <UsingTask TaskName="gflat.Build.Tasks.GflatReadProjectInputs" AssemblyFile="$(GflatBuildTasksPath)" />
+  <UsingTask TaskName="gflat.Build.Tasks.GflatWriteNativeLinkInputs" AssemblyFile="$(GflatBuildTasksPath)" />
   <PropertyGroup>
     <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == '' and '$(Configuration)' == 'Release'">2</GflatOptimizationLevel>
     <GflatOptimizationLevel Condition="'$(GflatOptimizationLevel)' == ''">0</GflatOptimizationLevel>
@@ -34,6 +35,7 @@
     <_GflatSourceList>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).sources'))</_GflatSourceList>
     <_GflatBuildSettings>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).build.settings'))</_GflatBuildSettings>
     <_GflatBuildSuccess>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).build.success'))</_GflatBuildSuccess>
+    <_GflatNativeLinkManifest>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', '$(MSBuildProjectName).native-link.xml'))</_GflatNativeLinkManifest>
     <GflatIROutput Condition="'$(OutputType)' == 'Executable' and '$(GflatIROutput)' == ''">$([System.IO.Path]::ChangeExtension('$(TargetPath)', '.ll'))</GflatIROutput>
     <_GflatStdLibOption>--no-stdlib</_GflatStdLibOption>
     <_GflatClangOption Condition="'$(GflatClang)' != ''">--clang &quot;$(GflatClang)&quot;</_GflatClangOption>
@@ -69,10 +71,17 @@
   </Target>
   <Target Name="_GflatValidateOutputs" DependsOnTargets="GflatGetSources">
     <Error Condition="!$([System.IO.File]::Exists('$(GflatBuildTasksPath)'))" Text="The precompiled gflat build task is missing: $(GflatBuildTasksPath). Keep build/tasks with the toolchain; for a source checkout, build the compiler first." />
-    <GflatReadProjectInputs ProjectFile="$(MSBuildProjectFullPath)" Configuration="$(Configuration)" Platform="$(Platform)">
+    <GflatReadProjectInputs ProjectFile="$(MSBuildProjectFullPath)" Configuration="$(Configuration)" Platform="$(Platform)" NativeLinkOverrides="$(GflatNativeLinkOverrides)">
       <Output TaskParameter="ProjectInputs" ItemName="_GflatEvaluatedProjectInputs" />
+      <Output TaskParameter="NativeLibraries" ItemName="_GflatNativeLibraries" />
+      <Output TaskParameter="NativeLibraryDirectories" ItemName="_GflatNativeLibraryDirectories" />
+      <Output TaskParameter="NativeLibraryFiles" ItemName="_GflatNativeLibraryFiles" />
+      <Output TaskParameter="HasLogicalLibraries" PropertyName="_GflatHasLogicalLibraries" />
     </GflatReadProjectInputs>
-    <ItemGroup><_GflatProtectedFiles Include="@(_GflatSources);@(_GflatEvaluatedProjectInputs)" /></ItemGroup>
+    <ItemGroup>
+      <_GflatProtectedFiles Include="@(_GflatSources);@(_GflatEvaluatedProjectInputs);@(_GflatNativeLibraryFiles)" />
+      <_GflatProtectedFiles Include="$([MSBuild]::Escape('$(GflatNativeLinkOverrides)'))" Condition="'$(GflatNativeLinkOverrides)' != ''" />
+    </ItemGroup>
     <PropertyGroup Condition="'$(OutputType)' == 'Executable'">
       <_GflatFullTargetPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(TargetPath)'))</_GflatFullTargetPath>
       <_GflatFullIRPath>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(GflatIROutput)'))</_GflatFullIRPath>
@@ -81,7 +90,10 @@
     <Error Condition="'$(OutputType)' == 'Executable' and ('%(_GflatProtectedFiles.FullPath)' == '$(_GflatFullTargetPath)' or '%(_GflatProtectedFiles.FullPath)' == '$(_GflatFullIRPath)')" Text="Output must differ from source, project, and imported build files: %(_GflatProtectedFiles.FullPath)" />
     <Error Condition="'$(OutputType)' == 'Executable' and '$(_GflatFullPdbPath)' != '' and '%(_GflatProtectedFiles.FullPath)' == '$(_GflatFullPdbPath)'" Text="PDB output must differ from source, project, and imported build files: %(_GflatProtectedFiles.FullPath)" />
     <Error Condition="'%(_GflatProtectedFiles.FullPath)' == '$(_GflatSourceList)' or '%(_GflatProtectedFiles.FullPath)' == '$(_GflatBuildSettings)' or '%(_GflatProtectedFiles.FullPath)' == '$(_GflatBuildSuccess)'" Text="Generated build files must differ from source, project, and imported build files: %(_GflatProtectedFiles.FullPath)" />
+    <Error Condition="'%(_GflatProtectedFiles.FullPath)' == '$(_GflatNativeLinkManifest)'" Text="Native link manifest must differ from every input file: %(_GflatProtectedFiles.FullPath)" />
     <Error Condition="'$(OutputType)' == 'Executable' and ('$(_GflatFullTargetPath)' == '$(_GflatSourceList)' or '$(_GflatFullTargetPath)' == '$(_GflatBuildSettings)' or '$(_GflatFullTargetPath)' == '$(_GflatBuildSuccess)' or '$(_GflatFullIRPath)' == '$(_GflatSourceList)' or '$(_GflatFullIRPath)' == '$(_GflatBuildSettings)' or '$(_GflatFullIRPath)' == '$(_GflatBuildSuccess)')" Text="Output must differ from the generated source list and incremental build stamps." />
+    <Error Condition="'$(OutputType)' == 'Executable' and ('$(_GflatFullTargetPath)' == '$(_GflatNativeLinkManifest)' or '$(_GflatFullIRPath)' == '$(_GflatNativeLinkManifest)' or '$(_GflatFullPdbPath)' == '$(_GflatNativeLinkManifest)')" Text="Output must differ from the generated native link manifest." />
+    <Error Condition="'$(_GflatNativeLinkManifest)' == '$(_GflatSourceList)' or '$(_GflatNativeLinkManifest)' == '$(_GflatBuildSettings)' or '$(_GflatNativeLinkManifest)' == '$(_GflatBuildSuccess)'" Text="Native link manifest must differ from other generated build files." />
   </Target>
   <Target Name="_GflatPrepare" DependsOnTargets="_GflatValidateOutputs">
     <Error Condition="'$(OutputType)' == 'Executable' and '@(_GflatSources)' == ''" Text="Executable project has no Compile items." />
@@ -91,6 +103,7 @@
     <!-- Keep the task's default UTF-8 encoding: explicit UTF-8 adds a BOM and
          prevents WriteOnlyWhenDifferent from preserving unchanged timestamps. -->
     <WriteLinesToFile File="$(_GflatSourceList)" Lines="@(_GflatSources)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <GflatWriteNativeLinkInputs ManifestPath="$(_GflatNativeLinkManifest)" Libraries="@(_GflatNativeLibraries)" Directories="@(_GflatNativeLibraryDirectories)" />
   </Target>
   <Target Name="_GflatPrepareBuild" DependsOnTargets="_GflatPrepare">
     <PropertyGroup>
@@ -105,6 +118,8 @@
            Actual imports come from the task's items: MSBuildAllProjects also loses
            filename boundaries when an import path contains a semicolon. -->
       <_GflatCanCache Condition="'$(OutputType)' == 'Executable' and '$(GflatProjectInputs)' != '' and ('$(GflatEmitIR)' == 'true' or Exists('$(_GflatDriverInput)')) and (('$(GflatCompilerPath)' != '' and '$(GflatCompilerCommand)' == '$(_GflatKnownCompilerCommand)') or '@(GflatCompilerInputs)' != '')">true</_GflatCanCache>
+      <!-- Names are resolved by the selected linker, so no exact file timestamp is known. -->
+      <_GflatCanCache Condition="'$(GflatEmitIR)' != 'true' and '$(_GflatHasLogicalLibraries)' == 'true'">false</_GflatCanCache>
     </PropertyGroup>
     <ItemGroup>
       <_GflatCompilerFiles Include="$(GflatCompilerPath)" Condition="'$(GflatCompilerPath)' != ''" />
@@ -112,6 +127,8 @@
       <_GflatNativeOutputs Include="$(_GflatFullPdbPath)" Condition="'$(DebugSymbols)' == 'true' and '$(GflatEmitIR)' != 'true' and '$(_GflatFullPdbPath)' != ''" />
       <_GflatCompilerFiles Include="$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/*.dll;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/*.json;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Runtime/*.cpp;$([System.IO.Path]::GetDirectoryName('$(GflatCompilerPath)'))/Std/**/*.gf" Condition="'$(GflatCompilerPath)' != ''" />
       <_GflatBuildInputs Include="@(_GflatSources);@(_GflatEvaluatedProjectInputs);$([MSBuild]::Escape('$(GflatBuildTasksPath)'));@(_GflatCompilerFiles);@(GflatCompilerInputs)" />
+      <_GflatBuildInputs Include="@(_GflatNativeLibraryFiles)" Condition="'$(GflatEmitIR)' != 'true'" />
+      <_GflatBuildInputs Include="$([MSBuild]::Escape('$(_GflatNativeLinkManifest)'))" />
       <_GflatBuildInputs Include="$(GflatClang)" Condition="'$(GflatClang)' != '' and Exists('$(GflatClang)')" />
       <_GflatBuildInputs Include="$(GFLAT_CLANG)" Condition="'$(GflatClang)' == '' and '$(GFLAT_CLANG)' != '' and Exists('$(GFLAT_CLANG)')" />
       <_GflatBuildInputs Include="$(_GflatDriverInput)" Condition="'$(GflatEmitIR)' != 'true' and Exists('$(_GflatDriverInput)')" />
@@ -139,22 +156,22 @@
   </Target>
   <Target Name="_GflatCompile" DependsOnTargets="_GflatPrepareBuild;_GflatCheckOutputProvenance" Inputs="@(_GflatBuildInputs);$(_GflatSourceList);$(_GflatBuildSettings)" Outputs="@(_GflatNativeOutputs);$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' == 'true'">
     <Delete Files="$(_GflatBuildSuccess)" />
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
     <Touch Files="$(_GflatBuildSuccess)" AlwaysCreate="true" />
   </Target>
   <Target Name="Build" DependsOnTargets="_GflatPrepareBuild;_GflatCompile" Returns="$(_GflatBuildOutput)">
     <!-- Unknown commands and source-library checks stay uncached. -->
     <Delete Files="$(_GflatBuildSuccess)" Condition="'$(_GflatCanCache)' != 'true'" />
-    <Exec Condition="'$(_GflatCanCache)' != 'true' and '@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
+    <Exec Condition="'$(_GflatCanCache)' != 'true' and '@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) $(_GflatOptions) $(_GflatDebugOption) $(_GflatClangOption) --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot; --optimization &quot;$(GflatOptimizationLevel)&quot;" />
   </Target>
   <Target Name="Check" DependsOnTargets="_GflatPrepare">
-    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
+    <Exec Condition="'@(_GflatSources)' != ''" Command="$(GflatCompilerCommand) --source-list &quot;$(_GflatSourceList)&quot; --native-link-inputs &quot;$(_GflatNativeLinkManifest)&quot; $(_GflatStdLibOption) $(_GflatBuiltinsOption) --check --exception-reserve-bytes &quot;$(GflatExceptionReserveBytes)&quot;" />
   </Target>
   <Target Name="Clean" DependsOnTargets="_GflatValidateOutputs">
     <PropertyGroup Condition="'$(OutputType)' == 'Executable'"><_GflatCleanExtension>$([System.IO.Path]::GetExtension('$(TargetPath)'))</_GflatCleanExtension></PropertyGroup>
     <Error Condition="'$(OutputType)' == 'Executable' and '$(_GflatCleanExtension)' != '.exe'" Text="Clean requires an .exe TargetPath; custom output names must be cleaned explicitly." />
     <Delete Files="$(_GflatFullTargetPath);$(_GflatFullIRPath);$(_GflatFullPdbPath)" Condition="'$(OutputType)' == 'Executable'" />
-    <Delete Files="$(_GflatSourceList);$(_GflatBuildSettings);$(_GflatBuildSuccess)" />
+    <Delete Files="$(_GflatSourceList);$(_GflatBuildSettings);$(_GflatBuildSuccess);$(_GflatNativeLinkManifest)" />
   </Target>
   <Target Name="Rebuild" DependsOnTargets="Clean;Build" />
   <Target Name="Restore" />

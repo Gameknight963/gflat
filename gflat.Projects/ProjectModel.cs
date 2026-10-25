@@ -29,11 +29,12 @@ public sealed class ProjectModel
     public string? SdkRoot { get; }
     public IReadOnlyList<string> References { get; }
     public IReadOnlyList<string> Imports { get; }
+    public NativeLinkInputs NativeLinkInputs { get; }
     private readonly string[] sources;
     private readonly Func<string, bool> matchesGlob;
 
     internal ProjectModel(string path, ProjectKind kind, string? targetPath, string[] sources,
-        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU", bool noBuiltins = false)
+        string[] references, string[] imports, Func<string, bool> matchesGlob, int exceptionReserveBytes, int optimizationLevel, string? sdkRoot = null, bool noStdLib = false, string configuration = "Debug", string platform = "AnyCPU", bool noBuiltins = false, NativeLinkInputs? nativeLinkInputs = null)
     {
         Configuration = configuration;
         Platform = platform;
@@ -44,6 +45,7 @@ public sealed class ProjectModel
         SdkRoot = sdkRoot;
         FilePath = path; Kind = kind; TargetPath = targetPath; this.sources = sources;
         References = references; Imports = imports; this.matchesGlob = matchesGlob;
+        NativeLinkInputs = nativeLinkInputs ?? gflat.Projects.NativeLinkInputs.Empty;
     }
     public static ProjectModel Load(string path) => Load(path, null, null);
     public static ProjectModel Load(string path, string? configuration, string? platform, int? exceptionReserveBytes = null, int? optimizationLevel = null, bool? noStdLib = null, bool asReference = false, bool? debugSymbols = null, bool? noBuiltins = null)
@@ -69,8 +71,13 @@ public sealed class ProjectGraph
     public ProjectModel Root { get; }
     public IReadOnlyList<ProjectModel> Projects { get; }
     public IReadOnlyList<string> Sources { get; }
+    public NativeLinkInputs NativeLinkInputs { get; }
     private ProjectGraph(ProjectModel root, List<ProjectModel> projects, List<string> sources)
-    { Root = root; Projects = projects; Sources = sources; }
+    {
+        Root = root; Projects = projects; Sources = sources;
+        NativeLinkInputs = NativeLinkProjectOrder.Aggregate(root.FilePath, projects.Select(project =>
+            new NativeLinkProject(project.FilePath, project.References, project.NativeLinkInputs)));
+    }
 
     /// <summary>Evaluates the root normally and each dependency in reference context.</summary>
     /// <param name="loader">Optional evaluator receiving the project path and whether it is a reference.</param>

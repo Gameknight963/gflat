@@ -27,6 +27,10 @@ public static class Program
             int? optimizationLevel = null;
             bool? debugSymbols = null;
             bool? noBuiltins = null;
+            NativeLinkInputs nativeLinkInputs = NativeLinkInputs.Empty;
+            var nativeManifests = new List<string>();
+            void AddLibrary(string kind, string value) => nativeLinkInputs = nativeLinkInputs.Append(
+                NativeLinkInputs.Create([new NativeLibraryInput(kind, value)], [], Environment.CurrentDirectory));
             for (int i = 0; i < args.Length; i++)
             {
                 string Value() => ++i < args.Length ? args[i] : throw new ArgumentException($"Missing value for {args[i - 1]}");
@@ -37,6 +41,7 @@ public static class Program
                         Console.WriteLine("gflat doctor [--native] [--clang path]");
                         Console.WriteLine("Debug symbols: -g or --debug; --no-debug disables the project's DebugSymbols setting.");
                         Console.WriteLine("Libc builtin recognition: --no-builtins disables it; --builtins overrides the project's NoBuiltins setting. Explicit calls/intrinsics may still require runtime helpers.");
+                        Console.WriteLine("Native linking: repeat --native-library NAME, --native-library-file PATH, and --native-library-dir PATH. Project options append to declared requirements.");
                         Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N] [--no-stdlib]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
                     case "build" when i == 0: break;
@@ -55,6 +60,14 @@ public static class Program
                     case "--configuration": configuration = Value(); explicitConfiguration = true; break;
                     case "--platform": platform = Value(); explicitPlatform = true; break;
                     case "--source-list": sourcePaths.AddRange(File.ReadAllLines(Value()).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath)); break;
+                    case "--native-library": AddLibrary("Name", Value()); break;
+                    case "--native-library-file": AddLibrary("File", Value()); break;
+                    case "--native-library-dir": nativeLinkInputs = nativeLinkInputs.Append(NativeLinkInputs.Create([], [Value()], Environment.CurrentDirectory)); break;
+                    case "--native-link-inputs":
+                        string manifest = Path.GetFullPath(Value());
+                        nativeManifests.Add(manifest);
+                        nativeLinkInputs = nativeLinkInputs.Append(NativeLinkInputs.Read(manifest));
+                        break;
                     case "--target": TargetInfo.Parse(Value()); break;
                     case "--run": run = true; break;
                     case "--emit-ir": irOnly = true; break;
@@ -68,6 +81,8 @@ public static class Program
             ProjectGraph? graph = null;
             if (sourcePaths.Any(p => p.EndsWith(".gfproj", StringComparison.OrdinalIgnoreCase)))
             {
+                if (nativeManifests.Count != 0)
+                    throw new ArgumentException("--native-link-inputs is an internal source-build option. Use --native-library, --native-library-file, and --native-library-dir with projects.");
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
                 projectPath = sourcePaths[0];
                 var root = ProjectModel.Load(projectPath, explicitConfiguration ? configuration : null,
@@ -89,7 +104,7 @@ public static class Program
                 if (graph == null || run || irOnly || args.Contains("-o")) throw new ArgumentException("Use clean with a project file and no output options.");
                 // The SDK validates the actual executable/IR paths against all
                 // sources and imports before deleting those same normalized paths.
-                return ProjectBuild.Run(graph.Root, "Clean", configuration, platform, sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins);
+                return ProjectBuild.Run(graph.Root, "Clean", configuration, platform, sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs);
             }
             if (sourcePaths.Count == 0 && graph == null) throw new ArgumentException("Specify a source file. Use --help for usage.");
             if (check && (run || irOnly)) throw new ArgumentException("--check cannot be combined with --run or --emit-ir.");
@@ -97,17 +112,22 @@ public static class Program
             if (graph?.Root.Kind == ProjectKind.SourceLibrary)
                 return ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
                     clang: clang, exceptionReserveBytes: exceptionReserveBytes, optimizationLevel: optimizationLevel,
-                    sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins);
+                    sourceGraph: graph, noStdLib: noStdLib, noBuiltins: noBuiltins, nativeLinkOverrides: nativeLinkInputs);
             outputPath = Path.GetFullPath(outputPath ?? Path.ChangeExtension(sourcePaths[0], irOnly ? ".ll" : ".exe"));
             var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)
                 throw new ArgumentException("A source file may only be supplied once.");
             if (sourcePaths.Contains(outputPath, pathComparer) || graph?.Projects.Any(p => pathComparer.Equals(p.FilePath, outputPath)) == true)
                 throw new ArgumentException("Output must differ from every source file.");
+            if (nativeLinkInputs.Libraries.Any(library => library.Kind == "File" && pathComparer.Equals(library.Value, outputPath)) ||
+                nativeManifests.Contains(outputPath, pathComparer) ||
+                (OperatingSystem.IsWindows() && debugSymbols == true && !irOnly &&
+                 nativeManifests.Contains(Path.ChangeExtension(outputPath, ".pdb"), pathComparer)))
+                throw new ArgumentException("Output must differ from native library files and link manifests.");
             if (graph != null)
             {
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
-                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph, noStdLib, debugSymbols, noBuiltins);
+                    irOnly, args.Contains("-o") ? outputPath : null, clang, exceptionReserveBytes, optimizationLevel, graph, noStdLib, debugSymbols, noBuiltins, nativeLinkInputs);
                 if (result != 0 || !run) return result;
                 return NativeToolchain.RunProgram(outputPath, programArguments);
             }
@@ -126,7 +146,7 @@ public static class Program
             try
             {
                 File.WriteAllText(temporaryIr, ir);
-                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel);
+                ProcessResult compiled = NativeToolchain.Compile(temporaryIr, outputPath, clang, exceptionReserveBytes ?? ExceptionReserve.DefaultBytes, optimizationLevel, nativeLinkInputs);
                 if (compiled.ExitCode != 0) { Console.Error.WriteLine("Native toolchain error: " + compiled.StandardError); return 2; }
                 if (!run) return 0;
                 return NativeToolchain.RunProgram(outputPath, programArguments);
@@ -151,7 +171,7 @@ public static class Program
             Console.Error.WriteLine(diagnostics.HasErrors ? diagnostics.FormatAll() : ex.Message);
             return 1;
         }
-        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or TimeoutException)
+        catch (Exception ex) when (ex is ArgumentException or IOException or InvalidDataException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or TimeoutException)
         {
             Console.Error.WriteLine(ex.Message);
             return 2;

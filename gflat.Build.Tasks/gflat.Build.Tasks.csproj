@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.14.28" ExcludeAssets="runtime" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" Condition="'$(TargetFramework)' == 'net472'" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../gflat.Projects/NativeLinkInputs.cs" Link="NativeLinkInputs.cs" />
+    <Reference Include="System.Xml.Linq" Condition="'$(TargetFramework)' == 'net472'" />
+  </ItemGroup>
 </Project>

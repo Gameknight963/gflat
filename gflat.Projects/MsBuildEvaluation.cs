@@ -44,13 +44,28 @@ internal static class MsBuildEvaluation
             try { optimization = OptimizationLevel.Parse(project.GetPropertyValue("GflatOptimizationLevel") is { Length: > 0 } opt ? opt : "0"); }
             catch (ArgumentException error) { throw new ProjectException(path, "GflatOptimizationLevel: " + error.Message); }
             var globs = project.GetAllGlobs("Compile").Select(g => g.MsBuildGlob).ToArray();
+            var nativeLibraries = new List<NativeLibraryInput>();
+            var nativeDirectories = new List<string>();
+            var survivingItems = new HashSet<ProjectItem>(project.Items);
+            NativeLinkInputs nativeInputs;
+            try
+            {
+                foreach (var item in project.AllEvaluatedItems.Where(survivingItems.Contains))
+                {
+                    if (item.ItemType.Equals("NativeLibrary", StringComparison.OrdinalIgnoreCase)) nativeLibraries.Add(new NativeLibraryInput("Name", item.EvaluatedInclude));
+                    else if (item.ItemType.Equals("NativeLibraryFile", StringComparison.OrdinalIgnoreCase)) nativeLibraries.Add(new NativeLibraryInput("File", item.EvaluatedInclude));
+                    else if (item.ItemType.Equals("NativeLibraryDirectory", StringComparison.OrdinalIgnoreCase)) nativeDirectories.Add(item.EvaluatedInclude);
+                }
+                nativeInputs = NativeLinkInputs.Create(nativeLibraries, nativeDirectories, Path.GetDirectoryName(path)!);
+            }
+            catch (ArgumentException error) { throw new ProjectException(path, "Native link inputs: " + error.Message); }
             // MSBuild's evaluated glob expressions match paths relative to the project.
             return new ProjectModel(path, kind, target == null ? null : Path.GetFullPath(target, Path.GetDirectoryName(path)!),
                 Files("Compile"), Files("ProjectReference"),
                 project.Imports.Select(i => i.ImportedProject.FullPath).Distinct(ProjectModel.Paths).ToArray(),
                 file => globs.Any(g => g.IsMatch(Path.GetRelativePath(Path.GetDirectoryName(path)!, file))), reserveBytes, optimization,
                 project.GetPropertyValue("GflatSdkRoot") is { Length: > 0 } root ? Path.GetFullPath(root, Path.GetDirectoryName(path)!) : null,
-                excludesStd, project.GetPropertyValue("Configuration"), project.GetPropertyValue("Platform"), disablesBuiltins);
+                excludesStd, project.GetPropertyValue("Configuration"), project.GetPropertyValue("Platform"), disablesBuiltins, nativeInputs);
         }
         catch (InvalidProjectFileException error)
         {

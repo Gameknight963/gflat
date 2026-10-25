@@ -36,7 +36,7 @@ try {
     foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
-    foreach ($source in @('std/core/Version.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+    foreach ($source in @('std/core/Version.gf', 'std/core/DateTimeOffset.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
     foreach ($platform in @('windows', 'linux')) {
@@ -1006,6 +1006,10 @@ int SmokeHashesAndViews() {
         Rational expectedFraction = new(2l, 3l);
         if (!parsedFraction.Equals(&expectedFraction) || !Rational::TryParse("2/4tail", 3, ref parsedFraction)
             || !parsedFraction.Equals(&expectedHalf)) return 268;
+        DateTimeOffset offsetStamp = DateTimeOffset::Parse("2000-01-01T02:00:00+02:00");
+        DateTimeOffset utcStamp = offsetStamp.ToOffset(TimeSpan::FromTicks(0l));
+        if (!offsetStamp.Equals(&utcStamp) || offsetStamp.EqualsExact(&utcStamp)
+            || utcStamp.DateTime.TimeOfDay.Hour != 0) return 269;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

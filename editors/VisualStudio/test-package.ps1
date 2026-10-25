@@ -1002,6 +1002,10 @@ int SmokeHashesAndViews() {
         indexedDeque.Insert(2, 9); int removedMiddle = indexedDeque.RemoveAt(3);
         if (removedMiddle != 4 || indexedDeque.Count != 4 || indexedDeque[0] != 2 || indexedDeque[1] != 3
             || indexedDeque[2] != 9 || indexedDeque[3] != 5) return 267;
+        Rational parsedFraction = Rational::Parse("-12/-18");
+        Rational expectedFraction = new(2l, 3l);
+        if (!parsedFraction.Equals(&expectedFraction) || !Rational::TryParse("2/4tail", 3, ref parsedFraction)
+            || !parsedFraction.Equals(&expectedHalf)) return 268;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

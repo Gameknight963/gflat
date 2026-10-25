@@ -36,7 +36,7 @@ try {
     foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
-    foreach ($source in @('std/core/Version.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+    foreach ($source in @('std/core/Version.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
     foreach ($platform in @('windows', 'linux')) {
@@ -985,6 +985,12 @@ int SmokeHashesAndViews() {
         HashMap<int, int> originalMap = keyedView.AsEnumerable().ToHashMap((int value) => value);
         HashMap<int, long> selectedMap = keyedView.AsEnumerable().ToHashMap((int value) => value, (int value) => (long)value * 10l);
         if (originalMap.Count != 4 || selectedMap.Count != 4 || originalMap[&thirdKey] != 3 || selectedMap[&thirdKey] != 30l) return 264;
+        HashMap<int, Vector<int>> originalGroups = keyedView.AsEnumerable().ToLookup((int value) => value % 2);
+        HashMap<int, Vector<long>> selectedGroups = keyedView.AsEnumerable().ToLookup((int value) => value % 2, (int value) => (long)value * (long)value);
+        Span<int> oddValues = originalGroups[&oddKey].AsSpan();
+        Span<long> evenSquares = selectedGroups[&evenKey].AsSpan();
+        if (originalGroups.Count != 2 || selectedGroups.Count != 2 || oddValues.Length != 2 || oddValues[0] != 1 || oddValues[1] != 3
+            || evenSquares.Length != 2 || evenSquares[0] != 4l || evenSquares[1] != 16l) return 265;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

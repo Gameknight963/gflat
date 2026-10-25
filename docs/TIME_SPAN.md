@@ -27,9 +27,27 @@ properties expose the exact count and signed components. Division truncates
 toward zero: minus 25 hours has `Days == -1` and `Hours == -1`, while minus one
 tick has zero whole components. Hours range from -23 through 23, minutes and
 seconds from -59 through 59, and milliseconds from -999 through 999.
-`TotalSeconds` returns the whole interval as an approximate `double`, including
-fractional seconds; large values can lose tick precision. Use `Ticks` for exact
-storage or arithmetic.
+`TotalMilliseconds`, `TotalSeconds`, `TotalMinutes`, `TotalHours`, and `TotalDays`
+return the complete interval as an approximate `double` in that unit, including
+fractional units. They are immutable, `nothrow`, and allocate nothing. They are
+totals rather than components: 25 hours has `Hours == 1` and `TotalHours == 25`;
+minus one tick has zero whole components and negative fractional totals.
+Each converts ticks to `double` and divides by the unit's tick scale. Large
+values can lose tick precision; use `Ticks` for exact storage or arithmetic.
+The natural approximate result is not clamped to a whole-unit integer range.
+
+```cpp
+using std;
+int main()
+{
+    TimeSpan interval = TimeSpan::FromTicks(15000l);
+    if (interval.TotalMilliseconds != 1.5d || interval.Milliseconds != 1) return 1;
+    return 0;
+}
+```
+
+For a stopwatch, `watch.Elapsed.TotalMilliseconds` observes its recorded elapsed
+duration in milliseconds without changing the clock provider or allocating.
 
 `Add(TimeSpan)`, `Subtract(TimeSpan)`, and `Negate()` return new values and check
 for overflow before performing signed arithmetic. They throw `Exception` when

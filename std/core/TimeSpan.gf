@@ -35,6 +35,10 @@ public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable,
     public int Seconds { immutable get nothrow => (int)(ticks / 10000000l % 60l); }
     public int Milliseconds { immutable get nothrow => (int)(ticks / 10000l % 1000l); }
     public double TotalSeconds { immutable get nothrow => (double)ticks / 10000000d; }
+    public double TotalMilliseconds { immutable get nothrow => (double)ticks / 10000d; }
+    public double TotalMinutes { immutable get nothrow => (double)ticks / 600000000d; }
+    public double TotalHours { immutable get nothrow => (double)ticks / 36000000000d; }
+    public double TotalDays { immutable get nothrow => (double)ticks / 864000000000d; }
 
     private static bool ReadTwoDigits(readonly(char)* text, nuint count, ref nuint position, ref int value) nothrow
     {

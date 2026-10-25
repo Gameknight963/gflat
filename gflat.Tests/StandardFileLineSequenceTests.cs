@@ -121,6 +121,67 @@ public sealed class StandardFileLineSequenceTests
             """,optimization);
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void TakeLastConsumesOnlyRemainingFileBeforeYieldAndRetainsIndependentCountedTails(int optimization)
+    {
+        byte[] contents = [.. Encoding.ASCII.GetBytes("prefix\nskip\r\n"),
+            0, (byte)'A', 255, 13, (byte)'X', 13, 10, (byte)'z', 13];
+        Run(contents, path => Counters + $$$"""
+            int main()
+            {
+                {
+                    File input = File::OpenRead({{{path}}});
+                    File* source = &input;
+                    {
+                        String prefix = source.Lines().AsEnumerable().First();
+                        if (!prefix.Equals("prefix") || !input.IsOpen || input.EndOfFile) return 1;
+                    }
+                    if (allocations != releases || input.PeekByte() != 's') return 2;
+                    int before = allocations;
+                    failAllocation = true;
+                    {
+                        var empty = source.Lines().AsEnumerable().TakeLast(0).GetEnumerator();
+                        if (empty.MoveNext() || empty.MoveNext()) return 3;
+                    }
+                    failAllocation = false;
+                    if (allocations != before || !input.IsOpen || input.EndOfFile || input.PeekByte() != 's') return 4;
+
+                    String keptFirst = new();
+                    String keptLast = new();
+                    var query = source.Lines().AsEnumerable().TakeLast(2);
+                    before = allocations;
+                    {
+                        var tail = query.GetEnumerator();
+                        if (allocations != before || input.EndOfFile || input.PeekByte() != 's') return 5;
+                        if (!tail.MoveNext() || !input.IsOpen || !input.EndOfFile) return 6;
+                        keptFirst = tail.Current;
+                        if (keptFirst.Length != 5 || keptFirst[0] != '\0' || keptFirst[1] != 'A'
+                            || (byte)keptFirst[2] != (byte)255 || keptFirst[3] != '\r' || keptFirst[4] != 'X') return 7;
+                        {
+                            String another = tail.Current;
+                            if (another.Data == keptFirst.Data || !another.Equals(&keptFirst)) return 8;
+                            another[1] = 'Q';
+                            if (keptFirst[1] != 'A') return 9;
+                        }
+                        if (!tail.MoveNext()) return 10;
+                        keptLast = tail.Current;
+                        if (keptLast.Length != 2 || keptLast[0] != 'z' || keptLast[1] != '\r') return 11;
+                        if (tail.MoveNext() || tail.MoveNext() || !input.IsOpen || !input.EndOfFile) return 12;
+                        before = allocations;
+                        if (query.Count() != 0 || allocations != before || !input.IsOpen || !input.EndOfFile) return 13;
+                    }
+                    input.Close();
+                    if (keptFirst.Length != 5 || keptFirst[0] != '\0' || keptFirst[1] != 'A'
+                        || (byte)keptFirst[2] != (byte)255 || keptFirst[3] != '\r' || keptFirst[4] != 'X') return 14;
+                    if (keptLast.Length != 2 || keptLast[0] != 'z' || keptLast[1] != '\r') return 15;
+                }
+                return allocations - releases;
+            }
+            """, optimization);
+    }
+
+    [Theory]
     [InlineData("iterator.Current[0]='X';")]
     [InlineData("iterator.Current.Clear();")]
     public void CurrentCannotMutateTheIteratorsOwnedString(string invalid)

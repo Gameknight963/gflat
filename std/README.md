@@ -50,6 +50,7 @@ implementation lives in `libc`.
 | Query ordering | `Order()` / `Order(compare)` | [Stable buffered ordering and borrowed cursor values](../docs/QUERY_ORDER.md) |
 | Query concatenation | `Concat(other)` | [Concatenated iteration and ownership](../docs/QUERY_CONCAT.md) |
 | Buffered query tail | `TakeLast(count)` | [Finite tails and bounded storage](../docs/QUERY_TAKE_LAST.md) |
+| Streaming suffix omission | `SkipLast(count)` | [Bounded lookahead and source consumption](../docs/QUERY_SKIP_LAST.md) |
 | Query endpoints | `Append`, `Prepend` | [Captured values and repeatable enumeration](../docs/QUERY_ENDPOINT.md) |
 | Query key counts | `CountBy` | [Owning hash maps of selected-key counts](../docs/QUERY_COUNT_BY.md) |
 | Query map results | `ToHashMap` | [Selected keys and values with duplicate detection](../docs/QUERY_TO_HASH_MAP.md) |

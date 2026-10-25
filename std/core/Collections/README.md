@@ -86,6 +86,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Select(selector)` | Project elements when their `Current` value is read. |
 | `Reverse()` | Yield in reverse order, buffering the complete input on each iterator's first move. |
 | `TakeLast(count)` | Yield the final at most count elements, buffering a bounded tail on each iterator's first move. |
+| `SkipLast(count)` | Omit a trailing suffix using bounded streaming lookahead. |
 | `Order()` / `Order(compare)` | Stably sort the complete input on each iterator's first move. |
 | `Distinct()` | Yield distinct values in encounter order; each enumeration owns a hash set. |
 | `DistinctBy(selector)` | Yield the first whole value for each selected key, in encounter order. |
@@ -134,6 +135,7 @@ For owning distinct results, see [ToHashSet](../../../docs/QUERY_HASH_SET.md).
 For lazy distinct values in encounter order, see [Distinct](../../../docs/QUERY_DISTINCT.md).
 For selecting distinct keys while returning whole values, see [DistinctBy](../../../docs/QUERY_DISTINCT_BY.md).
 For bounded tail buffering and its copying and finite-source rules, see [TakeLast](../../../docs/QUERY_TAKE_LAST.md).
+For streaming suffix omission and lookahead consumption, see [SkipLast](../../../docs/QUERY_SKIP_LAST.md).
 For deferred full-input buffering in reverse order, see [Reverse](../../../docs/QUERY_REVERSE.md).
 For stable buffered ordering and borrowed cursor values, see [Order](../../../docs/QUERY_ORDER.md).
 For comparison, ties, and value ownership in `Min` and `Max`, see [query extrema](../../../docs/QUERY_EXTREMA.md).
@@ -205,7 +207,7 @@ they contain its address.
 with outer `readonly` or `immutable` qualification currently fails its writable
 indexer check. Choose an ordinary stored value explicitly, for example
 `.Select((readonly(int) value) => (int)value).ToVector()` for readonly integers.
-The same restriction applies to buffering with query `Reverse()`, `Order()`, or `TakeLast(count)`.
+The same restriction applies to buffering with query `Reverse()`, `Order()`, `TakeLast(count)`, or `SkipLast(count)`.
 Managed pointer elements keep their normal collector behavior.
 
 `Aggregate` owns its seed parameter. Passing a named seed normally copies it at

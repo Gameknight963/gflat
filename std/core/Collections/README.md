@@ -87,6 +87,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Reverse()` | Yield in reverse order, buffering the complete input on each iterator's first move. |
 | `Order()` / `Order(compare)` | Stably sort the complete input on each iterator's first move. |
 | `Distinct()` | Yield distinct values in encounter order; each enumeration owns a hash set. |
+| `DistinctBy(selector)` | Yield the first whole value for each selected key, in encounter order. |
 | `Zip(other, selector)` | Project pairs in order until either input ends. |
 | `Concat(other)` | Yield the complete first query, then the second, with inline cursor state. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements; counts are `nuint`. |
@@ -130,6 +131,7 @@ For concatenation and its eager cursor construction and value-copy rules, see [C
 For positional access and projection behavior, see [ElementAt](../../../docs/QUERY_ELEMENT_AT.md).
 For owning distinct results, see [ToHashSet](../../../docs/QUERY_HASH_SET.md).
 For lazy distinct values in encounter order, see [Distinct](../../../docs/QUERY_DISTINCT.md).
+For selecting distinct keys while returning whole values, see [DistinctBy](../../../docs/QUERY_DISTINCT_BY.md).
 For deferred full-input buffering in reverse order, see [Reverse](../../../docs/QUERY_REVERSE.md).
 For stable buffered ordering and borrowed cursor values, see [Order](../../../docs/QUERY_ORDER.md).
 For comparison, ties, and value ownership in `Min` and `Max`, see [query extrema](../../../docs/QUERY_EXTREMA.md).
@@ -174,7 +176,7 @@ sequence. Query membership borrows the search key but follows ordinary element-c
 semantics; see [query searches](../../../docs/QUERY_SEARCH.md).
 
 The built-in source views allocate no storage. `Where`, `Select`, `Zip`, `Concat`, and the
-skip/take operators allocate no internal storage. `Distinct` allocates a hash set
+skip/take operators allocate no internal storage. `Distinct` and `DistinctBy` allocate a hash set
 as values are encountered; its iterator owns that storage. `Reverse` buffers all
 input values in a vector on its first move and retains that buffer until its
 iterator is destroyed. `Order` similarly buffers on its first move, then uses

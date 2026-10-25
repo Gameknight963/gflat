@@ -46,6 +46,7 @@ implementation lives in `libc`.
 | Algorithms | `Sort`, `StableSort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |
 | Lazy uniqueness | `Distinct` | [First-occurrence order with scoped hash storage](../docs/QUERY_DISTINCT.md) |
+| Lazy uniqueness by key | `DistinctBy(selector)` | [First whole values for selected keys](../docs/QUERY_DISTINCT_BY.md) |
 | Query ordering | `Order()` / `Order(compare)` | [Stable buffered ordering and borrowed cursor values](../docs/QUERY_ORDER.md) |
 | Query concatenation | `Concat(other)` | [Concatenated iteration and ownership](../docs/QUERY_CONCAT.md) |
 | Query endpoints | `Append`, `Prepend` | [Captured values and repeatable enumeration](../docs/QUERY_ENDPOINT.md) |

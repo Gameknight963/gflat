@@ -26,6 +26,7 @@
   <Project Path="queries/queries.gfproj" />
   <Project Path="quote-lines/quote-lines.gfproj" />
   <Project Path="ratio-calc/ratio-calc.gfproj" />
+  <Project Path="sample-lines/sample-lines.gfproj" />
   <Project Path="search/search.gfproj" />
   <Project Path="seq/seq.gfproj" />
   <Project Path="settings-json/settings-json.gfproj" />

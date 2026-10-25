@@ -45,6 +45,7 @@
     <None Include="..\examples\json-get\main.gf" Link="Examples\json-get.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\number-stats\main.gf" Link="Examples\number-stats.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\sort-lines\main.gf" Link="Examples\sort-lines.gf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\examples\sample-lines\main.gf" Link="Examples\sample-lines.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\settings-json\main.gf" Link="Examples\settings-json.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\csv-column\main.gf" Link="Examples\csv-column.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\components\main.gf" Link="Examples\components.gf" CopyToOutputDirectory="PreserveNewest" />

@@ -143,6 +143,7 @@ Applications reference the Windows or Linux source project explicitly.
 - [Fraction arithmetic](../examples/ratio-calc/README.md): normalize and calculate with exact Rational values from integer or fraction operands.
 - [Time conversion](../examples/time-convert/README.md): normalize explicit-offset timestamps to UTC and convert Unix seconds or milliseconds.
 - [Sort lines](../examples/sort-lines/README.md): move owning strings into a vector, sort by unsigned byte order, and preserve counted output.
+- [Sample lines](../examples/sample-lines/README.md): bounded reservoir sampling with deterministic seeds and randomized output order.
 - [Settings to JSON](../examples/settings-json/README.md): parse borrowed key/value slices, validate UTF-8, and retain accepted strings in an owning map.
 - [Extract a CSV column](../examples/csv-column/README.md): validate first, then preserve counted field bytes in a binary one-column CSV file.
 - [CSV column sums](../examples/csv-sum/README.md): validate quoted fields and sum one integer column without allocating field strings.

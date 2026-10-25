@@ -45,5 +45,5 @@ use a named function for an owning value parameter such as `String`.
 
 Selective builds include `Collections/IndexedSelectSource.gf` and
 `Collections/EnumerableIndexedSelect.gf` alongside the ordinary Enumerable,
-iterator, span and exception sources. The existing one-argument `Select`
-implementation and layout are unchanged.
+iterator, span and exception sources. The existing adapter for a one-parameter
+selector keeps its implementation and layout.

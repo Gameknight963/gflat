@@ -339,6 +339,33 @@ their ordinary collection source files. Failed allocation during `Resize`
 preserves both the original bits and length. Padding bits outside the logical
 length are always kept clear.
 
+### Finding a matching bit
+
+`FindIndex(value, start = 0)` returns the first logical bit equal to `value` at or
+after `start`, or `Length` if none matches. Start may equal `Length`, including on
+an empty set; a larger start throws before reading bit storage. This is an
+immutable observer, allocates nothing, and changes no bits. It skips whole words
+with no matches and excludes both earlier bits and unused final-word padding.
+
+```cpp
+using std;
+int main()
+{
+    BitSet occupied = new(65);
+    occupied.SetRange(0, 64, true);
+    nuint freeSlot = occupied.FindIndex(false);
+    if (freeSlot == occupied.Length) return 1;
+    occupied[freeSlot] = true;
+    if (freeSlot != 64 || occupied.FindIndex(false) != occupied.Length) return 2;
+    return 0;
+}
+```
+
+The existing enumerator already efficiently yields set-bit indices. Use it for
+ordinary enumeration. `FindIndex(false, start)` instead locates a clear/free bit
+without walking prior set-bit indices or allocating a complemented copy. A start
+offset also supports a direct resumed search for either bit value.
+
 ## Priority queue
 
 `PriorityQueue<T>` owns a binary min-heap. Its constructor accepts a comparison

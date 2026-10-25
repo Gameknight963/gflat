@@ -166,6 +166,37 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHas
         return (((uint)1 << (int)count) - (uint)1) << (int)first;
     }
 
+    // First matching logical bit at or after start; Length means no match.
+    public immutable nuint FindIndex(bool value, nuint start = 0)
+    {
+        if (start > length) throw new Exception("BitSet search start out of range");
+        if (start == length) return length;
+        nuint wordIndex = start / 32;
+        nuint offset = start % 32;
+        while (wordIndex < words)
+        {
+            nuint beginning = wordIndex * 32;
+            nuint available = length - beginning;
+            if (available > 32) available = 32;
+            uint bits = data![wordIndex];
+            if (!value) bits = bits ^ 0xffffffffu;
+            bits = bits & BitSet::RangeMask(offset, available - offset);
+            if (bits != 0u)
+            {
+                nuint bit = 0;
+                if ((bits & 0xffffu) == 0u) { bits = bits >> 16; bit += 16; }
+                if ((bits & 0xffu) == 0u) { bits = bits >> 8; bit += 8; }
+                if ((bits & 0xfu) == 0u) { bits = bits >> 4; bit += 4; }
+                if ((bits & 3u) == 0u) { bits = bits >> 2; bit += 2; }
+                if ((bits & 1u) == 0u) bit++;
+                return beginning + bit;
+            }
+            wordIndex++;
+            offset = 0;
+        }
+        return length;
+    }
+
     public immutable nuint CountSetBits() nothrow
     {
         nuint total = 0;

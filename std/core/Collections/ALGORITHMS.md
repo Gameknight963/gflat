@@ -194,3 +194,45 @@ Use LowerBound instead when you need the insertion position for a missing key.
 Empty spans do not call the comparator. Elements and the key are borrowed; a
 throwing comparator propagates without modifying the span. The callback must
 keep both alive and must not mutate either through another alias.
+
+## Default ordering
+
+The optional `Collections/DefaultOrdering.gf` source adds `Sort<T>(Span<T>)` and
+`StableSort<T>(Span<T>)` overloads for `T : IComparable<T>`. They forward to the
+existing algorithms with `Comparer<T>::Compare`. They are ordinary namespace
+functions, with the same ownership and failure rules as their explicit-comparator
+counterparts.
+
+```csharp
+using std;
+
+int main()
+{
+    int[4] data = [3, 1, 2, 1];
+    Span<int> values = new(data, 4);
+    Sort(values);
+    if (data[0] != 1 || data[1] != 1 || data[2] != 2 || data[3] != 3) return 1;
+    StableSort(values);
+    return 0;
+}
+```
+
+Primitive ordering is the existing `IComparable<T>` policy: floating-point NaNs
+compare before non-NaNs, all NaNs compare equal, and signed zeros compare equal.
+StableSort preserves encounter order among such ties; Sort need not. Custom
+comparers remain available through the two-argument overloads, without requiring
+the interface.
+
+For ordinary nonallocating comparisons, Sort allocates no storage and relocates
+owners without copies. StableSort keeps its existing two-index-vector allocation
+and comparison-before-relocation behavior. Comparison exceptions propagate;
+Sort may leave a permutation partially ordered, whereas StableSort leaves the
+input unchanged when allocation or comparison fails. User comparison methods
+must obey the existing ordering, immutability and borrowed-pointer contracts.
+
+Explicit source selection needs `Collections/DefaultOrdering.gf`, `Comparer.gf`,
+`IComparable.gf` and the normal Span dependencies. Also include the underlying
+algorithm sources being used: `Collections/Algorithms.gf` for Sort, and
+`Collections/StableSort.gf` with Vector dependencies for StableSort. Selecting the
+original explicit-comparator sources alone does not gain a dependency on these
+default-ordering contracts.

@@ -1067,6 +1067,9 @@ int SmokeHashesAndViews() {
         BitSet occupiedSlots = new(65);
         occupiedSlots.SetRange(0, 64, true);
         if (occupiedSlots.FindIndex(false) != 64 || occupiedSlots.FindIndex(true, 64) != 65) return 284;
+        String borrowedComparison = s"a\0b";
+        if (borrowedComparison.CompareTo("a") <= 0
+            || borrowedComparison.CompareTo("a\0b", 3) != 0) return 285;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

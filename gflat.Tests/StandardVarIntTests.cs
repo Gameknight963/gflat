@@ -15,7 +15,7 @@ public sealed class StandardVarIntTests
     private static void Run(string program, int optimization)
     {
         var sources = new[] {
-            new SourceFile("VarInt.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "VarInt.gf"))),
+            new SourceFile("VarInt.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "Binary", "VarInt.gf"))),
             new SourceFile("main.gf", program)
         };
         var result = CompilerTestHelper.Run(sources, optimizationLevel: optimization);

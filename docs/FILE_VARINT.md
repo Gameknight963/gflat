@@ -58,6 +58,6 @@ application allocator call. libc File buffering and exception storage remain
 separate. Signed values can compose the existing `VarInt::ZigZagEncode` and
 `ZigZagDecode` methods; there is no separate signed file family.
 
-Explicit source selection needs `File/FileVarInt.gf`, `File.gf`, `VarInt.gf`, and
+Explicit source selection needs `File/FileVarInt.gf`, `File.gf`, `Binary/VarInt.gf`, and
 ordinary File exception/runtime dependencies. The core VarInt codec stays
 independent of IO, allocation, and libc.

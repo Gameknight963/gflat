@@ -80,7 +80,7 @@ public sealed class StandardZigZagTests
         code.AppendLine(Corpus(true));
         code.AppendLine("return 0; }");
         var sources = new[] {
-            new SourceFile("VarInt.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/VarInt.gf"))),
+            new SourceFile("VarInt.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/VarInt.gf"))),
             new SourceFile("main.gf", code.ToString())
         };
         // The complete source and these calls type-check/emit without implicit std

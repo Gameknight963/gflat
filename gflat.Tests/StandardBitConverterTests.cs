@@ -47,7 +47,7 @@ public class StandardBitConverterTests
                 return 0;
             }
             """;
-        SourceFile[] sources = [new("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/BitConverter.gf"))), new("main.gf", code)];
+        SourceFile[] sources = [new("BitConverter.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BitConverter.gf"))), new("main.gf", code)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$", "@malloc", "fptoui", "fptosi", "uitofp", "sitofp", " fadd ", " fmul ", " fcmp " })
             Assert.DoesNotContain(forbidden, ir);

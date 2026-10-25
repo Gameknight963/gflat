@@ -31,7 +31,7 @@ public class StandardBinaryReadAliasTests
             code.Append($"if(BinaryPrimitives::{method}(bytes,{width - 1},ref value)||value!=({type})0)return 2;}}");
         }
         code.Append("return 0;}");
-        SourceFile[] sources = [new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/BinaryPrimitives.gf"))), new("main.gf", code.ToString())];
+        SourceFile[] sources = [new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BinaryPrimitives.gf"))), new("main.gf", code.ToString())];
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
     }
 }

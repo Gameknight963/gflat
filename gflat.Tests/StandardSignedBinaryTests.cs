@@ -72,7 +72,7 @@ public class StandardSignedBinaryTests
 
     private static void RunCore(string program, int optimization)
     {
-        SourceFile[] sources = [new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/BinaryPrimitives.gf"))), new("main.gf", program)];
+        SourceFile[] sources = [new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BinaryPrimitives.gf"))), new("main.gf", program)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "@malloc", "gflat$Memory$" }) Assert.DoesNotContain(forbidden, ir);
         RunNative(ir, optimization);

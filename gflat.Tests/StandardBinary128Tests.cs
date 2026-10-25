@@ -142,7 +142,7 @@ public sealed class StandardBinary128Tests
     {
         var sources = new[]
         {
-            new SourceFile("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/BinaryPrimitives.gf"))),
+            new SourceFile("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BinaryPrimitives.gf"))),
             new SourceFile("main.gf", program)
         };
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

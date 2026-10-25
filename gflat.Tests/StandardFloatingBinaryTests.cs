@@ -11,7 +11,7 @@ public sealed class StandardFloatingBinaryTests
     {
         if (!OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64) return;
         SourceFile[] sources = [
-            new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/BinaryPrimitives.gf"))),
+            new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BinaryPrimitives.gf"))),
             new("main.gf", "int main() { byte[4] data; if (!std::BinaryPrimitives::TryWriteUInt32BigEndian(data, 4, 123u)) return 1; return 0; }")
         ];
         string directory = Path.Combine(Path.GetTempPath(), "gflat-ieee-marker-" + Guid.NewGuid().ToString("N"));
@@ -102,7 +102,7 @@ public sealed class StandardFloatingBinaryTests
 
     private static void Run(string program, int optimization, bool cursors = false)
     {
-        string[] names = cursors ? ["BinaryPrimitives.gf", "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "Memory/Bytes.gf"] : ["BinaryPrimitives.gf"];
+        string[] names = cursors ? ["Binary/BinaryPrimitives.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/Bytes.gf"] : ["Binary/BinaryPrimitives.gf"];
         SourceFile[] sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });

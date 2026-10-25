@@ -21,7 +21,7 @@ infinities, and quiet or signaling NaN payloads. They perform no floating-point
 arithmetic; later arithmetic on the resulting value can change a NaN's bits.
 
 Every function is `nothrow`, allocates nothing, and has no other std dependency.
-Include `core/BitConverter.gf` independently. It is separate from
+Include `core/Binary/BitConverter.gf` independently. It is separate from
 `BinaryPrimitives.gf`, which can serve integer-only programs without introducing
 floating-point ABI requirements. On Windows, floating-point code can still need
 the toolchain's `_fltused` marker; lack of std dependencies does not remove

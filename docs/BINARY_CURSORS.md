@@ -3,7 +3,7 @@
 `std::BinaryBufferReader` and `std::BinaryBufferWriter` track a position within
 caller-owned bytes. They do not own storage, allocate, or directly call libc. All
 constructors, properties, and methods are `nothrow`. Include their respective
-source files, `core/BinaryPrimitives.gf`, and `core/Memory/Bytes.gf`.
+source files, `core/Binary/BinaryPrimitives.gf`, and `core/Memory/Bytes.gf`.
 
 ```csharp
 using std;
@@ -95,9 +95,9 @@ validates a raw pointer's actual allocation or protection.
 
 ## Optional variable-length integers
 
-`BinaryBufferVarInt.gf` integrates the standalone [VarInt codec](VARINT.md)
+`Binary/binary_buffer_var_int.gf` integrates the standalone [VarInt codec](VARINT.md)
 without adding that dependency to the cursor source files. Include it and
-`VarInt.gf` when selecting sources individually.
+`Binary/VarInt.gf` when selecting sources individually.
 
 ```csharp
 bool TryWriteVarUInt32(this ref BinaryBufferWriter writer, uint value) nothrow;

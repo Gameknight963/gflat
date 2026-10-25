@@ -34,14 +34,14 @@ public class StandardBinaryPrimitivesTests
             body.Append($"if(BinaryPrimitives::TryRead{suffix}(&data[1],{width-1},ref {output}) || {output}!=({type})0) return 7;");
         }
         body.Append("return 0;}");
-        SourceFile[] sources=[new("BinaryPrimitives.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/BinaryPrimitives.gf"))),new("main.gf",body.ToString())];
+        SourceFile[] sources=[new("BinaryPrimitives.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Binary/BinaryPrimitives.gf"))),new("main.gf",body.ToString())];
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 
     [Fact]
     public void ByteOrderHelpersDoNotIntroduceRuntimeServices()
     {
-        SourceFile[] sources=[new("BinaryPrimitives.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/BinaryPrimitives.gf"))),
+        SourceFile[] sources=[new("BinaryPrimitives.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Binary/BinaryPrimitives.gf"))),
             new("main.gf","using std; int main(){byte[4] data; uint value=0u; BinaryPrimitives::TryWriteUInt32LittleEndian(data,4,42u); BinaryPrimitives::TryReadUInt32LittleEndian(data,4,ref value); return (int)value;}")];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,InternalizeFunctions=true});
         Assert.DoesNotContain("@__gflat_eh_",ir);

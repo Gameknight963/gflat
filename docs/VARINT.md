@@ -1,10 +1,10 @@
 # Variable-length integers
 
-`core/VarInt.gf` provides `std::VarInt`, a standalone, allocation-free codec
+`core/Binary/VarInt.gf` provides `std::VarInt`, a standalone, allocation-free codec
 for unsigned base-128 integers. All methods are `nothrow`; no other std source
 is required.
 
-For position-tracking buffers, optional `BinaryBufferVarInt.gf` adds
+For position-tracking buffers, optional `Binary/binary_buffer_var_int.gf` adds
 [`ReadVarUInt32/64` and `TryWriteVarUInt32/64`](BINARY_CURSORS.md#optional-variable-length-integers)
 to the existing binary cursors. It keeps the standalone codec independent of
 cursor and raw-memory sources.

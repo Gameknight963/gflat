@@ -16,21 +16,63 @@ public sealed class StandardSpanCopyTests
     [InlineData(2)]
     public void EverySmallOverlapMatchesArrayCopyAndPreservesDestinationTail(int optimization)
     {
-        var source = new StringBuilder("using std; extern int puts(immutable(char*) text); int main() {\n");
+        var packet = new List<byte>();
+        int scenarios = 0;
         for (int count = 0; count <= 8; count++)
         for (int from = 0; from <= 8 - count; from++)
         for (int to = 0; to <= 8 - count; to++)
         {
             int[] expected = Enumerable.Range(0, 8).ToArray();
             Array.Copy(expected, from, expected, to, count);
-            source.AppendLine("{ int[8] buffer = [0,1,2,3,4,5,6,7]; Span<int> values = new((int*)buffer,8);");
-            source.AppendLine($"values.AsImmutable().Slice({from},{count}).CopyTo(values.Slice({to}));");
-            for (int i = 0; i < expected.Length; i++)
-                source.AppendLine($"if (buffer[{i}] != {expected[i]}) {{ puts(\"overlap {from}/{to}/{count}/{i}\"); return 1; }}");
-            source.AppendLine("}");
+            packet.Add(checked((byte)from));
+            packet.Add(checked((byte)to));
+            packet.Add(checked((byte)count));
+            packet.AddRange(expected.Select(value => checked((byte)value)));
+            scenarios++;
         }
-        source.AppendLine("return 0; }");
-        Run(source.ToString(), optimization);
+        Assert.Equal(285, scenarios);
+        string hex = Convert.ToHexString(packet.ToArray());
+        Run($$$"""
+            using std;
+            extern int puts(immutable(char*) text);
+            int Nibble(char value) {
+                if (value <= '9') return (int)value - (int)'0';
+                return (int)value - (int)'A' + 10;
+            }
+            nuint ReadByte(readonly(char)* data, ref nuint position) {
+                int value = Nibble(data[position]) * 16 + Nibble(data[position + 1]);
+                position += 2;
+                return (nuint)value;
+            }
+            int main() {
+                readonly(char)* packet = "{{{hex}}}";
+                nuint position = 0;
+                for (int scenario = 0; scenario < {{{scenarios}}}; scenario++) {
+                    nuint from = ReadByte(packet, ref position);
+                    nuint to = ReadByte(packet, ref position);
+                    nuint count = ReadByte(packet, ref position);
+                    int[8] buffer = default(int[8]);
+                    for (nuint i = 0; i < 8; i++) buffer[i] = (int)i;
+                    Span<int> values = new((int*)buffer, 8);
+                    values.AsImmutable().Slice(from, count).CopyTo(values.Slice(to));
+                    for (nuint i = 0; i < 8; i++) {
+                        int expected = (int)ReadByte(packet, ref position);
+                        if (buffer[i] != expected) {
+                            char[8] diagnostic = ['0','/','0','/','0','/','0','\0'];
+                            diagnostic[0] = (char)((int)'0' + (int)from);
+                            diagnostic[2] = (char)((int)'0' + (int)to);
+                            diagnostic[4] = (char)((int)'0' + (int)count);
+                            diagnostic[6] = (char)((int)'0' + (int)i);
+                            puts("overlap mismatch: from/to/count/index");
+                            puts((char*)diagnostic);
+                            return 1;
+                        }
+                    }
+                }
+                if (position != {{{hex.Length}}}) return 2;
+                return 0;
+            }
+            """, optimization);
     }
 
     private const string Owner = """

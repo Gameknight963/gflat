@@ -83,7 +83,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | Operation | Behavior |
 | --- | --- |
 | `Where(predicate)` | Yield elements passing the predicate. |
-| `Select(selector)` | Project elements when their `Current` value is read. |
+| `Select(selector)` | Project elements when their `Current` value is read; optional [indexed projection](../../../docs/QUERY_INDEXED_SELECT.md) supplies a zero-based `nuint` index. |
 | `Reverse()` | Yield in reverse order, buffering the complete input on each iterator's first move. |
 | `TakeLast(count)` | Yield the final at most count elements, buffering a bounded tail on each iterator's first move. |
 | `SkipLast(count)` | Omit a trailing suffix using bounded streaming lookahead. |
@@ -172,6 +172,11 @@ the selector separately, as with `Where`.
 the selector twice. `Any()` and `Count()` need not invoke a selector at all. This
 allows arbitrary result types without default construction or hidden storage
 allocation. Put effects in `ForEach`, rather than relying on a selector running.
+
+Optional indexed `Select` supplies a zero-based `nuint` encounter index. The
+index advances on successful moves, not getter calls; repeated reads project
+the same index. It keeps ordinary `Select` copy, retry and uncached getter
+semantics. See [indexed projection](../../../docs/QUERY_INDEXED_SELECT.md).
 
 `Any(predicate)` and both `Contains` overloads read terminal `Current` once for
 each element tested. They stop before reading a later element after a successful

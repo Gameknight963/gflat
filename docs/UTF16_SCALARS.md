@@ -2,7 +2,7 @@
 
 `std/core/Utf16Scalars.gf` provides `std::Utf16Scalars`, a repeatable borrowed view
 of counted host `ushort` code units. Include `Utf16.gf`, `Collections/IEnumerable.gf`,
-`Collections/IEnumerator.gf`, and `Collections/Enumerable.gf` alongside the view source.
+`Collections/IEnumerator.gf`, and `Queries/Enumerable.gf` alongside the view source.
 
 ```csharp
 ushort[4] units = [(ushort)65, (ushort)0, (ushort)0xd83d, (ushort)0xde00];
@@ -38,7 +38,7 @@ The adapter copies only borrowed pointer/count metadata; keep the same backing
 units live for every later enumeration. Repeating a query starts again from
 the beginning and observes subsequent changes to backing units. An early
 `Take` can stop before malformed input, preserving the iterator's existing lazy
-validation rules. See [lazy queries](../std/core/Collections/README.md).
+validation rules. See [lazy queries](../std/core/Queries/README.md).
 
 Like `Utf8Scalars`, this iterator validates lazily and throws on malformed input
 when `MoveNext()` reaches it. It does not replace isolated/truncated/incorrect

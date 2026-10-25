@@ -56,8 +56,8 @@ Creating or copying queries and their cursors can therefore copy the capture,
 even for `Take(0)`. The query's generic `Count()` enumerates; the sequence's
 `Count` property simply reads its metadata.
 
-For selective use, include `core/Repeated.gf`, `Collections/IEnumerable.gf`,
-`Collections/IEnumerator.gf`, `Collections/Enumerable.gf`, and the chosen query
+For selective use, include `core/Queries/Repeated.gf`, `Collections/IEnumerable.gf`,
+`Collections/IEnumerator.gf`, `Queries/Enumerable.gf`, and the chosen query
 operator sources. Invalid `Current` access requires ordinary Exception support;
 captured owners keep their usual dependencies. No GC is needed unless the
 capture itself uses managed references.

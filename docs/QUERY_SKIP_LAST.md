@@ -63,5 +63,5 @@ Pending owners and the upstream cursor are released when the iterator is
 destroyed. A buffered output-copy failure in `Current` leaves position unchanged
 and can be retried; zero-count getter failures have the upstream getter's policy.
 No new runtime hooks or GC objects are introduced. Selective builds include
-`Collections/EnumerableSkipLast.gf`, `Collections/SkipLastSource.gf`, the ordinary
+`Queries/EnumerableSkipLast.gf`, `Queries/SkipLastSource.gf`, the ordinary
 Enumerable contracts, and Deque with its normal dependencies.

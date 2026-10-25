@@ -52,7 +52,7 @@ the predicate. That upstream value is consumed, `Current` is invalid, and
 later moves return false. EOF after the maximum valid index returns false
 normally.
 
-Selective builds add `Collections/IndexedWhereSource.gf` and
-`Collections/EnumerableIndexedWhere.gf` to the ordinary Enumerable, iterator
+Selective builds add `Queries/IndexedWhereSource.gf` and
+`Queries/EnumerableIndexedWhere.gf` to the ordinary Enumerable, iterator
 and exception sources. The existing adapter for a one-parameter predicate is
 unchanged.

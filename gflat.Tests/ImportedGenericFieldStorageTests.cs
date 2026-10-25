@@ -65,7 +65,7 @@ public sealed class ImportedGenericFieldStorageTests
     [InlineData(2)]
     public void ActualStdVectorPointerGlobalCanBorrowAndObserveLocalStorage(int optimization)
     {
-        string[] names = ["Collections/IEnumerable.gf", "Collections/Enumerable.gf", "IStringConvertable.gf",
+        string[] names = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf",
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf", "Collections/Vector.gf", "Span.gf"];
         var sources = names.Select(name => new SourceFile("std/" + name,
                 File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

@@ -131,8 +131,8 @@ public sealed class StandardWhileQueryTests
 
     private static void Run(string program, int optimization)
     {
-        string[] files=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf","Collections/EnumerableExtensions.gf",
-            "Collections/WhereSource.gf","Collections/SelectSource.gf","Collections/SliceSource.gf","Collections/TakeWhileSource.gf","Collections/SkipWhileSource.gf",
+        string[] files=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Queries/EnumerableExtensions.gf",
+            "Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf",
             "Collections/Vector.gf","Span.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","String.gf", "ByteSearch.gf"];
         var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))))
             .Append(new SourceFile("while.gf",program));

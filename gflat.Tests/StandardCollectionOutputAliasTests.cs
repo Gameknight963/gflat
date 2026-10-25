@@ -118,7 +118,7 @@ public sealed class StandardCollectionOutputAliasTests
 
     private static void Run(string program,int optimization)
     {
-        string[] names=["Collections/IEnumerable.gf","Collections/Enumerable.gf","Span.gf","Collections/Vector.gf","Collections/Stack.gf","Collections/Queue.gf","Collections/PriorityQueue.gf"];
+        string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Span.gf","Collections/Vector.gf","Collections/Stack.gf","Collections/Queue.gf","Collections/PriorityQueue.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("output-alias.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_output_alias_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);

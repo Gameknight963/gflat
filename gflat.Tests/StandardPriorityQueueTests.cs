@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardPriorityQueueTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
-        "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "IStringConvertable.gf", "IHashable.gf",
+        "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf", "IHashable.gf",
         "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf", "Collections/Vector.gf", "Span.gf", "Collections/PriorityQueue.gf"
     }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
         .Append(new SourceFile("main.gf", program));

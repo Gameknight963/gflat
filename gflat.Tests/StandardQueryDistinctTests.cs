@@ -74,6 +74,7 @@ public sealed class StandardQueryDistinctTests
         string[] files=["Span.gf","String.gf","ByteSearch.gf","IStringConvertable.gf",
             "IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf"];
         var sources=Directory.GetFiles(Path.Combine(root,"Collections"),"*.gf")
+            .Concat(Directory.GetFiles(Path.Combine(root,"Queries"),"*.gf"))
             .Concat(files.Select(file=>Path.Combine(root,file)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("selective.gf","""

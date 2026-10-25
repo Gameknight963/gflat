@@ -99,8 +99,8 @@ public sealed class StandardDequeQueryTests
 
     private static IEnumerable<SourceFile> Sources(string program)
     {
-        string[] names = ["Collections/Deque.gf", "Span.gf", "Collections/Vector.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf",
-            "Collections/EnumerableExtensions.gf", "Collections/WhereSource.gf", "Collections/SelectSource.gf", "Collections/SliceSource.gf", "Collections/TakeWhileSource.gf", "Collections/SkipWhileSource.gf"];
+        string[] names = ["Collections/Deque.gf", "Span.gf", "Collections/Vector.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf",
+            "Queries/EnumerableExtensions.gf", "Queries/WhereSource.gf", "Queries/SelectSource.gf", "Queries/SliceSource.gf", "Queries/TakeWhileSource.gf", "Queries/SkipWhileSource.gf"];
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("deque-queries.gf", program));
     }

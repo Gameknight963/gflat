@@ -8,7 +8,7 @@ public sealed class StandardNthElementManagedTests
     public void CollectingComparatorsKeepEveryManagedIdentityRootedThroughSuccessAndFailure(int optimization)
     {
         string[] files = [
-            "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf",
+            "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf",
             "core/Collections/Algorithms.gf", "core/Collections/NthElement.gf",
             "core/Collections/Vector.gf", "core/Span.gf", "libc/GC.gf", "libc/TracingCollector.gf"
         ];

@@ -84,6 +84,6 @@ through normal ownership cleanup. Reverse adds no GC allocation of its own.
 
 The operation uses O(n) element storage and materialization work before its first
 result. Later moves are constant-time; element copying retains its usual costs.
-Selective source users include `Collections/EnumerableReverse.gf` and
-`Collections/ReverseSource.gf`, along with `EnumerableExtensions.gf` for
+Selective source users include `Queries/EnumerableReverse.gf` and
+`Queries/ReverseSource.gf`, along with `EnumerableExtensions.gf` for
 `ToVector`, the normal enumeration contracts, and `Vector<T>` dependencies.

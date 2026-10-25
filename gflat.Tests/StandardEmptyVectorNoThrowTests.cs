@@ -9,7 +9,7 @@ public sealed class StandardEmptyVectorNoThrowTests
     [InlineData(2)]
     public async Task EmptyHeadersAreNothrowWithoutAllocationOrElementConstruction(int optimization)
     {
-        string[] names = ["core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf",
+        string[] names = ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf",
             "core/Span.gf", "core/Collections/Vector.gf"];
         var sources = names.Select(name => new SourceFile(name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))

@@ -17,8 +17,8 @@ var sums = first.AsEnumerable().Zip(second.AsEnumerable(),
 
 The inputs can have different element, source, and iterator types. The selector
 uses the existing noncapturing function-pointer callback rules. Named functions
-can return owning values such as String. Include `Collections/EnumerableZip.gf`
-and `Collections/ZipSource.gf` with the ordinary enumerable interfaces and sources
+can return owning values such as String. Include `Queries/EnumerableZip.gf`
+and `Queries/ZipSource.gf` with the ordinary enumerable interfaces and sources
 when selecting library files individually.
 
 ## Evaluation
@@ -63,4 +63,4 @@ has no recovery guarantee. Discard that iterator after such an error.
 Zip retains the source views' borrowing rules. Keep backing storage alive and
 stable for the query and all iterators; pointer results do not extend an owner's
 lifetime. Writes through other valid aliases remain visible when their elements
-are read. See [query ownership](../std/core/Collections/README.md#ownership).
+are read. See [query ownership](../std/core/Queries/README.md#ownership).

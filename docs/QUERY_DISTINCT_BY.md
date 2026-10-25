@@ -96,6 +96,6 @@ wrapper per element, use GC, or materialize all source values. Key/source/elemen
 operations retain their own allocation behavior, and HashSet retains its normal
 collision and capacity limits.
 
-For selective sources include `Collections/EnumerableDistinctBy.gf`,
-`Collections/DistinctBySource.gf`, the ordinary query interfaces, HashSet,
+For selective sources include `Queries/EnumerableDistinctBy.gf`,
+`Queries/DistinctBySource.gf`, the ordinary query interfaces, HashSet,
 HashMap, and their hashing/equality dependencies, plus the actual input types.

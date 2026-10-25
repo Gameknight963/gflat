@@ -57,7 +57,7 @@ public sealed class RepeatedEditorTests
     private static (EditorModel Model,SourceFile Source,SourceFile Library) Analyze(string text)
     {
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        var files=new[]{"Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf","Repeated.gf"}
+        var files=new[]{"Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Queries/Repeated.gf"}
             .Select(name=>Path.Combine(root,name.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         SourceFile library=files.Single(file=>Path.GetFileName(file.Path)=="Repeated.gf");

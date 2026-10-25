@@ -128,8 +128,8 @@ public sealed class StandardQueryIteratorLifetimeTests
 
     private static void Run(string program, int optimization)
     {
-        string[] files = ["Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf",
-            "Collections/EnumerableExtensions.gf", "Collections/WhereSource.gf", "Collections/SelectSource.gf", "Collections/SliceSource.gf",
+        string[] files = ["Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf",
+            "Queries/EnumerableExtensions.gf", "Queries/WhereSource.gf", "Queries/SelectSource.gf", "Queries/SliceSource.gf",
             "Collections/Vector.gf", "Span.gf", "String.gf", "ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf"];
         var sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("iterator.gf", program));

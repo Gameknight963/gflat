@@ -103,8 +103,8 @@ gets one binary LF. Bare CR within a line remains data. Memory grows with the
 unique line contents, rather than with the complete file. This is not a bounded
 memory algorithm for a file containing arbitrarily many unique lines.
 
-For explicit source selection, include `Collections/EnumerableDistinct.gf` and
-`Collections/DistinctSource.gf` alongside the usual query sources, `Collections/HashSet.gf`,
+For explicit source selection, include `Queries/EnumerableDistinct.gf` and
+`Queries/DistinctSource.gf` alongside the usual query sources, `Collections/HashSet.gf`,
 `Collections/HashMap.gf`, and their hash/equality dependencies. Existing queries that do not
 use Distinct do not acquire a HashSet dependency merely by including its generic
 definitions. The existing qualified-element `IEquatable<T>` constraint limitation

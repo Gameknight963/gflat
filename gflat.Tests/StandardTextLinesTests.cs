@@ -170,9 +170,9 @@ public sealed class StandardTextLinesTests
 
     private static SourceFile[] Sources(string program, bool conveniences = false)
     {
-        var names = new List<string> { "Span.gf", "TextLines.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf" };
+        var names = new List<string> { "Span.gf", "TextLines.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" };
         if(conveniences) names.AddRange(["TextLinesSpan.gf","StringLines.gf","Collections/Vector.gf","String.gf", "ByteSearch.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","Formatting.gf",
-            "Collections/EnumerableExtensions.gf","Collections/WhereSource.gf","Collections/SelectSource.gf","Collections/SliceSource.gf","Collections/TakeWhileSource.gf","Collections/SkipWhileSource.gf"]);
+            "Queries/EnumerableExtensions.gf","Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"]);
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
     }

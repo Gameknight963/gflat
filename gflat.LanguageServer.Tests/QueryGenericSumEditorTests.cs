@@ -17,7 +17,7 @@ public sealed class QueryGenericSumEditorTests
         string text="using std; using std::Collections;long Probe(){"+storage+"[3] numbers=["+literals+"];Span<"+storage+"> samples=new(numbers,3);"+
             "Span<"+element+"> values="+view+";long total=values.AsEnumerable().Sum();return total;}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["Collections/IEnumerable.gf","Collections/Enumerable.gf","Span.gf","Collections/EnumerableSum.gf"];
+        string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Span.gf","Queries/EnumerableSum.gf"];
         var files=names.Select(name=>Path.Combine(root,name.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("query-generic-sum-editor.gf"),text);files.Add(source);

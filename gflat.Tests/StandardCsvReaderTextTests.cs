@@ -135,7 +135,7 @@ public sealed class StandardCsvReaderTextTests
     public void HasValueUsesActualCoreReaderWithoutStringDependencyOrExceptionBoundary()
     {
         string[] names=["core/CsvReader.gf","core/CsvParseException.gf","core/Span.gf",
-            "core/Collections/IEnumerable.gf","core/Collections/Enumerable.gf","core/Exception.gf"];
+            "core/Collections/IEnumerable.gf","core/Queries/Enumerable.gf","core/Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("csv-value-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint bytes){return null;}public void Free(void* storage)nothrow{}}

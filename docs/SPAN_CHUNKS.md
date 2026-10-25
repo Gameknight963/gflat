@@ -45,5 +45,5 @@ their ordinary allocation, copying, and exception behavior.
 
 When selecting sources explicitly, include `Collections/SpanChunks.gf`,
 `Span.gf`, `Collections/IEnumerable.gf`, `Collections/IEnumerator.gf`, and
-`Collections/Enumerable.gf`, plus the query operator files actually used. Projects
+`Queries/Enumerable.gf`, plus the query operator files actually used. Projects
 including the full standard library already include these sources.

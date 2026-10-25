@@ -29,7 +29,7 @@ lifetime requirements. Queries can be enumerated repeatedly and see subsequent
 changes to unread backing bytes. For example,
 `text.AsEnumerable().Where(IsNonAscii).Take(10)` decodes only as far as needed
 to find ten matching scalar values. Early completion does not validate a
-malformed suffix. See [lazy queries](../std/core/Collections/README.md).
+malformed suffix. See [lazy queries](../std/core/Queries/README.md).
 
 ## Validation and errors
 
@@ -43,7 +43,7 @@ calling `MoveNext()` again on unchanged input throws again.
 `Current` throws before the first successful `MoveNext()`, after exhaustion,
 and after a decoding error. Valid enumeration allocates nothing; failures use
 the normal exception runtime. `Utf8.gf`, the generic enumeration interface
-definitions, and `Collections/Enumerable.gf` are dependencies of `Utf8Scalars.gf`.
+definitions, and `Queries/Enumerable.gf` are dependencies of `Utf8Scalars.gf`.
 Query operators additionally require their ordinary collection source files.
 
 Scalar values are not grapheme clusters or necessarily user-perceived

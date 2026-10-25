@@ -4,7 +4,7 @@ See the [standard library index](../README.md) for collections, hashing, parsing
 UTF-8, binary codecs, paths, math, and runnable examples.
 
 Lazy collection queries and their ownership rules are documented in
-[Collections](Collections/README.md). The runnable example is
+[Collections](Queries/README.md). The runnable example is
 [`examples/queries`](../../examples/queries/main.gf).
 
 Portable facilities use the replaceable `Memory` API. The default
@@ -151,7 +151,7 @@ count matching values. Filtered aggregates enumerate as needed. Sums return
 Enumerator `Current` is valid only after a successful `MoveNext()` and before
 exhaustion.
 
-These specialized helpers coexist with the [generic query API](Collections/README.md).
+These specialized helpers coexist with the [generic query API](Queries/README.md).
 Use `IntRange.AsEnumerable()` to access those operators. The range types implement
 `IEnumerable<int, IntRange::Enumerator>` and
 `IEnumerable<int, FilteredIntRange::Enumerator>`, respectively.

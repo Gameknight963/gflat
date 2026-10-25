@@ -64,7 +64,7 @@ borrows elements directly and can reject unequal lengths immediately. Query
 sequence equality intentionally enumerates and follows ordinary element value
 semantics.
 
-Selective source users include `Collections/EnumerableSequenceEqual.gf`, plus
+Selective source users include `Queries/EnumerableSequenceEqual.gf`, plus
 `Collections/EqualityComparer.gf` and `IEquatable.gf` for default equality, alongside their
 normal source/enumeration dependencies. No new iterator type or compiler feature
 is required.

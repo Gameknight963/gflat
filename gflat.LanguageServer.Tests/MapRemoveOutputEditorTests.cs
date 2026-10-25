@@ -18,7 +18,7 @@ public sealed class MapRemoveOutputEditorTests
             """+"int Probe(){"+map+"<int,int> values="+construction+";values.Add(3,42);"+
             "int key=3;int output=99;bool removed=values.Remove(&key,ref output);bool old=values.Remove(&key);return output;}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["IHashable.gf","IEquatable.gf","Hashing.gf","Collections/IEnumerable.gf","Collections/Enumerable.gf",
+        string[] names=["IHashable.gf","IEquatable.gf","Hashing.gf","Collections/IEnumerable.gf","Queries/Enumerable.gf",
             "Span.gf","Collections/Vector.gf","Collections/"+map+".gf"];
         var files=names.Select(name=>Path.Combine(root,name.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();

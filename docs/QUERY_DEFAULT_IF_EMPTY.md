@@ -73,8 +73,8 @@ to an ordinary value before capture. The implementation follows the existing
 mutable generic observer/getter pattern to preserve ordinary pointer/reference
 copies; it does not add qualifier conversions or new compiler rules.
 
-Selective users include `Collections/DefaultIfEmptySource.gf` and
-`Collections/EnumerableDefaultIfEmpty.gf` with the normal IEnumerable,
+Selective users include `Queries/DefaultIfEmptySource.gf` and
+`Queries/EnumerableDefaultIfEmpty.gf` with the normal IEnumerable,
 IEnumerator and Enumerable contracts, plus the other operators they call.
 No Vector, String, libc or collector dependency is introduced by this operator;
 dependencies of its element, iterator and exception runtime still apply.

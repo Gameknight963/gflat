@@ -109,7 +109,7 @@ elements by value can require copying during generic specialization; that also
 applies when the final consumer only counts their output. Callbacks and copying
 terminals retain their ordinary allocation and exception behavior.
 
-For explicit source selection, include `Collections/Enumerable.gf` alongside
+For explicit source selection, include `Queries/Enumerable.gf` alongside
 `Collections/IEnumerable.gf` and `Collections/LinkedList.gf`, plus the operator sources used.
 
 `Reverse()` takes O(n) time and O(1) extra storage and is `nothrow`. Each node

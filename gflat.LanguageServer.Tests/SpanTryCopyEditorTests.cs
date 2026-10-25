@@ -18,7 +18,7 @@ public sealed class SpanTryCopyEditorTests
             }
             """;
         string root = Path.Combine(AppContext.BaseDirectory, "StandardLibrary", "core");
-        string[] names = ["Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Span.gf", "Collections/SpanCopy.gf"];
+        string[] names = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Span.gf", "Collections/SpanCopy.gf"];
         var files = names.Select(name => Path.Combine(root, name))
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("span-try-copy-editor.gf"), text);

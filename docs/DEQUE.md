@@ -105,7 +105,7 @@ int main()
 holds the storage address, capacity, head, and count at the time of the call.
 Each enumeration starts an independent existing `Deque<T>::Enumerator` at the
 captured front. Selective source-library builds also include
-`Collections/Enumerable.gf`; query operations live in the usual separate query
+`Queries/Enumerable.gf`; query operations live in the usual separate query
 extension sources.
 
 ```csharp

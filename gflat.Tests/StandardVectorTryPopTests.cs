@@ -97,7 +97,7 @@ public sealed class StandardVectorTryPopTests
 
     private static void Run(string program,int optimization)
     {
-        string[] names=["Collections/IEnumerable.gf","Collections/Enumerable.gf","Span.gf","Collections/Vector.gf","Unique.gf"];
+        string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Span.gf","Collections/Vector.gf","Unique.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("vector-try-pop.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

@@ -16,7 +16,7 @@
     <Content Include="../std/core/ByteSearch.gf" Link="EditorFixtures/ByteSearch.gf" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../std/**/*.gf" Link="StandardLibrary/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../libraries/platform/**/*.gf" Link="PlatformLibrary/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../std/core/IHashable.gf;../std/core/IEquatable.gf;../std/core/IComparable.gf;../std/core/Hashing.gf;../std/core/IStringConvertable.gf;../std/core/Collections/HashMap.gf;../std/core/Collections/HashSet.gf;../std/core/Collections/Queue.gf;../std/core/Collections/Stack.gf;../std/core/Collections/Vector.gf;../std/core/Span.gf;../std/core/Collections/IEnumerable.gf;../std/core/Collections/Enumerable.gf"
+    <Content Include="../std/core/IHashable.gf;../std/core/IEquatable.gf;../std/core/IComparable.gf;../std/core/Hashing.gf;../std/core/IStringConvertable.gf;../std/core/Collections/HashMap.gf;../std/core/Collections/HashSet.gf;../std/core/Collections/Queue.gf;../std/core/Collections/Stack.gf;../std/core/Collections/Vector.gf;../std/core/Span.gf;../std/core/Collections/IEnumerable.gf;../std/core/Queries/Enumerable.gf"
              Link="EditorFixtures/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Xunit" />
     <Compile Include="../gflat.Tests/ProjectFileFixture.cs" Link="ProjectFileFixture.cs" />

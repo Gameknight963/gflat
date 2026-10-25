@@ -52,8 +52,8 @@ public sealed class DefaultIfEmptyEditorTests
     private static (EditorModel Model,SourceFile Source,SourceFile[] Files) Analyze(string text)
     {
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf","Span.gf",
-            "Collections/DefaultIfEmptySource.gf","Collections/EnumerableDefaultIfEmpty.gf"];
+        string[] names=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Span.gf",
+            "Queries/DefaultIfEmptySource.gf","Queries/EnumerableDefaultIfEmpty.gf"];
         var files=names.Select(name=>Path.Combine(root,name.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("default-if-empty-editor.gf"),text);files.Add(source);

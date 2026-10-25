@@ -48,6 +48,6 @@ The source is not snapshotted or protected from unrelated mutable aliases.
 
 For selective compilation include `TextPartsAny.gf`, `TextPartsAnySpan.gf`,
 `Span.gf`, `Collections/IEnumerable.gf`, `Collections/IEnumerator.gf`, and
-`Collections/Enumerable.gf`. The optional String adapter needs the usual String
+`Queries/Enumerable.gf`. The optional String adapter needs the usual String
 dependencies. Normal query operators need their ordinary source files.
 `NoStdLib` builds also supply the normal exception contracts.

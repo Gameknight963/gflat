@@ -72,7 +72,7 @@ Reverse/ToVector. Sorting uses O(n) element storage plus StableSort's two index
 vectors and O(n log n) comparisons before yielding the first result. Later moves
 are constant-time, with ordinary consumer copy costs when applicable.
 
-Selective sources include `Collections/OrderSource.gf`,
-`Collections/EnumerableOrder.gf`, `Collections/EnumerableExtensions.gf`,
+Selective sources include `Queries/OrderSource.gf`,
+`Queries/EnumerableOrder.gf`, `Queries/EnumerableExtensions.gf`,
 `Collections/StableSort.gf`, `Collections/Comparer.gf` for default ordering, and the normal
 Enumerable/Vector dependencies.

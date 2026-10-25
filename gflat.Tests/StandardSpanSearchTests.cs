@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardSpanSearchTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
-        => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/Algorithms.gf",
+        => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/Algorithms.gf",
             "Span.gf", "Collections/Vector.gf", "String.gf", "ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));

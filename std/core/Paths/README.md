@@ -42,7 +42,7 @@ These lexical byte operations do not make counted null bytes valid filenames
 for a filesystem API.
 
 Explicit source selections also need `Span.gf`, `Collections/IEnumerable.gf`,
-and `Collections/Enumerable.gf` for these overload declarations. Ordinary
+and `Queries/Enumerable.gf` for these overload declarations. Ordinary
 projects including the standard library already include these sources.
 
 - `GetFileName(path, style)` returns the final component. A trailing separator

@@ -65,7 +65,7 @@ public sealed class StandardMapQualifierViewTests
         string[] dependencies = map == "HashMap"
             ? ["core/Collections/HashMap.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/Hashing.gf"]
             : ["core/Collections/SortedMap.gf", "core/Collections/Vector.gf", "core/Span.gf",
-                "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf"];
+                "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf"];
         SourceFile[] library = managed.Concat(dependencies).Select(relative =>
         {
             string path = Path.Combine(AppContext.BaseDirectory, "Std", relative);

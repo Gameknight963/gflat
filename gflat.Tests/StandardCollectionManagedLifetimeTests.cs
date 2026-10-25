@@ -6,7 +6,7 @@ public sealed class StandardCollectionManagedLifetimeTests
     public void OwningContainersAndSortingKeepManagedElementsAliveAndReleaseThem()
     {
         string[] files = [
-            "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/Collections/Algorithms.gf",
+            "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Collections/Algorithms.gf",
             "core/Collections/Vector.gf", "core/Span.gf", "core/Collections/Queue.gf", "core/Collections/Stack.gf", "core/Collections/PriorityQueue.gf",
             "libc/GC.gf", "libc/TracingCollector.gf"
         ];

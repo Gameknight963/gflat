@@ -87,7 +87,7 @@ implementation lives in `libc`.
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
 | Algorithms | `Sort`, `StableSort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
 | Rank selection | `NthElement<T>(span, nth, compare)` | [In-place selection and partition guarantees](../docs/NTH_ELEMENT.md) |
-| Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |
+| Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Queries/README.md) |
 | Lazy uniqueness | `Distinct` | [First-occurrence order with scoped hash storage](../docs/QUERY_DISTINCT.md) |
 | Lazy uniqueness by key | `DistinctBy(selector)` | [First whole values for selected keys](../docs/QUERY_DISTINCT_BY.md) |
 | Query ordering | `Order()` / `Order(compare)` | [Stable buffered ordering and borrowed cursor values](../docs/QUERY_ORDER.md) |

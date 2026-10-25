@@ -66,7 +66,7 @@ alive and stable while an iterator uses it. Repeated enumeration follows each
 source's normal behavior: independent views restart, while a file-line view
 continues consuming its shared open file position.
 
-For selective source builds, include `Collections/EnumerableConcat.gf`,
-`Collections/ConcatSource.gf`, the usual enumerable interfaces, `Exception.gf`,
+For selective source builds, include `Queries/EnumerableConcat.gf`,
+`Queries/ConcatSource.gf`, the usual enumerable interfaces, `Exception.gf`,
 and the actual input source dependencies. Concat adds no String, Unique, libc,
 allocator, or collector dependency of its own.

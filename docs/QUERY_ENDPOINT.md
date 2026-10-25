@@ -70,7 +70,7 @@ view. This is the same qualified-storage limitation that affects buffering and
 some other query terminals.
 
 Selective source users add
-`Collections/EndpointSource.gf` and `Collections/EnumerableEndpoint.gf` with the
+`Queries/EndpointSource.gf` and `Queries/EnumerableEndpoint.gf` with the
 normal sequence contracts. The wrapper makes no direct libc or collector calls
 and needs no Vector or String implementation. Dependencies of its element,
 iterator, and exception runtime still apply.

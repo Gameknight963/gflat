@@ -59,7 +59,7 @@ This also supplies the existing `IComparable<int>` contract rather than assuming
 it applies to `readonly(int)`. The operator does not remove element qualification
 automatically.
 
-Selective source users add `Collections/EnumerableExtrema.gf` with the normal
+Selective source users add `Queries/EnumerableExtrema.gf` with the normal
 sequence contracts and `Collections/Comparer.gf`/`IComparable.gf` for default comparison.
 The scan needs no Vector, sorting, or String implementation and makes no direct
 libc calls. Ordinary iterator, element, and exception-runtime dependencies still

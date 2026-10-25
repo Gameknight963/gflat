@@ -59,5 +59,5 @@ normally. This follows the existing owning assignment and destructor contracts;
 the method does not catch errors or reinterpret them as an absent index.
 
 Projects selecting standard-library sources explicitly need
-`std/core/Collections/EnumerableElementAt.gf` alongside their query and source
+`std/core/Queries/EnumerableElementAt.gf` alongside their query and source
 dependencies. Ordinary projects including the standard library get it directly.

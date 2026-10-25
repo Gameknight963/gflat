@@ -62,7 +62,7 @@ capacity growth; buffering performs linear work and later moves are constant-tim
 Element copy/allocation/destruction costs remain their normal costs. Unlike
 `Reverse().Take(count).Reverse()`, this retains only a bounded tail instead of
 materializing every input element. It does not change existing tail tools.
-Selective source users include `Collections/EnumerableTakeLast.gf`,
-`Collections/TakeLastSource.gf`, the ordinary Enumerable/enumeration contracts,
+Selective source users include `Queries/EnumerableTakeLast.gf`,
+`Queries/TakeLastSource.gf`, the ordinary Enumerable/enumeration contracts,
 and `Deque<T>` plus its normal Span dependencies. No new runtime hooks or GC
 allocation are introduced by the wrapper.

@@ -274,7 +274,7 @@ independent cursors, and ordinary element edits through valid aliases remain
 visible. Captured views do not track a later count or extend the owner's lifetime.
 Structural mutation, moving, or destroying the container invalidates them.
 View construction and iteration allocate nothing; callbacks and value copies
-retain their normal behavior. Include `Collections/Enumerable.gf` when selecting
+retain their normal behavior. Include `Queries/Enumerable.gf` when selecting
 these container sources explicitly, plus query operator sources actually used.
 
 Noncopyable elements support view construction, direct borrowed iterator access,
@@ -422,7 +422,7 @@ the storage's lifetime. The public `View(storage, bitLength)` constructor also
 accepts caller-owned words; null is valid only for zero length, otherwise provide
 at least `ceil(bitLength / 32)` readable words for every later enumeration.
 
-Explicit source selection now requires `Collections/Enumerable.gf` alongside
+Explicit source selection now requires `Queries/Enumerable.gf` alongside
 `Collections/BitSet.gf`, `Collections/IEnumerable.gf`, `IEquatable.gf`, `IHashable.gf`, and
 `Hashing.gf`; query operators additionally use
 their ordinary collection source files. Failed allocation during `Resize`

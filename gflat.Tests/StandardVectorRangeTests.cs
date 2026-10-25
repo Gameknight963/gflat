@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardVectorRangeTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
-        "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/VectorExtensions.gf",
+        "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/VectorExtensions.gf",
         "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf",
         "String.gf", "ByteSearch.gf", "Collections/Vector.gf", "Span.gf"
     }.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))

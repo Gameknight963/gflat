@@ -4,7 +4,7 @@ public sealed class StandardRingShrinkTests
 {
     private static IEnumerable<SourceFile> Sources(string program, bool managed = false)
     {
-        string[] names = ["core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf",
+        string[] names = ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf",
             "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf",
             "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Collections/Vector.gf", "core/Span.gf",
             "core/Collections/Queue.gf", "core/Collections/Deque.gf"];

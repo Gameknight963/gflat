@@ -29,17 +29,14 @@ int main(int argc, char** argv)
             }
             line.Remove(decoded, line.Length - decoded);
             decodingLine = false;
-            Console::Write(line.Data, line.Length);
-            Console::WriteLine();
+            Console::WriteLine(line.Data, line.Length);
         }
         input.Close();
         Console::Flush();
     }
     catch (ref Exception error)
     {
-        nuint pathLength = 0;
-        while (argv[1][pathLength] != '\0') pathLength++;
-        Console::Error.Write(argv[1], pathLength);
+        Console::Error.Write(argv[1], CString::Length(argv[1]));
         if (decodingLine)
         {
             Console::Error.Write(": line ", 7);

@@ -27,8 +27,7 @@ int main(int argc, char** argv)
             Console::Error.WriteLine("JSON pointer did not resolve");
             return 2;
         }
-        Console::Write(value.Data!, value.Length);
-        Console::WriteLine();
+        Console::WriteLine(value.Data!, value.Length);
         Console::Flush();
     }
     catch (ref JsonParseException error)

@@ -61,6 +61,43 @@ Iteration borrows the deque. Structural changes invalidate borrowed element
 references and iterators; do not move or destroy the owner while using them.
 There is no runtime mutation counter or lifetime checking for these borrows.
 
+## Indexed insertion and removal
+
+`Deque<T>.Insert(index, value)` inserts before the existing logical index;
+`index == Count` appends. Valid insertion indices are `0..Count` inclusive.
+`RemoveAt(index)` accepts `0..Count-1`, removes that element, and returns its
+owner. Ignoring the returned value destroys it normally. Invalid indices throw
+before changing deque contents. Arguments follow ordinary by-value copy/move
+rules; constructing an argument can throw before the method begins.
+
+The endpoints delegate to `AddFirst`/`AddLast` and `RemoveFirst`/`RemoveLast`.
+Middle insertion grows first when required, then moves the logical suffix one
+slot toward the back; middle removal moves it toward the front. Ring wrap does
+not change logical order. Relocation transfers owners without element copies
+or element destructor calls. Middle operations take linear suffix-move time.
+
+Failed growth preserves existing elements, their allocation and deque metadata.
+An owning insertion argument is still consumed and destroyed normally on failure.
+An ordinary copy of an existing deque element is made before insertion begins,
+so that copy remains valid across wrapped growth and suffix relocation. If its
+copy constructor throws, the deque remains unchanged. Structural mutation
+invalidates existing borrowed elements and iterators, as with other deque methods.
+
+```csharp
+using std;
+
+int main()
+{
+    Deque<int> values = new();
+    values.AddLast(1);
+    values.AddLast(3);
+    values.Insert(1, 2);
+    int removed = values.RemoveAt(0);
+    if (removed != 1 || values.Count != 2 || values[0] != 2 || values[1] != 3) return 1;
+    return 0;
+}
+```
+
 ## Borrowed queries
 
 `deque.AsEnumerable()` creates the ordinary query wrapper over a small captured

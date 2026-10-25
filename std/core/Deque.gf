@@ -86,6 +86,35 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
         count++;
     }
 
+    public void Insert(nuint index, T value)
+    {
+        if (index > count) throw new Exception("Deque insertion index out of range");
+        if (index == 0) { this.AddFirst(move value); return; }
+        if (index == count) { this.AddLast(move value); return; }
+        // Growth can replace storage and reset head. Compute slots only afterwards.
+        this.EnsureCapacity();
+        nuint hole = count;
+        while (hole != index)
+        {
+            move *(data! + this.Physical(hole - 1)) at data! + this.Physical(hole);
+            hole--;
+        }
+        move value at data! + this.Physical(index);
+        count++;
+    }
+
+    public T RemoveAt(nuint index)
+    {
+        if (index >= count) throw new Exception("Deque removal index out of range");
+        if (index == 0) return this.RemoveFirst();
+        if (index == count - 1) return this.RemoveLast();
+        T result = move *(data! + this.Physical(index));
+        for (nuint source = index + 1; source < count; source++)
+            move *(data! + this.Physical(source)) at data! + this.Physical(source - 1);
+        count--;
+        return move result;
+    }
+
     public T RemoveFirst()
     {
         if (count == 0) throw new Exception("Cannot remove from an empty deque");

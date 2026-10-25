@@ -370,9 +370,14 @@ and run the project normally.
 
 ## Visual Studio
 
-Build and install the VSIX, restart Visual Studio, and open `gflat.slnx`.
-The `std` and `hello` projects appear directly under the solution beside the C# tools.
-Use **Add > Existing Project** for another `.gfproj`.
+Build and install the VSIX, restart Visual Studio, and open the solution for the
+work you want to do:
+
+- `gflat.slnx` contains the compiler, command-line tools, language server, and tests.
+- `std/std.slnx` contains the source standard library and platform providers.
+- `examples/examples.slnx` contains runnable examples; choose a startup project.
+
+Use **Add > Existing Project** to add another `.gfproj` to a solution.
 
 Use **File > New > Project** and search for **gflat** to create a Console
 Application or Source Library directly in your solution. These are native Visual
@@ -390,9 +395,9 @@ configurations, property pages, and MSBuild invocation. The old handwritten
 hierarchy and its custom file dialogs have been removed. The extension supplies a
 `.gf` item template, App/Library project templates, and the bundled compiler and SDK locations.
 
-The gflat projects remain excluded from the checked-in solution's automatic build
-so `dotnet build/test gflat.slnx` can bootstrap the tools. Build a gflat project
-explicitly in VS, or enable it in Configuration Manager after the compiler exists.
+The compiler solution contains only .NET projects, so `dotnet build/test gflat.slnx`
+can bootstrap the tools without first building gflat programs. Build the standard
+library or examples from their separate solutions after the compiler is available.
 The available configurations are `Debug|AnyCPU` and `Release|AnyCPU`; `AnyCPU` is
 an MSBuild configuration label, not a native ABI selection.
 
@@ -465,10 +470,10 @@ Package management and binary libraries are not included.
 
 The previous `<GflatProject>` XML prototype is no longer supported. Convert it to
 an MSBuild `<Project>` with the explicit imports shown above, and replace
-`Sources`/`Reference` with `Compile`/`ProjectReference` items. Projects previously
-using `<Project Sdk="Gflat.Sdk">` must likewise switch to those imports. The old
-SDK registration command has been removed. Any registration files written by an
-older version remain untouched; the import-based projects do not use them.
+`Sources`/`Reference` with `Compile`/`ProjectReference` items. SDK-style projects
+remain supported as described above. The old CLI SDK registration command has
+been removed; the CLI and language server use their bundled SDK. Visual Studio
+SDK setup is handled separately by the extension's scripts linked above.
 
 References: [Microsoft's CPS documentation](https://github.com/microsoft/VSProjectSystem)
 and [MSBuild project files](https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-project-file-schema-reference).

@@ -348,6 +348,40 @@ return false; self-comparison agrees with `HasAnySet()`. Like the set operations
 different `Length` values throw `Exception` before inspecting word storage.
 It is an immutable observer and borrows its argument through an immutable pointer.
 
+`IsSubsetOf(&other)` tests whether every set bit in this bitset is also set in
+`other`; `IsSupersetOf(&other)` tests the converse. For example, required
+capabilities can be checked against enabled capabilities without cloning or
+building a temporary difference. Both methods borrow immutable bitsets, copy no
+owner, allocate nothing on valid calls, and leave both inputs unchanged. They
+scan packed words until inclusion fails. Self-comparisons and two empty bitsets
+return true.
+
+Like `Overlaps` and the mutating algebra, these methods require equal `Length`
+values and throw `Exception("BitSet lengths differ")` otherwise. A length mismatch
+is rejected before word storage is read. This is a fixed-universe contract;
+it does not treat a shorter bitset as implicitly extended with clear bits.
+`Equals` continues to return false, rather than throw, for different lengths.
+
+```cpp
+using std;
+int main()
+{
+    BitSet required = new(64);
+    required[1] = true;
+    required[7] = true;
+    BitSet enabled = new(64);
+    enabled[1] = true;
+    enabled[7] = true;
+    enabled[12] = true;
+    immutable(BitSet)* requirements = &required;
+    if (!requirements.IsSubsetOf(&enabled)) return 1;
+    if (!enabled.IsSupersetOf(&required)) return 2;
+    enabled[7] = false;
+    if (required.IsSubsetOf(&enabled)) return 3;
+    return 0;
+}
+```
+
 `ShiftLeft(count)` moves each set bit toward a higher index; `ShiftRight(count)`
 moves it toward a lower index. Both keep `Length`, discard bits shifted past an
 end, and fill the vacated positions with zero. A zero shift changes nothing;

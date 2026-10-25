@@ -224,6 +224,18 @@ struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHas
         return false;
     }
 
+    // Fixed-universe inclusion, with the same length rule as other set operations.
+    public immutable bool IsSubsetOf(immutable(BitSet)* other)
+    {
+        if (length != other.length) throw new Exception("BitSet lengths differ");
+        for (nuint i = 0; i < words; i++)
+            if ((data![i] & other.data![i]) != data![i]) return false;
+        return true;
+    }
+
+    public immutable bool IsSupersetOf(immutable(BitSet)* other)
+        => other.IsSubsetOf(this);
+
     public immutable bool HasAllSet() nothrow
     {
         nuint complete = length / 32;

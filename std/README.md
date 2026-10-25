@@ -10,6 +10,48 @@ own runtime contracts. See [project setup](../docs/PROJECTS.md).
 Start with [a complete text-processing program](../docs/STDLIB_GETTING_STARTED.md)
 for parsing, formatting, and the ownership rules used by these APIs.
 
+## Namespaces and files
+
+Library namespaces group related APIs. Directories follow those namespaces inside
+`core` and `libc`; these two source roots describe dependencies, not public
+namespace components. Both roots can contribute to the same namespace.
+
+| Namespace | APIs |
+| --- | --- |
+| `std` | General equality, ordering, and hashing contracts; `Uuid`, `Version` |
+| `std::Collections` | Containers, iteration contracts, collection algorithms |
+| `std::Queries` | Query extensions and supporting sequences |
+| `std::Text` | Strings, Unicode, text writers, formatting, text parsing |
+| `std::Numerics` | Scalar math, arbitrary-precision numbers, bit operations, seeded randomness |
+| `std::Memory` | Spans, owning pointers, arenas, memory operations |
+| `std::IO` | Files, paths, console facilities, IO exceptions |
+| `std::Binary` | Binary cursors, byte-order operations, variable-length integers |
+| `std::Encoding` | Base32, Base64, hexadecimal, percent encoding |
+| `std::Json`, `std::Csv` | Format readers, writers, helpers, and exceptions |
+| `std::Time` | Dates, times, durations, clocks, timers |
+| `std::Net` | Network addresses and networks |
+| `std::Hashing` | Checksums and digest implementations |
+| `std::Reflection` | Reflection descriptors |
+
+This is the agreed layout; existing sources are being migrated in separate
+changes. During migration, use the namespace declared by the checked-in source.
+Deliberate global APIs are allowed. Runtime contracts such as `Exception`,
+`Memory`, and the selected `GC` alias need not move merely to eliminate globals.
+
+A primary type uses a matching PascalCase filename, such as `HashSet.gf`.
+Freestanding and extension functions use descriptive snake_case filenames, such
+as `integer_parsing.gf` or `enumerable_select.gf`. Extensions belong to the
+operation's subject: text extensions on spans belong with text, while query
+extensions belong with queries. Avoid catch-all names such as `Helpers.gf` or
+`Extensions.gf`.
+
+Nested types stay with their owner. Small supporting declarations may share the
+main API's file; independently useful types get their own files. Tests follow
+subject directories and behavior names, such as
+`StandardLibrary/Collections/HashSetRemovalTests.cs`, rather than repeating a
+`Standard` prefix on every filename.
+
+
 ## Core
 
 Core algorithms and data structures contain no direct libc calls. Owning types

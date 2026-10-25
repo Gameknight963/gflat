@@ -172,17 +172,43 @@ public sealed class StandardQueryGenericSumTests
     [Fact]
     public void UnsupportedElementsFailOrdinaryImplicitLongConversionDuringSpecialization()
     {
-        (string Type,string Value)[] cases=[("float","1.0f"),("double","1.0"),("ulong","1ul"),
-            ("nuint","(nuint)1"),("extralong","(extralong)1"),("bool","true"),("Code","Code::One"),("String","s\"text\"")];
-        foreach(var row in cases){
-            string code=$$"""
-                using std;enum Code:int{One=1}
-                int main(){ {{row.Type}}[1] values=[{{row.Value}}];Span<{{row.Type}}> view=new(values,1);view.AsEnumerable().Sum();return 0;}
-                """;
-            var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Check(Sources(code)));
-            Assert.Contains("Cannot assign",error.Message,StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("long",error.Message,StringComparison.OrdinalIgnoreCase);
+        string[] dependencies =
+        [
+            "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/EnumerableSum.gf",
+            "Span.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf",
+            "Hashing.gf", "String.gf", "ByteSearch.gf"
+        ];
+        SourceFile[] library = dependencies.Select(relative =>
+        {
+            string path = Path.Combine(AppContext.BaseDirectory, "Std", "core", relative);
+            return new SourceFile(path, File.ReadAllText(path));
+        }).ToArray();
+
+        Compiler.Check(Inputs("int", "1"));
+        (string Type, string Value)[] cases =
+        [
+            ("float", "1.0f"), ("double", "1.0"), ("ulong", "1ul"), ("nuint", "(nuint)1"),
+            ("extralong", "(extralong)1"), ("bool", "true"), ("Code", "Code::One"), ("String", "s\"text\"")
+        ];
+        foreach (var row in cases)
+        {
+            var error = Assert.Throws<gflat.CompileExceptions.TypeCheckException>(
+                () => Compiler.Check(Inputs(row.Type, row.Value)));
+            Assert.Contains("Cannot assign", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("long", error.Message, StringComparison.OrdinalIgnoreCase);
         }
+
+        IEnumerable<SourceFile> Inputs(string type, string value)
+            => library.Append(new SourceFile("query-sum.gf", $$"""
+                using std;
+                enum Code : int { One = 1 }
+                int main() {
+                    {{type}}[1] values = [{{value}}];
+                    Span<{{type}}> view = new(values, 1);
+                    view.AsEnumerable().Sum();
+                    return 0;
+                }
+                """));
     }
 
     private static IEnumerable<SourceFile> Sources(string code)

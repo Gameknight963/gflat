@@ -33,6 +33,7 @@
   <Project Path="stamp-lines/stamp-lines.gfproj" />
   <Project Path="tail/tail.gfproj" />
   <Project Path="tasks/tasks.gfproj" />
+  <Project Path="time-convert/time-convert.gfproj" />
   <Project Path="transcode/transcode.gfproj" />
   <Project Path="unquote-lines/unquote-lines.gfproj" />
   <Project Path="values/values.gfproj" />

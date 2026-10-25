@@ -47,6 +47,7 @@ implementation lives in `libc`.
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |
 | Lazy uniqueness | `Distinct` | [First-occurrence order with scoped hash storage](../docs/QUERY_DISTINCT.md) |
 | Query ordering | `Order()` / `Order(compare)` | [Stable buffered ordering and borrowed cursor values](../docs/QUERY_ORDER.md) |
+| Query concatenation | `Concat(other)` | [Concatenated iteration and ownership](../docs/QUERY_CONCAT.md) |
 | Query endpoints | `Append`, `Prepend` | [Captured values and repeatable enumeration](../docs/QUERY_ENDPOINT.md) |
 | Query key counts | `CountBy` | [Owning hash maps of selected-key counts](../docs/QUERY_COUNT_BY.md) |
 | Query map results | `ToHashMap` | [Selected keys and values with duplicate detection](../docs/QUERY_TO_HASH_MAP.md) |

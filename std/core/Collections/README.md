@@ -88,6 +88,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Order()` / `Order(compare)` | Stably sort the complete input on each iterator's first move. |
 | `Distinct()` | Yield distinct values in encounter order; each enumeration owns a hash set. |
 | `Zip(other, selector)` | Project pairs in order until either input ends. |
+| `Concat(other)` | Yield the complete first query, then the second, with inline cursor state. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements; counts are `nuint`. |
 | `TakeWhile(predicate)` | Yield the initial matching prefix; stop permanently at the first false result. |
 | `SkipWhile(predicate)` | Skip the initial matching prefix, then yield every remaining element without testing again. |
@@ -125,6 +126,7 @@ see the [qualified-element limitation](../../../docs/QUERY_ELEMENT_AT.md).
 
 Operators are lazy until a terminal operation or `foreach` advances an iterator.
 For paired queries and their iteration/ownership rules, see [Zip](../../../docs/QUERY_ZIP.md).
+For concatenation and its eager cursor construction and value-copy rules, see [Concat](../../../docs/QUERY_CONCAT.md).
 For positional access and projection behavior, see [ElementAt](../../../docs/QUERY_ELEMENT_AT.md).
 For owning distinct results, see [ToHashSet](../../../docs/QUERY_HASH_SET.md).
 For lazy distinct values in encounter order, see [Distinct](../../../docs/QUERY_DISTINCT.md).
@@ -171,7 +173,7 @@ match. `Count(predicate)` reads each terminal value once and scans the whole
 sequence. Query membership borrows the search key but follows ordinary element-copy
 semantics; see [query searches](../../../docs/QUERY_SEARCH.md).
 
-The built-in source views allocate no storage. `Where`, `Select`, `Zip`, and the
+The built-in source views allocate no storage. `Where`, `Select`, `Zip`, `Concat`, and the
 skip/take operators allocate no internal storage. `Distinct` allocates a hash set
 as values are encountered; its iterator owns that storage. `Reverse` buffers all
 input values in a vector on its first move and retains that buffer until its

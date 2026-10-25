@@ -13,13 +13,17 @@ public struct Adler32
     // is sufficient, avoiding overflow even for arbitrarily long streams.
     public void Append(readonly(char)* data, nuint count) nothrow
     {
+        uint runningFirst = first;
+        uint runningSecond = second;
         for (nuint i = 0; i < count; i++)
         {
-            first += (uint)(byte)data[i];
-            if (first >= 65521u) first -= 65521u;
-            second += first;
-            if (second >= 65521u) second -= 65521u;
+            runningFirst += (uint)(byte)data[i];
+            if (runningFirst >= 65521u) runningFirst -= 65521u;
+            runningSecond += runningFirst;
+            if (runningSecond >= 65521u) runningSecond -= 65521u;
         }
+        first = runningFirst;
+        second = runningSecond;
     }
 
     public immutable uint GetValue() nothrow => (second << 16) | first;

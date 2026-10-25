@@ -117,6 +117,39 @@ public class StandardChecksumTests
             """, optimization);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void AppendingOwnInitializedStateMatchesIndependentCapturedInput(int optimization)
+        => Run("""
+            int main() {
+                for (int seeded = 0; seeded < 2; seeded++)
+                for (nuint offset = 0; offset < 2; offset++) {
+                    std::CRC32 crc = new();
+                    std::Adler32 adler = new();
+                    if (seeded != 0) { crc.Append("123456789", 9); adler.Append("123456789", 9); }
+                    std::CRC32 capturedCrc = crc;
+                    std::Adler32 capturedAdler = adler;
+                    char[sizeof(std::CRC32)] crcBytes;
+                    char[sizeof(std::Adler32)] adlerBytes;
+                    readonly(char)* crcView = (readonly(char)*)&crc;
+                    readonly(char)* adlerView = (readonly(char)*)&adler;
+                    for (nuint i = 0; i < (nuint)sizeof(std::CRC32); i++) crcBytes[i] = crcView[i];
+                    for (nuint i = 0; i < (nuint)sizeof(std::Adler32); i++) adlerBytes[i] = adlerView[i];
+                    nuint crcCount = (nuint)sizeof(std::CRC32) - offset;
+                    nuint adlerCount = (nuint)sizeof(std::Adler32) - offset;
+                    capturedCrc.Append(&crcBytes[offset], crcCount);
+                    capturedAdler.Append(&adlerBytes[offset], adlerCount);
+                    crc.Append(crcView + offset, crcCount);
+                    adler.Append(adlerView + offset, adlerCount);
+                    if (crc.GetValue() != capturedCrc.GetValue()) return 1;
+                    if (adler.GetValue() != capturedAdler.GetValue()) return 2;
+                }
+                return 0;
+            }
+            """, optimization);
+
+
     private static void Run(string code, int optimization)
     {
         var sources = new[] { "CRC32.gf", "Adler32.gf" }

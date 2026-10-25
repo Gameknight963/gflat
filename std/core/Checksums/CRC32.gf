@@ -11,15 +11,17 @@ public struct CRC32
     // Counted bytes, including embedded zeros. The input is borrowed for this call.
     public void Append(readonly(char)* data, nuint count) nothrow
     {
+        uint current = state;
         for (nuint i = 0; i < count; i++)
         {
-            state = state ^ (uint)(byte)data[i];
+            current = current ^ (uint)(byte)data[i];
             for (int bit = 0; bit < 8; bit++)
             {
-                if ((state & 1u) != 0u) state = (state >> 1) ^ 0xedb88320u;
-                else state = state >> 1;
+                if ((current & 1u) != 0u) current = (current >> 1) ^ 0xedb88320u;
+                else current = current >> 1;
             }
         }
+        state = current;
     }
 
     // Returns the finalized numeric checksum without changing the streaming state.

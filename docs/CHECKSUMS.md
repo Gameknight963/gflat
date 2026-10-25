@@ -24,6 +24,12 @@ Both types expose the same operations:
 Copying a checksum copies its independent running state, so a shared prefix can
 be continued with different suffixes. Neither type retains the input pointer.
 
+Append stages its numeric running state in local integers and commits it only
+after consuming the input. Counted input may therefore overlap the checksum's
+own initialized storage: its bytes are read before that final state update.
+This does not allow concurrent mutation of input or simultaneous mutation of the
+same checksum object.
+
 ## Algorithms and representation
 
 CRC32 uses the IEEE CRC-32 variant specified for gzip: reflected polynomial

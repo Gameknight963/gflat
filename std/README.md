@@ -56,6 +56,7 @@ implementation lives in `libc`.
 | Repeated values | `Repeated<T>` | [Captured values and independent query cursors](../docs/REPEATED_VALUES.md) |
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
 | Arbitrary-precision integers | `BigInteger` | [Owned values, exact arithmetic, strict decimal parsing, and formatting](../docs/BIG_INTEGER.md) |
+| Exact fractions | `Rational` | [Normalized BigInteger fractions with owning value semantics](../docs/RATIONAL.md) |
 | Hexadecimal numbers | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Explicit hexadecimal parsing](../docs/HEX_INTEGER_PARSING.md) |
 | Boolean text | `TryParseBool`, `ParseBool` | [Strict ASCII Boolean parsing](../docs/BOOLEAN_PARSING.md) |
 | Identifiers | `Uuid` | [Canonical UUID parsing, formatting, comparison, and hashing](../docs/UUID.md) |

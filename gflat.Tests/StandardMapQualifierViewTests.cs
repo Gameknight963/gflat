@@ -61,7 +61,17 @@ public sealed class StandardMapQualifierViewTests
     [InlineData("SortedMap")]
     public void ShallowInlineWritesAndImmutableTargetWritesAreRejected(string map)
     {
-        string prefix=Types+$$"""
+        string[] managed = ["libc/GC.gf", "libc/TracingCollector.gf"];
+        string[] dependencies = map == "HashMap"
+            ? ["core/HashMap.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/Hashing.gf"]
+            : ["core/SortedMap.gf", "core/Vector.gf", "core/Span.gf",
+                "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf"];
+        SourceFile[] library = managed.Concat(dependencies).Select(relative =>
+        {
+            string path = Path.Combine(AppContext.BaseDirectory, "Std", relative);
+            return new SourceFile(path, File.ReadAllText(path));
+        }).ToArray();
+        string prefix = Types + $$"""
             void Test(readonly({{map}}<int,Payload>)* shallow,immutable({{map}}<int,Payload>)* deep,
                 readonly({{map}}<int,Payload>::Entry)* shallowEntry,immutable({{map}}<int,Payload>::Entry)* deepEntry,int* key){
                 readonly(Payload)* value=shallow.FindReadOnly(key)!;
@@ -69,10 +79,21 @@ public sealed class StandardMapQualifierViewTests
                 readonly(Payload)* entryValue=shallowEntry.ValueReadOnly;
                 immutable(Payload)* entryFrozen=deepEntry.ValueImmutable;
             """;
-        Compiler.Check(Sources(prefix+"}"));
-        foreach(string write in new[]{"value.Inline=9;","value.Pointer=key;","entryValue.Inline=9;",
-            "*frozen.Pointer=9;","frozen.Managed.Value=9;","*entryFrozen.Pointer=9;","entryFrozen.Managed.Value=9;","*shallowEntry.Key=9;"})
-            Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(prefix+write+"}")));
+        IEnumerable<SourceFile> Inputs(string code)
+            => library.Append(new SourceFile("views.gf", code));
+
+        Compiler.Check(Inputs(prefix + "}"));
+        string[] writes =
+        [
+            "value.Inline=9;", "value.Pointer=key;", "entryValue.Inline=9;",
+            "*frozen.Pointer=9;", "frozen.Managed.Value=9;", "*entryFrozen.Pointer=9;",
+            "entryFrozen.Managed.Value=9;", "*shallowEntry.Key=9;"
+        ];
+        foreach (string write in writes)
+        {
+            var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Inputs(prefix + write + "}")));
+            Assert.Contains("readonly", error.Message, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private static IEnumerable<SourceFile> Sources(string code)

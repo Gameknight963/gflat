@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Retains a bounded lookahead, rather than materializing the whole input.

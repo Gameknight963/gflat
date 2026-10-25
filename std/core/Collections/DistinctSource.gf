@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // The reusable source owns no seen-key set; each enumerator creates its own.

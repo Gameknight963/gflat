@@ -14,7 +14,7 @@ public sealed class QueryGenericSumEditorTests
     [InlineData("long","immutable(long)","1l,2l,3l","samples.AsImmutable()")]
     public void GenericSumKeepsConcreteQualifiedElementArgumentAndReturnsLong(string storage,string element,string literals,string view)
     {
-        string text="using std;long Probe(){"+storage+"[3] numbers=["+literals+"];Span<"+storage+"> samples=new(numbers,3);"+
+        string text="using std; using std::Collections;long Probe(){"+storage+"[3] numbers=["+literals+"];Span<"+storage+"> samples=new(numbers,3);"+
             "Span<"+element+"> values="+view+";long total=values.AsEnumerable().Sum();return total;}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
         string[] names=["Collections/IEnumerable.gf","Collections/Enumerable.gf","Span.gf","Collections/EnumerableSum.gf"];

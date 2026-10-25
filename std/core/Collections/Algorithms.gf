@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 namespace detail
 {
@@ -19,7 +19,7 @@ namespace detail
             nuint child = root * 2 + 1;
             if (child + 1 < count && compare(data + child, data + child + 1) < 0) child++;
             if (compare(data + root, data + child) >= 0) return;
-            std::detail::SwapElements<T>(data + root, data + child);
+            std::Collections::detail::SwapElements<T>(data + root, data + child);
             root = child;
         }
     }
@@ -27,7 +27,7 @@ namespace detail
 
 // Exchange initialized values without copying their owned resources.
 public void Swap<T>(ref T left, ref T right)
-    => std::detail::SwapElements<T>(&left, &right);
+    => std::Collections::detail::SwapElements<T>(&left, &right);
 
 // Allocation-free heapsort. Equal elements need not retain their relative order.
 // A throwing comparator can leave a partial ordering, but all values remain owned.
@@ -40,14 +40,14 @@ public void Sort<T>(Span<T> values, int(immutable(T)*, immutable(T)*)* compare)
     while (root != 0)
     {
         root--;
-        std::detail::SiftDown<T>(data, root, count, compare);
+        std::Collections::detail::SiftDown<T>(data, root, count, compare);
     }
     nuint end = count;
     while (end > 1)
     {
         end--;
-        std::detail::SwapElements<T>(data, data + end);
-        std::detail::SiftDown<T>(data, 0, end, compare);
+        std::Collections::detail::SwapElements<T>(data, data + end);
+        std::Collections::detail::SiftDown<T>(data, 0, end, compare);
     }
 }
 
@@ -59,7 +59,7 @@ public void Reverse<T>(Span<T> values)
     nuint right = values.Length - 1;
     while (left < right)
     {
-        std::detail::SwapElements<T>(data + left, data + right);
+        std::Collections::detail::SwapElements<T>(data + left, data + right);
         left++;
         right--;
     }
@@ -71,9 +71,9 @@ public void Rotate<T>(Span<T> values, nuint middle)
 {
     if (middle > values.Length) throw new Exception("Rotation split out of range", 3);
     if (middle == 0 || middle == values.Length) return;
-    std::Reverse<T>(values.Slice(0, middle));
-    std::Reverse<T>(values.Slice(middle));
-    std::Reverse<T>(values);
+    std::Collections::Reverse<T>(values.Slice(0, middle));
+    std::Collections::Reverse<T>(values.Slice(middle));
+    std::Collections::Reverse<T>(values);
 }
 
 // First index whose element is not less than key, or Length if none exists.
@@ -121,7 +121,7 @@ public nuint UpperBound<T>(Span<immutable(T)> values, immutable(T)* key,
 public nuint BinarySearch<T>(Span<immutable(T)> values, immutable(T)* key,
     int(immutable(T)*, immutable(T)*)* compare)
 {
-    nuint index = std::LowerBound<T>(values, key, compare);
+    nuint index = std::Collections::LowerBound<T>(values, key, compare);
     if (index == values.Length) return values.Length;
     if (compare(&values[index], key) != 0) return values.Length;
     return index;
@@ -233,7 +233,7 @@ public nuint Partition<T>(Span<T> values, bool(immutable(T)*)* predicate)
     {
         if (predicate(&values[i]))
         {
-            std::detail::SwapElements<T>(&values[i], &values[boundary]);
+            std::Collections::detail::SwapElements<T>(&values[i], &values[boundary]);
             boundary++;
         }
     }

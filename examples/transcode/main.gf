@@ -1,3 +1,4 @@
+using std::Collections;
 using std;
 
 Vector<byte> ToUtf16Le(ref immutable(Vector<byte>) input)

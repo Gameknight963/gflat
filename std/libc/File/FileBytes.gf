@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Optional owning binary conveniences. No text encoding or terminator is added.

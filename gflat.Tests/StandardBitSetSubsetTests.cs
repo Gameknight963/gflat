@@ -152,7 +152,7 @@ public sealed class StandardBitSetSubsetTests
             """, optimization);
 
     private const string Memory = """
-        using std;
+        using std; using std::Collections;
         bool deny=false;int attempts=0;int allocated=0;int released=0;
         extern void*? malloc(nuint count);extern void free(void* value);
         namespace Memory {

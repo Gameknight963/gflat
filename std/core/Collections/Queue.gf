@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // An owning FIFO ring buffer. Structural mutation invalidates borrowed elements and iterators.
 struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // In-place rank selection. Elements within either partition need not be sorted.
 public void NthElement<T>(Span<T> values, nuint nth,
@@ -16,7 +16,7 @@ public void NthElement<T>(Span<T> values, nuint nth,
     {
         if (budget == 0)
         {
-            std::Sort<T>(values.Slice(first, last - first), compare);
+            std::Collections::Sort<T>(values.Slice(first, last - first), compare);
             return;
         }
         budget--;
@@ -29,7 +29,7 @@ public void NthElement<T>(Span<T> values, nuint nth,
             int order = compare(&values[current], &values[pivot]);
             if (order < 0)
             {
-                std::Swap<T>(ref values[current], ref values[lower]);
+                std::Collections::Swap<T>(ref values[current], ref values[lower]);
                 if (pivot == current) pivot = lower;
                 else if (pivot == lower) pivot = current;
                 lower++; current++;
@@ -37,7 +37,7 @@ public void NthElement<T>(Span<T> values, nuint nth,
             else if (order > 0)
             {
                 upper--;
-                std::Swap<T>(ref values[current], ref values[upper]);
+                std::Collections::Swap<T>(ref values[current], ref values[upper]);
                 if (pivot == current) pivot = upper;
                 else if (pivot == upper) pivot = current;
             }

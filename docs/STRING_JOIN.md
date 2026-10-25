@@ -11,7 +11,7 @@ String Join(this Span<immutable(String)> values, readonly(char)* separator, nuin
 For example:
 
 ```csharp
-using std;
+using std; using std::Collections;
 Vector<String> fields = new();
 fields.Add(s"one");
 fields.Add(s"two");

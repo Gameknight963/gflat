@@ -15,7 +15,7 @@ public sealed class StandardCollectionMetadataTests
     public void MetadataGettersUseOrdinaryCallsAndHaveNonthrowingContracts()
     {
         string ir = Compiler.Emit(Sources("""
-            using std;
+            using std; using std::Collections;
             bool ReadMetadata(immutable(Vector<int>)* vector, Span<int>* span, immutable(Queue<int>)* queue,
                 immutable(Stack<int>)* stack, immutable(PriorityQueue<int>)* priority, immutable(BitSet)* bits,
                 immutable(HashMap<int,int>)* map, immutable(HashSet<int>)* set, immutable(LinkedList<int>)* list) nothrow {
@@ -46,7 +46,7 @@ public sealed class StandardCollectionMetadataTests
     public void EmptyAndPopulatedMetadataWorkWhileInvalidAccessesStillThrow()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             int Compare(readonly(int)* a, readonly(int)* b) => *a - *b;
             int main() {
                 Vector<int> vector = new(); Span<int> span = new(); Queue<int> queue = new(); Stack<int> stack = new();

@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 struct EndpointSource<T, Source, Iterator>

@@ -8,7 +8,7 @@ public sealed class BitSetSearchEditorTests
     [Fact]
     public void MatchingBitSearchHasItsImmutableObserverAndOptionalStartSignature()
     {
-        const string text = "using std;void Observe(immutable(BitSet)* bits){nuint first=bits.FindIndex(false);nuint next=bits.FindIndex(true,32);}";
+        const string text = "using std; using std::Collections;void Observe(immutable(BitSet)* bits){nuint first=bits.FindIndex(false);nuint next=bits.FindIndex(true,32);}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "BitSet.gf");

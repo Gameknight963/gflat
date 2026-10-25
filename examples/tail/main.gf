@@ -1,3 +1,4 @@
+using std::Collections;
 using std;
 
 // Keep at most count owned lines, then print them in their original order.

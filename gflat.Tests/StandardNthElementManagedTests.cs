@@ -21,7 +21,7 @@ public sealed class StandardNthElementManagedTests
 
     private const string Program =
     """
-    using std;
+    using std; using std::Collections;
     
     class Node
     {

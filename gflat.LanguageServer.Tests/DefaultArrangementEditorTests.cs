@@ -9,7 +9,7 @@ public sealed class DefaultArrangementEditorTests
     public void DefaultAndExplicitCallsNavigateTheirOwnArityAndDefinitions()
     {
         const string text = """
-            using std;
+            using std; using std::Collections;
             int Compare(immutable(int)* first, immutable(int)* second) {
                 if (*first < *second) return -1;
                 if (*first > *second) return 1;

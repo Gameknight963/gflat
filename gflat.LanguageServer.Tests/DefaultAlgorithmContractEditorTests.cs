@@ -19,7 +19,7 @@ public sealed class DefaultAlgorithmContractEditorTests
 
     private static void Check(string path,string fileName,string contract,string calls,(string Name,string Return,int Arity)[] rows)
     {
-        string text="using std;void Probe(){int[4] data=[1,2,2,4];Span<int> values=new(data,4);int key=2;"+calls+"}";
+        string text="using std; using std::Collections;void Probe(){int[4] data=[1,2,2,4];Span<int> values=new(data,4);int key=2;"+calls+"}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(file=>new SourceFile(file,File.ReadAllText(file))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)==fileName);

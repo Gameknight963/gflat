@@ -24,7 +24,7 @@ Empty input accesses no input bytes and allocates no output storage; a nonempty
 result reserves exactly once. Inputs remain unchanged on success or failure.
 
 ```csharp
-using std;
+using std; using std::Collections;
 ushort[3] source = [(ushort)'A', (ushort)0xd83d, (ushort)0xde00];
 String utf8 = UnicodeText::FromUtf16(source, 3);
 Vector<ushort> utf16 = UnicodeText::ToUtf16(utf8.Data, utf8.Length);

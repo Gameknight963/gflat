@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns contiguous elements. Growth invalidates pointers and spans into the buffer.
 struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>

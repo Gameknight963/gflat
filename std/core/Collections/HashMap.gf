@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 namespace hash_detail
 {

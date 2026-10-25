@@ -9,7 +9,7 @@ public class StandardHashMapManagedLifetimeTests
         var sources=files.Select(file=>new SourceFile("std/"+file,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",file))));
         var result=CompilerTestHelper.Run(sources.Append(new SourceFile("main.gf","""
-            using std;
+            using std; using std::Collections;
             class Node { public int Value; public Node^? Next; public Node(int n) { Value=n; } }
             void Fill(HashMap<int,Node^>* map) {
                 for(int i=0;i<32;i++) {

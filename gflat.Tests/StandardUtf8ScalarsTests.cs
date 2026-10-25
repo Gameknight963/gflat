@@ -49,7 +49,7 @@ public class StandardUtf8ScalarsTests
                 if (!second.MoveNext() || second.Current != 65u) return 6;
                 std::Utf8Scalars::Enumerator copy = second;
                 if (!copy.MoveNext() || copy.Current != 0u || second.Current != 65u) return 7;
-                std::IEnumerable<uint, std::Utf8Scalars::Enumerator>* source = &scalars;
+                std::Collections::IEnumerable<uint, std::Utf8Scalars::Enumerator>* source = &scalars;
                 std::Utf8Scalars::Enumerator iterator = source.GetEnumerator();
                 nuint count = 0;
                 while (iterator.MoveNext()) {

@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Optional owning output; CsvReader itself does not depend on String.

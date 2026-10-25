@@ -49,7 +49,7 @@ public sealed class StandardShuffleTests
         }
         ulong next = Next(ref state);
         var result = CompilerTestHelper.Run(Sources($$"""
-            using std;
+            using std; using std::Collections;
             int main() {
                 PseudoRandom random = new(0xfedcba9876543210ul);
                 {{checks}}
@@ -66,7 +66,7 @@ public sealed class StandardShuffleTests
     public void ShufflingNoncopyableValuesPreservesEveryOwnerAndDoesNotAllocate(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             extern void* malloc(nuint size);
             extern void free(void* storage);
             int allocations = 0;

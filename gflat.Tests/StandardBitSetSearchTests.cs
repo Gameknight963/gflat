@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardBitSetSearchTests
 {
     private const string Allocator = """
-        using std;
+        using std; using std::Collections;
         extern void*? malloc(nuint count);
         extern void free(void* storage);
         int attempts = 0;

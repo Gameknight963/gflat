@@ -1,3 +1,4 @@
+using std::Collections;
 using std;
 
 // Keep owned address values as keys; the input buffer is reused for every line.

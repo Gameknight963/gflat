@@ -96,7 +96,7 @@ The fill argument participates in type inference: for `Vector<nuint>`, use a
 typed `(nuint)0` fill or call `Resize<nuint>(count, 0)` explicitly.
 
 ```cpp
-using std;
+using std; using std::Collections;
 int main()
 {
     Vector<nuint> row = new();
@@ -224,7 +224,7 @@ retained buffer without allocating. Removal and `Clear` retain capacity until
 shrinking is requested.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int main()
 {
@@ -299,7 +299,7 @@ nothing, and are `nothrow`. An empty set has no set bits and satisfies
 does not contribute to either answer.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int main()
 {
@@ -333,7 +333,7 @@ allow independently copied bitsets to be ordinary hash keys. As with other mutab
 keys, do not change a stored key through an alias while a collection relies on it.
 
 ```csharp
-using std;
+using std; using std::Collections;
 int main()
 {
     BitSet flags = new(65);
@@ -370,7 +370,7 @@ it does not treat a shorter bitset as implicitly extended with clear bits.
 `Equals` continues to return false, rather than throw, for different lengths.
 
 ```cpp
-using std;
+using std; using std::Collections;
 int main()
 {
     BitSet required = new(64);
@@ -438,7 +438,7 @@ immutable observer, allocates nothing, and changes no bits. It skips whole words
 with no matches and excludes both earlier bits and unused final-word padding.
 
 ```cpp
-using std;
+using std; using std::Collections;
 int main()
 {
     BitSet occupied = new(65);
@@ -475,7 +475,7 @@ queue frees retained storage without allocating. Removal and `Clear` retain
 capacity until shrinking is requested.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int Compare(readonly(int)* left, readonly(int)* right)
 {

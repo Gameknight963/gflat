@@ -5,7 +5,7 @@ and never copy or own the source collection.
 Import `std` and call them as ordinary functions:
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int Compare(readonly(int)* left, readonly(int)* right)
 {
@@ -149,7 +149,7 @@ input; callback side effects are not rolled back. The method is not `nothrow`,
 because an arbitrary predicate can throw.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 struct Record
 {
@@ -229,7 +229,7 @@ functions, with the same ownership and failure rules as their explicit-comparato
 counterparts.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int main()
 {
@@ -298,7 +298,7 @@ comparison exceptions propagate without changing input; their external side
 effects are not rolled back. These helpers are ordinary throwing methods.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int main()
 {
@@ -329,7 +329,7 @@ Sequence comparison returns the first nonzero comparison **without changing its
 magnitude**; equal prefixes are ordered by length, returning -1, 0, or 1.
 
 ```cpp
-using std;
+using std; using std::Collections;
 int main()
 {
     int[4] data = [2, 5, 5, 1];
@@ -351,7 +351,7 @@ Sequence equality rejects unequal lengths before comparing any elements.
 Default floating equality treats NaNs as equal and signed zeros as equal.
 
 ```cpp
-using std;
+using std; using std::Collections;
 int main()
 {
     int[4] data = [1, 2, 2, 4];

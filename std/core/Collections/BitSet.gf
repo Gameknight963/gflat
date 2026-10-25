@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns a resizable sequence of packed bits. New bits start clear.
 struct BitSet : IEnumerable<nuint, BitSet::Enumerator>, IEquatable<BitSet>, IHashable

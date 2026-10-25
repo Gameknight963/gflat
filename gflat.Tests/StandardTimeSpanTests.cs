@@ -34,7 +34,7 @@ public sealed class StandardTimeSpanTests
                 }
             }
             Run($$"""
-                using std;
+                using std; using std::Collections;
                 extern void* fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* output,nuint size,nuint count,void* file);
                 extern int fclose(void* file);
@@ -81,7 +81,7 @@ public sealed class StandardTimeSpanTests
     [InlineData(2)]
     public void IntegralFactoriesAndArithmeticCheckEverySignedBoundary(int optimization)
     {
-        var code = new StringBuilder("using std;int main(){int caught=0;\n");
+        var code = new StringBuilder("using std; using std::Collections;int main(){int caught=0;\n");
         int throws = 0;
         var random = new Random(3345);
         foreach (var (name, scale) in new (string, long)[] { ("Milliseconds", 10000), ("Seconds", 10000000), ("Minutes", 600000000), ("Hours", 36000000000), ("Days", 864000000000) })
@@ -128,7 +128,7 @@ public sealed class StandardTimeSpanTests
     [InlineData(2)]
     public void SuccessfulValueOperationsAndBorrowedFormattingAllocateNothing(int optimization)
         => Run("""
-            using std;int allocations=0;
+            using std; using std::Collections;int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* data)nothrow{allocations++;}}
             int main(){
                 TimeSpan a=TimeSpan::FromDays(-2);TimeSpan b=TimeSpan::FromHours(3);
@@ -147,7 +147,7 @@ public sealed class StandardTimeSpanTests
     [InlineData(2)]
     public void HashKeysInterpolationAndWriterFailuresUseExistingContracts(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             struct Sink:ITextWriter{
                 public int Calls;public bool Fail;public char* Data;
                 public Sink(char* data,bool fail){Calls=0;Fail=fail;Data=data;}
@@ -175,7 +175,7 @@ public sealed class StandardTimeSpanTests
         string[] names = ["core/TimeSpan.gf", "core/Text.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/Exception.gf"];
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("nothrow.gf", """
-                using std;
+                using std; using std::Collections;
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* data)nothrow{}}
                 bool Convert(long ticks,char* output,nuint capacity,ref nuint written)nothrow{
                     immutable(TimeSpan) value=TimeSpan::FromTicks(ticks);TimeSpan other=new();

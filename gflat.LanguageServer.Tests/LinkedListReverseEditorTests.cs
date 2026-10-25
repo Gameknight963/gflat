@@ -9,7 +9,7 @@ public sealed class LinkedListReverseEditorTests
     [Fact]
     public void MutableReceiverOffersReverseWithItsNoThrowSignatureAndSourceDefinition()
     {
-        const string text="using std;void Flip(LinkedList<int>* list) nothrow{list.Reverse();}";
+        const string text="using std; using std::Collections;void Flip(LinkedList<int>* list) nothrow{list.Reverse();}";
         var (sources,source)=Sources(text);
         var snapshot=new AnalysisSnapshot(sources);
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
@@ -35,7 +35,7 @@ public sealed class LinkedListReverseEditorTests
     [InlineData("immutable","non-immutable")]
     public void ProtectedReceiversRejectMutationWithoutBreakingHealthyMutableCall(string protection,string diagnostic)
     {
-        string text="using std;void Invalid("+protection+"(LinkedList<int>)* list){list.Reverse();}\n"+
+        string text="using std; using std::Collections;void Invalid("+protection+"(LinkedList<int>)* list){list.Reverse();}\n"+
             "void Healthy(LinkedList<int>* list) nothrow{list.Reverse();}";
         var (sources,source)=Sources(text);
         var snapshot=new AnalysisSnapshot(sources);

@@ -1,3 +1,4 @@
+using std::Collections;
 using std;
 
 void Report(nuint line, readonly(char)* message)

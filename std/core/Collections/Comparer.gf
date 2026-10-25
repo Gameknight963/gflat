@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Bridges a type's comparison contract to APIs accepting borrowed callbacks.
 static class Comparer<T : IComparable<T>>

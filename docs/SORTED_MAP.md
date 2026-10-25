@@ -1,12 +1,12 @@
 # Sorted map
 
-`std::SortedMap<K,V>` owns keys and values in a sorted contiguous buffer. Supply
+`std::Collections::SortedMap<K,V>` owns keys and values in a sorted contiguous buffer. Supply
 a comparer borrowing two keys through `immutable(K)*`; return negative, zero, or
 positive according to their order. Zero identifies equivalent keys, regardless
 of other equality or hashing implementations.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int Compare(readonly(int)* left, readonly(int)* right)
 {

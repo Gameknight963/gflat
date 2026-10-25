@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns unique values. T must also implement IEquatable<T>.
 struct HashSet<T : IHashable>

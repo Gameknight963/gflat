@@ -7,7 +7,7 @@ unspecified, while each group's vector follows source encounter order. A missing
 key behaves like any other missing HashMap key; there is no lazy lookup wrapper.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int Parity(int value) => value % 2;
 long Square(int value) => (long)value * (long)value;

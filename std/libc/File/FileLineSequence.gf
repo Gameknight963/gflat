@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Borrows an open File at its current position; each enumeration consumes it.

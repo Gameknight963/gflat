@@ -94,7 +94,7 @@ which remain alive for the entire map lifetime. Keys borrowing other storage mus
 keep it alive and unchanged while stored in the map.
 
 ```cpp
-using std;
+using std; using std::Collections;
 
 struct HeaderName : IHashable, IEquatable<HeaderName>
 {

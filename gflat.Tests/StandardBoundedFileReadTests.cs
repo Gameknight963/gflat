@@ -35,7 +35,7 @@ public sealed class StandardBoundedFileReadTests
                 }
             }
             Run(directory, """
-                using std;
+                using std; using std::Collections;
                 String ReadPath(File* input) {
                     nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);
                     String result=new(); result.Resize(count); Span<char> data=result.AsSpan();
@@ -175,7 +175,7 @@ public sealed class StandardBoundedFileReadTests
     }
 
     private const string Counters = """
-        using std;
+        using std; using std::Collections;
         extern void*? malloc(nuint size);extern void free(void* value);
         int allocated=0;int released=0;int denied=0;int failAfter=-1;
         namespace Memory {

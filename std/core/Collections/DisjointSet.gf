@@ -1,4 +1,4 @@
-﻿namespace std;
+﻿namespace std::Collections;
 
 // Fixed index universe. Union by component size keeps immutable root lookup logarithmic.
 public struct DisjointSet

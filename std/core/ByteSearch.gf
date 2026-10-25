@@ -1,3 +1,4 @@
+using std::Collections;
 // Two-Way search portions adapted from musl src/string/memmem.c.
 // Copyright (c) 2005-2020 Rich Felker, et al.
 //

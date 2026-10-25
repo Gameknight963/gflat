@@ -20,7 +20,7 @@ public sealed class StandardSpanFillTests
     public void PrimitiveFillChangesOnlySelectedInitializedElementsAndEmptyViewsAreSafe(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             int main(){int[7] buffer=[0,1,2,3,4,5,6];Span<int> values=new((int*)buffer,7);
                 values.Slice(2,3).Fill(42);
                 for(nuint i=0;i<7;i++){int expected=(int)i;if(i>=2 && i<5)expected=42;if(buffer[i]!=expected)return 1;}
@@ -32,7 +32,7 @@ public sealed class StandardSpanFillTests
     }
 
     private const string Owners = """
-        using std;
+        using std; using std::Collections;
         int made=0;int dead=0;int copies=0;int budget=-1;
         struct Owner{
             public int Id;public String Text;
@@ -101,7 +101,7 @@ public sealed class StandardSpanFillTests
     public void ManagedSnapshotSurvivesCollectionInReplacedOwnerDestructors(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             class Node{public int Id;public Node^? Next;public Node(int id){Id=id;}}
             int dead=0;bool bad=false;
             struct Owner{
@@ -125,9 +125,9 @@ public sealed class StandardSpanFillTests
     public void FillRejectsReadonlyElementsAndNoncopyableOwnersOnlyWhenCalled()
     {
         Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std;int main(){int[1] value=[1];Span<readonly(int)> span=new((readonly(int)*)value,1);span.Fill(2);return 0;}
+            using std; using std::Collections;int main(){int[1] value=[1];Span<readonly(int)> span=new((readonly(int)*)value,1);span.Fill(2);return 0;}
             """)));
-        const string owner = "using std;struct Owner{public int Id;~Owner(){}}";
+        const string owner = "using std; using std::Collections;struct Owner{public int Id;~Owner(){}}";
         Compiler.Check(Sources(owner + "int main(){Span<Owner> span=new();return 0;}"));
         Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources(owner + "int main(){Span<Owner> span=new();span.Fill(new Owner());return 0;}")));
     }

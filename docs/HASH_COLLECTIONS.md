@@ -1,7 +1,7 @@
 # Hash collections
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 HashMap<String, int> counts = new();
 counts.Add(s"apple", 1);
@@ -48,7 +48,7 @@ allocates no storage; noncopyable mapped values are supported. Capacity is
 retained. Output remains valid independently of the map.
 
 ```csharp
-using std;
+using std; using std::Collections;
 int main()
 {
     HashMap<int, String> names = new();

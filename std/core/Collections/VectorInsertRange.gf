@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Optional copying operation: merely including it does not require copyable T.
 public void InsertRange<T>(this ref Vector<T> target, nuint index, Span<immutable(T)> source)
@@ -16,5 +16,5 @@ public void InsertRange<T>(this ref Vector<T> target, nuint index, Span<immutabl
         throw;
     }
     // Copying has finished. Rotate only relocates the initialized elements.
-    std::Rotate<T>(target.AsSpan().Slice(index), originalCount - index);
+    std::Collections::Rotate<T>(target.AsSpan().Slice(index), originalCount - index);
 }

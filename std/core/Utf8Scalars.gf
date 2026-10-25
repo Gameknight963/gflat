@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Borrows counted UTF-8 bytes. Input must remain alive throughout enumeration.

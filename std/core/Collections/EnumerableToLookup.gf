@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Eager owning groups; HashMap additionally needs the matching IEquatable<K>.

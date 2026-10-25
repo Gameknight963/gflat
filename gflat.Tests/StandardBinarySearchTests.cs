@@ -13,7 +13,7 @@ public sealed class StandardBinarySearchTests
     public void SortedSearchMatchesLinearFirstMatchInEitherOrdering(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             int calls = 0;
             int direction = 1;
             int Compare(readonly(int)* left, readonly(int)* right) {
@@ -62,7 +62,7 @@ public sealed class StandardBinarySearchTests
     public void BorrowedOwnersSurviveEveryThrowingComparisonAndAliasedKey(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             int calls = 0; int failAt = 0;
             struct Item {
                 private int* destroyed;

@@ -9,7 +9,7 @@ public sealed class NthElementEditorTests
     public void ExplicitRankSelectionShowsConcreteBorrowedSpanAndActualDefinition()
     {
         const string text="""
-            using std;
+            using std; using std::Collections;
             int Compare(readonly(int)* a,readonly(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}
             void Observe(){int[3] data=[3,1,2];Span<int> values=new(data,3);NthElement<int>(values,1,Compare);}
             """;

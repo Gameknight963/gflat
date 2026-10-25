@@ -32,7 +32,7 @@ public sealed class StandardVectorRemoveRangeTests
         // One runtime loop exercises the table, keeping IR and optimizer work
         // bounded rather than unrolling hundreds of owning-vector lifetimes.
         string program = $$"""
-            using std;
+            using std; using std::Collections;
             int main(){int[{{oracle.Count}}] oracle=[{{string.Join(',', oracle)}}];nuint cursor=0;
                 while(cursor<{{oracle.Count}}){
                     int count=oracle[cursor++];nuint start=(nuint)oracle[cursor++];
@@ -56,7 +56,7 @@ public sealed class StandardVectorRemoveRangeTests
     public void NoncopyableOwnersAreDestroyedInReverseAndSurvivorsRelocateWithoutAllocation(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             extern void* malloc(nuint size); extern void free(void* pointer);
             bool deny=false; int allocationAttempts=0;
             namespace Memory {
@@ -98,7 +98,7 @@ public sealed class StandardVectorRemoveRangeTests
     public void InvalidAndOverflowingRangesPreserveEveryOwner(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             int dead=0;
             struct Owner{public int Id;public Owner(int id){Id=id;}~Owner(){dead++;}}
             int main(){
@@ -126,7 +126,7 @@ public sealed class StandardVectorRemoveRangeTests
     public void ZeroSizedElementsCanRemoveWholeAndPartialRanges(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;struct Empty{}
+            using std; using std::Collections;struct Empty{}
             int main(){Vector<Empty> values=new();values.RemoveRange(0,0);
                 for(int i=0;i<10;i++)values.Add(new Empty());
                 values.RemoveRange(2,5);if(values.Count!=5)return 1;
@@ -141,7 +141,7 @@ public sealed class StandardVectorRemoveRangeTests
     public void ManagedSurvivorsStayLiveDuringRemovedOwnerDestructorsAndRelocation(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             class Node{public int Id;public Node^? Next;public Node(int id){Id=id;}}
             int dead=0;bool bad=false;
             struct Owner{

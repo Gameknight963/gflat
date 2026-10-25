@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardMapQualifierViewTests
 {
     private const string Types="""
-        using std;
+        using std; using std::Collections;
         int destroyed=0;
         int allocations=0;
         extern void*? malloc(nuint bytes);extern void free(void* pointer);

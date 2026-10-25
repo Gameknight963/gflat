@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 namespace detail
 {
@@ -16,7 +16,7 @@ namespace detail
         }
         if (suffix == 0)
         {
-            std::Reverse<T>(values);
+            std::Collections::Reverse<T>(values);
             return false;
         }
         nuint pivot = suffix - 1;
@@ -28,8 +28,8 @@ namespace detail
             candidate--;
         }
         // All comparator calls are complete before any initialized owner moves.
-        std::Swap<T>(ref values[pivot], ref values[candidate]);
-        std::Reverse<T>(values.Slice(suffix));
+        std::Collections::Swap<T>(ref values[pivot], ref values[candidate]);
+        std::Collections::Reverse<T>(values.Slice(suffix));
         return true;
     }
 }

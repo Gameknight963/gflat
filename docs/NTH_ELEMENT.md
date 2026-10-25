@@ -11,7 +11,7 @@ This is useful for selecting a median or percentile, or separating the smallest
 for even-sized medians or percentiles; the algorithm returns no owning value.
 
 ```csharp
-using std;
+using std; using std::Collections;
 int Compare(readonly(int)* left, readonly(int)* right)
 {
     if (*left < *right) return -1;

@@ -393,7 +393,7 @@ public sealed class ManagedReturnStorageTests
     public void NativeVectorOwnsElementsThroughGrowthPopClearAndDestruction() => Succeeds("""
         int main() {
             {
-                std::Vector<int^> values = new std::Vector<int^>();
+                std::Collections::Vector<int^> values = new std::Collections::Vector<int^>();
                 for (int i = 0; i < 20; i++) values.Add(new^ int(i));
                 if (rc_live_count() != 20) return 101;
                 for (nuint i = 0; i < values.Count; i++) if (*values[i] != (int)i) return 102;

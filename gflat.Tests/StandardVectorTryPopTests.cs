@@ -7,7 +7,7 @@ public sealed class StandardVectorTryPopTests
     [InlineData(2)]
     public void NoncopyableOwnersTransferWithoutAllocationAndEmptyPreservesOutput(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             extern void*? malloc(nuint size);extern void free(void* pointer);
             int attempts=0;int allocated=0;int freed=0;int made=0;int dead=0;bool deny=false;
             namespace Memory {
@@ -43,7 +43,7 @@ public sealed class StandardVectorTryPopTests
     [InlineData(2)]
     public void LiveAndConstructedSpareOutputAliasesRejectBeforeMutation(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             int made=0;int dead=0;
             struct Item{public int Id;public Item(int id){Id=id;made++;}~Item(){dead++;}}
             int main(){
@@ -78,7 +78,7 @@ public sealed class StandardVectorTryPopTests
     [InlineData(2)]
     public void ZeroSizedOwnerUsesAllocationStrideAndRetainsOrdinaryCleanup(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             int made=0;int dead=0;
             struct Empty{public Empty(){made++;}~Empty(){dead++;}}
             int main(){

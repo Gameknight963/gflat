@@ -1,3 +1,4 @@
+using std::Collections;
 using std;
 
 // Count ASCII words without allocating for repeated occurrences.

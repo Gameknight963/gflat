@@ -12,8 +12,8 @@ public sealed class GenericMemberCompletionTests
         var sources = Directory.GetFiles(directory, "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         const string text = """
-            using std;
-            alias IntVector = std::Vector<int>;
+            using std; using std::Collections;
+            alias IntVector = std::Collections::Vector<int>;
             alias IntEquality = std::IEquatable<int>;
             class Box<T> { public T Echo(T value) => value; }
             void Append<T>(ref Vector<T> vector, T value) { vector.Add(value); }

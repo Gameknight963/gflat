@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardDequeTryRemoveTests
 {
     private const string Allocator="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;bool deny=false;bool capture=false;void*? captured=null;
         namespace Memory{
             public replace void*? Allocate(nuint count){

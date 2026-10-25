@@ -8,7 +8,7 @@ public sealed class EnumerableCountByEditorTests
     [Fact]
     public void PrimitiveAndOwningKeysInferAndNavigateTheCountBySelector()
     {
-        const string text = "using std;int Key(int value)=>value%3;String Text(int value)=>value.ToString();void Probe(){int[3] data=[4,2,1];Span<int> values=new(data,3);HashMap<int,nuint> numbers=values.AsEnumerable().CountBy(Key);HashMap<String,nuint> words=values.AsEnumerable().CountBy(Text);}";
+        const string text = "using std; using std::Collections;int Key(int value)=>value%3;String Text(int value)=>value.ToString();void Probe(){int[3] data=[4,2,1];Span<int> values=new(data,3);HashMap<int,nuint> numbers=values.AsEnumerable().CountBy(Key);HashMap<String,nuint> words=values.AsEnumerable().CountBy(Text);}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "EnumerableCountBy.gf");

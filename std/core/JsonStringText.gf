@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Owning conveniences, separate from the allocation-free JSON string codec.

@@ -7,7 +7,7 @@ namespace gflat.Tests;
 public sealed class StandardIpNetworkTests
 {
     private const string Counters="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -189,7 +189,7 @@ public sealed class StandardIpNetworkTests
         string[] names=["IpNetwork.gf","IpAddress.gf","Text.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("network-contract.gf","""
-                using std;namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
+                using std; using std::Collections;namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
                 bool Observe(immutable(IpNetwork)* network,readonly(char)* input,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
                     IpNetwork parsed=new();bool valid=IpNetwork::TryParse(input,count,&parsed);IpAddress address=network.NetworkAddress;int prefix=network.PrefixLength;
                     nuint hash=network.GetHashCode();bool equal=network.Equals(&parsed);bool contains=network.Contains(&address);

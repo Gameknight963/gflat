@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Query copies retain only the source and comparator; each cursor owns its buffer.
@@ -32,7 +33,7 @@ struct OrderSource<T, Source, Iterator>
             {
                 initialized = true; finished = true;
                 Vector<T> staged = std::ToVector<T, Source, Iterator>(new Enumerable<T, Source, Iterator>(source));
-                std::StableSort<T>(staged.AsSpan(), compare);
+                std::Collections::StableSort<T>(staged.AsSpan(), compare);
                 buffer = move staged;
                 finished = false;
             }

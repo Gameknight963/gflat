@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns unique values ordered by the supplied comparison, rather than a hash.
 struct SortedSet<T>

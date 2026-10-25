@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns nodes and values. Borrowed node addresses survive insertion and list moves.
 struct LinkedList<T> : IEnumerable<T, LinkedList<T>::Enumerator>

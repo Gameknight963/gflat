@@ -20,7 +20,7 @@ public sealed class StandardTextMatchSpanTests
             int length=random.Next(text.Length+1);
             cases.Add((text,text[..length]));cases.Add((text,text[(text.Length-length)..]));
         }
-        var code=new StringBuilder("using std;int main(){char[20] input;char[20] pattern;\n");
+        var code=new StringBuilder("using std; using std::Collections;int main(){char[20] input;char[20] pattern;\n");
         foreach(var item in cases)
         {
             for(int i=0;i<item.Text.Length;i++)code.AppendLine($"input[{i}]=(char){item.Text[i]};");
@@ -46,7 +46,7 @@ public sealed class StandardTextMatchSpanTests
     [InlineData(2)]
     public void InteriorAliasedViewsAndEmptyChecksDoNotAllocateOrReadOutsideCounts(int optimization)
         => Run("""
-            using std;int allocations=0;
+            using std; using std::Collections;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}

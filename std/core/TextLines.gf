@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Borrowed counted lines. LF and CRLF terminate lines; a bare CR is text.

@@ -143,7 +143,7 @@ public sealed class StandardBigIntegerPowerTests
     }
 
     private const string Counters="""
-        using std;
+        using std; using std::Collections;
         extern void*? malloc(nuint count);extern void free(void* value);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{

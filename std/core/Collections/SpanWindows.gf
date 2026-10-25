@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Borrows contiguous storage; each result is a full, possibly overlapping view.
 public struct SpanWindows<T> : IEnumerable<Span<T>, SpanWindows<T>::Enumerator>

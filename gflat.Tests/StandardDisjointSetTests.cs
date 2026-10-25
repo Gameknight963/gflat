@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardDisjointSetTests
 {
     private const string Counters="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){
@@ -153,7 +153,7 @@ public sealed class StandardDisjointSetTests
     [Fact]
     public void ImplicitCopyOfTheOwningPartitionIsRejected()
     {
-        var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources("using std;void Probe(){DisjointSet original=new(3);DisjointSet copied=original;}")));
+        var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources("using std; using std::Collections;void Probe(){DisjointSet original=new(3);DisjointSet copied=original;}")));
         Assert.Contains("copy",error.Message,StringComparison.OrdinalIgnoreCase);
     }
 

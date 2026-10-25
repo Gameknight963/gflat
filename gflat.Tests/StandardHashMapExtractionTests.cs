@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardHashMapExtractionTests
 {
     private const string Owners = """
-        using std;
+        using std; using std::Collections;
         int made=0; int dead=0; int allocations=0; int releases=0;
         bool failHash=false; bool failEquality=false;
         private extern void*? malloc(nuint bytes);
@@ -88,7 +88,7 @@ public sealed class StandardHashMapExtractionTests
     {
         var random=new Random(140981); var expected=new Dictionary<int,int>();
         var source=new StringBuilder("""
-            using std;
+            using std; using std::Collections;
             struct Key:IHashable,IEquatable<Key> {
                 public int Id; public Key(int id){Id=id;}
                 public immutable nuint GetHashCode()=>1;
@@ -126,7 +126,7 @@ public sealed class StandardHashMapExtractionTests
     [InlineData(2)]
     public void ExtractedManagedFieldsStayRootedAfterMapClearAndReleaseAtScopeExit(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             class Node {public int Id;public Node^? Next;public Node(int id){Id=id;}}
             struct Key:IHashable,IEquatable<Key> {
                 public int Id; public Node^ Root;

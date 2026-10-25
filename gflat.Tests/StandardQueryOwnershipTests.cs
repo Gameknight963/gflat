@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public class StandardQueryOwnershipTests
 {
     private const string AllocationCounters = """
-        using std;
+        using std; using std::Collections;
         extern void*? malloc(nuint bytes);
         extern void free(void* storage);
         int allocations = 0;

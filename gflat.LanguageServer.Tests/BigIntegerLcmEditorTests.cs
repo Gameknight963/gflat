@@ -10,7 +10,7 @@ public sealed class BigIntegerLcmEditorTests
     public void StaticLcmBorrowsImmutableInputsAndPresentsItsOwningResultAndSourceSignature()
     {
         const string text="""
-            using std;
+            using std; using std::Collections;
             int Probe(){
                 immutable(BigInteger) first=new(12l);
                 immutable(BigInteger) second=new(18l);

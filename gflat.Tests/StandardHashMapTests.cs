@@ -11,7 +11,7 @@ public class StandardHashMapTests
     [Fact]
     public void AutomaticGrowthAllocatesLogarithmicallyRatherThanRehashingEachInsertion()
         => Run("""
-            using std;
+            using std; using std::Collections;
             int allocations=0; int releases=0;
             private extern void*? malloc(nuint bytes);
             private extern void free(void* address);
@@ -41,7 +41,7 @@ public class StandardHashMapTests
     [Fact]
     public void GrowthDuplicatesAndRemovalDestroyEachOwnedResourceOnce()
         => Run("""
-            using std;
+            using std; using std::Collections;
             struct Key : IHashable, IEquatable<Key> {
                 public int id; private int* destroyed;
                 public Key(int n,int* counter) { id=n; destroyed=counter; }
@@ -76,7 +76,7 @@ public class StandardHashMapTests
     [Fact]
     public void FailedGrowthAndThrowingKeyComparisonPreserveExistingEntries()
         => Run("""
-            using std;
+            using std; using std::Collections;
             bool fail=false; bool compareFail=false;
             private extern void*? malloc(nuint bytes);
             private extern void free(void* address);
@@ -111,7 +111,7 @@ public class StandardHashMapTests
     public void BorrowedEntriesPreventKeyMutation()
     {
         Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => Compiler.Emit(Sources("""
-            using std;
+            using std; using std::Collections;
             struct Key : IHashable, IEquatable<Key> {
                 public int id;
                 public immutable nuint GetHashCode()=>(nuint)id;
@@ -128,7 +128,7 @@ public class StandardHashMapTests
     [Fact]
     public void GrowthReplacementRemovalAndReinsertionPreserveProbeChains()
         => Run("""
-            using std;
+            using std; using std::Collections;
             int main() {
                 HashMap<int,int> map = new();
                 for(int i=0;i<300;i++) map.Add(i,i*3);
@@ -154,7 +154,7 @@ public class StandardHashMapTests
     [Fact]
     public void CollisionsTombstonesAndDuplicateInsertionsDoNotLoseEntries()
         => Run("""
-            using std;
+            using std; using std::Collections;
             struct Key : IHashable, IEquatable<Key> {
                 public int value;
                 public Key(int x) { value=x; }
@@ -179,7 +179,7 @@ public class StandardHashMapTests
     [Fact]
     public void OwningStringKeysAndValuesSurviveGrowthAndBorrowedIteration()
         => Run("""
-            using std;
+            using std; using std::Collections;
             int main() {
                 HashMap<String,String> map=new();
                 map.Add(s"first",s"one"); map.Add(s"second",s"two");
@@ -203,7 +203,7 @@ public class StandardHashMapTests
     [Fact]
     public void SetOwnsUniqueValuesAndBorrowsDuringIteration()
         => Run("""
-            using std;
+            using std; using std::Collections;
             int main() {
                 HashSet<String> set=new();
                 if(!set.Add(s"a") || !set.Add(s"b") || set.Add(s"a")) return 1;
@@ -219,7 +219,7 @@ public class StandardHashMapTests
     [Fact]
     public void CapacityOverflowAndMissingKeysLeaveMapUsable()
         => Run("""
-            using std;
+            using std; using std::Collections;
             int main() {
                 HashMap<int,int> map=new(); int k=8;
                 if(map.Find(&k)!=null || map.ContainsKey(&k) || map.Remove(&k)) return 1;

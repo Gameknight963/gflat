@@ -13,7 +13,7 @@ public sealed class StandardVectorRangeTests
     public void SelfBorrowedRangesRebindAfterGrowthAndAppendIndependentStrings()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             int main() {
                 Vector<String> values = new(); values.Reserve(4);
                 values.Add(s"one"); values.Add(s"two"); values.Add(s"three"); values.Add(s"four");
@@ -36,7 +36,7 @@ public sealed class StandardVectorRangeTests
     public void SeparateAndReservedRangesAppendInOrder()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             int main() {
                 Vector<int> source = new(); Vector<int> target = new();
                 for (int i = 0; i < 10; i++) source.Add(i);
@@ -57,7 +57,7 @@ public sealed class StandardVectorRangeTests
     public void MerelyIncludingCopyExtensionsDoesNotRequireCopyableVectorElements()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             struct Unique {
                 private int* destroyed;
                 public Unique(int* counter) { destroyed = counter; }
@@ -76,7 +76,7 @@ public sealed class StandardVectorRangeTests
     public void FailedReservationAndCountOverflowPreserveExistingElements()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             extern void* malloc(nuint bytes); extern void free(void* address);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (bytes > 16) return null; return malloc(bytes); }
@@ -102,7 +102,7 @@ public sealed class StandardVectorRangeTests
     public void CopyFailureRetainsSuccessfulPrefixAndDestroysEveryConstructedValueOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             struct Item {
                 private int* copies;
                 private int* destroyed;

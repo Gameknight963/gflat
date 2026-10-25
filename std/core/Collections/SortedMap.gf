@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns sorted contiguous entries. Ordering equivalence identifies duplicate keys.
 struct SortedMap<K, V>

@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Keep each projected key with its original element; compare cached keys only.

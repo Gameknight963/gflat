@@ -1,4 +1,5 @@
-﻿using std;
+﻿using std::Collections;
+using std;
 
 void ReportLine(nuint line, readonly(char)* message)
 {

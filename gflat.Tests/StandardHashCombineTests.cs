@@ -76,7 +76,7 @@ public sealed class StandardHashCombineTests
     public void CompositeKeysAndStructuredPairsDistributeWithoutQuadraticEquality(int optimization)
     {
         string code="""
-            using std;
+            using std; using std::Collections;
             static class State{public static int Comparisons;}
             struct Point:IHashable,IEquatable<Point>{
                 public ulong X;public ulong Y;

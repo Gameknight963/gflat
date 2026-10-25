@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardWhileQueryTests
 {
     private const string CounterSource = """
-        using std;
+        using std; using std::Collections;
         int moves = 0; int reads = 0; int calls = 0;
         struct Source {
             private int count;
@@ -90,7 +90,7 @@ public sealed class StandardWhileQueryTests
     [InlineData(2)]
     public void OwningPredicatesAndIteratorsCleanUpOnShortCircuitAndThrow(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             private extern void*? malloc(nuint bytes); private extern void free(void* storage);
             int allocations=0;int releases=0;int created=0;int destroyed=0;int calls=0;int failAt=0;
             namespace Memory {

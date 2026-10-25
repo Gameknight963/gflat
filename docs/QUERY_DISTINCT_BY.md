@@ -6,7 +6,7 @@ the element type does not need hash or equality implementations. This is useful
 for retaining the first record for each ID without collecting groups first.
 
 ```cpp
-using std;
+using std; using std::Collections;
 
 struct Row
 {

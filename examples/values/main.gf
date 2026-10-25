@@ -1,3 +1,4 @@
+using std::Collections;
 using std;
 
 extern int puts(readonly(char)* text);

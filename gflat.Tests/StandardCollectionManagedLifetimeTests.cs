@@ -13,7 +13,7 @@ public sealed class StandardCollectionManagedLifetimeTests
         var result = CompilerTestHelper.Run(files.Select(file => new SourceFile("std/" + file,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))))
             .Append(new SourceFile("main.gf", """
-            using std;
+            using std; using std::Collections;
             class Node {
                 public int Value;
                 public Node^? Next;

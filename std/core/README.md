@@ -167,7 +167,7 @@ Its cursors own captured copies rather than borrowing the sequence's address;
 `Vector<T>` owns contiguous elements. It supports primitives and owning values:
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int main()
 {

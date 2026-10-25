@@ -59,7 +59,7 @@ public sealed class StandardIpAddressTests
                 }
             }
             Run(directory, """
-                using std;
+                using std; using std::Collections;
                 String ReadText(File* file){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(file);
                     String result=new();result.Resize(count);Span<char> data=result.AsSpan();file.ReadExactly(data.Data!,count);return move result;}
                 int main(int argc,char** argv){
@@ -116,7 +116,7 @@ public sealed class StandardIpAddressTests
                 foreach (byte[] row in rows) { writer.Write(row.Length); writer.Write(row); }
             }
             Run(directory, """
-                using std;
+                using std; using std::Collections;
                 int main(int argc,char** argv){
                     File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     IpAddress zero=new();IpAddress seed=IpAddress::Parse("2001:db8::1");
@@ -152,7 +152,7 @@ public sealed class StandardIpAddressTests
     [InlineData(2)]
     public async Task SuccessfulOperationsAndTryFailuresAllocateNothingAndSupportBackedAliases(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std;
+            using std; using std::Collections;
             int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}
                 public replace void Free(void* value)nothrow{}}
@@ -186,7 +186,7 @@ public sealed class StandardIpAddressTests
     [InlineData(2)]
     public async Task FamilyEqualityHashMapInterpolationAndWriterFailureUseValueContracts(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std;
+            using std; using std::Collections;
             struct Sink:ITextWriter{
                 public char* Data;public bool Fail;public int Calls;
                 public Sink(char* data,bool fail){Data=data;Fail=fail;Calls=0;}
@@ -216,7 +216,7 @@ public sealed class StandardIpAddressTests
         string[] names = ["core/IpAddress.gf", "core/Text.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/IHashable.gf", "core/Hashing.gf", "core/Exception.gf"];
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("contract.gf", """
-                using std;
+                using std; using std::Collections;
                 namespace Memory{public void*? Allocate(nuint size){return null;}public void Free(void* value)nothrow{}}
                 bool Check(readonly(char)* text,nuint length,char* output,nuint capacity,ref nuint written)nothrow{
                     IpAddress value=new();bool valid=IpAddress::TryParse(text,length,&value);IpAddress other=new();

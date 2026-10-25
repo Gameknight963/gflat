@@ -7,7 +7,7 @@ namespace gflat.Tests;
 public sealed class StandardRationalTests
 {
     private const string Allocator="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? value=malloc(count);if(value!=null)allocated++;return value;}

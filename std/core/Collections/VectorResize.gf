@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Copying resize stays outside Vector<T>, like AddRange.
 public void Resize<T>(this ref Vector<T> target, nuint count, T fill)

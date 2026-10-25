@@ -7,7 +7,7 @@ public sealed class StandardBitSetQueryTests
     [InlineData(2)]
     public void ProtectedQueriesBorrowSetIndicesLazilyAndObserveContentEdits(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int predicates=0;int selections=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return malloc(size);}public replace void Free(void* pointer) nothrow{free(pointer);}}
@@ -43,7 +43,7 @@ public sealed class StandardBitSetQueryTests
     [InlineData(2)]
     public void NestedViewCapturesBorrowedMetadataAndRejectsNonemptyNullStorage(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             nuint Sum(nuint total,nuint value)=>total+value;
             int main(){
                 uint[2] words=[(uint)2,(uint)1];

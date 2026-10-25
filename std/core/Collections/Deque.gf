@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns a ring buffer. Structural mutation invalidates borrowed values/iterators.
 struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>

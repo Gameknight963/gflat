@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryTakeLastTests
 {
     private const string Allocator = """
-        using std;
+        using std; using std::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocations = 0; int releases = 0; int failAt = 0;
         bool deny = false; nuint largest = 0;
@@ -173,7 +173,7 @@ public sealed class StandardQueryTakeLastTests
             """, optimization);
 
         const string borrowed = """
-            using std;
+            using std; using std::Collections;
             struct Unique { public int Id; public Unique(int id) { Id = id; } ~Unique() {} }
             int main() {
                 Vector<Unique> input = new(); input.Add(new Unique(1));

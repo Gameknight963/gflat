@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQualifiedSpanTests
 {
     private const string Cell = """
-        using std;
+        using std; using std::Collections;
         struct Cell {
             public int* value;
             public Cell(int* storage) { value = storage; }

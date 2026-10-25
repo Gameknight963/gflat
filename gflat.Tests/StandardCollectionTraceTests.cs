@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardCollectionTraceTests
 {
     private const string OwnedPrelude = """
-        using std;
+        using std; using std::Collections;
         extern int puts(immutable(char*) message);
         int made = 0;
         int destroyed = 0;
@@ -207,7 +207,7 @@ public sealed class StandardCollectionTraceTests
         int[] lengths = [0, 1, 2, 7, 31, 32, 33, 63, 64, 65, 95, 96, 97, 127, 128, 129];
         var reference = new BitArray(0);
         var trace = new Trace("""
-            using std;
+            using std; using std::Collections;
             extern int puts(immutable(char*) message);
             bool MatchesBits(immutable(BitSet)* values, readonly(uint)* words, nuint length, nuint count) {
                 if (values.Length != length || values.CountSetBits() != count) return false;

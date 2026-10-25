@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardHashSetRelationTests
 {
     private const string Prelude = """
-        using std;
+        using std; using std::Collections;
         extern int puts(immutable(char*) message);
         int made = 0; int destroyed = 0; int allocations = 0; int releases = 0;
         bool failHash = false; bool failEquality = false;

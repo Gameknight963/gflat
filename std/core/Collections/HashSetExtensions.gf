@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Separate copying operation: ordinary HashSet<T> operations still accept
 // noncopyable keys without instantiating this helper.

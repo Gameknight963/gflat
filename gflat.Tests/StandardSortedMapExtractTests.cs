@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardSortedMapExtractTests
 {
     private const string Prelude="""
-        using std;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
         int allocations=0;int releases=0;int dead=0;int budget=-1;
         namespace Memory{
             public replace void*? Allocate(nuint size){allocations++;return malloc(size);}

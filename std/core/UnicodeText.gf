@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Owning counted conversions, separate from the allocation-free codecs.

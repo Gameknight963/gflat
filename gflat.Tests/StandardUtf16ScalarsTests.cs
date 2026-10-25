@@ -52,7 +52,7 @@ public sealed class StandardUtf16ScalarsTests
                 if (!second.MoveNext() || second.Current != 65u) return 5;
                 std::Utf16Scalars::Enumerator copy = second;
                 if (!copy.MoveNext() || copy.Current != 0u || second.Current != 65u) return 6;
-                std::IEnumerable<uint, std::Utf16Scalars::Enumerator>* source = &scalars;
+                std::Collections::IEnumerable<uint, std::Utf16Scalars::Enumerator>* source = &scalars;
                 std::Utf16Scalars::Enumerator iterator = source.GetEnumerator();
                 nuint index = 0;
                 while (iterator.MoveNext()) {

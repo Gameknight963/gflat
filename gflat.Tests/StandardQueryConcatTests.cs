@@ -33,7 +33,7 @@ public sealed class StandardQueryConcatTests
         }
         string hex = Convert.ToHexString(packet.ToArray()).ToLowerInvariant();
         Run($$$"""
-            using std;
+            using std; using std::Collections;
             int attempts = 0;
             int callbacks = 0;
             namespace Memory {
@@ -110,7 +110,7 @@ public sealed class StandardQueryConcatTests
     }
 
     private const string Owners = """
-        using std;
+        using std; using std::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int allocated = 0; int freed = 0;
         int starts = 0; int active = 0; int created = 0; int destroyed = 0;

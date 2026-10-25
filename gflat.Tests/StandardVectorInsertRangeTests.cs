@@ -39,7 +39,7 @@ public sealed class StandardVectorInsertRangeTests
                 }
             }
             Run("""
-                using std;
+                using std; using std::Collections;
                 extern void* fopen(readonly(char)* path, readonly(char)* mode);
                 extern nuint fread(void* buffer, nuint size, nuint count, void* stream);
                 extern int fclose(void* stream);
@@ -72,7 +72,7 @@ public sealed class StandardVectorInsertRangeTests
     }
 
     private const string Owners = """
-        using std;
+        using std; using std::Collections;
         int made=0; int dead=0; int budget=-1; int copies=0;
         int allocations=0; int releases=0; bool deny=false;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
@@ -149,7 +149,7 @@ public sealed class StandardVectorInsertRangeTests
     public void CopyRequirementAppliesOnlyWhenInsertRangeIsCalled()
     {
         const string program = """
-            using std;
+            using std; using std::Collections;
             struct Unique {
                 private int* destroyed;
                 public Unique(int* counter){destroyed=counter;}

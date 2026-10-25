@@ -8,7 +8,7 @@ public sealed class StandardStringResizeTests
         => Assert.Equal(0, CompilerTestHelper.Run(InterpolationTests.Sources(code), optimization).ExitCode);
 
     private const string Allocator = """
-        using std;
+        using std; using std::Collections;
         int allocations=0;int releases=0;bool deny=false;
         extern void*? malloc(nuint bytes);extern void free(void* storage);
         namespace Memory{

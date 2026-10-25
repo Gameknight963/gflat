@@ -5,7 +5,7 @@ Include `core/Collections/SpanWindows.gf` alongside `Span.gf`, `IEnumerable.gf`,
 The full standard library includes these sources automatically.
 
 ```csharp
-using std;
+using std; using std::Collections;
 int[5] samples = [1, 3, 5, 7, 9];
 Span<int> values = new(samples, 5);
 foreach (Span<int> pair in values.Windows(2)) {

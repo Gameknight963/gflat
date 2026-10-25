@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Materializes ordinary value copies; duplicate arguments are destroyed by Add.

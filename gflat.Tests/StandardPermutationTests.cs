@@ -266,7 +266,7 @@ public sealed class StandardPermutationTests
             """, optimization);
 
     private const string Memory = """
-        using std;
+        using std; using std::Collections;
         int attempts = 0;
         int allocated = 0;
         int released = 0;

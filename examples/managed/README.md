@@ -6,7 +6,7 @@ Run from the repository or nightly bundle root:
 gflat build examples/managed/managed.gfproj --run
 ```
 
-The example puts `Node^` references in a native `std::Vector<Node^>`. Each node
+The example puts `Node^` references in a native `std::Collections::Vector<Node^>`. Each node
 also references itself. Collection keeps the nodes alive while the vector holds
 them, then reclaims all 20 cycles after `Clear()` removes those references.
 

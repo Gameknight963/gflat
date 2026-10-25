@@ -1,12 +1,12 @@
 # SortedSet
 
-`std::SortedSet<T>` owns unique values in comparator order. It wraps
+`std::Collections::SortedSet<T>` owns unique values in comparator order. It wraps
 `SortedMap<T, byte>` and therefore stores its entries contiguously. Lookups use
 binary search; insertion and removal may move later entries. No hash or equality
 interface is required, and noncopyable owning values work.
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 int Compare(readonly(int)* left, readonly(int)* right)
 {

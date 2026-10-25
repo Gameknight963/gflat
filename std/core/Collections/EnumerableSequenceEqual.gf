@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 public bool SequenceEqual<T, LS, LE, RS, RE>(this Enumerable<T, LS, LE> left,

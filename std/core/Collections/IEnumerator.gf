@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // A value-producing iterator. Borrowing iterators can expose ref Current and
 // use the foreach pattern directly instead.

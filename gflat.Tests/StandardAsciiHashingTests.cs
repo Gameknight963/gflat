@@ -32,7 +32,7 @@ public sealed class StandardAsciiHashingTests
         }
         string hex = Convert.ToHexString(packet.ToArray());
         string program = $$$"""
-            using std;
+            using std; using std::Collections;
             int attempts = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { attempts++; return null; }
@@ -104,7 +104,7 @@ public sealed class StandardAsciiHashingTests
     public void MatchingBorrowedKeyEqualityFindsOriginalSpellingWithoutExtraAllocation(int optimization)
     {
         Run("""
-            using std;
+            using std; using std::Collections;
             extern void*? malloc(nuint count);
             extern void free(void* storage);
             int attempts = 0;

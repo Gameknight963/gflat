@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // The searched key is borrowed. Enumeration still follows ordinary T semantics:

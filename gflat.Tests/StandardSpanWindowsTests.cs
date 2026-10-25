@@ -11,7 +11,7 @@ public sealed class StandardSpanWindowsTests
     public void FullWindowsMatchIndependentSmallSequenceOracle(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std;extern int printf(readonly(char)* format,...);
+            using std; using std::Collections;extern int printf(readonly(char)* format,...);
             int main(){
                 int[9] data;for(nuint i=0;i<9;i++)data[i]=(int)(2*i+1);
                 for(nuint length=0;length<=9;length++)for(nuint width=1;width<=11;width++)for(nuint step=1;step<=12;step++){
@@ -40,7 +40,7 @@ public sealed class StandardSpanWindowsTests
     [InlineData(2)]
     public void AdjacentDifferencesAndLazySmoothingBorrowCapturedStorageWithoutAllocation(int optimization)
         => Run("""
-            using std;extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            using std; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* pointer);
             int allocations=0;int selected=0;
             namespace Memory{public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}public replace void Free(void* pointer) nothrow{free(pointer);}}
             int Average(Span<readonly(int)> window){selected++;return (window[0]+window[1]+window[2])/3;}
@@ -65,7 +65,7 @@ public sealed class StandardSpanWindowsTests
     [InlineData(2)]
     public void NoncopyableElementsAndShallowOrDeepQualifiedDataStayBorrowed(int optimization)
         => Run("""
-            using std;int copies=0;int dead=0;
+            using std; using std::Collections;int copies=0;int dead=0;
             struct Owner{
                 public int Id;public int* Pointer;
                 public Owner(int id,int* pointer){Id=id;Pointer=pointer;}
@@ -93,7 +93,7 @@ public sealed class StandardSpanWindowsTests
     [InlineData(2)]
     public void EmptyInvalidAndMaximumStepIteratorBoundariesAreChecked(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             int main(){
                 Span<int> empty=new();if(empty.Windows(1).GetEnumerator().MoveNext())return 1;
                 int value=42;Span<int> one=new(&value,1);int errors=0;
@@ -122,7 +122,7 @@ public sealed class StandardSpanWindowsTests
     public void WindowElementQualifiersRejectForbiddenWrites(bool deep)
     {
         string setup="""
-            using std;struct Item{public int Value;public int* Pointer;public Item(int* pointer){Value=0;Pointer=pointer;}}
+            using std; using std::Collections;struct Item{public int Value;public int* Pointer;public Item(int* pointer){Value=0;Pointer=pointer;}}
             int main(){int pointed=0;Item item=new(&pointed);Span<Item> source=new(&item,1);
             """;
         string loop=deep?"foreach(Span<immutable(Item)> window in source.AsImmutable().Windows(1)){BODY}":

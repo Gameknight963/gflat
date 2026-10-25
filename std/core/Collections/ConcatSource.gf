@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 struct ConcatSource<T, LeftSource, LeftIterator, RightSource, RightIterator>

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns its elements. Views and iterators borrow storage; structural mutation invalidates them.
 struct Stack<T> : IEnumerable<T, Stack<T>::Enumerator>

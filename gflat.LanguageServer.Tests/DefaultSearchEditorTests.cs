@@ -8,7 +8,7 @@ public sealed class DefaultSearchEditorTests
     [Fact]
     public void ProtectedSpanDefaultsUseActualInferredArgumentsAndTheirOwnDeclarations()
     {
-        const string text="using std;void Probe(){int[5] data=[1,2,2,4,9];Span<int> values=new(data,5);int key=2;nuint lower=LowerBound(values.AsImmutable(),&key);nuint upper=UpperBound(values.AsImmutable(),&key);nuint match=BinarySearch(values.AsImmutable(),&key);bool sorted=IsSorted(values.AsImmutable());}";
+        const string text="using std; using std::Collections;void Probe(){int[5] data=[1,2,2,4,9];Span<int> values=new(data,5);int key=2;nuint lower=LowerBound(values.AsImmutable(),&key);nuint upper=UpperBound(values.AsImmutable(),&key);nuint match=BinarySearch(values.AsImmutable(),&key);bool sorted=IsSorted(values.AsImmutable());}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="DefaultOrdering.gf");

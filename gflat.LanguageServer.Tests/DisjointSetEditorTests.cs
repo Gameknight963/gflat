@@ -8,7 +8,7 @@ public sealed class DisjointSetEditorTests
     [Fact]
     public void OwningGroupsExposeImmutableQueriesAndMutableUnionWithTheirSourceDefinitions()
     {
-        const string text = "using std;void Probe(){DisjointSet groups=new(8);bool changed=groups.Union(1,2);immutable(DisjointSet)* view=&groups;nuint root=view.Find(1);nuint size=view.SizeOf(2);bool same=view.Connected(1,2);nuint count=view.SetCount;}";
+        const string text = "using std; using std::Collections;void Probe(){DisjointSet groups=new(8);bool changed=groups.Union(1,2);immutable(DisjointSet)* view=&groups;nuint root=view.Find(1);nuint size=view.SizeOf(2);bool same=view.Connected(1,2);nuint count=view.SetCount;}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "DisjointSet.gf");

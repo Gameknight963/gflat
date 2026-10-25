@@ -8,7 +8,7 @@ public sealed class StandardStructuredIntegerHashTests
     public void StructuredIntegerFamiliesDistributeAndAvoidQuadraticMapEquality(int optimization)
     {
         string code = """
-            using std;
+            using std; using std::Collections;
             static class State { public static int EqualCalls; public static bool Wide; }
             nuint Hash<T:IHashable>(ref immutable(T) value)=>value.GetHashCode();
             struct Key:IHashable,IEquatable<Key> {

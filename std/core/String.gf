@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Owns bytes, conventionally UTF-8, without validating their encoding.

@@ -55,7 +55,7 @@ public sealed class StandardStableSortTests
                 }
             }
             Run("""
-                using std;
+                using std; using std::Collections;
                 extern void* fopen(readonly(char)* path, readonly(char)* mode);
                 extern nuint fread(void* data, nuint size, nuint count, void* stream);
                 extern int fclose(void* stream);
@@ -90,7 +90,7 @@ public sealed class StandardStableSortTests
     }
 
     private const string Owners = """
-        using std;
+        using std; using std::Collections;
         int made=0;int dead=0;int budget=-1;int comparisons=0;
         int allocations=0;int releases=0;int denyAfter=-1;bool inconsistent=false;
         extern void*? malloc(nuint bytes);extern void free(void* storage);

@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardStringShrinkTests
 {
     private const string Allocator = """
-        using std;
+        using std; using std::Collections;
         extern void*? malloc(nuint bytes);
         extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;bool deny=false;

@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 struct DistinctBySource<T, K : IHashable, Source, Iterator>

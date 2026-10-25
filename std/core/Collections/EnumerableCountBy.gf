@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Materializes owning keys. HashMap also requires the matching IEquatable<K>.

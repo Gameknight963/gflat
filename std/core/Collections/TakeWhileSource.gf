@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 struct TakeWhileSource<T, Source, Iterator>

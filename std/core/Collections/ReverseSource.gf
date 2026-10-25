@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 // Reusable source view; the buffer belongs to each independent iterator.

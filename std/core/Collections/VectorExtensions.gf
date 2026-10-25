@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Kept outside Vector<T>: only calls to this copying operation instantiate its
 // copy requirement. A vector of noncopyable values can still use its own methods.

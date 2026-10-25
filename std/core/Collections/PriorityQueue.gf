@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Owns a min-heap. The borrowed comparator returns negative for a higher priority.
 // Its ordering must remain consistent while elements are stored in this queue.

@@ -14,7 +14,7 @@ public sealed class StandardPathTests
     }
 
     private const string Equal = """
-        using std;
+        using std; using std::Collections;
         bool Equal(ref immutable(String) value, immutable(char*) expected) {
             nuint i = 0;
             while (expected[i] != '\0') {
@@ -31,7 +31,7 @@ public sealed class StandardPathTests
     public void RootClassificationDistinguishesWindowsDriveRelativePathsWithoutAllocating(int optimization)
     {
         string[] paths = ["", "a", "C", ":", "1:", "C:", "c:child", "Z:..", "C:/", @"C:\child", "/", @"\", "/child", @"\child", "//", @"\\", @"\\server", @"\\server\share", @"\\?\C:\file", "a/b", "a\\b", "../a", "./", "C::", "C:/../x"];
-        var program = new System.Text.StringBuilder("using std; namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* address) nothrow {} } int main(){");
+        var program = new System.Text.StringBuilder("using std; using std::Collections; namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* address) nothrow {} } int main(){");
         foreach (string path in paths)
         {
             bool drive = path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':';

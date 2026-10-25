@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Fisher-Yates shuffle. Borrows the elements and advances the caller's generator.
 // Relocation supports owning elements without invoking copy constructors.

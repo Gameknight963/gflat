@@ -19,7 +19,7 @@ public sealed class CollectionIterationTests
     [Fact]
     public void SpanVectorAndReadOnlyViewsIterateWithoutAllocating()
         => Run("""
-            using std;
+            using std; using std::Collections;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             extern int printf(immutable(char*) text, ...);
@@ -47,7 +47,7 @@ public sealed class CollectionIterationTests
     [Fact]
     public void IteratorChecksCurrentAndCanBorrowWritableElements()
         => Run("""
-            using std;
+            using std; using std::Collections;
             int main() {
                 int[1] buffer = [7]; Span<int> span = new Span<int>(buffer, 1);
                 Span<int>::Enumerator iterator = span.GetEnumerator();
@@ -67,7 +67,7 @@ public sealed class CollectionIterationTests
     [Fact]
     public void OwningStringsAreCopiedFromElements()
         => Run("""
-            using std;
+            using std; using std::Collections;
             int main() {
                 Vector<String> values = new Vector<String>(); values.Add(s"abc");
                 foreach (String item in values) { if (item.Data == values[(nuint)0].Data) return 3; item[(nuint)0] = 'z'; }
@@ -80,7 +80,7 @@ public sealed class CollectionIterationTests
     [Fact]
     public void MutableManagedElementsRemainMutableAndRootedDuringCollection()
         => Run("""
-            using std;
+            using std; using std::Collections;
             class Node { public int value; public Node() { value = 1; } }
             int main() {
                 Vector<Node^> values = new Vector<Node^>(); values.Add(new^ Node());
@@ -93,7 +93,7 @@ public sealed class CollectionIterationTests
     [Fact]
     public void DirectTemporaryVectorOwnsItsElementsUntilIterationFinishes()
         => Run("""
-            using std;
+            using std; using std::Collections;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             extern int printf(immutable(char*) text, ...);
@@ -114,7 +114,7 @@ public sealed class CollectionIterationTests
     public void NoncopyableElementsAreNotSilentlyConsumed()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources("""
-            using std;
+            using std; using std::Collections;
             struct Resource { ~Resource() {} }
             int main() { Vector<Resource> values = new Vector<Resource>(); foreach (Resource item in values) {} return 0; }
             """)));
@@ -125,7 +125,7 @@ public sealed class CollectionIterationTests
     public void ReadOnlyViewDoesNotExposeMutableManagedReferences()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources("""
-            using std;
+            using std; using std::Collections;
             class Node { public int value; }
             int main() {
                 Vector<Node^> values = new Vector<Node^>();

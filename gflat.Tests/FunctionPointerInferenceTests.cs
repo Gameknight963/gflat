@@ -25,7 +25,7 @@ public sealed class FunctionPointerInferenceTests
             new SourceFile("core/Collections/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/Enumerable.gf"))),
             new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Span.gf"))),
             new SourceFile("main.gf", """
-                using std;
+                using std; using std::Collections;
                 U Select<T, U>(this Span<T> source, U(T)* callback) => callback(source[(nuint)0]);
                 int main() {
                     int[1] buffer = [42]; Span<int> source = new Span<int>(buffer, 1);

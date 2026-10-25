@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std
 {
     namespace collector_detail

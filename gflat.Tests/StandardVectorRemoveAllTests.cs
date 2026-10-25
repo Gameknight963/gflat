@@ -30,7 +30,7 @@ public sealed class StandardVectorRemoveAllTests
             oracle.AddRange(expected);
         }
         string program = $$"""
-            using std;
+            using std; using std::Collections;
             extern void*? malloc(nuint bytes);extern void free(void* pointer);
             bool deny=false;int attempts=0;int divisor=1;int calls=0;
             namespace Memory{
@@ -61,7 +61,7 @@ public sealed class StandardVectorRemoveAllTests
     public void NoncopyableOwnersStayInitializedDuringPredicatesAndAreDestroyedExactlyOnce(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             int dead=0;int calls=0;int next=0;bool bad=false;Vector<Owner>*? watched=null;
             struct Owner{public int* Data;public Owner(int id){Data=new* int(id);}~Owner(){dead++;delete Data;}}
             bool Match(immutable(Owner)* value){
@@ -95,7 +95,7 @@ public sealed class StandardVectorRemoveAllTests
     public void EachThrowPositionRemovesOnlyPriorMatchesAndPreservesFailingAndUnvisitedOwners(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             class PredicateFailure:Exception{public int Index;public PredicateFailure(int index):base("predicate failed",77){Index=index;}}
             int failAt=0;int calls=0;int dead=0;
             struct Owner{public int* Data;public Owner(int id){Data=new* int(id);}~Owner(){dead++;delete Data;}}
@@ -129,7 +129,7 @@ public sealed class StandardVectorRemoveAllTests
     public void PredicateAndDestructorCollectionsKeepEveryLiveManagedOwnerRooted(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             class Node{public int Id;public Node^? Next;public Node(int id){Id=id;}}
             class PredicateFailure:Exception{public PredicateFailure():base("predicate failed",77){}}
             int dead=0;int calls=0;int failAt=-1;int expectedLive=12;bool bad=false;

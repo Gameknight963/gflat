@@ -308,7 +308,7 @@ String and collection operations; this is an ordinary helper, not a built-in
 formatting mode:
 
 ```csharp
-using std;
+using std; using std::Collections;
 
 String ToRadix(immutable(BigInteger)* input, int radix)
 {

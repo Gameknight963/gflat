@@ -1,3 +1,4 @@
+using std::Collections;
 namespace std;
 
 public T Min<T, S, E>(this Enumerable<T, S, E> source,

@@ -13,7 +13,7 @@ public sealed class StandardVectorShrinkTests
     }
 
     private const string Allocator = """
-        using std;
+        using std; using std::Collections;
         extern void*? malloc(nuint bytes);extern void free(void* pointer);
         int allocations=0;int frees=0;nuint lastSize=0;bool deny=false;
         namespace Memory{
@@ -107,7 +107,7 @@ public sealed class StandardVectorShrinkTests
     public void ShrinkingRelocatesManagedRootsAndEmptyReleaseDropsThem(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Collections;
             class Node{public int Id;public Node^? Next;public Node(int id){Id=id;}}
             void Fill(Vector<Node^>* values){for(int i=0;i<12;i++){Node^ node=new^ Node(i);node.Next=node;values.Add(node);}}
             int main(){Vector<Node^> values=new();values.Reserve(100);Fill(&values);

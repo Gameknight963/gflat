@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardMapRemoveOutputTests
 {
     private const string Owners="""
-        using std;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using std; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         bool capture=false;void*? backing=null;nuint backingBytes=0;void*? watchedStorage=null;int watchedFrees=0;
         int madeKeys=0;int deadKeys=0;int madeValues=0;int deadValues=0;int hashCalls=0;int equalCalls=0;int compareCalls=0;
@@ -194,7 +194,7 @@ public sealed class StandardMapRemoveOutputTests
     {
         foreach(bool sorted in new[]{false,true}) {
             string source="""
-                using std;
+                using std; using std::Collections;
                 public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
                 class Box {
                     public Box^? Self;public int Id;

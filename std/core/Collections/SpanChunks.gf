@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Collections;
 
 // Borrows contiguous storage; the final nonoverlapping chunk may be shorter.
 public struct SpanChunks<T> : IEnumerable<Span<T>, SpanChunks<T>::Enumerator>

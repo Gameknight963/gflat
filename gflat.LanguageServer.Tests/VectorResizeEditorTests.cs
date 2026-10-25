@@ -8,7 +8,7 @@ public sealed class VectorResizeEditorTests
     [Fact]
     public void CopyingResizeBindsConcreteFillAndNavigatesToItsExtension()
     {
-        const string text = "using std;void Work(){Vector<int> values=new();values.Resize(8,7);nuint count=values.Count;}";
+        const string text = "using std; using std::Collections;void Work(){Vector<int> values=new();values.Resize(8,7);nuint count=values.Count;}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path => new SourceFile(path,File.ReadAllText(path))).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path)=="VectorResize.gf");

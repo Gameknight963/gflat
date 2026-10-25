@@ -20,7 +20,7 @@ public sealed class StandardDateTests
         DateOnly[] dates=values.Select(DateOnly.FromDayNumber).ToArray();
         int[] offsets=dates.Select(date=>{int offset=random.Next(-3000,3001);return date.DayNumber+offset<0||date.DayNumber+offset>DateOnly.MaxValue.DayNumber?0:offset;}).ToArray();
         string code=$$"""
-            using std;int main(){char[13] output;nuint written=0;Date baseline=new();
+            using std; using std::Collections;int main(){char[13] output;nuint written=0;Date baseline=new();
              int[{{dates.Length}}] numbers=[{{string.Join(",",dates.Select(d=>d.DayNumber))}}];
              int[{{dates.Length}}] years=[{{string.Join(",",dates.Select(d=>d.Year))}}];
              int[{{dates.Length}}] months=[{{string.Join(",",dates.Select(d=>d.Month))}}];
@@ -55,7 +55,7 @@ public sealed class StandardDateTests
     [InlineData(2)]
     public void CalendarAndCallerWriterFormattingNeedNoHeapAllocation(int optimization)
         => Run("""
-            using std;int allocations=0;
+            using std; using std::Collections;int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;} public replace void Free(void* storage) nothrow{allocations++;}}
             int main(){Date value=new(2000,2,29);Date next=value.AddDays(1);
                 char[11] storage;BufferWriter output=new(storage,11);value.Format(&output);
@@ -68,7 +68,7 @@ public sealed class StandardDateTests
     [InlineData(2)]
     public void InvalidArgumentsThrowWithoutChangingValuesAndWriterInterpolationWorks(int optimization)
         => Run("""
-            using std;
+            using std; using std::Collections;
             struct FailWriter:ITextWriter{public void Write(readonly(char)* data,nuint count){throw new Exception("writer failed");}}
             int main(){
                 int caught=0;

@@ -34,6 +34,8 @@ int main()
 | `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
 | `NthElement<T>(Span<T>, nth, compare)` | Select a rank and partition around it without sorting either side. Optional `Collections/NthElement.gf`; see [rank selection](../../../docs/NTH_ELEMENT.md). |
 | `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/StableSort.gf`; see [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
+| `NextPermutation<T>(Span<T>, compare)` | Advance lexicographically, or wrap to the first ordering and return false. Optional `Collections/Permutations.gf`; see [arrangements](../../../docs/PERMUTATIONS.md). |
+| `PreviousPermutation<T>(Span<T>, compare)` | Move to the previous ordering, or wrap to the last ordering and return false. Same optional source. |
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
 | `LowerBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
@@ -208,6 +210,15 @@ access or comparison. Comparator failures can leave a rearranged initialized
 permutation. Ordinary comparator and collector-hook effects still apply.
 See [rank selection](../../../docs/NTH_ELEMENT.md) for the complete example,
 boundaries, borrowing rules, and bounded heapsort-fallback complexity.
+
+## Lexicographic arrangements
+
+Optional `Collections/Permutations.gf` provides `NextPermutation` and
+`PreviousPermutation` for bounded arrangement searches. Both relocate owners
+with public `Swap`/`Reverse`, use no heap scratch, and return false when wrapping.
+All comparisons precede mutation, so comparator errors leave the arrangement
+unchanged. See [lexicographic arrangements](../../../docs/PERMUTATIONS.md) for
+ordering, duplicate-key and borrowing contracts and the complete example.
 
 ## Default ordering
 

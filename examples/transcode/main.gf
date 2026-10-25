@@ -55,6 +55,6 @@ int main(int argc,char** argv)
         else output=FromUtf16Le(ref input);
         FileBytes::WriteAll(argv[3],ref output);
     }
-    catch(Exception* error) { Console::Error.WriteLine(error.GetMessage()); return 1; }
+    catch(ref Exception error) { Console::Error.WriteLine(error.GetMessage()); return 1; }
     return 0;
 }

@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 {
     if (argc != 2) { Console::Error.WriteLine("Usage: hexdump <file>"); return 2; }
     try { DumpFile(argv[1]); }
-    catch (IOException* error)
+    catch (ref IOException error)
     {
         Console::Error.Write("Unable to dump: ", 16);
         Console::Error.WriteLine(argv[1]);

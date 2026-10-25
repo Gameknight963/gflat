@@ -35,7 +35,7 @@ int main(int argc, char** argv)
         input.Close();
         Console::Flush();
     }
-    catch (Exception* error)
+    catch (ref Exception error)
     {
         nuint pathLength = 0;
         while (argv[1][pathLength] != '\0') pathLength++;

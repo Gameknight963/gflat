@@ -44,7 +44,7 @@ int main(int argc, char** argv)
         Console::Flush();
         return 0;
     }
-    catch (IOException* error)
+    catch (ref IOException error)
     {
         if (writingOutput) Console::Error.WriteLine("Unable to write search results.");
         else Console::Error.WriteLine("Unable to read file.");

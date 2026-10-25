@@ -62,7 +62,7 @@ int main(int argc, char** argv)
                 if (sha256) digest = FileHash::SHA256(argv[i]);
                 else ReadChecksums(argv[i], ref crc, ref adler);
             }
-            catch (IOException* error)
+            catch (ref IOException error)
             {
                 Console::Error.Write("Unable to read: ", 16);
                 Console::Error.WriteLine(argv[i]);
@@ -85,7 +85,7 @@ int main(int argc, char** argv)
         // Buffered writes can fail only when the pending bytes are flushed.
         Console::Flush();
     }
-    catch (IOException* error)
+    catch (ref IOException error)
     {
         Console::Error.WriteLine("Unable to write checksums");
         return 1;

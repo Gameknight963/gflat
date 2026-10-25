@@ -226,7 +226,7 @@ public struct JsonWriter
                 throw new JsonWriteException("Expected one complete JSON number without whitespace");
             if (reader.Read()) throw new JsonWriteException("Expected one complete JSON number without whitespace");
         }
-        catch (JsonParseException* error)
+        catch (ref JsonParseException error)
         {
             throw new JsonWriteException("Expected one complete JSON number without whitespace");
         }

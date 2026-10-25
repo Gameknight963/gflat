@@ -21,7 +21,7 @@ int main(int argc, char** argv)
         input.Close();
         Console::Flush();
     }
-    catch (Exception* error)
+    catch (ref Exception error)
     {
         Console::Error.WriteLine(error.GetMessage());
         return 1;

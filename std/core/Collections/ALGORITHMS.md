@@ -39,15 +39,15 @@ int main()
 | `UpperBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
-| `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. |
-| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. |
-| `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. |
-| `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. |
+| `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `DefaultEquality.gf`. |
+| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `DefaultOrdering.gf`. |
+| `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `DefaultOrdering.gf`. |
+| `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `DefaultOrdering.gf`. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
 | `FindLastIndex<T>(Span<immutable(T)>, predicate)` | Last matching index, or span length when no element matches. |
-| `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. |
-| `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. |
-| `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. |
+| `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. Optional `IEquatable<T>` default in `DefaultEquality.gf`. |
+| `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. Optional `IEquatable<T>` default in `DefaultEquality.gf`. |
+| `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. Optional `IEquatable<T>` default in `DefaultEquality.gf`. |
 | `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
 | `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
 
@@ -282,3 +282,58 @@ For selective sources these wrappers need `Collections/DefaultOrdering.gf`,
 `Collections/Algorithms.gf`, `Comparer.gf`, `IComparable.gf` and ordinary Span
 dependencies. The explicit-comparator algorithm source remains independent of
 DefaultOrdering/Comparer and still supports custom or descending comparisons.
+
+### Default ordering and equality contracts
+
+The optional `DefaultOrdering.gf` conveniences also provide `MinIndex(values)`,
+`MaxIndex(values)`, and `SequenceCompare(first, second)` for `IComparable<T>`.
+They forward to the existing callback algorithms through `Comparer<T>::Compare`.
+Min/max keep the first tied element and return `Length` for an empty span.
+Sequence comparison returns the first nonzero comparison **without changing its
+magnitude**; equal prefixes are ordered by length, returning -1, 0, or 1.
+
+```cpp
+using std;
+int main()
+{
+    int[4] data = [2, 5, 5, 1];
+    Span<int> values = new(data, 4);
+    nuint minimum = MinIndex(values.AsImmutable()); // 3
+    nuint maximum = MaxIndex(values.AsImmutable()); // 1: first equal maximum
+    int order = SequenceCompare(values.Slice(0, 1).AsImmutable(), values.AsImmutable()); // -1
+    if (minimum != 3 || maximum != 1 || order != -1) return 1;
+    return 0;
+}
+```
+
+The optional `DefaultEquality.gf` provides `SequenceEqual(first, second)`,
+`IndexOf(values, key)`, `LastIndexOf(values, key)`, and `Contains(values, key)`
+for `IEquatable<T>`, forwarding through `EqualityComparer<T>::Equals`.
+Searches borrow the key and elements. `IndexOf` and `LastIndexOf` return
+`Length` if no match exists; `Contains` returns false.
+Sequence equality rejects unequal lengths before comparing any elements.
+Default floating equality treats NaNs as equal and signed zeros as equal.
+
+```cpp
+using std;
+int main()
+{
+    int[4] data = [1, 2, 2, 4];
+    Span<int> values = new(data, 4);
+    int key = 2;
+    nuint first = IndexOf(values.AsImmutable(), &key); // 1
+    nuint last = LastIndexOf(values.AsImmutable(), &key); // 2
+    if (!Contains(values.AsImmutable(), &key)) return 1;
+    if (!SequenceEqual(values.AsImmutable(), values.AsImmutable())) return 2;
+    if (first != 1 || last != 2) return 3;
+    return 0;
+}
+```
+
+These helpers do not allocate or copy elements themselves. User comparisons
+and equality methods can allocate or throw; their original exceptions propagate,
+and these read-only algorithms do not modify either input. Existing overloads
+with explicit callbacks remain available without either optional source file.
+Selective source users need `Algorithms.gf`, `Span` and its dependencies, the
+appropriate `IComparable`/`Comparer` or `IEquatable`/`EqualityComparer` pair, and
+the chosen default convenience file. Ordinary std projects include them already.

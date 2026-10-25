@@ -18,3 +18,12 @@ public nuint BinarySearch<T : IComparable<T>>(Span<immutable(T)> values, immutab
 
 public bool IsSorted<T : IComparable<T>>(Span<immutable(T)> values)
     => std::IsSorted<T>(values, Comparer<T>::Compare);
+
+public nuint MinIndex<T : IComparable<T>>(Span<immutable(T)> values)
+    => std::MinIndex<T>(values, Comparer<T>::Compare);
+
+public nuint MaxIndex<T : IComparable<T>>(Span<immutable(T)> values)
+    => std::MaxIndex<T>(values, Comparer<T>::Compare);
+
+public int SequenceCompare<T : IComparable<T>>(Span<immutable(T)> first, Span<immutable(T)> second)
+    => std::SequenceCompare<T>(first, second, Comparer<T>::Compare);

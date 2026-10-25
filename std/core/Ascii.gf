@@ -80,6 +80,15 @@ bool EqualsIgnoreCase(readonly(char)* left, nuint leftLength,
     return CompareIgnoreCase(left, leftLength, right, rightLength) == 0;
 }
 
+// Counted ASCII-folded FNV-1a; equal folded byte sequences have equal hashes.
+nuint HashIgnoreCase(readonly(char)* data, nuint count) nothrow
+{
+    uint hash = 2166136261u;
+    for (nuint i = 0; i < count; i++)
+        hash = (hash ^ (uint)(byte)ToUpper(data[i])) * 16777619u;
+    return (nuint)hash;
+}
+
 // C-string overloads stop at the first null, with the same unsigned ASCII fold.
 int CompareIgnoreCase(readonly(char)* left, readonly(char)* right) nothrow
 {

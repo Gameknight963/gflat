@@ -79,3 +79,52 @@ and -1/0/1 ordering as the counted forms. Bytes after a terminator do not affect
 the result. Both pointers must designate readable null-terminated strings.
 These overloads are also `nothrow`, allocate nothing, and do not modify input.
 Use the counted forms to compare embedded null bytes as part of the text.
+
+## Case-insensitive hashing
+
+`Ascii::HashIgnoreCase(data, count)` returns a `nuint` hash using the same ASCII
+uppercase folding as counted `EqualsIgnoreCase`. It includes embedded NUL bytes
+and leaves bytes 128-255 unchanged. Input is borrowed and never modified; provide
+`count` readable bytes. Zero count reads no storage. The helper is `nothrow`,
+allocates nothing, and adds no source dependencies.
+
+Use this hash with the matching equality contract when preserving the original
+spelling of case-insensitive keys. This example borrows only static string literals,
+which remain alive for the entire map lifetime. Keys borrowing other storage must
+keep it alive and unchanged while stored in the map.
+
+```cpp
+using std;
+
+struct HeaderName : IHashable, IEquatable<HeaderName>
+{
+    private readonly(char)* text;
+    private nuint length;
+    public HeaderName(readonly(char)* bytes, nuint count)
+    {
+        text = bytes;
+        length = count;
+    }
+    public immutable nuint GetHashCode() nothrow
+        => Ascii::HashIgnoreCase(text, length);
+    public immutable bool Equals(immutable(HeaderName)* other) nothrow
+        => Ascii::EqualsIgnoreCase(text, length, other.text, other.length);
+}
+
+int main()
+{
+    HashMap<HeaderName, int> fields = new();
+    fields.Add(new HeaderName("Content-Type", 12), 7);
+    HeaderName query = new("content-type", 12);
+    int*? found = fields.Find(&query);
+    if (found == null) return 1;
+    if (*found! != 7) return 2;
+    return 0;
+}
+```
+
+The implementation currently uses 32-bit FNV-1a widened to `nuint`; its exact
+numeric result is not a persistent-format contract. Like `Hashing::Bytes`, it is
+not cryptographic and is unsuitable for keys supplied by hostile users because
+collisions can be deliberately chosen. Hash equality alone does not establish
+key equality: the map also calls the matching equality method.

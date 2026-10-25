@@ -74,7 +74,7 @@ implementation lives in `libc`.
 | Unicode | `Utf8`, incremental `Utf8Decoder`, borrowed `Utf8Scalars` | [UTF-8 buffers](../docs/UTF8.md), [chunked decoding](../docs/UTF8_DECODER.md), [scalar iteration](../docs/UTF8_SCALARS.md) |
 | Unicode scalar values | `Rune` | [Validated scalars and UTF-8 formatting](../docs/RUNE.md) |
 | UTF-16 and conversion | `Utf16`, incremental `Utf16Decoder`, borrowed `Utf16Scalars`, `UnicodeTranscoding` | [Code units and chunked decoding](../docs/UTF16.md), [scalar iteration](../docs/UTF16_SCALARS.md), [strict caller-buffer transcoding](../docs/UNICODE_TRANSCODING.md) |
-| ASCII bytes | `Ascii` classification, comparison, and case conversion | [Byte utilities](../docs/ASCII.md) |
+| ASCII bytes | `Ascii` classification, comparison, case conversion, and case-insensitive hashing | [Byte utilities](../docs/ASCII.md) |
 | Binary text | `Base64`, unpadded `Base64Url`, `Hex`; owning `Base64Text`, `Base64UrlText`, `HexText` helpers and writer `WriteHex` | [Caller-buffer, owning, and writer codecs](../docs/BINARY_CODECS.md) |
 | Padded Base32 | `Base32`, `Base32Text` | [Strict canonical caller-buffer codecs and owning results](../docs/BASE32.md) |
 | Streaming Base64 | `Base64Encoder`, `Base64Decoder` | [Encoding](../docs/BASE64_ENCODER.md), [strict decoding](../docs/BASE64_DECODER.md) through borrowed writers |

@@ -48,6 +48,20 @@ struct PseudoRandom
         return (int)((long)inclusiveMin + (long)this.NextULong(width));
     }
 
+    // All 64 signed bits; consumes exactly one complete generated word.
+    public long NextLong() nothrow => (long)this.NextULong();
+
+    public long NextLong(long exclusiveMax) => this.NextLong(0l, exclusiveMax);
+
+    // Unsigned subtraction/addition also covers widths greater than long.MaxValue.
+    public long NextLong(long inclusiveMin, long exclusiveMax)
+    {
+        if (inclusiveMin >= exclusiveMax) throw new Exception("Random range must not be empty");
+        ulong width = (ulong)exclusiveMax - (ulong)inclusiveMin;
+        ulong offset = this.NextULong(width);
+        return (long)((ulong)inclusiveMin + offset);
+    }
+
     // 24 random bits, producing a finite value in [0, 1).
     // Convert the selected bits directly; rounding NextDouble to float can yield 1.
     public float NextFloat() nothrow

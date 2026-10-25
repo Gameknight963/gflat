@@ -33,8 +33,12 @@ public sealed class NthElementEditorTests
         int argument=text.IndexOf("values,",use,StringComparison.Ordinal);Assert.True(argument>use);
         var help=Json(model.SignatureHelp(source.Path,argument+"values,".Length));
         Assert.Equal(1,help.GetProperty("activeParameter").GetInt32());
-        var signature=Assert.Single(help.GetProperty("signatures").EnumerateArray());
+        var signatures=help.GetProperty("signatures");
+        Assert.Equal(2,signatures.GetArrayLength());
+        Assert.Equal(new[]{2,3},signatures.EnumerateArray().Select(item=>item.GetProperty("parameters").GetArrayLength()).Order().ToArray());
+        var signature=signatures[help.GetProperty("activeSignature").GetInt32()];
         Assert.Equal(3,signature.GetProperty("parameters").GetArrayLength());
+        Assert.Contains("NthElement<int>",signature.GetProperty("label").GetString());
         Assert.Contains("nuint nth",signature.GetProperty("label").GetString());
         Assert.Contains("compare",signature.GetProperty("label").GetString());
     }

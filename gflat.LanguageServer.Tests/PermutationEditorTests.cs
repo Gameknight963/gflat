@@ -54,8 +54,13 @@ public sealed class PermutationEditorTests
             Assert.True(argument > use);
             var help = Json(model.SignatureHelp(source.Path, argument + "values,".Length));
             Assert.Equal(1, help.GetProperty("activeParameter").GetInt32());
-            var signature = Assert.Single(help.GetProperty("signatures").EnumerateArray());
+            var signatures = help.GetProperty("signatures");
+            Assert.Equal(2, signatures.GetArrayLength());
+            Assert.Equal(new[] { 1, 2 }, signatures.EnumerateArray()
+                .Select(item => item.GetProperty("parameters").GetArrayLength()).Order().ToArray());
+            var signature = signatures[help.GetProperty("activeSignature").GetInt32()];
             Assert.Equal(2, signature.GetProperty("parameters").GetArrayLength());
+            Assert.Contains(name + "<int>", signature.GetProperty("label").GetString());
             Assert.Contains("compare", signature.GetProperty("label").GetString());
         }
     }

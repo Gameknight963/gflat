@@ -1064,6 +1064,9 @@ int SmokeHashesAndViews() {
         long signedRange = signedRandom.NextLong(-5000000000l, 5000000001l);
         if (signedRange < -5000000000l || signedRange >= 5000000001l
             || signedRandom.NextLong(1l) != 0l) return 283;
+        BitSet occupiedSlots = new(65);
+        occupiedSlots.SetRange(0, 64, true);
+        if (occupiedSlots.FindIndex(false) != 64 || occupiedSlots.FindIndex(true, 64) != 65) return 284;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

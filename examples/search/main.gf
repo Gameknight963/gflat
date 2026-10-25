@@ -1,5 +1,20 @@
 using std;
 
+void EmitMatch(ref String line, immutable(char*) needle, bool endedWithLF, ref bool writingOutput)
+{
+    // Preserve bytes within a line; normalize its ending for Console output.
+    if (endedWithLF && line.Length != 0 && line.Data[line.Length - 1] == '\r')
+        line.Remove(line.Length - 1, 1);
+    // Shared byte-oriented String search; no regex or Unicode normalization.
+    if (line.Contains(needle))
+    {
+        writingOutput = true;
+        Console::WriteLine(ref line);
+        writingOutput = false;
+    }
+    line.Clear();
+}
+
 int main(int argc, char** argv)
 {
     if (argc != 3)
@@ -11,20 +26,19 @@ int main(int argc, char** argv)
     try
     {
         File input = File::OpenRead(argv[1]);
+        String line = new String();
+        char[4096] buffer;
+        while (true)
         {
-            File* source = &input;
-            FileLineSequence::Enumerator iterator = source.Lines().GetEnumerator();
-            while (iterator.MoveNext())
+            nuint count = input.Read(buffer, 4096);
+            if (count == 0) break;
+            for (nuint i = 0; i < count; i++)
             {
-                immutable(String)* line = &iterator.Current;
-                if (line.Contains(argv[2]))
-                {
-                    writingOutput = true;
-                    Console::WriteLine(line.Data, line.Length);
-                    writingOutput = false;
-                }
+                if (buffer[i] == '\n') EmitMatch(ref line, argv[2], true, ref writingOutput);
+                else line.Append(&buffer[i], 1);
             }
         }
+        if (line.Length != 0) EmitMatch(ref line, argv[2], false, ref writingOutput);
         input.Close();
         writingOutput = true;
         Console::Flush();

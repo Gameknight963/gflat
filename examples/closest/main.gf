@@ -27,7 +27,7 @@ int main(int argc, char** argv)
                     throw new Exception("Edit distance workspace length overflow");
                 required = shorter + 1;
             }
-            while (row.Count < required) row.Add((nuint)0);
+            if (row.Count < required) row.Resize(required, (nuint)0);
             Span<readonly(char)> candidate = new(argv[index], candidateLength);
             nuint distance = 0;
             if (!EditDistance::TryCompute(query, candidate, row.AsSpan(), ref distance))

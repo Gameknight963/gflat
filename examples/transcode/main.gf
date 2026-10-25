@@ -9,11 +9,11 @@ Vector<byte> ToUtf16Le(ref immutable(Vector<byte>) input)
         throw new Exception("Input is not valid UTF-8");
     if(units>((nuint)0-(nuint)1)/2)throw new Exception("Output length overflow");
     Vector<ushort> wide=new(); wide.Reserve(units);
-    for(nuint i=0;i<units;i++)wide.Add((ushort)0);
+    wide.Resize(units,(ushort)0);
     nuint written=0;
     UnicodeTranscoding::TryUtf8ToUtf16((readonly(char)*)bytes.Data!,bytes.Length,wide.AsSpan().Data!,units,ref written);
     Vector<byte> result=new(); result.Reserve(units*2);
-    for(nuint i=0;i<units*2;i++)result.Add((byte)0);
+    result.Resize(units*2,(byte)0);
     Span<byte> output=result.AsSpan();
     for(nuint i=0;i<units;i++)
         BinaryPrimitives::TryWriteUInt16LittleEndian(output.Data!+i*2,2,wide[i]);
@@ -36,7 +36,7 @@ Vector<byte> FromUtf16Le(ref immutable(Vector<byte>) input)
     if(!UnicodeTranscoding::TryGetUtf8Length(wide.AsImmutable().Data!,units,ref required))
         throw new Exception("Input is not valid UTF-16LE");
     Vector<byte> result=new(); result.Reserve(required);
-    for(nuint i=0;i<required;i++)result.Add((byte)0);
+    result.Resize(required,(byte)0);
     nuint written=0;
     UnicodeTranscoding::TryUtf16ToUtf8(wide.AsImmutable().Data!,units,(char*)result.AsSpan().Data!,required,ref written);
     return move result;

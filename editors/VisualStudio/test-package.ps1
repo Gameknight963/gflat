@@ -1054,6 +1054,10 @@ int SmokeHashesAndViews() {
         IpAddress endpoint = endpointNetwork.LastAddress;
         IpAddress expectedEndpoint = IpAddress::Parse("192.0.2.255");
         if (!endpoint.Equals(&expectedEndpoint) || !endpointNetwork.Contains(&endpoint)) return 279;
+        if (Ascii::HashIgnoreCase("Content-Type", 12) != Ascii::HashIgnoreCase("content-type", 12)) return 280;
+        TimeSpan fractionalDuration = TimeSpan::FromTicks(15000l);
+        if (fractionalDuration.TotalMilliseconds != 1.5d
+            || TimeSpan::FromDays(1l).TotalHours != 24d) return 281;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

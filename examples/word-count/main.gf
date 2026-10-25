@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     }
     HashMap<String, nuint> counts = new();
     try { ReadWords(argv[1], &counts); }
-    catch (IOException* error)
+    catch (ref IOException error)
     {
         Console::Error.WriteLine("Unable to read input file.");
         return 1;
@@ -52,17 +52,15 @@ int main(int argc, char** argv)
         {
             immutable(String)* key = iterator.Current.Key;
             nuint count = *iterator.Current.ValueImmutable;
-            String line = s"";
-            line.Append(key);
-            line.Append(':');
-            line.Append(' ');
-            count.Format(&line);
-            Console::WriteLine(ref line);
+            Console::Write(key.Data, key.Length);
+            Console::Write(": ", 2);
+            count.Format(Console::Out);
+            Console::WriteLine();
         }
         Console::Flush();
         return 0;
     }
-    catch (IOException* error)
+    catch (ref IOException error)
     {
         Console::Error.WriteLine("Unable to write word counts.");
         return 1;

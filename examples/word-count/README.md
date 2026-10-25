@@ -14,6 +14,9 @@ builds the current word. Lookups borrow it; only previously unseen words allocat
 map keys. The map owns every key, and file and buffer resources are released on
 ordinary return and exceptions. No managed allocations are needed.
 
+Output writes borrowed key bytes and formats each count directly to the console;
+it does not construct a temporary String for each row.
+
 Count rows go to stdout, and usage and IO diagnostics go to stderr. The tool
 flushes stdout before reporting success. Exit codes are 0 on success, 1 on input
 or output IO failure, and 2 for invalid arguments. Output failures are reported

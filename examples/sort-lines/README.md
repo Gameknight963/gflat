@@ -12,10 +12,10 @@ gflat build examples/sort-lines/sort-lines.gfproj -o artifacts/sort-lines.exe
 
 The tool holds every line in a `Vector<String>`, so memory use grows with the
 complete input. Each read String is moved into the vector, and the input local
-is reinitialized for the next line. `Sort` moves those owners in place using
-`String.CompareTo`; it creates no copies of their byte buffers. The algorithm
-is unstable, which does not affect the output because equal lines are identical.
-No collector or external sorting is used.
+is reinitialized for the next line. The default `Sort` overload moves those owners
+in place through `IComparable<String>` and `String.CompareTo`; it creates no copies
+of their byte buffers. The algorithm is unstable, which does not affect the output
+because equal lines are identical. No collector or external sorting is used.
 
 `Console::TryReadLine` removes LF/CRLF endings from the host text-stream bytes
 and accepts a final unterminated line. A bare CR in that stream remains data.

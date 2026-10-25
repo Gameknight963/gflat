@@ -1,8 +1,5 @@
 using std;
 
-int CompareLines(immutable(String)* left, immutable(String)* right) nothrow
-    => left.CompareTo(right);
-
 int main()
 {
     try
@@ -14,7 +11,7 @@ int main()
             lines.Add(move line);
             line = new String();
         }
-        Sort(lines.AsSpan(), &CompareLines);
+        Sort(lines.AsSpan());
         for (nuint i = 0; i < lines.Count; i++)
             Console::WriteLine(lines[i].Data, lines[i].Length);
         Console::Flush();

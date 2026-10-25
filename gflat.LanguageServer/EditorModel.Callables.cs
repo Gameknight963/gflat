@@ -93,6 +93,8 @@ public sealed partial class EditorModel
             if (token == null) continue;
             Symbol selected;
             if (extension != null) selected = extension;
+            else if (call != null && checker.GetGenericCallTypeArguments(call) is { } arguments)
+                selected = BindCallable(source, target, interfaceOwner, arguments);
             else if (!bound.TryGetValue(target, out selected!)) bound[target] = selected = BindCallable(source, target, interfaceOwner);
             boundCallableReferences[token] = selected;
             boundCallableFamilies[token] = selected.BoundExtension && call?.Callee is MemberAccessExpression member
@@ -157,7 +159,8 @@ public sealed partial class EditorModel
         return target == null ? source : BindCallable(source, target);
     }
 
-    private Symbol BindCallable(Symbol source, MethodDeclaration target, string? interfaceOwner = null)
+    private Symbol BindCallable(Symbol source, MethodDeclaration target, string? interfaceOwner = null,
+        IReadOnlyList<TypeExpression>? genericArguments = null)
     {
         if (ReferenceEquals(source.Syntax.Node, target) || snapshot.Checker is not { } checker) return source;
         if (checker.GetPrimitiveMethodSource(target) != null)
@@ -172,6 +175,9 @@ public sealed partial class EditorModel
             owner = checker.DisplayName(identity);
             BindDisplayOwnerArguments(source, identity, bindings, definition.GenericParameters.Select(parameter => parameter.Name).ToHashSet());
         }
+        if (genericArguments?.Count == definition.GenericParameters.Count)
+            foreach (var (parameter, argument) in definition.GenericParameters.Zip(genericArguments))
+                bindings[parameter.Name] = argument;
         Infer(snapshot.DeclaredTypes.GetValueOrDefault(definition) ?? definition.ReturnType, target.ReturnType);
         foreach (var (original, concrete) in definition.Parameters.Zip(target.Parameters))
             Infer(snapshot.DeclaredTypes.GetValueOrDefault(original) ?? original.Type, concrete.Type);

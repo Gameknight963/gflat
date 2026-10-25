@@ -7,6 +7,12 @@ public partial class TypeChecker
     public NamedTypeExpression? GetGenericTypeOrigin(string identity) => extensionGenericTypeOrigins.GetValueOrDefault(identity);
     public bool IsResolvedTypeIdentity(TypeExpression type) => type is NamedTypeExpression { IsResolvedNominal: true };
 
+    // Use the checker's chosen arguments: protection in a formal parameter can
+    // erase distinctions that cannot be recovered from the closed signature.
+    public IReadOnlyList<TypeExpression>? GetGenericCallTypeArguments(CallExpression call) =>
+        extensionCalls.TryGetValue(call, out var lowered) ? GetGenericCallTypeArguments(lowered) :
+        selectedGenericCallArguments.GetValueOrDefault(call);
+
     // Preserve a source parameter as itself. The caller supplies its already
     // known, nongeneric interface; this query never binds or specializes a type.
     public TypeExpression? CreateOpenGenericParameterView(AstNode definition, string name, TypeExpression? knownConstraint)

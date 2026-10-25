@@ -711,8 +711,10 @@ public sealed partial class EditorModel
         }
         if (symbol.Parameters != null)
         {
-            int count = Candidates(path, offset, index).Where(s => s.Parameters != null && s.Qualified == symbol.Qualified)
-                .Append(symbol).DistinctBy(Detail).Count() - 1;
+            int count = (boundCallableFamilies.GetValueOrDefault(tokens[path][index]) is { } family
+                ? family.Length
+                : Candidates(path, offset, index).Where(s => s.Parameters != null && s.Qualified == symbol.Qualified)
+                    .Append(symbol).DistinctBy(Detail).Count()) - 1;
             if (count > 0) details = [.. details, new("", $"+{count} " + (count == 1 ? "overload" : "overloads"))];
         }
         string markdown = "```gflat\n" + string.Concat(parts.Select(p => p.Text)) + "\n```" + (details.Length == 0 ? "" : "\n\n" + string.Join("  \n", details.Select(d => d.Markdown)));

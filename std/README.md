@@ -136,6 +136,7 @@ Applications reference the Windows or Linux source project explicitly.
 - [Decode JSON string lines](../examples/unquote-lines/README.md): strict validation and in-place decoding with a reusable buffer.
 - [Check JSON documents](../examples/json-check/README.md): forward-only validation and nesting statistics without building a DOM.
 - [Minify JSON documents](../examples/json-minify/README.md): validate first, then write compact JSON while preserving duplicate names, property order, and number spelling.
+- [Pretty-print JSON documents](../examples/json-pretty/README.md): validate first, then indent original token bytes with a selectable width.
 - [Number statistics](../examples/number-stats/README.md): bounded stdin lines, borrowed ASCII trimming, strict integer parsing, and an exact 128-bit running sum.
 - [Integer arithmetic](../examples/big-calc/README.md): exact BigInteger calculations, greatest common divisors, and least common multiples.
 - [Fraction arithmetic](../examples/ratio-calc/README.md): normalize and calculate with exact Rational values from integer or fraction operands.

@@ -18,6 +18,7 @@
   <Project Path="json-check/json-check.gfproj" />
   <Project Path="json-get/json-get.gfproj" />
   <Project Path="json-minify/json-minify.gfproj" />
+  <Project Path="json-pretty/json-pretty.gfproj" />
   <Project Path="managed/managed.gfproj" />
   <Project Path="number-stats/number-stats.gfproj" />
   <Project Path="pathfinding/pathfinding.gfproj" />

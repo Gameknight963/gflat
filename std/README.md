@@ -44,6 +44,7 @@ implementation lives in `libc`.
 | Connected components | `DisjointSet` | [Fixed-index groups and allocation-free unions and queries](../docs/DISJOINT_SET.md) |
 | Contracts | `IHashable`, `IEquatable<T>`, `IComparable<T>` | [Primitive and String implementations](../docs/HASHING.md) |
 | Algorithms | `Sort`, `StableSort`, `Reverse`, `Rotate`, `Shuffle`, `Partition`, bounds/search helpers, `Comparer<T>` | [Span algorithms](core/Collections/ALGORITHMS.md) |
+| Rank selection | `NthElement<T>(span, nth, compare)` | [In-place selection and partition guarantees](../docs/NTH_ELEMENT.md) |
 | Queries | `IEnumerable<T,E>`, `Where`, `Select`, `Skip`, `Take`, `SkipWhile`, `TakeWhile`, aggregates and `TryFirst`/`TryLast`/`TrySingle` | [Lazy queries](core/Collections/README.md) |
 | Lazy uniqueness | `Distinct` | [First-occurrence order with scoped hash storage](../docs/QUERY_DISTINCT.md) |
 | Lazy uniqueness by key | `DistinctBy(selector)` | [First whole values for selected keys](../docs/QUERY_DISTINCT_BY.md) |

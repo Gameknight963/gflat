@@ -32,6 +32,7 @@ int main()
 | --- | --- |
 | `Swap<T>(ref T left, ref T right)` | Exchange two initialized mutable values by relocation; the same storage is a no-op. |
 | `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
+| `NthElement<T>(Span<T>, nth, compare)` | Select a rank and partition around it without sorting either side. Optional `Collections/NthElement.gf`; see [rank selection](../../../docs/NTH_ELEMENT.md). |
 | `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/StableSort.gf`; see [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
@@ -194,6 +195,19 @@ Use LowerBound instead when you need the insertion position for a missing key.
 Empty spans do not call the comparator. Elements and the key are borrowed; a
 throwing comparator propagates without modifying the span. The callback must
 keep both alive and must not mutate either through another alias.
+
+## Rank selection
+
+Optional `Collections/NthElement.gf` adds the explicit-comparer `NthElement`
+algorithm, reusing `Swap` and `Sort` from `Collections/Algorithms.gf`. It relocates
+values in place without copying owners or allocating heap scratch storage. On
+success, the selected value has the specified sorted rank, with all earlier
+values no greater and all later values no less. The partitions are not sorted
+or stable. `nth == Length` is a no-op; larger indices throw before storage
+access or comparison. Comparator failures can leave a rearranged initialized
+permutation. Ordinary comparator and collector-hook effects still apply.
+See [rank selection](../../../docs/NTH_ELEMENT.md) for the complete example,
+boundaries, borrowing rules, and bounded heapsort-fallback complexity.
 
 ## Default ordering
 

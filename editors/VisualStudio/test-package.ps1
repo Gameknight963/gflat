@@ -36,7 +36,7 @@ try {
     foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
-    foreach ($source in @('std/core/Version.gf', 'std/core/DateTimeOffset.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+    foreach ($source in @('std/core/Version.gf', 'std/core/DateTimeOffset.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/Collections/EnumerableOrder.gf', 'std/core/Collections/OrderSource.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
     foreach ($platform in @('windows', 'linux')) {
@@ -1014,6 +1014,16 @@ int SmokeHashesAndViews() {
         DateTimeOffset epochSecond = DateTimeOffset::FromUnixTimeSeconds(-1l);
         if (preEpoch.ToUnixTimeMilliseconds() != -1l || preEpoch.ToUnixTimeSeconds() != -1l
             || epochSecond.ToUnixTimeMilliseconds() != -1000l || epochSecond.Offset.Ticks != 0l) return 270;
+        Vector<int> orderedInput = keyedView.AsEnumerable().Order().ToVector();
+        Vector<int> descendingInput = keyedView.AsEnumerable()
+            .Order((immutable(int)* first, immutable(int)* second) => *second - *first).ToVector();
+        if (orderedInput.Count != 4 || orderedInput[0] != 1 || orderedInput[3] != 4
+            || descendingInput.Count != 4 || descendingInput[0] != 4 || descendingInput[3] != 1) return 271;
+        DateTimeOffset laterStamp = offsetStamp.Add(TimeSpan::FromMinutes(15l));
+        TimeSpan elapsedStamp = laterStamp.Difference(offsetStamp);
+        DateTimeOffset restoredStamp = laterStamp.Subtract(elapsedStamp);
+        if (elapsedStamp.Ticks != 9000000000l || laterStamp.Offset.Ticks != offsetStamp.Offset.Ticks
+            || !restoredStamp.EqualsExact(&offsetStamp)) return 272;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

@@ -56,8 +56,9 @@ The method neither mutates input bytes nor retains pointers outside the result.
 
 Parsing may allocate reader nesting stacks and one reusable `String` for decoded
 segments. There is no allocation-free guarantee, DOM, or owning result copy.
-Validation adds one full pass; descent rescans parent values, with worst-case
-work O(document length × (pointer depth + 1)).
+Validation adds one full document pass and scans the complete pointer. Descent
+rescans parent values, with worst-case total work
+O(pointer length + document length × (pointer depth + 1)).
 
 Selective source users add `core/JsonPointer.gf` with `JsonReader`, `JsonString`,
 `Utf8`, `String`, and `Span` and their normal dependencies, including JSON token

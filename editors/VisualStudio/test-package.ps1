@@ -1010,6 +1010,10 @@ int SmokeHashesAndViews() {
         DateTimeOffset utcStamp = offsetStamp.ToOffset(TimeSpan::FromTicks(0l));
         if (!offsetStamp.Equals(&utcStamp) || offsetStamp.EqualsExact(&utcStamp)
             || utcStamp.DateTime.TimeOfDay.Hour != 0) return 269;
+        DateTimeOffset preEpoch = DateTimeOffset::FromUnixTimeMilliseconds(-1l);
+        DateTimeOffset epochSecond = DateTimeOffset::FromUnixTimeSeconds(-1l);
+        if (preEpoch.ToUnixTimeMilliseconds() != -1l || preEpoch.ToUnixTimeSeconds() != -1l
+            || epochSecond.ToUnixTimeMilliseconds() != -1000l || epochSecond.Offset.Ticks != 0l) return 270;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

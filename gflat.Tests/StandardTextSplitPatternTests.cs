@@ -61,7 +61,10 @@ public sealed class StandardTextSplitPatternTests
                         int expected=FileBinary::ReadInt32LittleEndian(&input);
                         for(nuint i=0;i<8195;i++)text[i]='?';for(nuint i=0;i<1028;i++)pattern[i]='!';
                         input.ReadExactly(&text[1],(nuint)length);input.ReadExactly(&pattern[1],(nuint)width);
-                        char[8195] original=text;char[1028] originalPattern=pattern;
+                        char[8195] original;
+                        char[1028] originalPattern;
+                        for(nuint i=0;i<8195;i++)original[i]=text[i];
+                        for(nuint i=0;i<1028;i++)originalPattern[i]=pattern[i];
                         Span<readonly(char)> source=new(&text[1],(nuint)length);
                         Span<readonly(char)> separator=new(&pattern[1],(nuint)width);
                         if(!Check(source,separator,expected,false)||!Check(source,separator,expected,true))return 1;

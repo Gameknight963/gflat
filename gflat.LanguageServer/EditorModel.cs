@@ -646,6 +646,8 @@ public sealed partial class EditorModel
         options ??= new();
         var query = QueryHover(path, offset, presentation, options.ShowTypeLayout);
         if (query != null) return query;
+        var inferred = InferredTypeHover(path, offset, presentation, options.ShowTypeLayout);
+        if (inferred != null) return inferred;
         var compound = CompoundTypeHover(path, offset, presentation, options.ShowTypeLayout);
         if (compound != null) return compound;
         int index = TokenAt(path, offset);

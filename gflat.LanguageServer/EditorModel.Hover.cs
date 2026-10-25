@@ -361,11 +361,33 @@ public sealed partial class EditorModel
         var syntax = nodes[path].Where(n => n.Node is TypeExpression && Contains(n, offset))
             .OrderByDescending(n => n.Span.Length).FirstOrDefault();
         if (syntax?.Node is not TypeExpression type || type is NamedTypeExpression && !type.IsReadOnlyValue) return null;
+        return TypeHover(type, syntax.Span, path, offset, presentation, showLayout);
+    }
+
+    private object? InferredTypeHover(string path, int offset, VisualStudioHover? presentation, bool showLayout)
+    {
+        int index = TokenAt(path, offset);
+        if (index < 0 || tokens[path][index] is not { Kind: TokenKind.Identifier, Text: "var" } token ||
+            snapshot.Checker is not { } checker) return null;
+        // Capture retains the original var node even after checking replaces the
+        // declaration's Type. Match that source token, not initializer syntax.
+        var syntax = nodes[path].FirstOrDefault(node => node.Span.Start == token.Start &&
+            node.Node is NamedTypeExpression { Name: "var", Namespace: null } &&
+            node.Parent?.Node is VariableDeclaration { IsTypeInferred: true });
+        if (syntax?.Parent?.Node is not VariableDeclaration declaration) return null;
+        var type = checker.GetType(declaration);
+        if (TypeChecker.TypeName(type) is "<error>" or "var") return null;
+        return TypeHover(type, token.Span, path, offset, presentation, showLayout);
+    }
+
+    private object TypeHover(TypeExpression type, SourceSpan span, string path, int offset,
+        VisualStudioHover? presentation, bool showLayout)
+    {
         var parts = TypeDisplayParts(type, path, offset);
         string text = string.Concat(parts.Select(p => p.Text));
         var layout = showLayout ? TypeLayoutDetails(type) : [];
         return new HoverResult(new("markdown", "```gflat\n" + text + "\n```" + (layout.Length == 0 ? "" : "\n\n" + string.Join("  \n", layout.Select(d => d.Markdown)))),
-            Workspace.ToRange(syntax.Span), presentation?.Render(parts.ToArray(), layout, "type.public"));
+            Workspace.ToRange(span), presentation?.Render(parts.ToArray(), layout, "type.public"));
     }
 
     private DisplayPart[] TypeDisplayParts(TypeExpression type, string path, int offset)

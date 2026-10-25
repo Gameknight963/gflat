@@ -2,8 +2,8 @@
 
 `ratio-calc <left> <operator> <right>` performs one exact Rational operation:
 `+`, `-`, `*`, or `/`. Each operand is either an integer or a single
-`numerator/denominator` pair. An application-local helper combines counted
-BigInteger parsing with Rational construction.
+`numerator/denominator` pair. Rational parsing validates counted BigInteger parts
+and constructs canonical values.
 
 ```powershell
 gflat build examples/ratio-calc/ratio-calc.gfproj -o artifacts/ratio-calc.exe

@@ -1,28 +1,5 @@
 using std;
 
-// Application syntax only; Rational deliberately has no parser.
-private bool TryRead(readonly(char)* text, ref Rational result)
-{
-    nuint length = CString::Length(text);
-    nuint separator = length;
-    for (nuint index = 0; index < length; index++)
-    {
-        if (text[index] == '/')
-        {
-            if (separator != length) return false;
-            separator = index;
-        }
-    }
-    BigInteger numerator = new();
-    BigInteger denominator = new();
-    if (!BigInteger::TryParse(text, separator, ref numerator)) return false;
-    if (separator == length) denominator = new(1l);
-    else if (!BigInteger::TryParse(text + separator + 1, length - separator - 1, ref denominator)
-        || denominator.Sign == 0) return false;
-    result = new Rational(move numerator, move denominator);
-    return true;
-}
-
 int main(int argc, char** argv)
 {
     if (argc != 4)
@@ -45,7 +22,7 @@ int main(int argc, char** argv)
     {
         Rational left = new();
         Rational right = new();
-        if (!TryRead(argv[1], ref left) || !TryRead(argv[3], ref right))
+        if (!Rational::TryParse(argv[1], ref left) || !Rational::TryParse(argv[3], ref right))
         {
             Console::Error.WriteLine("ratio-calc: operands must be integers or numerator/denominator with a nonzero denominator");
             return 2;

@@ -39,9 +39,7 @@ public sealed class StandardHashSetRelationTests
     public void ReadOnlyRelationsMatchDotNetWithoutCopyingOrAllocating(int optimization, bool collisions)
     {
         var random = new Random(73119);
-        string prelude = collisions ? Prelude : Prelude.Replace("return 1;", "return (nuint)(Value * 17);", StringComparison.Ordinal);
-        var source = new StringBuilder(prelude).AppendLine("int main() {");
-        int created = 0;
+        var packet = new List<byte>();
         for (int scenario = 0; scenario < 80; scenario++)
         {
             int[] leftValues = scenario == 0 ? [] : Enumerable.Range(0, random.Next(24)).Select(_ => random.Next(16)).ToArray();
@@ -53,35 +51,91 @@ public sealed class StandardHashSetRelationTests
                 _ => Enumerable.Range(0, random.Next(24)).Select(_ => random.Next(16)).ToArray()
             };
             HashSet<int> left = [.. leftValues], right = [.. rightValues];
-            source.AppendLine("{ HashSet<Key> left = new(); HashSet<Key> right = new();");
-            foreach (int value in leftValues) source.AppendLine($"left.Add(new Key({value}));");
-            foreach (int value in rightValues) source.AppendLine($"right.Add(new Key({value}));");
-            created += leftValues.Length + rightValues.Length;
-            source.AppendLine("immutable(HashSet<Key>)* a = &left; immutable(HashSet<Key>)* b = &right;");
-            source.AppendLine("int beforeAllocations = allocations; int beforeReleases = releases;");
-            Relations("a", "b", left, right, scenario);
-            Relations("b", "a", right, left, scenario);
-            Relations("a", "a", left, left, scenario);
-            Check($"made == {created} && destroyed == {created - left.Count - right.Count}", $"keys unchanged {scenario}");
-            Check("allocations == beforeAllocations && releases == beforeReleases", $"allocation-free {scenario}");
-            source.AppendLine("}");
-            Check($"made == {created} && destroyed == {created}", $"keys destroyed {scenario}");
+            packet.Add(checked((byte)leftValues.Length));
+            packet.Add(checked((byte)rightValues.Length));
+            packet.Add(checked((byte)left.Count));
+            packet.Add(checked((byte)right.Count));
+            packet.AddRange(leftValues.Select(value => checked((byte)value)));
+            packet.AddRange(rightValues.Select(value => checked((byte)value)));
+            packet.Add(RelationMask(left, right));
+            packet.Add(RelationMask(right, left));
+            packet.Add(RelationMask(left, left));
         }
-        Check("allocations == releases", "balanced allocations");
-        source.AppendLine("return 0; }");
-        Run(source.ToString(), optimization);
 
-        void Relations(string a, string b, HashSet<int> left, HashSet<int> right, int scenario)
+        string hex = Convert.ToHexString(packet.ToArray());
+        string prelude = collisions ? Prelude : Prelude.Replace("return 1;", "return (nuint)(Value * 17);", StringComparison.Ordinal);
+        string source = prelude + $$$"""
+            int Nibble(char value) {
+                if (value <= '9') return (int)value - (int)'0';
+                return (int)value - (int)'A' + 10;
+            }
+            int ReadByte(readonly(char)* data, ref nuint position) {
+                int value = Nibble(data[position]) * 16 + Nibble(data[position + 1]);
+                position += 2;
+                return value;
+            }
+            bool CheckRelations(immutable(HashSet<Key>)* left, immutable(HashSet<Key>)* right, int expected) {
+                if (left.SetEquals(right) != ((expected & 1) != 0)) return false;
+                if (left.IsSubsetOf(right) != ((expected & 2) != 0)) return false;
+                if (left.IsSupersetOf(right) != ((expected & 4) != 0)) return false;
+                if (left.IsProperSubsetOf(right) != ((expected & 8) != 0)) return false;
+                if (left.IsProperSupersetOf(right) != ((expected & 16) != 0)) return false;
+                if (left.Overlaps(right) != ((expected & 32) != 0)) return false;
+                return true;
+            }
+            int main() {
+                readonly(char)* packet = "{{{hex}}}";
+                nuint position = 0;
+                int created = 0;
+                for (int scenario = 0; scenario < 80; scenario++) {
+                    int leftCount = ReadByte(packet, ref position);
+                    int rightCount = ReadByte(packet, ref position);
+                    int leftUnique = ReadByte(packet, ref position);
+                    int rightUnique = ReadByte(packet, ref position);
+                    {
+                        HashSet<Key> left = new();
+                        HashSet<Key> right = new();
+                        for (int i = 0; i < leftCount; i++) left.Add(new Key(ReadByte(packet, ref position)));
+                        for (int i = 0; i < rightCount; i++) right.Add(new Key(ReadByte(packet, ref position)));
+                        created += leftCount + rightCount;
+                        int forward = ReadByte(packet, ref position);
+                        int backward = ReadByte(packet, ref position);
+                        int self = ReadByte(packet, ref position);
+                        immutable(HashSet<Key>)* a = &left;
+                        immutable(HashSet<Key>)* b = &right;
+                        int beforeAllocations = allocations;
+                        int beforeReleases = releases;
+                        if (!CheckRelations(a, b, forward) || !CheckRelations(b, a, backward) || !CheckRelations(a, a, self)) {
+                            puts("relation mismatch"); return scenario + 1;
+                        }
+                        if (made != created || destroyed != created - leftUnique - rightUnique) {
+                            puts("keys changed"); return scenario + 1;
+                        }
+                        if (allocations != beforeAllocations || releases != beforeReleases) {
+                            puts("relations allocated or released"); return scenario + 1;
+                        }
+                    }
+                    if (made != created || destroyed != created) {
+                        puts("keys not destroyed"); return scenario + 1;
+                    }
+                }
+                if (position != {{{hex.Length}}} || allocations != releases) return 81;
+                return 0;
+            }
+            """;
+        Run(source, optimization);
+
+        static byte RelationMask(HashSet<int> left, HashSet<int> right)
         {
-            (string Method, bool Expected)[] relations = [
-                ("SetEquals", left.SetEquals(right)), ("IsSubsetOf", left.IsSubsetOf(right)),
-                ("IsSupersetOf", left.IsSupersetOf(right)), ("IsProperSubsetOf", left.IsProperSubsetOf(right)),
-                ("IsProperSupersetOf", left.IsProperSupersetOf(right)), ("Overlaps", left.Overlaps(right))];
-            foreach (var (method, expected) in relations)
-                Check($"{a}.{method}({b}) == {(expected ? "true" : "false")}", $"{method} {a}/{b} {scenario}");
+            int mask = 0;
+            if (left.SetEquals(right)) mask |= 1;
+            if (left.IsSubsetOf(right)) mask |= 2;
+            if (left.IsSupersetOf(right)) mask |= 4;
+            if (left.IsProperSubsetOf(right)) mask |= 8;
+            if (left.IsProperSupersetOf(right)) mask |= 16;
+            if (left.Overlaps(right)) mask |= 32;
+            return checked((byte)mask);
         }
-        void Check(string condition, string label)
-            => source.AppendLine($"if (!({condition})) {{ puts(\"{label}\"); return 1; }}");
     }
 
     [Theory]

@@ -390,12 +390,21 @@ methods read fixed-width unsigned values; the corresponding `BigEndian` methods
 use network byte order. Matching `WriteUInt16/32/64LittleEndian` and
 `WriteUInt16/32/64BigEndian` methods write these representations. Signed
 `ReadInt16/32/64` and `WriteInt16/32/64` methods are available in both byte orders
-and preserve two's-complement bits. Each operation
-uses an eight-byte stack buffer and works independently of host byte order,
+and preserve two's-complement bits. The 16/32/64-bit operations
+use an eight-byte stack buffer and work independently of host byte order,
 alignment, pointer width, and the C runtime's `long` size. Truncation throws
 `EndOfStreamException`; actual IO errors throw `IOException` (the base type of
 `EndOfStreamException`), with the same partial-progress behavior as
 `ReadExactly` and `Write`. Writes do not flush or close the stream.
+
+`ReadExtraLongLittleEndian` / `ReadExtraLongBigEndian` and matching
+`WriteExtraLongLittleEndian` / `WriteExtraLongBigEndian` methods preserve the
+two's-complement representation of signed 128-bit `extralong` values. Each uses
+a sixteen-byte stack buffer and one `ReadExactly` or `Write` call, consuming or
+writing sixteen bytes on success. They borrow the stream and require the same
+sources as the other FileBinary methods. Truncation or IO failures can leave
+partial progress; no rewind, flush, or close is performed. The adapter itself
+does not allocate; libc may allocate its ordinary stream buffers.
 
 `ReadFloatLittleEndian` / `ReadFloatBigEndian`, `ReadDoubleLittleEndian` /
 `ReadDoubleBigEndian`, and matching `WriteFloat` / `WriteDouble` methods read

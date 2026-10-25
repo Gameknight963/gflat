@@ -45,7 +45,9 @@ an overlapping scalar output must still have valid `extralong` alignment.
 The implementation combines two 64-bit halves with shifts and bit operations,
 without floating-point conversions, division helpers, or a separate runtime.
 The matching [binary cursors](BINARY_CURSORS.md) provide sixteen-byte `ExtraLong`
-methods too. `FileBinary` does not currently provide 128-bit stream overloads.
+methods too. `FileBinary::ReadExtraLongLittleEndian` / `ReadExtraLongBigEndian`
+and matching `WriteExtraLong` methods provide the corresponding sixteen-byte
+stream operations.
 
 ## Floating-point values
 

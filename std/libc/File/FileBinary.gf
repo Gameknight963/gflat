@@ -84,4 +84,36 @@ public static class FileBinary
         }
         output.Write(buffer, count);
     }
+
+    public static extralong ReadExtraLongLittleEndian(File* input) => ReadExtraLong(input, true);
+    public static extralong ReadExtraLongBigEndian(File* input) => ReadExtraLong(input, false);
+    public static void WriteExtraLongLittleEndian(File* output, extralong value) { WriteExtraLong(output, value, true); }
+    public static void WriteExtraLongBigEndian(File* output, extralong value) { WriteExtraLong(output, value, false); }
+
+    private static extralong ReadExtraLong(File* input, bool littleEndian)
+    {
+        char[16] buffer;
+        input.ReadExactly(buffer, 16);
+        extralong value = (extralong)0;
+        for (nuint i = 0; i < 16; i++)
+        {
+            nuint index = i;
+            if (littleEndian) index = 15 - i;
+            value = (value << 8) | (extralong)(byte)buffer[index];
+        }
+        return value;
+    }
+
+    private static void WriteExtraLong(File* output, extralong value, bool littleEndian)
+    {
+        char[16] buffer;
+        for (nuint i = 0; i < 16; i++)
+        {
+            nuint index = i;
+            if (!littleEndian) index = 15 - i;
+            buffer[index] = (char)value;
+            value = value >> 8;
+        }
+        output.Write(buffer, 16);
+    }
 }

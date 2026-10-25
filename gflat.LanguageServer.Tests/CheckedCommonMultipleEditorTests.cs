@@ -9,7 +9,7 @@ public sealed class CheckedCommonMultipleEditorTests
     [Fact]
     public void ThreeCheckedUnsignedOverloadsKeepTheirConcreteResultsAndDefinitions()
     {
-        string path=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core","Math.gf");
+        string path=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core","Numerics","Math.gf");
         var library=new SourceFile(path,File.ReadAllText(path));
         const string text="""
             uint Narrow()=>std::Math::LeastCommonMultiple(6u,8u);

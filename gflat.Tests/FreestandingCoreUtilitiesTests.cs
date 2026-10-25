@@ -328,7 +328,7 @@ public class FreestandingCoreUtilitiesTests
         if (RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
-        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "Base64Url.gf", "BitOperations.gf", "Hashing.gf", "SHA256.gf",
+        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "Base64Url.gf", "Numerics/BitOperations.gf", "Hashing.gf", "SHA256.gf",
             "PercentEncoding.gf", "BinaryPrimitives.gf", "Checksums/CRC32.gf", "Checksums/Adler32.gf", "Utf8Decoder.gf",
             "BinaryBufferReader.gf", "BinaryBufferWriter.gf", "IntegerFormatting.gf", "HexIntegerParsing.gf", "BooleanParsing.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

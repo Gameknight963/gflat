@@ -160,7 +160,7 @@ public sealed class StandardAdjacentFloatTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program) => [
-        new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Math.gf"))),
+        new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
         new SourceFile("main.gf", program)
     ];
 }

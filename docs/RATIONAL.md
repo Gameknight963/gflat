@@ -81,5 +81,5 @@ newline, terminator, or flush. The existing generic `ToString()` extension retur
 an owning String for a named Rational; it borrows the receiver. Writer failures
 propagate and may leave a prefix in the sink without altering the Rational.
 
-For explicit source selection include `Rational.gf`, BigInteger's existing
+For explicit source selection include `Numerics/Rational.gf`, BigInteger's existing
 dependencies, and `FormattableString.gf` only when using the ToString extension.

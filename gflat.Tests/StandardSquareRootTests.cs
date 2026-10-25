@@ -59,7 +59,7 @@ public sealed class StandardSquareRootTests
         }
         code.AppendLine("return 0; }");
         var sources = new[] {
-            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Math.gf"))),
+            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
             new SourceFile("main.gf", code.ToString())
         };
         string ir = Compiler.Emit(sources);

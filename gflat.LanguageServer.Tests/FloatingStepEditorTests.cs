@@ -14,7 +14,7 @@ public sealed class FloatingStepEditorTests
     [InlineData("BitDecrement","double","1.0")]
     public void ActualMathStepsSelectLiteralPrecisionAndPresentBothNoThrowOverloads(string member,string type,string literal)
     {
-        string path=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core","Math.gf");
+        string path=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core","Numerics","Math.gf");
         var library=new SourceFile(path,File.ReadAllText(path));
         string text=type+" Probe() nothrow=>std::Math::"+member+"("+literal+");";
         var source=new SourceFile(Path.GetFullPath("floating-step-editor.gf"),text);

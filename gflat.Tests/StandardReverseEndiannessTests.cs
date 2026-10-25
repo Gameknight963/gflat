@@ -64,7 +64,7 @@ public class StandardReverseEndiannessTests
 
     private static void Run(string code,int optimization)
     {
-        SourceFile[] sources=[new("BitOperations.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/BitOperations.gf"))),new("main.gf",code)];
+        SourceFile[] sources=[new("BitOperations.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Numerics/BitOperations.gf"))),new("main.gf",code)];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$","@malloc","fptoui","uitofp"})Assert.DoesNotContain(forbidden,ir);
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);

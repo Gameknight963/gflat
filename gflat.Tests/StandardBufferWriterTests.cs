@@ -5,7 +5,7 @@ public sealed class StandardBufferWriterTests
     [Fact]
     public void BufferMetadataAndUnboundedRandomDrawsDoNotIntroduceExceptionBoundaries()
     {
-        var files = new[] { "BufferTooSmallException.gf", "BufferWriter.gf", "PseudoRandom.gf" }
+        var files = new[] { "BufferTooSmallException.gf", "BufferWriter.gf", "Numerics/PseudoRandom.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", """
                 using std;

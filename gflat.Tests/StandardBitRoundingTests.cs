@@ -59,7 +59,7 @@ public sealed class StandardBitRoundingTests
         foreach(string forbidden in new[]{"invoke ","__gflat_eh","@malloc","@free","gflat$Memory$","llvm.memcpy"})Assert.DoesNotContain(forbidden,ir);
     }
     private static SourceFile[] Sources(string source)=>[
-        new("BitOperations.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/BitOperations.gf"))),
+        new("BitOperations.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Numerics/BitOperations.gf"))),
         new("bit-rounding.gf",source)];
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
 }

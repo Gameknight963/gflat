@@ -33,7 +33,7 @@ public sealed class StandardMath128Tests
             }
             var sources = new[]
             {
-                new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Math.gf"))),
+                new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
                 new SourceFile("main.gf", $$"""
                     using std;
                     extern void*? fopen(readonly(char)* path,readonly(char)* mode);

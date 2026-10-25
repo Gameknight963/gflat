@@ -5,7 +5,7 @@ public sealed class StandardMathTests
     private static void Run(string program)
     {
         var result = CompilerTestHelper.Run([
-            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "Math.gf"))),
+            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", "Numerics", "Math.gf"))),
             new SourceFile("main.gf", program)
         ]);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

@@ -4,7 +4,7 @@ public class StandardPseudoRandomTests
 {
     private static void Run(string code)
     {
-        var random = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/PseudoRandom.gf")));
+        var random = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/PseudoRandom.gf")));
         Assert.Equal(0, CompilerTestHelper.Run([random, new SourceFile("main.gf", code)]).ExitCode);
     }
 
@@ -64,7 +64,7 @@ public class StandardPseudoRandomTests
         Assert.Equal(0UL, Next(ref state));
         state = upperSeed;
         Assert.Equal(ulong.MaxValue, Next(ref state));
-        var random = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/PseudoRandom.gf")));
+        var random = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/PseudoRandom.gf")));
         var result = CompilerTestHelper.Run([random, new SourceFile("main.gf", $$"""
             using std;
             int allocations = 0;
@@ -147,7 +147,7 @@ public class StandardPseudoRandomTests
         }
         code.AppendLine($"if(allocations!=0)return {failure};return 0;}}");
         var randomSource = new SourceFile("PseudoRandom.gf",
-            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/PseudoRandom.gf")));
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/PseudoRandom.gf")));
         var result = CompilerTestHelper.Run([randomSource, new SourceFile("signed-draws.gf", code.ToString())], optimization);
         Assert.Equal(0, result.ExitCode);
     }

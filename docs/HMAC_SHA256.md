@@ -61,4 +61,4 @@ block. RFC 4231 case 5 specifies only the first 128 output bits; the library
 always returns all 256 bits and has no truncation option.
 
 Explicit source selection needs `core/HMACSHA256.gf`, `core/SHA256.gf`,
-`core/BitOperations.gf`, and ordinary exception support for invalid key lengths.
+`core/Numerics/BitOperations.gf`, and ordinary exception support for invalid key lengths.

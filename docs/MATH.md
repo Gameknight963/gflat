@@ -1,6 +1,6 @@
 # Scalar math
 
-`std/core/Math.gf` provides `std::Math`, with scalar helpers and checked integer
+`std/core/Numerics/Math.gf` provides `std::Math`, with scalar helpers and checked integer
 operations. It does not directly call C math functions. The checked operations
 still require the normal exception and allocation support.
 

@@ -74,5 +74,5 @@ can allocate too. No file length or snapshot is captured: concurrent file change
 can change the bytes observed during the read.
 
 For explicit source selection, include `File/FileHash.gf`, `File.gf`, `SHA256.gf`,
-`BitOperations.gf`, and the ordinary File exception/runtime dependencies. The
+`Numerics/BitOperations.gf`, and the ordinary File exception/runtime dependencies. The
 core `SHA256` remains usable independently of File IO or libc.

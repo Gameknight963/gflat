@@ -39,7 +39,7 @@ public class StandardNumericNothrowTests
                 return 0;
             }
             """;
-        var sources = new[] { "Parsing.gf", "IntegerParsing.gf", "Math.gf" }
+        var sources = new[] { "Parsing.gf", "IntegerParsing.gf", "Numerics/Math.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Compiler.Emit(sources);

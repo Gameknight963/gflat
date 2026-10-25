@@ -109,7 +109,7 @@ public sealed class StandardCopySignTests
         }
         code.AppendLine("return 0; }");
         var result = CompilerTestHelper.Run([
-            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Math.gf"))),
+            new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
             new SourceFile("main.gf", code.ToString())
         ], optimization);
         Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");

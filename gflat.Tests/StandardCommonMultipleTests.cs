@@ -110,6 +110,6 @@ public sealed class StandardCommonMultipleTests
         });
     }
     private static SourceFile[] Sources(string source)=>[
-        new("Math.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Math.gf"))),new("common-multiples.gf",source)];
+        new("Math.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Numerics/Math.gf"))),new("common-multiples.gf",source)];
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
 }

@@ -65,7 +65,7 @@ public class StandardBitOperationsTests
     private static void Run(string program)
     {
         var sources = new[] {
-            new SourceFile("BitOperations.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/BitOperations.gf"))),
+            new SourceFile("BitOperations.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/BitOperations.gf"))),
             new SourceFile("main.gf", program)
         };
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });

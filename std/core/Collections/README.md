@@ -1,5 +1,8 @@
 # Enumeration and queries
 
+[`CountBy(selector)`](../../../docs/QUERY_COUNT_BY.md) materializes selected-key
+counts into an owning hash map without storing each group of elements.
+
 `Vector`, `Deque`, `Queue`, `Stack`, `LinkedList`, `Span`, `IntRange`,
 `FilteredIntRange`, `Repeated<T>`, `TextParts`, `TextLines`, `Utf8Scalars`, `Utf16Scalars`, and
 `BitSet` provide an `AsEnumerable()` adapter

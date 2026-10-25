@@ -995,6 +995,13 @@ int SmokeHashesAndViews() {
         Rational half = sixth.Add(&third); Rational expectedHalf = new(1l, 2l);
         String halfText = half.ToString();
         if (!half.Equals(&expectedHalf) || !halfText.Equals("1/2")) return 266;
+        Deque<int> indexedDeque = new(); indexedDeque.Reserve(4);
+        for (int i = 0; i < 4; i++) indexedDeque.AddLast(i);
+        indexedDeque.RemoveFirst(); indexedDeque.RemoveFirst();
+        indexedDeque.AddLast(4); indexedDeque.AddLast(5);
+        indexedDeque.Insert(2, 9); int removedMiddle = indexedDeque.RemoveAt(3);
+        if (removedMiddle != 4 || indexedDeque.Count != 4 || indexedDeque[0] != 2 || indexedDeque[1] != 3
+            || indexedDeque[2] != 9 || indexedDeque[3] != 5) return 267;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

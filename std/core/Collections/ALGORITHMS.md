@@ -262,6 +262,17 @@ algorithm sources being used: `Collections/Algorithms.gf` for Sort, and
 original explicit-comparator sources alone does not gain a dependency on these
 default-ordering contracts.
 
+`DefaultOrdering.gf` also provides `NthElement(values, nth)`,
+`NextPermutation(values)`, and `PreviousPermutation(values)` for
+`T : IComparable<T>`. These ordinary forwarders use `Comparer<T>::Compare` and
+retain the respective explicit-comparer algorithms' ownership, comparison,
+wrapping and failure rules. Include `Collections/NthElement.gf` for selection
+or `Collections/Permutations.gf` for the permutation operations, together with
+`Collections/Algorithms.gf` and the normal Span/Comparer/interface dependencies.
+Unused generic wrappers do not require their underlying optional algorithm
+modules. The explicit callbacks remain available without `DefaultOrdering.gf`
+or an `IComparable<T>` implementation.
+
 ### Default searches
 
 The optional `DefaultOrdering.gf` comparison-contract helpers also include:

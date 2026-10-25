@@ -66,6 +66,8 @@ retargeted. Keep the source storage alive and obey the usual in-place algorithm
 borrowing rules.
 
 Include optional `Collections/Permutations.gf` and `Collections/Algorithms.gf`,
-Span and their normal dependencies. There are no default-comparer overloads or
-permutation-sequence wrappers. An existing `Comparer<T>::Compare` bridge can be
-passed explicitly where the ordinary `IComparable<T>` contract applies.
+Span and their normal dependencies. `Collections/DefaultOrdering.gf` adds
+one-argument `NextPermutation(values)` and `PreviousPermutation(values)` for
+`T : IComparable<T>`, using `Comparer<T>::Compare`; include `Comparer.gf` and
+`IComparable.gf` for those conveniences. Explicit callbacks remain available
+without that interface. There is no permutation-sequence wrapper.

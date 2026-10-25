@@ -27,3 +27,12 @@ public nuint MaxIndex<T : IComparable<T>>(Span<immutable(T)> values)
 
 public int SequenceCompare<T : IComparable<T>>(Span<immutable(T)> first, Span<immutable(T)> second)
     => std::SequenceCompare<T>(first, second, Comparer<T>::Compare);
+
+public void NthElement<T : IComparable<T>>(Span<T> values, nuint nth)
+    => std::NthElement<T>(values, nth, Comparer<T>::Compare);
+
+public bool NextPermutation<T : IComparable<T>>(Span<T> values)
+    => std::NextPermutation<T>(values, Comparer<T>::Compare);
+
+public bool PreviousPermutation<T : IComparable<T>>(Span<T> values)
+    => std::PreviousPermutation<T>(values, Comparer<T>::Compare);

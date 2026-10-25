@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Hashing;
 
 // Streaming Adler-32, as used by zlib (RFC 1950).
 public struct Adler32

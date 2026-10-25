@@ -1,11 +1,11 @@
 # HMAC-SHA256 over counted bytes
 
-`std::HMACSHA256` provides keyed message authentication using HMAC and SHA-256.
+`std::Hashing::HMACSHA256` provides keyed message authentication using HMAC and SHA-256.
 It composes the existing SHA256 implementation with the inner/outer pads defined
 by [RFC 2104](https://www.rfc-editor.org/rfc/rfc2104).
 
 ```csharp
-using std;
+using std; using std::Hashing;
 
 int main()
 {

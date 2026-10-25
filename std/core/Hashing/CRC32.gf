@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Hashing;
 
 // Streaming IEEE CRC-32, as used by gzip (RFC 1952).
 public struct CRC32

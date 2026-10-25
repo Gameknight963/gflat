@@ -49,7 +49,7 @@ public sealed class StandardCRC32CTests
             }
         string hex = Convert.ToHexString(packet.ToArray());
         Run($$$"""
-            using std;
+            using std; using std::Hashing;
             nuint ReadByte(readonly(char)* text, ref nuint offset) nothrow {
                 nuint result = 0;
                 for (int i = 0; i < 2; i++) {
@@ -103,7 +103,7 @@ public sealed class StandardCRC32CTests
     [InlineData(2)]
     public void LegalOwnStateInputMatchesCapturedInitializedBytes(int optimization)
         => Run("""
-            using std;
+            using std; using std::Hashing;
             int main() {
                 for (int seeded = 0; seeded < 2; seeded++) {
                     for (nuint offset = 0; offset <= (nuint)sizeof(CRC32C); offset++) {

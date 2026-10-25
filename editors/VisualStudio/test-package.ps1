@@ -215,7 +215,7 @@ int main() {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'
-using std; using std::Numerics; using std::Queries; using std::Collections;
+using std; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
 int smokeDestroyed = 0;
 long smokeTimestamp = 0l;
 static class SmokeClock : IMonotonicClock {

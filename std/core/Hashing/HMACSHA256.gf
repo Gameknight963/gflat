@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Hashing;
 
 // RFC 2104 HMAC using SHA-256. Inline state is independently copied.
 public struct HMACSHA256

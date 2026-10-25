@@ -1,3 +1,4 @@
+using std::Hashing;
 namespace std;
 
 // Optional file IO convenience. SHA256 itself remains independent of libc.
@@ -8,7 +9,7 @@ public static class FileHash
     {
         if (!input.IsOpen) throw new IOException("File is closed");
         if (capacity == 0) throw new IOException("File hash buffer must not be empty");
-        std::SHA256 state = new();
+        std::Hashing::SHA256 state = new();
         while (true)
         {
             nuint count = input.Read(buffer, capacity);

@@ -10,7 +10,7 @@ public sealed class StandardFileHashTests
             .Append(new SourceFile("file-hash.gf",program));
 
     private const string DenyAllocation="""
-        using std;int attempts=0;
+        using std; using std::Hashing;int attempts=0;
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -94,7 +94,7 @@ public sealed class StandardFileHashTests
         WithDirectory(directory=>
         {
             string executable=Compile(directory,"""
-                using std;
+                using std; using std::Hashing;
                 int main(int argc,char** argv){
                     File input=File::OpenRead(argv[1]);int caught=0;char[3] scratch=['?','?','?'];
                     try{FileHash::SHA256(&input,(char*)1,0);}catch(IOException* error){caught++;}

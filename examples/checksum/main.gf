@@ -1,3 +1,4 @@
+using std::Hashing;
 using std;
 
 // Format the numeric checksum in a fixed byte order, independent of this CPU.

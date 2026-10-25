@@ -7,7 +7,7 @@ existing [SHA-256 core](SHA256.md). It returns the raw digest as an independent
 This complete program prints a file's digest as lowercase hexadecimal:
 
 ```csharp
-using std;
+using std; using std::Hashing;
 
 int main(int argc, char** argv)
 {

@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardHMACSHA256Tests
 {
     private const string DenyAllocation = """
-        using std;
+        using std; using std::Hashing;
         int attempts=0;
         extern void free(void* storage);
         namespace Memory {
@@ -166,7 +166,7 @@ public sealed class StandardHMACSHA256Tests
     [InlineData(2)]
     public void ImpossibleKeyLengthThrowsBeforeReadingKey(int optimization)
         => Run("""
-            using std;
+            using std; using std::Hashing;
             int main(){
                 if(sizeof(nuint)!=8)return 0;
                 try{HMACSHA256 invalid=new((readonly(char)*)1,(nuint)2305843009213693952ul);return 1;}
@@ -180,7 +180,7 @@ public sealed class StandardHMACSHA256Tests
     public void ConstructionRequiresAnExplicitKey()
     {
         var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("""
-            using std;int main(){HMACSHA256 missing=new();return 0;}
+            using std; using std::Hashing;int main(){HMACSHA256 missing=new();return 0;}
             """)));
         Assert.Contains("constructor",error.Message,StringComparison.OrdinalIgnoreCase);
     }

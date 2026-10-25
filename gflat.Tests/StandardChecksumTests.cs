@@ -35,7 +35,7 @@ public class StandardChecksumTests
         Assert.Equal(0x11e60398u, ReferenceAdler32(Encoding.ASCII.GetBytes("Wikipedia")));
         Run("""
             int main() {
-                std::CRC32 crc = new(); std::Adler32 adler = new();
+                std::Hashing::CRC32 crc = new(); std::Hashing::Adler32 adler = new();
                 if (crc.GetValue() != 0u || adler.GetValue() != 1u) return 1;
                 crc.Append("123456789", 9); adler.Append("123456789", 9);
                 if (crc.GetValue() != 0xcbf43926u || adler.GetValue() != 0x091e01deu) return 2;
@@ -73,7 +73,7 @@ public class StandardChecksumTests
             int main() {
                 char[{{Math.Max(1, count)}}] data;
                 for (int i = 0; i < {{count}}; i++) data[i] = {{initializer}};
-                std::CRC32 crc = new(); std::Adler32 adler = new();
+                std::Hashing::CRC32 crc = new(); std::Hashing::Adler32 adler = new();
                 crc.Append(data, {{count}}); adler.Append(data, {{count}});
                 if (crc.GetValue() != {{crc}}u || adler.GetValue() != {{adler}}u) return 1;
                 crc.Reset(); adler.Reset();
@@ -100,11 +100,11 @@ public class StandardChecksumTests
         byte[] first = Encoding.ASCII.GetBytes("prefix-first"), second = Encoding.ASCII.GetBytes("prefix-second");
         Run($$"""
             int main() {
-                std::CRC32 first = new(); std::Adler32 firstAdler = new();
+                std::Hashing::CRC32 first = new(); std::Hashing::Adler32 firstAdler = new();
                 first.Append("prefix-", 7); firstAdler.Append("prefix-", 7);
                 uint observed = first.GetValue(); uint adlerObserved = firstAdler.GetValue();
                 if (observed != {{ReferenceCRC32(Encoding.ASCII.GetBytes("prefix-"))}}u || adlerObserved != {{ReferenceAdler32(Encoding.ASCII.GetBytes("prefix-"))}}u) return 5;
-                std::CRC32 second = first; std::Adler32 secondAdler = firstAdler;
+                std::Hashing::CRC32 second = first; std::Hashing::Adler32 secondAdler = firstAdler;
                 first.Append("first", 5); firstAdler.Append("first", 5);
                 second.Append("second", 6); secondAdler.Append("second", 6);
                 if (first.GetValue() != {{ReferenceCRC32(first)}}u || firstAdler.GetValue() != {{ReferenceAdler32(first)}}u) return 1;
@@ -125,19 +125,19 @@ public class StandardChecksumTests
             int main() {
                 for (int seeded = 0; seeded < 2; seeded++)
                 for (nuint offset = 0; offset < 2; offset++) {
-                    std::CRC32 crc = new();
-                    std::Adler32 adler = new();
+                    std::Hashing::CRC32 crc = new();
+                    std::Hashing::Adler32 adler = new();
                     if (seeded != 0) { crc.Append("123456789", 9); adler.Append("123456789", 9); }
-                    std::CRC32 capturedCrc = crc;
-                    std::Adler32 capturedAdler = adler;
-                    char[sizeof(std::CRC32)] crcBytes;
-                    char[sizeof(std::Adler32)] adlerBytes;
+                    std::Hashing::CRC32 capturedCrc = crc;
+                    std::Hashing::Adler32 capturedAdler = adler;
+                    char[sizeof(std::Hashing::CRC32)] crcBytes;
+                    char[sizeof(std::Hashing::Adler32)] adlerBytes;
                     readonly(char)* crcView = (readonly(char)*)&crc;
                     readonly(char)* adlerView = (readonly(char)*)&adler;
-                    for (nuint i = 0; i < (nuint)sizeof(std::CRC32); i++) crcBytes[i] = crcView[i];
-                    for (nuint i = 0; i < (nuint)sizeof(std::Adler32); i++) adlerBytes[i] = adlerView[i];
-                    nuint crcCount = (nuint)sizeof(std::CRC32) - offset;
-                    nuint adlerCount = (nuint)sizeof(std::Adler32) - offset;
+                    for (nuint i = 0; i < (nuint)sizeof(std::Hashing::CRC32); i++) crcBytes[i] = crcView[i];
+                    for (nuint i = 0; i < (nuint)sizeof(std::Hashing::Adler32); i++) adlerBytes[i] = adlerView[i];
+                    nuint crcCount = (nuint)sizeof(std::Hashing::CRC32) - offset;
+                    nuint adlerCount = (nuint)sizeof(std::Hashing::Adler32) - offset;
                     capturedCrc.Append(&crcBytes[offset], crcCount);
                     capturedAdler.Append(&adlerBytes[offset], adlerCount);
                     crc.Append(crcView + offset, crcCount);

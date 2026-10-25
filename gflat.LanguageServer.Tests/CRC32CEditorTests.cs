@@ -9,7 +9,7 @@ public sealed class CRC32CEditorTests
     public void StreamingValueMethodsNavigateActualNoThrowDeclarations()
     {
         const string text = """
-            using std;
+            using std; using std::Hashing;
             uint Observe(readonly(char)* data, nuint count) nothrow {
                 CRC32C crc = new();
                 crc.Append(data, count);

@@ -11,7 +11,7 @@ public class FreestandingCoreUtilitiesTests
         extern ulong formatter_input() nothrow;
         extern void byte_search_input(byte* data) nothrow;
         int Sha256Proof() nothrow {
-            std::SHA256 hash = new();
+            std::Hashing::SHA256 hash = new();
             char[3] text = ['a', 'b', (char)(98ul + (formatter_input() >> 63))];
             if (!hash.TryAppend(text, 3)) return 1;
             byte[32] actual = hash.GetHash();
@@ -57,9 +57,9 @@ public class FreestandingCoreUtilitiesTests
             byte[9] binary; ulong integer = 0ul;
             if (!std::BinaryPrimitives::TryWriteUInt64BigEndian(&binary[1], 8, 0xfedcba9876543210ul)) return 22;
             if (!std::BinaryPrimitives::TryReadUInt64BigEndian(&binary[1], 8, ref integer) || integer != 0xfedcba9876543210ul) return 23;
-            std::CRC32 crc = new(); crc.Append("123456789", 9);
+            std::Hashing::CRC32 crc = new(); crc.Append("123456789", 9);
             if (crc.GetValue() != 0xcbf43926u) return 24;
-            std::Adler32 adler = new(); adler.Append("Wikipedia", 9);
+            std::Hashing::Adler32 adler = new(); adler.Append("Wikipedia", 9);
             if (adler.GetValue() != 0x11e60398u) return 25;
             std::Utf8Decoder decoder = new();
             if (decoder.Read(input, 2, false, &scalar, &consumed) != std::Utf8Decoder::Status::NeedMore || consumed != 2) return 26;

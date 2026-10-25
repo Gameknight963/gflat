@@ -1,5 +1,5 @@
 using std::Numerics;
-namespace std;
+namespace std::Hashing;
 
 // Incremental SHA-256 over counted bytes. Specification: RFC 6234 sections 4-6.
 // Inline state is independently copied; GetHash finalizes only a snapshot.

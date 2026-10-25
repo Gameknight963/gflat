@@ -1,11 +1,12 @@
 # Byte checksums
 
-`std::CRC32`, `std::CRC32C`, and `std::Adler32` are streaming value types. They
+`std::Hashing::CRC32`, `std::Hashing::CRC32C`, and `std::Hashing::Adler32` are streaming value types. They
 process counted bytes, including embedded zero bytes, without allocation or libc
 calls. All their methods and constructors are `nothrow`.
 
 ```cpp
-std::CRC32 crc = new();
+using std::Hashing;
+std::Hashing::CRC32 crc = new();
 crc.Append("1234", 4);
 crc.Append("56789", 5);
 uint value = crc.GetValue(); // 0xcbf43926
@@ -53,7 +54,7 @@ without choosing a serialization byte order. For example, the RFC's zero-filled
 32-byte vector lists `aa 36 91 8a`; its numeric CRC32C is `0x8a9136aa`.
 
 ```csharp
-using std;
+using std; using std::Hashing;
 int main()
 {
     CRC32C checksum = new();

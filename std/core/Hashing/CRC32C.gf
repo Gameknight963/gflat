@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Hashing;
 
 // Streaming CRC-32C (Castagnoli), with the reflected representation of RFC 3720.
 public struct CRC32C

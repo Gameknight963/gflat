@@ -236,3 +236,49 @@ algorithm sources being used: `Collections/Algorithms.gf` for Sort, and
 `Collections/StableSort.gf` with Vector dependencies for StableSort. Selecting the
 original explicit-comparator sources alone does not gain a dependency on these
 default-ordering contracts.
+
+### Default searches
+
+The optional `DefaultOrdering.gf` comparison-contract helpers also include:
+
+| API | Default-order result |
+| --- | --- |
+| `LowerBound<T>(Span<immutable(T)>, key)` | First index not less than the borrowed key. |
+| `UpperBound<T>(Span<immutable(T)>, key)` | First index greater than the borrowed key. |
+| `BinarySearch<T>(Span<immutable(T)>, key)` | First equal index, or Length when absent. |
+| `IsSorted<T>(Span<immutable(T)>)` | Whether every adjacent pair is nondecreasing. |
+
+These ordinary overloads require `T : IComparable<T>` and forward through
+`Comparer<T>::Compare` to the existing algorithms. Bounds return Length if their
+insertion position is after the input. Empty searches return zero without reading
+elements or comparing the key; IsSorted is true for empty and singleton spans.
+Search input must already be sorted using this same default ordering. Equal
+floating-point NaNs and signed zeros follow the existing comparison contract.
+
+Elements and the key are borrowed, never copied, so noncopyable comparable owners
+are supported. The algorithms allocate nothing internally; comparison methods can
+allocate or throw and must obey the existing immutability/lifetime rules. Original
+comparison exceptions propagate without changing input; their external side
+effects are not rolled back. These helpers are ordinary throwing methods.
+
+```csharp
+using std;
+
+int main()
+{
+    int[5] data = [1, 2, 2, 4, 9];
+    Span<int> values = new(data, 5);
+    int key = 2;
+    if (!IsSorted(values.AsImmutable())) return 1;
+    nuint first = LowerBound(values.AsImmutable(), &key);
+    nuint after = UpperBound(values.AsImmutable(), &key);
+    nuint match = BinarySearch(values.AsImmutable(), &key);
+    if (first != 1 || after != 3 || match != first) return 2;
+    return 0;
+}
+```
+
+For selective sources these wrappers need `Collections/DefaultOrdering.gf`,
+`Collections/Algorithms.gf`, `Comparer.gf`, `IComparable.gf` and ordinary Span
+dependencies. The explicit-comparator algorithm source remains independent of
+DefaultOrdering/Comparer and still supports custom or descending comparisons.

@@ -6,3 +6,15 @@ public void Sort<T : IComparable<T>>(Span<T> values)
 
 public void StableSort<T : IComparable<T>>(Span<T> values)
     => std::StableSort<T>(values, Comparer<T>::Compare);
+
+public nuint LowerBound<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* key)
+    => std::LowerBound<T>(values, key, Comparer<T>::Compare);
+
+public nuint UpperBound<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* key)
+    => std::UpperBound<T>(values, key, Comparer<T>::Compare);
+
+public nuint BinarySearch<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* key)
+    => std::BinarySearch<T>(values, key, Comparer<T>::Compare);
+
+public bool IsSorted<T : IComparable<T>>(Span<immutable(T)> values)
+    => std::IsSorted<T>(values, Comparer<T>::Compare);

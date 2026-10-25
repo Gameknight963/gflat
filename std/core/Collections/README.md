@@ -137,7 +137,14 @@ For widened integer totals, readonly views, and overflow behavior, see [Sum](../
 For overlapping borrowed views of contiguous data, see [span windows](../../../docs/SPAN_WINDOWS.md).
 For nonoverlapping views that retain a shorter final segment, see
 [span chunks](../../../docs/SPAN_CHUNKS.md).
-Each enumeration starts a fresh iterator. Operator order matters:
+Each enumeration starts a fresh iterator, but does not rewind an external source.
+For example, [FileLineSequence](../../libc/README.md#reading-lines) continues from
+its borrowed file's current position; enumerating an ordered or reversed file
+query again does not replay the previous buffer. A span starts again over its
+captured view. Materialize values into an owning collection when replay is needed
+independently of a consumable source.
+
+Operator order matters:
 `Take(3).Where(test)` examines at most three input elements;
 `Where(test).Take(3)` looks for three matches.
 `Take(0)` never advances its input.

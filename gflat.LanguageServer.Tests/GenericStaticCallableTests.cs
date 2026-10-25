@@ -95,7 +95,7 @@ public sealed class GenericStaticCallableTests
     }
 
     [Fact]
-    public void GenericMethodCallsGetBoundSignatureHelpAndUnusedArgumentsRemainExplicitlyUnbound()
+    public void GenericMethodCallsRetainUsedAndUnusedChosenArgumentsInHoverAndSignatureHelp()
     {
         const string library = "class Box<T>{public static U Echo<U>(U value)=>value;public static int Ignore<U>(int value)=>value;}";
         var (model, _, main, _) = Analyze("int main(){int a=Box<int>::Echo<int>(3);return Box<int>::Ignore<long>(a);}", library);
@@ -103,7 +103,10 @@ public sealed class GenericStaticCallableTests
         Assert.Contains("Echo<int>(int value)", Hover(model, main, echo));
         var help = Json(model.SignatureHelp(main.Path, main.Text.IndexOf("(3)", StringComparison.Ordinal) + 1));
         Assert.Contains("Echo<int>(int value)", help.GetProperty("signatures")[0].GetProperty("label").GetString());
-        Assert.Contains("Ignore<U>", Hover(model, main, main.Text.IndexOf("Ignore", StringComparison.Ordinal)));
+        int ignore = main.Text.IndexOf("Ignore<long>(", StringComparison.Ordinal);
+        Assert.Contains("Ignore<long>", Hover(model, main, ignore));
+        var ignoredHelp = Json(model.SignatureHelp(main.Path, ignore + "Ignore<long>(".Length));
+        Assert.Contains("Ignore<long>(int value)", ignoredHelp.GetProperty("signatures")[0].GetProperty("label").GetString());
     }
 
     [Fact]

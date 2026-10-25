@@ -25,7 +25,7 @@ public sealed class QueryIndexedWhereEditorTests
         var source = new SourceFile(Path.GetFullPath("query-indexed-where-editor.gf"), text);
         files.Add(source);
         SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "enumerable_indexed_where.gf");
-        SourceFile ordinary = files.Single(file => Path.GetFileName(file.Path) == "EnumerableExtensions.gf");
+        SourceFile ordinary = files.Single(file => Path.GetFileName(file.Path) == "enumerable_where.gf");
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });
         Assert.DoesNotContain(snapshot.Diagnostics, item => item.Severity == DiagnosticSeverity.Error);
         var model = new EditorModel(snapshot, files);

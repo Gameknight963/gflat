@@ -25,7 +25,7 @@ public sealed class QueryIndexedSelectEditorTests
         var source = new SourceFile(Path.GetFullPath("query-indexed-select-editor.gf"), text);
         files.Add(source);
         SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "enumerable_indexed_select.gf");
-        SourceFile ordinary = files.Single(file => Path.GetFileName(file.Path) == "EnumerableExtensions.gf");
+        SourceFile ordinary = files.Single(file => Path.GetFileName(file.Path) == "enumerable_select.gf");
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });
         Assert.DoesNotContain(snapshot.Diagnostics, item => item.Severity == DiagnosticSeverity.Error);
         var model = new EditorModel(snapshot, files);

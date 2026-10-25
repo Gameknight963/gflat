@@ -73,6 +73,6 @@ vectors and O(n log n) comparisons before yielding the first result. Later moves
 are constant-time, with ordinary consumer copy costs when applicable.
 
 Selective sources include `Queries/OrderSource.gf`,
-`Queries/enumerable_order.gf`, `Queries/EnumerableExtensions.gf`,
+`Queries/enumerable_order.gf`, `Queries/enumerable_to_vector.gf`,
 `Collections/stable_sort.gf`, `Collections/Comparer.gf` for default ordering, and the normal
 Enumerable/Vector dependencies.

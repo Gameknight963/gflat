@@ -494,7 +494,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
             string definition=member=="TryElementAt"?"enumerable_element_at.gf":member=="Reverse"?"enumerable_reverse.gf":member.StartsWith("TryRemove",StringComparison.Ordinal)?"Deque.gf":"Date.gf";
             Assert.Contains(definition,JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
         }
-        foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),("queryCount","Count","EnumerableExtensions.gf"),
+        foreach(var query in new[]{("queryHasAny","Any","enumerable_predicates.gf"),("queryCount","Count","enumerable_count.gf"),
             ("querySame","SequenceEqual","enumerable_sequence_equal.gf"),("querySameCustom","SequenceEqual","enumerable_sequence_equal.gf"),
             ("queryHasKey","Contains","enumerable_contains.gf"),("queryHasCustomKey","Contains","enumerable_contains.gf")})
         {
@@ -617,11 +617,11 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         int aggregateCall=text.IndexOf(".Aggregate",text.IndexOf("foldedOwner",StringComparison.Ordinal),StringComparison.Ordinal)+1;
         var aggregateHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,aggregateCall),Protocol.JsonOptions);
         Assert.Contains("Unique",aggregateHover.GetProperty("contents").GetProperty("value").GetString());
-        Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,aggregateCall),Protocol.JsonOptions));
+        Assert.Contains("enumerable_aggregate.gf",JsonSerializer.Serialize(model.Definition(source.Path,aggregateCall),Protocol.JsonOptions));
         int seedlessCall=text.IndexOf(".Aggregate",text.IndexOf("foldedValue",StringComparison.Ordinal),StringComparison.Ordinal)+1;
         var seedlessHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,seedlessCall),Protocol.JsonOptions);
         Assert.Contains("public int",seedlessHover.GetProperty("contents").GetProperty("value").GetString());
-        Assert.Contains("EnumerableExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
+        Assert.Contains("enumerable_aggregate.gf",JsonSerializer.Serialize(model.Definition(source.Path,seedlessCall),Protocol.JsonOptions));
         var aggregateHelp=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',seedlessCall)+1),Protocol.JsonOptions);
         Assert.Equal(2,aggregateHelp.GetProperty("signatures").GetArrayLength());
         foreach(var array in new[]{("nativeCounts","nuint[3]"),("byteValues","byte[3]"),

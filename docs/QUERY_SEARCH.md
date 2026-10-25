@@ -76,7 +76,7 @@ contiguous spans, the existing `Contains<T>(Span<immutable(T)>, key, equal)`
 algorithm borrows elements directly; query searching intentionally follows the
 normal value semantics of sequence enumeration.
 
-Selective source users need `Queries/EnumerableExtensions.gf` for `Any` and `Count`,
+Selective source users need `Queries/enumerable_predicates.gf` for `Any` and `Queries/enumerable_count.gf` for `Count`,
 and `Queries/enumerable_contains.gf` plus `Collections/EqualityComparer.gf` and
 `IEquatable.gf` for default query membership, alongside the sequence's ordinary
 source and enumeration dependencies. Explicit-comparer calls do not require an

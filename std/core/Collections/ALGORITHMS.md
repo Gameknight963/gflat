@@ -44,6 +44,7 @@ int main()
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
+| `FindLastIndex<T>(Span<immutable(T)>, predicate)` | Last matching index, or span length when no element matches. |
 | `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. |
 | `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. |
 | `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. |
@@ -131,6 +132,42 @@ predicate borrows an element through `immutable(T)*` and runs once per element
 unless an earlier invocation throws. `FindIndex` stops at the first match;
 `IsSorted` stops at the first out-of-order adjacent pair. Empty spans are sorted
 and compare equal to other empty spans without invoking callbacks.
+
+## Reverse predicate search
+
+`FindLastIndex` visits elements from the end toward the beginning, stopping at
+the first true predicate result. An empty span returns zero without reading
+element storage or invoking the predicate. The callback receives a borrowed
+`immutable(T)*`; elements are never copied or destroyed by the search, including
+noncopyable owners. Keep the span's backing owner alive and do not structurally
+mutate it or change elements through another alias during the search. Predicate
+exceptions propagate unchanged. The search itself does not allocate or alter the
+input; callback side effects are not rolled back. The method is not `nothrow`,
+because an arbitrary predicate can throw.
+
+```csharp
+using std;
+
+struct Record
+{
+    public int Code;
+    public bool Failed;
+    public Record(int code, bool failed) { Code = code; Failed = failed; }
+}
+
+bool IsFailure(immutable(Record)* value) => value.Failed;
+
+int main()
+{
+    Record[4] data = [new Record(10, false), new Record(20, true),
+        new Record(30, false), new Record(40, true)];
+    Span<Record> records = new(data, 4);
+    nuint index = FindLastIndex<Record>(records.AsImmutable(), IsFailure);
+    if (index == records.Length) return 1;
+    if (records[index].Code != 40) return 2;
+    return 0;
+}
+```
 
 ## Shuffling
 

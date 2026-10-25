@@ -186,6 +186,18 @@ public nuint FindIndex<T>(Span<immutable(T)> values, bool(immutable(T)*)* predic
     return values.Length;
 }
 
+// Returns Length when no element matches, including for an empty span.
+public nuint FindLastIndex<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
+{
+    nuint index = values.Length;
+    while (index != 0)
+    {
+        index--;
+        if (predicate(&values[index])) return index;
+    }
+    return values.Length;
+}
+
 // Search callbacks borrow both values; elements and keys are never copied.
 public nuint IndexOf<T>(Span<immutable(T)> values, immutable(T)* key,
     bool(immutable(T)*, immutable(T)*)* equal)

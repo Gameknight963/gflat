@@ -758,8 +758,10 @@ It may throw like other constructors. A type with a user-written destructor is n
 it supplies a copy constructor. Aggregates without a user-written destructor copy
 their fields and base value; all of those must be copyable. Fixed buffers copy each
 element. If a copy fails, completed subobjects are destroyed. Nontrivial copying is
-not supported during constant evaluation. `foreach` copies elements and requires
-a copyable element type.
+not supported during constant evaluation. `foreach` initializes each iteration
+value using ordinary value-initializer rules. Array elements and borrowed iterator
+elements require copying; fresh values returned by an iterator's `Current` getter
+or method transfer into the loop variable, including noncopyable owning values.
 
 An explicit value cast follows the same copy contract: casting an existing value requires its accessible copy implementation, while a fresh or moved operand transfers without another copy. An owning cast result is destroyed when discarded or after temporary member use. `default(T)` and cast results support field, property, method, and fixed-buffer element access with the normal temporary lifetime.
 
@@ -769,7 +771,8 @@ a `bool MoveNext()` method and a readable `Current` member. `Current` may be a
 parameterless method, property, reference-returning property, or field; a method
 takes precedence when present. Access restrictions, immutable receivers, and value
 copy rules apply as they do to ordinary calls and member reads. A reference-returning
-`Current` is copied into the loop variable; this does not introduce reference iteration.
+`Current` is copied into the loop variable and must support the required copy;
+this does not introduce reference iteration or implicitly move from borrowed storage.
 
 The collection expression is evaluated once. A temporary collection is kept alive
 until iteration ends, and the iterator is destroyed before that temporary collection.

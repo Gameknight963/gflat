@@ -56,8 +56,7 @@ pointee lifetime. A noncopyable owning element can be returned when the active
 source produces a fresh owning value; a borrowed noncopyable owner cannot be
 copied by this value-returning getter. Both inputs must support the same ordinary
 element return contract.
-Use an explicit cursor and an owning local from `cursor.Current` for fresh
-noncopyable values; `foreach` currently requires a copyable iteration variable.
+`foreach` applies these same ordinary initialization rules to each iteration value.
 
 Both iterator fields remain alive until the Concat iterator is destroyed,
 including after switching to the right input or reaching EOF. Early exit,

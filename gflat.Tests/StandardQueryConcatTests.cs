@@ -210,12 +210,7 @@ public sealed class StandardQueryConcatTests
                     if (active != 0 || madeItems != 3 || deadItems != 3 || created != destroyed) return 34;
                     starts = 0; leftMoves = 0; rightMoves = 0;
                     if (query.Take(0).Count() != 0 || starts != 12 || leftMoves != 0 || rightMoves != 0 || active != 0) return 35;
-                    {
-                        var iterator = query.Take(1).GetEnumerator();
-                        if (!iterator.MoveNext()) return 36;
-                        Item value = iterator.Current;
-                        if (value.Id != 11) return 36;
-                    }
+                    foreach (Item value in query.Take(1)) { if (value.Id != 11) return 36; }
                     if (active != 0 || created != destroyed || madeItems != deadItems) return 37;
                 }
                 if (active != 0 || created != destroyed || allocated != freed || madeItems != deadItems) return 38;

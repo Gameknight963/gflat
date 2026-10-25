@@ -3416,14 +3416,13 @@ namespace gflat
             using var sourceContext = SourceContext.Enter(node.Span);
             node.ElementType = ResolveAlias(node.ElementType);
             ValidateValueType(node.ElementType, node.Line);
-            if (!CanCopy(node.ElementType))
-                throw new TypeCheckException($"Foreach iteration variable '{node.VariableName}' requires a copyable element type; borrow elements through an indexer instead", node.Line);
-
             node.Collection.Accept(this);
             TypeExpression rawColType = ResolveAlias(GetType(node.Collection));
 
             if (rawColType is ArrayTypeExpression arr)
             {
+                if (!CanCopy(node.ElementType))
+                    throw new TypeCheckException($"Foreach iteration variable '{node.VariableName}' requires a copyable element type; borrow elements through an indexer instead", node.Line);
                 if (!arr.Size.HasValue)
                 {
                     throw new TypeCheckException("Cannot iterate over an unsized array in foreach", node.Line);

@@ -49,6 +49,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | `Subtract(immutable(BigInteger)* other)` | Return this value minus `other`. |
 | `Multiply(immutable(BigInteger)* other)` | Return the exact product. |
 | `Pow(uint exponent)` | Return an independent exact nonnegative integer power; zero to the zero power is one. |
+| `ModPow(immutable(BigInteger)* exponent, immutable(BigInteger)* modulus)` | Return the signed remainder of this value raised to a nonnegative arbitrary-precision exponent. |
 | `DivRem(int divisor, ref int remainder)` | Return a fresh quotient and the signed remainder for a 32-bit divisor. |
 | `DivRem(immutable(BigInteger)* divisor, ref BigInteger remainder)` | Return a fresh quotient and replace initialized output with the exact remainder. |
 | `Divide(immutable(BigInteger)* divisor)` / `Remainder(immutable(BigInteger)* divisor)` | Return the quotient or remainder of arbitrary-precision division. |
@@ -337,3 +338,47 @@ int main()
     return 0;
 }
 ```
+
+## Modular exponentiation
+
+`ModPow(&exponent, &modulus)` computes the remainder without constructing the
+full integer power. The exponent must be nonnegative and the modulus nonzero;
+negative exponents throw `Exception("BigInteger exponent is negative")`, while
+zero modulus uses the existing `Exception("BigInteger divisor is zero")` error.
+These checks precede any working-limb allocations. If both are invalid, the
+negative exponent is reported first. Ordinary exception support still applies.
+
+Negative moduli are accepted and behave like their positive magnitudes. The
+result follows the existing signed remainder convention: a negative base and an
+odd exponent can produce a negative result, rather than a normalized nonnegative
+residue. Zero to exponent zero is one before reduction; modulus `1` or `-1`
+therefore always produces zero for valid exponents. This agrees with
+[.NET BigInteger.ModPow](https://learn.microsoft.com/en-us/dotnet/api/system.numerics.biginteger.modpow).
+
+```csharp
+using std;
+int main()
+{
+    BigInteger value = new(4l);
+    BigInteger exponent = new(13l);
+    BigInteger modulus = new(497l);
+    BigInteger result = value.ModPow(&exponent, &modulus);
+    long small = 0l;
+    if (!result.TryToLong(ref small) || small != 445l) return 1;
+    return 0;
+}
+```
+
+Receiver and borrowed operands remain unchanged, including when their pointers
+refer to the same initialized owner. The result is an independent owner. A
+caller may assign it back to an operand; that assignment commits only after the
+call succeeds. Allocation failures release temporary owners and preserve the
+caller's prior destination. The operation can allocate and throw.
+
+The implementation uses repeated squaring with reduction after multiplication.
+Working residue magnitudes stay below the modulus magnitude; products can reach
+roughly twice its limb length. It performs O(number of exponent bits) modular
+arithmetic steps plus repeated halving of a copied decimal-limb exponent. Halving can be
+quadratic in exponent representation length, and each arithmetic operation has
+its existing size-dependent cost and allocation behavior. This is not a
+constant-time or specialized cryptographic implementation.

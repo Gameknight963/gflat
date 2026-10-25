@@ -296,6 +296,36 @@ public struct BigInteger : IFormattable, IStringConvertable, IEquatable<BigInteg
         return move result;
     }
 
+    public immutable BigInteger ModPow(immutable(BigInteger)* exponent, immutable(BigInteger)* modulus)
+    {
+        if (exponent.sign < 0) throw new Exception("BigInteger exponent is negative");
+        if (modulus.sign == 0) throw new Exception("BigInteger divisor is zero");
+        if (modulus.limbs.Count == 1 && modulus.limbs[0] == 1u) return new BigInteger();
+        if (exponent.sign == 0) return new BigInteger(1l);
+        if (sign == 0) return new BigInteger();
+
+        BigInteger factor = this.Remainder(modulus);
+        if (factor.sign == 0) return move factor;
+        BigInteger remaining = *exponent;
+        BigInteger result = new(1l);
+        while (remaining.sign != 0)
+        {
+            int bit = 0;
+            remaining = remaining.DivRem(2, ref bit);
+            if (bit != 0)
+            {
+                BigInteger product = result.Multiply(&factor);
+                result = product.Remainder(modulus);
+            }
+            if (remaining.sign != 0)
+            {
+                BigInteger square = factor.Multiply(&factor);
+                factor = square.Remainder(modulus);
+            }
+        }
+        return move result;
+    }
+
     // Signed 32-bit divisor. Quotient truncates toward zero; remainder has dividend sign.
     public immutable BigInteger DivRem(int divisor, ref int remainder)
     {

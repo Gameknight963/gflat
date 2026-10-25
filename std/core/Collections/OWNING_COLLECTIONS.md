@@ -113,6 +113,20 @@ extension is checked only when called; spans of noncopyable values remain usable
 without calling it. For source-library selection its file is
 `Collections/SpanCopy.gf`.
 
+`source.TryCopyTo(destination)` has the same receiver and element-copy contract
+as `CopyTo`, but returns false when the destination is too short. That length
+check happens before accessing either data buffer or invoking any element copy;
+neither span's elements are changed on that false result. Empty copies and exact
+self-copies succeed. Successful copies leave any extra destination elements
+unchanged and preserve the same overlap-safe assignment order as `CopyTo`.
+
+This is a capacity check, not an exception boundary. A copy constructor or
+allocation failure still propagates; assignments completed before that failure
+remain committed under the existing `CopyTo` rules. The element type must support
+the same ordinary copying even if a particular call would return false. Use
+`view.AsImmutable().TryCopyTo(destination)` for a mutable source view; a readonly
+or immutable destination cannot be written through this helper.
+
 `span.Fill(value)` assigns a snapshot of `value` to every initialized element,
 in increasing index order. For example, `work.AsSpan().Slice(2, 4).Fill(0)` resets
 four existing work slots. The value is an ordinary by-value parameter: its copy

@@ -21,3 +21,11 @@ public void CopyTo<T>(this Span<immutable(T)> source, Span<T> destination)
         for (nuint i = 0; i < count; i++) output[i] = input[i];
     }
 }
+
+// False means insufficient destination length; copying errors still propagate.
+public bool TryCopyTo<T>(this Span<immutable(T)> source, Span<T> destination)
+{
+    if (destination.Length < source.Length) return false;
+    std::CopyTo<T>(source, destination);
+    return true;
+}

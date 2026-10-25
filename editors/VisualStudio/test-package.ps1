@@ -1050,6 +1050,10 @@ int SmokeHashesAndViews() {
         nuint nativeMask = ~(nuint)0;
         if (complementConstant != (byte)255 || complementValue != (byte)254
             || nativeMask != (nuint)0 - (nuint)1) return 278;
+        IpNetwork endpointNetwork = IpNetwork::Parse("192.0.2.128/25");
+        IpAddress endpoint = endpointNetwork.LastAddress;
+        IpAddress expectedEndpoint = IpAddress::Parse("192.0.2.255");
+        if (!endpoint.Equals(&expectedEndpoint) || !endpointNetwork.Contains(&endpoint)) return 279;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

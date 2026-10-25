@@ -36,7 +36,7 @@ try {
     foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
-    foreach ($source in @('std/core/Version.gf', 'std/core/DateTimeOffset.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/Collections/EnumerableOrder.gf', 'std/core/Collections/OrderSource.gf', 'std/core/Collections/DefaultOrdering.gf', 'std/core/Collections/DefaultEquality.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+    foreach ($source in @('std/core/Version.gf', 'std/core/DateTimeOffset.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/Collections/EnumerableOrder.gf', 'std/core/Collections/OrderSource.gf', 'std/core/Collections/DefaultOrdering.gf', 'std/core/Collections/DefaultEquality.gf', 'std/core/Memory/Alignment.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
     foreach ($platform in @('windows', 'linux')) {
@@ -1042,6 +1042,14 @@ int SmokeHashesAndViews() {
             || IndexOf(defaultSpan.AsImmutable(), &contractKey) != 2
             || LastIndexOf(defaultSpan.AsImmutable(), &contractKey) != 2
             || !Contains(defaultSpan.AsImmutable(), &contractKey)) return 276;
+        if (Memory::AlignUp(13, 8) != 16 || Memory::AlignDown(123, 64) != 64
+            || !Memory::IsAligned(16, 8) || Memory::IsAligned(16, 3)) return 277;
+        const byte complementConstant = ~(byte)0;
+        byte complementInput = (byte)defaultSorted[0];
+        byte complementValue = ~complementInput;
+        nuint nativeMask = ~(nuint)0;
+        if (complementConstant != (byte)255 || complementValue != (byte)254
+            || nativeMask != (nuint)0 - (nuint)1) return 278;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

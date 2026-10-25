@@ -13,6 +13,9 @@ public partial class TypeChecker
         extensionCalls.TryGetValue(call, out var lowered) ? GetGenericCallTypeArguments(lowered) :
         selectedGenericCallArguments.GetValueOrDefault(call);
 
+    public IReadOnlyList<TypeExpression>? GetGenericFunctionValueTypeArguments(AstNode expression) =>
+        selectedGenericFunctionValueArguments.GetValueOrDefault(expression);
+
     // Preserve a source parameter as itself. The caller supplies its already
     // known, nongeneric interface; this query never binds or specializes a type.
     public TypeExpression? CreateOpenGenericParameterView(AstNode definition, string name, TypeExpression? knownConstraint)

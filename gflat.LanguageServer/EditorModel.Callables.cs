@@ -91,10 +91,12 @@ public sealed partial class EditorModel
             int memberStart = expression switch { NamespaceAccessExpression access => access.Left.Span.Start + access.Left.Span.Length, MemberAccessExpression access => access.Object.Span.Start + access.Object.Span.Length, _ => expression.Span.Start };
             var token = fileTokens.FirstOrDefault(token => token.Kind == TokenKind.Identifier && token.Text == name && token.Start >= memberStart && token.End < expression.Span.Start + expression.Span.Length);
             if (token == null) continue;
+            var genericArguments = call != null ? checker.GetGenericCallTypeArguments(call) :
+                checker.GetGenericFunctionValueTypeArguments(syntax.Node);
             Symbol selected;
             if (extension != null) selected = extension;
-            else if (call != null && checker.GetGenericCallTypeArguments(call) is { } arguments)
-                selected = BindCallable(source, target, interfaceOwner, arguments);
+            else if (genericArguments != null)
+                selected = BindCallable(source, target, interfaceOwner, genericArguments);
             else if (!bound.TryGetValue(target, out selected!)) bound[target] = selected = BindCallable(source, target, interfaceOwner);
             boundCallableReferences[token] = selected;
             boundCallableFamilies[token] = selected.BoundExtension && call?.Callee is MemberAccessExpression member

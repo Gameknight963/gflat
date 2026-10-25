@@ -6,6 +6,7 @@ namespace gflat;
 public partial class TypeChecker
 {
     private readonly HashSet<AstNode> selectedFunctionValues = new();
+    private readonly Dictionary<AstNode, IReadOnlyList<TypeExpression>> selectedGenericFunctionValueArguments = new();
 
     private bool IsOverloadedFunctionValue(AstNode expression) =>
         _functionAddressTargets.TryGetValue(expression, out var target) && target is MethodDeclaration method &&
@@ -108,8 +109,11 @@ public partial class TypeChecker
         var selected = matches[0].Definition;
         if (name != null) ResolveStaticMethod(name, selectedValue: selected);
         ValidateNamespaceFunctionAccess(selected, expression.Span);
+        var genericArguments = selected.IsGeneric ? matches[0].TypeArguments : null;
         if (selected.IsGeneric) selected = MonomorphizeFunction(selected, matches[0].TypeArguments, expression.Line);
         ValidateFunctionAddress(selected, expression.Line);
+        if (genericArguments != null) selectedGenericFunctionValueArguments[expression] = genericArguments.ToArray();
+        else selectedGenericFunctionValueArguments.Remove(expression);
         _functionAddressTargets[expression] = selected;
         selectedFunctionValues.Add(expression);
         RecordType(expression, new FunctionPointerTypeExpression(expected.ReturnType,

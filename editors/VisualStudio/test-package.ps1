@@ -36,7 +36,7 @@ try {
     foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
-    foreach ($source in @('std/core/Version.gf', 'std/core/DateTimeOffset.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/Collections/EnumerableOrder.gf', 'std/core/Collections/OrderSource.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
+    foreach ($source in @('std/core/Version.gf', 'std/core/DateTimeOffset.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/Collections/EnumerableOrder.gf', 'std/core/Collections/OrderSource.gf', 'std/core/Collections/DefaultOrdering.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/$source"))) { throw "VSIX is missing Sdk/$source" }
     }
     foreach ($platform in @('windows', 'linux')) {
@@ -1024,6 +1024,14 @@ int SmokeHashesAndViews() {
         DateTimeOffset restoredStamp = laterStamp.Subtract(elapsedStamp);
         if (elapsedStamp.Ticks != 9000000000l || laterStamp.Offset.Ticks != offsetStamp.Offset.Ticks
             || !restoredStamp.EqualsExact(&offsetStamp)) return 272;
+        int[5] defaultSorted = [3, 4, 1, 2, 0];
+        Span<int> defaultSpan = new(defaultSorted, 5);
+        Sort(defaultSpan);
+        if (defaultSorted[0] != 0 || defaultSorted[4] != 4
+            || FindLastIndex<int>(defaultSpan.AsImmutable(), (immutable(int)* item) => *item % 2 == 0) != 4) return 273;
+        defaultSorted[0] = 9;
+        StableSort(defaultSpan);
+        if (defaultSorted[0] != 1 || defaultSorted[4] != 9) return 274;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

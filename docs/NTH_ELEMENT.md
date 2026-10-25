@@ -64,6 +64,6 @@ other in-place algorithms.
 Include optional `Collections/NthElement.gf` with `Collections/Algorithms.gf`,
 Span and their normal dependencies. `Collections/DefaultOrdering.gf` adds
 `NthElement(values, nth)` for `T : IComparable<T>`, using `Comparer<T>::Compare`;
-include `Comparer.gf` and `IComparable.gf` for that convenience. The explicit
+include `Collections/Comparer.gf` and `IComparable.gf` for that convenience. The explicit
 three-argument operation remains independent of those comparison contracts.
 There is no median wrapper.

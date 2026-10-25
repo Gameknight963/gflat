@@ -125,7 +125,7 @@ public sealed class StandardLinkedListReverseTests
     private static void Run(string program, int optimization, bool gc = false)
     {
         var names = new List<string> {
-            "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/LinkedList.gf"
+            "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/Collections/LinkedList.gf"
         };
         if (gc) names.AddRange(["libc/GC.gf", "libc/TracingCollector.gf"]);
         var sources = names.Select(name => new SourceFile(name,

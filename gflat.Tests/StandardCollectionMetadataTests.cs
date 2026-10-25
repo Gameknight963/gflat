@@ -5,8 +5,8 @@ namespace gflat.Tests;
 public sealed class StandardCollectionMetadataTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Vector.gf", "Span.gf", "Queue.gf",
-            "Stack.gf", "PriorityQueue.gf", "BitSet.gf", "HashMap.gf", "HashSet.gf", "LinkedList.gf",
+        => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/Vector.gf", "Span.gf", "Collections/Queue.gf",
+            "Collections/Stack.gf", "Collections/PriorityQueue.gf", "Collections/BitSet.gf", "Collections/HashMap.gf", "Collections/HashSet.gf", "Collections/LinkedList.gf",
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf" }
             .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("metadata.gf", program));

@@ -185,7 +185,7 @@ public sealed class StandardLinkedListRemoveAllTests
             """;
         // Match StandardLinkedListTests.Sources(gc:true), not an alternate collector.
         string[] names=["core/Collections/IEnumerable.gf","core/Collections/Enumerable.gf",
-            "core/LinkedList.gf","libc/GC.gf","libc/TracingCollector.gf"];
+            "core/Collections/LinkedList.gf","libc/GC.gf","libc/TracingCollector.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(
                 Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("linked-list-remove-all-managed.gf",program));
@@ -195,7 +195,7 @@ public sealed class StandardLinkedListRemoveAllTests
 
     private static void Run(string program,int optimization)
     {
-        string[] names=["Collections/IEnumerable.gf","Collections/Enumerable.gf","LinkedList.gf"];
+        string[] names=["Collections/IEnumerable.gf","Collections/Enumerable.gf","Collections/LinkedList.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("linked-list-remove-all.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

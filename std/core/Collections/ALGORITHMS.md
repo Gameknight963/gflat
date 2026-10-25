@@ -255,7 +255,7 @@ Sort may leave a permutation partially ordered, whereas StableSort leaves the
 input unchanged when allocation or comparison fails. User comparison methods
 must obey the existing ordering, immutability and borrowed-pointer contracts.
 
-Explicit source selection needs `Collections/DefaultOrdering.gf`, `Comparer.gf`,
+Explicit source selection needs `Collections/DefaultOrdering.gf`, `Collections/Comparer.gf`,
 `IComparable.gf` and the normal Span dependencies. Also include the underlying
 algorithm sources being used: `Collections/Algorithms.gf` for Sort, and
 `Collections/StableSort.gf` with Vector dependencies for StableSort. Selecting the
@@ -315,7 +315,7 @@ int main()
 ```
 
 For selective sources these wrappers need `Collections/DefaultOrdering.gf`,
-`Collections/Algorithms.gf`, `Comparer.gf`, `IComparable.gf` and ordinary Span
+`Collections/Algorithms.gf`, `Collections/Comparer.gf`, `IComparable.gf` and ordinary Span
 dependencies. The explicit-comparator algorithm source remains independent of
 DefaultOrdering/Comparer and still supports custom or descending comparisons.
 

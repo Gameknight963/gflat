@@ -94,7 +94,7 @@ public sealed class StandardBitSetOverlapTests
 
     private static void Run(string program,int optimization)
     {
-        string[] names=["Collections/IEnumerable.gf","Collections/Enumerable.gf","BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf"];
+        string[] names=["Collections/IEnumerable.gf","Collections/Enumerable.gf","Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("bitset-overlaps.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat-bitset-overlap-"+Guid.NewGuid().ToString("N"));

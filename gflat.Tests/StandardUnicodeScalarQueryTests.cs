@@ -69,7 +69,7 @@ public sealed class StandardUnicodeScalarQueryTests
 
     private static void Run(string program,int optimization)
     {
-        string[] names=["Utf8.gf","Utf16.gf","Utf8Scalars.gf","Utf16Scalars.gf","Span.gf","Vector.gf",
+        string[] names=["Utf8.gf","Utf16.gf","Utf8Scalars.gf","Utf16Scalars.gf","Span.gf","Collections/Vector.gf",
             "Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf","Collections/EnumerableExtensions.gf",
             "Collections/WhereSource.gf","Collections/SelectSource.gf","Collections/SliceSource.gf","Collections/TakeWhileSource.gf","Collections/SkipWhileSource.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))

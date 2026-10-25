@@ -68,6 +68,6 @@ borrowing rules.
 Include optional `Collections/Permutations.gf` and `Collections/Algorithms.gf`,
 Span and their normal dependencies. `Collections/DefaultOrdering.gf` adds
 one-argument `NextPermutation(values)` and `PreviousPermutation(values)` for
-`T : IComparable<T>`, using `Comparer<T>::Compare`; include `Comparer.gf` and
+`T : IComparable<T>`, using `Comparer<T>::Compare`; include `Collections/Comparer.gf` and
 `IComparable.gf` for those conveniences. Explicit callbacks remain available
 without that interface. There is no permutation-sequence wrapper.

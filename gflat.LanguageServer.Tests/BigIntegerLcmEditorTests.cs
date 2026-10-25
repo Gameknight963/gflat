@@ -20,7 +20,7 @@ public sealed class BigIntegerLcmEditorTests
             """;
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
         string[] names=["IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf",
-            "String.gf","ByteSearch.gf","Formatting.gf","Vector.gf","Span.gf",
+            "String.gf","ByteSearch.gf","Formatting.gf","Collections/Vector.gf","Span.gf",
             "Collections/IEnumerable.gf","Collections/Enumerable.gf","BigInteger.gf"];
         var sources=names.Select(name=>Path.Combine(root,name.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();

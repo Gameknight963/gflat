@@ -173,7 +173,7 @@ public sealed class StandardHashSetRelationTests
 
     private static void Run(string program, int optimization)
     {
-        string[] files = ["IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "HashMap.gf", "HashSet.gf",
+        string[] files = ["IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "Collections/HashMap.gf", "Collections/HashSet.gf",
             "IStringConvertable.gf", "String.gf", "ByteSearch.gf"];
         var sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("relations.gf", program));

@@ -71,7 +71,7 @@ public sealed class StandardQueryDistinctTests
     public void UnusedDistinctDefinitionsDoNotRequireHashImplementationInSelectiveCollectionFixtures()
     {
         string root=Path.Combine(AppContext.BaseDirectory,"Std/core");
-        string[] files=["Span.gf","Vector.gf","String.gf","ByteSearch.gf","IStringConvertable.gf",
+        string[] files=["Span.gf","String.gf","ByteSearch.gf","IStringConvertable.gf",
             "IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf"];
         var sources=Directory.GetFiles(Path.Combine(root,"Collections"),"*.gf")
             .Concat(files.Select(file=>Path.Combine(root,file)))

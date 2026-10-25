@@ -75,7 +75,7 @@ public class StandardBitSetEnumerationTests
 
     private static void Run(string code,int optimization)
     {
-        var sources=new[]{"Collections/IEnumerable.gf", "Collections/Enumerable.gf","BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf"}
+        var sources=new[]{"Collections/IEnumerable.gf", "Collections/Enumerable.gf","Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);

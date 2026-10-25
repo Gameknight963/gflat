@@ -423,7 +423,7 @@ accepts caller-owned words; null is valid only for zero length, otherwise provid
 at least `ceil(bitLength / 32)` readable words for every later enumeration.
 
 Explicit source selection now requires `Collections/Enumerable.gf` alongside
-`BitSet.gf`, `Collections/IEnumerable.gf`, `IEquatable.gf`, `IHashable.gf`, and
+`Collections/BitSet.gf`, `Collections/IEnumerable.gf`, `IEquatable.gf`, `IHashable.gf`, and
 `Hashing.gf`; query operators additionally use
 their ordinary collection source files. Failed allocation during `Resize`
 preserves both the original bits and length. Padding bits outside the logical

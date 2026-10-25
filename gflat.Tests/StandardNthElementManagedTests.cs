@@ -10,7 +10,7 @@ public sealed class StandardNthElementManagedTests
         string[] files = [
             "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf",
             "core/Collections/Algorithms.gf", "core/Collections/NthElement.gf",
-            "core/Vector.gf", "core/Span.gf", "libc/GC.gf", "libc/TracingCollector.gf"
+            "core/Collections/Vector.gf", "core/Span.gf", "libc/GC.gf", "libc/TracingCollector.gf"
         ];
         var sources = files.Select(file => new SourceFile("std/" + file,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))))

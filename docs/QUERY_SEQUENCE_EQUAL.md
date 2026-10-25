@@ -65,6 +65,6 @@ sequence equality intentionally enumerates and follows ordinary element value
 semantics.
 
 Selective source users include `Collections/EnumerableSequenceEqual.gf`, plus
-`EqualityComparer.gf` and `IEquatable.gf` for default equality, alongside their
+`Collections/EqualityComparer.gf` and `IEquatable.gf` for default equality, alongside their
 normal source/enumeration dependencies. No new iterator type or compiler feature
 is required.

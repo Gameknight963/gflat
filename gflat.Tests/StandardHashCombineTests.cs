@@ -127,7 +127,7 @@ public sealed class StandardHashCombineTests
             }
             int main(){for(int family=0;family<7;family++){int result=Check(family);if(result!=0)return result;}return 0;}
             """;
-        var sources=new[]{"Hashing.gf","IHashable.gf","IEquatable.gf","HashMap.gf","HashSet.gf"}
+        var sources=new[]{"Hashing.gf","IHashable.gf","IEquatable.gf","Collections/HashMap.gf","Collections/HashSet.gf"}
             .Select(name=>new SourceFile(name,Read(name))).Append(new SourceFile("main.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");
     }

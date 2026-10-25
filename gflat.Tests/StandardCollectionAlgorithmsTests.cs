@@ -4,7 +4,7 @@ public sealed class StandardCollectionAlgorithmsTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/Algorithms.gf", "IStringConvertable.gf",
-        "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf", "Vector.gf", "Span.gf"
+        "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf", "Collections/Vector.gf", "Span.gf"
     }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
         .Append(new SourceFile("main.gf", program));
 

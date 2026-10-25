@@ -75,7 +75,7 @@ public sealed class ManagedReturnStorageTests
             string runtime = Path.Combine(directory, "runtime.cpp");
             string executable = Path.Combine(directory, OperatingSystem.IsWindows() ? "program.exe" : "program");
             string emitted = vector
-                ? Compiler.Emit(new[] { "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/Vector.gf", "core/Span.gf" }
+                ? Compiler.Emit(new[] { "core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf", "core/Collections/Vector.gf", "core/Span.gf" }
                     .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                     .Append(new SourceFile("main.gf", Runtime + source)))
                 : Compiler.Emit(Runtime + source);

@@ -4,7 +4,7 @@ public sealed class StandardShuffleTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/Shuffle.gf",
-        "PseudoRandom.gf", "Span.gf", "Vector.gf"
+        "PseudoRandom.gf", "Span.gf", "Collections/Vector.gf"
     }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
         .Append(new SourceFile("main.gf", program));
 

@@ -53,7 +53,7 @@ public sealed class LinkedListReverseEditorTests
     private static (SourceFile[] Sources,SourceFile Source) Sources(string text)
     {
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary");
-        var files=new[]{"core/Collections/IEnumerable.gf","core/Collections/Enumerable.gf","core/LinkedList.gf"}
+        var files=new[]{"core/Collections/IEnumerable.gf","core/Collections/Enumerable.gf","core/Collections/LinkedList.gf"}
             .Select(relative=>Path.Combine(root,relative.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("linked-list-reverse-editor.gf"),text);files.Add(source);

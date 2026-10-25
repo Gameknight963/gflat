@@ -4,7 +4,7 @@ public sealed class StandardSpanSearchTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/Algorithms.gf",
-            "Span.gf", "Vector.gf", "String.gf", "ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf" }
+            "Span.gf", "Collections/Vector.gf", "String.gf", "ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
 
@@ -47,7 +47,7 @@ public sealed class StandardSpanSearchTests
                 if(IndexOf<int>(mutable.AsImmutable(),&changed,Equal)!=0) return 6;
                 return 0;
             }
-            """, optimization, "EqualityComparer.gf");
+            """, optimization, "Collections/EqualityComparer.gf");
 
     private const string Owning = """
         using std;

@@ -104,8 +104,8 @@ unique line contents, rather than with the complete file. This is not a bounded
 memory algorithm for a file containing arbitrarily many unique lines.
 
 For explicit source selection, include `Collections/EnumerableDistinct.gf` and
-`Collections/DistinctSource.gf` alongside the usual query sources, `HashSet.gf`,
-`HashMap.gf`, and their hash/equality dependencies. Existing queries that do not
+`Collections/DistinctSource.gf` alongside the usual query sources, `Collections/HashSet.gf`,
+`Collections/HashMap.gf`, and their hash/equality dependencies. Existing queries that do not
 use Distinct do not acquire a HashSet dependency merely by including its generic
 definitions. The existing qualified-element `IEquatable<T>` constraint limitation
 also applies here; this adapter does not erase readonly/immutable qualifiers.

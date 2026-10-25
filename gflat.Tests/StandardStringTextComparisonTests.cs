@@ -4,7 +4,7 @@ public sealed class StandardStringTextComparisonTests
 {
     // CString.gf is intentionally absent: the String methods scan locally.
     private static IEnumerable<SourceFile> Sources(string program)
-        => new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Comparer.gf",
+        => new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Collections/Comparer.gf",
             "Hashing.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf" }
             .Select(name => new SourceFile(name,
                 File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

@@ -74,5 +74,5 @@ are constant-time, with ordinary consumer copy costs when applicable.
 
 Selective sources include `Collections/OrderSource.gf`,
 `Collections/EnumerableOrder.gf`, `Collections/EnumerableExtensions.gf`,
-`Collections/StableSort.gf`, `Comparer.gf` for default ordering, and the normal
+`Collections/StableSort.gf`, `Collections/Comparer.gf` for default ordering, and the normal
 Enumerable/Vector dependencies.

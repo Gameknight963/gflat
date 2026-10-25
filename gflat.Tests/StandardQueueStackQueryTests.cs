@@ -110,7 +110,7 @@ public sealed class StandardQueueStackQueryTests
 
     private static IEnumerable<SourceFile> Sources(string source)
     {
-        string[] names=["Queue.gf","Stack.gf","Span.gf","Vector.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf",
+        string[] names=["Collections/Queue.gf","Collections/Stack.gf","Span.gf","Collections/Vector.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf",
             "Collections/EnumerableExtensions.gf","Collections/WhereSource.gf","Collections/SelectSource.gf","Collections/SliceSource.gf","Collections/TakeWhileSource.gf","Collections/SkipWhileSource.gf"];
         return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("queue-stack-queries.gf",source));

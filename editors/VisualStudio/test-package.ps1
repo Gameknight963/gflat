@@ -33,7 +33,7 @@ try {
     }
     # The complete optional source library lives in the project SDK. Compiler and
     # server Std folders contain only the built-in runtime contract subset.
-    foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Deque.gf', 'core/SortedSet.gf', 'core/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
+    foreach ($source in @('core/String.gf', 'core/ByteSearch.gf', 'core/Collections/Deque.gf', 'core/Collections/SortedSet.gf', 'core/Collections/HashMap.gf', 'core/Collections/HashSetExtensions.gf', 'core/JsonString.gf', 'core/JsonStringWriter.gf', 'core/VarInt.gf', 'core/BinaryPrimitives.gf', 'core/BinaryBufferReader.gf', 'core/BinaryBufferWriter.gf', 'core/IntegerFormatting.gf')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/$source"))) { throw "VSIX is missing Sdk/std/$source" }
     }
     foreach ($source in @('std/core/Version.gf', 'std/core/DateTimeOffset.gf', 'std/core/Rational.gf', 'std/core/Collections/EnumerableExtremaBy.gf', 'std/core/Collections/EnumerableCountBy.gf', 'std/core/Collections/EnumerableToHashMap.gf', 'std/core/Collections/EnumerableToLookup.gf', 'std/core/Collections/EnumerableOrder.gf', 'std/core/Collections/OrderSource.gf', 'std/core/Collections/DefaultOrdering.gf', 'std/core/Collections/DefaultEquality.gf', 'std/core/Memory/Alignment.gf', 'std/core/IMonotonicClock.gf', 'std/core/Stopwatch.gf', 'libraries/platform/windows/Windows.gfproj', 'libraries/platform/windows/PerformanceCounter.gf', 'libraries/platform/linux/Linux.gfproj', 'libraries/platform/linux/MonotonicClock.gf')) {
@@ -211,7 +211,7 @@ int main() {
     $bundledStd = Join-Path $extracted 'Sdk/std/core'
     $querySources = @(Get-ChildItem -LiteralPath (Join-Path $bundledStd 'Collections') -Filter '*.gf' -File | ForEach-Object FullName)
     $contractSources = @('IHashable.gf', 'IEquatable.gf', 'IComparable.gf', 'Hashing.gf') | ForEach-Object { Join-Path $bundledStd $_ }
-    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Vector.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'ByteSearch.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
+    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'Collections/Vector.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'ByteSearch.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'

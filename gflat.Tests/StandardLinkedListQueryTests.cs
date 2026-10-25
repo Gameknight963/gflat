@@ -96,7 +96,7 @@ public sealed class StandardLinkedListQueryTests
 
     private static IEnumerable<SourceFile> Sources(string source)
     {
-        string[] names = ["LinkedList.gf", "Vector.gf", "Span.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf",
+        string[] names = ["Collections/LinkedList.gf", "Collections/Vector.gf", "Span.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf",
             "Collections/EnumerableExtensions.gf", "Collections/WhereSource.gf", "Collections/SelectSource.gf", "Collections/SliceSource.gf",
             "Collections/TakeWhileSource.gf", "Collections/SkipWhileSource.gf"];
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

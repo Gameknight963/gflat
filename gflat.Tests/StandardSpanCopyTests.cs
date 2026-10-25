@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardSpanCopyTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
-        => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/SpanCopy.gf", "Span.gf", "Vector.gf",
+        => new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/SpanCopy.gf", "Span.gf", "Collections/Vector.gf",
             "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf" }
             .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("copy.gf", program));

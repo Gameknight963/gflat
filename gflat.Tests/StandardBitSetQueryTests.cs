@@ -66,7 +66,7 @@ public sealed class StandardBitSetQueryTests
 
     private static void Run(string code,int optimization)
     {
-        string[] names=["BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf","Span.gf","Vector.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf",
+        string[] names=["Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf","Span.gf","Collections/Vector.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Collections/Enumerable.gf",
             "Collections/EnumerableExtensions.gf","Collections/WhereSource.gf","Collections/SelectSource.gf","Collections/SliceSource.gf","Collections/TakeWhileSource.gf","Collections/SkipWhileSource.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("bit-queries.gf",code));

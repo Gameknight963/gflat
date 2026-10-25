@@ -51,4 +51,4 @@ initialized ownership is cleaned up by the language.
 
 There is no insertion, removal, splitting, or concurrent mutation support.
 Map application-specific labels to indices separately. The source is
-`core/DisjointSet.gf`, using Vector and its ordinary runtime contracts.
+`core/Collections/DisjointSet.gf`, using Vector and its ordinary runtime contracts.

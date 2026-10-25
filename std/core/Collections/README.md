@@ -384,7 +384,7 @@ comparison preserves the key type's existing ordering, including its floating
 NaN/signed-zero policy. Explicit comparers must define a consistent ordering.
 
 Selective source users add Collections/EnumerableExtremaBy.gf with the ordinary
-sequence contracts. Default comparison additionally uses Comparer.gf and
+sequence contracts. Default comparison additionally uses Collections/Comparer.gf and
 IComparable.gf. No Vector, String, or direct libc dependency is introduced by
 the scan itself; selected element, iterator, callback, and exception dependencies
 still apply.

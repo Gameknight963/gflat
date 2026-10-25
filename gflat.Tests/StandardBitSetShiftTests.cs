@@ -167,7 +167,7 @@ public sealed class StandardBitSetShiftTests
 
     private static void Run(string directory, string program, int optimization)
     {
-        var sources = new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf" }
+        var sources = new[] { "Collections/IEnumerable.gf", "Collections/Enumerable.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf" }
             .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("shifts.gf", program));
         string ir = Path.Combine(directory, "shifts.ll"), executable = Path.Combine(directory, "shifts.exe");

@@ -130,7 +130,7 @@ public sealed class StandardQueryIteratorLifetimeTests
     {
         string[] files = ["Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Collections/Enumerable.gf",
             "Collections/EnumerableExtensions.gf", "Collections/WhereSource.gf", "Collections/SelectSource.gf", "Collections/SliceSource.gf",
-            "Vector.gf", "Span.gf", "String.gf", "ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf"];
+            "Collections/Vector.gf", "Span.gf", "String.gf", "ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf"];
         var sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("iterator.gf", program));
         string directory = Path.Combine(Path.GetTempPath(), "gflat_query_iterator_" + Guid.NewGuid().ToString("N"));

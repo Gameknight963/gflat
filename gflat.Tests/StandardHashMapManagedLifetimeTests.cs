@@ -5,7 +5,7 @@ public class StandardHashMapManagedLifetimeTests
     [Fact]
     public void GrowthAndTombstoneRemovalKeepOnlyLiveManagedValuesReachable()
     {
-        string[] files=["core/IHashable.gf","core/IEquatable.gf","core/Hashing.gf","core/HashMap.gf","libc/GC.gf","libc/TracingCollector.gf"];
+        string[] files=["core/IHashable.gf","core/IEquatable.gf","core/Hashing.gf","core/Collections/HashMap.gf","libc/GC.gf","libc/TracingCollector.gf"];
         var sources=files.Select(file=>new SourceFile("std/"+file,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",file))));
         var result=CompilerTestHelper.Run(sources.Append(new SourceFile("main.gf","""

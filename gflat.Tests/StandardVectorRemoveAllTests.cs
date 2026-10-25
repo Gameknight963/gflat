@@ -6,7 +6,7 @@ public sealed class StandardVectorRemoveAllTests
     {
         string[] names = ["core/Collections/IEnumerable.gf", "core/Collections/Enumerable.gf",
             "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf",
-            "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Vector.gf", "core/Span.gf"];
+            "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Collections/Vector.gf", "core/Span.gf"];
         return names.Concat(managed ? ["libc/GC.gf", "libc/TracingCollector.gf"] : Array.Empty<string>())
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("vector-remove-all.gf", program));

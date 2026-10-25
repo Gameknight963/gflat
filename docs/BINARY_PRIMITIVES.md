@@ -44,7 +44,8 @@ sixteen bytes before committing their output. Byte buffers may be unaligned;
 an overlapping scalar output must still have valid `extralong` alignment.
 The implementation combines two 64-bit halves with shifts and bit operations,
 without floating-point conversions, division helpers, or a separate runtime.
-These additions do not add 128-bit cursor or stream overloads.
+The matching [binary cursors](BINARY_CURSORS.md) provide sixteen-byte `ExtraLong`
+methods too. `FileBinary` does not currently provide 128-bit stream overloads.
 
 ## Floating-point values
 

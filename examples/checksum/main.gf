@@ -27,26 +27,44 @@ void ReadChecksums(readonly(char)* path, ref uint crcValue, ref uint adlerValue)
     adlerValue = adler.GetValue();
 }
 
+uint ReadCRC32C(readonly(char)* path)
+{
+    File input = File::OpenRead(path);
+    CRC32C crc = new();
+    char[4096] buffer;
+    while (true)
+    {
+        nuint count = input.Read(buffer, 4096);
+        if (count == 0) break;
+        crc.Append(buffer, count);
+    }
+    input.Close();
+    return crc.GetValue();
+}
+
 int main(int argc, char** argv)
 {
     bool sha256 = false;
+    bool crc32c = false;
     int firstPath = 1;
     while (firstPath < argc)
     {
         readonly(char)* argument = argv[firstPath];
         if (CString::Equals(argument, "--")) { firstPath++; break; }
-        if (CString::Equals(argument, "--sha256") && !sha256)
+        if (CString::Equals(argument, "--sha256") && !sha256 && !crc32c)
         { sha256 = true; firstPath++; continue; }
+        if (CString::Equals(argument, "--crc32c") && !sha256 && !crc32c)
+        { crc32c = true; firstPath++; continue; }
         if (argument[0] == '-')
         {
-            Console::Error.WriteLine("Usage: checksum [--sha256] [--] <file> [more files...]");
+            Console::Error.WriteLine("Usage: checksum [--sha256 | --crc32c] [--] <file> [more files...]");
             return 2;
         }
         break;
     }
     if (firstPath >= argc)
     {
-        Console::Error.WriteLine("Usage: checksum [--sha256] [--] <file> [more files...]");
+        Console::Error.WriteLine("Usage: checksum [--sha256 | --crc32c] [--] <file> [more files...]");
         return 2;
     }
     int status = 0;
@@ -60,6 +78,7 @@ int main(int argc, char** argv)
             try
             {
                 if (sha256) digest = FileHash::SHA256(argv[i]);
+                else if (crc32c) crc = ReadCRC32C(argv[i]);
                 else ReadChecksums(argv[i], ref crc, ref adler);
             }
             catch (ref IOException error)
@@ -73,6 +92,7 @@ int main(int argc, char** argv)
             {
                 Console::Out.WriteHex((readonly(char)*)(byte*)digest, 32, false);
             }
+            else if (crc32c) WriteChecksum(crc);
             else
             {
                 WriteChecksum(crc);

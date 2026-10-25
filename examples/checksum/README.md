@@ -4,21 +4,25 @@
 gflat build examples/checksum/checksum.gfproj
 examples/checksum/bin/Debug/checksum.exe first.bin second.bin
 examples/checksum/bin/Debug/checksum.exe --sha256 first.bin second.bin
+examples/checksum/bin/Debug/checksum.exe --crc32c first.bin second.bin
 ```
 
-Syntax: `checksum [--sha256] [--] <file> [more files...]`.
+Syntax: `checksum [--sha256 | --crc32c] [--] <file> [more files...]`.
 Options are recognized only before the first path. `--` ends option parsing,
-allowing a first filename such as `--sha256`; later paths are always literal.
-Unknown or repeated leading options and missing paths are usage errors.
+allowing a first filename such as `--sha256` or `--crc32c`; later paths are always literal.
+The algorithm options are mutually exclusive. Unknown, repeated, or mixed leading
+options and missing paths are usage errors.
 
 By default, prints an eight-digit hexadecimal CRC32, an eight-digit Adler32,
 two spaces, and the file path for each input. `--sha256` instead prints a
 64-digit lowercase SHA-256 digest, two spaces, and the path, using `FileHash`.
+`--crc32c` instead prints one eight-digit lowercase CRC32C, two spaces, and the path.
 Files are read in binary mode, in 4096-byte chunks. Neither
 the file contents nor the formatted checksums require a String or managed
 allocation. Streams close before output, including on read failure.
 
-CRC32 is the IEEE variant used by gzip; Adler32 is the zlib checksum. These can
+CRC32 is the IEEE variant used by gzip; CRC32C uses the Castagnoli polynomial
+and produces different checksums. Adler32 is the zlib checksum. These can
 detect accidental corruption. They are not cryptographic hashes and cannot
 establish that a file is trustworthy.
 

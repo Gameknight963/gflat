@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardBitSetTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
-        "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing.gf"
+        "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf"
     }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
         .Append(new SourceFile("main.gf", program));
 

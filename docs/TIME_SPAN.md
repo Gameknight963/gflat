@@ -131,7 +131,7 @@ or calendar arithmetic are provided.
 
 For selective source use, include `core/TimeSpan.gf`, `core/Text.gf`,
 `core/IEquatable.gf`, `core/IComparable.gf`, and `core/IHashable.gf` with
-`core/Hashing.gf` and their normal Exception/runtime dependencies.
+`core/Hashing/primitive_hashing.gf` and their normal Exception/runtime dependencies.
 
 The tick unit, signed components, and constant spelling match documented
 [.NET TimeSpan semantics](https://learn.microsoft.com/en-us/dotnet/api/system.timespan)

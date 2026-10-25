@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public class StandardHashingTests
 {
     private static IEnumerable<SourceFile> Sources(string code, bool maps = false) =>
-        new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf" }
+        new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf" }
             .Concat(maps ? ["Collections/HashMap.gf"] : [])
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));

@@ -6,7 +6,7 @@ public sealed class StandardComparerTests
     public void ContractBridgesServePrimitiveAndStringAlgorithmsAndPriorityQueues()
     {
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf",
-            "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "Collections/Comparer.gf", "Collections/EqualityComparer.gf",
+            "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/Comparer.gf", "Collections/EqualityComparer.gf",
             "IStringConvertable.gf", "String.gf", "ByteSearch.gf", "Collections/Vector.gf", "Span.gf", "Collections/PriorityQueue.gf"];
         var result = CompilerTestHelper.Run(files.Select(file => new SourceFile(file,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))

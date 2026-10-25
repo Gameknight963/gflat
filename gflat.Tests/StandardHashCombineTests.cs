@@ -59,7 +59,7 @@ public sealed class StandardHashCombineTests
                     if(fread((void*)&row[0],1,1,file!)!=0)return 6;return 0;
                 }
                 """;
-            SourceFile[] sources=[new("Hashing.gf",Read("Hashing.gf")),new("main.gf",code)];
+            SourceFile[] sources=[new("primitive_hashing.gf",Read("Hashing/primitive_hashing.gf")),new("main.gf",code)];
             string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
             foreach(string forbidden in new[]{"__gflat_eh","@malloc","@free","gflat$Memory$","llvm.memcpy"})Assert.DoesNotContain(forbidden,ir);
             foreach(string name in new[]{"Integer","Combine"}){
@@ -127,7 +127,7 @@ public sealed class StandardHashCombineTests
             }
             int main(){for(int family=0;family<7;family++){int result=Check(family);if(result!=0)return result;}return 0;}
             """;
-        var sources=new[]{"Hashing.gf","IHashable.gf","IEquatable.gf","Collections/HashMap.gf","Collections/HashSet.gf"}
+        var sources=new[]{"Hashing/primitive_hashing.gf","IHashable.gf","IEquatable.gf","Collections/HashMap.gf","Collections/HashSet.gf"}
             .Select(name=>new SourceFile(name,Read(name))).Append(new SourceFile("main.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"Exit {result.ExitCode}: {result.StandardError}");
     }

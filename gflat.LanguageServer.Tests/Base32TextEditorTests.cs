@@ -13,7 +13,7 @@ public sealed class Base32TextEditorTests
     {
         string text="using std;int Probe(){String result=Base32Text::"+member+"(\""+input+"\","+count+");return (int)result.Length;}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf",
+        string[] names=["IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf",
             "ByteSearch.gf","String.gf","Base32.gf","Base32Text.gf"];
         var sources=names.Select(name=>Path.Combine(root,name))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();

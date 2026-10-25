@@ -174,7 +174,7 @@ public sealed class StandardDateTimeTests
     public void SelectedPureSourcesNeedNoStringAndTryObserversHaveNoExceptionBoundary()
     {
         string[] names=["DateTime.gf","Date.gf","DayOfWeek.gf","TimeOfDay.gf","TimeSpan.gf","Text.gf",
-            "IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","Exception.gf"];
+            "IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("date-time-contract.gf","""
                 namespace Memory{

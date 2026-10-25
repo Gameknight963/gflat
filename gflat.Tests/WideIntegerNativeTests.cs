@@ -20,7 +20,7 @@ public sealed class WideIntegerNativeTests
     [Fact]
     public void PrimitiveStdInterfacesDoNotSelectCompilerRuntimeForOrdinaryPrograms()
     {
-        var sources=new[]{"IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf"}
+        var sources=new[]{"IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("main.gf","using std; int main(){int n=42; IHashable* view=&n; return (int)view.GetHashCode();}"));
         string ir=Compiler.Emit(sources);

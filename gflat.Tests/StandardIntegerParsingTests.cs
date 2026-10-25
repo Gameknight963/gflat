@@ -6,7 +6,7 @@ public class StandardIntegerParsingTests
 {
     private static IEnumerable<SourceFile> Sources(string code, bool strings = false) =>
         new[] { "IntegerParsing.gf" }
-            .Concat(strings ? ["Hashing.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf", "StringIntegerParsing.gf"] : [])
+            .Concat(strings ? ["Hashing/primitive_hashing.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf", "StringIntegerParsing.gf"] : [])
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
 

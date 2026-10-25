@@ -82,7 +82,7 @@ public sealed class StandardPathEdgeTests
 
     private static void Run(string code, int optimization)
     {
-        var files = new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Span.gf", "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Paths/PathStyle.gf", "core/Paths/Paths.gf" }
+        var files = new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Span.gf", "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Paths/PathStyle.gf", "core/Paths/Paths.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", code));
         var result = CompilerTestHelper.Run(files, optimization);

@@ -60,5 +60,5 @@ the independent .NET HMAC implementation, including keys longer than one SHA
 block. RFC 4231 case 5 specifies only the first 128 output bits; the library
 always returns all 256 bits and has no truncation option.
 
-Explicit source selection needs `core/HMACSHA256.gf`, `core/SHA256.gf`,
+Explicit source selection needs `core/Hashing/HMACSHA256.gf`, `core/Hashing/SHA256.gf`,
 `core/Numerics/BitOperations.gf`, and ordinary exception support for invalid key lengths.

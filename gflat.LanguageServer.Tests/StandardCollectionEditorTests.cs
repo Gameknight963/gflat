@@ -5,7 +5,7 @@ namespace gflat.LanguageServer.Tests;
 
 public class StandardCollectionEditorTests
 {
-    private static readonly string[] Files = ["IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf",
+    private static readonly string[] Files = ["IHashable.gf", "IEquatable.gf", "IComparable.gf", "primitive_hashing.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf",
         "HashMap.gf", "HashSet.gf", "Queue.gf", "Stack.gf", "Vector.gf", "Span.gf", "IEnumerable.gf", "Enumerable.gf"];
 
     [Theory]

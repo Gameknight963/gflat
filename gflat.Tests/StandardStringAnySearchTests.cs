@@ -124,7 +124,7 @@ public sealed class StandardStringAnySearchTests
 
     private static void WriteIndex(BinaryWriter writer,int value)=>writer.Write(value<0?ushort.MaxValue:(ushort)value);
     private static IEnumerable<SourceFile> Sources(string program){
-        string[] names=["String.gf","ByteSearch.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","CString.gf"];
+        string[] names=["String.gf","ByteSearch.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","CString.gf"];
         return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("string-any-search.gf",program));
     }

@@ -74,5 +74,5 @@ overlap the receiver when enough writable storage backs that region. The
 
 The implementation uses the existing pure `TimeSpan` codec with a restricted
 time-only grammar and range. For selective source builds, include `TimeOfDay.gf`,
-`TimeSpan.gf`, their comparison/hash interfaces, `Hashing.gf`, and the normal
+`TimeSpan.gf`, their comparison/hash interfaces, `Hashing/primitive_hashing.gf`, and the normal
 formatting and exception contracts. No clock or operating-system API is needed.

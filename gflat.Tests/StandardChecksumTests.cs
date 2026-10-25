@@ -153,7 +153,7 @@ public class StandardChecksumTests
     private static void Run(string code, int optimization)
     {
         var sources = new[] { "CRC32.gf", "Adler32.gf" }
-            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Checksums", name))))
+            .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Hashing", name))))
             .Append(new SourceFile("main.gf", code));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$", "@malloc", "@free" }) Assert.DoesNotContain(forbidden, ir);

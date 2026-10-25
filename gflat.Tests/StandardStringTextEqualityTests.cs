@@ -4,7 +4,7 @@ public sealed class StandardStringTextEqualityTests
 {
     // Deliberately excludes CString.gf: String text equality needs no new source dependency.
     private static IEnumerable<SourceFile> Sources(string program)
-        => new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "Collections/HashMap.gf",
+        => new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/HashMap.gf",
             "IStringConvertable.gf", "String.gf", "ByteSearch.gf" }
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("string-text-equality.gf",program));

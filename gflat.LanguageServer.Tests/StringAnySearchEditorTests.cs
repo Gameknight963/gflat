@@ -14,7 +14,7 @@ public sealed class StringAnySearchEditorTests
         string arguments=countedArguments==3?"\"xy\",2,1":"\"xy\",2";
         string text="using std;void Observe(immutable(String)* text){nuint counted=text."+member+"("+arguments+");nuint terminated=text."+member+"(\"xy\");}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","ByteSearch.gf","String.gf"];
+        string[] names=["IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","ByteSearch.gf","String.gf"];
         var files=names.Select(name=>Path.Combine(root,name)).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("string-any-search-editor.gf"),text);files.Add(source);
         SourceFile library=files.Single(file=>Path.GetFileName(file.Path)=="String.gf");

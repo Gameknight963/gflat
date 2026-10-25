@@ -130,7 +130,7 @@ public sealed class StandardSHA256Tests
     private static string Bytes(byte[] bytes)=>"["+string.Join(",",bytes.Select(value=>"(byte)"+value))+"]";
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"")+"\"";
     private static IEnumerable<SourceFile> Sources(string code)
-        =>new[]{"SHA256.gf","Numerics/BitOperations.gf"}.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
+        =>new[]{"Hashing/SHA256.gf","Numerics/BitOperations.gf"}.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("sha256-test.gf",code));
     private static void Run(string code,int optimization)
     {

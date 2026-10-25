@@ -15,7 +15,7 @@ public sealed class IpNetworkRelationsEditorTests
     {
         string text="using std;bool Observe(immutable(IpNetwork)* receiver,immutable("+targetType+")* target) nothrow=>receiver."+member+"(target);";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["IpNetwork.gf","IpAddress.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing.gf"];
+        string[] names=["IpNetwork.gf","IpAddress.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf"];
         var sources=names.Select(name=>Path.Combine(root,name)).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("ip-network-relations-editor.gf"),text);sources.Add(source);
         var snapshot=new AnalysisSnapshot(sources);

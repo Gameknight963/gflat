@@ -7,7 +7,7 @@ public sealed class StandardBase64Tests
     private static void Run(string program, bool text = false)
     {
         var names = new List<string> { "core/Base64.gf" };
-        if (text) names.AddRange(["core/Base64Text.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Formatting.gf"]);
+        if (text) names.AddRange(["core/Base64Text.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Formatting.gf"]);
         var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(files);

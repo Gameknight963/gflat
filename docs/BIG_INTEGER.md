@@ -148,7 +148,7 @@ divisor with m >= n, it takes O((m-n+1)*n + m+n) work and O(m+n) storage. Its
 scratch vectors are reserved once, with no allocation per quotient digit.
 
 For explicit source selection include `core/Numerics/BigInteger.gf`, `Vector`/`Span` and
-their query-interface dependencies, `Formatting.gf`, `Hashing.gf`, the implemented
+their query-interface dependencies, `Formatting.gf`, `Hashing/primitive_hashing.gf`, the implemented
 interface sources, and `String`/`ByteSearch`. Projects using the complete standard
 library already include these sources.
 

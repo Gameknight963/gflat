@@ -18,7 +18,7 @@ public sealed class CRC32CEditorTests
                 return value;
             }
             """;
-        string path = Path.Combine(AppContext.BaseDirectory, "StandardLibrary/core/Checksums/CRC32C.gf");
+        string path = Path.Combine(AppContext.BaseDirectory, "StandardLibrary/core/Hashing/CRC32C.gf");
         var library = new SourceFile(path, File.ReadAllText(path));
         var source = new SourceFile(Path.GetFullPath("crc32c-editor.gf"), text);
         SourceFile[] files = [library, source];

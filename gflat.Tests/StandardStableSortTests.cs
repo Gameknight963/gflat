@@ -5,7 +5,7 @@ public sealed class StandardStableSortTests
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/stable_sort.gf",
             "Collections/Vector.gf", "Span.gf", "String.gf", "ByteSearch.gf", "IStringConvertable.gf",
-            "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf" }
+            "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
 

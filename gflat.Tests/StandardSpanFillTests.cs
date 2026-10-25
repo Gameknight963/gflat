@@ -8,7 +8,7 @@ public sealed class StandardSpanFillTests
     {
         string[] files = ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Collections/SpanFill.gf",
             "core/Span.gf", "core/Collections/Vector.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf",
-            "core/IComparable.gf", "core/Hashing.gf", "core/String.gf", "core/ByteSearch.gf"];
+            "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf"];
         return files.Concat(managed ? ["libc/GC.gf", "libc/TracingCollector.gf"] : Array.Empty<string>())
             .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))))
             .Append(new SourceFile("span-fill.gf", program));

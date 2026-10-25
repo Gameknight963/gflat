@@ -63,7 +63,7 @@ public sealed class StandardMapQualifierViewTests
     {
         string[] managed = ["libc/GC.gf", "libc/TracingCollector.gf"];
         string[] dependencies = map == "HashMap"
-            ? ["core/Collections/HashMap.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/Hashing.gf"]
+            ? ["core/Collections/HashMap.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/Hashing/primitive_hashing.gf"]
             : ["core/Collections/SortedMap.gf", "core/Collections/Vector.gf", "core/Span.gf",
                 "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf"];
         SourceFile[] library = managed.Concat(dependencies).Select(relative =>

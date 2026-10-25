@@ -172,7 +172,7 @@ public sealed class StandardTimeSpanTests
     [Fact]
     public void SelectiveSourceCompilationNeedsNoStringOrLibcImplementation()
     {
-        string[] names = ["core/TimeSpan.gf", "core/Text.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing.gf", "core/Exception.gf"];
+        string[] names = ["core/TimeSpan.gf", "core/Text.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Exception.gf"];
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("nothrow.gf", """
                 using std; using std::Collections;

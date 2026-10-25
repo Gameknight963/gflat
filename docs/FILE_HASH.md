@@ -73,6 +73,6 @@ buffering a libc File can allocate inside the host CRT, and throwing exceptions
 can allocate too. No file length or snapshot is captured: concurrent file changes
 can change the bytes observed during the read.
 
-For explicit source selection, include `File/FileHash.gf`, `File.gf`, `SHA256.gf`,
+For explicit source selection, include `File/FileHash.gf`, `File.gf`, `Hashing/SHA256.gf`,
 `Numerics/BitOperations.gf`, and the ordinary File exception/runtime dependencies. The
 core `SHA256` remains usable independently of File IO or libc.

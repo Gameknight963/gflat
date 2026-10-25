@@ -371,7 +371,7 @@ public sealed class StandardCollectionTraceTests
     {
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/Vector.gf", "Span.gf", "Collections/Queue.gf",
             "Collections/PriorityQueue.gf", "Collections/BitSet.gf", "Collections/HashMap.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf",
-            "IComparable.gf", "Hashing.gf", "String.gf", "ByteSearch.gf"];
+            "IComparable.gf", "Hashing/primitive_hashing.gf", "String.gf", "ByteSearch.gf"];
         var sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("trace.gf", program));
         string directory = Path.Combine(Path.GetTempPath(), "gflat_collection_trace_" + Guid.NewGuid().ToString("N"));

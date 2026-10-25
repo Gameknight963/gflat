@@ -165,7 +165,7 @@ public sealed class StandardTimeOfDayTests
     [Fact]
     public void SelectedPureSourcesNeedNoStringAndTryObserversHaveNoExceptionBoundary()
     {
-        string[] names=["TimeOfDay.gf","TimeSpan.gf","Text.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","Exception.gf"];
+        string[] names=["TimeOfDay.gf","TimeSpan.gf","Text.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("time-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}

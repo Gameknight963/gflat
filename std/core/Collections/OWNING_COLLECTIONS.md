@@ -424,7 +424,7 @@ at least `ceil(bitLength / 32)` readable words for every later enumeration.
 
 Explicit source selection now requires `Queries/Enumerable.gf` alongside
 `Collections/BitSet.gf`, `Collections/IEnumerable.gf`, `IEquatable.gf`, `IHashable.gf`, and
-`Hashing.gf`; query operators additionally use
+`Hashing/primitive_hashing.gf`; query operators additionally use
 their ordinary collection source files. Failed allocation during `Resize`
 preserves both the original bits and length. Padding bits outside the logical
 length are always kept clear.

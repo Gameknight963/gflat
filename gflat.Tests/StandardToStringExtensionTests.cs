@@ -134,7 +134,7 @@ public sealed class StandardToStringExtensionTests
     public void CoreConversionsCanBeSelectedWithoutLibcOrWideFormattingModules()
     {
         string[] names = ["Text.gf", "Exception.gf", "BadAllocException.gf", "IStringConvertable.gf",
-            "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "ByteSearch.gf", "String.gf",
+            "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "ByteSearch.gf", "String.gf",
             "Formatting.gf", "FormattableString.gf", "PrimitiveString.gf"];
         var sources = names.Select(name => new SourceFile(name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", name))))

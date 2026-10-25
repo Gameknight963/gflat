@@ -125,7 +125,7 @@ public sealed class StandardCRC32CTests
 
     private static void Run(string code, int optimization)
     {
-        var library = new SourceFile("CRC32C.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Checksums/CRC32C.gf")));
+        var library = new SourceFile("CRC32C.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Hashing/CRC32C.gf")));
         var sources = new[] { library, new SourceFile("crc32c-test.gf", code) };
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "@malloc", "@free", "gflat$Memory$", "@__gflat_gc_" })

@@ -80,7 +80,7 @@ public sealed class StandardStringSearchTests
     }
     private static void Run(string code, int optimization)
     {
-        var sources = new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf" }
+        var sources = new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "IStringConvertable.gf", "String.gf", "ByteSearch.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);

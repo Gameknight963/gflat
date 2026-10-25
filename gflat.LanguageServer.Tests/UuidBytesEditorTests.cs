@@ -49,7 +49,7 @@ public sealed class UuidBytesEditorTests
     private static (EditorModel Model,SourceFile Source,SourceFile Library,AnalysisSnapshot Snapshot) Analyze(string text)
     {
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["Uuid.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing.gf"];
+        string[] names=["Uuid.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf"];
         var files=names.Select(name=>Path.Combine(root,name)).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         SourceFile library=files.Single(file=>Path.GetFileName(file.Path)=="Uuid.gf");
         var source=new SourceFile(Path.GetFullPath("uuid-bytes-editor.gf"),text);files.Add(source);

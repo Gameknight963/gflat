@@ -19,7 +19,7 @@ public sealed class StringTextComparisonEditorTests
             """;
         string root = Path.Combine(AppContext.BaseDirectory, "StandardLibrary", "core");
         string[] names = ["IStringConvertable.gf", "IHashable.gf", "IEquatable.gf",
-            "IComparable.gf", "Hashing.gf", "ByteSearch.gf", "String.gf"];
+            "IComparable.gf", "Hashing/primitive_hashing.gf", "ByteSearch.gf", "String.gf"];
         var files = names.Select(name => Path.Combine(root, name))
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("string-text-comparison-editor.gf"), text);

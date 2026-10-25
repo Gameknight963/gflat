@@ -95,7 +95,7 @@ Ordinary copies retain only values. Throwing errors follow normal Exception
 runtime behavior; caller-selected writers may allocate or throw.
 
 For selective sources, include `core/IpNetwork.gf`, `core/IpAddress.gf`, their
-equality/hash/formatting interfaces and `core/Hashing.gf` with normal Exception
+equality/hash/formatting interfaces and `core/Hashing/primitive_hashing.gf` with normal Exception
 contracts. No sockets, DNS, interface identifiers, routing state, address lists,
 or implicit family conversions are involved.
 

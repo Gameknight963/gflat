@@ -70,7 +70,7 @@ public sealed class StandardStructuredIntegerHashTests
                 return 0;
             }
             """;
-        var sources = new[] { "IHashable.gf", "IEquatable.gf", "Hashing.gf", "Collections/HashMap.gf" }
+        var sources = new[] { "IHashable.gf", "IEquatable.gf", "Hashing/primitive_hashing.gf", "Collections/HashMap.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("main.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);

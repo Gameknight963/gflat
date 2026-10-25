@@ -233,6 +233,7 @@ bool SmokeRemove(readonly(int)* value) => *value == 9;
 long SmokeMagnitude(int value) { if (value < 0) return -(long)value; return (long)value; }
 bool SmokeRangeFailure(int value) { throw new Exception("Range predicate evaluated", 77); }
 Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
+Unique<int> SmokeFreshOwner(int value) => new Unique<int>(new* int(value));
 int SmokeCore() {
     HashMap<String, int> map = new();
     map.Add(s"answer", 42);
@@ -1076,6 +1077,10 @@ int SmokeHashesAndViews() {
         foreach (int concatValue in concatView.AsEnumerable().Concat(new IntRange(3, 2).AsEnumerable()))
             concatSum += concatValue;
         if (concatSum != 10) return 286;
+        int freshOwnerSum = 0;
+        foreach (Unique<int> freshOwner in new IntRange(1, 2).AsEnumerable().Select(SmokeFreshOwner))
+            freshOwnerSum += freshOwner.Value;
+        if (freshOwnerSum != 3) return 287;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

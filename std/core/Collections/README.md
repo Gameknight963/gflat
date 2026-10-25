@@ -85,6 +85,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Where(predicate)` | Yield elements passing the predicate. |
 | `Select(selector)` | Project elements when their `Current` value is read. |
 | `Reverse()` | Yield in reverse order, buffering the complete input on each iterator's first move. |
+| `Order()` / `Order(compare)` | Stably sort the complete input on each iterator's first move. |
 | `Distinct()` | Yield distinct values in encounter order; each enumeration owns a hash set. |
 | `Zip(other, selector)` | Project pairs in order until either input ends. |
 | `Skip(count)` / `Take(count)` | Skip or yield at most `count` elements; counts are `nuint`. |
@@ -125,6 +126,7 @@ For positional access and projection behavior, see [ElementAt](../../../docs/QUE
 For owning distinct results, see [ToHashSet](../../../docs/QUERY_HASH_SET.md).
 For lazy distinct values in encounter order, see [Distinct](../../../docs/QUERY_DISTINCT.md).
 For deferred full-input buffering in reverse order, see [Reverse](../../../docs/QUERY_REVERSE.md).
+For stable buffered ordering and borrowed cursor values, see [Order](../../../docs/QUERY_ORDER.md).
 For comparison, ties, and value ownership in `Min` and `Max`, see [query extrema](../../../docs/QUERY_EXTREMA.md).
 For captured values and iterator behavior in `Append` and `Prepend`, see [query endpoints](../../../docs/QUERY_ENDPOINT.md).
 For an explicit fallback and its capture lifetime, see [DefaultIfEmpty](../../../docs/QUERY_DEFAULT_IF_EMPTY.md).

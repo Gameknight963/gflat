@@ -18,6 +18,25 @@ public struct IpNetwork : IEquatable<IpNetwork>, IHashable, IFormattable
         this.networkAddress = networkAddress; this.prefixLength = prefixLength;
     }
     public IpAddress NetworkAddress { immutable get nothrow => networkAddress; }
+    // Numeric range endpoint, including every host bit; no host-usability policy.
+    public IpAddress LastAddress
+    {
+        immutable get nothrow
+        {
+            byte[16] bytes;
+            nuint count = 0;
+            networkAddress.TryWriteBytes(bytes, 16, ref count);
+            int remaining = prefixLength;
+            for (nuint i = 0; i < count; i++)
+            {
+                bytes[i] = bytes[i] | (byte)(255u - (uint)PrefixMask(remaining));
+                remaining -= 8;
+            }
+            IpAddress result = new();
+            IpAddress::TryFromBytes(bytes, count, &result);
+            return result;
+        }
+    }
     public int PrefixLength { immutable get nothrow => prefixLength; }
 
     private static bool ValidPrefix(IpAddress address, int prefix) nothrow

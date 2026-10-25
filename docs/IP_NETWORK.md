@@ -105,3 +105,29 @@ and its [.NET 8 implementation](https://github.com/dotnet/runtime/blob/v8.0.0/sr
 Later .NET implementations change constructor normalization and mapped-address
 membership behavior. The strict parsing, explicit normalization and family rules
 above are gflat's own contracts, independent of the host .NET version.
+
+### Numeric range endpoint
+
+`LastAddress` returns the last numeric address in the prefix: it retains the
+network bits and sets every host bit to one. Together, `NetworkAddress` and
+`LastAddress` give the inclusive numeric range, in the original address family.
+The getter is immutable and `nothrow`, returns an ordinary `IpAddress` value
+copy, and allocates nothing.
+
+```cpp
+using std;
+int main()
+{
+    IpNetwork network = IpNetwork::Parse("192.0.2.128/25");
+    IpAddress last = network.LastAddress;
+    IpAddress expected = IpAddress::Parse("192.0.2.255");
+    if (!last.Equals(&expected) || !network.Contains(&last)) return 1;
+    return 0;
+}
+```
+
+A full-width `/32` IPv4 or `/128` IPv6 prefix has the same first and last
+address. A `/0` prefix ends at its family's all-one address. IPv4-mapped IPv6
+prefixes remain IPv6. This is a numeric endpoint, not the last usable host:
+it does not exclude IPv4 network/broadcast addresses or assign broadcast
+semantics to IPv6.

@@ -57,6 +57,30 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
     public immutable long ToUnixTimeSeconds() nothrow => this.GetUtcTicks() / 10000000l - 62135596800l;
     public immutable long ToUnixTimeMilliseconds() nothrow => this.GetUtcTicks() / 10000l - 62135596800000l;
 
+    // Preserve the displayed offset; both wall and UTC clocks must remain valid.
+    public immutable DateTimeOffset Add(TimeSpan value)
+    {
+        long delta = value.Ticks;
+        long wall = clock.Ticks;
+        long utc = this.GetUtcTicks();
+        if (delta < -wall || delta > MaximumTicks - wall ||
+            delta < -utc || delta > MaximumTicks - utc)
+            throw new Exception("DateTimeOffset addition is outside years 1 through 9999");
+        return Create(std::DateTime::FromTicks(wall + delta), offsetTicks);
+    }
+    public immutable DateTimeOffset Subtract(TimeSpan value)
+    {
+        long delta = value.Ticks;
+        long wall = clock.Ticks;
+        long utc = this.GetUtcTicks();
+        // Do not negate delta: TimeSpan can contain long minimum.
+        if (delta > wall || delta < wall - MaximumTicks ||
+            delta > utc || delta < utc - MaximumTicks)
+            throw new Exception("DateTimeOffset subtraction is outside years 1 through 9999");
+        return Create(std::DateTime::FromTicks(wall - delta), offsetTicks);
+    }
+    public immutable TimeSpan Difference(DateTimeOffset other) nothrow
+        => TimeSpan::FromTicks(this.GetUtcTicks() - other.GetUtcTicks());
     public immutable bool Equals(immutable(DateTimeOffset)* other) nothrow => this.GetUtcTicks() == other.GetUtcTicks();
     public immutable bool EqualsExact(immutable(DateTimeOffset)* other) nothrow
         => clock.Ticks == other.clock.Ticks && offsetTicks == other.offsetTicks;

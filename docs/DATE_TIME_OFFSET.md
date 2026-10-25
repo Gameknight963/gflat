@@ -44,6 +44,43 @@ their input unit's precision; converting a fractional timestamp to a Unix intege
 and back discards the remaining fraction. Normal valid conversions allocate
 nothing internally; invalid factory calls use ordinary exception behavior.
 
+## Duration arithmetic
+
+`Add(TimeSpan)` and `Subtract(TimeSpan)` return a new timestamp with the same
+displayed offset and the duration added to or removed from both its wall clock
+and UTC instant. Both results must remain within years 1 through 9999. The methods
+check before arithmetic, including for `TimeSpan` values containing signed-long
+minimum or maximum ticks. Out-of-range results throw `Exception` with
+`DateTimeOffset addition is outside years 1 through 9999` or
+`DateTimeOffset subtraction is outside years 1 through 9999`.
+
+`Difference(DateTimeOffset other)` returns a `TimeSpan` measuring the
+UTC instant difference, independently of either displayed offset. It is immutable
+and `nothrow`; even the full supported date range fits a signed-long tick count.
+The operand is an ordinary value copy, matching DateTime's API. Self-difference is zero.
+
+These are exact elapsed-duration operations, with no calendar month/year,
+daylight-saving or named-zone adjustment. They do not mutate either operand or
+allocate internally for successful calls. A failed result assignment preserves
+its destination; throwing errors use normal exception storage. No operators or
+floating-point unit conversions are added.
+
+```csharp
+using std;
+
+int main()
+{
+    DateTimeOffset start = DateTimeOffset::Parse("2024-06-01T12:30:00+02:00");
+    DateTimeOffset end = start.Add(TimeSpan::FromMinutes(15l));
+    TimeSpan elapsed = end.Difference(start);
+    DateTimeOffset restored = end.Subtract(elapsed);
+    if (elapsed.Ticks != 9000000000l || !restored.EqualsExact(&start)) return 1;
+    return 0;
+}
+```
+
+## Parsing and formatting
+
 Accepted text is exactly `yyyy-MM-ddTHH:mm:ss[.fraction]Z` or the same civil prefix
 followed by `+HH:mm`/`-HH:mm`. Fractions have 1 through 7 decimal digits. `T`/`Z` are
 uppercase. No whitespace, absent suffix, named zone, offset seconds, leap seconds,

@@ -4,6 +4,8 @@
 counts into an owning hash map without storing each group of elements.
 [`ToHashMap`](../../../docs/QUERY_TO_HASH_MAP.md) stores each original element or
 a selected value under its selected key, rejecting duplicate keys.
+[`ToLookup`](../../../docs/QUERY_LOOKUP.md) instead groups equal keys into owning
+vectors, preserving encounter order within each group.
 
 `Vector`, `Deque`, `Queue`, `Stack`, `LinkedList`, `Span`, `IntRange`,
 `FilteredIntRange`, `Repeated<T>`, `TextParts`, `TextLines`, `Utf8Scalars`, `Utf16Scalars`, and

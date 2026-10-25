@@ -49,6 +49,7 @@ implementation lives in `libc`.
 | Query endpoints | `Append`, `Prepend` | [Captured values and repeatable enumeration](../docs/QUERY_ENDPOINT.md) |
 | Query key counts | `CountBy` | [Owning hash maps of selected-key counts](../docs/QUERY_COUNT_BY.md) |
 | Query map results | `ToHashMap` | [Selected keys and values with duplicate detection](../docs/QUERY_TO_HASH_MAP.md) |
+| Query groups | `ToLookup` | [Owning maps of vectors in encounter order](../docs/QUERY_LOOKUP.md) |
 | Empty-query fallback | `DefaultIfEmpty(value)` | [Explicit fallback and capture ownership](../docs/QUERY_DEFAULT_IF_EMPTY.md) |
 | Integer query totals | `Sum()` | [Checked long totals through mutable and protected views](../docs/QUERY_SUM.md) |
 | Integer sequences | `IntRange`, `FilteredIntRange` | [Allocation-free ranges and specialized aggregates](core/README.md#integer-sequences) |

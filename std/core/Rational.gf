@@ -99,6 +99,62 @@ public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable,
     public immutable nuint GetHashCode()
         => Hashing::Combine(numerator.GetHashCode(), denominator.GetHashCode());
 
+    private static bool TryReadParts(readonly(char)* text, nuint count,
+        ref BigInteger numerator, ref BigInteger denominator)
+    {
+        nuint separator = count;
+        for (nuint index = 0; index < count; index++)
+        {
+            if (text[index] == '/')
+            {
+                if (separator != count) return false;
+                separator = index;
+            }
+        }
+        if (!BigInteger::TryParse(text, separator, ref numerator)) return false;
+        if (separator == count) denominator = new(1l);
+        else if (!BigInteger::TryParse(text + separator + 1, count - separator - 1, ref denominator)
+            || denominator.Sign == 0) return false;
+        return true;
+    }
+
+    // All input reads and candidate construction finish before replacing result.
+    // False assigns canonical zero; constructing that owner can itself throw.
+    public static bool TryParse(readonly(char)* text, nuint count, ref Rational result)
+    {
+        BigInteger numerator = new();
+        BigInteger denominator = new();
+        if (!TryReadParts(text, count, ref numerator, ref denominator))
+        {
+            Rational zero = new();
+            result = move zero;
+            return false;
+        }
+        Rational parsed = new(move numerator, move denominator);
+        result = move parsed;
+        return true;
+    }
+    public static bool TryParse(readonly(char)* text, ref Rational result)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return TryParse(text, count, ref result);
+    }
+    public static Rational Parse(readonly(char)* text, nuint count)
+    {
+        BigInteger numerator = new();
+        BigInteger denominator = new();
+        if (!TryReadParts(text, count, ref numerator, ref denominator))
+            throw new Exception("Invalid rational");
+        return new Rational(move numerator, move denominator);
+    }
+    public static Rational Parse(readonly(char)* text)
+    {
+        nuint count = 0;
+        while (text[count] != '\0') count++;
+        return Parse(text, count);
+    }
+
     public immutable void Format(ITextWriter* output)
     {
         numerator.Format(output);

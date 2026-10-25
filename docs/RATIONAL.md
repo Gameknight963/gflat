@@ -34,7 +34,7 @@ does not rely on static heap storage or a special zero-denominator sentinel.
 other Rational and return a new normalized owner. `Negate()` also returns a new
 owner. Division by a zero Rational throws `Exception("Rational divisor is zero")`.
 Receivers and borrowed operands are unchanged, including when both pointers
-refer to the same value. There are no operators or parser in this API.
+refer to the same value. There are no arithmetic operators.
 
 Copying performs a deep copy of both BigIntegers. `Numerator` and `Denominator`
 return independent owning value copies, rather than pointers into the Rational.
@@ -47,7 +47,33 @@ arithmetic likewise uses straightforward BigInteger products before GCD reductio
 Intermediate values can be larger than the result; ordinary BigInteger size and
 allocation limits apply.
 Failures clean partial owners, and failed result assignment preserves its old
-destination. No method mutates an existing Rational's parts.
+destination. Arithmetic methods do not mutate their operands.
+
+## Parsing integer and fraction text
+
+`Parse(text, count)` and `Parse(text)` accept an integer or one
+`numerator/denominator` pair. Each part uses BigInteger's strict optional `+`/`-`
+followed by ASCII decimal digits. Leading zeros and negative denominators are
+allowed. Whitespace, empty parts, multiple slashes, decimal points, radix prefixes,
+non-ASCII digits and trailing bytes are rejected. A zero denominator is invalid
+input. Successful results use the same canonical representation as constructors.
+`Parse` throws `Exception("Invalid rational")` for malformed input.
+
+`TryParse(text, count, ref result)` and `TryParse(text, ref result)` return true
+for accepted text and replace `result` with its normalized owning value. False
+replaces it with canonical `0/1`. These methods are **not** `nothrow`: even a
+false result can allocate the ordinary BigInteger denominator `1`. If allocation
+or another construction operation throws, the old result is preserved, rather
+than partially reset. Syntax errors remain false when constructing that reset
+value succeeds.
+
+Counted input includes every supplied byte, so embedded NUL is invalid. CString
+overloads stop at the first NUL and require a readable terminator. Input is
+borrowed for the call. All reads and candidate construction complete before
+replacing the output, so fully readable input in the result's owned storage is
+also supported. No input pointer is retained. The caller must keep the bytes
+valid until parsing returns; no encoding normalization or whitespace trimming
+is performed.
 
 Formatting writes the integer numerator when the denominator is `1`, otherwise
 `numerator/denominator`, with decimal BigInteger spelling. It adds no whitespace,

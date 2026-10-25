@@ -1058,6 +1058,12 @@ int SmokeHashesAndViews() {
         TimeSpan fractionalDuration = TimeSpan::FromTicks(15000l);
         if (fractionalDuration.TotalMilliseconds != 1.5d
             || TimeSpan::FromDays(1l).TotalHours != 24d) return 281;
+        PseudoRandom signedRandom = new(42ul);
+        PseudoRandom wordRandom = new(42ul);
+        if (signedRandom.NextLong() != (long)wordRandom.NextULong()) return 282;
+        long signedRange = signedRandom.NextLong(-5000000000l, 5000000001l);
+        if (signedRange < -5000000000l || signedRange >= 5000000001l
+            || signedRandom.NextLong(1l) != 0l) return 283;
     }
     {
         Unique<int> batchOwner = new(new* int(7));

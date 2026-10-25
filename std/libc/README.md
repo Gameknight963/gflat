@@ -212,6 +212,13 @@ the other selected sources.
 The nullable `std::FileHandle` alias represents libc's opaque `FILE*` internally.
 It is not a Windows kernel handle, and callers must not free it through `Memory`.
 
+Path arguments are borrowed, null-terminated native byte strings used for the
+call. `File` passes them to libc without encoding conversion; on Windows, the
+narrow CRT path functions interpret those bytes using their configured code
+page. Native `main` likewise receives the host runtime's `argv` representation.
+The UTF-8 convention for gflat string literals and text does not normalize OS
+paths or command-line arguments.
+
 ```csharp
 using std;
 int main()

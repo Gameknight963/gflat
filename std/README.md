@@ -135,6 +135,7 @@ Applications reference the Windows or Linux source project explicitly.
 - [IP address counts](../examples/ip-count/README.md): normalize equivalent IPv4/IPv6 spellings, optionally filter by CIDR, and count numeric keys from stdin.
 - [Task list](../examples/tasks/README.md): owning titles, reference-indexer updates, and reusable console input.
 - [File checksums](../examples/checksum/README.md): streaming CRC32 and Adler32, or SHA-256 with `--sha256`, over binary files.
+- [Closest byte matches](../examples/closest/README.md): select minimum edit-distance candidates with a reused scratch row and stable ties.
 - [Hex dump](../examples/hexdump/README.md): byte offsets, hex columns, and printable ASCII with stack-backed formatting.
 - [Unicode conversion](../examples/transcode/README.md): strict UTF-8/UTF-16LE conversion with validation before output-file creation.
 - [Quote text lines](../examples/quote-lines/README.md): lazy file lines written directly as newline-delimited JSON strings.

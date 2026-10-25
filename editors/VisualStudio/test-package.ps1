@@ -1156,9 +1156,11 @@ int main(int argc, char** argv) {
 }
 '@ | Set-Content -LiteralPath $expandedStd
     $allSources = @(Get-ChildItem -LiteralPath $std -Recurse -Filter '*.gf' -File | ForEach-Object FullName)
+    $allSourcesList = Join-Path $extracted 'standard-library.sources'
+    [IO.File]::WriteAllLines($allSourcesList, $allSources, [Text.UTF8Encoding]::new($false))
     $boundedInput = Join-Path $extracted 'bounded input.bin'
     [IO.File]::WriteAllBytes($boundedInput, [byte[]](97, 0, 98))
-    & $compiler $expandedStd @allSources --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
+    & $compiler $expandedStd --source-list $allSourcesList --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
     if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
     foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj')) {
         & $compiler check (Join-Path $extracted "Sdk/libraries/platform/$project")
@@ -1176,7 +1178,7 @@ int main() {
     return 0;
 }
 '@ | Set-Content -LiteralPath $clockProbe
-    & $compiler $clockProbe @allSources (Join-Path $extracted 'Sdk/libraries/platform/windows/PerformanceCounter.gf') (Join-Path $extracted 'Sdk/libraries/platform/windows/SystemClock.gf') --optimization 2 --run -o (Join-Path $extracted 'clock-provider.exe')
+    & $compiler $clockProbe --source-list $allSourcesList (Join-Path $extracted 'Sdk/libraries/platform/windows/PerformanceCounter.gf') (Join-Path $extracted 'Sdk/libraries/platform/windows/SystemClock.gf') --optimization 2 --run -o (Join-Path $extracted 'clock-provider.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged optional Windows clock provider failed to link or run' }
     $clockConsumer = Join-Path $extracted 'clock consumer'
     New-Item -ItemType Directory -Force -Path $clockConsumer | Out-Null

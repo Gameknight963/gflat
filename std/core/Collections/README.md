@@ -114,6 +114,9 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `ForEach(action)` | Visit every element. |
 | `ToVector()` | Copy values into a new owning vector. |
 | `ToHashSet()` | Copy distinct values into a new owning hash set. |
+| `CountBy(selector)` | Materialize an owning hash map of selected-key counts. |
+| `ToHashMap(keySelector)` / `ToHashMap(keySelector, valueSelector)` | Materialize an owning map; reject duplicate selected keys. |
+| `ToLookup(keySelector)` / `ToLookup(keySelector, valueSelector)` | Materialize an owning map of vectors, preserving encounter order within each group. |
 
 See [sequence equality](../../../docs/QUERY_SEQUENCE_EQUAL.md) for paired
 advancement order, equality contracts, and temporary element ownership.
@@ -165,8 +168,10 @@ The built-in source views allocate no storage. `Where`, `Select`, `Zip`, and the
 skip/take operators allocate no internal storage. `Distinct` allocates a hash set
 as values are encountered; its iterator owns that storage. `Reverse` buffers all
 input values in a vector on its first move and retains that buffer until its
-iterator is destroyed. A callback, a custom
-source or element's copy constructor, or materializing a collection can allocate.
+iterator is destroyed. `Order` similarly buffers on its first move, then uses
+`StableSort`'s two index buffers before yielding the first result. A callback,
+a custom source or element's copy constructor, or materializing a collection can
+allocate.
 Callback signatures use ordinary
 function pointers; capturing closures are not implemented. For owning value
 parameters such as `String`, use a named function: lambda parameters currently
@@ -174,16 +179,19 @@ must borrow those values through pointers.
 
 ## Ownership
 
-Elements follow ordinary value semantics. Reading a `String` element copies it;
-`ToVector()` creates independent owning strings. Reading a pointer copies its
-address. Pointer elements do not confer ownership: the query and the resulting
-vector do **not** delete a pointee merely because they contain its address.
+Elements follow ordinary value semantics. Assigning a borrowed `String` element
+to an owning local or passing it by value copies it; `ToVector()` creates
+independent owning strings. A borrowed `Current`, such as the one on span,
+file-line, and ordered cursors, also allows inspection without copying the element.
+Copying a pointer copies its address. Pointer elements do not confer ownership:
+the query and the resulting vector do **not** delete a pointee merely because
+they contain its address.
 
 `ToVector()` requires an element type accepted by `Vector<T>`. An element type
 with outer `readonly` or `immutable` qualification currently fails its writable
 indexer check. Choose an ordinary stored value explicitly, for example
 `.Select((readonly(int) value) => (int)value).ToVector()` for readonly integers.
-The same restriction applies to buffering with query `Reverse()`.
+The same restriction applies to buffering with query `Reverse()` or `Order()`.
 Managed pointer elements keep their normal collector behavior.
 
 `Aggregate` owns its seed parameter. Passing a named seed normally copies it at

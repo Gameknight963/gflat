@@ -259,6 +259,115 @@ Project evaluation, checking, and native builds work on Windows x64 and Linux x6
 Native builds need Clang and the host's C linker/toolchain. The compiler selects
 the host target; cross-compilation is not supported.
 
+## Native libraries
+
+Foreign `extern` declarations describe calls; native link requirements provide
+the object files or libraries implementing them. Repeat these options on an
+explicit-source command or an executable project build:
+
+| CLI option | Project item | Meaning |
+| --- | --- | --- |
+| `--native-library NAME` | `<NativeLibrary Include="NAME" />` | A logical library name resolved by the selected native toolchain. Supply the name without `-l`. |
+| `--native-library-file PATH` | `<NativeLibraryFile Include="PATH" />` | An explicit native object, archive, or other library file accepted by that linker. |
+| `--native-library-dir PATH` | `<NativeLibraryDirectory Include="PATH" />` | A native library search directory. |
+
+Quote paths containing spaces. A library name is not a gflat namespace or a
+source-project reference. Native linking does not add declarations, generate
+bindings, or change the foreign calling convention or type layout.
+
+For example, a project can declare a Windows SDK library without adding a
+binding to its functions:
+
+```xml
+<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+  <NativeLibrary Include="bcrypt" />
+</ItemGroup>
+```
+
+Use names and binary formats supported by your host toolchain. A native file
+must match the target architecture and ABI; adding a file does not convert it.
+Native code and its dependencies are built separately from the gflat sources.
+
+### Requirements from source libraries
+
+All three items may appear in a `SourceLibrary`. The final executable collects
+requirements through its project-reference graph, so consumers do not need to
+repeat each dependency's native items. File and directory paths are relative to
+the project that declares them, not to the executable that eventually links.
+Explicit CLI paths are relative to the command's working directory.
+
+Native requirements are ordered with each owning project before its referenced
+dependencies, preserving declaration order where dependency ordering allows.
+Shared dependencies follow all their owners. Within a project, evaluated
+`NativeLibrary` and `NativeLibraryFile` entries keep their interleaved order and
+repeats; repeated libraries are not
+removed. This matters for archive linkers that resolve dependencies from left
+to right. Search directories keep first-occurrence order, with duplicates
+removed. Additional CLI requirements append after the project's requirements;
+they do not replace them.
+
+For incremental builds, explicit native files are tracked as inputs. Logical
+library names conservatively force a new link because search resolution can change.
+
+`check`, `--check`, and `--emit-ir` validate the source and link metadata without
+linking. Native files and libraries need not be installed for those operations.
+An executable build invokes Clang with the collected requirements; missing or
+incompatible native inputs are then native compiler/linker errors.
+
+Link-time library selection does not configure runtime shared-library lookup.
+The normal operating-system loader policy applies. gflat does not copy DLLs or
+shared libraries beside the executable or add an rpath automatically.
+
+### A small C object
+
+Save this as `native_add.c` and build it with the native compiler for the same
+host target as gflat:
+
+```c
+int native_add(int left, int right)
+{
+    return left + right;
+}
+```
+
+```text
+clang -c native_add.c -o native_add.o
+```
+
+Save the caller as `main.gf`:
+
+```csharp
+extern int native_add(int left, int right) nothrow;
+int main() nothrow
+{
+    return native_add(20, 22) - 42;
+}
+```
+
+```text
+gflat main.gf --no-stdlib --native-library-file native_add.o --run
+```
+
+The program exits with zero. The explicit object supplies the C symbol; this
+caller needs no standard-library source. Its `nothrow` declaration is the
+foreign contract for this C implementation, not an inferred exception policy.
+
+The same input can be recorded in a project, relative to that project file:
+
+```xml
+<Project Sdk="Gflat.Sdk">
+  <PropertyGroup>
+    <NoStdLib>true</NoStdLib>
+  </PropertyGroup>
+  <ItemGroup>
+    <NativeLibraryFile Include="native_add.o" />
+  </ItemGroup>
+</Project>
+```
+
+Keep `main.gf`, `native_add.o`, and the project in the same directory, then build
+and run the project normally.
+
 ## Visual Studio
 
 Build and install the VSIX, restart Visual Studio, and open `gflat.slnx`.

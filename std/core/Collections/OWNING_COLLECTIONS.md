@@ -216,6 +216,13 @@ nothing. Successful relocation invalidates borrowed elements and iterators;
 failed allocation preserves contents, capacity, and existing borrows. It moves
 owners without invoking copy constructors or destroying elements.
 
+`Stack<T>.ShrinkToFit()` also reduces capacity to `Count`, preserving stack
+order without copying or destroying elements. Successful relocation invalidates
+borrowed elements and views; allocation failure preserves them and the original
+contents and capacity. A tight stack does nothing, and a drained stack frees its
+retained buffer without allocating. Removal and `Clear` retain capacity until
+shrinking is requested.
+
 ```csharp
 using std;
 
@@ -459,6 +466,13 @@ stable. Comparator state and stored priorities must remain consistent while
 elements are in the heap.
 Types implementing `IComparable<T>` can use `Comparer<T>::Compare` directly,
 such as `PriorityQueue<int> pending = new(Comparer<int>::Compare);`.
+
+`ShrinkToFit()` reduces backing capacity to `Count`, preserving the existing
+heap without calling the comparator, copying owners, or destroying elements.
+Successful relocation invalidates borrowed elements; allocation failure preserves
+contents, capacity, and existing borrows. A tight queue does nothing; a drained
+queue frees retained storage without allocating. Removal and `Clear` retain
+capacity until shrinking is requested.
 
 ```csharp
 using std;

@@ -193,6 +193,76 @@ public sealed class StandardQuerySkipLastTests
             }
             """, optimization);
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ManagedElementsRemainRootedAcrossEvictionAndReleaseOnEofOrEarlyExit(int optimization)
+        => Run("""
+            using std;
+            int created = 0;
+            class Cell {
+                public int Id;
+                public int Mark;
+                public Cell^? Next;
+                public Cell(int id) { Id = id; Mark = 0; }
+            }
+            Cell^ MakeCell(int id) {
+                Cell^ result = new^ Cell(id);
+                result.Next = result;
+                created++;
+                GC::Collect();
+                return result;
+            }
+            nuint CleanCount() {
+                GC::Collect();
+                return std::TracingCollector::ManagedCount;
+            }
+            bool CountIs(nuint wanted, int phase) {
+                nuint actual = CleanCount();
+                if (actual == wanted) return true;
+                Console::Error.Write("GC phase ", 9); phase.Format(Console::Error);
+                Console::Error.Write(" expected ", 10); wanted.Format(Console::Error);
+                Console::Error.Write(" actual ", 8); actual.Format(Console::Error);
+                Console::Error.Write("\n", 1);
+                return false;
+            }
+            int main() {
+                nuint baseline = CleanCount();
+                IntRange range = new(0, 7);
+                var query = range.AsEnumerable().Select(MakeCell).SkipLast(2);
+                {
+                    var iterator = query.GetEnumerator();
+                    if (created != 0) return 1;
+                    for (int expected = 0; expected < 5; expected++) {
+                        if (!iterator.MoveNext() || created != expected + 3) return 2;
+                        if (!CountIs(baseline + 3, 10 + expected)) return 3;
+                        {
+                            Cell^ first = iterator.Current;
+                            Cell^ second = iterator.Current;
+                            if (first.Id != expected || second.Id != expected) return 4;
+                            first.Mark = expected + 1000;
+                            GC::Collect();
+                            if (second.Mark != expected + 1000 || iterator.Current.Mark != expected + 1000) return 5;
+                        }
+                        // Both output-reference locals expire before the next eviction.
+                    }
+                    if (iterator.MoveNext() || created != 7) return 6;
+                    // The iterator remains alive here, but EOF has cleared its withheld tail.
+                    if (!CountIs(baseline, 20)) return 7;
+                    if (iterator.MoveNext() || created != 7 || !CountIs(baseline, 21)) return 8;
+                }
+                if (!CountIs(baseline, 22)) return 9;
+                created = 0;
+                foreach (Cell^ value in query) {
+                    if (value.Id != 0 || created != 3) return 10;
+                    if (!CountIs(baseline + 3, 30)) return 11;
+                    break;
+                }
+                if (created != 3 || !CountIs(baseline, 31)) return 12;
+                return 0;
+            }
+            """, optimization);
+
     private const string Memory = """
         using std;
         int attempts=0;int allocated=0;int released=0;int failAt=0;bool deny=false;

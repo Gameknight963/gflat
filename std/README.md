@@ -99,6 +99,7 @@ implementation lives in `libc`.
 | Keyed digests | `HMACSHA256` | [Incremental HMAC-SHA256 with counted keys](../docs/HMAC_SHA256.md) |
 | Temporary storage | `Arena` | [Independent raw-storage arenas](../docs/ARENA.md) |
 | Raw memory | `Memory::Copy`, `Move`, `Fill`, `Compare`, `Equal` | [Byte operations and linking](../docs/MEMORY.md) |
+| Integer alignment | `Memory::AlignUp`, `AlignDown`, `IsAligned` | [Checked offsets and alignment tests](../docs/MEMORY.md#integer-alignment) |
 
 Containers own stored values. Raw pointers stored as elements borrow their
 pointees; they do not cause automatic deletion. Views and enumerators borrow

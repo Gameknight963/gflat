@@ -87,3 +87,34 @@ Explicit memory intrinsics can still lower to runtime symbols even with
 separate requirements. A freestanding target must provide any such symbols
 selected by its backend. Inspect the final executable when validating a new
 configuration.
+
+## Integer alignment
+
+`Memory::AlignUp(value, alignment)` rounds an integer byte offset/address upward;
+`AlignDown` rounds downward. Alignment must be a positive power of two, matching
+Arena's alignment requirement. Invalid alignment throws `Exception`. AlignUp
+also throws if the rounded result cannot fit in `nuint`; AlignDown cannot
+overflow. An already aligned input is returned unchanged.
+
+`Memory::IsAligned(value, alignment)` is nothrow and returns false for invalid
+alignment, including zero. For valid alignment, offset zero is aligned.
+
+```cpp
+int main()
+{
+    nuint headerBytes = 13;
+    nuint payloadOffset = Memory::AlignUp(headerBytes, 8); // 16
+    nuint pageStart = Memory::AlignDown(123, 64); // 64
+    if (payloadOffset != 16 || pageStart != 64) return 1;
+    if (!Memory::IsAligned(payloadOffset, 8)) return 2;
+    return 0;
+}
+```
+
+These functions operate only on integers. They allocate no storage, do not
+validate backing storage or buffer size, and do not construct objects. A caller
+laying out a real buffer must independently check its capacity and any additional
+size arithmetic.
+Selective source users can include `std/core/Memory/Alignment.gf` separately;
+its throwing helpers require ordinary exception support. Success performs no
+allocation; exception runtime behavior still applies to failures.

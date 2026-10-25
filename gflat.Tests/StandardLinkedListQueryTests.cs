@@ -11,7 +11,7 @@ public sealed class StandardLinkedListQueryTests
     public void QueriesMatchDotNetAfterMixedNodeOperations(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections; extern int printf(readonly(char)* format,...);
+            using std; using std::Queries; using std::Collections; extern int printf(readonly(char)* format,...);
             int main() {
                 for (int count=0;count<25;count++) {
                     LinkedList<int> values=new();
@@ -48,7 +48,7 @@ public sealed class StandardLinkedListQueryTests
     public void NoncopyableBorrowedQueriesSurviveOwnerMoveAndObserveElementEdits(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections; extern void*? malloc(nuint size); extern void free(void* pointer);
+            using std; using std::Queries; using std::Collections; extern void*? malloc(nuint size); extern void free(void* pointer);
             int allocations=0; int releases=0; int dead=0; bool deny=false;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { if(deny)return null; allocations++; return malloc(size); }
@@ -87,7 +87,7 @@ public sealed class StandardLinkedListQueryTests
     public void BorrowedViewCannotBeConstructedFromAnArbitraryNode()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main(){LinkedList<int>::View view=new LinkedList<int>::View(null);return 0;}
             """)));
         Assert.Equal("linked-list-query.gf", error.Span.Source?.Path);

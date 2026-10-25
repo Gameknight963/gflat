@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardCsvReaderTextTests
 {
     private const string Counters="""
-        using std; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using std; using std::Queries; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;int failAfter=-1;bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {

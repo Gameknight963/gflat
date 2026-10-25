@@ -96,7 +96,7 @@ public sealed class GenericExtensionOverloadTests
     {
         string first=predicateFirst?"if(!source.AsEnumerable().Any(&IsTwo)||calls!=2)return 1;calls=0;":"if(!source.AsEnumerable().Any()||calls!=0)return 1;";
         Run($$"""
-            using std;
+            using std; using std::Queries;
             int calls=0;
             bool IsTwo(int value){calls++;return value==2;}
             bool Missing(int value){calls++;return false;}

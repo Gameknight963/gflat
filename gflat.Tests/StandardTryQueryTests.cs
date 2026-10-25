@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardTryQueryTests
 {
     private const string Prelude = """
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         private extern void*? malloc(nuint bytes); private extern void free(void* storage);
         int allocations=0;int releases=0;
         namespace Memory {

@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // Materializes owning keys. HashMap also requires the matching IEquatable<K>.
 public HashMap<K, nuint> CountBy<T, K : IHashable, S, E>(this Enumerable<T, S, E> source, K(T)* selector)

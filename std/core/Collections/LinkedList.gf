@@ -1,3 +1,4 @@
+using std::Queries;
 namespace std::Collections;
 
 // Owns nodes and values. Borrowed node addresses survive insertion and list moves.

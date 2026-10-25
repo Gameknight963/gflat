@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Queries;
 
 public Enumerable<T, DistinctSource<T, S, E>, DistinctSource<T, S, E>::Enumerator>
     Distinct<T : IHashable, S, E>(this Enumerable<T, S, E> source)

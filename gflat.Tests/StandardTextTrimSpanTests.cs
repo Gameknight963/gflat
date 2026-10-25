@@ -9,7 +9,7 @@ public sealed class StandardTextTrimSpanTests
     [InlineData(2)]
     public void EveryByteBoundaryUsesExactlyAsciiWhitespaceWithoutChangingStorage(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main(){
                 char[5] data;
                 for(int value=0;value<256;value++){
@@ -38,7 +38,7 @@ public sealed class StandardTextTrimSpanTests
     [InlineData(2)]
     public void EmptyAndWhitespaceViewsAreCanonicalAndMutableResultsStillAliasWithoutAllocation(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
@@ -74,7 +74,7 @@ public sealed class StandardTextTrimSpanTests
     [InlineData(2)]
     public void TrimComposesWithBorrowedLineAndDelimiterViews(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main(){
                 readonly(char)* input=" name = value \r\n\tflag= yes\t\n \t = \t \n";
                 Span<readonly(char)> text=new(input,36);int lineIndex=0;
@@ -105,7 +105,7 @@ public sealed class StandardTextTrimSpanTests
         foreach (string method in new[] { "Trim", "TrimStart", "TrimEnd" })
         {
             var error = Assert.Throws<TypeCheckException>(() => Compiler.Emit(Sources($$"""
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 int main(){Span<readonly(char)> text=new(" x ",3);text.{{method}}()[0]='!';return 0;}
                 """)));
             Assert.Contains("read", error.Message, StringComparison.OrdinalIgnoreCase);

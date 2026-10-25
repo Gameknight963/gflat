@@ -50,7 +50,7 @@ public sealed class StandardBitSetShiftTests
                 }
             }
             Run(directory, $$"""
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 extern void*? fopen(immutable(char*) path,immutable(char*) mode);
                 extern nuint fread(void* output,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);
@@ -98,7 +98,7 @@ public sealed class StandardBitSetShiftTests
     [InlineData(2)]
     public void ShiftingMovedOwnersIsAllocationFreeAndReleasesExactlyOnce(int optimization)
         => WithDirectory(directory => Run(directory, """
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int allocations=0;int releases=0;bool deny=false;
             extern void*? malloc(nuint size);extern void free(void* storage);
             namespace Memory{

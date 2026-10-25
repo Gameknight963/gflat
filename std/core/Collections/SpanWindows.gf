@@ -1,3 +1,4 @@
+using std::Queries;
 namespace std::Collections;
 
 // Borrows contiguous storage; each result is a full, possibly overlapping view.

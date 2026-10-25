@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // The searched key is borrowed. Enumeration still follows ordinary T semantics:
 // materialize Current once and lend only this iteration's local to the comparer.
@@ -16,4 +16,4 @@ public bool Contains<T, S, E>(this Enumerable<T, S, E> source, immutable(T)* key
 }
 
 public bool Contains<T : IEquatable<T>, S, E>(this Enumerable<T, S, E> source, immutable(T)* key)
-    => std::Contains<T, S, E>(move source, key, EqualityComparer<T>::Equals);
+    => std::Queries::Contains<T, S, E>(move source, key, EqualityComparer<T>::Equals);

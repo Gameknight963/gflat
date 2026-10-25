@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 public bool Any<T, S, E>(this Enumerable<T, S, E> source)
 {

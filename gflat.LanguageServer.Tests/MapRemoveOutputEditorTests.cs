@@ -13,7 +13,7 @@ public sealed class MapRemoveOutputEditorTests
     {
         string construction=map=="SortedMap"?"new(Compare)":"new()";
         string text="""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int Compare(immutable(int)* left,immutable(int)* right){if(*left<*right)return -1;if(*left>*right)return 1;return 0;}
             """+"int Probe(){"+map+"<int,int> values="+construction+";values.Add(3,42);"+
             "int key=3;int output=99;bool removed=values.Remove(&key,ref output);bool old=values.Remove(&key);return output;}";

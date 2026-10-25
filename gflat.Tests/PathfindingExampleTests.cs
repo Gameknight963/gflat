@@ -19,7 +19,7 @@ public sealed class PathfindingExampleTests
     public void WeightedSearchUsesCheaperDetourAndHandlesTrivialAndUnreachableGoals()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             using Pathfinding;
             int main() {
                 Span<readonly(char)> cells = new("S9G...", 6);
@@ -42,7 +42,7 @@ public sealed class PathfindingExampleTests
     public void RandomWeightedGridsMatchIndependentBellmanFordCosts()
     {
         var program = new System.Text.StringBuilder("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             using Pathfinding;
             bool Verify(immutable(char*) text, int expected) {
                 Span<readonly(char)> cells = new(text, 42);
@@ -114,7 +114,7 @@ public sealed class PathfindingExampleTests
     public void InvalidDimensionsAndEndpointsHaveUsefulErrors()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             using Pathfinding;
             int main() {
                 Span<readonly(char)> cells = new("S#G...", 6); int caught = 0;

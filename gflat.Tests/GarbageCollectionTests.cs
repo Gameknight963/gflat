@@ -141,7 +141,7 @@ public sealed class GarbageCollectionTests
 
     [Fact]
     public void NativeVectorGrowthAndClearTrackManagedElements() => Succeeds("""
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         void Fill(Vector<int^>* values) {
             for (int i = 0; i < 20; i++) values.Add(new^ int(i));
         }
@@ -162,7 +162,7 @@ public sealed class GarbageCollectionTests
 
     [Fact]
     public void NativeVectorPopDoesNotRetainRemovedManagedReference() => Succeeds("""
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         void Fill(Vector<int^>* values) { values.Add(new^ int(42)); }
         int Take(Vector<int^>* values) { int^ value = values.Pop(); return *value; }
         int main() {

@@ -2,7 +2,7 @@
 
 `Swap` borrows two initialized values. The collection algorithms borrow a span
 and never copy or own the source collection.
-Import `std` and call them as ordinary functions:
+Import `std::Collections` and call them as ordinary functions:
 
 ```csharp
 using std; using std::Collections;

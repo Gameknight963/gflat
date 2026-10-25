@@ -127,7 +127,7 @@ allocating a buffer. `Where` accepts a `bool(int)*` callback; typed noncapturing
 lambdas work directly. `Take` and `Skip` return new sequence values:
 
 ```csharp
-using std;
+using std; using std::Queries;
 
 int main()
 {

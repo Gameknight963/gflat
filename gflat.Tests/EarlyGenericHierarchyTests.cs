@@ -37,7 +37,7 @@ public sealed class EarlyGenericHierarchyTests
         var result = CompilerTestHelper.Run(new[] { "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "libc/GC.gf", "libc/TracingCollector.gf", "core/Collections/Vector.gf", "core/Span.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", """
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 extern void*? malloc(nuint size);
                 extern void free(void* storage);
                 namespace Memory {

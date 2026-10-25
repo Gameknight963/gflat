@@ -1,3 +1,4 @@
+using std::Queries;
 namespace std::Collections;
 
 // Owns contiguous elements. Growth invalidates pointers and spans into the buffer.

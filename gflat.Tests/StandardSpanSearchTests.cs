@@ -13,7 +13,7 @@ public sealed class StandardSpanSearchTests
     [InlineData(2)]
     public void SearchesMatchIndependentLinearOracleForEverySliceAndKey(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int calls = 0;
             bool Equal(readonly(int)* a, readonly(int)* b) { calls++; return *a == *b; }
             int main() {
@@ -50,7 +50,7 @@ public sealed class StandardSpanSearchTests
             """, optimization, "Collections/EqualityComparer.gf");
 
     private const string Owning = """
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         extern void*? malloc(nuint size);
         extern void free(void* storage);
         int allocations=0; int releases=0; int destroyed=0; int calls=0; int failAt=0;

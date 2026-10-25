@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // Eager owning groups; HashMap additionally needs the matching IEquatable<K>.
 public HashMap<K, Vector<T>> ToLookup<T, K : IHashable, S, E>(this Enumerable<T, S, E> source, K(T)* keySelector)

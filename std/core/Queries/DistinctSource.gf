@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // The reusable source owns no seen-key set; each enumerator creates its own.
 struct DistinctSource<T : IHashable, Source, Iterator>

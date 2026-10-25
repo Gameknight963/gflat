@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // Keep each projected key with its original element; compare cached keys only.
 public T MinBy<T, K, S, E>(this Enumerable<T, S, E> source, K(T)* selector,
@@ -23,7 +23,7 @@ public T MinBy<T, K, S, E>(this Enumerable<T, S, E> source, K(T)* selector,
 }
 
 public T MinBy<T, K : IComparable<K>, S, E>(this Enumerable<T, S, E> source, K(T)* selector)
-    => std::MinBy<T, K, S, E>(move source, selector, Comparer<K>::Compare);
+    => std::Queries::MinBy<T, K, S, E>(move source, selector, Comparer<K>::Compare);
 
 public T MaxBy<T, K, S, E>(this Enumerable<T, S, E> source, K(T)* selector,
     int(immutable(K)*, immutable(K)*)* compare)
@@ -46,4 +46,4 @@ public T MaxBy<T, K, S, E>(this Enumerable<T, S, E> source, K(T)* selector,
 }
 
 public T MaxBy<T, K : IComparable<K>, S, E>(this Enumerable<T, S, E> source, K(T)* selector)
-    => std::MaxBy<T, K, S, E>(move source, selector, Comparer<K>::Compare);
+    => std::Queries::MaxBy<T, K, S, E>(move source, selector, Comparer<K>::Compare);

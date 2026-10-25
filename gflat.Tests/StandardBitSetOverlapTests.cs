@@ -21,7 +21,7 @@ public sealed class StandardBitSetOverlapTests
             expected.Add(((BitArray)left.Clone()).And(right).Cast<bool>().Any(v=>v));
         }
         Run($$"""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             extern void*? malloc(nuint size);extern void free(void* value);
             bool deny=false;int attempts=0;
             namespace Memory{
@@ -67,7 +67,7 @@ public sealed class StandardBitSetOverlapTests
     [InlineData(2)]
     public void ShrinkRegrowthClearsPaddingAndLengthMismatchesLeaveInputsUnchanged(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main(){
                 BitSet left=new(65);BitSet right=new(65);left[64]=true;right[64]=true;
                 if(!left.Overlaps(&right))return 1;

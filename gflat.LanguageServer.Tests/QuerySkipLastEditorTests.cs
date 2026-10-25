@@ -9,7 +9,7 @@ public sealed class QuerySkipLastEditorTests
     public void StreamingSuffixSkipInfersConcreteElementAndNavigatesItsBufferedCurrent()
     {
         const string text = """
-            using std;
+            using std; using std::Queries;
             void Observe() {
                 int[3] data = [1, 2, 3];
                 Span<int> values = new(data, 3);

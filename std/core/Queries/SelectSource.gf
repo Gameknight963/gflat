@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 struct SelectSource<T, U, Source, Iterator>
 {

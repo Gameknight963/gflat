@@ -7,7 +7,7 @@ public sealed class StandardLinkedListReverseTests
     [InlineData(2)]
     public void ReversalPreservesBothLinksNodeValueIdentityAndNoncopyableOwnershipWithoutAllocation(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             private extern void*? malloc(nuint size);
             private extern void free(void* storage);
             int attempts = 0;
@@ -85,7 +85,7 @@ public sealed class StandardLinkedListReverseTests
     [InlineData(2)]
     public void ManagedValuesKeepRootsAcrossReversalAndMoveAndReleaseAfterRemovalAndClear(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
             void Populate(ref LinkedList<int^> values) {
                 for (int id = 0; id < 17; id++) values.AddLast(new^ int(id));

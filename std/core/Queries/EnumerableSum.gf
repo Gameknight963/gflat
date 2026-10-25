@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Queries;
 
 private long CheckedSumAdd(long total, long value)
 {

@@ -42,7 +42,7 @@ public sealed class StandardFileBytesTests
             byte[] expected = Enumerable.Range(0, length).Select(i => (byte)i).ToArray();
             File.WriteAllBytes(input, expected);
             Run(directory, $$"""
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 int main() {
                     Vector<byte> bytes = FileBytes::ReadAll({{Literal(input)}});
                     if (bytes.Count != (nuint){{length}}) return 1;
@@ -70,7 +70,7 @@ public sealed class StandardFileBytesTests
         {
             string path = Path.Combine(directory, "bytes.bin");
             Run(directory, $$"""
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 int main() {
                     byte[4] data; data[0] = 0; data[1] = 255; data[2] = 128; data[3] = 42;
                     FileBytes::WriteAll({{Literal(path)}}, data, 0);
@@ -92,7 +92,7 @@ public sealed class StandardFileBytesTests
             string path = Path.Combine(directory, "failure.bin");
             File.WriteAllBytes(path, new byte[9000]);
             Run(directory, $$"""
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 extern void*? malloc(nuint size);
                 extern void free(void* data);
                 static class State { public static void*? Last; public static int Released; }
@@ -125,7 +125,7 @@ public sealed class StandardFileBytesTests
     {
         if (!OperatingSystem.IsLinux()) return;
         WithDirectory(directory => Run(directory, """
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 byte value = (byte)42;
                 try { FileBytes::WriteAll("/dev/full", &value, 1); return 1; }
@@ -145,7 +145,7 @@ public sealed class StandardFileBytesTests
             string empty = Path.Combine(directory, "empty.bin"), missing = Path.Combine(directory, "missing.bin");
             File.WriteAllBytes(empty, []);
             Run(directory, $$"""
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 static class State { public static int Calls; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { State::Calls++; return null; }

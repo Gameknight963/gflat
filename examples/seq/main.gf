@@ -1,3 +1,4 @@
+using std::Queries;
 using std;
 
 int main(int argc, char** argv)

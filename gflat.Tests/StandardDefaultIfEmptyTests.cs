@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardDefaultIfEmptyTests
 {
     private const string Counters="""
-        using std;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using std; using std::Queries;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;void*? p=malloc(bytes);if(p!=null)allocated++;return p;}
@@ -168,7 +168,7 @@ public sealed class StandardDefaultIfEmptyTests
     [InlineData(2)]
     public void ManagedSourceAndFallbackCapturesRemainRootedAfterQueryScopeEndsUntilIteratorCleanup(int optimization)
         =>Run("""
-            using std;
+            using std; using std::Queries;
             public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
             class Box {public Box^? Self;public int Id;public Box(int id){Self=null;Id=id;}}
             alias Cursor=DefaultIfEmptySource<Box^,Repeated<Box^>,Repeated<Box^>::Enumerator>::Enumerator;

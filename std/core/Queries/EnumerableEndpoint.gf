@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Queries;
 
 public Enumerable<T, EndpointSource<T, S, E>, EndpointSource<T, S, E>::Enumerator>
     Append<T, S, E>(this Enumerable<T, S, E> source, T value)

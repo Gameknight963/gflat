@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Queries;
 
 public Enumerable<T, SkipLastSource<T, S, E>, SkipLastSource<T, S, E>::Enumerator>
     SkipLast<T, S, E>(this Enumerable<T, S, E> source, nuint count)

@@ -28,7 +28,7 @@ explicit comparer overload for such views; it needs no equality-interface
 implementation.
 
 ```csharp
-using std;
+using std; using std::Queries;
 bool Even(int value) => value % 2 == 0;
 bool SameParity(immutable(int)* left, immutable(int)* right)
     => *left % 2 == *right % 2;

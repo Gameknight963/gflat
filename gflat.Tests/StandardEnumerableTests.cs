@@ -19,7 +19,7 @@ public sealed class StandardEnumerableTests
     public void ImmutableRangeAdaptersOwnTheirSmallSourceAndRemainLazy(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int calls = 0; int allocations = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { allocations++; return null; }
@@ -51,7 +51,7 @@ public sealed class StandardEnumerableTests
     [Fact]
     public void LazyOperatorsAllocateNothingAndShortCircuitInOrder()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             extern int putchar(int c);
@@ -77,7 +77,7 @@ public sealed class StandardEnumerableTests
     [Fact]
     public void EmptySequencesTerminalsAndOperationOrderAgree()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             bool Positive(int n) => n > 0;
             int Sum(int total, int n) => total + n;
             int main() {
@@ -108,7 +108,7 @@ public sealed class StandardEnumerableTests
     [Fact]
     public void TypedLambdasCanChangeTheElementAndAccumulatorTypes()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 int[3] buffer = [1, 2, 3];
                 Span<int> span = new Span<int>(buffer, 3);
@@ -122,7 +122,7 @@ public sealed class StandardEnumerableTests
     [Fact]
     public void ReadonlyViewsKeepTheirElementQualificationsThroughQueries()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             bool Even(readonly(int) n) => n % 2 == 0;
             int main() {
                 Vector<int> values = new Vector<int>(); values.Add(2); values.Add(4);
@@ -136,7 +136,7 @@ public sealed class StandardEnumerableTests
     [Fact]
     public void PointerElementsRemainBorrowedAndTheSourceVectorIsNotOwned()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             extern int putchar(int c);
             struct Item {
                 public int Value;
@@ -163,7 +163,7 @@ public sealed class StandardEnumerableTests
     [Fact]
     public void MaterializingOwningElementsMakesIndependentCopies()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int Length(String text) => (int)text.Length;
             int main() {
                 Vector<String> words = new Vector<String>(); words.Add(s"hello");
@@ -179,7 +179,7 @@ public sealed class StandardEnumerableTests
     [Fact]
     public void MaterializationCleansPartialResultsWhenProjectionThrows()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             int allocations = 0;
@@ -209,7 +209,7 @@ public sealed class StandardEnumerableTests
     public void ManagedProjectionResultsSurviveCollectionAndMaterialization()
     {
         var sources = Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             class Item { public int Value; public Item(int value) { Value = value; } }
             Item^ Project(Item^ item) { GC::Collect(); return item; }
             int main() {
@@ -234,7 +234,7 @@ public sealed class StandardEnumerableTests
     [InlineData("try { query.Select(Throw).First(); } catch {}", "D")]
     public void IteratorResourcesAreReleasedOnShortCircuitAndExceptions(string statement, string output)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             extern int putchar(int c);
             struct Source {
                 public struct Iterator {
@@ -256,7 +256,7 @@ public sealed class StandardEnumerableTests
     public void QueriesBorrowVectorsIncludingPointerReceivers()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             bool Even(int n) => n % 2 == 0;
             int Double(int n) => n * 2;
             int main() {

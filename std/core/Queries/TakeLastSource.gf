@@ -1,5 +1,5 @@
 ﻿using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // Each enumerator buffers its own bounded tail on the first move.
 struct TakeLastSource<T, Source, Iterator>

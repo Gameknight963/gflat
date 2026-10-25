@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // A reusable sequence. Source supplies GetEnumerator(); Iterator supplies
 // MoveNext() and Current. These patterns remain usable without interfaces.

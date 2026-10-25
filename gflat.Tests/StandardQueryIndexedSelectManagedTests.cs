@@ -15,7 +15,7 @@ public sealed class StandardQueryIndexedSelectManagedTests
     }
 
     private const string Program = """
-        using std;
+        using std; using std::Queries;
         class Cell
         {
             public int Value;

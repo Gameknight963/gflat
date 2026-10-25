@@ -31,7 +31,7 @@ public sealed class StandardRotationTests
                     """);
             }
         var result=CompilerTestHelper.Run(Sources($$"""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main(){
                 Span<int> empty=new();Rotate<int>(empty,0);
                 {{checks}}
@@ -52,7 +52,7 @@ public sealed class StandardRotationTests
     public void RotationRelocatesNoncopyableOwnersWithoutAllocationsOrDestructors(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             extern void* malloc(nuint size);extern void free(void* storage);
             int allocations=0;
             replace void*? Memory::Allocate(nuint bytes){allocations++;return malloc(bytes);}
@@ -86,7 +86,7 @@ public sealed class StandardRotationTests
     [Fact]
     public void ReadonlyElementsCannotBeRotated()
         => Assert.Throws<TypeCheckException>(()=>Compiler.Emit(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main(){int[2] values=[1,2];Span<readonly(int)> view=new(values,2);Rotate<readonly(int)>(view,1);return 0;}
             """)));
 
@@ -96,7 +96,7 @@ public sealed class StandardRotationTests
     public void ManagedElementRootsFollowTheirNewSlotsAndAreReleased(int optimization)
     {
         var sources=Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;Next=null;}}
             void Check(){
                 Vector<Node^> values=new();

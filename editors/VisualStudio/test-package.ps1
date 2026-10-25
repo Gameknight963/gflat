@@ -191,7 +191,7 @@ int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new(7
     if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
     $collections = Join-Path $extracted 'collections.gf'
     @'
-using std; using std::Collections;
+using std; using std::Queries; using std::Collections;
 int WordLength(String word) => (int)word.Length;
 int main() {
     Vector<String> words = new();
@@ -215,7 +215,7 @@ int main() {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'
-using std; using std::Collections;
+using std; using std::Queries; using std::Collections;
 int smokeDestroyed = 0;
 long smokeTimestamp = 0l;
 static class SmokeClock : IMonotonicClock {

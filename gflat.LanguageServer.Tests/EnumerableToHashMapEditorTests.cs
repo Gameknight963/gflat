@@ -8,7 +8,7 @@ public sealed class EnumerableToHashMapEditorTests
     [Fact]
     public void BothMaterializersInferTheirKeyValueTypesAndRetainTheirVisibleSelectorParameters()
     {
-        const string text="using std; using std::Collections;int Key(int value)=>value;long Square(int value)=>(long)value*(long)value;void Probe(){int[3] data=[2,5,9];Span<int> values=new(data,3);HashMap<int,int> originals=values.AsEnumerable().ToHashMap(Key);HashMap<int,long> squares=values.AsEnumerable().ToHashMap(Key,Square);}";
+        const string text="using std; using std::Queries; using std::Collections;int Key(int value)=>value;long Square(int value)=>(long)value*(long)value;void Probe(){int[3] data=[2,5,9];Span<int> values=new(data,3);HashMap<int,int> originals=values.AsEnumerable().ToHashMap(Key);HashMap<int,long> squares=values.AsEnumerable().ToHashMap(Key,Square);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="EnumerableToHashMap.gf");

@@ -1,3 +1,4 @@
+using std::Queries;
 namespace std::Collections;
 
 // An owning FIFO ring buffer. Structural mutation invalidates borrowed elements and iterators.

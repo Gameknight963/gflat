@@ -8,7 +8,7 @@ following HashMap's existing rules. Hash and equality must agree, and stored key
 must retain stable identity. Map enumeration order is unspecified.
 
 ```csharp
-using std; using std::Collections;
+using std; using std::Queries; using std::Collections;
 
 int Key(int value) => value;
 long Square(int value) => (long)value * (long)value;

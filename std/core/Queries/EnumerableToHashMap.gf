@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // HashMap additionally requires the matching IEquatable<K> contract.
 public HashMap<K, T> ToHashMap<T, K : IHashable, S, E>(this Enumerable<T, S, E> source, K(T)* keySelector)

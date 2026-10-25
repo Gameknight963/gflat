@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardLinkedListRemoveAllTests
 {
     private const string Allocator="""
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         private extern void*? malloc(nuint size);
         private extern void free(void* storage);
         int attempts=0;int allocated=0;int freed=0;bool deny=false;
@@ -162,7 +162,7 @@ public sealed class StandardLinkedListRemoveAllTests
     public void RemovingManagedElementNodesRetiresRootsAndKeepsSurvivorAlive(int optimization)
     {
         const string program="""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             public static replace nuint std::TracingCollector::CollectionThreshold()=>0;
             void Populate(ref LinkedList<int^> values){
                 values.AddLast(new^ int(1));

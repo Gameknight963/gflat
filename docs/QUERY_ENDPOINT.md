@@ -9,7 +9,7 @@ Use [DefaultIfEmpty(value)](QUERY_DEFAULT_IF_EMPTY.md) when the captured value
 should be yielded only if the source is empty.
 
 ```csharp
-using std;
+using std; using std::Queries;
 int main()
 {
     int[2] data = [1, 2];

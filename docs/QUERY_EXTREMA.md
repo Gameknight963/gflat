@@ -8,7 +8,7 @@ before its second, zero means equal priority, and a positive result orders it
 after its second. The comparator must define a consistent order.
 
 ```csharp
-using std;
+using std; using std::Queries;
 int main()
 {
     int[5] data = [7, -3, 5, -3, 2];

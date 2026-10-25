@@ -48,7 +48,7 @@ public sealed class StandardSpanTryCopyTests
         }
         string hex = Convert.ToHexString(packet.ToArray());
         Run($$$"""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int allocations = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint size) { allocations++; return null; }
@@ -98,7 +98,7 @@ public sealed class StandardSpanTryCopyTests
     public void ShortBuffersNeverCopyAndOwningCopyFailuresPropagateWithNormalPartialProgress(int optimization)
     {
         Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             extern void*? malloc(nuint bytes); extern void free(void* storage);
             int allocated = 0; int freed = 0; int copies = 0; int made = 0; int dead = 0;
             int budget = -1; bool deny = false; bool failNext = false;
@@ -157,7 +157,7 @@ public sealed class StandardSpanTryCopyTests
             """, optimization);
 
         const string protectedOutput = """
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 int[2] data = [1, 2]; Span<int> view = new(data, 2);
                 view.AsImmutable().TryCopyTo(view.AsImmutable()); return 0;
@@ -165,7 +165,7 @@ public sealed class StandardSpanTryCopyTests
             """;
         Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources(protectedOutput)));
         const string noncopyable = """
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             struct Unique { public Unique() {} ~Unique() {} }
             int main() {
                 Vector<Unique> values = new(); values.Add(new Unique());

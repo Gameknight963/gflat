@@ -6,7 +6,7 @@ types may differ. It can join several input batches without creating an
 intermediate vector.
 
 ```cpp
-using std;
+using std; using std::Queries;
 
 int main()
 {

@@ -18,7 +18,7 @@ public sealed class StandardLinkedListTests
     public void EndpointAndMiddleOperationsMaintainBothLinkDirections()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 LinkedList<int> values = new();
                 if (!values.IsEmpty || values.First != null || values.Last != null) return 1;
@@ -48,7 +48,7 @@ public sealed class StandardLinkedListTests
     public void NodesAndIteratorsRemainValidAcrossInsertionAndListMoves()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 LinkedList<int> original = new();
                 LinkedList<int>::Node* saved = original.AddLast(42);
@@ -71,7 +71,7 @@ public sealed class StandardLinkedListTests
     public void OwningNoncopyableValuesTransferAndDestroyExactlyOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             struct Unique {
                 private int* destroyed;
                 public int Key;
@@ -102,7 +102,7 @@ public sealed class StandardLinkedListTests
     public void StringsCopyOnInsertionAndNodeValuesBorrowTheirOwnedStorage()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 LinkedList<String> values = new(); String original = s"source";
                 LinkedList<String>::Node* node = values.AddLast(original);
@@ -122,7 +122,7 @@ public sealed class StandardLinkedListTests
     public void ForeignLiveNodesAreRejectedWithoutChangingEitherList()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 LinkedList<int> first = new(); LinkedList<int> second = new();
                 LinkedList<int>::Node* a = first.AddLast(1);
@@ -144,7 +144,7 @@ public sealed class StandardLinkedListTests
     public void FailedInsertionsCleanArgumentsAndPreserveExistingLinks()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             bool fail = false;
             extern void* malloc(nuint bytes); extern void free(void* pointer);
             namespace Memory {
@@ -181,7 +181,7 @@ public sealed class StandardLinkedListTests
     public void FailedFirstStateOrNodeAllocationLeavesAnEmptyReusableList()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int budget = 0; int allocated = 0; int released = 0;
             extern void*? malloc(nuint bytes); extern void free(void* pointer);
             namespace Memory {
@@ -219,7 +219,7 @@ public sealed class StandardLinkedListTests
     public void ManagedValuesSurviveNativeNodesAndReleaseAfterRemovalAndClear()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             class Item { public Item^? Next; public int Key; public Item(int key) { Key = key; } }
             void Check() {
                 LinkedList<Item^> values = new();
@@ -244,7 +244,7 @@ public sealed class StandardLinkedListTests
     public void EmptyOperationsAndUnpositionedEnumeratorThrow()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 LinkedList<int> values = new(); int caught = 0;
                 try { values.RemoveFirst(); } catch (ref Exception error) { caught++; }
@@ -267,7 +267,7 @@ public sealed class StandardLinkedListTests
     public void ListsAndIdentityBearingNodesCannotBeCopied(string statement)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() { LinkedList<int> values = new(); values.AddLast(42);
             """ + statement + " return 0; }")));
         Assert.Contains("copy", error.Message, StringComparison.OrdinalIgnoreCase);

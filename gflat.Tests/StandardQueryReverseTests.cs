@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryReverseTests
 {
     private const string Allocator="""
-        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocations=0;int releases=0;int failAt=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny||(failAt!=0&&attempts==failAt))return null;void*? value=malloc(count);if(value!=null)allocations++;return value;}
@@ -161,7 +161,7 @@ public sealed class StandardQueryReverseTests
     [InlineData(2)]
     public void FreshManagedProjectionResultsStayRootedByTheReverseBuffer(int optimization)
         =>Run("""
-            using std; using std::Collections;class Item{public int Value;public Item(int value){Value=value;}}
+            using std; using std::Queries; using std::Collections;class Item{public int Value;public Item(int value){Value=value;}}
             Item^ Make(int value){Item^ result=new^ Item(value);GC::Collect();return result;}
             int main(){
                 IntRange range=new(1,4);var query=range.AsEnumerable().Select(&Make).Reverse();

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Queries;
 
 public T ElementAt<T, S, E>(this Enumerable<T, S, E> source, nuint index)
 {

@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryEndpointTests
 {
     private const string Allocator="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Queries;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -25,7 +25,7 @@ public sealed class StandardQueryEndpointTests
         }
         data.Add(0);
         Run($$"""
-            using std;int attempts=0;
+            using std; using std::Queries;int attempts=0;
             namespace Memory{public replace void*? Allocate(nuint count){attempts++;return null;}public replace void Free(void* storage)nothrow{} }
             bool Even(int value)=>value%2==0;int Twice(int value)=>value*2;
             int main(){
@@ -54,7 +54,7 @@ public sealed class StandardQueryEndpointTests
     [InlineData(2)]
     public void SourceEffectsAndStickyMoveFailuresDifferFromRetryableCurrentFailures(int optimization)
         =>Run("""
-            using std;int length=3;int mode=0;int starts=0;int ends=0;int moves=0;int reads=0;
+            using std; using std::Queries;int length=3;int mode=0;int starts=0;int ends=0;int moves=0;int reads=0;
             struct Source{
                 public struct Iterator{
                     private int position;public Iterator(){position=0;starts++;}
@@ -183,7 +183,7 @@ public sealed class StandardQueryEndpointTests
     [InlineData(2)]
     public void ManagedEndpointsRemainRootedAndRawPointerEndpointsDoNotOwnTheirPointees(int optimization)
         =>Run("""
-            using std;int dead=0;
+            using std; using std::Queries;int dead=0;
             class Node{public int Value;public Node(int value){Value=value;}}
             struct Raw{public int Value;public Raw(int value){Value=value;}~Raw(){dead++;}}
             Node^ Make(int value){Node^ result=new^ Node(value);GC::Collect();return result;}

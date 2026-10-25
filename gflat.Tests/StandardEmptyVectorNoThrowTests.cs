@@ -14,7 +14,7 @@ public sealed class StandardEmptyVectorNoThrowTests
         var sources = names.Select(name => new SourceFile(name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("empty-vector.gf", """
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 int allocations=0;int frees=0;int constructed=0;int destroyed=0;int collectorAllocations=0;
                 namespace Memory {
                     public replace void*? Allocate(nuint count){allocations++;return null;}

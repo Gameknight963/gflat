@@ -14,7 +14,7 @@ ordinary generic inference; readonly element views can use an explicit comparer
 without assuming variance between differently constructed equality contracts.
 
 ```csharp
-using std;
+using std; using std::Queries;
 bool SameParity(immutable(int)* left, immutable(int)* right)
     => *left % 2 == *right % 2;
 int main()

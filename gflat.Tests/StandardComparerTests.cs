@@ -11,7 +11,7 @@ public sealed class StandardComparerTests
         var result = CompilerTestHelper.Run(files.Select(file => new SourceFile(file,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("main.gf", """
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 int main() {
                     PriorityQueue<int> pending = new(Comparer<int>::Compare);
                     pending.Enqueue(9); pending.Enqueue(2); pending.Enqueue(5);

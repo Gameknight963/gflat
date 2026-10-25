@@ -8,7 +8,7 @@ public sealed class StandardFilteredRangeEffectsTests
     public void FusedTakeSkipPreservePredicateEffectsAndZeroTakeShortCircuiting(int optimization)
     {
         const string program = """
-using std;
+using std; using std::Queries;
 int calls=0; int mode=0; int failAt=0;
 bool Predicate(int value) {
     calls++;

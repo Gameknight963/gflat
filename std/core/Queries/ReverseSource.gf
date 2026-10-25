@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // Reusable source view; the buffer belongs to each independent iterator.
 struct ReverseSource<T, Source, Iterator>
@@ -30,7 +30,7 @@ struct ReverseSource<T, Source, Iterator>
             {
                 initialized = true;
                 finished = true;
-                buffer = std::ToVector<T, Source, Iterator>(new Enumerable<T, Source, Iterator>(source));
+                buffer = std::Queries::ToVector<T, Source, Iterator>(new Enumerable<T, Source, Iterator>(source));
                 remaining = buffer.Count;
                 finished = false;
             }

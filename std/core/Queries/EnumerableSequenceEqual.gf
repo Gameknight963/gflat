@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 public bool SequenceEqual<T, LS, LE, RS, RE>(this Enumerable<T, LS, LE> left,
     Enumerable<T, RS, RE> right, bool(immutable(T)*, immutable(T)*)* equal)
@@ -20,4 +20,4 @@ public bool SequenceEqual<T, LS, LE, RS, RE>(this Enumerable<T, LS, LE> left,
 
 public bool SequenceEqual<T : IEquatable<T>, LS, LE, RS, RE>(this Enumerable<T, LS, LE> left,
     Enumerable<T, RS, RE> right)
-    => std::SequenceEqual<T, LS, LE, RS, RE>(move left, move right, EqualityComparer<T>::Equals);
+    => std::Queries::SequenceEqual<T, LS, LE, RS, RE>(move left, move right, EqualityComparer<T>::Equals);

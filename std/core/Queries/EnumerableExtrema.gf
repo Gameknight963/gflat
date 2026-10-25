@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 public T Min<T, S, E>(this Enumerable<T, S, E> source,
     int(immutable(T)*, immutable(T)*)* compare)
@@ -16,7 +16,7 @@ public T Min<T, S, E>(this Enumerable<T, S, E> source,
 }
 
 public T Min<T : IComparable<T>, S, E>(this Enumerable<T, S, E> source)
-    => std::Min<T, S, E>(move source, Comparer<T>::Compare);
+    => std::Queries::Min<T, S, E>(move source, Comparer<T>::Compare);
 
 public T Max<T, S, E>(this Enumerable<T, S, E> source,
     int(immutable(T)*, immutable(T)*)* compare)
@@ -33,4 +33,4 @@ public T Max<T, S, E>(this Enumerable<T, S, E> source,
 }
 
 public T Max<T : IComparable<T>, S, E>(this Enumerable<T, S, E> source)
-    => std::Max<T, S, E>(move source, Comparer<T>::Compare);
+    => std::Queries::Max<T, S, E>(move source, Comparer<T>::Compare);

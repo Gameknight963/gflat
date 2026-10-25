@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 public Enumerable<T, ReverseSource<T, S, E>, ReverseSource<T, S, E>::Enumerator>
     Reverse<T, S, E>(this Enumerable<T, S, E> source)

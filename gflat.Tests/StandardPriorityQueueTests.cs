@@ -12,7 +12,7 @@ public sealed class StandardPriorityQueueTests
     public void HeapOrdersDuplicatesAndAlternatingInsertionsAndRemovals()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int Compare(readonly(int)* left, readonly(int)* right) {
                 if (*left < *right) return -1;
                 if (*left > *right) return 1;
@@ -45,7 +45,7 @@ public sealed class StandardPriorityQueueTests
     public void OwningElementsSurviveSiftingAndDestroyExactlyOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             struct Item {
                 private int* destroyed;
                 public int Priority;
@@ -80,7 +80,7 @@ public sealed class StandardPriorityQueueTests
     public void FailedComparisonDestroysAnOwningInsertionArgumentOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             bool fail = false;
             struct Item {
                 private int* destroyed;
@@ -114,7 +114,7 @@ public sealed class StandardPriorityQueueTests
     public void ThrowingComparisonPreservesBothInsertionAndRemovalState()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             bool fail = false;
             int Compare(readonly(int)* left, readonly(int)* right) {
                 if (fail) throw new Exception("comparison failed");

@@ -110,7 +110,7 @@ public sealed class StaticManagedLifetimeTests
     {
         var sources = new[] { "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Span.gf", "core/Collections/Vector.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
-            .Append(new SourceFile("main.gf", "using std; using std::Collections;\n" + ProbeSource + """
+            .Append(new SourceFile("main.gf", "using std; using std::Queries; using std::Collections;\n" + ProbeSource + """
                 void Work() {
                     Vector<managed<int, Probe>?> values = new Vector<managed<int, Probe>?>();
                     values.Add(null); values.Add(null); values.Reserve(16);

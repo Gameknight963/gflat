@@ -1,3 +1,4 @@
+using std::Queries;
 namespace std::Collections;
 
 // Borrows contiguous storage; the final nonoverlapping chunk may be shorter.

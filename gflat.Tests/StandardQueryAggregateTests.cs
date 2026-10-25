@@ -16,7 +16,7 @@ public sealed class StandardQueryAggregateTests
         }
         data.Add(0);
         Run($$"""
-            using std;int attempts=0;bool deny=false;
+            using std; using std::Queries;int attempts=0;bool deny=false;
             extern void*? malloc(nuint count);extern void free(void* storage);
             namespace Memory{public replace void*? Allocate(nuint count){attempts++;if(deny)return null;return malloc(count);}public replace void Free(void* storage)nothrow{free(storage);} }
             int Fold(int left,int right)=>left*3-right;int Subtract(int left,int right)=>left-right;int Sum(int left,int right)=>left+right;
@@ -42,7 +42,7 @@ public sealed class StandardQueryAggregateTests
     [InlineData(2)]
     public void IteratorAndCallbackEffectsReadEachElementOnceAndEmptyNeverInvokesTheCallback(int optimization)
         =>Run("""
-            using std;int length=3;int mode=0;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;
+            using std; using std::Queries;int length=3;int mode=0;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;
             struct Source{
                 private int* values;public Source(int* data){values=data;}
                 public struct Iterator{
@@ -77,7 +77,7 @@ public sealed class StandardQueryAggregateTests
     [InlineData(2)]
     public void NoncopyableFreshCurrentsMoveThroughTheAccumulatorAndUnwindOwnedResources(int optimization)
         =>Run("""
-            using std;extern void*? malloc(nuint count);extern void free(void* storage);
+            using std; using std::Queries;extern void*? malloc(nuint count);extern void free(void* storage);
             int allocated=0;int released=0;int made=0;int dead=0;int starts=0;int ends=0;int calls=0;int mode=0;int length=3;
             namespace Memory{
                 public replace void*? Allocate(nuint count){void*? value=malloc(count);if(value!=null)allocated++;return value;}

@@ -14,7 +14,7 @@ public sealed class StandardQueryDistinctByTests
     }
 
     private const string Memory = """
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int attempts = 0; int allocated = 0; int freed = 0; int denyAt = 0;
         namespace Memory {
@@ -243,7 +243,7 @@ public sealed class StandardQueryDistinctByTests
             }
             """, optimization);
         const string borrowed = """
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             struct Unique {
                 public int Id;
                 public Unique(int id) { Id = id; }

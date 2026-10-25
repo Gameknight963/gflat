@@ -12,7 +12,7 @@ public sealed class StandardQueryIndexedSelectTests
     }
 
     private const string Memory = """
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         extern void*? malloc(nuint bytes);
         extern void free(void* storage);
         int allocated = 0;

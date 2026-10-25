@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Queries;
 
 public Enumerable<U, IndexedSelectSource<T, U, S, E>, IndexedSelectSource<T, U, S, E>::Enumerator>
     Select<T, U, S, E>(this Enumerable<T, S, E> source, U(T, nuint)* selector)

@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 struct ConcatSource<T, LeftSource, LeftIterator, RightSource, RightIterator>
 {

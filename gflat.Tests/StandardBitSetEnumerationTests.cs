@@ -7,7 +7,7 @@ public class StandardBitSetEnumerationTests
     [InlineData(2)]
     public void EveryBitPositionAcrossWordsAndDirtyPaddingRespectsLogicalLength(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 uint[5] words;
                 for (nuint size=0;size<=(nuint)129;size++) {
@@ -41,7 +41,7 @@ public class StandardBitSetEnumerationTests
     [InlineData(2)]
     public void RawBorrowedWordsAreReloadedBetweenCallsAndCopiesKeepIndependentPositions(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int main() {
                 uint[3] words=[0x80000001u,0u,0xffffffffu];
                 BitSet::Enumerator iterator=new(words,65);

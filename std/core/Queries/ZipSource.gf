@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 struct ZipSource<T, U, R, LeftSource, LeftIterator, RightSource, RightIterator>
 {

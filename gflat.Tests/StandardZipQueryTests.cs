@@ -12,7 +12,7 @@ public sealed class StandardZipQueryTests
         for(int leftCount=0;leftCount<=16;leftCount++)for(int rightCount=0;rightCount<=20;rightCount++)
             expected.Add(left.Take(leftCount).Zip(Enumerable.Range(100,rightCount),(a,b)=>(long)a*1000+b).Sum());
         Run($$"""
-            using std; using std::Collections;int allocations=0;int callbacks=0;
+            using std; using std::Queries; using std::Collections;int allocations=0;int callbacks=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}
@@ -41,7 +41,7 @@ public sealed class StandardZipQueryTests
     }
 
     private const string OwningSources="""
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         extern void*? malloc(nuint bytes);extern void free(void* pointer);
         int allocations=0;int releases=0;int active=0;int created=0;int destroyed=0;
         int starts=0;int advances=0;int callbacks=0;int failure=0;

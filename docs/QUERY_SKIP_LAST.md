@@ -6,7 +6,7 @@ fixed footer. Unlike reversing or materializing a whole input, it keeps only a
 bounded lookahead and can yield from an infinite source after that initial lag.
 
 ```csharp
-using std;
+using std; using std::Queries;
 int main()
 {
     int[5] data = [1, 2, 3, 4, 5];

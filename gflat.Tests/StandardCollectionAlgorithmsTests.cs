@@ -12,7 +12,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void SortAndReverseHandleAllSmallLengthsAndRepeatedKeys()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int Compare(readonly(int)* a, readonly(int)* b) => *a - *b;
             int main() {
                 for (int size = 0; size < 100; size++) {
@@ -33,7 +33,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void BoundsFindDuplicateRangesAndInsertionPositions()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int Compare(readonly(int)* a, readonly(int)* b) => *a - *b;
             int main() {
                 Vector<int> values = new();
@@ -56,7 +56,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void SortingNoncopyableOwningValuesDoesNotDestroyOrDuplicateThem()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -86,7 +86,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void BorrowedSearchEqualityAndPartitionDoNotCopyOwningElements()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -127,7 +127,7 @@ public sealed class StandardCollectionAlgorithmsTests
     public void ThrowingComparisonLeavesEveryElementAliveAndOwned()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int comparisons = 0;
             struct Item {
                 private int* destroyed;

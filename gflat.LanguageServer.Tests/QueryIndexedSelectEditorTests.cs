@@ -9,7 +9,7 @@ public sealed class QueryIndexedSelectEditorTests
     public void CallbackAritySelectsConcreteProjectionAndNavigatesItsActualAdapter()
     {
         const string text = """
-            using std;
+            using std; using std::Queries;
             void Observe()
             {
                 int[2] data = [4, 8];

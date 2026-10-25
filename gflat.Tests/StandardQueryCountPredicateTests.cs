@@ -16,7 +16,7 @@ public sealed class StandardQueryCountPredicateTests
             data.AddRange(values);
         }
         Run($$"""
-            using std; using std::Collections;int allocations=0;
+            using std; using std::Queries; using std::Collections;int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
             bool Even(int value)=>value%2==0;bool Keep(int value)=>value>=0;bool Always(int value)=>true;bool Never(int value)=>false;
             int Increment(int value)=>value+1;
@@ -42,7 +42,7 @@ public sealed class StandardQueryCountPredicateTests
     [InlineData(2)]
     public void PredicateCountsReadEveryCurrentOnceAndParameterlessCountStillSkipsIt(int optimization)
         =>Run("""
-            using std; using std::Collections;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;int projections=0;int count=6;int mode=0;
+            using std; using std::Queries; using std::Collections;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;int projections=0;int count=6;int mode=0;
             struct Source{
                 public struct Iterator{
                     private int position;public Iterator(){position=0;starts++;}
@@ -75,7 +75,7 @@ public sealed class StandardQueryCountPredicateTests
     [InlineData(2)]
     public void OwningCurrentIteratorAndFailedCopiesReleaseExactlyOnce(int optimization)
         =>Run("""
-            using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+            using std; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
             int allocations=0;int releases=0;int live=0;int starts=0;int ends=0;int calls=0;int copies=0;int mode=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){void*? result=malloc(count);if(result!=null)allocations++;return result;}
@@ -123,7 +123,7 @@ public sealed class StandardQueryCountPredicateTests
     [InlineData(2)]
     public void ManagedCallbackArgumentsRemainRootedThroughoutTheFullScan(int optimization)
         =>Run("""
-            using std; using std::Collections;int calls=0;class Item{public int Value;public Item(int value){Value=value;}}
+            using std; using std::Queries; using std::Collections;int calls=0;class Item{public int Value;public Item(int value){Value=value;}}
             bool Even(Item^ value){calls++;GC::Collect();return value.Value%2==0;}
             int main(){
                 Vector<Item^> values=new();for(int value=1;value<=5;value++)values.Add(new^ Item(value));

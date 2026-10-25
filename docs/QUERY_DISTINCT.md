@@ -5,7 +5,7 @@ optional query extension using the existing `HashSet<T>`, without materializing
 the entire result before yielding its first value.
 
 ```csharp
-using std; using std::Collections;
+using std; using std::Queries; using std::Collections;
 
 int main()
 {
@@ -77,7 +77,7 @@ selector, hash/equality method, or allocation propagate normally.
 ## Unique lines without loading the file
 
 ```csharp
-using std;
+using std; using std::Queries;
 
 int main()
 {

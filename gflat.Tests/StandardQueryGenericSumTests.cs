@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryGenericSumTests
 {
     private const string Allocator="""
-        using std; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint size){attempts++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}
@@ -60,10 +60,10 @@ public sealed class StandardQueryGenericSumTests
                         int before=attempts;deny=true;long result=0l;
                         if(narrow){
                             result=first.AsEnumerable().Sum();if(Tag(result)!=1||Tag(first.AsEnumerable().Sum())!=1)return 1;
-                            if(std::Sum<int,Span<int>,Span<int>::Enumerator>(first.AsEnumerable())!=expected)return 2;
+                            if(std::Queries::Sum<int,Span<int>,Span<int>::Enumerator>(first.AsEnumerable())!=expected)return 2;
                         }else{
                             result=second.AsEnumerable().Sum();if(Tag(second.AsEnumerable().Sum())!=1)return 3;
-                            if(std::Sum<long,Span<long>,Span<long>::Enumerator>(second.AsEnumerable())!=expected)return 4;
+                            if(std::Queries::Sum<long,Span<long>,Span<long>::Enumerator>(second.AsEnumerable())!=expected)return 4;
                         }
                         deny=false;if(result!=expected||attempts!=before)return 5;
                     }else{
@@ -164,7 +164,7 @@ public sealed class StandardQueryGenericSumTests
             { {{row.Type}}[2] input=[{{row.First}},{{row.Second}}];Span<{{row.Type}}> samples=new(input,2);
               Span<readonly({{row.Type}})> shallow=samples.AsReadOnly();Span<immutable({{row.Type}})> deep=samples.AsImmutable();
               if(samples.AsEnumerable().Sum()!={{row.Expected}}||shallow.AsEnumerable().Sum()!={{row.Expected}}||deep.AsEnumerable().Sum()!={{row.Expected}})return 20;
-              if(std::Sum<readonly({{row.Type}}),Span<readonly({{row.Type}})>,Span<readonly({{row.Type}})>::Enumerator>(shallow.AsEnumerable())!={{row.Expected}})return 21;
+              if(std::Queries::Sum<readonly({{row.Type}}),Span<readonly({{row.Type}})>,Span<readonly({{row.Type}})>::Enumerator>(shallow.AsEnumerable())!={{row.Expected}})return 21;
               if(deep.AsEnumerable().Take(0).Sum()!=0l)return 22; }
             """));
     }
@@ -200,7 +200,7 @@ public sealed class StandardQueryGenericSumTests
 
         IEnumerable<SourceFile> Inputs(string type, string value)
             => library.Append(new SourceFile("query-sum.gf", $$"""
-                using std; using std::Collections;
+                using std; using std::Queries; using std::Collections;
                 enum Code : int { One = 1 }
                 int main() {
                     {{type}}[1] values = [{{value}}];

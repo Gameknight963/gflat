@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // Retains a bounded lookahead, rather than materializing the whole input.
 struct SkipLastSource<T, Source, Iterator>

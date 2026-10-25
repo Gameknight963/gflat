@@ -167,7 +167,7 @@ public sealed class GarbageCollectorSafetyTests
     [InlineData(0)]
     [InlineData(2)]
     public void NativeVectorRetiresMovedAndClearedCycleRoots(int optimization) => Succeeds("""
-        using std; using std::Collections;
+        using std; using std::Queries; using std::Collections;
         class Node { public Node^? next; public int value; public Node(int n) { value = n; } }
         void Fill(Vector<Node^>* roots) {
             for (int i = 0; i < 24; i++) {

@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Queries;
 
 // Owns one captured value. Each iterator owns a copy; Current copies normally.
 public struct Repeated<T> : IEnumerable<T, Repeated<T>::Enumerator>

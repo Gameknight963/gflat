@@ -12,7 +12,7 @@ public sealed class StandardBitSetRangeTests
     {
         var random = new Random(91207);
         var source = new StringBuilder("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             extern int puts(immutable(char*) message);
             bool Matches(immutable(BitSet)* bits, readonly(uint)* words, nuint count) {
                 if (bits.CountSetBits() != count) return false;
@@ -52,7 +52,7 @@ public sealed class StandardBitSetRangeTests
     [Fact]
     public void InvalidRangesPreserveBitsAndValidRangesNeedNoAllocationAcrossMoves()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Queries; using std::Collections;
             int allocations = 0; int releases = 0; bool failAllocation = false;
             private extern void*? malloc(nuint bytes);
             private extern void free(void* storage);

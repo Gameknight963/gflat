@@ -1,3 +1,4 @@
+using std::Queries;
 using std::Collections;
 namespace std;
 

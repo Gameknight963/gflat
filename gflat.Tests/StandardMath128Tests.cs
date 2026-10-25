@@ -35,7 +35,7 @@ public sealed class StandardMath128Tests
             {
                 new SourceFile("Math.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/Math.gf"))),
                 new SourceFile("main.gf", $$"""
-                    using std;
+                    using std; using std::Numerics;
                     extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                     extern nuint fread(void* data,nuint size,nuint count,void* stream);
                     extern int ferror(void* stream);extern int fclose(void* stream);

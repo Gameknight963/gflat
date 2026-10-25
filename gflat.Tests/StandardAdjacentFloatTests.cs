@@ -44,7 +44,7 @@ public sealed class StandardAdjacentFloatTests
     public void EdgesExponentTransitionsAndSeededBitPatternsMatchHostSteppingWithExactNaNs(int optimization)
     {
         var code = new StringBuilder("""
-            using std;
+            using std; using std::Numerics;
             int attempts = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { attempts++; return null; }
@@ -133,10 +133,10 @@ public sealed class StandardAdjacentFloatTests
     public void AdjacentMethodsAndNothrowWrappersUseIntegerOperationsWithoutExceptionBoundaries()
     {
         string ir = Compiler.Emit(Sources("""
-            float UpFloat(float value) nothrow => std::Math::BitIncrement(value);
-            float DownFloat(float value) nothrow => std::Math::BitDecrement(value);
-            double UpDouble(double value) nothrow => std::Math::BitIncrement(value);
-            double DownDouble(double value) nothrow => std::Math::BitDecrement(value);
+            float UpFloat(float value) nothrow => std::Numerics::Math::BitIncrement(value);
+            float DownFloat(float value) nothrow => std::Numerics::Math::BitDecrement(value);
+            double UpDouble(double value) nothrow => std::Numerics::Math::BitIncrement(value);
+            double DownDouble(double value) nothrow => std::Numerics::Math::BitDecrement(value);
             int main() { return 0; }
             """));
         var methods = Regex.Matches(ir, @"(?ms)^define [^\r\n]*\$Math\$Bit(Increment|Decrement)\$[^\r\n]*\{\r?\n.*?^\}");

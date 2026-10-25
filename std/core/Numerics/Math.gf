@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Numerics;
 
 // Scalar arithmetic helpers, without direct libc calls. Checked integer
 // operations require the ordinary exception/allocation support.

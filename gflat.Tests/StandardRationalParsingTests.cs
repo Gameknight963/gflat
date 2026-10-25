@@ -7,7 +7,7 @@ namespace gflat.Tests;
 public sealed class StandardRationalParsingTests
 {
     private const string Support="""
-        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Numerics; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;
         bool capture=false;void*? captured=null;nuint capturedBytes=0;void*? watched=null;void*? retired=null;int watchedFrees=0;
         namespace Memory{

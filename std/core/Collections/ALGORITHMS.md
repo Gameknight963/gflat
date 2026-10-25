@@ -181,6 +181,7 @@ allocations, and relocates elements without copying them or running destructors.
 Noncopyable owning values are supported.
 
 ```csharp
+using std::Numerics;
 PseudoRandom random = new(42ul);
 Shuffle<int>(values.AsSpan(), ref random);
 ```

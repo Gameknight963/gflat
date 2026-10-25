@@ -48,8 +48,8 @@ public class FreestandingCoreUtilitiesTests
             if (std::Ascii::ToLower(encoded[0]) != 'f') return 13;
             if (!std::Hex::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength)) return 14;
             if (!std::Utf8::IsValid(decoded, decodedLength)) return 15;
-            if (std::BitOperations::PopCount(0xffu) != 8) return 16;
-            if (std::BitOperations::RotateRight(1ul, 64) != 1ul) return 17;
+            if (std::Numerics::BitOperations::PopCount(0xffu) != 8) return 16;
+            if (std::Numerics::BitOperations::RotateRight(1ul, 64) != 1ul) return 17;
             if (std::Hashing::Bytes("hello", 5) != (nuint)1335831723u) return 18;
             if (!std::PercentEncoding::TryEncode("a +", 3, encoded, 32, ref encodedLength) || encodedLength != (nuint)7) return 19;
             if (!std::PercentEncoding::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength) || decodedLength != (nuint)3) return 20;

@@ -30,7 +30,7 @@ public sealed class StandardSquareRootTests
     [InlineData(2)]
     public void FloatingSquareRootMatchesDotNetAtBoundariesAndRandomBitPatterns(int optimization)
     {
-        var code = new StringBuilder("using std; int main() {\n");
+        var code = new StringBuilder("using std; using std::Numerics; int main() {\n");
         foreach (bool wide in new[] { false, true })
         {
             ulong[] input = Inputs(wide);

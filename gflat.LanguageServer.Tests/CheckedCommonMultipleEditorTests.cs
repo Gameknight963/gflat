@@ -12,9 +12,9 @@ public sealed class CheckedCommonMultipleEditorTests
         string path=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core","Numerics","Math.gf");
         var library=new SourceFile(path,File.ReadAllText(path));
         const string text="""
-            uint Narrow()=>std::Math::LeastCommonMultiple(6u,8u);
-            ulong Wide()=>std::Math::LeastCommonMultiple(6ul,8ul);
-            nuint Native()=>std::Math::LeastCommonMultiple((nuint)6,(nuint)8);
+            uint Narrow()=>std::Numerics::Math::LeastCommonMultiple(6u,8u);
+            ulong Wide()=>std::Numerics::Math::LeastCommonMultiple(6ul,8ul);
+            nuint Native()=>std::Numerics::Math::LeastCommonMultiple((nuint)6,(nuint)8);
             """;
         var source=new SourceFile(Path.GetFullPath("checked-common-multiple-editor.gf"),text);
         SourceFile[] files=[library,source];

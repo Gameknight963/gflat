@@ -11,7 +11,7 @@ public sealed class StandardSpanOrderTests
     {
         var random=new Random(89071);
         var source=new StringBuilder("""
-            using std; using std::Queries; using std::Collections;extern int puts(immutable(char*) text);int calls=0;
+            using std; using std::Numerics; using std::Queries; using std::Collections;extern int puts(immutable(char*) text);int calls=0;
             int Compare(readonly(int)* a,readonly(int)* b){calls++;if(*a<*b)return -1;if(*a>*b)return 1;return 0;}
             int main(){
             """);
@@ -44,7 +44,7 @@ public sealed class StandardSpanOrderTests
     [InlineData(2)]
     public void NoncopyableOwnersAreBorrowedWithoutAllocationAndRemainIntactWhenComparisonThrows(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Numerics; using std::Queries; using std::Collections;
             private extern void*? malloc(nuint bytes);private extern void free(void* storage);
             int allocations=0;int releases=0;int made=0;int dead=0;int calls=0;int failAt=0;
             namespace Memory{

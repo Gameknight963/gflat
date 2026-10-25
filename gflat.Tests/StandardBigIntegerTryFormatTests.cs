@@ -44,7 +44,7 @@ public sealed class StandardBigIntegerTryFormatTests
         string[] rows = values.Select(value => value.ToString(CultureInfo.InvariantCulture)).ToArray();
         string data = string.Join('|', rows) + "|";
         string program = $$"""
-            using std;
+            using std; using std::Numerics;
             extern void*? malloc(nuint count); extern void free(void* value);
             int attempts=0; int allocated=0; int released=0; bool deny=false;
             namespace Memory {

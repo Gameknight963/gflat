@@ -22,20 +22,20 @@ public class StandardNumericNothrowTests
             if (!std::TryParse{{type.Suffix}}("+42suffix", 3, &value{{index}}) || value{{index}} != ({{type.Type}})42) return 2;
             if (std::TryParse{{type.Suffix}}("bad", &value{{index}}) || value{{index}} != ({{type.Type}})0) return 3;
             if (std::TryParse{{type.Suffix}}("", 0, &value{{index}}) || value{{index}} != ({{type.Type}})0) return 4;
-            if (std::Math::Min(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})4) return 5;
-            if (std::Math::Max(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})7) return 6;
+            if (std::Numerics::Math::Min(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})4) return 5;
+            if (std::Numerics::Math::Max(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})7) return 6;
             """));
         string program = $$"""
             int main() {
                 {{checks}}
-                if (!std::Math::IsFinite(1.0f) || !std::Math::IsFinite(1.0)) return 7;
-                if (std::Math::IsNaN(1.0f) || std::Math::IsNaN(1.0)) return 8;
-                if (std::Math::Abs(-2.0f) != 2.0f || std::Math::Abs(-2.0) != 2.0) return 9;
-                if (std::Math::Min(1.0f, 2.0f) != 1.0f || std::Math::Max(1.0f, 2.0f) != 2.0f) return 10;
-                if (std::Math::Min(1.0, 2.0) != 1.0 || std::Math::Max(1.0, 2.0) != 2.0) return 11;
+                if (!std::Numerics::Math::IsFinite(1.0f) || !std::Numerics::Math::IsFinite(1.0)) return 7;
+                if (std::Numerics::Math::IsNaN(1.0f) || std::Numerics::Math::IsNaN(1.0)) return 8;
+                if (std::Numerics::Math::Abs(-2.0f) != 2.0f || std::Numerics::Math::Abs(-2.0) != 2.0) return 9;
+                if (std::Numerics::Math::Min(1.0f, 2.0f) != 1.0f || std::Numerics::Math::Max(1.0f, 2.0f) != 2.0f) return 10;
+                if (std::Numerics::Math::Min(1.0, 2.0) != 1.0 || std::Numerics::Math::Max(1.0, 2.0) != 2.0) return 11;
                 extralong wide = (extralong)1 << 100;
-                if (std::Math::Min(wide, wide + (extralong)1) != wide) return 12;
-                if (std::Math::Max(wide, wide + (extralong)1) != wide + (extralong)1) return 13;
+                if (std::Numerics::Math::Min(wide, wide + (extralong)1) != wide) return 12;
+                if (std::Numerics::Math::Max(wide, wide + (extralong)1) != wide + (extralong)1) return 13;
                 return 0;
             }
             """;

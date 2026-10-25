@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Numerics;
 
 // Exact canonical fraction: positive denominator, coprime parts, zero is 0/1.
 public struct Rational : IEquatable<Rational>, IComparable<Rational>, IHashable, IFormattable

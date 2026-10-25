@@ -56,7 +56,7 @@ public sealed class StandardCopySignTests
         // Keep data compact: expanded pair/expected arrays create thousands of
         // local initializer stores and make LLVM's optimization unnecessarily slow.
         var code = new StringBuilder("""
-            using std;
+            using std; using std::Numerics;
             ulong Next(ref ulong state) nothrow {
                 state = state ^ (state << 13);
                 state = state ^ (state >> 7);

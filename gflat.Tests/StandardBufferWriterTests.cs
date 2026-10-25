@@ -8,7 +8,7 @@ public sealed class StandardBufferWriterTests
         var files = new[] { "BufferTooSmallException.gf", "BufferWriter.gf", "Numerics/PseudoRandom.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", """
-                using std;
+                using std; using std::Numerics;
                 bool Inspect(char* buffer) nothrow {
                     BufferWriter writer = new(buffer, 16);
                     PseudoRandom random = new(42ul);
@@ -41,7 +41,7 @@ public sealed class StandardBufferWriterTests
     public void CountedAndCStringWritesPreserveZerosAndMaintainCapacityAndTerminator()
     {
         Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 char[9] storage;
                 BufferWriter writer = new BufferWriter(storage, 9);
@@ -65,7 +65,7 @@ public sealed class StandardBufferWriterTests
     public void OverflowLeavesEntireBufferAndPositionUntouched()
     {
         Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 char[6] storage;
                 for (int i = 0; i < 6; i++) storage[i] = '?';
@@ -86,7 +86,7 @@ public sealed class StandardBufferWriterTests
     public void ZeroStorageNeverTouchesPointerAndOneByteStorageOnlyHoldsTerminator()
     {
         Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 char sentinel = '?';
                 BufferWriter zero = new BufferWriter(&sentinel, 0);
@@ -108,7 +108,7 @@ public sealed class StandardBufferWriterTests
     public void OverlappingWritesUseMemmoveOrderInBothDirections()
     {
         Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 char[16] storage;
                 BufferWriter writer = new BufferWriter(storage, 16);
@@ -133,7 +133,7 @@ public sealed class StandardBufferWriterTests
     public void PrimitiveAndUserFormattingThroughInterfacesNeverAllocate()
     {
         Run("""
-            using std;
+            using std; using std::Numerics;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }

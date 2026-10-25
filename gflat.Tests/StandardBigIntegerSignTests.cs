@@ -88,7 +88,7 @@ public sealed class StandardBigIntegerSignTests
         });
 
     private const string Counters="""
-        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* value);
+        using std; using std::Numerics; using std::Collections;extern void*? malloc(nuint count);extern void free(void* value);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         bool capture=false;void*? captured=null;void*? watchSource=null;void*? watchTarget=null;int watchedFrees=0;
         namespace Memory{

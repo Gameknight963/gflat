@@ -1,3 +1,4 @@
+using std::Numerics;
 namespace std::Collections;
 
 // Fisher-Yates shuffle. Borrows the elements and advances the caller's generator.

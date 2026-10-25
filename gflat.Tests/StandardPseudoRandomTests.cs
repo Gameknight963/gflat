@@ -11,7 +11,7 @@ public class StandardPseudoRandomTests
     [Fact]
     public void SeedZeroMatchesSplitMix64ReferenceVectors()
         => Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 PseudoRandom random = new PseudoRandom(0ul);
                 if (random.NextULong() != 16294208416658607535ul) return 1;
@@ -66,7 +66,7 @@ public class StandardPseudoRandomTests
         Assert.Equal(ulong.MaxValue, Next(ref state));
         var random = new SourceFile("PseudoRandom.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Numerics/PseudoRandom.gf")));
         var result = CompilerTestHelper.Run([random, new SourceFile("main.gf", $$"""
-            using std;
+            using std; using std::Numerics;
             int allocations = 0;
             replace void*? Memory::Allocate(nuint bytes) { allocations++; return null; }
             replace void Memory::Free(void* storage) nothrow { allocations++; }
@@ -109,7 +109,7 @@ public class StandardPseudoRandomTests
         static string Signed(int value) => value == int.MinValue ? "(-2147483647-1)" :
             value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var code = new System.Text.StringBuilder("""
-            using std;
+            using std; using std::Numerics;
             int allocations=0;
             replace void*? Memory::Allocate(nuint bytes){allocations++;return null;}
             replace void Memory::Free(void* storage)nothrow{allocations++;}
@@ -168,7 +168,7 @@ public class StandardPseudoRandomTests
             return value % bound;
         }).ToArray();
         Run($$"""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 ulong[64] expected = [{{string.Join(",", expected.Select(n => $"{n}ul"))}}];
                 PseudoRandom random = new PseudoRandom(0ul);
@@ -181,7 +181,7 @@ public class StandardPseudoRandomTests
     [Fact]
     public void CopiedGeneratorsProduceIndependentIdenticalStreams()
         => Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 PseudoRandom original = new PseudoRandom(18446744073709551615ul);
                 original.NextULong();
@@ -196,7 +196,7 @@ public class StandardPseudoRandomTests
     [Fact]
     public void InvalidBoundsThrowWithoutAdvancingAndSignedRangesHandleExtremes()
         => Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 PseudoRandom random = new PseudoRandom(42ul); PseudoRandom copy = random;
                 try { random.NextULong(0ul); return 1; } catch (ref Exception error) {}
@@ -220,7 +220,7 @@ public class StandardPseudoRandomTests
     [Fact]
     public void FillUsesLittleEndianWordsAndPreservesCallerBounds()
         => Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 PseudoRandom random = new PseudoRandom(0ul); PseudoRandom expected = random;
                 char[19] bytes;
@@ -242,7 +242,7 @@ public class StandardPseudoRandomTests
     [Fact]
     public void UIntAndDoubleDrawsUseDocumentedBitsAndRanges()
         => Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 PseudoRandom ints = new PseudoRandom(0ul);
                 if (ints.NextUInt() != 0xe220a839u) return 1;

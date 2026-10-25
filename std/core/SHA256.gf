@@ -1,3 +1,4 @@
+using std::Numerics;
 namespace std;
 
 // Incremental SHA-256 over counted bytes. Specification: RFC 6234 sections 4-6.

@@ -27,7 +27,7 @@ public class StandardIntegerParsingTests
     public void LongLeadingZeroInputDoesNotOverflowOrAccumulateStackStorage()
     {
         Assert.Equal(0, CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 char[131072] text;
                 for (nuint i = 0; i < (nuint)131072; i++) text[i] = '0';
@@ -55,7 +55,7 @@ public class StandardIntegerParsingTests
         string failures = string.Join("\n", invalid.Select((text, i) =>
             $"value = ({type})7; if (TryParse{name}(\"{text}\", &value) || value != ({type})0) return {10 + i};"));
         string code = $$"""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 {{type}} value = ({{type}})0;
                 if (!TryParse{{name}}("{{minimum}}", &value) || value != ({{type}})({{expectedMin}})) return 1;
@@ -79,7 +79,7 @@ public class StandardIntegerParsingTests
     public void OwningStringConveniencesUseCountedInput(string name, string type, string minimum, string maximum)
     {
         string code = $$"""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 String text = s"{{maximum}}";
                 {{type}} result = ({{type}})0;

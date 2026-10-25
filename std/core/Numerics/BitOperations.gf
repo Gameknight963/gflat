@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Numerics;
 
 // Integer bit utilities with defined zero and masked-rotation behavior.
 public static class BitOperations

@@ -32,8 +32,8 @@ public sealed class StandardBitRoundingTests
                     for(int i=0;i<{{values.Count}};i++){
                         if(fread((void*)&row[0],1,20,file!)!=20)return 2;
                         ulong value=Word(row,8);
-                        if(std::BitOperations::RoundUpToPowerOfTwo((uint)value)!=(uint)Word(&row[8],4))return 3;
-                        if(std::BitOperations::RoundUpToPowerOfTwo(value)!=Word(&row[12],8))return 4;
+                        if(std::Numerics::BitOperations::RoundUpToPowerOfTwo((uint)value)!=(uint)Word(&row[8],4))return 3;
+                        if(std::Numerics::BitOperations::RoundUpToPowerOfTwo(value)!=Word(&row[12],8))return 4;
                     }
                     if(fread((void*)&row[0],1,1,file!)!=0)return 5;return 0;
                 }
@@ -48,8 +48,8 @@ public sealed class StandardBitRoundingTests
     {
         string ir=Compiler.Emit(Sources("""
             int main()nothrow{
-                if(std::BitOperations::RoundUpToPowerOfTwo(9u)!=16u)return 1;
-                if(std::BitOperations::RoundUpToPowerOfTwo(9223372036854775809ul)!=0ul)return 2;
+                if(std::Numerics::BitOperations::RoundUpToPowerOfTwo(9u)!=16u)return 1;
+                if(std::Numerics::BitOperations::RoundUpToPowerOfTwo(9223372036854775809ul)!=0ul)return 2;
                 return 0;
             }
             """),options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});

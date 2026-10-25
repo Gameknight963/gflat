@@ -18,11 +18,11 @@ public class StandardReverseEndiannessTests
                 for(uint raw=0u;raw<=65535u;raw++) {
                     ushort value=(ushort)raw;
                     ushort expected=(ushort)(256u*(raw%256u)+raw/256u);
-                    ushort result=std::BitOperations::ReverseEndianness(value);
-                    if(result!=expected||std::BitOperations::ReverseEndianness(result)!=value)return 1;
+                    ushort result=std::Numerics::BitOperations::ReverseEndianness(value);
+                    if(result!=expected||std::Numerics::BitOperations::ReverseEndianness(result)!=value)return 1;
                     short signed=(short)value;
-                    short changed=std::BitOperations::ReverseEndianness(signed);
-                    if(changed!=(short)expected||std::BitOperations::ReverseEndianness(changed)!=signed)return 2;
+                    short changed=std::Numerics::BitOperations::ReverseEndianness(signed);
+                    if(changed!=(short)expected||std::Numerics::BitOperations::ReverseEndianness(changed)!=signed)return 2;
                 }
                 return 0;
             }
@@ -46,15 +46,15 @@ public class StandardReverseEndiannessTests
                 ulong[{{values.Length}}] reversed64=[{{string.Join(",",values.Select(value=>BinaryPrimitives.ReverseEndianness(value)+"ul"))}}];
                 for(int i=0;i<{{values.Length}};i++) {
                     uint small=(uint)values[i];ulong large=values[i];
-                    uint changed32=std::BitOperations::ReverseEndianness(small);
-                    ulong changed64=std::BitOperations::ReverseEndianness(large);
+                    uint changed32=std::Numerics::BitOperations::ReverseEndianness(small);
+                    ulong changed64=std::Numerics::BitOperations::ReverseEndianness(large);
                     if(changed32!=reversed32[i]||changed64!=reversed64[i])return 1;
-                    if(std::BitOperations::ReverseEndianness(changed32)!=small||std::BitOperations::ReverseEndianness(changed64)!=large)return 2;
+                    if(std::Numerics::BitOperations::ReverseEndianness(changed32)!=small||std::Numerics::BitOperations::ReverseEndianness(changed64)!=large)return 2;
                     int signed32=(int)small;long signed64=(long)large;
-                    int result32=std::BitOperations::ReverseEndianness(signed32);
-                    long result64=std::BitOperations::ReverseEndianness(signed64);
+                    int result32=std::Numerics::BitOperations::ReverseEndianness(signed32);
+                    long result64=std::Numerics::BitOperations::ReverseEndianness(signed64);
                     if((uint)result32!=reversed32[i]||(ulong)result64!=reversed64[i])return 3;
-                    if(std::BitOperations::ReverseEndianness(result32)!=signed32||std::BitOperations::ReverseEndianness(result64)!=signed64)return 4;
+                    if(std::Numerics::BitOperations::ReverseEndianness(result32)!=signed32||std::Numerics::BitOperations::ReverseEndianness(result64)!=signed64)return 4;
                 }
                 return 0;
             }

@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Numerics;
 
 // Decimal-oriented signed integer. Limbs are least-significant first in base
 // 1,000,000,000; zero has no limbs and sign zero. Arithmetic returns new owners.

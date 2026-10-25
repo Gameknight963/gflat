@@ -8,7 +8,7 @@ public sealed class RationalEditorTests
     [Fact]
     public void OwningFractionMembersAndBorrowedTextConversionHaveTheirActualDefinitions()
     {
-        const string text="using std;void Probe(){Rational first=new Rational(1l,2l);Rational second=new(1l,3l);BigInteger top=first.Numerator;BigInteger bottom=first.Denominator;Rational sum=first.Add(&second);String rendered=sum.ToString();}";
+        const string text="using std; using std::Numerics;void Probe(){Rational first=new Rational(1l,2l);Rational second=new(1l,3l);BigInteger top=first.Numerator;BigInteger bottom=first.Denominator;Rational sum=first.Add(&second);String rendered=sum.ToString();}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var rational=files.Single(file=>Path.GetFileName(file.Path)=="Rational.gf");

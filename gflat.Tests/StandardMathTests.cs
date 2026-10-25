@@ -25,7 +25,7 @@ public sealed class StandardMathTests
     public void IntegerOverloadsReturnTheirInputTypeAndValidateClampBounds(string type)
     {
         Run($$"""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 {{type}} minimum = ({{type}})2; {{type}} maximum = ({{type}})8;
                 {{type}} a = Math::Min(maximum, minimum);
@@ -50,7 +50,7 @@ public sealed class StandardMathTests
     public void SignedAbsoluteValuesRejectUnrepresentableMinimum(string type, string minimum)
     {
         Run($$"""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 {{type}} minimum = {{minimum}};
                 {{type}} zero = Math::Abs(({{type}})0);
@@ -71,7 +71,7 @@ public sealed class StandardMathTests
         string negativeZeroBits, string infinityBits, string negativeNaNBits, string positiveNaNBits, string one)
     {
         Run($$"""
-            using std;
+            using std; using std::Numerics;
             {{type}} FromBits({{bitsType}} bits) => *(({{type}}*)&bits);
             {{bitsType}} Bits({{type}} value) => *(({{bitsType}}*)&value);
             int main() {

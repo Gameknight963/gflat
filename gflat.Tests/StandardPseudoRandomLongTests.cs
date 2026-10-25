@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardPseudoRandomLongTests
 {
     private const string Reader = """
-        using std;
+        using std; using std::Numerics;
         int Digit(char value) nothrow {
             if (value <= '9') return value - '0';
             return value - 'A' + 10;
@@ -175,7 +175,7 @@ public sealed class StandardPseudoRandomLongTests
     public void InvalidRangesPreserveTargetsAndStateAndCopiesRemainIndependent(int optimization)
     {
         Run("""
-            using std;
+            using std; using std::Numerics;
             int main() {
                 PseudoRandom random = new(42ul);
                 PseudoRandom copy = random;

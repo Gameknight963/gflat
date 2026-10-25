@@ -58,7 +58,7 @@ public sealed class StandardTimeSpanTotalsTests
 
                 // Away from its legacy millisecond clamp, TimeSpan is an extra
                 // independent API oracle. Endpoint expectations remain unclamped.
-                if (tick > -9000000000000000000l && tick < 9000000000000000000l)
+                if (tick > -9000000000000000000L && tick < 9000000000000000000L)
                 {
                     var span = new TimeSpan(tick);
                     double host = unit.Name switch

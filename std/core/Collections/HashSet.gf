@@ -12,6 +12,9 @@ struct HashSet<T : IHashable>
     public bool Add(T value) => storage.TryAdd(move value, 0);
     public immutable bool Contains(immutable(T)* value) => storage.ContainsKey(value);
     public bool Remove(immutable(T)* value) => storage.Remove(value);
+    public nuint RemoveWhere(bool(immutable(T)*)* predicate)
+        => storage.RemoveKeysWhere(predicate);
+
     public void Clear() { storage.Clear(); }
     public void ExceptWith(immutable(HashSet<T>)* other)
     {

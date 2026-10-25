@@ -120,6 +120,37 @@ enumeration also borrows existing entries; its invalidation rules are unchanged.
 
 ## Set mutations
 
+`RemoveWhere(bool(immutable(T)*)* predicate)` removes matching keys and returns
+the number removed. It borrows each occupied key for the callback without
+copying it, so noncopyable owning keys are supported. The set itself allocates
+no storage and does not invoke key hashing or equality. An empty set does not
+call the predicate. Capacity is retained; removed buckets remain tombstones so
+colliding survivors can still be found and the set can be reused.
+
+```csharp
+using std; using std::Collections;
+bool Temporary(immutable(String)* key) => key.StartsWith("tmp:");
+int main()
+{
+    HashSet<String> names = new();
+    names.Add(s"tmp:build"); names.Add(s"saved");
+    nuint removed = names.RemoveWhere(Temporary);
+    if (removed != 1 || names.Count != 1) return 1;
+    return 0;
+}
+```
+
+Traversal order is unspecified. The predicate sees the current key alive.
+Borrowing its pointer does not extend its lifetime past removal. The predicate
+must not structurally mutate, move, or destroy this set through another alias.
+A predicate exception preserves the failing key and
+all unvisited keys; earlier completed removals remain committed. Removed keys
+are destroyed normally, using the same cleanup behavior as individual removal.
+Destructor exceptions follow the language's termination rules, rather than this
+predicate-failure guarantee. Public iterators and borrowed pointers follow the
+existing mutation invalidation rules. No collection buffer is allocated, but
+callbacks and user cleanup can perform their ordinary work.
+
 `ExceptWith(immutable(HashSet<T>)* other)` removes matching keys from this set.
 It borrows the other set's keys without copying them, so noncopyable owning keys
 are supported. Passing the same set clears it. It allocates no collection storage;
@@ -134,7 +165,7 @@ helper scans private buckets directly and leaves tombstones for removed entries;
 it does not keep a public enumerator alive during structural mutation. Public
 enumerator invalidation rules remain unchanged.
 
-With `Collections/hash_set_algebra.gf` included and `using std;`,
+With `Collections/hash_set_algebra.gf` included and `using std::Collections;`,
 `target.UnionWith(&source)` copies missing keys into the target. Existing keys are
 checked before copying, and self-union does nothing. Added owning keys use their
 normal copy constructors; the source stays unchanged. This is a separate

@@ -217,6 +217,23 @@ struct HashMap<K : IHashable, V>
         }
     }
 
+    internal nuint RemoveKeysWhere(bool(immutable(K)*)* predicate)
+    {
+        nuint removed = 0;
+        if (count == 0) return removed;
+        for (nuint slot = 0; slot < capacity; slot++)
+        {
+            if (states![slot] == 1 && predicate(&entries![slot].key))
+            {
+                (entries! + slot).~Entry();
+                states![slot] = 2;
+                count--;
+                removed++;
+            }
+        }
+        return removed;
+    }
+
     public void Clear()
     {
         for (nuint i = 0; i < capacity; i++)

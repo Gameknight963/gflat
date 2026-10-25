@@ -41,6 +41,22 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
         if (ticks < 0l || ticks > MaximumTicks) throw new Exception("DateTimeOffset clock or offset is out of range");
         return Create(std::DateTime::FromTicks(ticks), selected);
     }
+    public static DateTimeOffset FromUnixTimeSeconds(long seconds)
+    {
+        if (seconds < -62135596800l || seconds > 253402300799l)
+            throw new Exception("Unix seconds are outside years 1 through 9999");
+        return Create(std::DateTime::FromTicks((seconds + 62135596800l) * 10000000l), 0l);
+    }
+    public static DateTimeOffset FromUnixTimeMilliseconds(long milliseconds)
+    {
+        if (milliseconds < -62135596800000l || milliseconds > 253402300799999l)
+            throw new Exception("Unix milliseconds are outside years 1 through 9999");
+        return Create(std::DateTime::FromTicks((milliseconds + 62135596800000l) * 10000l), 0l);
+    }
+    // UTC ticks are nonnegative: divide before shifting epoch to floor negatives.
+    public immutable long ToUnixTimeSeconds() nothrow => this.GetUtcTicks() / 10000000l - 62135596800l;
+    public immutable long ToUnixTimeMilliseconds() nothrow => this.GetUtcTicks() / 10000l - 62135596800000l;
+
     public immutable bool Equals(immutable(DateTimeOffset)* other) nothrow => this.GetUtcTicks() == other.GetUtcTicks();
     public immutable bool EqualsExact(immutable(DateTimeOffset)* other) nothrow
         => clock.Ticks == other.clock.Ticks && offsetTicks == other.offsetTicks;

@@ -16,6 +16,8 @@ int main()
     DateTimeOffset utc = first.ToOffset(TimeSpan::FromTicks(0l));
     if (!first.Equals(&utc) || first.EqualsExact(&utc)) return 1;
     if (utc.DateTime.TimeOfDay.Hour != 10) return 2;
+    DateTimeOffset beforeEpoch = DateTimeOffset::FromUnixTimeMilliseconds(-1l);
+    if (beforeEpoch.ToUnixTimeSeconds() != -1l || beforeEpoch.ToUnixTimeMilliseconds() != -1l) return 3;
     return 0;
 }
 ```
@@ -26,6 +28,21 @@ if its new offset or wall time is out of range. Construction and ToOffset throw
 `Exception("DateTimeOffset clock or offset is out of range")`. Offset durations
 with fractional minutes, even one tick, are rejected. Equality, ordering and hash
 use UTC ticks; `EqualsExact` also requires the same wall time and offset.
+
+`FromUnixTimeSeconds(seconds)` and `FromUnixTimeMilliseconds(milliseconds)`
+construct an offset-zero UTC value. Seconds must be in
+`-62135596800..253402300799`; milliseconds must be in
+`-62135596800000..253402300799999`. Outside these inclusive ranges they throw
+`Exception` before epoch shifting or multiplication. They do not consult a clock
+or local time-zone settings.
+
+`ToUnixTimeSeconds()` and `ToUnixTimeMilliseconds()` are immutable, `nothrow`
+observers of the UTC instant, independent of the displayed offset. They round
+down to the containing second or millisecond, including before the 1970 epoch:
+`1969-12-31T23:59:59.9999999Z` yields `-1` in both units. Factories preserve only
+their input unit's precision; converting a fractional timestamp to a Unix integer
+and back discards the remaining fraction. Normal valid conversions allocate
+nothing internally; invalid factory calls use ordinary exception behavior.
 
 Accepted text is exactly `yyyy-MM-ddTHH:mm:ss[.fraction]Z` or the same civil prefix
 followed by `+HH:mm`/`-HH:mm`. Fractions have 1 through 7 decimal digits. `T`/`Z` are

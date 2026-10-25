@@ -468,17 +468,35 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
 
     // Ordinal UTF-8 byte order, independent of locale and null termination.
     public immutable int CompareTo(immutable(String)* other) nothrow
+        => this.CompareTo(other.Data, other.Length);
+
+    // Counted bytes include embedded NUL; neither input is modified or copied.
+    public immutable int CompareTo(readonly(char)* text, nuint count) nothrow
     {
         nuint limit = length;
-        if (other.Length < limit) limit = other.Length;
+        if (count < limit) limit = count;
         for (nuint i = 0; i < limit; i++)
         {
-            if ((byte)data[i] < (byte)other.Data[i]) return -1;
-            if ((byte)data[i] > (byte)other.Data[i]) return 1;
+            if ((byte)data[i] < (byte)text[i]) return -1;
+            if ((byte)data[i] > (byte)text[i]) return 1;
         }
-        if (length < other.Length) return -1;
-        if (length > other.Length) return 1;
+        if (length < count) return -1;
+        if (length > count) return 1;
         return 0;
+    }
+
+    public immutable int CompareTo(readonly(char)* text) nothrow
+    {
+        for (nuint i = 0; i < length; i++)
+        {
+            byte right = (byte)text[i];
+            if (right == 0) return 1;
+            byte left = (byte)data[i];
+            if (left < right) return -1;
+            if (left > right) return 1;
+        }
+        if (text[length] == '\0') return 0;
+        return -1;
     }
 
     public char this[nuint index]

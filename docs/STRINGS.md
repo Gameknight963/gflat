@@ -120,6 +120,29 @@ Equality, comparison, and hashing use complete byte contents, including embedded
 zero bytes. Ordering is unsigned byte order, independent of locale. String does
 not require valid UTF-8; binary callers may store arbitrary bytes.
 
+`CompareTo(&other)` compares another String. `CompareTo(data, count)` compares
+exactly the counted bytes, including embedded zeros; `CompareTo(text)` compares
+a C string ending at its first zero. Each returns a negative value, zero, or a
+positive value for less than, equal to, or greater than. These borrowed-input
+overloads allocate nothing and do not change either input. Counted input must
+cover `count` readable bytes; C-string input must contain a readable terminator.
+The String retains its full length even when compared to a C string.
+
+```cpp
+using std;
+
+int main()
+{
+    String version = s"item-20";
+    if (version.CompareTo("item-3") >= 0) return 1;
+    char[3] bytes = ['a', '\0', 'b'];
+    String binary = String::From(bytes, 3);
+    if (binary.CompareTo(bytes, 3) != 0) return 2;
+    if (binary.CompareTo(bytes) <= 0) return 3;
+    return 0;
+}
+```
+
 Empty construction and the `Length`, `Capacity`, `IsEmpty`, and `Data` getters
 are explicitly `nothrow`. So are `ToCString()`, `Equals`, `CompareTo`,
 `GetHashCode`, `StartsWith`, `EndsWith`, `LastIndexOf`, `Trim()`, `TrimStart()`,

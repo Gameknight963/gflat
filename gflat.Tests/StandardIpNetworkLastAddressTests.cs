@@ -1,6 +1,5 @@
 using System.Net;
 using System.Numerics;
-using System.Text;
 
 namespace gflat.Tests;
 
@@ -19,14 +18,79 @@ public sealed class StandardIpNetworkLastAddressTests
     [InlineData(2)]
     public void EveryPrefixMatchesIndependentUnsignedNetworkRangeOracles(int optimization)
     {
-        var body=new StringBuilder();var random=new Random(184953);
-        foreach(int count in new[]{4,16})for(int prefix=0;prefix<=count*8;prefix++){
-            byte[] raw=new byte[count];random.NextBytes(raw);
-            AddRow(body,new IPAddress(raw).GetAddressBytes(),prefix);
+        var packet = new List<byte>();
+        var random = new Random(184953);
+        int rows = 0;
+        foreach (int count in new[] { 4, 16 })
+        for (int prefix = 0; prefix <= count * 8; prefix++)
+        {
+            byte[] raw = new byte[count];
+            random.NextBytes(raw);
+            AddCase(new IPAddress(raw).GetAddressBytes(), prefix);
         }
-        byte[] mapped=[0,0,0,0,0,0,0,0,0,0,255,255,192,0,2,129];
-        foreach(int prefix in new[]{0,31,32,63,64,65,95,96,97,127,128})AddRow(body,mapped,prefix);
-        Run(Allocator+"int main(){int before=attempts;deny=true;"+body+"deny=false;if(attempts!=before)return 20;return 0;}",optimization);
+        byte[] mapped = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 0, 2, 129];
+        foreach (int prefix in new[] { 0, 31, 32, 63, 64, 65, 95, 96, 97, 127, 128 })
+            AddCase(mapped, prefix);
+        Assert.Equal(173, rows);
+        Assert.Equal(7462, packet.Count);
+        string hex = Convert.ToHexString(packet.ToArray());
+        Run(Allocator + $$$"""
+            nuint ReadByte(readonly(char)* data, ref nuint position) {
+                nuint value = 0;
+                for (int digit = 0; digit < 2; digit++) {
+                    char current = data[position]; position++;
+                    int nibble = (int)current - (int)'0';
+                    if (current >= 'A') nibble = (int)current - (int)'A' + 10;
+                    value = value * 16 + (nuint)nibble;
+                }
+                return value;
+            }
+            int main() {
+                readonly(char)* packet = "{{{hex}}}"; nuint position = 0;
+                byte[16] input; byte[16] wanted; byte[16] first; byte[18] bytes;
+                int before = attempts; deny = true;
+                for (int row = 0; row < {{{rows}}}; row++) {
+                    nuint count = ReadByte(packet, ref position);
+                    int prefix = (int)ReadByte(packet, ref position);
+                    for (nuint i = 0; i < count; i++) input[i] = (byte)ReadByte(packet, ref position);
+                    for (nuint i = 0; i < count; i++) wanted[i] = (byte)ReadByte(packet, ref position);
+                    for (nuint i = 0; i < count; i++) first[i] = (byte)ReadByte(packet, ref position);
+                    IpAddress address = IpAddress::FromBytes(input, count);
+                    IpNetwork net = IpNetwork::FromAddress(address, prefix);
+                    IpNetwork original = net;
+                    IpAddress last = net.LastAddress;
+                    IpAddress beginning = net.NetworkAddress;
+                    for (nuint i = 0; i < 18; i++) bytes[i] = (byte)165;
+                    nuint written = 99;
+                    // Every row failure uses row + 1 (1..173), portable as an exit code.
+                    if (!last.TryWriteBytes(&bytes[1], 16, ref written) || written != count || last.IsIpv4 != (count == 4)) return row + 1;
+                    for (nuint i = 0; i < count; i++) if (bytes[i + 1] != wanted[i]) return row + 1;
+                    for (nuint i = count + 1; i < 18; i++) if (bytes[i] != (byte)165) return row + 1;
+                    if (bytes[0] != (byte)165) return row + 1;
+                    if (!net.Contains(&last) || !net.Equals(&original) || net.PrefixLength != prefix) return row + 1;
+                    if (!beginning.TryWriteBytes(&bytes[1], 16, ref written) || written != count) return row + 1;
+                    for (nuint i = 0; i < count; i++) if (bytes[i + 1] != first[i]) return row + 1;
+                }
+                deny = false;
+                if (position != {{{hex.Length}}}) return 200;
+                if (attempts != before) return 201;
+                return 0;
+            }
+            """, optimization);
+
+        void AddCase(byte[] raw, int prefix)
+        {
+            BigInteger value = new(raw, isUnsigned: true, isBigEndian: true);
+            BigInteger block = BigInteger.One << (raw.Length * 8 - prefix);
+            BigInteger start = value / block * block;
+            BigInteger end = start + block - 1;
+            packet.Add(checked((byte)raw.Length));
+            packet.Add(checked((byte)prefix));
+            packet.AddRange(raw);
+            packet.AddRange(FixedBytes(end, raw.Length));
+            packet.AddRange(FixedBytes(start, raw.Length));
+            rows++;
+        }
     }
 
     [Theory]
@@ -55,18 +119,6 @@ public sealed class StandardIpNetworkLastAddressTests
             }
             """,optimization);
 
-    private static void AddRow(StringBuilder body,byte[] raw,int prefix)
-    {
-        BigInteger value=new(raw,isUnsigned:true,isBigEndian:true);BigInteger block=BigInteger.One<<(raw.Length*8-prefix);
-        BigInteger start=value/block*block,end=start+block-1;
-        byte[] expected=FixedBytes(end,raw.Length),network=FixedBytes(start,raw.Length);
-        body.Append("{byte["+raw.Length+"] input=["+string.Join(',',raw)+"];byte["+raw.Length+"] wanted=["+string.Join(',',expected)+"];byte["+raw.Length+"] first=["+string.Join(',',network)+"];");
-        body.Append($"IpAddress address=IpAddress::FromBytes(input,{raw.Length});IpNetwork net=IpNetwork::FromAddress(address,{prefix});IpNetwork original=net;IpAddress last=net.LastAddress;IpAddress beginning=net.NetworkAddress;");
-        body.Append("byte[18] bytes;for(nuint i=0;i<18;i++)bytes[i]=(byte)165;nuint written=99;");
-        body.Append($"if(!last.TryWriteBytes(&bytes[1],16,ref written)||written!={raw.Length}||last.IsIpv4!={(raw.Length==4?"true":"false")})return 1;for(nuint i=0;i<{raw.Length};i++)if(bytes[i+1]!=wanted[i])return 2;");
-        body.Append($"for(nuint i={raw.Length+1};i<18;i++)if(bytes[i]!=(byte)165)return 3;if(bytes[0]!=(byte)165)return 4;if(!net.Contains(&last)||!net.Equals(&original)||net.PrefixLength!={prefix})return 5;");
-        body.Append($"if(!beginning.TryWriteBytes(&bytes[1],16,ref written)||written!={raw.Length})return 6;for(nuint i=0;i<{raw.Length};i++)if(bytes[i+1]!=first[i])return 7;}}");
-    }
     private static byte[] FixedBytes(BigInteger value,int count){byte[] encoded=value.ToByteArray(isUnsigned:true,isBigEndian:true);var result=new byte[count];encoded.CopyTo(result,count-encoded.Length);return result;}
     private static void Run(string program,int optimization){var sources=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).Append(new SourceFile("ip-network-last-address.gf",program));var result=CompilerTestHelper.Run(sources,optimization);Assert.True(result.ExitCode==0,$"IP network endpoint exit {result.ExitCode}: {result.StandardError}");}
 }

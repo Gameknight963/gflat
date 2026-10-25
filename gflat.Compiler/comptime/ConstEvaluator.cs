@@ -522,9 +522,9 @@ namespace gflat.comptime
                     throw new ConstEvalException($"Cannot apply '!' to '{operand}' at compile time", node.Line);
 
                 case TokenKind.Tilde:
-                    if (ConstValue.TryBitwiseNot(operand, out ConstValue? bnotRes))
+                    if (ConstValue.TryBitwiseNot(ArithmeticOperand(operand), out ConstValue? bnotRes))
                     {
-                        _currentValue = bnotRes;
+                        _currentValue = Normalize(bnotRes!, _context.GetType(node), node.Line);
                         return;
                     }
                     throw new ConstEvalException($"Cannot apply '~' to '{operand}' at compile time", node.Line);

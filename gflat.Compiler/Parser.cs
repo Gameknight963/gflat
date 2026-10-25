@@ -1135,7 +1135,7 @@ namespace gflat
             TokenKind.Plus or TokenKind.Minus or TokenKind.Star or TokenKind.Slash or TokenKind.Percent or
             TokenKind.EqualsEquals or TokenKind.NotEquals or TokenKind.Less or TokenKind.Greater or
             TokenKind.LessEquals or TokenKind.GreaterEquals or TokenKind.Ampersand or TokenKind.Pipe or
-            TokenKind.Caret or TokenKind.LessLess or TokenKind.GreaterGreater or TokenKind.Bang => true,
+            TokenKind.Caret or TokenKind.LessLess or TokenKind.GreaterGreater or TokenKind.Bang or TokenKind.Tilde => true,
             _ => false
         };
 
@@ -1961,7 +1961,7 @@ namespace gflat
             }
 
             // unary prefix operators
-            if (Check(TokenKind.Bang) || Check(TokenKind.Minus) || Check(TokenKind.Star) ||
+            if (Check(TokenKind.Bang) || Check(TokenKind.Tilde) || Check(TokenKind.Minus) || Check(TokenKind.Star) ||
                 Check(TokenKind.Ampersand) || Check(TokenKind.PlusPlus) || Check(TokenKind.MinusMinus))
             {
                 Token op = Consume();
@@ -2211,7 +2211,7 @@ namespace gflat
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
             TokenKind.OpenParen or TokenKind.New or TokenKind.Default or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or TokenKind.Typeof or
             TokenKind.InterpolatedStringStart or
-            TokenKind.Minus or TokenKind.Bang or TokenKind.Star or TokenKind.Ampersand or
+            TokenKind.Minus or TokenKind.Bang or TokenKind.Tilde or TokenKind.Star or TokenKind.Ampersand or
             TokenKind.PlusPlus or TokenKind.MinusMinus;
 
         private static bool IsUnambiguousCastOperandStarter(TokenKind kind) =>
@@ -2221,7 +2221,7 @@ namespace gflat
             TokenKind.StringLiteral or TokenKind.CharLiteral or TokenKind.True or TokenKind.False or TokenKind.Null or
             TokenKind.OpenParen or TokenKind.New or TokenKind.Default or TokenKind.Global or TokenKind.Sizeof or TokenKind.Alignof or TokenKind.Nameof or TokenKind.Typeof or
             TokenKind.InterpolatedStringStart or
-            TokenKind.Bang or TokenKind.PlusPlus or TokenKind.MinusMinus;
+            TokenKind.Bang or TokenKind.Tilde or TokenKind.PlusPlus or TokenKind.MinusMinus;
 
         private LambdaExpression? TryParseLambda(bool isStatic) => Located(() => TryParseLambdaCoreLocated(isStatic));
 

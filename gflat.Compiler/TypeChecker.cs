@@ -2846,7 +2846,7 @@ namespace gflat
             if (RequiresCopy(node.ReturnType) || node.Parameters.Any(p => RequiresCopy(p.Type)))
                 throw new TypeCheckException("Owning operator operands and results are not yet supported; use an explicit method", node.Line);
 
-            if (node.OperatorKind == TokenKind.Bang)
+            if (node.OperatorKind is TokenKind.Bang or TokenKind.Tilde)
             {
                 if (node.Parameters.Count != 1)
                 {
@@ -3926,6 +3926,11 @@ namespace gflat
                 case TokenKind.Minus:
                     if (!IsNumeric(operand))
                         throw new TypeCheckException("'-' requires numeric operand", node.Line);
+                    RecordType(node, ResolveAlias(operand).WithoutValueProtection());
+                    break;
+                case TokenKind.Tilde:
+                    if (!IsInteger(operand))
+                        throw new TypeCheckException("'~' requires integral operand", node.Line);
                     RecordType(node, ResolveAlias(operand).WithoutValueProtection());
                     break;
                 case TokenKind.PlusPlus:

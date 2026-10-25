@@ -156,6 +156,16 @@ NaNs: `NaN != x` is true, while equality and ordered comparisons with NaN are fa
 Bitwise and shift operators do not accept floating operands. Depending on the
 target, floating remainder may require the toolchain's math runtime.
 
+Prefix `~value` complements every bit of an integral value, including `char`,
+native integers, `extralong`, and enums. It preserves the operand's integer width
+and enum identity; small integers are not promoted to `int`. Its result is a fresh
+value without the operand storage's readonly/immutable protection. `bool`, floating
+values, and pointers are not builtin operands. For example, `~(byte)0` is byte 255,
+`~0` is int -1, and `~(nuint)0` is the maximum native unsigned value. Compile-time
+evaluation uses the same width and signedness. Structs may declare a static unary
+`operator ~` under the existing operator rules. Destructor declarations and
+explicit `pointer.~T()` lifetime calls retain their existing syntax and meaning.
+
 ```csharp
 const int answer()
 {

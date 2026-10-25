@@ -1732,6 +1732,7 @@ public partial class LlvmEmitter : IVisitor
         TokenKind.Greater => "op_GreaterThan",
         TokenKind.GreaterEquals => "op_GreaterThanOrEqual",
         TokenKind.Bang => "op_LogicalNot",
+        TokenKind.Tilde => "op_BitwiseNot",
         TokenKind.Ampersand => "op_BitwiseAnd",
         TokenKind.Pipe => "op_BitwiseOr",
         TokenKind.Caret => "op_ExclusiveOr",
@@ -3032,6 +3033,13 @@ public partial class LlvmEmitter : IVisitor
                 {
                     string temp = NewTemp();
                     Emit($"    {temp} = xor i1 {operand}, 1");
+                    PushManaged(node, temp);
+                    break;
+                }
+            case TokenKind.Tilde:
+                {
+                    string temp = NewTemp();
+                    Emit($"    {temp} = xor {llvmType} {operand}, -1");
                     PushManaged(node, temp);
                     break;
                 }

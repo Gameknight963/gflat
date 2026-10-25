@@ -427,6 +427,11 @@ namespace gflat.comptime
         public static bool TryBitwiseNot(ConstValue operand, out ConstValue? result)
         {
             result = null;
+            if (operand is WideInteger wide)
+            {
+                result = new WideInteger(~wide.Value);
+                return true;
+            }
             if (operand is Integer li)
             {
                 result = new Integer(~li.Value);

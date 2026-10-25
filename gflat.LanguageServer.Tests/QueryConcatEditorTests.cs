@@ -23,7 +23,7 @@ public sealed class QueryConcatEditorTests
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("query-concat-editor.gf"), text);
         files.Add(source);
-        SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "EnumerableConcat.gf");
+        SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "enumerable_concat.gf");
         SourceFile library = files.Single(file => Path.GetFileName(file.Path) == "ConcatSource.gf");
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });
         Assert.DoesNotContain(snapshot.Diagnostics, error => error.Severity == DiagnosticSeverity.Error);

@@ -63,5 +63,5 @@ The partial map, staged group, local element/key/value and iterator are destroye
 normally. Failed assignment preserves an existing destination map. Consumed
 input and callback side effects are not rolled back.
 
-For selective sources include `Queries/EnumerableToLookup.gf`, the Enumerable
+For selective sources include `Queries/enumerable_to_lookup.gf`, the Enumerable
 interfaces, and the existing HashMap/Vector hashing and equality dependencies.

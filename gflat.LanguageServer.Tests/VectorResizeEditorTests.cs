@@ -11,7 +11,7 @@ public sealed class VectorResizeEditorTests
         const string text = "using std; using std::Collections;void Work(){Vector<int> values=new();values.Resize(8,7);nuint count=values.Count;}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path => new SourceFile(path,File.ReadAllText(path))).ToList();
-        var library = files.Single(file => Path.GetFileName(file.Path)=="VectorResize.gf");
+        var library = files.Single(file => Path.GetFileName(file.Path)=="vector_resize.gf");
         var source = new SourceFile(Path.GetFullPath("vector-resize-editor.gf"),text);
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files,new(){NoStdLib=true});

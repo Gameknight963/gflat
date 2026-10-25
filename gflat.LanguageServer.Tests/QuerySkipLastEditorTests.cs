@@ -22,7 +22,7 @@ public sealed class QuerySkipLastEditorTests
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("query-skip-last-editor.gf"), text);
         files.Add(source);
-        SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "EnumerableSkipLast.gf");
+        SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "enumerable_skip_last.gf");
         SourceFile library = files.Single(file => Path.GetFileName(file.Path) == "SkipLastSource.gf");
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });
         Assert.DoesNotContain(snapshot.Diagnostics, error => error.Severity == DiagnosticSeverity.Error);

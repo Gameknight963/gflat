@@ -17,7 +17,7 @@ public sealed class DefaultIfEmptyEditorTests
         string hover=Hover(model,source,call);
         Assert.Contains("DefaultIfEmpty",hover);Assert.Contains("Enumerable",hover);Assert.Contains("int",hover);Assert.Contains("value",hover);
         Assert.DoesNotContain("T value",hover);Assert.DoesNotContain('$',hover);
-        SourceFile extension=files.Single(file=>Path.GetFileName(file.Path)=="EnumerableDefaultIfEmpty.gf");
+        SourceFile extension=files.Single(file=>Path.GetFileName(file.Path)=="enumerable_default_if_empty.gf");
         int declaration=extension.Text.IndexOf("DefaultIfEmpty<",StringComparison.Ordinal);Assert.True(declaration>=0);
         Definition(model,source,call,extension,declaration);
         var help=Json(model.SignatureHelp(source.Path,text.IndexOf("(7)",call,StringComparison.Ordinal)+1));
@@ -53,7 +53,7 @@ public sealed class DefaultIfEmptyEditorTests
     {
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
         string[] names=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Span.gf",
-            "Queries/DefaultIfEmptySource.gf","Queries/EnumerableDefaultIfEmpty.gf"];
+            "Queries/DefaultIfEmptySource.gf","Queries/enumerable_default_if_empty.gf"];
         var files=names.Select(name=>Path.Combine(root,name.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("default-if-empty-editor.gf"),text);files.Add(source);

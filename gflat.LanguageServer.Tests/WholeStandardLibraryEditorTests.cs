@@ -491,12 +491,12 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
             int offset=sourceTokens.Last(token=>token.Text==member).Start;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
-            string definition=member=="TryElementAt"?"EnumerableElementAt.gf":member=="Reverse"?"EnumerableReverse.gf":member.StartsWith("TryRemove",StringComparison.Ordinal)?"Deque.gf":"Date.gf";
+            string definition=member=="TryElementAt"?"enumerable_element_at.gf":member=="Reverse"?"enumerable_reverse.gf":member.StartsWith("TryRemove",StringComparison.Ordinal)?"Deque.gf":"Date.gf";
             Assert.Contains(definition,JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));
         }
         foreach(var query in new[]{("queryHasAny","Any","EnumerableExtensions.gf"),("queryCount","Count","EnumerableExtensions.gf"),
-            ("querySame","SequenceEqual","EnumerableSequenceEqual.gf"),("querySameCustom","SequenceEqual","EnumerableSequenceEqual.gf"),
-            ("queryHasKey","Contains","EnumerableContains.gf"),("queryHasCustomKey","Contains","EnumerableContains.gf")})
+            ("querySame","SequenceEqual","enumerable_sequence_equal.gf"),("querySameCustom","SequenceEqual","enumerable_sequence_equal.gf"),
+            ("queryHasKey","Contains","enumerable_contains.gf"),("queryHasCustomKey","Contains","enumerable_contains.gf")})
         {
             int call=text.IndexOf("."+query.Item2,text.IndexOf(query.Item1,StringComparison.Ordinal),StringComparison.Ordinal)+1;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
@@ -609,11 +609,11 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         var distinctHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,distinctCall),Protocol.JsonOptions);
         Assert.Contains("DistinctSource",distinctHover.GetProperty("contents").GetProperty("value").GetString());
         Assert.DoesNotContain('$',distinctHover.GetProperty("contents").GetProperty("value").GetString()!);
-        Assert.Contains("EnumerableDistinct.gf",JsonSerializer.Serialize(model.Definition(source.Path,distinctCall),Protocol.JsonOptions));
+        Assert.Contains("enumerable_distinct.gf",JsonSerializer.Serialize(model.Definition(source.Path,distinctCall),Protocol.JsonOptions));
         int setCall=sourceTokens.Single(token=>token.Text=="ToHashSet").Start;
         var setHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,setCall),Protocol.JsonOptions);
         Assert.Contains("HashSet",setHover.GetProperty("contents").GetProperty("value").GetString());
-        Assert.Contains("EnumerableHashSet.gf",JsonSerializer.Serialize(model.Definition(source.Path,setCall),Protocol.JsonOptions));
+        Assert.Contains("enumerable_to_hash_set.gf",JsonSerializer.Serialize(model.Definition(source.Path,setCall),Protocol.JsonOptions));
         int aggregateCall=text.IndexOf(".Aggregate",text.IndexOf("foldedOwner",StringComparison.Ordinal),StringComparison.Ordinal)+1;
         var aggregateHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,aggregateCall),Protocol.JsonOptions);
         Assert.Contains("Unique",aggregateHover.GetProperty("contents").GetProperty("value").GetString());
@@ -654,7 +654,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
             int call=text.IndexOf("."+member,text.IndexOf("endpointQuery",StringComparison.Ordinal),StringComparison.Ordinal)+1;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
             Assert.Contains("EndpointSource",hover.GetProperty("contents").GetProperty("value").GetString());
-            Assert.Contains("EnumerableEndpoint.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            Assert.Contains("enumerable_endpoints.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
             var help=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',call)+1),Protocol.JsonOptions);
             Assert.Single(help.GetProperty("signatures").EnumerateArray());
         }
@@ -664,7 +664,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
             int call=text.IndexOf("."+query.Item2,text.IndexOf(query.Item1,StringComparison.Ordinal),StringComparison.Ordinal)+1;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
             Assert.Contains("public int",hover.GetProperty("contents").GetProperty("value").GetString());
-            Assert.Contains("EnumerableExtrema.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            Assert.Contains("enumerable_extrema.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
             var help=JsonSerializer.SerializeToElement(model.SignatureHelp(source.Path,text.IndexOf('(',call)+1),Protocol.JsonOptions);
             Assert.Equal(2,help.GetProperty("signatures").GetArrayLength());
         }
@@ -676,7 +676,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         int swapCall=sourceTokens.Single(token=>token.Text=="Swap").Start;
         var swapHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,swapCall),Protocol.JsonOptions);
         Assert.Contains("ref int left",swapHover.GetProperty("contents").GetProperty("value").GetString());
-        Assert.Contains("Algorithms.gf",JsonSerializer.Serialize(model.Definition(source.Path,swapCall),Protocol.JsonOptions));
+        Assert.Contains("span_algorithms.gf",JsonSerializer.Serialize(model.Definition(source.Path,swapCall),Protocol.JsonOptions));
         foreach(string fileApi in new[]{"FileText","FileBytes"})
         {
             int call=text.IndexOf(fileApi+"::ReadAll",StringComparison.Ordinal)+fileApi.Length+2;

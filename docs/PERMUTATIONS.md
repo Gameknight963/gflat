@@ -65,8 +65,8 @@ and follow the transferred owner's lifetime. Raw aliases inside values are not
 retargeted. Keep the source storage alive and obey the usual in-place algorithm
 borrowing rules.
 
-Include optional `Collections/Permutations.gf` and `Collections/Algorithms.gf`,
-Span and their normal dependencies. `Collections/DefaultOrdering.gf` adds
+Include optional `Collections/span_permutations.gf` and `Collections/span_algorithms.gf`,
+Span and their normal dependencies. `Collections/default_ordering.gf` adds
 one-argument `NextPermutation(values)` and `PreviousPermutation(values)` for
 `T : IComparable<T>`, using `Comparer<T>::Compare`; include `Collections/Comparer.gf` and
 `IComparable.gf` for those conveniences. Explicit callbacks remain available

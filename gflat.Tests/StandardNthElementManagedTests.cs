@@ -9,7 +9,7 @@ public sealed class StandardNthElementManagedTests
     {
         string[] files = [
             "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf",
-            "core/Collections/Algorithms.gf", "core/Collections/NthElement.gf",
+            "core/Collections/span_algorithms.gf", "core/Collections/nth_element.gf",
             "core/Collections/Vector.gf", "core/Span.gf", "libc/GC.gf", "libc/TracingCollector.gf"
         ];
         var sources = files.Select(file => new SourceFile("std/" + file,

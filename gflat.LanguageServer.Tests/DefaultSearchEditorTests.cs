@@ -11,7 +11,7 @@ public sealed class DefaultSearchEditorTests
         const string text="using std; using std::Collections;void Probe(){int[5] data=[1,2,2,4,9];Span<int> values=new(data,5);int key=2;nuint lower=LowerBound(values.AsImmutable(),&key);nuint upper=UpperBound(values.AsImmutable(),&key);nuint match=BinarySearch(values.AsImmutable(),&key);bool sorted=IsSorted(values.AsImmutable());}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
-        var library=files.Single(file=>Path.GetFileName(file.Path)=="DefaultOrdering.gf");
+        var library=files.Single(file=>Path.GetFileName(file.Path)=="default_ordering.gf");
         var source=new SourceFile(Path.GetFullPath("default-search-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,files);

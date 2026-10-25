@@ -24,7 +24,7 @@ public sealed class QueryDistinctByEditorTests
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("query-distinct-by-editor.gf"), text);
         files.Add(source);
-        SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "EnumerableDistinctBy.gf");
+        SourceFile extension = files.Single(file => Path.GetFileName(file.Path) == "enumerable_distinct_by.gf");
         SourceFile library = files.Single(file => Path.GetFileName(file.Path) == "DistinctBySource.gf");
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });
         Assert.DoesNotContain(snapshot.Diagnostics, error => error.Severity == DiagnosticSeverity.Error);

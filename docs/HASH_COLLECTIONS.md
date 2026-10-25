@@ -134,7 +134,7 @@ helper scans private buckets directly and leaves tombstones for removed entries;
 it does not keep a public enumerator alive during structural mutation. Public
 enumerator invalidation rules remain unchanged.
 
-With `Collections/HashSetExtensions.gf` included and `using std;`,
+With `Collections/hash_set_algebra.gf` included and `using std;`,
 `target.UnionWith(&source)` copies missing keys into the target. Existing keys are
 checked before copying, and self-union does nothing. Added owning keys use their
 normal copy constructors; the source stays unchanged. This is a separate

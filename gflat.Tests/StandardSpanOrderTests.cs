@@ -79,7 +79,7 @@ public sealed class StandardSpanOrderTests
 
     private static void Run(string program,int optimization)
     {
-        string[] files=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Collections/Algorithms.gf","Collections/Vector.gf","Span.gf","String.gf", "ByteSearch.gf",
+        string[] files=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Collections/span_algorithms.gf","Collections/Vector.gf","Span.gf","String.gf", "ByteSearch.gf",
             "IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf"];
         var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))))
             .Append(new SourceFile("order.gf",program));

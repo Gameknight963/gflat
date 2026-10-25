@@ -17,7 +17,7 @@ var sums = first.AsEnumerable().Zip(second.AsEnumerable(),
 
 The inputs can have different element, source, and iterator types. The selector
 uses the existing noncapturing function-pointer callback rules. Named functions
-can return owning values such as String. Include `Queries/EnumerableZip.gf`
+can return owning values such as String. Include `Queries/enumerable_zip.gf`
 and `Queries/ZipSource.gf` with the ordinary enumerable interfaces and sources
 when selecting library files individually.
 

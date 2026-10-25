@@ -46,7 +46,7 @@ public sealed class DefaultArrangementEditorTests
                 Assert.Contains(name + "<int>", hover);
                 Assert.Contains("Span<int>", hover);
                 Assert.DoesNotContain('$', hover);
-                string file = explicitCall == 0 ? "DefaultOrdering.gf" : selection ? "NthElement.gf" : "Permutations.gf";
+                string file = explicitCall == 0 ? "default_ordering.gf" : selection ? "nth_element.gf" : "span_permutations.gf";
                 SourceFile library = files.Single(candidate => Path.GetFileName(candidate.Path) == file);
                 string prefix = "public " + (selection ? "void " : "bool ");
                 string anchor = prefix + name + (explicitCall == 0 ? "<T : IComparable<T>>" : "<T>") + "(";

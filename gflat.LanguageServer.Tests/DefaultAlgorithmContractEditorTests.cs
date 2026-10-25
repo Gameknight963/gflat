@@ -7,13 +7,13 @@ public sealed class DefaultAlgorithmContractEditorTests
 {
     [Fact]
     public void OrderingDefaultsRetainActualInferredIntAndTheirOwnDeclarations()
-        =>Check("ordering-contract-editor.gf","DefaultOrdering.gf","IComparable<T>",
+        =>Check("ordering-contract-editor.gf","default_ordering.gf","IComparable<T>",
             "nuint minimum=MinIndex(values.AsImmutable());nuint maximum=MaxIndex(values.AsImmutable());int order=SequenceCompare(values.AsImmutable(),values.AsImmutable());",
             [("MinIndex","nuint",1),("MaxIndex","nuint",1),("SequenceCompare","int",2)]);
 
     [Fact]
     public void EqualityDefaultsRetainActualInferredIntAndTheirOwnDeclarations()
-        =>Check("equality-contract-editor.gf","DefaultEquality.gf","IEquatable<T>",
+        =>Check("equality-contract-editor.gf","default_equality.gf","IEquatable<T>",
             "bool same=SequenceEqual(values.AsImmutable(),values.AsImmutable());nuint first=IndexOf(values.AsImmutable(),&key);nuint last=LastIndexOf(values.AsImmutable(),&key);bool found=Contains(values.AsImmutable(),&key);",
             [("SequenceEqual","bool",2),("IndexOf","nuint",2),("LastIndexOf","nuint",2),("Contains","bool",2)]);
 

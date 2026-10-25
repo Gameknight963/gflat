@@ -1,6 +1,6 @@
 # Materializing query results into a set
 
-Include `core/Queries/EnumerableHashSet.gf` alongside the usual query and
+Include `core/Queries/enumerable_to_hash_set.gf` alongside the usual query and
 `HashSet` sources to use `query.ToHashSet()`. This terminal enumerates the query
 immediately and returns a new owning `HashSet<T>`. Repeated calls enumerate
 again and produce independent sets. Results have unspecified iteration order.

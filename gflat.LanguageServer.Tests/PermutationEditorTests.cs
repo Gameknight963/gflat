@@ -26,7 +26,7 @@ public sealed class PermutationEditorTests
             """;
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
-        var library = files.Single(file => Path.GetFileName(file.Path) == "Permutations.gf");
+        var library = files.Single(file => Path.GetFileName(file.Path) == "span_permutations.gf");
         var source = new SourceFile(Path.GetFullPath("permutation-editor.gf"), text);
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });

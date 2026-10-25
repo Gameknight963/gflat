@@ -44,6 +44,6 @@ only by its temporary by-value argument. Capturing closures are not supported;
 use a named function for an owning value parameter such as `String`.
 
 Selective builds include `Queries/IndexedSelectSource.gf` and
-`Queries/EnumerableIndexedSelect.gf` alongside the ordinary Enumerable,
+`Queries/enumerable_indexed_select.gf` alongside the ordinary Enumerable,
 iterator, span and exception sources. The existing adapter for a one-parameter
 selector keeps its implementation and layout.

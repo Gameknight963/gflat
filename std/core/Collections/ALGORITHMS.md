@@ -32,9 +32,9 @@ int main()
 | --- | --- |
 | `Swap<T>(ref T left, ref T right)` | Exchange two initialized mutable values by relocation; the same storage is a no-op. |
 | `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
-| `NthElement<T>(Span<T>, nth, compare)` | Select a rank and partition around it without sorting either side. Optional `Collections/NthElement.gf`; see [rank selection](../../../docs/NTH_ELEMENT.md). |
-| `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/StableSort.gf`; see [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
-| `NextPermutation<T>(Span<T>, compare)` | Advance lexicographically, or wrap to the first ordering and return false. Optional `Collections/Permutations.gf`; see [arrangements](../../../docs/PERMUTATIONS.md). |
+| `NthElement<T>(Span<T>, nth, compare)` | Select a rank and partition around it without sorting either side. Optional `Collections/nth_element.gf`; see [rank selection](../../../docs/NTH_ELEMENT.md). |
+| `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/stable_sort.gf`; see [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
+| `NextPermutation<T>(Span<T>, compare)` | Advance lexicographically, or wrap to the first ordering and return false. Optional `Collections/span_permutations.gf`; see [arrangements](../../../docs/PERMUTATIONS.md). |
 | `PreviousPermutation<T>(Span<T>, compare)` | Move to the previous ordering, or wrap to the last ordering and return false. Same optional source. |
 | `Reverse<T>(Span<T>)` | Reverse elements in place without invoking user code. |
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
@@ -42,15 +42,15 @@ int main()
 | `UpperBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
-| `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `DefaultEquality.gf`. |
-| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `DefaultOrdering.gf`. |
-| `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `DefaultOrdering.gf`. |
-| `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `DefaultOrdering.gf`. |
+| `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `default_equality.gf`. |
+| `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `default_ordering.gf`. |
+| `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
+| `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
 | `FindLastIndex<T>(Span<immutable(T)>, predicate)` | Last matching index, or span length when no element matches. |
-| `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. Optional `IEquatable<T>` default in `DefaultEquality.gf`. |
-| `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. Optional `IEquatable<T>` default in `DefaultEquality.gf`. |
-| `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. Optional `IEquatable<T>` default in `DefaultEquality.gf`. |
+| `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
+| `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
+| `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
 | `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
 
@@ -174,7 +174,7 @@ int main()
 
 ## Shuffling
 
-`Collections/Shuffle.gf` supplies `Shuffle` separately from the comparison
+`Collections/span_shuffle.gf` supplies `Shuffle` separately from the comparison
 algorithms. It uses a Fisher–Yates shuffle with unbiased bounded draws from
 `PseudoRandom`. It takes linear time and constant extra storage, performs no
 allocations, and relocates elements without copying them or running destructors.
@@ -200,8 +200,8 @@ keep both alive and must not mutate either through another alias.
 
 ## Rank selection
 
-Optional `Collections/NthElement.gf` adds the explicit-comparer `NthElement`
-algorithm, reusing `Swap` and `Sort` from `Collections/Algorithms.gf`. It relocates
+Optional `Collections/nth_element.gf` adds the explicit-comparer `NthElement`
+algorithm, reusing `Swap` and `Sort` from `Collections/span_algorithms.gf`. It relocates
 values in place without copying owners or allocating heap scratch storage. On
 success, the selected value has the specified sorted rank, with all earlier
 values no greater and all later values no less. The partitions are not sorted
@@ -213,7 +213,7 @@ boundaries, borrowing rules, and bounded heapsort-fallback complexity.
 
 ## Lexicographic arrangements
 
-Optional `Collections/Permutations.gf` provides `NextPermutation` and
+Optional `Collections/span_permutations.gf` provides `NextPermutation` and
 `PreviousPermutation` for bounded arrangement searches. Both relocate owners
 with public `Swap`/`Reverse`, use no heap scratch, and return false when wrapping.
 All comparisons precede mutation, so comparator errors leave the arrangement
@@ -222,7 +222,7 @@ ordering, duplicate-key and borrowing contracts and the complete example.
 
 ## Default ordering
 
-The optional `Collections/DefaultOrdering.gf` source adds `Sort<T>(Span<T>)` and
+The optional `Collections/default_ordering.gf` source adds `Sort<T>(Span<T>)` and
 `StableSort<T>(Span<T>)` overloads for `T : IComparable<T>`. They forward to the
 existing algorithms with `Comparer<T>::Compare`. They are ordinary namespace
 functions, with the same ownership and failure rules as their explicit-comparator
@@ -255,27 +255,27 @@ Sort may leave a permutation partially ordered, whereas StableSort leaves the
 input unchanged when allocation or comparison fails. User comparison methods
 must obey the existing ordering, immutability and borrowed-pointer contracts.
 
-Explicit source selection needs `Collections/DefaultOrdering.gf`, `Collections/Comparer.gf`,
+Explicit source selection needs `Collections/default_ordering.gf`, `Collections/Comparer.gf`,
 `IComparable.gf` and the normal Span dependencies. Also include the underlying
-algorithm sources being used: `Collections/Algorithms.gf` for Sort, and
-`Collections/StableSort.gf` with Vector dependencies for StableSort. Selecting the
+algorithm sources being used: `Collections/span_algorithms.gf` for Sort, and
+`Collections/stable_sort.gf` with Vector dependencies for StableSort. Selecting the
 original explicit-comparator sources alone does not gain a dependency on these
 default-ordering contracts.
 
-`DefaultOrdering.gf` also provides `NthElement(values, nth)`,
+`default_ordering.gf` also provides `NthElement(values, nth)`,
 `NextPermutation(values)`, and `PreviousPermutation(values)` for
 `T : IComparable<T>`. These ordinary forwarders use `Comparer<T>::Compare` and
 retain the respective explicit-comparer algorithms' ownership, comparison,
-wrapping and failure rules. Include `Collections/NthElement.gf` for selection
-or `Collections/Permutations.gf` for the permutation operations, together with
-`Collections/Algorithms.gf` and the normal Span/Comparer/interface dependencies.
+wrapping and failure rules. Include `Collections/nth_element.gf` for selection
+or `Collections/span_permutations.gf` for the permutation operations, together with
+`Collections/span_algorithms.gf` and the normal Span/Comparer/interface dependencies.
 Unused generic wrappers do not require their underlying optional algorithm
-modules. The explicit callbacks remain available without `DefaultOrdering.gf`
+modules. The explicit callbacks remain available without `default_ordering.gf`
 or an `IComparable<T>` implementation.
 
 ### Default searches
 
-The optional `DefaultOrdering.gf` comparison-contract helpers also include:
+The optional `default_ordering.gf` comparison-contract helpers also include:
 
 | API | Default-order result |
 | --- | --- |
@@ -314,14 +314,14 @@ int main()
 }
 ```
 
-For selective sources these wrappers need `Collections/DefaultOrdering.gf`,
-`Collections/Algorithms.gf`, `Collections/Comparer.gf`, `IComparable.gf` and ordinary Span
+For selective sources these wrappers need `Collections/default_ordering.gf`,
+`Collections/span_algorithms.gf`, `Collections/Comparer.gf`, `IComparable.gf` and ordinary Span
 dependencies. The explicit-comparator algorithm source remains independent of
 DefaultOrdering/Comparer and still supports custom or descending comparisons.
 
 ### Default ordering and equality contracts
 
-The optional `DefaultOrdering.gf` conveniences also provide `MinIndex(values)`,
+The optional `default_ordering.gf` conveniences also provide `MinIndex(values)`,
 `MaxIndex(values)`, and `SequenceCompare(first, second)` for `IComparable<T>`.
 They forward to the existing callback algorithms through `Comparer<T>::Compare`.
 Min/max keep the first tied element and return `Length` for an empty span.
@@ -342,7 +342,7 @@ int main()
 }
 ```
 
-The optional `DefaultEquality.gf` provides `SequenceEqual(first, second)`,
+The optional `default_equality.gf` provides `SequenceEqual(first, second)`,
 `IndexOf(values, key)`, `LastIndexOf(values, key)`, and `Contains(values, key)`
 for `IEquatable<T>`, forwarding through `EqualityComparer<T>::Equals`.
 Searches borrow the key and elements. `IndexOf` and `LastIndexOf` return
@@ -370,6 +370,6 @@ These helpers do not allocate or copy elements themselves. User comparisons
 and equality methods can allocate or throw; their original exceptions propagate,
 and these read-only algorithms do not modify either input. Existing overloads
 with explicit callbacks remain available without either optional source file.
-Selective source users need `Algorithms.gf`, `Span` and its dependencies, the
+Selective source users need `span_algorithms.gf`, `Span` and its dependencies, the
 appropriate `IComparable`/`Comparer` or `IEquatable`/`EqualityComparer` pair, and
 the chosen default convenience file. Ordinary std projects include them already.

@@ -76,7 +76,7 @@ It is instantiated only when called; merely including it does not prevent using
 continue to support those elements through explicit movement.
 
 `vector.Resize(count, fill)` changes the number of initialized elements. Include
-`Collections/VectorResize.gf`. It preserves the shared prefix, destroys the tail
+`Collections/vector_resize.gf`. It preserves the shared prefix, destroys the tail
 when shrinking, and appends ordinary copies of `fill` when growing. Capacity is
 retained on shrink; growth follows `Add`'s geometric capacity policy.
 
@@ -111,8 +111,8 @@ int main()
 ```
 
 `vector.InsertRange(index, immutableSpan)` copies a range before `index`, which
-may equal `Count`. Include `Collections/VectorInsertRange.gf` together with
-`Collections/VectorExtensions.gf` and `Collections/Algorithms.gf`. Like `AddRange`,
+may equal `Count`. Include `Collections/vector_insert_range.gf` together with
+`Collections/vector_add_range.gf` and `Collections/span_algorithms.gf`. Like `AddRange`,
 this optional extension requires copyable elements only when called. Self-borrowed
 ranges work across growth, including insertion within the source range.
 
@@ -181,7 +181,7 @@ requires mutable, copyable elements only when called, and lives separately in
 `StableSort<T>(values, compare)` sorts a mutable `Span<T>` while retaining the
 original order of elements whose comparison is zero. For example,
 `StableSort<Record>(records.AsSpan(), CompareByTimestamp)` retains input order
-among records with the same timestamp. Include `Collections/StableSort.gf` and
+among records with the same timestamp. Include `Collections/stable_sort.gf` and
 its ordinary `Vector`/`Span` dependencies when selecting source files.
 
 The comparator has type `int(immutable(T)*, immutable(T)*)*`: a negative result

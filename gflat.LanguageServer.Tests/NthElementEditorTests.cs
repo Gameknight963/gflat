@@ -15,7 +15,7 @@ public sealed class NthElementEditorTests
             """;
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
-        var library=files.Single(file=>Path.GetFileName(file.Path)=="NthElement.gf");
+        var library=files.Single(file=>Path.GetFileName(file.Path)=="nth_element.gf");
         var source=new SourceFile(Path.GetFullPath("nth-element-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);

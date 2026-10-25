@@ -15,10 +15,10 @@ public sealed class DefaultOrderingEditorTests
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,files);
         foreach(var row in new[]{
-            (Call:"Sort(values)",Name:"Sort",Arity:1,File:"DefaultOrdering.gf",Anchor:"public void Sort<T : IComparable<T>>("),
-            (Call:"Sort(values,Desc)",Name:"Sort",Arity:2,File:"Algorithms.gf",Anchor:"public void Sort<T>("),
-            (Call:"StableSort(values)",Name:"StableSort",Arity:1,File:"DefaultOrdering.gf",Anchor:"public void StableSort<T : IComparable<T>>("),
-            (Call:"StableSort(values,Desc)",Name:"StableSort",Arity:2,File:"StableSort.gf",Anchor:"public void StableSort<T>(")}){
+            (Call:"Sort(values)",Name:"Sort",Arity:1,File:"default_ordering.gf",Anchor:"public void Sort<T : IComparable<T>>("),
+            (Call:"Sort(values,Desc)",Name:"Sort",Arity:2,File:"span_algorithms.gf",Anchor:"public void Sort<T>("),
+            (Call:"StableSort(values)",Name:"StableSort",Arity:1,File:"default_ordering.gf",Anchor:"public void StableSort<T : IComparable<T>>("),
+            (Call:"StableSort(values,Desc)",Name:"StableSort",Arity:2,File:"stable_sort.gf",Anchor:"public void StableSort<T>(")}){
             int use=text.IndexOf(row.Call,StringComparison.Ordinal);Assert.True(use>=0);
             var items=Json(model.Completion(source.Path,use)).GetProperty("items");Assert.Contains(items.EnumerateArray(),item=>item.GetProperty("label").GetString()==row.Name);
             string hover=Json(model.Hover(source.Path,use)).GetProperty("contents").GetProperty("value").GetString()!;

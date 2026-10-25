@@ -53,5 +53,5 @@ failures propagate. Locals, partial maps, and iterators are destroyed normally.
 Failed assignment to an existing map preserves that destination; external side
 effects and source advancement remain visible.
 
-For explicit source selection include `Queries/EnumerableToHashMap.gf`, the
+For explicit source selection include `Queries/enumerable_to_hash_map.gf`, the
 normal Enumerable interfaces, and HashMap's existing hashing/equality dependencies.

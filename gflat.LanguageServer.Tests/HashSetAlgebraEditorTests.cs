@@ -22,7 +22,7 @@ public sealed class HashSetAlgebraEditorTests
         var snapshot=new AnalysisSnapshot(sources,new(){NoStdLib=true});
         Assert.DoesNotContain(snapshot.Diagnostics,d=>d.Severity==DiagnosticSeverity.Error);
         var model=new EditorModel(snapshot,sources);
-        foreach(var method in new[]{("IntersectWith","HashSet.gf"),("SymmetricExceptWith","HashSetExtensions.gf")})
+        foreach(var method in new[]{("IntersectWith","HashSet.gf"),("SymmetricExceptWith","hash_set_algebra.gf")})
         {
             int offset=text.IndexOf(method.Item1,StringComparison.Ordinal);
             string definition=JsonSerializer.Serialize(model.Definition(source.Path,offset));

@@ -50,5 +50,5 @@ The partial map, local key/element, and iterator are destroyed during unwinding.
 Assigning the failed result to an existing map leaves that destination unchanged;
 external side effects and consumed source input are not rolled back.
 
-For explicit source selection include `Queries/EnumerableCountBy.gf`, the
+For explicit source selection include `Queries/enumerable_count_by.gf`, the
 normal Enumerable interfaces, and HashMap's hashing/equality dependencies.

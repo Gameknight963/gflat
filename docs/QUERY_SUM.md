@@ -46,5 +46,5 @@ and invalidation rules.
 
 Use `Select` before `Sum` for a projection, or `Aggregate` for a different
 accumulator type or arithmetic policy. For selective source builds, include
-`Queries/EnumerableSum.gf` with the ordinary query contracts and the source
+`Queries/enumerable_sum.gf` with the ordinary query contracts and the source
 operators you use.

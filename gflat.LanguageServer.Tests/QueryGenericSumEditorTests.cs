@@ -17,11 +17,11 @@ public sealed class QueryGenericSumEditorTests
         string text="using std; using std::Queries; using std::Collections;long Probe(){"+storage+"[3] numbers=["+literals+"];Span<"+storage+"> samples=new(numbers,3);"+
             "Span<"+element+"> values="+view+";long total=values.AsEnumerable().Sum();return total;}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Span.gf","Queries/EnumerableSum.gf"];
+        string[] names=["Collections/IEnumerable.gf","Queries/Enumerable.gf","Span.gf","Queries/enumerable_sum.gf"];
         var files=names.Select(name=>Path.Combine(root,name.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("query-generic-sum-editor.gf"),text);files.Add(source);
-        SourceFile library=files.Single(file=>Path.GetFileName(file.Path)=="EnumerableSum.gf");
+        SourceFile library=files.Single(file=>Path.GetFileName(file.Path)=="enumerable_sum.gf");
         var snapshot=new AnalysisSnapshot(files);
         Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var call=Assert.Single(snapshot.Nodes.Where(node=>node.Span.SourceId==source.Id).Select(node=>node.Node).OfType<CallExpression>(),
@@ -37,7 +37,7 @@ public sealed class QueryGenericSumEditorTests
         Assert.Contains("long",hover);Assert.Contains("Sum<"+displayElement+",",hover);Assert.DoesNotContain('$',hover);
         int declaration=library.Text.IndexOf("Sum<T, S, E>(",StringComparison.Ordinal);Assert.True(declaration>=0);
         var expected=model.Definition(library.Path,declaration);Assert.NotNull(expected);
-        Assert.Equal(expected,model.Definition(source.Path,use));Assert.Contains("EnumerableSum.gf",JsonSerializer.Serialize(expected,Protocol.JsonOptions));
+        Assert.Equal(expected,model.Definition(source.Path,use));Assert.Contains("enumerable_sum.gf",JsonSerializer.Serialize(expected,Protocol.JsonOptions));
         var help=Json(model.SignatureHelp(source.Path,text.IndexOf('(',use)+1));
         var signature=Assert.Single(help.GetProperty("signatures").EnumerateArray());
         Assert.Empty(signature.GetProperty("parameters").EnumerateArray());

@@ -53,6 +53,6 @@ later moves return false. EOF after the maximum valid index returns false
 normally.
 
 Selective builds add `Queries/IndexedWhereSource.gf` and
-`Queries/EnumerableIndexedWhere.gf` to the ordinary Enumerable, iterator
+`Queries/enumerable_indexed_where.gf` to the ordinary Enumerable, iterator
 and exception sources. The existing adapter for a one-parameter predicate is
 unchanged.

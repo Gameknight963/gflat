@@ -77,7 +77,7 @@ algorithm borrows elements directly; query searching intentionally follows the
 normal value semantics of sequence enumeration.
 
 Selective source users need `Queries/EnumerableExtensions.gf` for `Any` and `Count`,
-and `Queries/EnumerableContains.gf` plus `Collections/EqualityComparer.gf` and
+and `Queries/enumerable_contains.gf` plus `Collections/EqualityComparer.gf` and
 `IEquatable.gf` for default query membership, alongside the sequence's ordinary
 source and enumeration dependencies. Explicit-comparer calls do not require an
 `IEquatable<T>` implementation.

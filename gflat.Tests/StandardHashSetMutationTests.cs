@@ -158,7 +158,7 @@ public sealed class StandardHashSetMutationTests
 
     private static void Run(string program,int optimization,bool managed=false)
     {
-        string[] files=["IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","Collections/HashMap.gf","Collections/HashSet.gf","Collections/HashSetExtensions.gf","IStringConvertable.gf","String.gf", "ByteSearch.gf"];
+        string[] files=["IHashable.gf","IEquatable.gf","IComparable.gf","Hashing.gf","Collections/HashMap.gf","Collections/HashSet.gf","Collections/hash_set_algebra.gf","IStringConvertable.gf","String.gf", "ByteSearch.gf"];
         IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))));
         if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",file)))));
         sources=sources.Append(new SourceFile("set-mutations.gf",program));

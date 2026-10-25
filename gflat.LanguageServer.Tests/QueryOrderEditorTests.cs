@@ -10,7 +10,7 @@ public sealed class QueryOrderEditorTests
     {
         const string text="using std; using std::Queries;int Compare(immutable(int)* a,immutable(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}void Probe(){int[3] data=[3,1,2];Span<int> values=new(data,3);var ascending=values.AsEnumerable().Order();var custom=values.AsEnumerable().Order(&Compare);}";
         var (model,source,files)=Analyze(text);
-        var library=files.Single(file=>Path.GetFileName(file.Path)=="EnumerableOrder.gf");
+        var library=files.Single(file=>Path.GetFileName(file.Path)=="enumerable_order.gf");
         foreach(var row in new[]{(Call:".Order()",Arity:0,Declaration:"Order<T : IComparable<T>, S, E>"),(Call:".Order(&Compare)",Arity:1,Declaration:"Order<T, S, E>")})
         {
             int use=text.IndexOf(row.Call,StringComparison.Ordinal)+1;

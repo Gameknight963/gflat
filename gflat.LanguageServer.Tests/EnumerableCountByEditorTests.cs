@@ -11,7 +11,7 @@ public sealed class EnumerableCountByEditorTests
         const string text = "using std; using std::Queries; using std::Collections;int Key(int value)=>value%3;String Text(int value)=>value.ToString();void Probe(){int[3] data=[4,2,1];Span<int> values=new(data,3);HashMap<int,nuint> numbers=values.AsEnumerable().CountBy(Key);HashMap<String,nuint> words=values.AsEnumerable().CountBy(Text);}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
-        var library = files.Single(file => Path.GetFileName(file.Path) == "EnumerableCountBy.gf");
+        var library = files.Single(file => Path.GetFileName(file.Path) == "enumerable_count_by.gf");
         var source = new SourceFile(Path.GetFullPath("count-by-editor.gf"), text);
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });

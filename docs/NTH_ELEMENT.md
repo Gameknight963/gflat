@@ -61,8 +61,8 @@ The addresses of element slots stay fixed while the values stored there move.
 Raw aliases inside values are not retargeted; obey the same borrowing rules as
 other in-place algorithms.
 
-Include optional `Collections/NthElement.gf` with `Collections/Algorithms.gf`,
-Span and their normal dependencies. `Collections/DefaultOrdering.gf` adds
+Include optional `Collections/nth_element.gf` with `Collections/span_algorithms.gf`,
+Span and their normal dependencies. `Collections/default_ordering.gf` adds
 `NthElement(values, nth)` for `T : IComparable<T>`, using `Comparer<T>::Compare`;
 include `Collections/Comparer.gf` and `IComparable.gf` for that convenience. The explicit
 three-argument operation remains independent of those comparison contracts.

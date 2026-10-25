@@ -460,8 +460,8 @@ public sealed partial class EditorModel
                 type = parameter.TypeConstraint;
                 continue;
             }
-            var alias = symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == name)
-                ?? Visible(path, offset, name).FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Name == name);
+            var alias = Visible(path, offset, name).FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Name == name)
+                ?? symbols.FirstOrDefault(s => s.Scope == null && s.Syntax.Node is AliasDeclaration && s.Qualified == name);
             if (alias != null)
             {
                 if (!aliases.Add(alias)) return null;

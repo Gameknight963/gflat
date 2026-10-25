@@ -14,14 +14,17 @@ public partial class TypeChecker
     private string GenericParameterOrigin(AstNode definition, int index)
     {
         if (genericContractOrigins.TryGetValue((definition, index), out var cached)) return cached;
+        return genericContractOrigins[(definition, index)] = ComputeGenericParameterOrigin(definition, index);
+    }
+
+    private static string ComputeGenericParameterOrigin(AstNode definition, int index)
+    {
         string name = definition switch { MethodDeclaration method => method.Name,
             StructDeclaration structure => structure.SourceName, ClassDeclaration cls => cls.SourceName,
             InterfaceDeclaration contract => contract.Name, _ => "" };
         string declaration = string.Join("\0", definition.Span.SourceId?.Path ?? "", definition.GetType().Name,
             definition.Span.Start.ToString(CultureInfo.InvariantCulture), name, index.ToString(CultureInfo.InvariantCulture));
-        string identity = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(declaration)));
-        genericContractOrigins[(definition, index)] = identity;
-        return identity;
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(declaration)));
     }
 
     // A callee's body is checked through its own declaration parameters. Caller
@@ -129,16 +132,8 @@ public partial class TypeChecker
     // implemented by its current concrete substitution.
     private bool? DeclaredConstraintSatisfied(TypeExpression argument, TypeExpression constraint)
     {
-        var view = ParameterView(argument);
+        var view = GetDeclaredParameterView(argument);
         return view == null ? null : Satisfies(view, new HashSet<string>());
-
-        static GenericParameterContractView? ParameterView(TypeExpression type)
-        {
-            if (type.GenericParameterView is { } declared) return declared;
-            var inner = type switch { PointerTypeExpression pointer => pointer.Inner,
-                ManagedTypeExpression managed => managed.Inner, ReferenceTypeExpression reference => reference.Inner, _ => null };
-            return inner == null ? null : ParameterView(inner);
-        }
 
         bool Satisfies(GenericParameterContractView declared, HashSet<string> active)
         {
@@ -147,20 +142,30 @@ public partial class TypeChecker
             {
                 foreach (var exposed in declared.Constraints)
                 {
-                    if (ParameterView(exposed) is { } inherited)
+                    if (GetDeclaredParameterView(exposed) is { } inherited)
                     {
                         if (Satisfies(inherited, active)) return true;
                         continue;
                     }
-                    if (TypesMatch(OverloadArgumentType(exposed), OverloadArgumentType(constraint))) return true;
+                    if (declared.IsOpen
+                        ? TypesMatchPublic(OverloadArgumentType(exposed), OverloadArgumentType(constraint))
+                        : TypesMatch(OverloadArgumentType(exposed), OverloadArgumentType(constraint))) return true;
                     // IEquatable<A> cannot prove IEquatable<B> merely because A
                     // and B happen to substitute to the same concrete type.
-                    if ((HasDeclaredParameter(exposed) || HasDeclaredParameter(constraint)) && TypesMatch(exposed, constraint)) continue;
+                    if (!declared.IsOpen && (HasDeclaredParameter(exposed) || HasDeclaredParameter(constraint)) && TypesMatch(exposed, constraint)) continue;
                     if (KnownExtensionConstraintSatisfied(exposed, constraint, allowInterfaceIdentity: true)) return true;
                 }
                 return false;
             }
             finally { active.Remove(declared.OriginIdentity); }
         }
+    }
+
+    private static GenericParameterContractView? GetDeclaredParameterView(TypeExpression type)
+    {
+        if (type.GenericParameterView is { } declared) return declared;
+        var inner = type switch { PointerTypeExpression pointer => pointer.Inner,
+            ManagedTypeExpression managed => managed.Inner, ReferenceTypeExpression reference => reference.Inner, _ => null };
+        return inner == null ? null : GetDeclaredParameterView(inner);
     }
 }

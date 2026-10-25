@@ -35,17 +35,51 @@ public sealed partial class EditorModel
     private IEnumerable<Symbol> ExtensionMembers(string path, int offset, AstNode? receiver, TypeExpression? receiverType, string? memberName = null)
     {
         if (snapshot.Checker is not { } checker || receiverType == null) return [];
+        while (receiverType is ReferenceTypeExpression reference) receiverType = reference.Inner;
         string ns = ScopeAt(path, offset).Namespace;
         var imports = snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? [];
         bool storage = receiver != null && ExtensionReceiverStorage(receiver, path, offset);
         bool readOnly = receiverType.IsReadOnlyValue || receiver != null && ExtensionReceiverReadOnly(receiver, path, offset);
         var storageType = receiver == null ? null : checker.GetExtensionReceiverStorageType(receiver);
+        if (OpenExtensionParameterBinding(path, offset, receiverType) is { } binding)
+        {
+            var cloner = new AstCloner(binding);
+            receiverType = cloner.CloneType(receiverType);
+            if (storageType != null) storageType = cloner.CloneType(storageType);
+        }
         return checker.GetVisibleExtensions(ns, imports, receiverType, storage, readOnly, memberName: memberName, receiverStorageType: storageType)
             .GroupBy(candidate => candidate.Definition.Name)
             .SelectMany(group => group.Any(candidate => candidate.Adaptation == TypeChecker.ExtensionReceiverAdaptation.Exact)
                 ? group.Where(candidate => candidate.Adaptation == TypeChecker.ExtensionReceiverAdaptation.Exact) : group)
             .Select(candidate => ExtensionCandidateSymbol(candidate)).OfType<Symbol>()
             .Where(symbol => Accessible(symbol, path, offset));
+    }
+
+    private Dictionary<string, TypeExpression>? OpenExtensionParameterBinding(string path, int offset, TypeExpression type)
+    {
+        while (type is ReferenceTypeExpression or PointerTypeExpression or ManagedTypeExpression)
+            type = type switch { ReferenceTypeExpression reference => reference.Inner,
+                PointerTypeExpression pointer => pointer.Inner, ManagedTypeExpression managed => managed.Inner, _ => type };
+        if (type is not NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } named ||
+            snapshot.Checker!.IsResolvedTypeIdentity(named) ||
+            Visible(path, offset, named.Name).FirstOrDefault(symbol => symbol.IsTypeParameter) is not { } parameter)
+            return null;
+        TypeExpression? constraint = null;
+        if (parameter.TypeConstraint != null)
+        {
+            var span = parameter.TypeConstraint.Span;
+            string constraintPath = span.Source?.Path ?? path;
+            int constraintOffset = span.Source == null ? parameter.NameSpan.Start : span.Start;
+            string? owner = TypeOwner(parameter.TypeConstraint, constraintPath, constraintOffset);
+            string? identity = symbols.FirstOrDefault(symbol => symbol.Qualified == owner)?.Syntax.Node switch {
+                InterfaceDeclaration contract => contract.Name,
+                _ => null
+            };
+            if (identity == null) return null;
+            constraint = new NamedTypeExpression(identity, null, parameter.TypeConstraint.Line);
+        }
+        var view = snapshot.Checker!.CreateOpenGenericParameterView(parameter.Syntax.Node, named.Name, constraint);
+        return view == null ? null : new() { [named.Name] = view };
     }
 
     private Symbol? ExtensionCandidateSymbol(TypeChecker.ExtensionMethodCandidate candidate)

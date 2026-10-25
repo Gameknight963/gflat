@@ -6,7 +6,7 @@ namespace gflat.ast
 {
     // A compile-time view of one declaration parameter, never nominal identity.
     internal sealed record GenericParameterContractView(string OriginIdentity, AstNode DeclaringDefinition,
-        string ParameterName, TypeExpression ActualType, IReadOnlyList<TypeExpression> Constraints);
+        string ParameterName, TypeExpression ActualType, IReadOnlyList<TypeExpression> Constraints, bool IsOpen = false);
 
     public abstract class TypeExpression : AstNode
     {

@@ -149,7 +149,9 @@ public partial class TypeChecker
             formal = KnownExtensionType(OverloadArgumentType(formal));
             if (formal == null) return;
             var knownSource = KnownExtensionType(OverloadArgumentType(source));
-            if (knownSource != null && IsAssignable(formal, knownSource)) result.Add(new(method, adaptation, reference, bindings));
+            if (knownSource != null &&
+                (GetDeclaredParameterView(knownSource)?.IsOpen == true && TypesMatchPublic(formal, knownSource) ||
+                 IsAssignable(formal, knownSource))) result.Add(new(method, adaptation, reference, bindings));
         }
     }
 
@@ -159,7 +161,8 @@ public partial class TypeChecker
     private bool ExtensionConstraintSatisfied(TypeExpression argument, TypeExpression? constraint, bool strictDeclared)
     {
         if (constraint == null) return false;
-        if (strictDeclared && DeclaredConstraintSatisfied(argument, constraint) is { } declared) return declared;
+        if ((strictDeclared || GetDeclaredParameterView(argument)?.IsOpen == true) &&
+            DeclaredConstraintSatisfied(argument, constraint) is { } declared) return declared;
         if (aliasContracts.TryGetValue(argument, out var alias) &&
             (!boundAliasConstraints.TryGetValue(alias, out var exposed) ||
                 !exposed.Any(type => KnownExtensionConstraintSatisfied(type, constraint, allowInterfaceIdentity: true)))) return false;

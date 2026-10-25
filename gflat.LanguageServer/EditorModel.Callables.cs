@@ -101,8 +101,21 @@ public sealed partial class EditorModel
             boundCallableReferences[token] = selected;
             boundCallableFamilies[token] = selected.BoundExtension && call?.Callee is MemberAccessExpression member
                 ? BoundExtensionCallableFamily(source, selected, member, path, token.Start)
+                : call != null && checker.GetImportedCallCandidates(call) is { Count: > 0 } imported
+                    ? BoundImportedCallableFamily(imported, selected, path, token.Start)
                 : BoundCallableFamily(source, selected, target, path, token.Start);
         }
+    }
+
+    private Symbol[] BoundImportedCallableFamily(IReadOnlyList<MethodDeclaration> definitions, Symbol selected, string path, int offset)
+    {
+        // Use the checker's actual lookup set. A same-name scan would leak
+        // unimported declarations or merge imports into a shadowing lexical call.
+        var family = definitions.Select(SourceCallable).OfType<Symbol>()
+            .Where(candidate => Accessible(candidate, path, offset))
+            .DistinctBy(candidate => candidate.Syntax)
+            .Select(candidate => candidate.Syntax == selected.Syntax ? selected : candidate).ToArray();
+        return family.Any(candidate => candidate.Syntax == selected.Syntax) ? family : [selected];
     }
 
     private Symbol[] BoundExtensionCallableFamily(Symbol source, Symbol selected, MemberAccessExpression member, string path, int offset)

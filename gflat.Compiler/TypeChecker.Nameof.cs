@@ -33,7 +33,15 @@ public partial class TypeChecker
                 resolved is NamedTypeExpression identity && (IsPrimitive(identity.Name) || _classes.ContainsKey(identity.Name) || _structs.ContainsKey(identity.Name) ||
                     _interfaces.ContainsKey(identity.Name) || ResolveEnum(identity) != null)) return Bound(resolved);
             if (ResolveNamespace(node) is { } space) return new(Namespace: space);
-            if (ResolveFunction(name) is { } method) { CheckNameofSourceAccess(method, method.Accessibility, node); return Bound(method.ReturnType) with { IsMethodGroup = true }; }
+            var callables = ResolveNamespaceCallables(name);
+            var methods = callables.Methods;
+            if (methods.Length != 0)
+            {
+                var method = methods.FirstOrDefault(candidate => candidate.Accessibility != TokenKind.Private || candidate.Span.SourceId == node.Span.SourceId) ?? methods[0];
+                CheckNameofSourceAccess(method, method.Accessibility, node);
+                // Naming a group does not bind a signature or an open return T.
+                return Bound(callables.IsMerged || method.IsGeneric ? Void : method.ReturnType) with { IsMethodGroup = true };
+            }
             if (ResolveExtern(name) is { } external) { ValidateExternAccess(external, node.Span); return Bound(external.ReturnType) with { IsMethodGroup = true }; }
             if (ResolveGlobalField(name) is { } field) { CheckNameofSourceAccess(field, field.Accessibility, node); return Bound(field.Type); }
             // Namespace properties are named even when they have no getter.

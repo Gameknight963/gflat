@@ -206,26 +206,6 @@ public partial class TypeChecker
         }
     }
 
-    private MethodDeclaration? ResolveGenericFunction(string name)
-    {
-        for (var scope = _currentNamespace; scope != null; scope = scope.Parent)
-        {
-            if (scope.GenericFunctions.TryGetValue(name, out var method)) return method;
-            // Lexical declarations shadow outer/imported callables regardless
-            // of whether the declaration is generic, ordinary, or external.
-            if (scope.Functions.ContainsKey(name) || scope.Externs.ContainsKey(name)) return null;
-        }
-        MethodDeclaration? found = null;
-        foreach (var imported in CurrentUsings)
-        {
-            var candidate = ResolveNamespaceByName(imported, _currentNamespace)?.GenericFunctions.GetValueOrDefault(name);
-            if (candidate == null) continue;
-            if (found != null && found != candidate) throw new TypeCheckException($"Generic function '{name}' is ambiguous between namespaces", 0);
-            found = candidate;
-        }
-        return found;
-    }
-
     private void AnalyzeSafely(Action action)
     {
         int scopes = _scopes.Count;

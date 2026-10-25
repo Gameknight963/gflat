@@ -10,14 +10,16 @@ public partial class TypeChecker
 
     private bool IsOverloadedFunctionValue(AstNode expression) =>
         _functionAddressTargets.TryGetValue(expression, out var target) && target is MethodDeclaration method &&
-        (method.IsGeneric || overloadFamilies.ContainsKey(method));
+        (method.IsGeneric || overloadFamilies.ContainsKey(method) || importedFunctionValueCandidates.ContainsKey(expression));
 
     private CallableOverloadCandidate[] MatchingFunctionValues(MethodDeclaration method, FunctionPointerTypeExpression expected, int line, AstNode expression)
     {
         var matches = new List<CallableOverloadCandidate>();
-        foreach (var candidate in overloadFamilies.TryGetValue(method, out var family) ? family : [method])
+        var definitions = FunctionValueDefinitions(method, expression);
+        var eligible = definitions.Where(candidate => candidate.Parameters.Count == expected.ParameterTypes.Count).ToArray();
+        bool importedCompetition = importedFunctionValueCandidates.ContainsKey(expression) && !SameDeclarationFamily(eligible);
+        foreach (var candidate in eligible)
         {
-            if (candidate.Parameters.Count != expected.ParameterTypes.Count) continue;
             using var context = EnterMethodSignatureContext(candidate);
             var names = candidate.GenericParameters.Select(parameter => parameter.Name).ToHashSet();
             var bindings = new Dictionary<string, TypeExpression>();
@@ -28,8 +30,7 @@ public partial class TypeChecker
                     consistent = InferCallableBindings(GenericFormalType(candidate, candidate.Parameters[i].Type), expected.ParameterTypes[i], names, bindings);
                 if (!consistent || candidate.GenericParameters.Any(parameter => !bindings.ContainsKey(parameter.Name))) continue;
                 if (candidate.GenericParameters.Any(parameter => parameter.Constraint != null &&
-                    !FunctionConstraintSatisfied(candidate, bindings[parameter.Name],
-                        SubstituteExtensionType(GenericFormalType(candidate, parameter.Constraint), bindings)))) continue;
+                    !FunctionValueConstraintSatisfied(candidate, parameter, bindings, importedCompetition))) continue;
             }
             var parameters = candidate.Parameters.Select(parameter => new Parameter(parameter.Name,
                 CallablePreviewType(candidate, BindCallableOwnerType(candidate, expression,
@@ -45,16 +46,34 @@ public partial class TypeChecker
             PreferCallableOverload(other, candidate))).ToArray();
     }
 
+    private bool FunctionValueConstraintSatisfied(MethodDeclaration candidate, GenericParameter parameter,
+        Dictionary<string, TypeExpression> bindings, bool importedCompetition)
+    {
+        var constraint = SubstituteExtensionType(GenericFormalType(candidate, parameter.Constraint!), bindings);
+        return !(importedCompetition && DeclaredConstraintSatisfied(bindings[parameter.Name], constraint) == false) &&
+            FunctionConstraintSatisfied(candidate, bindings[parameter.Name], constraint);
+    }
+
     private bool CanSelectFunctionValue(AstNode expression, TypeExpression expected)
         => ResolveAlias(expected) is FunctionPointerTypeExpression { IsSignature: false, IsManaged: false } signature &&
             _functionAddressTargets[expression] is MethodDeclaration method && MatchingFunctionValues(method, signature, expression.Line, expression).Length == 1;
+
+    // Only committed call argument validation invokes this diagnostic. Preview
+    // assignability and overload ranking retain their nonthrowing bool contract.
+    private void DiagnoseAmbiguousFunctionValue(AstNode expression, TypeExpression expected)
+    {
+        if (!_functionAddressTargets.TryGetValue(expression, out var target) || target is not MethodDeclaration method ||
+            ResolveAlias(expected) is not FunctionPointerTypeExpression { IsSignature: false, IsManaged: false } signature) return;
+        if (MatchingFunctionValues(method, signature, expression.Line, expression).Length > 1)
+            throw new TypeCheckException($"Function value '{DisplayName(method.Name)}' is ambiguous for the target function pointer signature", expression.Span);
+    }
 
     private void ValidateFunctionValueSelections()
     {
         foreach (var (expression, target) in _functionAddressTargets)
         {
             if (!selectedFunctionValues.Contains(expression) && target is MethodDeclaration method &&
-                (method.IsGeneric || overloadFamilies.TryGetValue(method, out var family) && family.Count > 1))
+                (method.IsGeneric || importedFunctionValueCandidates.ContainsKey(expression) || overloadFamilies.TryGetValue(method, out var family) && family.Count > 1))
                 throw new TypeCheckException($"Overloaded function '{method.Name}' requires a target function pointer signature", expression.Span);
             if (target is MethodDeclaration selected) ValidateNamespaceFunctionAccess(selected, expression.Span);
         }
@@ -65,7 +84,12 @@ public partial class TypeChecker
         var name = expression is UnaryExpression { Operator: TokenKind.Ampersand } address ? address.Operand : expression;
         AstNode? target = null;
         if (name is IdentifierExpression id)
-            target = (AstNode?)ResolveFunction(id.Name) ?? ResolveGenericFunction(id.Name) ?? (AstNode?)ResolveExtern(id.Name);
+        {
+            var group = ResolveNamespaceCallables(id.Name);
+            target = group.Methods.FirstOrDefault();
+            if (target != null && group.IsMerged) importedFunctionValueCandidates[expression] = group.Methods;
+            target ??= ResolveExtern(id.Name);
+        }
         else if (name is NamespaceAccessExpression access)
         {
             target = ResolveStaticMethod(access, deferSelection: true);
@@ -73,7 +97,7 @@ public partial class TypeChecker
                 target = (AstNode?)scope.Functions.GetValueOrDefault(access.Member) ?? scope.GenericFunctions.GetValueOrDefault(access.Member) ?? (AstNode?)scope.Externs.GetValueOrDefault(access.Member);
         }
         if (target == null) return false;
-        bool needsTarget = target is MethodDeclaration method && (method.IsGeneric || overloadFamilies.ContainsKey(method));
+        bool needsTarget = target is MethodDeclaration method && (method.IsGeneric || overloadFamilies.ContainsKey(method) || importedFunctionValueCandidates.ContainsKey(expression));
         if (!needsTarget) ValidateFunctionAddress(target, expression.Line);
         _functionAddressTargets[expression] = target;
         // A method group has no function signature until a target selects it.
@@ -94,7 +118,7 @@ public partial class TypeChecker
     {
         var target = _functionAddressTargets[expression];
         if (target is not MethodDeclaration method) return true;
-        if (!method.IsGeneric && !overloadFamilies.ContainsKey(method))
+        if (!method.IsGeneric && !overloadFamilies.ContainsKey(method) && !importedFunctionValueCandidates.ContainsKey(expression))
         {
             ValidateNamespaceFunctionAccess(method, expression.Span);
             return true;
@@ -115,6 +139,7 @@ public partial class TypeChecker
         if (genericArguments != null) selectedGenericFunctionValueArguments[expression] = genericArguments.ToArray();
         else selectedGenericFunctionValueArguments.Remove(expression);
         _functionAddressTargets[expression] = selected;
+        importedFunctionValueCandidates.Remove(expression);
         selectedFunctionValues.Add(expression);
         RecordType(expression, new FunctionPointerTypeExpression(expected.ReturnType,
             expected.ParameterTypes, false, false, expression.Line));

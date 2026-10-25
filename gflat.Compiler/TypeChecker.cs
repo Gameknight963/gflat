@@ -61,8 +61,13 @@ namespace gflat
         public bool IsConstVariable(string name) =>
             BoundConstantIsReadOnly(name);
 
-        public MethodDeclaration? ResolveFunctionForComptime(string name) =>
-            ResolveFunction(name);
+        public MethodDeclaration? ResolveFunctionForComptime(string name)
+        {
+            // Typed calls use GetResolvedCall. Name-only fallback cannot choose
+            // among imported declarations without their argument expressions.
+            var group = ResolveNamespaceCallables(name);
+            return group.IsMerged ? null : group.Methods.FirstOrDefault(method => !method.IsGeneric);
+        }
 
         private readonly NamespaceScope _globalScope = new();
         private NamespaceScope _currentNamespace
@@ -658,7 +663,7 @@ namespace gflat
                 return gType;
             }
 
-            if (ResolveFunction(name) != null || ResolveExtern(name) != null)
+            if (ResolveNamespaceCallables(name).Methods.Length != 0 || ResolveExtern(name) != null)
             {
                 ReportError($"Cannot use function '{name}' as a value without '&'. Did you mean '&{name}'?", line);
                 return Error;
@@ -4462,6 +4467,7 @@ namespace gflat
             string? funcName = null;
             MethodDeclaration? method = null;
             ExternDeclaration? ext = null;
+            bool importedOverloadSelected = false;
 
             if (node.Callee is MemberAccessExpression memberAccess)
             {
@@ -4667,15 +4673,16 @@ namespace gflat
                     }
                     _resolvedCalls[node] = method;
                 }
-                else if (ResolveGenericFunction(funcName) is MethodDeclaration genericMethod)
-                {
-                    // Resolve the complete family before inferring or checking a
-                    // specialization; the representative is not the chosen overload.
-                    method = genericMethod;
-                }
                 else
                 {
-                    method = ResolveFunction(funcName);
+                    var callables = ResolveNamespaceCallables(funcName);
+                    if (callables.IsMerged)
+                    {
+                        importedCallCandidates[node] = Array.AsReadOnly(callables.Methods);
+                        method = SelectImportedCallable(callables, node, funcName);
+                        importedOverloadSelected = true;
+                    }
+                    else method = callables.Methods.FirstOrDefault();
                     if (method != null && node.TypeArguments.Count > 0 &&
                         !method.IsGeneric && !(overloadFamilies.TryGetValue(method, out var callableFamily) && callableFamily.Any(m => m.IsGeneric)))
                     {
@@ -4715,7 +4722,7 @@ namespace gflat
                 throw new TypeCheckException($"Expression of type '{DisplayTypeName(GetType(node.Callee))}' is not callable", node.Callee.Span);
             }
 
-            if (method != null && !extensionTargets.ContainsKey(node)) method = SelectOverload(method, node);
+            if (method != null && !extensionTargets.ContainsKey(node) && !importedOverloadSelected) method = SelectOverload(method, node);
 
             if (method?.IsStatic == true && node.Callee is MemberAccessExpression)
                 throw new TypeCheckException($"Static method '{method.Name}' must be accessed through its type with '::'", node.Line);
@@ -4732,9 +4739,12 @@ namespace gflat
                     TypeExpression argType = GetType(node.Arguments[i]);
                     TypeExpression paramType = ext.Parameters[i].Type;
                     if (!IsAssignable(paramType, argType, node.Arguments[i]))
+                    {
+                        DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                         throw new TypeCheckException(
                             $"Argument {i + 1} of '{funcName}': cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
                             node.Arguments[i].Span);
+                    }
 
                     if (ext.Parameters[i].IsConst)
                     {
@@ -4792,6 +4802,7 @@ namespace gflat
                 TypeExpression paramType = ClearIncomingGenericContracts(method.Parameters[i].Type);
                 if (!IsAssignable(paramType, argType, node.Arguments[i]))
                 {
+                    DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                     string callable = method.PropertyName == null ? $"'{funcName}'" : DescribeSourceCallable(method);
                     throw new TypeCheckException(
                         $"Argument {i + 1} of {callable}: cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
@@ -4837,43 +4848,15 @@ namespace gflat
                 TypeExpression argType = GetType(node.Arguments[i]);
                 TypeExpression paramType = fnPtr.ParameterTypes[i];
                 if (!IsAssignable(paramType, argType, node.Arguments[i]))
+                {
+                    DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                     throw new TypeCheckException(
                         $"Argument {i + 1} of indirect call: cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
                         node.Arguments[i].Span);
+                }
             }
 
             RecordType(node, fnPtr.ReturnType);
-        }
-
-        private MethodDeclaration? ResolveFunction(string name)
-        {
-            NamespaceScope? scope = _currentNamespace;
-            while (scope != null)
-            {
-                if (scope.Functions.TryGetValue(name, out MethodDeclaration? method))
-                    return method;
-                if (scope.GenericFunctions.ContainsKey(name) || scope.Externs.ContainsKey(name))
-                    return null;
-                scope = scope.Parent;
-            }
-
-            MethodDeclaration? foundInUsing = null;
-            foreach (string usingNs in CurrentUsings)
-            {
-                NamespaceScope? nsScope = ResolveNamespaceByName(usingNs, _currentNamespace);
-                if (nsScope != null && nsScope.Functions.TryGetValue(name, out MethodDeclaration? candidate))
-                {
-                    if (foundInUsing != null && foundInUsing != candidate)
-                    {
-                        throw new TypeCheckException($"Call to function '{name}' is ambiguous between namespaces", 0);
-                    }
-                    foundInUsing = candidate;
-                }
-            }
-            if (foundInUsing != null)
-                return foundInUsing;
-
-            return null;
         }
 
         private ExternDeclaration? ResolveExtern(string name)

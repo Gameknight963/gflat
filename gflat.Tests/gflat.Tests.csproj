@@ -30,6 +30,7 @@
     <None Include="..\examples\seq\main.gf" Link="Examples\seq.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\tail\main.gf" Link="Examples\tail.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\big-calc\main.gf" Link="Examples\big-calc.gf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../examples/ratio-calc/main.gf" Link="Examples/ratio-calc.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\search\main.gf" Link="Examples\search.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\tasks\main.gf" Link="Examples\tasks.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\hexdump\main.gf" Link="Examples\hexdump.gf" CopyToOutputDirectory="PreserveNewest" />

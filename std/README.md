@@ -135,6 +135,8 @@ Applications reference the Windows or Linux source project explicitly.
 - [Check JSON documents](../examples/json-check/README.md): forward-only validation and nesting statistics without building a DOM.
 - [Minify JSON documents](../examples/json-minify/README.md): validate first, then write compact JSON while preserving duplicate names, property order, and number spelling.
 - [Number statistics](../examples/number-stats/README.md): bounded stdin lines, borrowed ASCII trimming, strict integer parsing, and an exact 128-bit running sum.
+- [Integer arithmetic](../examples/big-calc/README.md): exact BigInteger calculations, greatest common divisors, and least common multiples.
+- [Fraction arithmetic](../examples/ratio-calc/README.md): normalize and calculate with exact Rational values from integer or fraction operands.
 - [Sort lines](../examples/sort-lines/README.md): move owning strings into a vector, sort by unsigned byte order, and preserve counted output.
 - [Settings to JSON](../examples/settings-json/README.md): parse borrowed key/value slices, validate UTF-8, and retain accepted strings in an owning map.
 - [Extract a CSV column](../examples/csv-column/README.md): validate first, then preserve counted field bytes in a binary one-column CSV file.

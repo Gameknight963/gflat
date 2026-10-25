@@ -75,7 +75,7 @@ public sealed class StandardZigZagTests
     [InlineData(2)]
     public void SignedMappingMatchesIndependentArithmeticAndComposesWithUnsignedCodec(int optimization)
     {
-        var code = new StringBuilder("using std; int main() nothrow {\n");
+        var code = new StringBuilder("using std; using std::Binary; int main() nothrow {\n");
         code.AppendLine(Corpus(false));
         code.AppendLine(Corpus(true));
         code.AppendLine("return 0; }");

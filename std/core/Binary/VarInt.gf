@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Binary;
 
 // Canonical unsigned base-128 integers, least-significant group first, plus ZigZag.
 // Metadata refs must not overlap buffers or one another. Zero counts do not

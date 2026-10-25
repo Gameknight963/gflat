@@ -1,6 +1,6 @@
 # Floating-point representation
 
-`std::BitConverter` reinterprets IEEE binary32 and binary64 representations:
+`std::Binary::BitConverter` reinterprets IEEE binary32 and binary64 representations:
 
 | Function | Result |
 | --- | --- |
@@ -10,8 +10,9 @@
 | `UInt64BitsToDouble(ulong bits)` | A `double` with exactly those bits. |
 
 ```csharp
-uint negativeZero = std::BitConverter::FloatToUInt32Bits(-0.0f); // 0x80000000
-float restored = std::BitConverter::UInt32BitsToFloat(negativeZero);
+using std::Binary;
+uint negativeZero = std::Binary::BitConverter::FloatToUInt32Bits(-0.0f); // 0x80000000
+float restored = std::Binary::BitConverter::UInt32BitsToFloat(negativeZero);
 ```
 
 These are bit reinterpretations, rather than numeric casts. For example,

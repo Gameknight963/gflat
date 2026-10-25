@@ -12,7 +12,7 @@ public sealed class StandardFloatingBinaryTests
         if (!OperatingSystem.IsWindows() || RuntimeInformation.ProcessArchitecture != Architecture.X64) return;
         SourceFile[] sources = [
             new("BinaryPrimitives.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Binary/BinaryPrimitives.gf"))),
-            new("main.gf", "int main() { byte[4] data; if (!std::BinaryPrimitives::TryWriteUInt32BigEndian(data, 4, 123u)) return 1; return 0; }")
+            new("main.gf", "int main() { byte[4] data; if (!std::Binary::BinaryPrimitives::TryWriteUInt32BigEndian(data, 4, 123u)) return 1; return 0; }")
         ];
         string directory = Path.Combine(Path.GetTempPath(), "gflat-ieee-marker-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -117,7 +117,7 @@ public sealed class StandardFloatingBinaryTests
     [InlineData(2)]
     public void UnalignedPrimitiveReadsAndWritesMatchDotNetForEveryIeeeCategoryAndRandomBits(int optimization)
     {
-        var code = new StringBuilder("using std; int main() {\n");
+        var code = new StringBuilder("using std; using std::Binary; int main() {\n");
         foreach (bool wide in new[] { false, true })
         foreach (bool little in new[] { false, true })
         {
@@ -164,7 +164,7 @@ public sealed class StandardFloatingBinaryTests
     [InlineData(2)]
     public void CursorsPreserveBitsAndOnlyAdvanceForCompleteValues(int optimization)
     {
-        var code = new StringBuilder("using std; int main() {\n");
+        var code = new StringBuilder("using std; using std::Binary; int main() {\n");
         foreach (bool wide in new[] { false, true })
         foreach (bool little in new[] { false, true })
         {

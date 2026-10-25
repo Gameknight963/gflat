@@ -1,12 +1,12 @@
 # Binary scalar buffers
 
-`std::BinaryPrimitives` reads and writes signed and unsigned 16-, 32-, and 64-bit integers,
+`std::Binary::BinaryPrimitives` reads and writes signed and unsigned 16-, 32-, and 64-bit integers,
 signed 128-bit `extralong`,
 32-bit `float`, and 64-bit `double` in explicitly selected little- or big-endian byte order. The operations do not
 depend on native alignment, host endianness, or the platform's C `long` width.
 
 ```csharp
-using std;
+using std; using std::Binary;
 byte[8] data;
 bool written = BinaryPrimitives::TryWriteUInt32BigEndian(data, 8, 305419896u);
 uint value = 0u;

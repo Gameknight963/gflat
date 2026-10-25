@@ -37,7 +37,7 @@ public sealed class StandardBinary128Tests
                     writer.Write(bytes);
                 }
             string program = $$"""
-                using std;
+                using std; using std::Binary;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode) nothrow;
                 extern nuint fread(void* data,nuint size,nuint count,void* stream) nothrow;
                 extern int fclose(void* stream) nothrow;extern int ferror(void* stream) nothrow;
@@ -103,7 +103,7 @@ public sealed class StandardBinary128Tests
         try
         {
             Run(directory, """
-                using std;
+                using std; using std::Binary;
                 int main(){
                     readonly(byte)* unreadable=(readonly(byte)*)1;byte* unwritable=(byte*)1;
                     extralong value=(extralong)99;extralong[4] aligned;byte* raw=(byte*)&aligned[0];

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Binary;
 
 // Preserve IEEE floating-point representation, without numeric conversion.
 public static class BitConverter

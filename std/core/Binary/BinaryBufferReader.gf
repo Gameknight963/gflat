@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Binary;
 
 // Borrows counted bytes. Copies retain independent positions over the same storage.
 public struct BinaryBufferReader

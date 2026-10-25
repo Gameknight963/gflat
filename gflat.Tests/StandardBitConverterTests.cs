@@ -24,7 +24,7 @@ public class StandardBitConverterTests
         Assert.Equal(floats, floatReference);
         Assert.Equal(doubles, doubleReference);
         string code = $$"""
-            using std;
+            using std; using std::Binary;
             int main() {
                 uint[{{floats.Length}}] singles = [{{string.Join(",", floats.Select(bits => bits + "u"))}}];
                 uint[{{floatReference.Length}}] expectedSingles = [{{string.Join(",", floatReference.Select(bits => bits + "u"))}}];

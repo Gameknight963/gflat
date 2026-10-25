@@ -10,7 +10,7 @@ public class StandardBinaryReadAliasTests
     [InlineData(2)]
     public void UnsignedReadsComputeBeforeAssigningAnOverlappingOutput(int optimization)
     {
-        var code = new StringBuilder("using std; int main(){");
+        var code = new StringBuilder("using std; using std::Binary; int main(){");
         foreach (int width in new[] { 2, 4, 8 })
         foreach (bool little in new[] { true, false })
         {

@@ -31,7 +31,7 @@ public sealed class StandardBinaryCursorVarIntTests
                 output.WriteByte((byte)encoded.Length);output.Write(encoded);output.Write(new byte[10-encoded.Length]);
             }
             Run($$"""
-                using std;extern void* fopen(readonly(char)* path,readonly(char)* mode);
+                using std; using std::Binary;extern void* fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* output,nuint size,nuint count,void* file);extern int fclose(void* file);
                 int allocations=0;
                 namespace Memory{public replace void*? Allocate(nuint size){allocations++;return null;}public replace void Free(void* pointer) nothrow{} }
@@ -83,7 +83,7 @@ public sealed class StandardBinaryCursorVarIntTests
     [InlineData(2)]
     public void EmptyInvalidAndAliasedResultsRespectCommitRules(int optimization)
         => Run("""
-            using std;
+            using std; using std::Binary;
             int main(){
                 BinaryBufferReader empty=new();BinaryBufferWriter writer=new();uint small=42u;ulong big=43ul;
                 if(empty.ReadVarUInt32(ref small)!=VarInt::Status::NeedMore||small!=42u||empty.Position!=0)return 1;
@@ -120,7 +120,7 @@ public sealed class StandardBinaryCursorVarIntTests
     public void OptionalIntegrationIsNothrowWithoutAllocatorOrExceptionContracts()
     {
         string ir=Compiler.Emit(Sources("""
-            using std;
+            using std; using std::Binary;
             bool Roundtrip(ref BinaryBufferReader reader,ref BinaryBufferWriter writer,ref ulong value)nothrow{
                 if(reader.ReadVarUInt64(ref value)!=VarInt::Status::Done)return false;
                 return writer.TryWriteVarUInt64(value);

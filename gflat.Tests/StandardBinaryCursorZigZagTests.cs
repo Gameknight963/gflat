@@ -165,7 +165,7 @@ public sealed class StandardBinaryCursorZigZagTests
     public void SelectiveSignedCursorContractUsesNothrowCallsWithoutAllocatorOrExceptionServices()
     {
         string ir=Emit("""
-            using std;
+            using std; using std::Binary;
             bool Convert(ref BinaryBufferReader reader,ref BinaryBufferWriter writer,ref int small,ref long big)nothrow{
                 VarInt::Status a=reader.ReadZigZagInt32(ref small);VarInt::Status b=reader.ReadZigZagInt64(ref big);
                 bool c=writer.TryWriteZigZagInt32(small);bool d=writer.TryWriteZigZagInt64(big);
@@ -191,7 +191,7 @@ public sealed class StandardBinaryCursorZigZagTests
         return bytes.ToArray();
     }
     private const string NoAllocation="""
-        using std;
+        using std; using std::Binary;
         int allocations=0;
         namespace Memory{public void*? Allocate(nuint count){allocations++;return null;}public void Free(void* value)nothrow{}}
         """;

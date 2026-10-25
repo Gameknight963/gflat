@@ -20,7 +20,7 @@ public sealed class StandardBinaryCursor128Tests
             foreach (byte b in row) expected = unchecked((expected ^ b) * 1099511628211ul);
         }
         Run($$"""
-            using std;
+            using std; using std::Binary;
             int main() {
                 extralong[6] values = [(extralong)0, (extralong)1, (extralong)-1,
                     (extralong)1 << 127, ((extralong)1 << 127) ^ (extralong)-1,
@@ -66,7 +66,7 @@ public sealed class StandardBinaryCursor128Tests
     [InlineData(2)]
     public void ShortRegionsAvoidPointerAccessAndReadsAllowAlignedOverlappingOutputs(int optimization)
         => Run("""
-            using std;
+            using std; using std::Binary;
             int main() {
                 byte[20] bytes;
                 for(nuint count=0;count<16;count++) {

@@ -16,7 +16,7 @@ public sealed class StandardBinaryCursorBulkTests
             foreach(byte value in bytes)expected=unchecked((expected^value)*1099511628211ul);
         }
         Run($$"""
-            using std;
+            using std; using std::Binary;
             int main(){ulong hash=14695981039346656037ul;byte[18] bytes;byte* buffer=bytes;
                 for(int mode=0;mode<2;mode++)for(nuint source=0;source<16;source++)for(nuint destination=0;destination<16;destination++){
                     nuint limit=source;if(destination>limit)limit=destination;
@@ -39,7 +39,7 @@ public sealed class StandardBinaryCursorBulkTests
     [InlineData(2)]
     public void BoundsFailuresAndZeroCountsDoNotAccessPointersOrChangeBytes(int optimization)
         => Run("""
-            using std;
+            using std; using std::Binary;
             int main(){
                 BinaryBufferReader emptyRead=new();BinaryBufferWriter emptyWrite=new();
                 if(!emptyRead.TryReadBytes((byte*)1,0)||!emptyWrite.TryWriteBytes((readonly(byte)*)1,0))return 1;

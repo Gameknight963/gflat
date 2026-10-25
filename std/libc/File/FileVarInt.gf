@@ -1,3 +1,4 @@
+using std::Binary;
 namespace std;
 
 // Optional canonical base-128 integers on borrowed File streams.

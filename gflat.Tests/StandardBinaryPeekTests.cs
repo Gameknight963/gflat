@@ -13,7 +13,7 @@ public sealed class StandardBinaryPeekTests
         new Random(71942).Shuffle(values.AsSpan());
         string oracle=string.Join(',',values.Select(value=>"(byte)"+value));
         await Run($$"""
-            using std;
+            using std; using std::Binary;
             int main(){
                 byte[256] oracle=[{{oracle}}];byte[258] data;
                 data[0]=(byte)165;data[257]=(byte)90;
@@ -60,7 +60,7 @@ public sealed class StandardBinaryPeekTests
     [InlineData(2)]
     public async Task EmptyAndEndZeroOutputWithoutReadingAndProtectedReceiversRemainValidObservers(int optimization)
         =>await Run("""
-            using std;
+            using std; using std::Binary;
             bool ReadOnly(readonly(BinaryBufferReader)* reader,ref byte value) nothrow=>reader.TryPeekByte(ref value);
             bool DeepImmutable(immutable(BinaryBufferReader)* reader,ref byte value) nothrow=>reader.TryPeekByte(ref value);
             int main(){

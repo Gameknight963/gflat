@@ -41,7 +41,7 @@ public sealed class StandardVarIntTests
         byte[][] encoded = values.Select(Encode).ToArray();
         string type = wide ? "ulong" : "uint", suffix = wide ? "ul" : "u", name = wide ? "UInt64" : "UInt32";
         return $$"""
-            using std;
+            using std; using std::Binary;
             int main() {
                 {{type}}[{{values.Count}}] values = [{{string.Join(",", values.Select(v => v + suffix))}}];
                 byte[{{encoded.Sum(bytes => bytes.Length) + 1}}] expected = [{{string.Join(",", encoded.SelectMany(bytes => bytes).Append((byte)255).Select(value => "(byte)" + value))}}];
@@ -92,7 +92,7 @@ public sealed class StandardVarIntTests
     public void OverflowNoncanonicalAndEmptyInputsPreserveValue(int optimization)
     {
         Run("""
-            using std;
+            using std; using std::Binary;
             int main() {
                 byte[11] input;
                 for (nuint i = 0; i < 11; i++) input[i] = (byte)128;

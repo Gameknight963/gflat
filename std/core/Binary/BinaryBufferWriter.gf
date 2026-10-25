@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Binary;
 
 // Borrows writable bytes. Reset changes position, without clearing caller storage.
 public struct BinaryBufferWriter

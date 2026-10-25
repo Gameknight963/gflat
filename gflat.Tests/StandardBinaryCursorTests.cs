@@ -17,7 +17,7 @@ public class StandardBinaryCursorTests
         BinaryPrimitives.WriteInt16LittleEndian(expected.AsSpan(15), -7);
         string checks = string.Join("\n", expected.Select((value, index) => $"if(data[{index + 1}]!=(byte){value})return 10;"));
         Run($$"""
-            using std;
+            using std; using std::Binary;
             int main() {
                 byte[20] data;
                 for (int i=0;i<20;i++)data[i]=(byte)165;
@@ -53,7 +53,7 @@ public class StandardBinaryCursorTests
     [InlineData(2)]
     public void EveryFixedWidthOperationAdvancesOnlyOnSuccessAndChecksCapacityBeforeWriting(int optimization)
     {
-        var code = new StringBuilder("using std; int main(){byte[12] bytes;");
+        var code = new StringBuilder("using std; using std::Binary; int main(){byte[12] bytes;");
         foreach (int width in new[] { 2, 4, 8 })
         foreach (bool signed in new[] { true, false })
         foreach (bool little in new[] { true, false })
@@ -85,7 +85,7 @@ public class StandardBinaryCursorTests
     [InlineData(2)]
     public void EmptyResetCopiesSlicesAndMaximalSkipMaintainIndependentBoundedPositions(int optimization)
         => Run("""
-            using std;
+            using std; using std::Binary;
             int main() {
                 BinaryBufferReader emptyRead=new(); BinaryBufferWriter emptyWrite=new();
                 if(emptyRead.Data!=null||emptyWrite.Data!=null)return 15;

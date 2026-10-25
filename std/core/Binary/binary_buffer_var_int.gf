@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Binary;
 
 VarInt::Status ReadVarUInt32(this ref BinaryBufferReader reader, ref uint value) nothrow
 {

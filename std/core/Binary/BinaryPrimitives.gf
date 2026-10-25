@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Binary;
 
 // Unaligned, explicitly ordered integers. Counts describe readable/writable bytes.
 public static class BinaryPrimitives

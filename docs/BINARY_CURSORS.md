@@ -1,12 +1,12 @@
 # Borrowed binary buffer cursors
 
-`std::BinaryBufferReader` and `std::BinaryBufferWriter` track a position within
+`std::Binary::BinaryBufferReader` and `std::Binary::BinaryBufferWriter` track a position within
 caller-owned bytes. They do not own storage, allocate, or directly call libc. All
 constructors, properties, and methods are `nothrow`. Include their respective
 source files, `core/Binary/BinaryPrimitives.gf`, and `core/Memory/Bytes.gf`.
 
 ```csharp
-using std;
+using std; using std::Binary;
 byte[16] bytes;
 BinaryBufferWriter writer = new(bytes, 16);
 writer.TryWriteUInt16BigEndian((ushort)7);
@@ -100,6 +100,7 @@ without adding that dependency to the cursor source files. Include it and
 `Binary/VarInt.gf` when selecting sources individually.
 
 ```csharp
+using std::Binary;
 bool TryWriteVarUInt32(this ref BinaryBufferWriter writer, uint value) nothrow;
 bool TryWriteVarUInt64(this ref BinaryBufferWriter writer, ulong value) nothrow;
 VarInt::Status ReadVarUInt32(this ref BinaryBufferReader reader, ref uint value) nothrow;
@@ -128,6 +129,7 @@ their previous output and position on `NeedMore` or `Invalid`, and signed writes
 leave every byte and position unchanged when capacity is insufficient.
 
 ```csharp
+using std::Binary;
 byte[10] buffer;
 BinaryBufferWriter writer = new(buffer, 10);
 bool written = writer.TryWriteVarUInt32(300u);
@@ -146,7 +148,7 @@ unsigned metadata before committing the signed result, with the same output
 alias restrictions as the unsigned helpers.
 
 ```csharp
-using std;
+using std; using std::Binary;
 int main()
 {
     byte[10] bytes;

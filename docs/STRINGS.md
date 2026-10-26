@@ -56,7 +56,7 @@ zero. Search patterns may borrow the string's own storage. Forward character
 search also accepts a start offset. Invalid start and
 substring/removal ranges throw instead of wrapping pointer-sized arithmetic.
 
-Substring searches reuse `std::ByteSearch`'s Two-Way search with constant extra
+Substring searches reuse `std::Text::ByteSearch`'s Two-Way search with constant extra
 storage, no allocation, and O(string length + pattern length) worst-case work.
 Character search is linear. Explicit source selections containing `String.gf`
 must also include `Text/ByteSearch.gf`; projects referencing the complete standard

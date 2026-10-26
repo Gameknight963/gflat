@@ -93,7 +93,7 @@ public sealed class StandardBigIntegerConversionTests
     public void PublicTryDefinitionsAndCallsRetainTheirNothrowContract()
     {
         string ir=Compiler.Emit(Sources("""
-            using std; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
+            using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
             bool Convert(immutable(BigInteger)* value,ref long signedValue,ref ulong unsignedValue)nothrow{
                 bool first=value.TryToLong(ref signedValue);bool second=value.TryToULong(ref unsignedValue);return first&&second;
             }
@@ -152,7 +152,7 @@ public sealed class StandardBigIntegerConversionTests
         finally{await TestDirectoryCleanup.DeleteAsync(directory);}
     }
     private const string Counters="""
-        using std; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
+        using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
         extern void*? malloc(nuint count);extern void free(void* value);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{

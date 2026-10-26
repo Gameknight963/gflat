@@ -38,7 +38,7 @@ public sealed class StandardByteSearchAnyTests
             rows.AddRange([one.First,one.Last,many.First,many.Last]);
         }
         await Run($$"""
-            using std;
+            using std; using std::Text;
             int main(){
                 byte[514] input;byte[3] pattern;
                 input[0]=(byte)90;input[513]=(byte)165;
@@ -86,7 +86,7 @@ public sealed class StandardByteSearchAnyTests
             overlapping.AddRange([start,length,patternStart,count,expected.First,expected.Last]);
         }
         await Run($$"""
-            using std;
+            using std; using std::Text;
             int main(){
                 byte[256] input=[{{Bytes(input)}}];byte[320] pattern=[{{Bytes(pattern)}}];
                 byte[256] inputBefore;byte[320] patternBefore;
@@ -119,7 +119,7 @@ public sealed class StandardByteSearchAnyTests
     [InlineData(2)]
     public async Task EmptySidesReadNeitherPointerAndRegionBoundsAreCounted(int optimization)
         =>await Run("""
-            using std;
+            using std; using std::Text;
             int main(){
                 readonly(byte)* invalid=(readonly(byte)*)1;nuint maximum=(nuint)0-(nuint)1;
                 if(ByteSearch::IndexOfAny(invalid,0,invalid,maximum)!=0)return 1;

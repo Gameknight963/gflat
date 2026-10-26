@@ -21,7 +21,7 @@ public sealed class StandardCStringCopyTests
             expected.AddRange(bytes);
         }
         string program = $$"""
-            using std;
+            using std; using std::Text;
             int main() {
                 nuint[{{cases.Length}}] sources = [{{string.Join(",", cases.Select(item => "(nuint)" + item.source))}}];
                 nuint[{{cases.Length}}] targets = [{{string.Join(",", cases.Select(item => "(nuint)" + item.target))}}];
@@ -58,7 +58,7 @@ public sealed class StandardCStringCopyTests
     public void EmptyZeroCapacityEmbeddedNullsAndDisjointHighBytesHaveExactBounds(int optimization)
     {
         Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 char*? absent = null;
                 if (CString::TryCopy(absent!, absent!, 0)) return 1;

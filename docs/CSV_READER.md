@@ -13,7 +13,7 @@ names may contain commas or doubled quotes. Only the numeric column is decoded
 into a caller-owned buffer; numeric parsing and column-count policy remain explicit.
 
 ```csharp
-using std; using std::Csv;
+using std; using std::Text; using std::Csv;
 
 int main()
 {
@@ -119,7 +119,7 @@ The optional `CsvReaderText` convenience decodes into an initialized `String`,
 reusing its capacity between fields:
 
 ```csharp
-using std; using std::Csv;
+using std; using std::Text; using std::Csv;
 int main()
 {
     readonly(char)* input = "first,\"two\"\"quotes\"";

@@ -94,7 +94,7 @@ public sealed class StandardAdapterShrinkTests
     }
 
     private const string Common = """
-        using std; using std::Collections;
+        using std; using std::Text; using std::Collections;
         bool deny = false; bool failNext = false;
         int attempts = 0; int allocated = 0; int freed = 0;
         int made = 0; int dead = 0; int comparisons = 0;

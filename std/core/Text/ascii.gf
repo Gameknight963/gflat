@@ -1,4 +1,4 @@
-namespace std::Ascii;
+namespace std::Text::Ascii;
 
 // char stores one byte. These operations classify ASCII, never UTF-8 scalars.
 bool IsAscii(char value) nothrow => (byte)value < (byte)128;

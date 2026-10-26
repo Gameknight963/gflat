@@ -9,7 +9,7 @@ public sealed class StandardByteSearchTests
     [InlineData(2)]
     public void ExhaustiveSmallBinaryInputsMatchIndependentNaiveSearch(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int main() {
                 byte[10] input; byte[8] pattern;
                 for(nuint length=0;length<=8;length++) {
@@ -47,7 +47,7 @@ public sealed class StandardByteSearchTests
         var random=new Random(71931);
         byte[] input=new byte[512];random.NextBytes(input);
         for(int i=0;i<256;i++)input[i]=(byte)i;
-        var code=new StringBuilder("using std; using std::Collections;int main(){byte[512] input;byte[96] pattern;\n");
+        var code=new StringBuilder("using std; using std::Text; using std::Collections;int main(){byte[512] input;byte[96] pattern;\n");
         for(int i=0;i<input.Length;i++)code.AppendLine($"input[{i}]=(byte){input[i]};");
         for(int trial=0;trial<80;trial++)
         {
@@ -69,7 +69,7 @@ public sealed class StandardByteSearchTests
     [InlineData(2)]
     public void LongPeriodicPatternsAndRegionLimitsHaveDefinedResults(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int main() {
                 byte[262144] input;byte[8192] pattern;
                 for(nuint i=0;i<262144;i++)input[i]=(byte)97;

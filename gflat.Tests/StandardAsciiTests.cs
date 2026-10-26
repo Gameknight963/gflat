@@ -29,10 +29,10 @@ public class StandardAsciiTests
                 ["IsPrintable"] = value is >= 32 and <= 126,
             };
             foreach (var (method, result) in expected)
-                checks.Add($"if (std::Ascii::{method}((char){value}) != {result.ToString().ToLowerInvariant()}) return 1;");
-            checks.Add($"if ((byte)std::Ascii::ToLower((char){value}) != (byte){(upper ? value + 32 : value)}) return 2;");
-            checks.Add($"if ((byte)std::Ascii::ToUpper((char){value}) != (byte){(lower ? value - 32 : value)}) return 3;");
-            checks.Add($"digit = (byte)99; if (std::Ascii::TryHexValue((char){value}, &digit) != {hex.ToString().ToLowerInvariant()}) return 4;");
+                checks.Add($"if (std::Text::Ascii::{method}((char){value}) != {result.ToString().ToLowerInvariant()}) return 1;");
+            checks.Add($"if ((byte)std::Text::Ascii::ToLower((char){value}) != (byte){(upper ? value + 32 : value)}) return 2;");
+            checks.Add($"if ((byte)std::Text::Ascii::ToUpper((char){value}) != (byte){(lower ? value - 32 : value)}) return 3;");
+            checks.Add($"digit = (byte)99; if (std::Text::Ascii::TryHexValue((char){value}, &digit) != {hex.ToString().ToLowerInvariant()}) return 4;");
             int decoded = digit ? value - 48 : value is >= 65 and <= 70 ? value - 55 : value is >= 97 and <= 102 ? value - 87 : 0;
             checks.Add($"if (digit != (byte){decoded}) return 5;");
         }
@@ -42,5 +42,5 @@ public class StandardAsciiTests
 
     [Fact]
     public void AsciiUtilitiesCompileWithoutStandardLibraryDefinitions()
-        => Compiler.Emit(Sources("int main() => (int)(byte)std::Ascii::ToLower('A');"), options: new() { NoStdLib = true });
+        => Compiler.Emit(Sources("int main() => (int)(byte)std::Text::Ascii::ToLower('A');"), options: new() { NoStdLib = true });
 }

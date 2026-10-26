@@ -21,7 +21,7 @@ using std::Collections;
 // TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 // SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-namespace std;
+namespace std::Text;
 
 // Two-Way factorization/search adapted from musl src/string/memmem.c.
 // See docs/BYTE_SEARCH.md for the upstream MIT license and algorithm reference.

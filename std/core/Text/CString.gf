@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Borrowed null-terminated byte strings; no encoding or ownership is implied.
 public static class CString

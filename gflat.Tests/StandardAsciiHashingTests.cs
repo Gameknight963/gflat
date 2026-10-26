@@ -32,7 +32,7 @@ public sealed class StandardAsciiHashingTests
         }
         string hex = Convert.ToHexString(packet.ToArray());
         string program = $$$"""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int attempts = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { attempts++; return null; }
@@ -104,7 +104,7 @@ public sealed class StandardAsciiHashingTests
     public void MatchingBorrowedKeyEqualityFindsOriginalSpellingWithoutExtraAllocation(int optimization)
     {
         Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             extern void*? malloc(nuint count);
             extern void free(void* storage);
             int attempts = 0;
@@ -171,7 +171,7 @@ public sealed class StandardAsciiHashingTests
     {
         SourceFile[] sources = [
             new("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/ascii.gf"))),
-            new("ascii-hash-only.gf", "nuint Observe(readonly(char)* data,nuint count)nothrow=>std::Ascii::HashIgnoreCase(data,count);int main()=>0;")
+            new("ascii-hash-only.gf", "nuint Observe(readonly(char)* data,nuint count)nothrow=>std::Text::Ascii::HashIgnoreCase(data,count);int main()=>0;")
         ];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotContain("__gflat_eh_", ir);

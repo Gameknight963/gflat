@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardRuneTests
 {
     private const string Allocator="""
-        using std; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Text; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failAt=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(failAt!=0&&attempts==failAt)return null;void*? value=malloc(count);if(value!=null)allocations++;return value;}
@@ -18,7 +18,7 @@ public sealed class StandardRuneTests
     {
         uint[] scalars=Scalars(300);var encoded=Bytes(scalars);
         Run($$"""
-            using std; using std::Queries; using std::Collections;int allocations=0;
+            using std; using std::Text; using std::Queries; using std::Collections;int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
             int main(){
                 uint[{{scalars.Length}}] scalars=[{{string.Join(',',scalars.Select(value=>value+"u"))}}];

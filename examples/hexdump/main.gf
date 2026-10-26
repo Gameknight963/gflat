@@ -1,3 +1,4 @@
+using std::Text;
 using std::IO;
 using std::Encoding;
 using std;
@@ -25,7 +26,7 @@ void PrintRow(ulong offset, readonly(char)* bytes, nuint count)
         char display = ' ';
         if (column < count) {
             display = bytes[column];
-            if (!std::Ascii::IsPrintable(display)) display = '.';
+            if (!std::Text::Ascii::IsPrintable(display)) display = '.';
         }
         output.Write(&display, 1);
     }

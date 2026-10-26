@@ -43,11 +43,11 @@ public sealed class StandardAsciiComparisonTests
                         int expected = 0;
                         if (folded[i] < folded[j]) expected = -1;
                         if (folded[i] > folded[j]) expected = 1;
-                        if (std::Ascii::CompareIgnoreCase(&left, 1, &right, 1) != expected) return 1;
-                        if (std::Ascii::EqualsIgnoreCase(&left, 1, &right, 1) != (expected == 0)) return 2;
+                        if (std::Text::Ascii::CompareIgnoreCase(&left, 1, &right, 1) != expected) return 1;
+                        if (std::Text::Ascii::EqualsIgnoreCase(&left, 1, &right, 1) != (expected == 0)) return 2;
                         cLeft[0]=left;cRight[0]=right;
-                        if (std::Ascii::CompareIgnoreCase(cLeft,cRight) != expected) return 3;
-                        if (std::Ascii::EqualsIgnoreCase(cLeft,cRight) != (expected == 0)) return 4;
+                        if (std::Text::Ascii::CompareIgnoreCase(cLeft,cRight) != expected) return 3;
+                        if (std::Text::Ascii::EqualsIgnoreCase(cLeft,cRight) != (expected == 0)) return 4;
                     }
                 }
                 return 0;
@@ -79,21 +79,21 @@ public sealed class StandardAsciiComparisonTests
             for (int i = 0; i < left.Length; i++) code.AppendLine($"left[{i}] = (char){(int)left[i]};");
             for (int i = 0; i < right.Length; i++) code.AppendLine($"right[{i}] = (char){(int)right[i]};");
             int expected = Math.Sign(string.Compare(left, right, StringComparison.OrdinalIgnoreCase));
-            code.AppendLine($"if (std::Ascii::CompareIgnoreCase(left, {left.Length}, right, {right.Length}) != {expected}) return 3;");
-            code.AppendLine($"if (std::Ascii::EqualsIgnoreCase(left, {left.Length}, right, {right.Length}) != {(expected == 0 ? "true" : "false")}) return 4;");
+            code.AppendLine($"if (std::Text::Ascii::CompareIgnoreCase(left, {left.Length}, right, {right.Length}) != {expected}) return 3;");
+            code.AppendLine($"if (std::Text::Ascii::EqualsIgnoreCase(left, {left.Length}, right, {right.Length}) != {(expected == 0 ? "true" : "false")}) return 4;");
             code.AppendLine($"left[{left.Length}]='\\0';right[{right.Length}]='\\0';");
             int cExpected=Math.Sign(string.Compare(left.Split('\0')[0],right.Split('\0')[0],StringComparison.OrdinalIgnoreCase));
-            code.AppendLine($"if(std::Ascii::CompareIgnoreCase(left,right)!={cExpected})return 10;");
-            code.AppendLine($"if(std::Ascii::EqualsIgnoreCase(left,right)!={(cExpected==0 ? "true" : "false")})return 11;");
+            code.AppendLine($"if(std::Text::Ascii::CompareIgnoreCase(left,right)!={cExpected})return 10;");
+            code.AppendLine($"if(std::Text::Ascii::EqualsIgnoreCase(left,right)!={(cExpected==0 ? "true" : "false")})return 11;");
         }
         code.AppendLine("""
             readonly(char)*? absent = null;
             readonly(char)* nowhere = absent!;
-            if (std::Ascii::CompareIgnoreCase(nowhere, 0, nowhere, 0) != 0) return 5;
-            if (!std::Ascii::EqualsIgnoreCase(nowhere, 0, nowhere, 0)) return 6;
-            if (std::Ascii::CompareIgnoreCase(nowhere, 0, left, 1) != -1) return 7;
-            if (std::Ascii::CompareIgnoreCase(right, 1, nowhere, 0) != 1) return 8;
-            if (std::Ascii::EqualsIgnoreCase(nowhere, 0, left, 1)) return 9;
+            if (std::Text::Ascii::CompareIgnoreCase(nowhere, 0, nowhere, 0) != 0) return 5;
+            if (!std::Text::Ascii::EqualsIgnoreCase(nowhere, 0, nowhere, 0)) return 6;
+            if (std::Text::Ascii::CompareIgnoreCase(nowhere, 0, left, 1) != -1) return 7;
+            if (std::Text::Ascii::CompareIgnoreCase(right, 1, nowhere, 0) != 1) return 8;
+            if (std::Text::Ascii::EqualsIgnoreCase(nowhere, 0, left, 1)) return 9;
             return 0;
             }
             """);

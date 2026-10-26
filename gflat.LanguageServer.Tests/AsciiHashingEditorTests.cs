@@ -8,7 +8,7 @@ public sealed class AsciiHashingEditorTests
     [Fact]
     public void CountedHashUsesTheActualAsciiNamespaceDeclarationAndNoThrowSignature()
     {
-        const string text = "nuint Probe(readonly(char)* data,nuint count)nothrow=>std::Ascii::HashIgnoreCase(data,count);";
+        const string text = "nuint Probe(readonly(char)* data,nuint count)nothrow=>std::Text::Ascii::HashIgnoreCase(data,count);";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "ascii.gf");

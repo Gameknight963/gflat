@@ -17,7 +17,7 @@ public sealed class StandardBufferWriterTryTests
     public void OverflowIsAtomicAndExactCapacityPreservesEmbeddedZerosAndGuards(int optimization)
     {
         Run("""
-            using std;
+            using std; using std::Text;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint count) { Calls::Allocations++; return null; }
@@ -51,7 +51,7 @@ public sealed class StandardBufferWriterTryTests
     public void EmptyAndTerminatorOnlyStorageNeedNoOutputAccessForEmptyWrites(int optimization)
     {
         Run("""
-            using std;
+            using std; using std::Text;
             bool TryOnly(char* storage) nothrow {
                 BufferWriter writer = new(storage, 0);
                 char*? absent = null;
@@ -78,7 +78,7 @@ public sealed class StandardBufferWriterTryTests
     public void OverlapsIncludeTerminatorAndInitializedTailAfterClear(int optimization)
     {
         Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 char[18] storage;
                 for (nuint i = 0; i < 18; i++) storage[i] = '!';

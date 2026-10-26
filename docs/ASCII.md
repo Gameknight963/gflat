@@ -1,6 +1,6 @@
 # ASCII byte utilities
 
-`core/Text/ascii.gf` provides `std::Ascii` functions for the language's byte-sized
+`core/Text/ascii.gf` provides `std::Text::Ascii` functions for the language's byte-sized
 `char`. These functions do not interpret individual UTF-8 bytes as Unicode
 characters. They work without std, libc, allocation, or exception support.
 
@@ -26,8 +26,9 @@ embedded NULs; these operations continue past them and leave every non-letter
 byte unchanged. There is no null-terminated mutation overload.
 
 ```csharp
+using std::Text;
 char[4] bytes = ['A', '\0', 'z', (char)255];
-std::Ascii::ToLower(bytes, 4); // ['a', '\0', 'z', 255]
+std::Text::Ascii::ToLower(bytes, 4); // ['a', '\0', 'z', 255]
 ```
 
 The caller supplies `count` writable bytes. Only that region is modified, and
@@ -46,8 +47,9 @@ any future Unicode character operations.
 These counted operations are also `nothrow` and allocation-free:
 
 ```csharp
-bool command = std::Ascii::EqualsIgnoreCase(input, inputLength, "help", 4);
-int order = std::Ascii::CompareIgnoreCase(left, leftLength, right, rightLength);
+using std::Text;
+bool command = std::Text::Ascii::EqualsIgnoreCase(input, inputLength, "help", 4);
+int order = std::Text::Ascii::CompareIgnoreCase(left, leftLength, right, rightLength);
 ```
 
 Lengths count bytes, including embedded nulls. Buffers are borrowed and are never
@@ -70,8 +72,9 @@ when lengths differ and otherwise applies the same ASCII-only rules.
 Two-argument overloads accept C strings:
 
 ```csharp
-bool command = std::Ascii::EqualsIgnoreCase(input, "help");
-int order = std::Ascii::CompareIgnoreCase(left, right);
+using std::Text;
+bool command = std::Text::Ascii::EqualsIgnoreCase(input, "help");
+int order = std::Text::Ascii::CompareIgnoreCase(left, right);
 ```
 
 Both stop at the first null byte and use the same unsigned ASCII-only folding
@@ -94,7 +97,7 @@ which remain alive for the entire map lifetime. Keys borrowing other storage mus
 keep it alive and unchanged while stored in the map.
 
 ```cpp
-using std; using std::Collections;
+using std; using std::Text; using std::Collections;
 
 struct HeaderName : IHashable, IEquatable<HeaderName>
 {

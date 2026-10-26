@@ -23,8 +23,8 @@ public class FreestandingCoreUtilitiesTests
             return 0;
         }
         int main() {
-            if (!std::Ascii::IsHexDigit('f')) return 1;
-            if (std::Ascii::IsAscii((char)255)) return 2;
+            if (!std::Text::Ascii::IsHexDigit('f')) return 1;
+            if (std::Text::Ascii::IsAscii((char)255)) return 2;
             char[64] input; char[64] decoded; char[32] encoded;
             nuint length = 0; nuint consumed = 0; uint scalar = 0u;
             if (!std::Utf8::TryEncode(0x1f600u, input, 64, &length)) return 3;
@@ -45,7 +45,7 @@ public class FreestandingCoreUtilitiesTests
             if (encodedLength != (nuint)8) return 11;
             readonly(char)* expected = "F09F9880";
             for (nuint i = 0; i < encodedLength; i++) if (encoded[i] != expected[i]) return 12;
-            if (std::Ascii::ToLower(encoded[0]) != 'f') return 13;
+            if (std::Text::Ascii::ToLower(encoded[0]) != 'f') return 13;
             if (!std::Encoding::Hex::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength)) return 14;
             if (!std::Utf8::IsValid(decoded, decodedLength)) return 15;
             if (std::Numerics::BitOperations::PopCount(0xffu) != 8) return 16;
@@ -126,24 +126,24 @@ public class FreestandingCoreUtilitiesTests
             byte_search_input((byte*)searchInput);
             searchPattern[0]=(byte)1;searchPattern[1]=(byte)0;searchPattern[2]=(byte)1;
             searchPattern[3]=(byte)0;searchPattern[4]=(byte)1;
-            if(std::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=0) return 63;
-            if(std::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=58) return 64;
+            if(std::Text::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=0) return 63;
+            if(std::Text::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=58) return 64;
             searchPattern[2]=(byte)2;
-            if(std::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=64) return 65;
-            if(std::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=64) return 66;
-            if(std::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=0) return 67;
-            if(std::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=64) return 68;
+            if(std::Text::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=64) return 65;
+            if(std::Text::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,5)!=64) return 66;
+            if(std::Text::ByteSearch::IndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=0) return 67;
+            if(std::Text::ByteSearch::LastIndexOf((byte*)searchInput,64,(byte*)searchPattern,0)!=64) return 68;
             char* cText=(char*)searchInput;
-            if(std::CString::Length(cText)!=1) return 69;
-            if(std::CString::Compare(cText,&cText[2])!=0 || !std::CString::Equals(cText,&cText[2])) return 70;
-            if(!std::CString::StartsWith(cText,&cText[2]) || !std::CString::EndsWith(cText,&cText[2])) return 71;
+            if(std::Text::CString::Length(cText)!=1) return 69;
+            if(std::Text::CString::Compare(cText,&cText[2])!=0 || !std::Text::CString::Equals(cText,&cText[2])) return 70;
+            if(!std::Text::CString::StartsWith(cText,&cText[2]) || !std::Text::CString::EndsWith(cText,&cText[2])) return 71;
             length=99;
-            if(std::CString::TryGetLength(cText,1,ref length) || length!=0) return 72;
-            if(!std::CString::TryGetLength(cText,2,ref length) || length!=1) return 73;
+            if(std::Text::CString::TryGetLength(cText,1,ref length) || length!=0) return 72;
+            if(!std::Text::CString::TryGetLength(cText,2,ref length) || length!=1) return 73;
             searchInput[1]=(byte)2;searchInput[2]=(byte)0;
-            if(std::CString::Length(cText)!=2 || std::CString::Compare(cText,&cText[2])!=1) return 74;
-            if(std::CString::Equals(cText,&cText[2]) || std::CString::EndsWith(cText,"x")) return 75;
-            if(!std::CString::EndsWith(cText,&cText[1]) || !std::CString::StartsWith(cText,&cText[2])) return 76;
+            if(std::Text::CString::Length(cText)!=2 || std::Text::CString::Compare(cText,&cText[2])!=1) return 74;
+            if(std::Text::CString::Equals(cText,&cText[2]) || std::Text::CString::EndsWith(cText,"x")) return 75;
+            if(!std::Text::CString::EndsWith(cText,&cText[1]) || !std::Text::CString::StartsWith(cText,&cText[2])) return 76;
             byte[66] memoryOutput;
             nuint moveCount=(nuint)(runtimeInput>>63)+62;
             Memory::Fill((void*)&memoryOutput[0],(byte)165,66);
@@ -263,13 +263,13 @@ public class FreestandingCoreUtilitiesTests
             cText=copySource;
             char[7] copied;
             for(nuint i=0;i<7;i++) copied[i]='Z';
-            if(std::CString::TryCopy(cText,&copied[1],2)) return 137;
+            if(std::Text::CString::TryCopy(cText,&copied[1],2)) return 137;
             for(nuint i=0;i<7;i++) if(copied[i]!='Z') return 138;
-            if(!std::CString::TryCopy(cText,&copied[1],3)||!std::CString::Equals(cText,&copied[1])) return 139;
-            if(!std::CString::TryCopy(&copied[1],&copied[2],3)||!std::CString::Equals(cText,&copied[2])) return 140;
-            if(!std::CString::TryCopy(&copied[2],&copied[1],3)||!std::CString::Equals(cText,&copied[1])) return 141;
+            if(!std::Text::CString::TryCopy(cText,&copied[1],3)||!std::Text::CString::Equals(cText,&copied[1])) return 139;
+            if(!std::Text::CString::TryCopy(&copied[1],&copied[2],3)||!std::Text::CString::Equals(cText,&copied[2])) return 140;
+            if(!std::Text::CString::TryCopy(&copied[2],&copied[1],3)||!std::Text::CString::Equals(cText,&copied[1])) return 141;
             if(copied[0]!='Z'||copied[5]!='Z'||copied[6]!='Z') return 142;
-            if(std::CString::TryCopy((readonly(char)*)1,(char*)1,0)) return 143;
+            if(std::Text::CString::TryCopy((readonly(char)*)1,(char*)1,0)) return 143;
             if(std::Binary::VarInt::ZigZagEncode((long)runtimeInput)!=unsignedMaximum ||
                 std::Binary::VarInt::ZigZagDecode(unsignedMaximum)!=(long)runtimeInput) return 144;
             if(std::Binary::VarInt::ZigZagEncode((int)(runtimeInput>>32))!=(uint)unsignedMaximum ||
@@ -292,7 +292,7 @@ public class FreestandingCoreUtilitiesTests
             if(!std::IntegerFormatting::TryFormat(wideBits,&wideDecimal[1],40,ref length)||length!=40) return 166;
             if(wideDecimal[0]!='Z'||wideDecimal[41]!='Z') return 167;
             wideDecimal[41]='\0';
-            if(!std::CString::Equals(&wideDecimal[1],"-170141183460469231731687303715884105728")) return 168;
+            if(!std::Text::CString::Equals(&wideDecimal[1],"-170141183460469231731687303715884105728")) return 168;
             byte[18] wideBinary; wideBinary[0]=(byte)90; wideBinary[17]=(byte)90;
             if(!std::Binary::BinaryPrimitives::TryWriteExtraLongLittleEndian(&wideBinary[1],16,wideBits)) return 169;
             extralong roundtrip=(extralong)1;

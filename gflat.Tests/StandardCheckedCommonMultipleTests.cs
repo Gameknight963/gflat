@@ -100,7 +100,7 @@ public sealed class StandardCheckedCommonMultipleTests
     }
 
     private const string Memory="""
-        using std; using std::Numerics;
+        using std; using std::Text; using std::Numerics;
         bool deny=false;int attempts=0;int allocated=0;int released=0;
         extern void*? malloc(nuint count);extern void free(void* value);
         namespace Memory {

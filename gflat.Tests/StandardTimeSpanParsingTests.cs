@@ -26,7 +26,7 @@ public sealed class StandardTimeSpanParsingTests
                 }
             }
             Run(directory, """
-                using std; using std::IO; using std::Time;
+                using std; using std::Text; using std::IO; using std::Time;
                 nuint ReadText(File* input,char* text){nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);
                     input.ReadExactly(text,count);text[count]='\0';return count;}
                 int main(int argc,char** argv){
@@ -78,7 +78,7 @@ public sealed class StandardTimeSpanParsingTests
                 writer.Write(rows.Count); foreach (byte[] row in rows) WriteText(writer,row);
             }
             Run(directory, """
-                using std; using std::IO; using std::Time;
+                using std; using std::Text; using std::IO; using std::Time;
                 int main(int argc,char** argv){
                     File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     for(int row=0;row<rows;row++){
@@ -119,7 +119,7 @@ public sealed class StandardTimeSpanParsingTests
     [InlineData(2)]
     public async Task SuccessfulParsingAndTryFailuresAllocateNothingAndStageBackedInputAliases(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std; using std::IO; using std::Time;
+            using std; using std::Text; using std::IO; using std::Time;
             int allocations=0;int frees=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* value)nothrow{frees++;}}
@@ -157,7 +157,7 @@ public sealed class StandardTimeSpanParsingTests
             "core/IHashable.gf", "core/Hashing/primitive_hashing.gf", "core/Exception.gf"];
         var sources = names.Select(name => new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("parse-contract.gf", """
-                using std; using std::IO; using std::Time;
+                using std; using std::Text; using std::IO; using std::Time;
                 namespace Memory{public void*? Allocate(nuint size){return null;}public void Free(void* value)nothrow{}}
                 bool Convert(readonly(char)* input,nuint count,TimeSpan* result)nothrow{
                     bool first=TimeSpan::TryParse(input,count,result);bool second=TimeSpan::TryParse(input,result);return first&&second;

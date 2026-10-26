@@ -4,8 +4,9 @@
 allocation, nor an exception runtime. All methods are `nothrow`.
 
 ```csharp
-nuint first = std::ByteSearch::IndexOf(data, length, pattern, count);
-nuint last = std::ByteSearch::LastIndexOf(data, length, pattern, count);
+using std::Text;
+nuint first = std::Text::ByteSearch::IndexOf(data, length, pattern, count);
+nuint last = std::Text::ByteSearch::LastIndexOf(data, length, pattern, count);
 ```
 
 Both pointers borrow readable regions of the specified byte lengths. The
@@ -37,7 +38,7 @@ They return `length` if there is no match. The pattern is a set of individual
 bytes, not a substring: duplicates and order do not affect membership.
 
 ```csharp
-using std;
+using std; using std::Text;
 int main()
 {
     byte[6] data = [7, 0, 255, 3, 255, 8];

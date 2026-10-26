@@ -40,7 +40,7 @@ public sealed class PlatformUtcClockTests
         string hex=Convert.ToHexString(bytes.ToArray());
         string conversion=windows?"Windows::system_clock_detail::FromFileTime((uint)first,(uint)second)":"Linux::system_clock_detail::FromUnixTime(first,second)";
         var result=CompilerTestHelper.Run(Sources(HostFolder,$$$"""
-            using std; using std::Time;
+            using std; using std::Text; using std::Time;
             int Digit(char value)nothrow{if(value<='9')return value-'0';return value-'A'+10;}
             int ReadByte(readonly(char)* text,ref nuint at)nothrow{int value=(Digit(text[at])<<4)|Digit(text[at+1]);at+=2;return value;}
             long ReadLong(readonly(char)* text,ref nuint at)nothrow{ulong value=0ul;for(int shift=0;shift<64;shift+=8)value=value|((ulong)ReadByte(text,ref at)<<shift);return (long)value;}
@@ -71,7 +71,7 @@ public sealed class PlatformUtcClockTests
         Assert.True(OperatingSystem.IsWindows()||OperatingSystem.IsLinux());
         string provider=OperatingSystem.IsWindows()?"Windows::SystemClock":"Linux::SystemClock";
         string program=$$$"""
-            using std; using std::Time;
+            using std; using std::Text; using std::Time;
             int main(){
                 for(int i=0;i<3;i++){
                     DateTime value={{{provider}}}::GetUtcNow();char[32] output;nuint written=0;
@@ -105,7 +105,7 @@ public sealed class PlatformUtcClockTests
         string provider=windows?"Linux::SystemClock":"Windows::SystemClock";
         string helper=windows?"Linux::system_clock_detail::FromUnixTime(0l,0l)":"Windows::system_clock_detail::FromFileTime(0u,0u)";
         string program=$$$"""
-            using std; using std::Time;int main(){DateTime sampled={{{provider}}}::GetUtcNow();DateTime converted={{{helper}}};if(sampled.Ticks==converted.Ticks)return 1;return 0;}
+            using std; using std::Text; using std::Time;int main(){DateTime sampled={{{provider}}}::GetUtcNow();DateTime converted={{{helper}}};if(sampled.Ticks==converted.Ticks)return 1;return 0;}
             """;
         // DateTime is concrete; emit checks actual provider bodies and foreign ABI declarations.
         string ir=Compiler.Emit(Sources(folder,program));

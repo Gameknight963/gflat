@@ -13,34 +13,34 @@ public sealed class StandardAsciiInPlaceTests
             int main()nothrow{
                 char[258] bytes;bytes[0]='!';bytes[257]='?';
                 for(nuint i=0;i<256;i++)bytes[i+1]=(char)i;
-                char* borrowed=&bytes[1];std::Ascii::ToLower(borrowed,256);
+                char* borrowed=&bytes[1];std::Text::Ascii::ToLower(borrowed,256);
                 for(nuint i=0;i<256;i++){
                     nuint expected=i;if(i>=65&&i<=90)expected=i+32;
                     if((nuint)(byte)bytes[i+1]!=expected)return 1;
-                    if(borrowed[i]!=std::Ascii::ToLower((char)i))return 2;
+                    if(borrowed[i]!=std::Text::Ascii::ToLower((char)i))return 2;
                 }
                 if(bytes[0]!='!'||bytes[257]!='?')return 3;
-                std::Ascii::ToLower(&bytes[1],256);
-                for(nuint i=0;i<256;i++)if(bytes[i+1]!=std::Ascii::ToLower((char)i))return 4;
+                std::Text::Ascii::ToLower(&bytes[1],256);
+                for(nuint i=0;i<256;i++)if(bytes[i+1]!=std::Text::Ascii::ToLower((char)i))return 4;
                 for(nuint i=0;i<256;i++)bytes[i+1]=(char)i;
-                std::Ascii::ToUpper(&bytes[1],256);
+                std::Text::Ascii::ToUpper(&bytes[1],256);
                 for(nuint i=0;i<256;i++){
                     nuint expected=i;if(i>=97&&i<=122)expected=i-32;
                     if((nuint)(byte)borrowed[i]!=expected)return 5;
                 }
-                std::Ascii::ToUpper(&bytes[1],256);
-                for(nuint i=0;i<256;i++)if(bytes[i+1]!=std::Ascii::ToUpper((char)i))return 6;
+                std::Text::Ascii::ToUpper(&bytes[1],256);
+                for(nuint i=0;i<256;i++)if(bytes[i+1]!=std::Text::Ascii::ToUpper((char)i))return 6;
                 if(bytes[0]!='!'||bytes[257]!='?')return 7;
                 char[8] part=['!','A','B','\0','c','d','Z','?'];
-                std::Ascii::ToLower(&part[1],4);
+                std::Text::Ascii::ToLower(&part[1],4);
                 if(part[0]!='!'||part[1]!='a'||part[2]!='b'||part[3]!='\0'||part[4]!='c'||part[5]!='d'||part[6]!='Z'||part[7]!='?')return 8;
-                std::Ascii::ToUpper(&part[3],3);
+                std::Text::Ascii::ToUpper(&part[3],3);
                 if(part[1]!='a'||part[2]!='b'||part[3]!='\0'||part[4]!='C'||part[5]!='D'||part[6]!='Z')return 9;
                 // A readonly pointer slot still permits changing mutable pointed bytes.
-                readonly(char*) fixedPointer=&part[1];std::Ascii::ToUpper(fixedPointer,1);
+                readonly(char*) fixedPointer=&part[1];std::Text::Ascii::ToUpper(fixedPointer,1);
                 if(part[1]!='A')return 10;
-                std::Ascii::ToLower((char*)1,0);std::Ascii::ToUpper((char*)1,0);
-                std::Ascii::ToLower(&part[1],0);std::Ascii::ToUpper(&part[7],0);
+                std::Text::Ascii::ToLower((char*)1,0);std::Text::Ascii::ToUpper((char*)1,0);
+                std::Text::Ascii::ToLower(&part[1],0);std::Text::Ascii::ToUpper(&part[7],0);
                 if(part[1]!='A'||part[7]!='?')return 11;return 0;
             }
             """),optimization);
@@ -53,7 +53,7 @@ public sealed class StandardAsciiInPlaceTests
     public void ProtectedCharactersCannotBePassedAsMutableStorage(string type)
     {
         foreach(string operation in new[]{"ToLower","ToUpper"}){
-            string code=$"int main(){{char[1] bytes=['A'];{type} view=bytes;std::Ascii::{operation}(view,1);return 0;}}";
+            string code=$"int main(){{char[1] bytes=['A'];{type} view=bytes;std::Text::Ascii::{operation}(view,1);return 0;}}";
             var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(code),options:new(){NoStdLib=true,NoBuiltins=true}));
             Assert.Equal("ascii-in-place.gf",error.Span.Source?.Path);
             Assert.Contains(operation,error.Message);
@@ -64,7 +64,7 @@ public sealed class StandardAsciiInPlaceTests
     public void ConversionRemainsFreestandingNothrowAndImportFree()
     {
         string ir=Compiler.Emit(Sources("""
-            int main()nothrow{char value='A';std::Ascii::ToLower(&value,1);std::Ascii::ToUpper(&value,1);return (int)value-65;}
+            int main()nothrow{char value='A';std::Text::Ascii::ToLower(&value,1);std::Text::Ascii::ToUpper(&value,1);return (int)value-65;}
             """),options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
         foreach(string name in new[]{"ToLower","ToUpper"}){
             string[] definitions=ir.Split('\n').Where(line=>line.StartsWith("define ")&&line.Contains("$Ascii$"+name)).ToArray();

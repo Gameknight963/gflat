@@ -28,7 +28,7 @@ public sealed class StandardCStringAppendTests
             }
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
-                using std;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
+                using std; using std::Text;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* file);extern int fclose(void* file);
                 int main(){
                     void*? input=fopen({{literal}},"rb");if(input==null)return 1;defer{fclose(input!);}
@@ -53,7 +53,7 @@ public sealed class StandardCStringAppendTests
     public void ScanBoundsEmptyAndUnterminatedBuffersNeedNoRuntimeServices(int optimization)
     {
         const string program="""
-            using std;
+            using std; using std::Text;
             int main(){
                 if(CString::TryAppend((readonly(char)*)1,(char*)1,0))return 1;
                 char[3] none=['a','b','c'];

@@ -20,7 +20,7 @@ public sealed class StandardHexWriterTests
                 string upper=Convert.ToHexString(input);writer.Write(Encoding.ASCII.GetBytes(upper));writer.Write(Encoding.ASCII.GetBytes(upper.ToLowerInvariant()));
             }
             Run($$"""
-                using std; using std::Encoding;int allocations=0;
+                using std; using std::Text; using std::Encoding;int allocations=0;
                 namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);extern nuint fread(void* output,nuint size,nuint count,void* file);extern int fclose(void* file);extern int ferror(void* file);
                 struct Sink:ITextWriter{
@@ -55,7 +55,7 @@ public sealed class StandardHexWriterTests
     [InlineData(2)]
     public void WriterFailuresKeepOnlyAcceptedPrefixesAndLaterCallsStartFresh(int optimization)
         =>Run("""
-            using std; using std::Encoding;
+            using std; using std::Text; using std::Encoding;
             struct Sink:ITextWriter{
                 private char* output;public nuint Length;public int Calls;public int FailAt;
                 public Sink(char* data,int failure){output=data;Length=0;Calls=0;FailAt=failure;}
@@ -88,7 +88,7 @@ public sealed class StandardHexWriterTests
     public async Task EmptyAndImpossibleLengthsNeverTouchInputOrWriterWithOnlyCoreContracts(int optimization)
     {
         const string program="""
-            using std; using std::Encoding;
+            using std; using std::Text; using std::Encoding;
             namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
             struct Sink:ITextWriter{public int Calls;public Sink(){Calls=0;}public void Write(readonly(char)* data,nuint count){Calls++;throw new Exception("touched writer",77);}}
             int main(){

@@ -48,7 +48,7 @@ There is no accumulated total output count; expansion is streamed and the
 destination's own capacity and resource limits still apply.
 
 ```csharp
-using std; using std::Json;
+using std; using std::Text; using std::Json;
 int main()
 {
     readonly(char)* input = "{ \"a\" : [1, 2], \"b\" : {} }";

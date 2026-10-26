@@ -1,5 +1,5 @@
 using std::Memory;
-namespace std;
+namespace std::Text;
 
 // Unit-cost Levenshtein distance over counted bytes, using one caller-owned row.
 public static class EditDistance

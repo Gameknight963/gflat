@@ -170,8 +170,8 @@ public class FreestandingCoreUtilitiesTests
             char[388] jsonOutput;
             for(nuint i=0;i<388;i++)jsonOutput[i]='Z';
             nuint jsonNeeded=0; nuint jsonWritten=0;
-            if(!std::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=386) return 87;
-            if(!std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=386) return 88;
+            if(!std::Json::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=386) return 87;
+            if(!std::Json::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=386) return 88;
             if(jsonOutput[0]!='Z'||jsonOutput[387]!='Z'||jsonOutput[1]!='"'||jsonOutput[386]!='"') return 89;
             for(nuint i=0;i<64;i++) {
                 nuint at=2+i*6;
@@ -180,16 +180,16 @@ public class FreestandingCoreUtilitiesTests
                 if(jsonOutput[at+5]!=digit) return 91;
             }
             searchInput[0]=(byte)'"';searchInput[1]=(byte)'\\';searchInput[2]=(byte)'\n';
-            if(!std::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=374) return 92;
-            if(!std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=374) return 93;
+            if(!std::Json::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=374) return 92;
+            if(!std::Json::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded,ref jsonWritten)||jsonWritten!=374) return 93;
             readonly(char)* jsonPrefix="\\\"\\\\\\n\\u0000";
             for(nuint i=0;i<12;i++)if(jsonOutput[i+2]!=jsonPrefix[i]) return 94;
             for(nuint i=0;i<388;i++)jsonOutput[i]='Z';
-            if(std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded-1,ref jsonWritten)||jsonWritten!=0) return 95;
+            if(std::Json::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],jsonNeeded-1,ref jsonWritten)||jsonWritten!=0) return 95;
             for(nuint i=0;i<388;i++)if(jsonOutput[i]!='Z') return 96;
             searchInput[63]=(byte)255;
-            if(std::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=0) return 97;
-            if(std::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],386,ref jsonWritten)||jsonWritten!=0) return 98;
+            if(std::Json::JsonString::TryGetQuotedLength((char*)searchInput,64,ref jsonNeeded)||jsonNeeded!=0) return 97;
+            if(std::Json::JsonString::TryQuote((char*)searchInput,64,&jsonOutput[1],386,ref jsonWritten)||jsonWritten!=0) return 98;
             for(nuint i=0;i<388;i++)if(jsonOutput[i]!='Z') return 99;
             byte[12] variable;
             for(nuint i=0;i<12;i++)variable[i]=(byte)90;
@@ -312,8 +312,8 @@ public class FreestandingCoreUtilitiesTests
                 ||!wideCursorReader.TryReadExtraLongLittleEndian(ref roundtrip)||roundtrip!=wideBits) return 177;
             if(wideBinary[0]!=(byte)90||wideBinary[17]!=(byte)90) return 178;
             char[8] escaped=['"','\\','u','0','0','4',(char)(48ul+(runtimeInput>>63)),'"'];
-            if(!std::JsonString::ValueTextEquals(escaped,8,"A",1)
-                ||std::JsonString::ValueTextEquals(escaped,8,"B",1)) return 179;
+            if(!std::Json::JsonString::ValueTextEquals(escaped,8,"A",1)
+                ||std::Json::JsonString::ValueTextEquals(escaped,8,"B",1)) return 179;
             if (Sha256Proof() != 0) return 180;
             return 42;
         }

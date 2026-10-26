@@ -1,6 +1,6 @@
 # JSON text
 
-`std::JsonText::Minify(readonly(char)* input, nuint count, ITextWriter* output)`
+`std::Json::JsonText::Minify(readonly(char)* input, nuint count, ITextWriter* output)`
 validates one complete counted UTF-8 JSON document, then writes it without JSON
 whitespace outside strings. It preserves every other byte: escape spelling,
 number spelling, property order, and duplicate property names. It adds no newline
@@ -48,7 +48,7 @@ There is no accumulated total output count; expansion is streamed and the
 destination's own capacity and resource limits still apply.
 
 ```csharp
-using std;
+using std; using std::Json;
 int main()
 {
     readonly(char)* input = "{ \"a\" : [1, 2], \"b\" : {} }";

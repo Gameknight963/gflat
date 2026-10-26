@@ -11,7 +11,7 @@ Each operation also accepts a `Span<readonly(char)>`, for example
 `JsonStringText::Unquote(reader.RawToken)`.
 
 ```csharp
-using std;
+using std; using std::Json;
 
 int main()
 {
@@ -43,17 +43,18 @@ codec remains independent of owning strings and allocation.
 
 ## Caller-owned buffers
 
-`std::JsonString` quotes or unquotes one counted UTF-8 string into caller-owned storage. It
+`std::Json::JsonString` quotes or unquotes one counted UTF-8 string into caller-owned storage. It
 is a string primitive, not a JSON parser, object model, or serializer. Its only
 std source dependency is `Utf8.gf`; it performs no allocation and calls neither
 libc nor the exception runtime. All counted-buffer methods are `nothrow`.
 
 ```csharp
+using std::Json;
 nuint needed = 0;
-if (std::JsonString::TryGetQuotedLength(input, length, ref needed))
+if (std::Json::JsonString::TryGetQuotedLength(input, length, ref needed))
 {
     nuint written = 0;
-    bool success = std::JsonString::TryQuote(input, length, output, capacity, ref written);
+    bool success = std::Json::JsonString::TryQuote(input, length, output, capacity, ref written);
 }
 ```
 
@@ -162,12 +163,14 @@ source dependencies beyond the existing `JsonString` and `Utf8` files.
 The optional `std/core/Json/json_string_writer.gf` adapter adds:
 
 ```csharp
+using std::Json;
 void WriteJsonString(this ITextWriter* output, readonly(char)* input, nuint length);
 ```
 
 Include it alongside `Json/JsonString.gf` and `Utf8.gf`. For example:
 
 ```csharp
+using std::Json;
 char[128] storage;
 std::BufferWriter buffer = new(storage, 128);
 ITextWriter* output = &buffer;

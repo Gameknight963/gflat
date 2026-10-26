@@ -3,13 +3,13 @@
 For path-based lookup returning a borrowed raw value, see
 [JSON Pointer](JSON_POINTER.md).
 
-`std::JsonReader` reads one complete JSON document from a borrowed counted UTF-8
+`std::Json::JsonReader` reads one complete JSON document from a borrowed counted UTF-8
 buffer. It emits tokens without allocating strings, converting numbers, or building
 a DOM. Its `Vector<byte>` nesting stack grows as needed; there is no recursive
 parser call stack or fixed nesting limit. Allocation can throw `BadAllocException`.
 
 ```cpp
-using std; using std::Memory;
+using std; using std::Json; using std::Memory;
 
 readonly(char)* document = "{\"ready\":true}";
 JsonReader reader = new(document, 14);
@@ -74,6 +74,7 @@ does nothing. It does not finish the document or validate trailing data after
 the skipped value; continue calling `Read()` until it returns false.
 
 ```cpp
+using std::Json;
 while (reader.Read()) {
     if (reader.Kind == JsonTokenKind::PropertyName) {
         // Decode/compare the name if needed. Ignore this unknown property's value.

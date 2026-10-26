@@ -57,7 +57,7 @@ public sealed class StandardJsonStringUnquoteTests
         literals.Add(Encoding.UTF8.GetBytes("\"\\/\\\\\\\"\\b\\f\\n\\r\\t\\u0000\\u0041\\u00e9\\uD834\\udd1e\""));
         int maximumInput = literals.Max(bytes => bytes.Length);
         int maximumOutput = literals.Max(bytes => Encoding.UTF8.GetByteCount(JsonDocument.Parse(bytes).RootElement.GetString()!));
-        var code = new StringBuilder($"using std; int main() {{ char[{maximumInput + 2}] input; char[{maximumOutput + 2}] output; char[{maximumOutput + 1}] expected; nuint needed=0; nuint written=0;\n");
+        var code = new StringBuilder($"using std; using std::Json; int main() {{ char[{maximumInput + 2}] input; char[{maximumOutput + 2}] output; char[{maximumOutput + 1}] expected; nuint needed=0; nuint written=0;\n");
         foreach (byte[] literal in literals)
         {
             using var parsed = JsonDocument.Parse(literal);
@@ -89,7 +89,7 @@ public sealed class StandardJsonStringUnquoteTests
         byte[] literal = Encoding.UTF8.GetBytes("\"prefix\\n\\u0000\\u00e9\\uD834\\uDD1e/\u20ac\"");
         using var parsed = JsonDocument.Parse(literal);
         int decodedLength = Encoding.UTF8.GetByteCount(parsed.RootElement.GetString()!);
-        var code = new StringBuilder("using std; int main() {char[256] input;char[256] original;char[256] output;nuint written=0;nuint needed=0;\n");
+        var code = new StringBuilder("using std; using std::Json; int main() {char[256] input;char[256] original;char[256] output;nuint written=0;nuint needed=0;\n");
         Assign(code, "input", literal, 1); Assign(code, "original", literal, 1);
         code.AppendLine($$"""
             input[0]='!';input[{{literal.Length + 1}}]='?';

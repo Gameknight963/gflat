@@ -1,5 +1,5 @@
 using std::Memory;
-namespace std;
+namespace std::Json;
 
 // Borrowed RFC 6901 plain-form lookup. Storage must remain alive and unchanged.
 public static class JsonPointer

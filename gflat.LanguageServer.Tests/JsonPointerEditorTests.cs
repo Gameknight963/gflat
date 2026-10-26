@@ -6,7 +6,7 @@ namespace gflat.LanguageServer.Tests;
 // Exercise the actual JSON Pointer source and borrowed result type.
 public sealed class JsonPointerEditorTests
 {
-    private const string Program="using std; using std::Memory;nuint Probe(Span<readonly(char)> document,Span<readonly(char)> pointer){Span<readonly(char)> value=new();bool found=JsonPointer::TryResolve(document,pointer,ref value);readonly(char)*? data=value.Data;return value.Length;}";
+    private const string Program="using std; using std::Json; using std::Memory;nuint Probe(Span<readonly(char)> document,Span<readonly(char)> pointer){Span<readonly(char)> value=new();bool found=JsonPointer::TryResolve(document,pointer,ref value);readonly(char)*? data=value.Data;return value.Length;}";
 
     [Fact]
     public void PublicResolutionSignatureAndOutputArgumentNavigateWithoutExposingPrivateSelectionHelper()

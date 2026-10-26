@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Json;
 
 // Owns nesting state; borrows the destination without flushing or closing it.
 public struct JsonWriter
@@ -160,7 +160,7 @@ public struct JsonWriter
         failed = true;
         if (state == ObjectNext) output.Write(",", 1);
         if (indented) this.WriteIndent(stack.Count);
-        std::WriteJsonString(output, data, length);
+        std::Json::WriteJsonString(output, data, length);
         if (indented) output.Write(": ", 2); else output.Write(":", 1);
         stack[last] = ObjectValue; failed = false;
     }
@@ -174,7 +174,7 @@ public struct JsonWriter
         CheckString(data, length);
         failed = true;
         this.WriteValuePrefix();
-        std::WriteJsonString(output, data, length);
+        std::Json::WriteJsonString(output, data, length);
         this.CommitValue(); failed = false;
     }
 

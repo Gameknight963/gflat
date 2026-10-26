@@ -1,6 +1,6 @@
 using std::Memory;
 using std::Collections;
-namespace std;
+namespace std::Json;
 
 // Owning conveniences, separate from the allocation-free JSON string codec.
 public static class JsonStringText

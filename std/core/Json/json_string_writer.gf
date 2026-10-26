@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Json;
 
 // Optional writer adapter. Unlike JsonString's counted-buffer API, writer
 // failures can leave a prefix in the destination after preflight succeeds.

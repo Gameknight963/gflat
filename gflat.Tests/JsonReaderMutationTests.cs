@@ -190,7 +190,7 @@ public sealed class JsonReaderMutationTests
     }
 
     private const string NativeProgram = """
-        using std; using std::IO;
+        using std; using std::Json; using std::IO;
         int Report(int row,readonly(char)* message) {
             Console::Error.Write("Row ",4);
             row.Format(Console::Error);

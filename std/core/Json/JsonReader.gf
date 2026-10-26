@@ -1,6 +1,6 @@
 using std::Memory;
 using std::Collections;
-namespace std;
+namespace std::Json;
 
 // Owns its nesting stack; borrows immutable counted UTF-8 input.
 public struct JsonReader

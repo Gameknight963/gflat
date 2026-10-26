@@ -7,7 +7,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonPointerTests
 {
     private const string Allocator = """
-        using std; using std::Encoding; using std::Memory;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Json; using std::Encoding; using std::Memory;extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int failAt=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){attempts++;if(attempts==failAt)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}

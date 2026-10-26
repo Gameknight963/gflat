@@ -13,7 +13,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         var sources = Directory.GetFiles(directory, "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         sources.Add(new SourceFile(Path.GetFullPath("std-editor/allocation.gf"), """
-            using std; using std::IO; using std::Encoding; using std::Time; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
+            using std; using std::Json; using std::IO; using std::Encoding; using std::Time; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
             int main() {
                 Vector<int> values = new(); values.Add(42);
                 HashMap<String,int> map = new(); map.Add(s"key",42);
@@ -43,7 +43,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         var sources=Directory.GetFiles(directory,"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         const string text="""
-            using std; using std::IO; using std::Encoding; using std::Time; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
+            using std; using std::Json; using std::IO; using std::Encoding; using std::Time; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
             private extern void*? malloc(nuint bytes);
             private extern void free(void* storage);
             bool Contains(int value) => value == 42;

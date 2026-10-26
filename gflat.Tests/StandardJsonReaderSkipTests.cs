@@ -13,7 +13,7 @@ public sealed class StandardJsonReaderSkipTests
         string[] documents = ["{\"unknown\":[1,{\"x\":[true,null]}],\"known\":42}",
             "[{},[],\"text\",false,null,-1.5e2]", "{\"a\\u0062\":\"x\\ny\",\"empty\":{}}", "42", "true", " \"abc\" \n"];
         var code = new StringBuilder("""
-            using std;
+            using std; using std::Json;
             bool Matches(ref JsonReader reader,int* row) {
                 return (int)reader.Kind==row[0] && reader.TokenOffset==(nuint)row[1]
                     && reader.TokenLength==(nuint)row[2] && reader.Depth==(nuint)row[3];
@@ -68,7 +68,7 @@ public sealed class StandardJsonReaderSkipTests
     public void InvalidSkippedSubtreesPreserveReadErrorsAndLatchUntilReset(int optimization)
     {
         string[] invalid = ["{\"x\":}", "{\"x\" 1}", "{\"x\":[1,]}", "[{\"x\":}]", "[1,[2]", "[\"\\uD800\"]", "[1e+]", "[true,falseX]"];
-        var code = new StringBuilder("using std;int main(){\n");
+        var code = new StringBuilder("using std; using std::Json;int main(){\n");
         foreach (string document in invalid)
         {
             code.AppendLine($$"""
@@ -93,7 +93,7 @@ public sealed class StandardJsonReaderSkipTests
     [InlineData(2)]
     public void SkipDoesNotConsumeTrailingDataAndNoOpDoesNotReadInitialInput(int optimization)
         => Run("""
-            using std;
+            using std; using std::Json;
             int main(){
                 JsonReader initial=new("invalid",7);initial.Skip();
                 if(initial.Kind!=JsonTokenKind::None||initial.TokenOffset!=0)return 1;
@@ -114,7 +114,7 @@ public sealed class StandardJsonReaderSkipTests
     [InlineData(2)]
     public void StackFailureRequiresResetAndDeepSkipReusesStorage(int optimization)
         => Run("""
-            using std;
+            using std; using std::Json;
             extern void*? malloc(nuint size);extern void free(void* storage);
             bool deny=false;int allocations=0;int releases=0;
             namespace Memory{

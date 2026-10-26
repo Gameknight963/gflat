@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonStringTextTests
 {
     private const string Allocator="""
-        using std; using std::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
+        using std; using std::Json; using std::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
         int allocations=0;int releases=0;int large=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint size){if(size>1024)large++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocations++;return result;}

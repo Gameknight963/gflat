@@ -6,7 +6,7 @@ Both inputs and the output have type `Span<readonly(char)>` and contain counted
 UTF-8 bytes. Success replaces the output span; false leaves it unchanged.
 
 ```csharp
-using std; using std::Memory;
+using std; using std::Json; using std::Memory;
 int main()
 {
     Span<readonly(char)> document = new("{\"users\":[{\"name\":\"Ada\"}]}", 26);

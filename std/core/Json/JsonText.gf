@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Json;
 
 public static class JsonText
 {

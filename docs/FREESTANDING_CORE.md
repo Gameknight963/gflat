@@ -4,7 +4,7 @@
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`,
 `BinaryBufferWriter`, `IntegerFormatting`, the Try-only `Text/hex_integer_parsing.gf`,
 `Text/boolean_parsing.gf`, `ByteSearch`, `CString`, `JsonString`, `VarInt`, and the raw
-byte operations in `Memory/Bytes.gf` can operate on caller-owned buffers
+byte operations in `Memory/bytes.gf` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are
 reported through their return values. Caller pointers must still designate valid

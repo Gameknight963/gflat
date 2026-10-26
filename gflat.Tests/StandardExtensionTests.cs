@@ -18,7 +18,7 @@ public sealed class StandardExtensionTests
                 std::Format(single, &output);
                 return 0;
             }
-            """).Append(new SourceFile("libc/Formatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "Formatting.gf"))));
+            """).Append(new SourceFile("libc/Formatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "libc", "floating_format.gf"))));
         var result = CompilerTestHelper.Run(sources);
         Assert.Equal(0, result.ExitCode);
         Assert.Equal("1.25|2.5|1.25", result.StandardOutput);

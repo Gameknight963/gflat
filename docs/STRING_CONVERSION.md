@@ -64,9 +64,9 @@ An empty formatter returns the ordinary empty String without result allocation.
 Selective source files and dependencies:
 
 - core/Text/formattable_string.gf: String and IFormattable/Text contracts; custom formatter dependencies remain its own.
-- core/Text/primitive_string.gf: String plus existing core/Formatting.gf.
-- core/Text/extra_long_string.gf: String, ExtraLongFormatting.gf and Text/IntegerFormatting.gf.
-- libc/Text/floating_string.gf: String plus existing libc/Formatting.gf and its snprintf linkage.
+- core/Text/primitive_string.gf: String plus existing core/primitive_format.gf.
+- core/Text/extra_long_string.gf: String, extra_long_format.gf and Text/IntegerFormatting.gf.
+- libc/Text/floating_string.gf: String plus existing libc/floating_format.gf and its snprintf linkage.
 
 String itself retains its normal interface, hashing and ByteSearch dependencies.
 These are convenience source files; they do not modify interfaces or compiler rules.

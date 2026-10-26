@@ -2,7 +2,7 @@ namespace gflat.Tests;
 
 public sealed class StandardMemoryTests
 {
-    private static IEnumerable<SourceFile> Sources(string program) => new[] { "Memory/Bytes.gf" }
+    private static IEnumerable<SourceFile> Sources(string program) => new[] { "Memory/bytes.gf" }
         .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
         .Append(new SourceFile("main.gf", program));
 

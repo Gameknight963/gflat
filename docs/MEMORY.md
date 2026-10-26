@@ -1,7 +1,7 @@
 # Raw byte operations
 
 `Memory::Copy`, `Move`, `Fill`, `Compare`, and `Equal` operate on raw storage.
-Their source file, `std/core/Memory/Bytes.gf`, is independent of the default
+Their source file, `std/core/Memory/bytes.gf`, is independent of the default
 allocator implementation in `std/libc/Memory/Memory.gf`.
 
 | Operation | Signature and meaning |
@@ -74,7 +74,7 @@ loops as known libc operations. This is an explicit optimizer policy, independen
 of `NoStdLib` and disabled by default. It does not disable general optimization.
 
 The [freestanding executable test](FREESTANDING_CORE.md) selects
-`Memory/Bytes.gf` without the allocator source and enables `NoBuiltins`. It
+`Memory/bytes.gf` without the allocator source and enables `NoBuiltins`. It
 exercises all five operations at O0 and O2 on runtime-populated bytes, including
 overlapping moves in both directions, identical regions, guard bytes,
 unsigned comparison, and zero counts. Both Windows x64 builds link with
@@ -115,6 +115,6 @@ These functions operate only on integers. They allocate no storage, do not
 validate backing storage or buffer size, and do not construct objects. A caller
 laying out a real buffer must independently check its capacity and any additional
 size arithmetic.
-Selective source users can include `std/core/Memory/Alignment.gf` separately;
+Selective source users can include `std/core/Memory/alignment.gf` separately;
 its throwing helpers require ordinary exception support. Success performs no
 allocation; exception runtime behavior still applies to failures.

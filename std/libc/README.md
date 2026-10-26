@@ -6,7 +6,7 @@
 Replace it to report the error and terminate explicitly. If it returns or throws,
 the runtime exits with status 1.
 
-`Formatting.gf` supplies `std::Format(float, ITextWriter*)` and
+`floating_format.gf` supplies `std::Format(float, ITextWriter*)` and
 `std::Format(double, ITextWriter*)` through `snprintf`, using 9 and 17 significant
 digits respectively. Formatting follows the application's current C locale.
 The result is written from a stack buffer; there is no intermediate heap string.
@@ -24,10 +24,10 @@ see [the freestanding example](../../docs/FREESTANDING_CORE.md).
 
 `Console/Console.gf` provides C-string and caller-buffer APIs. It needs `core/IO/IOException.gf`,
 `core/IO/EndOfStreamException.gf`, and `core/Text/BufferTooSmallException.gf`, but does not require `Text/String.gf`.
-`Console/ConsoleString.gf` adds the optional owning-string conveniences. Referencing
+`Console/console_string.gf` adds the optional owning-string conveniences. Referencing
 `std/std.gfproj` includes both.
 
-`Console/StandardWriters.gf` adds the read-only `Console::Out` and
+`Console/standard_writers.gf` adds the read-only `Console::Out` and
 `Console::Error` namespace properties, exposing borrowed process-lifetime
 `ITextWriter*` values. Their getters are `nothrow`. They accept counted writes,
 including embedded zeros, and can be passed directly to formatting APIs without
@@ -516,7 +516,7 @@ and reclaimed after its elements are cleared.
 
 ## Environment variables
 
-`Environment/Environment.gf` provides `std::Environment::GetVariable(name)`,
+`Environment.gf` provides `std::Environment::GetVariable(name)`,
 returning a nullable pointer to read-only C-string bytes from libc `getenv`.
 Null means missing. A nonnull pointer whose first byte is zero means the variable
 exists with an empty value. Names are null-terminated too: bytes after a zero in
@@ -533,7 +533,7 @@ Its wrapper performs no allocation through `Memory`; libc itself may lazily
 initialize environment storage. Both its wrapper and private native declaration
 are explicitly `nothrow`.
 
-`Environment/EnvironmentText.gf` separately provides owning conveniences:
+`EnvironmentText.gf` separately provides owning conveniences:
 
 - `EnvironmentText::GetVariable(name)` returns a copied `String`; a missing
   variable throws `Exception`, while an existing empty value returns an empty

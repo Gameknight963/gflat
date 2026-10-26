@@ -6,7 +6,7 @@ public sealed class StandardTextWriterExtensionsTests
     {
         var names = new List<string> { "core/Text/text_writer_line.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "libc/IO/File.gf" };
         if (strings) names.AddRange(["core/Text/String.gf", "core/Text/ByteSearch.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf"]);
-        if (console) names.AddRange(["libc/Console/Console.gf", "libc/Console/StandardWriters.gf"]);
+        if (console) names.AddRange(["libc/Console/Console.gf", "libc/Console/standard_writers.gf"]);
         if (path != null) program = program.Replace("$PATH", "\"" + path.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"");
         var sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));

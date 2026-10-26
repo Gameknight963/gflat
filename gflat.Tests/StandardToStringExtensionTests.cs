@@ -135,7 +135,7 @@ public sealed class StandardToStringExtensionTests
     {
         string[] names = ["Text.gf", "Exception.gf", "BadAllocException.gf", "IStringConvertable.gf",
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/ByteSearch.gf", "Text/String.gf",
-            "Formatting.gf", "Text/formattable_string.gf", "Text/primitive_string.gf"];
+            "primitive_format.gf", "Text/formattable_string.gf", "Text/primitive_string.gf"];
         var sources = names.Select(name => new SourceFile(name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", "core", name))))
             .Append(new SourceFile("core-conversions.gf", """

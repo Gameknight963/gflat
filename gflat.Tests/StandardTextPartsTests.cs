@@ -52,8 +52,8 @@ public sealed class StandardTextPartsTests
     private static SourceFile[] Sources(string program, bool strings = false, bool formatting = false)
     {
         var names = new List<string> { "Memory/Span.gf", "Text/TextParts.gf", "Text/text_parts_span.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" };
-        if (strings) names.AddRange(["Text/string_split.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "Formatting.gf"]);
-        if (formatting) names.AddRange(["Text/BufferWriter.gf", "Text/BufferTooSmallException.gf", "Formatting.gf"]);
+        if (strings) names.AddRange(["Text/string_split.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "primitive_format.gf"]);
+        if (formatting) names.AddRange(["Text/BufferWriter.gf", "Text/BufferTooSmallException.gf", "primitive_format.gf"]);
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
     }

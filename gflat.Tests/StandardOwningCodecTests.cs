@@ -145,7 +145,7 @@ public sealed class StandardOwningCodecTests
     {
         string[] names=["Encoding/Base64.gf","Encoding/Base64Text.gf","Encoding/Base64Url.gf","Encoding/Base64UrlText.gf","Encoding/Hex.gf","Encoding/HexText.gf",
             "Encoding/PercentEncoding.gf","Encoding/PercentEncodingText.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf",
-            "IComparable.gf","Hashing/primitive_hashing.gf","Text/String.gf","Text/ByteSearch.gf","Formatting.gf"];
+            "IComparable.gf","Hashing/primitive_hashing.gf","Text/String.gf","Text/ByteSearch.gf","primitive_format.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("owning-codecs.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

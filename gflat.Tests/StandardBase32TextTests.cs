@@ -171,7 +171,7 @@ public sealed class StandardBase32TextTests
     private static void Run(string program,int optimization)
     {
         string[] names=["Encoding/Base32.gf","Encoding/Base32Text.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf",
-            "IComparable.gf","Hashing/primitive_hashing.gf","Text/String.gf","Text/ByteSearch.gf","Formatting.gf","Text/CString.gf"];
+            "IComparable.gf","Hashing/primitive_hashing.gf","Text/String.gf","Text/ByteSearch.gf","primitive_format.gf","Text/CString.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("base32-text.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

@@ -30,7 +30,7 @@ public sealed class StandardBufferWriterTests
 
     private static void Run(string program)
     {
-        var files = new[] { "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/Formatting.gf" }
+        var files = new[] { "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/primitive_format.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(files);

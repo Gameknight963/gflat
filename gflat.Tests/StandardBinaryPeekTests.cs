@@ -85,7 +85,7 @@ public sealed class StandardBinaryPeekTests
 
     private static async Task Run(string program,int optimization)
     {
-        SourceFile[] sources=new[]{"Binary/BinaryPrimitives.gf","Binary/BinaryBufferReader.gf","Memory/Bytes.gf"}
+        SourceFile[] sources=new[]{"Binary/BinaryPrimitives.gf","Binary/BinaryBufferReader.gf","Memory/bytes.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("binary-peek.gf",program)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});

@@ -3,7 +3,7 @@
 `std::Binary::BinaryBufferReader` and `std::Binary::BinaryBufferWriter` track a position within
 caller-owned bytes. They do not own storage, allocate, or directly call libc. All
 constructors, properties, and methods are `nothrow`. Include their respective
-source files, `core/Binary/BinaryPrimitives.gf`, and `core/Memory/Bytes.gf`.
+source files, `core/Binary/BinaryPrimitives.gf`, and `core/Memory/bytes.gf`.
 
 ```csharp
 using std; using std::Binary;

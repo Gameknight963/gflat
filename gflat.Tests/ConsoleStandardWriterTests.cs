@@ -7,8 +7,8 @@ public sealed class ConsoleStandardWriterTests
     private static string Literal(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
     private static SourceFile[] Sources(string program) => new[] {
-        "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Formatting.gf",
-        "libc/Console/Console.gf", "libc/Console/StandardWriters.gf"
+        "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/primitive_format.gf",
+        "libc/Console/Console.gf", "libc/Console/standard_writers.gf"
     }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
         .Append(new SourceFile("main.gf", program)).ToArray();
 

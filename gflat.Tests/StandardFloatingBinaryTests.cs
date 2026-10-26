@@ -102,7 +102,7 @@ public sealed class StandardFloatingBinaryTests
 
     private static void Run(string program, int optimization, bool cursors = false)
     {
-        string[] names = cursors ? ["Binary/BinaryPrimitives.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/Bytes.gf"] : ["Binary/BinaryPrimitives.gf"];
+        string[] names = cursors ? ["Binary/BinaryPrimitives.gf", "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Memory/bytes.gf"] : ["Binary/BinaryPrimitives.gf"];
         SourceFile[] sources = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });

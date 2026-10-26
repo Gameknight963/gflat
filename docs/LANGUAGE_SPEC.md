@@ -1298,8 +1298,8 @@ int main()
 ```
 
 Include `std/core/Text/String.gf`, its substring-search dependency `std/core/Text/ByteSearch.gf`,
-and `std/core/Formatting.gf`, or reference `std/std.gfproj`.
-Floating-point conversion additionally uses `std/libc/Formatting.gf` and libc's `snprintf`.
+and `std/core/primitive_format.gf`, or reference `std/std.gfproj`.
+Floating-point conversion additionally uses `std/libc/floating_format.gf` and libc's `snprintf`.
 
 The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,
 including qualified syntax such as `std::Text::s$"{42}"`. Unprefixed `$"..."` is
@@ -1333,7 +1333,7 @@ Supported primitives are `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `in
 `uint`, `long`, `ulong`, `extralong`, `nint`, `nuint`, `float`, and `double`. Character pointers and
 arrays are not implicitly converted to text; provide an explicit string value.
 Signed 128-bit formatting uses `std/core/Text/IntegerFormatting.gf` and the optional
-`std/core/ExtraLongFormatting.gf` writer adapter. Both are included by the full
+`std/core/extra_long_format.gf` writer adapter. Both are included by the full
 standard library; explicit source selections must include them together.
 
 Formatting does not imply a heap allocation, a terminator scan, or a caller-owned

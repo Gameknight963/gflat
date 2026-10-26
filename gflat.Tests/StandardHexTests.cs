@@ -7,7 +7,7 @@ public sealed class StandardHexTests
     private static void Run(string program, bool text = false)
     {
         var names = new List<string> { "core/Encoding/Hex.gf" };
-        if (text) names.AddRange(["core/Encoding/HexText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Formatting.gf"]);
+        if (text) names.AddRange(["core/Encoding/HexText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf"]);
         var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(files);

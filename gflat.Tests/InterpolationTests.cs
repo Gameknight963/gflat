@@ -7,7 +7,7 @@ public class InterpolationTests
     internal static SourceFile[] Sources(string program, bool libc = false)
     {
         var files = new List<SourceFile>();
-        foreach (string file in new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/Formatting.gf" }.Concat(libc ? new[] { "libc/Formatting.gf" } : Array.Empty<string>()))
+        foreach (string file in new[] { "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/Text/String.gf", "core/Text/ByteSearch.gf", "core/primitive_format.gf" }.Concat(libc ? new[] { "libc/floating_format.gf" } : Array.Empty<string>()))
             files.Add(new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))));
         files.Add(new SourceFile("main.gf", program));
         return files.ToArray();
@@ -31,7 +31,7 @@ public class InterpolationTests
                 printf("%s", text.Data);
                 return 0;
             }
-            """).Concat(new[] { "Text/IntegerFormatting.gf", "ExtraLongFormatting.gf" }
+            """).Concat(new[] { "Text/IntegerFormatting.gf", "extra_long_format.gf" }
                 .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file)))));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.Equal(0, result.ExitCode);
@@ -46,7 +46,7 @@ public class InterpolationTests
             String Render(extralong value) => s$"{value}";
             """)));
         Assert.Contains("std::Format(extralong, ITextWriter*)", error.Message);
-        Assert.Contains("std/core/Text/IntegerFormatting.gf and std/core/ExtraLongFormatting.gf", error.Message);
+        Assert.Contains("std/core/Text/IntegerFormatting.gf and std/core/extra_long_format.gf", error.Message);
     }
 
     [Fact]

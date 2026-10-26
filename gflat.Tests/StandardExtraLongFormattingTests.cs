@@ -85,7 +85,7 @@ public sealed class StandardExtraLongFormattingTests
                 return 0;
             }
             """;
-        var sources = new[] { "IntegerFormatting.gf", "ExtraLongFormatting.gf" }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name == "IntegerFormatting.gf" ? "Text/IntegerFormatting.gf" : name)))).Append(new SourceFile("main.gf",code));
+        var sources = new[] { "IntegerFormatting.gf", "ExtraLongFormatting.gf" }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name == "IntegerFormatting.gf" ? "Text/IntegerFormatting.gf" : name == "ExtraLongFormatting.gf" ? "extra_long_format.gf" : name)))).Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 }

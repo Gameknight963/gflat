@@ -3,7 +3,7 @@
 `std/core/Text/BufferWriter.gf` defines `std::Text::BufferWriter : ITextWriter`.
 Include `core/Text/BufferTooSmallException.gf` too. Formatting contracts are
 automatically available; primitive formatting implementations live in
-`core/Formatting.gf`. Neither the writer nor integer formatting requires
+`core/primitive_format.gf`. Neither the writer nor integer formatting requires
 `String` or libc.
 
 Construct a writer over writable storage:

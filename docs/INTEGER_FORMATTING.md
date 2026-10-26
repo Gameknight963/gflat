@@ -77,7 +77,7 @@ by ten. Its signed minimum is supported using complement and carry; it does not
 use 128-bit division or introduce a compiler-runtime dependency. Counting and
 writing use scalar locals, with no temporary-buffer copy.
 
-The optional `std/core/ExtraLongFormatting.gf` supplies writer-based
+The optional `std/core/extra_long_format.gf` supplies writer-based
 `Format(extralong, ITextWriter*)`. Include `Text/IntegerFormatting.gf` and the normal
 `ITextWriter` contract when selecting sources explicitly. It writes the counted
 result once using a 40-byte local buffer; destination exceptions propagate

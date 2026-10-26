@@ -6,6 +6,19 @@ public sealed partial class EditorModel
 {
     private readonly Dictionary<SourceSpan, TypeExpression> sourceTypeNames = [];
 
+    private string? SourceTypeNamespace(TypeExpression type, string path, int offset)
+    {
+        string qualifier = DisplayType(type.WithoutValueProtection());
+        bool globalQualifier = qualifier.StartsWith("global::", StringComparison.Ordinal);
+        if (globalQualifier) qualifier = qualifier[8..];
+        string head = qualifier.Split("::")[0];
+        if (!globalQualifier && Visible(path, offset, head).Any(symbol =>
+            symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration)) return null;
+        return snapshot.Checker?.ResolveVisibleNamespacePath(qualifier,
+            globalQualifier ? "" : ScopeAt(path, offset).Namespace,
+            globalQualifier ? [] : snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? []);
+    }
+
     private void IndexSourceTypeNames()
     {
         foreach (var syntax in snapshot.Nodes)

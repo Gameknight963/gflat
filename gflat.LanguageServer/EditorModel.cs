@@ -439,7 +439,7 @@ public sealed partial class EditorModel
                 type = type switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression m => m.Inner, ReferenceTypeExpression r => r.Inner, _ => type };
             if (type is NestedTypeExpression nested)
             {
-                string? parent = TypeOwner(nested.Parent, path, offset);
+                string? parent = TypeOwner(nested.Parent, path, offset) ?? SourceTypeNamespace(nested.Parent, path, offset);
                 if (parent == null) return null;
                 string qualified = Join(parent, nested.Member);
                 var target = symbols.FirstOrDefault(s => s.Qualified == qualified);

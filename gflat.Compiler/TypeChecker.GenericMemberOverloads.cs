@@ -45,6 +45,9 @@ public partial class TypeChecker
             return implementations.Any(candidate => candidate.IsGeneric) ? null :
                 SelectBestOverload(implementations, candidate => candidate.Parameters, call.Arguments,
                     memberName, call.Line, useDeclaredTypes: false);
+        // Early specialization can inspect methods before their declaration pass.
+        // Bind their signatures once in their own scope for selection and argument checking.
+        foreach (var implementation in implementations.ToArray()) BindMethodSignature(implementation);
         var candidates = new List<DeclaredMemberCandidate>();
         var visited = new HashSet<string>();
         foreach (var constraint in constraints) AddConstraint(constraint);
@@ -84,6 +87,7 @@ public partial class TypeChecker
             foreach (var contract in overloadFamilies.GetValueOrDefault(representative) ?? [representative])
             {
                 if (aliasReceiver && interfaceConstraint == null && contract.Accessibility != TokenKind.Public) continue;
+                BindMethodSignature(contract);
                 var parameters = contract.Parameters.Select(parameter =>
                 {
                     var rebound = new Parameter(parameter.Name, Rebind(parameter.Type), parameter.Line,

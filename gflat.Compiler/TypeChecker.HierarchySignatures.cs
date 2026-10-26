@@ -4,6 +4,14 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    private void BindOperatorSignature(OperatorDeclaration declaration, StructInfo owner)
+    {
+        using var context = EnterSignatureContext(declaration, owner.Name, false);
+        declaration.ReturnType = ResolveAlias(declaration.ReturnType);
+        foreach (var parameter in declaration.Parameters)
+            parameter.Type = ResolveAlias(parameter.Type);
+    }
+
     private void BindMethodSignature(MethodDeclaration method)
     {
         if (method.IsGeneric) return;

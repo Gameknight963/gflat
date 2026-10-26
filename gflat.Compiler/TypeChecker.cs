@@ -6131,6 +6131,7 @@ namespace gflat
                 {
                     if (op.OperatorKind == opKind && op.Parameters.Count == 2)
                     {
+                        BindOperatorSignature(op, owner);
                         TypeExpression p0 = ResolveAlias(op.Parameters[0].Type);
                         TypeExpression p1 = ResolveAlias(op.Parameters[1].Type);
                         if (TypesMatch(resLeft, p0) && TypesMatch(resRight, p1))
@@ -6159,6 +6160,7 @@ namespace gflat
                 {
                     if (op.OperatorKind == opKind && op.Parameters.Count == 1)
                     {
+                        BindOperatorSignature(op, info);
                         TypeExpression p0 = ResolveAlias(op.Parameters[0].Type);
                         if (TypesMatch(resOperand, p0))
                         {

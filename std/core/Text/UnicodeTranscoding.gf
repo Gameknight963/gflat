@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Optional whole-buffer conversions. Source, destination, and result metadata
 // must be disjoint. Lengths count UTF-8 bytes or UTF-16 ushort code units.
@@ -12,10 +12,10 @@ public static class UnicodeTranscoding
         {
             uint scalar = 0u;
             nuint consumed = 0;
-            if (!std::Utf8::TryDecode(input + position, bytes - position, &scalar, &consumed))
+            if (!std::Text::Utf8::TryDecode(input + position, bytes - position, &scalar, &consumed))
             { units = 0; return false; }
             // A decoded scalar uses no more UTF-16 units than its UTF-8 bytes.
-            required += std::Utf16::EncodedLength(scalar);
+            required += std::Text::Utf16::EncodedLength(scalar);
             position += consumed;
         }
         units = required;
@@ -31,9 +31,9 @@ public static class UnicodeTranscoding
         {
             uint scalar = 0u;
             nuint consumed = 0;
-            if (!std::Utf16::TryDecode(input + position, units - position, &scalar, &consumed))
+            if (!std::Text::Utf16::TryDecode(input + position, units - position, &scalar, &consumed))
             { bytes = 0; return false; }
-            nuint encoded = std::Utf8::EncodedLength(scalar);
+            nuint encoded = std::Text::Utf8::EncodedLength(scalar);
             if (encoded > maximum - required) { bytes = 0; return false; }
             required += encoded;
             position += consumed;
@@ -56,8 +56,8 @@ public static class UnicodeTranscoding
             uint scalar = 0u;
             nuint consumed = 0;
             nuint encoded = 0;
-            std::Utf8::TryDecode(input + position, bytes - position, &scalar, &consumed);
-            std::Utf16::TryEncode(scalar, output + produced, capacity - produced, &encoded);
+            std::Text::Utf8::TryDecode(input + position, bytes - position, &scalar, &consumed);
+            std::Text::Utf16::TryEncode(scalar, output + produced, capacity - produced, &encoded);
             position += consumed;
             produced += encoded;
         }
@@ -78,8 +78,8 @@ public static class UnicodeTranscoding
             uint scalar = 0u;
             nuint consumed = 0;
             nuint encoded = 0;
-            std::Utf16::TryDecode(input + position, units - position, &scalar, &consumed);
-            std::Utf8::TryEncode(scalar, output + produced, capacity - produced, &encoded);
+            std::Text::Utf16::TryDecode(input + position, units - position, &scalar, &consumed);
+            std::Text::Utf8::TryEncode(scalar, output + produced, capacity - produced, &encoded);
             position += consumed;
             produced += encoded;
         }

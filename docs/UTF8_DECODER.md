@@ -1,17 +1,18 @@
 # Incremental UTF-8 decoding
 
-`std::Utf8Decoder` decodes strict UTF-8 across input chunks. It retains only
+`std::Text::Utf8Decoder` decodes strict UTF-8 across input chunks. It retains only
 the partially decoded scalar, never a pointer to a previous chunk. Construction,
 `Reset()`, and `Read()` are `nothrow`, allocate nothing, and require no libc,
 exception runtime, String, or GC. Include `core/Text/Utf8Decoder.gf`; the separate
 whole-buffer functions in `core/Text/utf8.gf` remain available.
 
 ```cpp
-std::Utf8Decoder decoder = new();
+using std::Text;
+std::Text::Utf8Decoder decoder = new();
 char[3] euro = [(char)0xe2, (char)0x82, (char)0xac];
 uint scalar = 0;
 nuint consumed = 0;
-std::Utf8Decoder::Status status =
+std::Text::Utf8Decoder::Status status =
     decoder.Read(euro, 2, false, &scalar, &consumed); // NeedMore; consumed = 2
 status = decoder.Read(&euro[2], 1, true, &scalar, &consumed);
 // Scalar; scalar = U+20AC; consumed = 1

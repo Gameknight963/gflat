@@ -1,6 +1,6 @@
 using std::Queries;
 using std::Collections;
-namespace std;
+namespace std::Text;
 
 // Borrows counted UTF-8 bytes. Input must remain alive throughout enumeration.
 public struct Utf8Scalars : IEnumerable<uint, Utf8Scalars::Enumerator>

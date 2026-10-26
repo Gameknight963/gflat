@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Incremental strict UTF-16 decoding over host ushort code units.
 // No input pointer is retained between calls.

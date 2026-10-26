@@ -19,7 +19,7 @@ nuint offset = text.IndexOf('!');
 
 Search, indexing, slicing, and removal use byte offsets. They do not split on
 Unicode character boundaries automatically. UTF-8 validation and scalar decoding
-are available separately through `std::Utf8`.
+are available separately through `std::Text::Utf8`.
 
 `Equals(&other)` compares another String. `Equals(text)` compares a C string,
 and `Equals(data, count)` compares exactly the counted bytes, including embedded

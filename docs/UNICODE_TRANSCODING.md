@@ -1,6 +1,6 @@
 # Counted Unicode transcoding
 
-`std::UnicodeTranscoding` converts whole buffers between strict UTF-8 and UTF-16.
+`std::Text::UnicodeTranscoding` converts whole buffers between strict UTF-8 and UTF-16.
 Include `core/Text/UnicodeTranscoding.gf`, `core/Text/utf8.gf`, and `core/Text/utf16.gf`. It uses
 no String, GC, allocation, libc, replacement characters, or exception support.
 All four methods are `nothrow`.
@@ -18,6 +18,7 @@ are ordinary scalar values. Nothing appends a terminator, strips a BOM, or
 normalizes text.
 
 ```csharp
+using std::Text;
 ushort[32] wide;
 nuint units = 0;
 bool converted = UnicodeTranscoding::TryUtf8ToUtf16("hello", 5, wide, 32, ref units);

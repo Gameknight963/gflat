@@ -1,4 +1,4 @@
-namespace std::Utf16;
+namespace std::Text::Utf16;
 
 // ushort values are host code units, not an endian-specific serialized byte stream.
 bool IsValidScalar(uint scalar) nothrow

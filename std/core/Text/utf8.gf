@@ -1,4 +1,4 @@
-namespace std::Utf8;
+namespace std::Text::Utf8;
 
 bool IsValidScalar(uint scalar) nothrow
     => scalar <= 0x10ffffu && !(scalar >= 0xd800u && scalar <= 0xdfffu);

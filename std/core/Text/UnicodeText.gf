@@ -1,6 +1,6 @@
 using std::Text;
 using std::Collections;
-namespace std;
+namespace std::Text;
 
 // Owning counted conversions, separate from the allocation-free codecs.
 public static class UnicodeText

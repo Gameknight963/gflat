@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Incremental strict UTF-8 decoding. No input pointer is retained between calls.
 public struct Utf8Decoder

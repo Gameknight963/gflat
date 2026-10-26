@@ -1,3 +1,4 @@
+using std::Text;
 namespace std::Json;
 
 // Quotes/unquotes one counted UTF-8 JSON string, including surrounding quotes.

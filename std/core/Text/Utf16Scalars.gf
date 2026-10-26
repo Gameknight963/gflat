@@ -1,6 +1,6 @@
 using std::Queries;
 using std::Collections;
-namespace std;
+namespace std::Text;
 
 // Borrows counted UTF-16 host ushort units. Input must remain alive throughout enumeration.
 public struct Utf16Scalars : IEnumerable<uint, Utf16Scalars::Enumerator>

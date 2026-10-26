@@ -344,7 +344,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
                 SortedSet<int> unique=new(Comparer<int>::Compare); unique.Add(42);
                 SortedSet<int>::Enumerator uniqueItems=unique.GetEnumerator();
                 ushort[2] units=[(ushort)65,(ushort)0];
-                std::Utf16::TryDecode(units,1,&scalar,&consumed);
+                std::Text::Utf16::TryDecode(units,1,&scalar,&consumed);
                 Utf16Decoder wideDecoder=new(); wideDecoder.Read(units,1,true,&scalar,&consumed); wideDecoder.Reset();
                 uint reversed=BitOperations::ReverseEndianness(42u);
                 uint roundedBits=BitOperations::RoundUpToPowerOfTwo(42u);

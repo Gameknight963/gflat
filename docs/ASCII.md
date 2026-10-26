@@ -39,7 +39,7 @@ and add no source dependencies. They do not perform Unicode case conversion.
 
 `TryHexValue(char input, byte* result)` recognizes one hexadecimal digit and
 writes its numerical value from 0 through 15. Invalid input returns false and
-writes zero. Use `std::Utf8` to decode Unicode scalar values before applying
+writes zero. Use `std::Text::Utf8` to decode Unicode scalar values before applying
 any future Unicode character operations.
 
 ## Counted case-insensitive comparison

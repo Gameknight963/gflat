@@ -1,5 +1,5 @@
 using std::Text;
-namespace std;
+namespace std::Text;
 
 // A validated Unicode scalar, formatted as its counted UTF-8 encoding.
 public struct Rune : IEquatable<Rune>, IComparable<Rune>, IHashable, IFormattable, IStringConvertable

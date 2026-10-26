@@ -32,7 +32,7 @@ public class StandardUtf8ScalarsTests
             int main() {
                 char[{{bytes.Length}}] bytes = [{{data}}];
                 uint[{{runes.Length}}] expected = [{{expected}}];
-                std::Utf8Scalars scalars = new(bytes, {{bytes.Length}});
+                std::Text::Utf8Scalars scalars = new(bytes, {{bytes.Length}});
                 if (scalars.ByteLength != {{bytes.Length}}) return 1;
                 for (int pass = 0; pass < 2; pass++) {
                     nuint index = 0;
@@ -42,15 +42,15 @@ public class StandardUtf8ScalarsTests
                     }
                     if (index != (nuint){{runes.Length}}) return 3;
                 }
-                std::Utf8Scalars::Enumerator first = scalars.GetEnumerator();
-                std::Utf8Scalars::Enumerator second = scalars.GetEnumerator();
+                std::Text::Utf8Scalars::Enumerator first = scalars.GetEnumerator();
+                std::Text::Utf8Scalars::Enumerator second = scalars.GetEnumerator();
                 if (!first.MoveNext() || first.Current != 65u) return 4;
                 if (!first.MoveNext() || first.Current != 0u) return 5;
                 if (!second.MoveNext() || second.Current != 65u) return 6;
-                std::Utf8Scalars::Enumerator copy = second;
+                std::Text::Utf8Scalars::Enumerator copy = second;
                 if (!copy.MoveNext() || copy.Current != 0u || second.Current != 65u) return 7;
-                std::Collections::IEnumerable<uint, std::Utf8Scalars::Enumerator>* source = &scalars;
-                std::Utf8Scalars::Enumerator iterator = source.GetEnumerator();
+                std::Collections::IEnumerable<uint, std::Text::Utf8Scalars::Enumerator>* source = &scalars;
+                std::Text::Utf8Scalars::Enumerator iterator = source.GetEnumerator();
                 nuint count = 0;
                 while (iterator.MoveNext()) {
                     if (iterator.Current != expected[count]) return 8;
@@ -69,13 +69,13 @@ public class StandardUtf8ScalarsTests
         => Run("""
             int main() {
                 char[3] bytes = ['A','B','C'];
-                std::Utf8Scalars scalars = new(bytes, 3);
-                std::Utf8Scalars copied = scalars;
-                std::Utf8Scalars::Enumerator iterator = scalars.GetEnumerator();
+                std::Text::Utf8Scalars scalars = new(bytes, 3);
+                std::Text::Utf8Scalars copied = scalars;
+                std::Text::Utf8Scalars::Enumerator iterator = scalars.GetEnumerator();
                 if (!iterator.MoveNext() || iterator.Current != 65u) return 1;
                 bytes[0] = 'X'; bytes[1] = 'Y';
                 if (iterator.Current != 65u || !iterator.MoveNext() || iterator.Current != 89u) return 2;
-                std::Utf8Scalars::Enumerator fresh = copied.GetEnumerator();
+                std::Text::Utf8Scalars::Enumerator fresh = copied.GetEnumerator();
                 if (!fresh.MoveNext() || fresh.Current != 88u) return 3;
                 // Breaking enumeration neither changes nor owns caller storage.
                 foreach (uint scalar in scalars) { if (scalar != 88u) return 4; break; }
@@ -90,21 +90,21 @@ public class StandardUtf8ScalarsTests
     public void EmptyAndInvalidIteratorStatesThrowAndExceptionsReleaseTheirStorage(int optimization)
         => Run("""
             int main() {
-                std::Utf8Scalars empty = new();
-                std::Utf8Scalars nullEmpty = new(null, 0);
+                std::Text::Utf8Scalars empty = new();
+                std::Text::Utf8Scalars nullEmpty = new(null, 0);
                 if (empty.ByteLength != 0 || nullEmpty.ByteLength != 0) return 1;
                 foreach (uint scalar in empty) return 2;
-                std::Utf8Scalars::Enumerator iterator = empty.GetEnumerator();
+                std::Text::Utf8Scalars::Enumerator iterator = empty.GetEnumerator();
                 bool caught = false;
                 try { iterator.Current; } catch { caught = true; }
                 if (!caught || iterator.MoveNext() || iterator.MoveNext()) return 3;
                 caught = false; try { iterator.Current; } catch { caught = true; }
                 if (!caught) return 4;
-                caught = false; try { new std::Utf8Scalars(null, 1); } catch { caught = true; }
+                caught = false; try { new std::Text::Utf8Scalars(null, 1); } catch { caught = true; }
                 if (!caught) return 5;
-                caught = false; try { new std::Utf8Scalars::Enumerator(null, 1); } catch { caught = true; }
+                caught = false; try { new std::Text::Utf8Scalars::Enumerator(null, 1); } catch { caught = true; }
                 if (!caught) return 6;
-                iterator = new std::Utf8Scalars("A", 1).GetEnumerator();
+                iterator = new std::Text::Utf8Scalars("A", 1).GetEnumerator();
                 caught = false; try { iterator.Current; } catch { caught = true; }
                 if (!caught || !iterator.MoveNext() || iterator.Current != 65u || iterator.MoveNext()) return 7;
                 caught = false; try { iterator.Current; } catch { caught = true; }
@@ -126,8 +126,8 @@ public class StandardUtf8ScalarsTests
             return $$"""
                 {
                     char[{{bytes.Length}}] bytes = [{{data}}];
-                    std::Utf8Scalars scalars = new(bytes, {{bytes.Length}});
-                    std::Utf8Scalars::Enumerator iterator = scalars.GetEnumerator();
+                    std::Text::Utf8Scalars scalars = new(bytes, {{bytes.Length}});
+                    std::Text::Utf8Scalars::Enumerator iterator = scalars.GetEnumerator();
                     if (!iterator.MoveNext() || iterator.Current != 65u) return 1;
                     bool caught = false; try { iterator.MoveNext(); } catch { caught = true; }
                     if (!caught) return 2;

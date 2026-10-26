@@ -1,12 +1,13 @@
 # Borrowed UTF-16 scalar iteration
 
-`std/core/Text/Utf16Scalars.gf` provides `std::Utf16Scalars`, a repeatable borrowed view
+`std/core/Text/Utf16Scalars.gf` provides `std::Text::Utf16Scalars`, a repeatable borrowed view
 of counted host `ushort` code units. Include `Text/utf16.gf`, `Collections/IEnumerable.gf`,
 `Collections/IEnumerator.gf`, and `Queries/Enumerable.gf` alongside the view source.
 
 ```csharp
+using std::Text;
 ushort[4] units = [(ushort)65, (ushort)0, (ushort)0xd83d, (ushort)0xde00];
-std::Utf16Scalars scalars = new(units, 4);
+std::Text::Utf16Scalars scalars = new(units, 4);
 foreach (uint scalar in scalars) {
     // U+0041, U+0000, U+1F600
 }

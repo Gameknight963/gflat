@@ -36,7 +36,7 @@ public sealed class StandardUtf16ScalarsTests
             int main() {
                 ushort[{{text.Length}}] units = [{{string.Join(",", text.Select(c => $"(ushort){(int)c}"))}}];
                 uint[{{scalars.Length}}] expected = [{{string.Join(",", scalars.Select(s => $"{s}u"))}}];
-                std::Utf16Scalars scalars = new(units, {{text.Length}});
+                std::Text::Utf16Scalars scalars = new(units, {{text.Length}});
                 if (scalars.CodeUnitLength != {{text.Length}}) return 1;
                 for (int pass = 0; pass < 2; pass++) {
                     nuint index = 0;
@@ -46,14 +46,14 @@ public sealed class StandardUtf16ScalarsTests
                     }
                     if (index != (nuint){{scalars.Length}}) return 3;
                 }
-                std::Utf16Scalars::Enumerator first = scalars.GetEnumerator();
-                std::Utf16Scalars::Enumerator second = scalars.GetEnumerator();
+                std::Text::Utf16Scalars::Enumerator first = scalars.GetEnumerator();
+                std::Text::Utf16Scalars::Enumerator second = scalars.GetEnumerator();
                 if (!first.MoveNext() || first.Current != 65u || !first.MoveNext() || first.Current != 0u) return 4;
                 if (!second.MoveNext() || second.Current != 65u) return 5;
-                std::Utf16Scalars::Enumerator copy = second;
+                std::Text::Utf16Scalars::Enumerator copy = second;
                 if (!copy.MoveNext() || copy.Current != 0u || second.Current != 65u) return 6;
-                std::Collections::IEnumerable<uint, std::Utf16Scalars::Enumerator>* source = &scalars;
-                std::Utf16Scalars::Enumerator iterator = source.GetEnumerator();
+                std::Collections::IEnumerable<uint, std::Text::Utf16Scalars::Enumerator>* source = &scalars;
+                std::Text::Utf16Scalars::Enumerator iterator = source.GetEnumerator();
                 nuint index = 0;
                 while (iterator.MoveNext()) {
                     if (index >= (nuint){{scalars.Length}} || iterator.Current != expected[index]) return 7;
@@ -73,12 +73,12 @@ public sealed class StandardUtf16ScalarsTests
         Run("""
             int main() {
                 ushort[3] units = [(ushort)65,(ushort)66,(ushort)67];
-                std::Utf16Scalars scalars = new(units, 3); std::Utf16Scalars copy = scalars;
-                std::Utf16Scalars::Enumerator iterator = scalars.GetEnumerator();
+                std::Text::Utf16Scalars scalars = new(units, 3); std::Text::Utf16Scalars copy = scalars;
+                std::Text::Utf16Scalars::Enumerator iterator = scalars.GetEnumerator();
                 if (!iterator.MoveNext() || iterator.Current != 65u) return 1;
                 units[0] = (ushort)88; units[1] = (ushort)89;
                 if (iterator.Current != 65u || !iterator.MoveNext() || iterator.Current != 89u) return 2;
-                std::Utf16Scalars::Enumerator fresh = copy.GetEnumerator();
+                std::Text::Utf16Scalars::Enumerator fresh = copy.GetEnumerator();
                 if (!fresh.MoveNext() || fresh.Current != 88u) return 3;
                 foreach (uint value in scalars) { if (value != 88u) return 4; break; }
                 if (units[0] != (ushort)88 || allocations != 0 || releases != 0) return 5;
@@ -94,19 +94,19 @@ public sealed class StandardUtf16ScalarsTests
     {
         Run("""
             int main() {
-                std::Utf16Scalars empty = new(); std::Utf16Scalars nullEmpty = new(null, 0);
+                std::Text::Utf16Scalars empty = new(); std::Text::Utf16Scalars nullEmpty = new(null, 0);
                 if (empty.CodeUnitLength != 0 || nullEmpty.CodeUnitLength != 0) return 1;
                 foreach (uint value in empty) return 2;
-                std::Utf16Scalars::Enumerator iterator = empty.GetEnumerator();
+                std::Text::Utf16Scalars::Enumerator iterator = empty.GetEnumerator();
                 bool caught = false; try { iterator.Current; } catch { caught = true; }
                 if (!caught || iterator.MoveNext() || iterator.MoveNext()) return 3;
                 caught = false; try { iterator.Current; } catch { caught = true; }
                 if (!caught) return 4;
-                caught = false; try { new std::Utf16Scalars(null, 1); } catch { caught = true; }
+                caught = false; try { new std::Text::Utf16Scalars(null, 1); } catch { caught = true; }
                 if (!caught) return 5;
-                caught = false; try { new std::Utf16Scalars::Enumerator(null, 1); } catch { caught = true; }
+                caught = false; try { new std::Text::Utf16Scalars::Enumerator(null, 1); } catch { caught = true; }
                 if (!caught) return 6;
-                ushort unit = (ushort)65; iterator = new std::Utf16Scalars(&unit, 1).GetEnumerator();
+                ushort unit = (ushort)65; iterator = new std::Text::Utf16Scalars(&unit, 1).GetEnumerator();
                 caught = false; try { iterator.Current; } catch { caught = true; }
                 if (!caught || !iterator.MoveNext() || iterator.Current != 65u || iterator.MoveNext()) return 7;
                 caught = false; try { iterator.Current; } catch { caught = true; }
@@ -125,12 +125,12 @@ public sealed class StandardUtf16ScalarsTests
         string cases = string.Join("\n", invalid.Select(units => $$"""
             {
                 ushort[{{units.Length + 1}}] units = [{{string.Join(",", new ushort[] { 65 }.Concat(units).Select(u => $"(ushort){u}"))}}];
-                std::Utf16Scalars scalars = new(units, {{units.Length + 1}});
-                std::Utf16Scalars invalidStart = new(&units[1], {{units.Length}});
-                std::Utf16Scalars::Enumerator invalidIterator = invalidStart.GetEnumerator();
+                std::Text::Utf16Scalars scalars = new(units, {{units.Length + 1}});
+                std::Text::Utf16Scalars invalidStart = new(&units[1], {{units.Length}});
+                std::Text::Utf16Scalars::Enumerator invalidIterator = invalidStart.GetEnumerator();
                 bool initialCaught = false; try { invalidIterator.MoveNext(); } catch { initialCaught = true; }
                 if (!initialCaught) return 8;
-                std::Utf16Scalars::Enumerator iterator = scalars.GetEnumerator();
+                std::Text::Utf16Scalars::Enumerator iterator = scalars.GetEnumerator();
                 if (!iterator.MoveNext() || iterator.Current != 65u) return 1;
                 bool caught = false; try { iterator.MoveNext(); } catch { caught = true; }
                 if (!caught) return 2;

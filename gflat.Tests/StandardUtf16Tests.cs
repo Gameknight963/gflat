@@ -37,22 +37,22 @@ public sealed class StandardUtf16Tests
             int count = new Rune((int)value).EncodeToUtf16(expected);
             code.AppendLine($$"""
                 units[0] = (ushort)123; units[1] = (ushort)123; units[2] = (ushort)123; units[3] = (ushort)123;
-                if (std::Utf16::EncodedLength({{value}}u) != (nuint){{count}}) return 1;
+                if (std::Text::Utf16::EncodedLength({{value}}u) != (nuint){{count}}) return 1;
                 for (nuint capacity = 0; capacity < (nuint){{count}}; capacity++) {
                     written = 99;
-                    if (std::Utf16::TryEncode({{value}}u, &units[1], capacity, &written) || written != 0) return 2;
+                    if (std::Text::Utf16::TryEncode({{value}}u, &units[1], capacity, &written) || written != 0) return 2;
                     for (int i = 0; i < 4; i++) if (units[i] != (ushort)123) return 3;
                 }
-                if (!std::Utf16::TryEncode({{value}}u, &units[1], {{count}}, &written) || written != (nuint){{count}}) return 4;
+                if (!std::Text::Utf16::TryEncode({{value}}u, &units[1], {{count}}, &written) || written != (nuint){{count}}) return 4;
                 if (units[0] != (ushort)123 || units[{{count + 1}}] != (ushort)123) return 5;
                 """);
             for (int i = 0; i < count; i++) code.AppendLine($"if (units[{i + 1}] != (ushort){(int)expected[i]}) return 6;");
             code.AppendLine($$"""
                 for (nuint available = 0; available < written; available++) {
                     scalar = 99u; consumed = 99;
-                    if (std::Utf16::TryDecode(&units[1], available, &scalar, &consumed) || scalar != 0u || consumed != 0) return 7;
+                    if (std::Text::Utf16::TryDecode(&units[1], available, &scalar, &consumed) || scalar != 0u || consumed != 0) return 7;
                 }
-                if (!std::Utf16::TryDecode(&units[1], written, &scalar, &consumed) || scalar != {{value}}u || consumed != written) return 8;
+                if (!std::Text::Utf16::TryDecode(&units[1], written, &scalar, &consumed) || scalar != {{value}}u || consumed != written) return 8;
                 """);
         }
         code.AppendLine("return 0; }");
@@ -69,21 +69,21 @@ public sealed class StandardUtf16Tests
                 ushort[2] units; nuint written = 0; uint scalar = 0u; nuint consumed = 0;
                 for (uint value = 0u; value <= 0x10ffffu; value++) {
                     bool valid = !(value >= 0xd800u && value <= 0xdfffu);
-                    if (std::Utf16::IsValidScalar(value) != valid) return 1;
+                    if (std::Text::Utf16::IsValidScalar(value) != valid) return 1;
                     units[0] = (ushort)42; units[1] = (ushort)43;
                     written = 99;
-                    if (std::Utf16::TryEncode(value, units, 2, &written) != valid) return 2;
+                    if (std::Text::Utf16::TryEncode(value, units, 2, &written) != valid) return 2;
                     if (!valid) {
                         if (written != 0 || units[0] != (ushort)42 || units[1] != (ushort)43) return 3;
                         units[0] = (ushort)value; scalar = 99u; consumed = 99;
-                        if (std::Utf16::TryDecode(units, 1, &scalar, &consumed) || scalar != 0u || consumed != 0) return 4;
+                        if (std::Text::Utf16::TryDecode(units, 1, &scalar, &consumed) || scalar != 0u || consumed != 0) return 4;
                         continue;
                     }
-                    if (!std::Utf16::TryDecode(units, written, &scalar, &consumed) || scalar != value || consumed != written) return 5;
+                    if (!std::Text::Utf16::TryDecode(units, written, &scalar, &consumed) || scalar != value || consumed != written) return 5;
                 }
-                if (std::Utf16::EncodedLength(0x110000u) != 0 || std::Utf16::IsValidScalar(0xffffffffu)) return 6;
+                if (std::Text::Utf16::EncodedLength(0x110000u) != 0 || std::Text::Utf16::IsValidScalar(0xffffffffu)) return 6;
                 units[0] = (ushort)42; units[1] = (ushort)43;
-                if (std::Utf16::TryEncode(0xffffffffu, units, 2, &written) || written != 0 || units[0] != (ushort)42 || units[1] != (ushort)43) return 7;
+                if (std::Text::Utf16::TryEncode(0xffffffffu, units, 2, &written) || written != 0 || units[0] != (ushort)42 || units[1] != (ushort)43) return 7;
                 return 0;
             }
             """, optimization);
@@ -101,20 +101,20 @@ public sealed class StandardUtf16Tests
             for (int i = 0; i < input.Length; i++) code.AppendLine($"units[{i}] = (ushort){input[i]};");
             code.AppendLine($$"""
                 scalar = 99u; consumed = 99; count = 99;
-                if (std::Utf16::TryDecode(units, {{input.Length}}, &scalar, &consumed) || scalar != 0u || consumed != 0) return 1;
-                if (std::Utf16::IsValid(units, {{input.Length}})) return 2;
-                if (std::Utf16::TryCount(units, {{input.Length}}, &count) || count != 0) return 3;
+                if (std::Text::Utf16::TryDecode(units, {{input.Length}}, &scalar, &consumed) || scalar != 0u || consumed != 0) return 1;
+                if (std::Text::Utf16::IsValid(units, {{input.Length}})) return 2;
+                if (std::Text::Utf16::TryCount(units, {{input.Length}}, &count) || count != 0) return 3;
                 """);
         }
         code.AppendLine("""
             units[0] = (ushort)0; units[1] = (ushort)0xd83d; units[2] = (ushort)0xde00; units[3] = (ushort)0xffff; units[4] = (ushort)0xd800;
-            if (!std::Utf16::TryCount(units, 4, &count) || count != 3 || !std::Utf16::IsValid(units, 4)) return 4;
-            if (std::Utf16::TryCount(units, 5, &count) || count != 0) return 5;
+            if (!std::Text::Utf16::TryCount(units, 4, &count) || count != 3 || !std::Text::Utf16::IsValid(units, 4)) return 4;
+            if (std::Text::Utf16::TryCount(units, 5, &count) || count != 0) return 5;
             readonly(ushort)*? absent = null; readonly(ushort)* empty = absent!;
-            if (!std::Utf16::TryCount(empty, 0, &count) || count != 0 || !std::Utf16::IsValid(empty, 0)) return 6;
-            if (std::Utf16::TryDecode(empty, 0, &scalar, &consumed) || scalar != 0u || consumed != 0) return 7;
+            if (!std::Text::Utf16::TryCount(empty, 0, &count) || count != 0 || !std::Text::Utf16::IsValid(empty, 0)) return 6;
+            if (std::Text::Utf16::TryDecode(empty, 0, &scalar, &consumed) || scalar != 0u || consumed != 0) return 7;
             ushort*? noOutput = null;
-            if (std::Utf16::TryEncode(65u, noOutput!, 0, &count) || count != 0) return 8;
+            if (std::Text::Utf16::TryEncode(65u, noOutput!, 0, &count) || count != 0) return 8;
             return 0;
             }
             """);
@@ -134,15 +134,15 @@ public sealed class StandardUtf16Tests
                 nuint* count = (nuint*)&aligned[1];
                 nuint consumed = 99; uint decoded = 99u;
                 units[0] = (ushort)0xd83d; units[1] = (ushort)0xde00;
-                if (!std::Utf16::TryDecode(units, 2, scalar, &consumed) || *scalar != 0x1f600u || consumed != 2) return 1;
+                if (!std::Text::Utf16::TryDecode(units, 2, scalar, &consumed) || *scalar != 0x1f600u || consumed != 2) return 1;
                 units[4] = (ushort)0xdbff; units[5] = (ushort)0xdfff;
-                if (!std::Utf16::TryDecode(&units[4], 2, &decoded, count) || decoded != 0x10ffffu || *count != 2) return 2;
+                if (!std::Text::Utf16::TryDecode(&units[4], 2, &decoded, count) || decoded != 0x10ffffu || *count != 2) return 2;
                 units[4] = (ushort)65; units[5] = (ushort)0xd83d; units[6] = (ushort)0xde00; units[7] = (ushort)0;
-                if (!std::Utf16::TryCount(&units[4], 4, count) || *count != 3) return 3;
+                if (!std::Text::Utf16::TryCount(&units[4], 4, count) || *count != 3) return 3;
                 units[4] = (ushort)65; units[5] = (ushort)0xd83d; units[6] = (ushort)0xde00; units[7] = (ushort)0xd800;
-                if (std::Utf16::TryCount(&units[4], 4, count) || *count != 0) return 4;
+                if (std::Text::Utf16::TryCount(&units[4], 4, count) || *count != 0) return 4;
                 units[0] = (ushort)0xd800; units[1] = (ushort)65;
-                if (std::Utf16::TryDecode(units, 2, scalar, &consumed) || *scalar != 0u || consumed != 0) return 5;
+                if (std::Text::Utf16::TryDecode(units, 2, scalar, &consumed) || *scalar != 0u || consumed != 0) return 5;
                 return 0;
             }
             """, optimization);

@@ -8,7 +8,7 @@ public class StandardUtf8Tests
     public void CoreCodecCompilesWithoutStandardLibraryOrRuntimeDefinitions()
     {
         var codec = new SourceFile("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/utf8.gf")));
-        Compiler.Emit([codec, new SourceFile("main.gf", "int main() => (int)std::Utf8::EncodedLength(65u);")], options: new() { NoStdLib = true });
+        Compiler.Emit([codec, new SourceFile("main.gf", "int main() => (int)std::Text::Utf8::EncodedLength(65u);")], options: new() { NoStdLib = true });
     }
 
     private static void Run(string code)
@@ -39,19 +39,19 @@ public class StandardUtf8Tests
             int main() {
                 char[5] bytes = ['Z','Z','Z','Z','Z'];
                 nuint written = 99;
-                if (std::Utf8::EncodedLength({{value}}u) != (nuint){{length}}) return 1;
+                if (std::Text::Utf8::EncodedLength({{value}}u) != (nuint){{length}}) return 1;
                 for (nuint capacity = 0; capacity < (nuint){{length}}; capacity++) {
-                    if (std::Utf8::TryEncode({{value}}u, bytes, capacity, &written) || written != (nuint)0) return 2;
+                    if (std::Text::Utf8::TryEncode({{value}}u, bytes, capacity, &written) || written != (nuint)0) return 2;
                     for (int j = 0; j < 5; j++) if (bytes[j] != 'Z') return 3;
                 }
-                if (!std::Utf8::TryEncode({{value}}u, bytes, 5, &written) || written != (nuint){{length}}) return 4;
+                if (!std::Text::Utf8::TryEncode({{value}}u, bytes, 5, &written) || written != (nuint){{length}}) return 4;
                 {{checks}}
                 if (bytes[{{length}}] != 'Z') return 5;
                 uint scalar = 123u; nuint consumed = 99;
                 for (nuint count = 0; count < written; count++) {
-                    if (std::Utf8::TryDecode(bytes, count, &scalar, &consumed) || scalar != 0u || consumed != (nuint)0) return 6;
+                    if (std::Text::Utf8::TryDecode(bytes, count, &scalar, &consumed) || scalar != 0u || consumed != (nuint)0) return 6;
                 }
-                if (!std::Utf8::TryDecode(bytes, written, &scalar, &consumed) || scalar != {{value}}u || consumed != written) return 7;
+                if (!std::Text::Utf8::TryDecode(bytes, written, &scalar, &consumed) || scalar != {{value}}u || consumed != written) return 7;
                 return 0;
             }
             """);
@@ -81,10 +81,10 @@ public class StandardUtf8Tests
             int main() {
                 char[{{bytes.Length}}] bytes = [{{initialization}}];
                 uint scalar = 42u; nuint consumed = 42; nuint count = 42;
-                if (std::Utf8::TryDecode(bytes, {{bytes.Length}}, &scalar, &consumed)) return 1;
+                if (std::Text::Utf8::TryDecode(bytes, {{bytes.Length}}, &scalar, &consumed)) return 1;
                 if (scalar != 0u || consumed != (nuint)0) return 2;
-                if (std::Utf8::IsValid(bytes, {{bytes.Length}})) return 3;
-                if (std::Utf8::TryCount(bytes, {{bytes.Length}}, &count) || count != (nuint)0) return 4;
+                if (std::Text::Utf8::IsValid(bytes, {{bytes.Length}})) return 3;
+                if (std::Text::Utf8::TryCount(bytes, {{bytes.Length}}, &count) || count != (nuint)0) return 4;
                 return 0;
             }
             """);
@@ -101,17 +101,17 @@ public class StandardUtf8Tests
                 nuint consumed = 0;
                 for (uint value = 0u; value <= 0x10ffffu; value++) {
                     written = 7;
-                    valid = std::Utf8::IsValidScalar(value);
-                    if (std::Utf8::TryEncode(value, bytes, 4, &written) != valid) return 1;
+                    valid = std::Text::Utf8::IsValidScalar(value);
+                    if (std::Text::Utf8::TryEncode(value, bytes, 4, &written) != valid) return 1;
                     if (!valid) { if (written != (nuint)0) return 2; continue; }
                     decoded = 0u; consumed = 0;
-                    if (!std::Utf8::TryDecode(bytes, written, &decoded, &consumed)) return 3;
+                    if (!std::Text::Utf8::TryDecode(bytes, written, &decoded, &consumed)) return 3;
                     if (decoded != value) return 4;
                     if (consumed != written) return 4;
                 }
-                if (std::Utf8::IsValidScalar(0x110000u) || std::Utf8::IsValidScalar(0xffffffffu)) return 5;
+                if (std::Text::Utf8::IsValidScalar(0x110000u) || std::Text::Utf8::IsValidScalar(0xffffffffu)) return 5;
                 written = 1;
-                if (std::Utf8::TryEncode(0xffffffffu, bytes, 4, &written) || written != (nuint)0) return 6;
+                if (std::Text::Utf8::TryEncode(0xffffffffu, bytes, 4, &written) || written != (nuint)0) return 6;
                 return 0;
             }
             """);
@@ -122,11 +122,11 @@ public class StandardUtf8Tests
             int main() {
                 char[10] text = ['A','\0',(char)0xe2,(char)0x82,(char)0xac,(char)0xf0,(char)0x9f,(char)0x98,(char)0x80,(char)0xff];
                 nuint count = 99;
-                if (!std::Utf8::TryCount(text, 9, &count) || count != (nuint)4) return 1;
-                if (std::Utf8::TryCount(text, 10, &count) || count != (nuint)0) return 2;
-                if (!std::Utf8::TryCount(text, 0, &count) || count != (nuint)0 || !std::Utf8::IsValid(text, 0)) return 3;
+                if (!std::Text::Utf8::TryCount(text, 9, &count) || count != (nuint)4) return 1;
+                if (std::Text::Utf8::TryCount(text, 10, &count) || count != (nuint)0) return 2;
+                if (!std::Text::Utf8::TryCount(text, 0, &count) || count != (nuint)0 || !std::Text::Utf8::IsValid(text, 0)) return 3;
                 uint scalar = 0u; nuint consumed = 0;
-                if (!std::Utf8::TryDecode(text, 10, &scalar, &consumed) || scalar != 65u || consumed != (nuint)1) return 4;
+                if (!std::Text::Utf8::TryDecode(text, 10, &scalar, &consumed) || scalar != 65u || consumed != (nuint)1) return 4;
                 return 0;
             }
             """);
@@ -138,7 +138,7 @@ public class StandardUtf8Tests
                 char[131072] text;
                 for (nuint i = 0; i < (nuint)131072; i++) text[i] = 'a';
                 nuint count = 0;
-                if (!std::Utf8::TryCount(text, 131072, &count)) return 1;
+                if (!std::Text::Utf8::TryCount(text, 131072, &count)) return 1;
                 if (count != (nuint)131072) return 2;
                 return 0;
             }

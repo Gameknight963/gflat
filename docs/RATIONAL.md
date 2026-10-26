@@ -83,4 +83,4 @@ an owning String for a named Rational; it borrows the receiver. Writer failures
 propagate and may leave a prefix in the sink without altering the Rational.
 
 For explicit source selection include `Numerics/Rational.gf`, BigInteger's existing
-dependencies, and `FormattableString.gf` only when using the ToString extension.
+dependencies, and `Text/formattable_string.gf` only when using the ToString extension.

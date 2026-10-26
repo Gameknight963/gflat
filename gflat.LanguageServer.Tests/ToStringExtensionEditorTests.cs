@@ -17,9 +17,9 @@ public sealed class ToStringExtensionEditorTests
         Assert.DoesNotContain(snapshot.Diagnostics, error => error.Severity == DiagnosticSeverity.Error);
         var model = new EditorModel(snapshot, files);
         foreach (var row in new[] {
-            (Receiver: "number", File: "PrimitiveString.gf", Declaration: "public String ToString(this int value)"),
-            (Receiver: "label", File: "FormattableString.gf", Declaration: "public String ToString<T"),
-            (Receiver: "borrowed", File: "FormattableString.gf", Declaration: "public String ToString<T"),
+            (Receiver: "number", File: "primitive_string.gf", Declaration: "public String ToString(this int value)"),
+            (Receiver: "label", File: "formattable_string.gf", Declaration: "public String ToString<T"),
+            (Receiver: "borrowed", File: "formattable_string.gf", Declaration: "public String ToString<T"),
             (Receiver: "original", File: "String.gf", Declaration: "public immutable String ToString()") })
         {
             int use = text.IndexOf(row.Receiver + ".ToString", StringComparison.Ordinal) + row.Receiver.Length + 1;
@@ -42,7 +42,7 @@ public sealed class ToStringExtensionEditorTests
     public void SingleBorrowedExtensionUsesTheOpenParametersAdvertisedAliasContract()
     {
         const string text = "using std; using std::Text;namespace Views{alias Bound=IFormattable;String Describe<T:Bound>(ref immutable(T) value)=>value.ToString();}";
-        string[] excluded = ["PrimitiveString.gf", "ExtraLongString.gf", "FloatingString.gf"];
+        string[] excluded = ["primitive_string.gf", "extra_long_string.gf", "floating_string.gf"];
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Where(path => !excluded.Contains(Path.GetFileName(path)))
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
@@ -55,7 +55,7 @@ public sealed class ToStringExtensionEditorTests
         for (int query = 0; query < 2; query++)
         {
             var definition = Json(model.Definition(source.Path, use));
-            Assert.EndsWith("FormattableString.gf", new Uri(definition.GetProperty("uri").GetString()!).LocalPath);
+            Assert.EndsWith("formattable_string.gf", new Uri(definition.GetProperty("uri").GetString()!).LocalPath);
             string hover = Json(model.Hover(source.Path, use)).GetProperty("contents").GetProperty("value").GetString()!;
             Assert.Contains("ToString", hover);
             Assert.DoesNotContain('$', hover);

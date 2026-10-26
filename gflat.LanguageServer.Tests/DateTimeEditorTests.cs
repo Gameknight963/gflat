@@ -9,7 +9,7 @@ public sealed class DateTimeEditorTests
     [Fact]
     public void CalendarAndClockPropertiesRetainTheirTypesAndFormatExposesItsOutputContract()
     {
-        const string text = "using std;void Probe(){DateTime value=new(new Date(2026,10,24),new TimeOfDay(12,30));immutable(DateTime)* view=&value;Date date=view.Date;TimeOfDay time=view.TimeOfDay;char[27] output;nuint written=0;bool success=view.TryFormat(output,27,ref written);}";
+        const string text = "using std; using std::Time;void Probe(){DateTime value=new(new Date(2026,10,24),new TimeOfDay(12,30));immutable(DateTime)* view=&value;Date date=view.Date;TimeOfDay time=view.TimeOfDay;char[27] output;nuint written=0;bool success=view.TryFormat(output,27,ref written);}";
         var (model, source, library, _) = Analyze(text);
         foreach (string name in new[] { "Date", "TimeOfDay" })
         {
@@ -39,7 +39,7 @@ public sealed class DateTimeEditorTests
     [Fact]
     public void CountedAndTerminatedParsingNavigateToTheirDistinctDeclarations()
     {
-        const string text = "using std;void Probe(){DateTime value=new();bool first=DateTime::TryParse(\"2026-10-24T12:30:00\",19,&value);bool second=DateTime::TryParse(\"2026-10-24T12:30:00\",&value);}";
+        const string text = "using std; using std::Time;void Probe(){DateTime value=new();bool first=DateTime::TryParse(\"2026-10-24T12:30:00\",19,&value);bool second=DateTime::TryParse(\"2026-10-24T12:30:00\",&value);}";
         var (model, source, library, snapshot) = Analyze(text);
         foreach (var row in new[] { (Use: text.IndexOf("TryParse", StringComparison.Ordinal), Arity: 3), (Use: text.LastIndexOf("TryParse", StringComparison.Ordinal), Arity: 2) })
         {

@@ -1,6 +1,6 @@
 # Calendar dates
 
-`std::Date` is an immutable Gregorian calendar value from `0001-01-01` through
+`std::Time::Date` is an immutable Gregorian calendar value from `0001-01-01` through
 `9999-12-31`. It has no clock, time-of-day, timezone, locale, or OS dependency.
 The Gregorian rules apply throughout that range, including before their historical
 adoption. Its single private `int` day number counts days since `0001-01-01`;
@@ -8,7 +8,7 @@ the supported-range bound is a static constant and adds no per-date storage.
 An empty/default construction represents that first day, rather than an invalid date.
 
 ```csharp
-using std;
+using std; using std::Time;
 Date leapDay = new(2024, 2, 29);
 Date march = leapDay.AddDays(1);
 String message = s$"Next day: {march}"; // Next day: 2024-03-01
@@ -19,7 +19,7 @@ and `DayNumber` properties expose them. `Date::FromDayNumber(number)` accepts
 `0..3652058`. `Date::IsLeapYear(year)` and `Date::DaysInMonth(year, month)` validate
 the same year/month ranges. Invalid arguments throw `Exception`.
 
-`DayOfWeek` returns `std::DayOfWeek`: `Sunday = 0`, `Monday = 1`, through
+`DayOfWeek` returns `std::Time::DayOfWeek`: `Sunday = 0`, `Monday = 1`, through
 `Saturday = 6`. `DayOfYear` is one-based, from `1` on January 1 through `365`
 (or `366` in a leap year). Both properties are `immutable`, `nothrow`, and
 allocate nothing. These are calendar facts; neither consults a clock or timezone.
@@ -40,6 +40,7 @@ Results outside years `1..9999` throw `Exception`; extreme offsets never wrap.
 Both methods preserve the original date and allocate nothing on success.
 
 ```csharp
+using std::Time;
 Date invoice = new(2024, 1, 31);
 Date nextInvoice = invoice.AddMonths(1); // 2024-02-29
 Date anniversary = nextInvoice.AddYears(1); // 2025-02-28
@@ -73,7 +74,7 @@ Successful factories and week-count lookup allocate nothing. These methods
 perform calendar calculations without a clock, locale, or timezone.
 
 ```csharp
-using std;
+using std; using std::Time;
 int main()
 {
     Date holiday = Date::FromIsoWeek(2020, 53, DayOfWeek::Friday);
@@ -127,6 +128,7 @@ storage may overlap input: all needed input is read before the output is committ
 throw `Exception` on invalid input. Successful parsing allocates nothing.
 
 ```csharp
+using std::Time;
 Date birthday = Date::Parse("2000-02-29");
 Date parsed = new();
 if (Date::TryParse("2024-12-31", &parsed)) {

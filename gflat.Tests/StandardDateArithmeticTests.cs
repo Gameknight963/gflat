@@ -35,7 +35,7 @@ public sealed class StandardDateArithmeticTests
         foreach (int years in new[] { -9998, -9999 }) Add(DateOnly.MaxValue.DayNumber, years, true);
 
         string code = $$"""
-            using std;
+            using std; using std::Time;
             int main(){
                 int[{{samples.Count}}] numbers=[{{string.Join(",",samples.Select(s=>s.Number))}}];
                 int[{{samples.Count}}] offsets=[{{string.Join(",",samples.Select(s=>s.Offset))}}];
@@ -76,7 +76,7 @@ public sealed class StandardDateArithmeticTests
     [InlineData(2)]
     public void SuccessfulCalendarShiftsAllocateNothingAndDoNotRememberClampedDays(int optimization)
         => Run("""
-            using std;
+            using std; using std::Time;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}

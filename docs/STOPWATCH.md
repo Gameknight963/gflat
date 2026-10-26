@@ -1,6 +1,6 @@
 # Measuring intervals
 
-`std::Stopwatch<C>` is a value that accumulates elapsed time from a clock provider.
+`std::Time::Stopwatch<C>` is a value that accumulates elapsed time from a clock provider.
 The provider implements the static `IMonotonicClock` interface:
 `long GetTimestamp()` and `long GetFrequency()`. Frequency is positive, fixed,
 and expressed in counter ticks per second. Timestamp origins may be negative;
@@ -10,7 +10,7 @@ The application selects the provider as an ordinary type argument. This complete
 example uses a deterministic clock and requires no operating-system calls:
 
 ```csharp
-using std;
+using std; using std::Time;
 long timestamp = 0l;
 static class Clock : IMonotonicClock
 {
@@ -70,7 +70,7 @@ Optional source-library projects supply native providers:
 - [Linux monotonic clock](../libraries/platform/linux/README.md): Linux LP64.
 
 Add the appropriate project reference, then give the chosen specialization a
-local alias, for example `alias Timer = std::Stopwatch<Windows::PerformanceCounter>;`.
+local alias, for example `alias Timer = std::Time::Stopwatch<Windows::PerformanceCounter>;`.
 These projects are distributed under `libraries/platform` in the SDK and are
 not automatically included with std. Their clocks measure intervals; their
 origins are unrelated to calendar dates. Platform behavior during system

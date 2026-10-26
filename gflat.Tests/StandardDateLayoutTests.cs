@@ -8,7 +8,7 @@ public sealed class StandardDateLayoutTests
     public void CalendarBoundDoesNotOccupyPerDateStorage(int optimization)
     {
         const string code = """
-            using std;
+            using std; using std::Time;
             int main(){
                 if(sizeof(Date)!=sizeof(int)||alignof(Date)!=alignof(int))return 1;
                 Date first=Date::FromDayNumber(0);

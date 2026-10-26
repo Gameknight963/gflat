@@ -1,4 +1,4 @@
-﻿namespace std;
+﻿namespace std::Time;
 
 // Ordinary value state; C is selected by the caller, with no global clock hook.
 public struct Stopwatch<C : IMonotonicClock>

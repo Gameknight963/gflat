@@ -1,4 +1,4 @@
-﻿namespace std;
+﻿namespace std::Time;
 
 // Timestamp units are provider-defined. Frequency is positive and fixed.
 // Samples must be monotonic; methods may throw on provider failure.

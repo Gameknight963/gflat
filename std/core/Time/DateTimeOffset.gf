@@ -1,9 +1,9 @@
-namespace std;
+namespace std::Time;
 
 // Civil wall time plus a whole-minute UTC offset; no named time zone is retained.
 public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeOffset>, IHashable, IFormattable
 {
-    private std::DateTime clock;
+    private std::Time::DateTime clock;
     private long offsetTicks;
     private static const long MinuteTicks = 600000000l;
     private static const long MaximumOffset = 504000000000l;
@@ -12,25 +12,25 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
     public DateTimeOffset() nothrow { clock = new(); offsetTicks = 0l; }
     private static bool ValidOffset(long offset) nothrow
         => offset >= -MaximumOffset && offset <= MaximumOffset && offset % MinuteTicks == 0l;
-    private static bool Valid(std::DateTime value, long offset) nothrow
+    private static bool Valid(std::Time::DateTime value, long offset) nothrow
     {
         if (!ValidOffset(offset)) return false;
         long utc = value.Ticks - offset;
         return utc >= 0l && utc <= MaximumTicks;
     }
-    private static DateTimeOffset Create(std::DateTime value, long offset) nothrow
+    private static DateTimeOffset Create(std::Time::DateTime value, long offset) nothrow
     {
         DateTimeOffset result = new(); result.clock = value; result.offsetTicks = offset; return result;
     }
-    public DateTimeOffset(std::DateTime value, TimeSpan offset)
+    public DateTimeOffset(std::Time::DateTime value, TimeSpan offset)
     {
         clock = new(); offsetTicks = 0l;
         if (!Valid(value, offset.Ticks)) throw new Exception("DateTimeOffset clock or offset is out of range");
         clock = value; offsetTicks = offset.Ticks;
     }
     private immutable long GetUtcTicks() nothrow => clock.Ticks - offsetTicks;
-    public std::DateTime DateTime { immutable get nothrow => clock; }
-    public std::DateTime UtcDateTime { immutable get => std::DateTime::FromTicks(this.GetUtcTicks()); }
+    public std::Time::DateTime DateTime { immutable get nothrow => clock; }
+    public std::Time::DateTime UtcDateTime { immutable get => std::Time::DateTime::FromTicks(this.GetUtcTicks()); }
     public TimeSpan Offset { immutable get nothrow => TimeSpan::FromTicks(offsetTicks); }
 
     public immutable DateTimeOffset ToOffset(TimeSpan offset)
@@ -39,19 +39,19 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
         if (!ValidOffset(selected)) throw new Exception("DateTimeOffset clock or offset is out of range");
         long ticks = this.GetUtcTicks() + selected;
         if (ticks < 0l || ticks > MaximumTicks) throw new Exception("DateTimeOffset clock or offset is out of range");
-        return Create(std::DateTime::FromTicks(ticks), selected);
+        return Create(std::Time::DateTime::FromTicks(ticks), selected);
     }
     public static DateTimeOffset FromUnixTimeSeconds(long seconds)
     {
         if (seconds < -62135596800l || seconds > 253402300799l)
             throw new Exception("Unix seconds are outside years 1 through 9999");
-        return Create(std::DateTime::FromTicks((seconds + 62135596800l) * 10000000l), 0l);
+        return Create(std::Time::DateTime::FromTicks((seconds + 62135596800l) * 10000000l), 0l);
     }
     public static DateTimeOffset FromUnixTimeMilliseconds(long milliseconds)
     {
         if (milliseconds < -62135596800000l || milliseconds > 253402300799999l)
             throw new Exception("Unix milliseconds are outside years 1 through 9999");
-        return Create(std::DateTime::FromTicks((milliseconds + 62135596800000l) * 10000l), 0l);
+        return Create(std::Time::DateTime::FromTicks((milliseconds + 62135596800000l) * 10000l), 0l);
     }
     // UTC ticks are nonnegative: divide before shifting epoch to floor negatives.
     public immutable long ToUnixTimeSeconds() nothrow => this.GetUtcTicks() / 10000000l - 62135596800l;
@@ -66,7 +66,7 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
         if (delta < -wall || delta > MaximumTicks - wall ||
             delta < -utc || delta > MaximumTicks - utc)
             throw new Exception("DateTimeOffset addition is outside years 1 through 9999");
-        return Create(std::DateTime::FromTicks(wall + delta), offsetTicks);
+        return Create(std::Time::DateTime::FromTicks(wall + delta), offsetTicks);
     }
     public immutable DateTimeOffset Subtract(TimeSpan value)
     {
@@ -77,7 +77,7 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
         if (delta > wall || delta < wall - MaximumTicks ||
             delta > utc || delta < utc - MaximumTicks)
             throw new Exception("DateTimeOffset subtraction is outside years 1 through 9999");
-        return Create(std::DateTime::FromTicks(wall - delta), offsetTicks);
+        return Create(std::Time::DateTime::FromTicks(wall - delta), offsetTicks);
     }
     public immutable TimeSpan Difference(DateTimeOffset other) nothrow
         => TimeSpan::FromTicks(this.GetUtcTicks() - other.GetUtcTicks());
@@ -110,8 +110,8 @@ public struct DateTimeOffset : IEquatable<DateTimeOffset>, IComparable<DateTimeO
             offset = (long)(hours * 60 + minutes) * MinuteTicks;
             if (text[prefix] == '-') offset = -offset;
         }
-        std::DateTime value = new();
-        if (!std::DateTime::TryParse(text, prefix, &value) || !Valid(value, offset)) return false;
+        std::Time::DateTime value = new();
+        if (!std::Time::DateTime::TryParse(text, prefix, &value) || !Valid(value, offset)) return false;
         parsed = Create(value, offset); return true;
     }
     // Candidate reads complete before output is written, including failure reset.

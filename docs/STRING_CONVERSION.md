@@ -8,7 +8,7 @@ any pointer borrowed from it is used.
 For a borrowed C string, use `String::From(text)`.
 
 ```csharp
-using std;
+using std; using std::Time;
 
 int main()
 {

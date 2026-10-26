@@ -8,7 +8,7 @@ public sealed class StopwatchEditorTests
     [Fact]
     public void StaticClockSpecializationRetainsImmutableObserversNoThrowResetAndSourceNavigation()
     {
-        const string text = "using std;static class Clock:IMonotonicClock{public static long GetTimestamp()=>0l;public static long GetFrequency()=>3l;}alias Timer=Stopwatch<Clock>;void Probe(){Timer value=new();value.Start();immutable(Timer)* view=&value;long ticks=view.ElapsedTicks;TimeSpan elapsed=view.Elapsed;value.Reset();}";
+        const string text = "using std; using std::Time;static class Clock:IMonotonicClock{public static long GetTimestamp()=>0l;public static long GetFrequency()=>3l;}alias Timer=Stopwatch<Clock>;void Probe(){Timer value=new();value.Start();immutable(Timer)* view=&value;long ticks=view.ElapsedTicks;TimeSpan elapsed=view.Elapsed;value.Reset();}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var library = files.Single(file => Path.GetFileName(file.Path) == "Stopwatch.gf");

@@ -24,7 +24,7 @@ public sealed class StandardDateTimeOffsetUnixTests
         }
         string hex=Convert.ToHexString(bytes.ToArray());
         string program=$$$"""
-            using std;extern void*? malloc(nuint count);extern void free(void* storage);
+            using std; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);
             int attempts=0;int allocated=0;int released=0;bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}

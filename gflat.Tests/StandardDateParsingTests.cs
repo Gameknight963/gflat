@@ -31,7 +31,7 @@ public sealed class StandardDateParsingTests
         int[] counted = cases.Select(Expected).ToArray();
         int[] terminated = cases.Select(text => Expected(text.Split('\0')[0])).ToArray();
         string code = $$"""
-            using std;
+            using std; using std::Time;
             int main(){
                 readonly(char)* text={{Literal(blob)}};
                 int[{{cases.Count}}] offsets=[{{string.Join(",",offsets)}}];
@@ -79,7 +79,7 @@ public sealed class StandardDateParsingTests
                 expected.Add(Expected(new string(characters)));
             }
         Run($$"""
-            using std;
+            using std; using std::Time;
             int main(){
                 int[2560] expected=[{{string.Join(",",expected)}}];
                 readonly(char)* original="2024-02-29";
@@ -109,7 +109,7 @@ public sealed class StandardDateParsingTests
     [InlineData(2)]
     public void OverlappingResultsAndWrongLengthsAreAllocationFree(int optimization)
         => Run("""
-            using std;
+            using std; using std::Time;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}

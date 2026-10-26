@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Time;
 
 public enum DayOfWeek
 {

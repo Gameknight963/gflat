@@ -22,11 +22,11 @@ public sealed class StampLinesExampleTests
                 .Append(new SourceFile("stamp-lines-test-clock.gf","""
                     int clockCalls=0;
                     static class TestClock{
-                        public static std::DateTime GetUtcNow(){
+                        public static std::Time::DateTime GetUtcNow(){
                             clockCalls++;
                             if(clockCalls==2&&std::Environment::GetVariable("GFLAT_TEST_STAMP_LINES_FAIL_SECOND")!=null)
                                 throw new Exception("test clock failure",71);
-                            return std::DateTime::FromTicks(621355968000000000l+(long)(clockCalls-1)*10000000l);
+                            return std::Time::DateTime::FromTicks(621355968000000000l+(long)(clockCalls-1)*10000000l);
                         }
                     }
                     alias NativeClock=TestClock;

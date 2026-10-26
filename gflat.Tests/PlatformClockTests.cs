@@ -15,8 +15,8 @@ public sealed class PlatformClockTests
             .Select(file => new SourceFile(file, File.ReadAllText(file)))
             .Append(new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("other-platform-clock.gf", $$"""
-                alias Timer=std::Stopwatch<{{provider}}>;
-                int main(){Timer value=Timer::StartNew();value.Stop();std::TimeSpan elapsed=value.Elapsed;return 0;}
+                alias Timer=std::Time::Stopwatch<{{provider}}>;
+                int main(){Timer value=Timer::StartNew();value.Stop();std::Time::TimeSpan elapsed=value.Elapsed;return 0;}
                 """));
         // Emit only: declarations and generic specialization are checked without
         // linking or executing the other operating system's native functions.
@@ -35,9 +35,9 @@ public sealed class PlatformClockTests
         string provider=windows?"Windows::PerformanceCounter":"Linux::MonotonicClock";
         string path=Path.Combine(AppContext.BaseDirectory,"Platform",folder,filename);
         string program=$$"""
-            using std;
+            using std; using std::Time;
             alias Clock={{provider}};
-            alias Timer=std::Stopwatch<Clock>;
+            alias Timer=std::Time::Stopwatch<Clock>;
             int main(){
                 if(sizeof(long)!=8||sizeof(nint)!=8)return 1;
                 long frequency=Clock::GetFrequency();if(frequency<=0l)return 2;

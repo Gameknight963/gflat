@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Time;
 
 // Signed duration in 100 ns ticks, independent of calendars and clocks.
 public struct TimeSpan : IEquatable<TimeSpan>, IComparable<TimeSpan>, IHashable, IFormattable

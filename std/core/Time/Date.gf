@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Time;
 
 // Proleptic Gregorian calendar date, independent of clocks and time zones.
 public struct Date : IEquatable<Date>, IComparable<Date>, IHashable, IFormattable

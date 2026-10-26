@@ -215,7 +215,7 @@ int main() {
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'
-using std; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
+using std; using std::Time; using std::Net; using std::Memory; using std::Binary; using std::Hashing; using std::Numerics; using std::Queries; using std::Collections;
 int smokeDestroyed = 0;
 long smokeTimestamp = 0l;
 static class SmokeClock : IMonotonicClock {
@@ -1168,12 +1168,12 @@ int main(int argc, char** argv) {
     }
     $clockProbe = Join-Path $extracted 'clock-provider.gf'
     @'
-alias Timer = std::Stopwatch<Windows::PerformanceCounter>;
+alias Timer = std::Time::Stopwatch<Windows::PerformanceCounter>;
 int main() {
     Timer timer = Timer::StartNew(); timer.Stop();
-    std::TimeSpan elapsed = timer.Elapsed;
+    std::Time::TimeSpan elapsed = timer.Elapsed;
     if (timer.IsRunning || timer.ElapsedTicks < 0l || elapsed.Ticks < 0l) return 1;
-    std::DateTime utc = Windows::SystemClock::GetUtcNow();
+    std::Time::DateTime utc = Windows::SystemClock::GetUtcNow();
     if (utc.Ticks < 504911232000000000l || utc.Ticks > 3155378975999999999l) return 2;
     return 0;
 }

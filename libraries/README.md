@@ -9,10 +9,10 @@ distributed alongside std, without becoming part of its default source set.
 | [Linux](platform/linux/Linux.gfproj) | `Linux::MonotonicClock`, `Linux::SystemClock` | Linux LP64 |
 
 The monotonic providers implement std's static `IMonotonicClock` contract. A program
-can use `std::Stopwatch<Windows::PerformanceCounter>`, for example, or define a
+can use `std::Time::Stopwatch<Windows::PerformanceCounter>`, for example, or define a
 local alias for that specialization. See [interval timing](../docs/STOPWATCH.md).
 
-Each platform's `SystemClock::GetUtcNow()` returns a `std::DateTime` interpreted
+Each platform's `SystemClock::GetUtcNow()` returns a `std::Time::DateTime` interpreted
 as UTC. Wall-clock time can jump when adjusted; use the monotonic providers for
 intervals. The project READMEs describe platform requirements and precision.
 

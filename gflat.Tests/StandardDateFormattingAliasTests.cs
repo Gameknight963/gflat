@@ -10,7 +10,7 @@ public sealed class StandardDateFormattingAliasTests
         var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("date-formatting-alias.gf", """
-                using std;
+                using std; using std::Time;
                 int main(){
                     readonly(char)*[3] expected=["0001-01-01","2000-02-29","9999-12-31"];
                     int[3] numbers=[0,730178,3652058];

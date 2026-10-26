@@ -7,7 +7,7 @@ namespace gflat.Tests;
 public sealed class StandardStopwatchTests
 {
     private const string Support="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -150,9 +150,9 @@ public sealed class StandardStopwatchTests
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("stopwatch-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
-                static class Clock:std::IMonotonicClock{public static long GetTimestamp()=>0l;public static long GetFrequency()=>3l;}
-                bool ResetProbe(std::Stopwatch<Clock>* value)nothrow{value.Reset();return value.IsRunning;}
-                std::TimeSpan Observe(immutable(std::Stopwatch<Clock>)* value)=>value.Elapsed;
+                static class Clock:std::Time::IMonotonicClock{public static long GetTimestamp()=>0l;public static long GetFrequency()=>3l;}
+                bool ResetProbe(std::Time::Stopwatch<Clock>* value)nothrow{value.Reset();return value.IsRunning;}
+                std::Time::TimeSpan Observe(immutable(std::Time::Stopwatch<Clock>)* value)=>value.Elapsed;
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         Assert.DoesNotContain("$String",ir);Assert.False(NativeToolchain.RequiresWideIntegerRuntime(ir));

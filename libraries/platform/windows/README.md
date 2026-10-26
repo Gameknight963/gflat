@@ -3,7 +3,8 @@
 Optional Windows x64 source library. Add a project reference to `libraries/platform/windows/Windows.gfproj`; it uses the normal std reference. It is outside automatic std inclusion.
 
 ```csharp
-alias Timer = std::Stopwatch<Windows::PerformanceCounter>;
+using std::Time;
+alias Timer = std::Time::Stopwatch<Windows::PerformanceCounter>;
 ```
 
 The provider queries the Windows performance counter and its fixed frequency. It measures intervals, not calendar dates. Timestamp/frequency failures throw exceptions with static messages. Successful readings require no application allocation.
@@ -14,12 +15,13 @@ Primary documentation: [QueryPerformanceCounter](https://learn.microsoft.com/en-
 
 ## UTC wall-clock time
 
-`Windows::SystemClock::GetUtcNow()` returns a `std::DateTime` interpreted as
+`Windows::SystemClock::GetUtcNow()` returns a `std::Time::DateTime` interpreted as
 UTC by this method's contract. DateTime itself still carries no timezone or
 UTC/local marker. For example, keep the interpretation explicit at the call site:
 
 ```csharp
-std::DateTime utc = Windows::SystemClock::GetUtcNow();
+using std::Time;
+std::Time::DateTime utc = Windows::SystemClock::GetUtcNow();
 utc.Format(Console::Out);
 Console::WriteLine();
 ```

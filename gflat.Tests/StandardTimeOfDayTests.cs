@@ -8,7 +8,7 @@ public sealed class StandardTimeOfDayTests
 {
     private const long Day=864000000000L;
     private const string Counters="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -169,8 +169,8 @@ public sealed class StandardTimeOfDayTests
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("time-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}
-                bool Observe(immutable(std::TimeOfDay)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
-                    std::TimeOfDay parsed=new();return std::TimeOfDay::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
+                bool Observe(immutable(std::Time::TimeOfDay)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
+                    std::Time::TimeOfDay parsed=new();return std::Time::TimeOfDay::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
                 }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});

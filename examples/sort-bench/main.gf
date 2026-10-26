@@ -1,8 +1,9 @@
+using std::Time;
 using std::Numerics;
 using std::Collections;
 using std;
 
-alias Timer = std::Stopwatch<NativeClock>;
+alias Timer = std::Time::Stopwatch<NativeClock>;
 
 int CompareValues(immutable(int)* left, immutable(int)* right) nothrow
 {

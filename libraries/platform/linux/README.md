@@ -3,7 +3,8 @@
 Optional Linux LP64 source library. Add a project reference to `libraries/platform/linux/Linux.gfproj`; it uses the normal std reference. It is outside automatic std inclusion.
 
 ```csharp
-alias Timer = std::Stopwatch<Linux::MonotonicClock>;
+using std::Time;
+alias Timer = std::Time::Stopwatch<Linux::MonotonicClock>;
 ```
 
 The provider calls libc `clock_gettime(CLOCK_MONOTONIC)` and exposes nanosecond units with frequency 1,000,000,000. Units do not imply nanosecond precision. Linux monotonic time excludes suspended time; consecutive readings may be equal. It is not a calendar timestamp. Invalid native results or signed-64-bit nanosecond overflow throw static-message exceptions.
@@ -16,13 +17,14 @@ Primary documentation: [clock_gettime manual](https://man7.org/linux/man-pages/m
 
 ## UTC wall-clock time
 
-`Linux::SystemClock::GetUtcNow()` returns a `std::DateTime` interpreted as UTC
+`Linux::SystemClock::GetUtcNow()` returns a `std::Time::DateTime` interpreted as UTC
 by this method's contract. DateTime remains a civil value with no timezone or
 UTC/local marker. This optional Linux project calls libc clock_gettime with
 CLOCK_REALTIME; it does not add an implicit core clock or provider.
 
 ```csharp
-std::DateTime utc = Linux::SystemClock::GetUtcNow();
+using std::Time;
+std::Time::DateTime utc = Linux::SystemClock::GetUtcNow();
 utc.Format(Console::Out);
 Console::WriteLine();
 ```

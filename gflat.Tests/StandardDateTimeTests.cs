@@ -9,7 +9,7 @@ public sealed class StandardDateTimeTests
 {
     private const long Day=864000000000L,Maximum=3155378975999999999L;
     private const string Support="""
-        using std;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Time;extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}
@@ -181,9 +181,9 @@ public sealed class StandardDateTimeTests
                     public void*? Allocate(nuint count){return null;}
                     public void Free(void* storage)nothrow{}
                 }
-                bool Observe(immutable(std::DateTime)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
-                    std::DateTime parsed=new();
-                    return std::DateTime::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
+                bool Observe(immutable(std::Time::DateTime)* value,readonly(char)* text,nuint count,char* output,nuint capacity,ref nuint written)nothrow{
+                    std::Time::DateTime parsed=new();
+                    return std::Time::DateTime::TryParse(text,count,&parsed)&&value.TryFormat(output,capacity,ref written)&&value.Equals(&parsed);
                 }
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});

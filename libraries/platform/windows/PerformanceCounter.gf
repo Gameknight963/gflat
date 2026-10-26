@@ -1,3 +1,4 @@
+using std::Time;
 namespace Windows;
 
 namespace performance_counter_detail
@@ -7,7 +8,7 @@ namespace performance_counter_detail
     private extern int QueryPerformanceFrequency(long* value);
 }
 
-public static class PerformanceCounter : std::IMonotonicClock
+public static class PerformanceCounter : std::Time::IMonotonicClock
 {
     private static bool HasCompatibleLayout() nothrow => sizeof(nint) == 8;
 

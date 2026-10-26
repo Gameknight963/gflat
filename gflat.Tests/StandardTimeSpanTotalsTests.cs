@@ -76,7 +76,7 @@ public sealed class StandardTimeSpanTotalsTests
         }
 
         string program = """
-            using std;
+            using std; using std::Time;
             int attempts=0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { attempts++; return null; }

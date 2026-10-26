@@ -1,12 +1,12 @@
 # Date and time
 
-`std::DateTime` combines a Gregorian [Date](DATE.md) with a
+`std::Time::DateTime` combines a Gregorian [Date](DATE.md) with a
 [TimeOfDay](TIME_OF_DAY.md). It describes a calendar date and clock reading,
 without a time zone or UTC offset. It does not identify an instant or consult
 the system clock. Two values compare their calendar and clock readings directly.
 
 ```csharp
-using std;
+using std; using std::Time;
 int main()
 {
     DateTime appointment = new(new Date(2026, 10, 24), new TimeOfDay(23, 30));

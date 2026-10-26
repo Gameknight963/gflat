@@ -57,7 +57,7 @@ of writes, including none; its emitted LF bytes never affect input line state.
 The counted constructor keeps its existing behavior and does not invoke Format.
 
 ```csharp
-using std;
+using std; using std::Time;
 
 struct TimestampPrefix : IFormattable
 {

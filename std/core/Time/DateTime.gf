@@ -1,4 +1,4 @@
-﻿namespace std;
+﻿namespace std::Time;
 
 // Gregorian civil date and wall-clock time. No time zone, offset, or instant is implied.
 public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable, IFormattable

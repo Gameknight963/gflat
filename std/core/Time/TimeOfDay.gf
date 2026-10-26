@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Time;
 
 // Time within one day, in 100 ns ticks. No date or time zone is attached.
 public struct TimeOfDay : IEquatable<TimeOfDay>, IComparable<TimeOfDay>, IHashable, IFormattable

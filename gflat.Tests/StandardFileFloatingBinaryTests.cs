@@ -24,7 +24,7 @@ public sealed class StandardFileFloatingBinaryTests
         WithDirectory(directory=>{
             string source=Path.Combine(directory,"input.bin"),target=Path.Combine(directory,"output.bin");File.WriteAllBytes(source,input);
             Run($$"""
-                using std;
+                using std; using std::IO;
                 int main(){
                     uint[{{floats.Length}}] floatBits=[{{string.Join(",",floats.Select(v=>v.ToString(CultureInfo.InvariantCulture)+"u"))}}];
                     ulong[{{doubles.Length}}] doubleBits=[{{string.Join(",",doubles.Select(v=>v.ToString(CultureInfo.InvariantCulture)+"ul"))}}];
@@ -58,7 +58,7 @@ public sealed class StandardFileFloatingBinaryTests
             string shortFloat=Path.Combine(directory,"short4.bin"),shortDouble=Path.Combine(directory,"short8.bin"),target=Path.Combine(directory,"output.bin");
             File.WriteAllBytes(shortFloat,[1,2,3]);File.WriteAllBytes(shortDouble,[1,2,3,4,5,6,7]);
             Run($$"""
-                using std;
+                using std; using std::IO;
                 int main(){
                     File first=File::OpenRead({{Literal(shortFloat)}});
                     try{FileBinary::ReadFloat{{order}}(&first);return 1;}catch(ref EndOfStreamException error){}

@@ -10,7 +10,7 @@ public ITextWriter* Error { get nothrow => &errorWriter; }
 public void FlushError()
 {
     if (writer_detail::fflush(writer_detail::__gflat_stdio_stderr()) != 0)
-        throw new std::IOException("Console error flush failed");
+        throw new std::IO::IOException("Console error flush failed");
 }
 
 namespace writer_detail
@@ -25,7 +25,7 @@ namespace writer_detail
             if (count == 0) return;
             void* stream = __gflat_stdio_stderr();
             if (fwrite((readonly(void)*)text, 1, count, stream) != count || ferror(stream) != 0)
-                throw new std::IOException("Console error write failed");
+                throw new std::IO::IOException("Console error write failed");
         }
     }
 

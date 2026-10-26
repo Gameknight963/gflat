@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class ConsoleLineWriterTests
 {
     private const string DenyAllocation="""
-        using std;int attempts=0;
+        using std; using std::IO;int attempts=0;
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -95,7 +95,7 @@ public sealed class ConsoleLineWriterTests
         try
         {
             string executable=Compile(directory,"""
-                using std;
+                using std; using std::IO;
                 class SinkFailure:Exception{public SinkFailure():base("sink failed",77){}}
                 struct Sink:ITextWriter {
                     public nuint Offered;public nuint Accepted;

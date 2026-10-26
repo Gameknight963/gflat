@@ -1,6 +1,6 @@
 using std::Queries;
 using std::Collections;
-namespace std;
+namespace std::IO;
 
 // Borrows an open File at its current position; each enumeration consumes it.
 public struct FileLineSequence : IEnumerable<String, FileLineSequence::Enumerator>

@@ -1,3 +1,4 @@
+using std::IO;
 using std;
 
 void EmitMatch(ref String line, immutable(char*) needle, bool endedWithLF, ref bool writingOutput)

@@ -50,7 +50,7 @@ These pointers borrow private static writer values; never delete or explicitly
 destroy them. No caller-managed lifetime or heap allocation is involved.
 Each write resolves the current standard stream, so existing CRT redirection is
 respected. `Flush()` flushes stdout and `FlushError()` flushes stderr; write and
-flush failures throw `std::IOException`. A multi-write formatting operation may
+flush failures throw `std::IO::IOException`. A multi-write formatting operation may
 already have produced partial output before a failure. Separate formatting calls
 can interleave across threads according to libc's stream synchronization.
 Nonempty writes check both the returned byte count and the stream error indicator:
@@ -101,12 +101,12 @@ int main()
 - `Write(text)` writes a null-terminated C string without a newline.
 - `Write(data, length)` writes counted bytes, including embedded nulls.
 - `WriteLine()` writes a newline. Its C-string and counted overloads write text first.
-- `Flush()` flushes stdout and throws `std::IOException` on failure.
+- `Flush()` flushes stdout and throws `std::IO::IOException` on failure.
 - `Read(data, count)` reads up to the requested count into caller storage and
   returns the number of bytes obtained. It may block until the count is filled
   or EOF/error occurs. Zero count performs no input access or consumption.
 - `ReadByte()` returns the next value in 0-255, or -1 at EOF. Input errors throw
-  `std::IOException` rather than being mistaken for EOF.
+  `std::IO::IOException` rather than being mistaken for EOF.
 - `PeekByte()` has the same result/error convention without consuming the next
   byte. Repeated peeks return the same value; subsequent counted and line reads
   see that byte. It uses libc's one-byte pushback, performs no application
@@ -118,9 +118,9 @@ int main()
   failed descriptor or changes the stream mode. Clear the state before retrying
   after a recoverable error, or after more data becomes available on a stream
   that had reached EOF. An unchanged underlying failure still fails on retry.
-- `ReadExactly(data, count)` throws `std::EndOfStreamException` if EOF arrives
+- `ReadExactly(data, count)` throws `std::IO::EndOfStreamException` if EOF arrives
   before the count is satisfied; the available prefix has already been consumed
-  and written. Other input errors remain `std::IOException`.
+  and written. Other input errors remain `std::IO::IOException`.
 - Counted and byte reads do not append a terminator, perform line processing,
   allocate a String, close stdin, or change its mode. They share the current
   stdin position with line readers. The host CRT's existing mode still applies:
@@ -139,7 +139,7 @@ int main()
   consumed beyond the bytes the sink accepted. The remaining line is not drained
   or recovered automatically, and there is no rollback.
 - `ReadLine(data, capacity)` returns the byte count and throws
-  `std::EndOfStreamException` when no line remains. It also leaves a trailing null.
+  `std::IO::EndOfStreamException` when no line remains. It also leaves a trailing null.
 - EOF before any bytes returns `false` from the caller-buffer `TryReadLine`, with
   an empty buffer and zero length. Empty lines return `true`. A final line without
   a newline is returned by every line-reading overload.
@@ -150,7 +150,7 @@ int main()
 - If a line is too large, the whole line is consumed, a null-terminated prefix and
   its length remain in the buffer, and `std::BufferTooSmallException` is thrown.
   The next read starts at the next line. Actual read/write failures throw
-  `std::IOException`; partial input/output can already have occurred.
+  `std::IO::IOException`; partial input/output can already have occurred.
 
 For example, count each stdin line without storing its text or imposing a maximum
 line length in a caller buffer:
@@ -201,7 +201,7 @@ The compiler links the small native standard-stream accessor only when reference
 
 ## Files
 
-`IO/File.gf` provides a move-only owning `std::File` for binary byte IO. It needs
+`IO/File.gf` provides a move-only owning `std::IO::File` for binary byte IO. It needs
 `core/IO/IOException.gf` and `core/IO/EndOfStreamException.gf`; it does not depend on
 `String` or allocate a gflat buffer.
 `File` implements the automatically available `ITextWriter` contract, so
@@ -209,7 +209,7 @@ primitive and user formatting can write directly through a borrowed `File*`.
 This adds no fields or ownership transfer; a File remains one native stream
 pointer in size. With `NoStdLib`, supply `core/Text.gf` explicitly alongside
 the other selected sources.
-The nullable `std::FileHandle` alias represents libc's opaque `FILE*` internally.
+The nullable `std::IO::FileHandle` alias represents libc's opaque `FILE*` internally.
 It is not a Windows kernel handle, and callers must not free it through `Memory`.
 
 Path arguments are borrowed, null-terminated native byte strings used for the
@@ -220,7 +220,7 @@ The UTF-8 convention for gflat string literals and text does not normalize OS
 paths or command-line arguments.
 
 ```csharp
-using std;
+using std; using std::IO;
 int main()
 {
     File output = File::OpenWrite("message.txt");
@@ -301,7 +301,7 @@ int main()
 
 ### Owning binary and text conveniences
 
-`IO/FileBytes.gf` adds `std::FileBytes` for owning binary data, requiring core
+`IO/FileBytes.gf` adds `std::IO::FileBytes` for owning binary data, requiring core
 `Vector`, `Span`, and their enumerable contracts, but no String or GC sources.
 `ReadAll(path)` returns a `Vector<byte>` owned by the caller. Reads use a stack
 chunk and geometric vector growth; an empty file returns an empty vector without
@@ -323,7 +323,7 @@ empty vector still opens and closes the file: writing creates or truncates it,
 and appending creates it or preserves existing contents. Both report delayed
 close failures and retain the counted overloads' partial-output behavior.
 
-`IO/FileText.gf` adds `std::FileText`, requiring the core `String` facilities.
+`IO/FileText.gf` adds `std::IO::FileText`, requiring the core `String` facilities.
 `FileText::ReadAll(path)` returns an owning `String`; embedded zeros are retained.
 It reads raw bytes without validating UTF-8, removing a BOM, or translating
 newlines. Memory grows with the file; use `File::Read` or `CopyTo` for bounded
@@ -361,7 +361,7 @@ and the IO failure contracts. The underlying core `SHA256` does not require libc
 
 ### Reading lines
 
-`IO/FileLines.gf` provides `std::FileLines`, borrowing a `File*` without closing
+`IO/FileLines.gf` provides `std::IO::FileLines`, borrowing a `File*` without closing
 it. Include `core/IO/EndOfStreamException.gf` and `core/BufferTooSmallException.gf`.
 `TryReadLine(input, data, capacity, ref length)` reads into caller storage and
 returns false only at EOF before any input. Capacity includes the null
@@ -391,7 +391,7 @@ or calling `ToVector()` creates independent owning values. See
 
 ### Binary numbers
 
-`IO/FileBinary.gf` supplies `std::FileBinary`, borrowing `File*` streams. Its
+`IO/FileBinary.gf` supplies `std::IO::FileBinary`, borrowing `File*` streams. Its
 `ReadUInt16LittleEndian`, `ReadUInt32LittleEndian`, and `ReadUInt64LittleEndian`
 methods read fixed-width unsigned values; the corresponding `BigEndian` methods
 use network byte order. Matching `WriteUInt16/32/64LittleEndian` and

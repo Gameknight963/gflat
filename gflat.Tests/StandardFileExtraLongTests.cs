@@ -34,7 +34,7 @@ public sealed class StandardFileExtraLongTests
             string outputPath = Path.Combine(directory, "output.bin");
             File.WriteAllBytes(inputPath, records);
             Run($$$"""
-                using std;
+                using std; using std::IO;
                 bool deny = false;
                 namespace Memory {
                     public replace void*? Allocate(nuint count) {
@@ -92,7 +92,7 @@ public sealed class StandardFileExtraLongTests
             }
             string target = Path.Combine(directory, "output.bin");
             Run($$$"""
-                using std;
+                using std; using std::IO;
                 int main() {
                     readonly(char)*[16] paths = [{{{string.Join(", ", paths)}}}];
                     for (nuint count = 0; count < 16; count++) {

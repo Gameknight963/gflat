@@ -1,5 +1,5 @@
 using std::Hashing;
-namespace std;
+namespace std::IO;
 
 // Optional file IO convenience. SHA256 itself remains independent of libc.
 public static class FileHash

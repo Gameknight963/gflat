@@ -10,7 +10,7 @@ It reuses the existing [Base64 codec](BINARY_CODECS.md).
 This complete program writes `input.bin` as Base64 in `output.txt`:
 
 ```csharp
-using std; using std::Encoding;
+using std; using std::IO; using std::Encoding;
 
 int main()
 {

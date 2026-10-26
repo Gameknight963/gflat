@@ -8,7 +8,7 @@ public sealed class StandardFileDirectionTests
     public void TemporaryStreamsSupportExplicitFlushAndObservedEofDirectionTransitions(int optimization)
     {
         const string code="""
-            using std;
+            using std; using std::IO;
             extern void*? malloc(nuint size);extern void free(void* storage);
             bool deny=false;int attempts=0;
             namespace Memory{

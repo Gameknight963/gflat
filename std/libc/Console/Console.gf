@@ -13,7 +13,7 @@ void Write(immutable(char*) data, nuint length)
     if (length == 0) return;
     void* stream = __gflat_stdio_stdout();
     if (fwrite((readonly(void)*)data, 1, length, stream) != length || ferror(stream) != 0)
-        throw new std::IOException("Console write failed");
+        throw new std::IO::IOException("Console write failed");
 }
 
 void WriteLine() { Write("\n", 1); }
@@ -23,7 +23,7 @@ void WriteLine(immutable(char*) data, nuint length) { Write(data, length); Write
 void Flush()
 {
     if (fflush(__gflat_stdio_stdout()) != 0)
-        throw new std::IOException("Console flush failed");
+        throw new std::IO::IOException("Console flush failed");
 }
 
 // Counted input from the current stdin mode; no terminator or line processing.
@@ -33,7 +33,7 @@ nuint Read(char* data, nuint count)
     void* stream = __gflat_stdio_stdin();
     nuint read = fread(data, 1, count, stream);
     if (read < count && ferror(stream) != 0)
-        throw new std::IOException("Console read failed");
+        throw new std::IO::IOException("Console read failed");
     return read;
 }
 
@@ -43,7 +43,7 @@ int ReadByte()
     void* stream = __gflat_stdio_stdin();
     int value = fgetc(stream);
     if (value == -1 && ferror(stream) != 0)
-        throw new std::IOException("Console read failed");
+        throw new std::IO::IOException("Console read failed");
     return value;
 }
 
@@ -54,10 +54,10 @@ int PeekByte()
     int value = fgetc(stream);
     if (value == -1)
     {
-        if (ferror(stream) != 0) throw new std::IOException("Console read failed");
+        if (ferror(stream) != 0) throw new std::IO::IOException("Console read failed");
         return -1;
     }
-    if (ungetc(value, stream) == -1) throw new std::IOException("Console lookahead failed");
+    if (ungetc(value, stream) == -1) throw new std::IO::IOException("Console lookahead failed");
     return value;
 }
 
@@ -67,7 +67,7 @@ void ClearInputError() { clearerr(__gflat_stdio_stdin()); }
 // Consumes an available prefix before reporting unexpected EOF.
 void ReadExactly(char* data, nuint count)
 {
-    if (Read(data, count) != count) throw new std::EndOfStreamException();
+    if (Read(data, count) != count) throw new std::IO::EndOfStreamException();
 }
 
 // Appends one line without its ending. Borrows the sink; never clears or closes it.
@@ -89,7 +89,7 @@ bool TryReadLine(char* data, nuint capacity, ref nuint length)
 nuint ReadLine(char* data, nuint capacity)
 {
     nuint length = 0;
-    if (!TryReadLine(data, capacity, ref length)) throw new std::EndOfStreamException();
+    if (!TryReadLine(data, capacity, ref length)) throw new std::IO::EndOfStreamException();
     return length;
 }
 
@@ -134,7 +134,7 @@ namespace detail
             int value = fgetc(stream);
             if (value == -1)
             {
-                if (ferror(stream) != 0) throw new std::IOException("Console read failed");
+                if (ferror(stream) != 0) throw new std::IO::IOException("Console read failed");
                 if (pendingCR) { chunk[count] = '\r'; count++; }
                 if (count != 0) output.Write(chunk, count);
                 return any;

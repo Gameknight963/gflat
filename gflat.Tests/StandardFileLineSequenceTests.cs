@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardFileLineSequenceTests
 {
     private const string Counters="""
-        using std; using std::Queries; using std::Collections;
+        using std; using std::IO; using std::Queries; using std::Collections;
         private extern void*? malloc(nuint bytes);private extern void free(void* storage);
         int allocations=0;int releases=0;bool failAllocation=false;
         namespace Memory{
@@ -186,7 +186,7 @@ public sealed class StandardFileLineSequenceTests
     [InlineData("iterator.Current.Clear();")]
     public void CurrentCannotMutateTheIteratorsOwnedString(string invalid)
         => RunCompileFailure(path=>$$"""
-            using std; using std::Queries; using std::Collections;int main(){File input=File::OpenRead({{path}});File* source=&input;
+            using std; using std::IO; using std::Queries; using std::Collections;int main(){File input=File::OpenRead({{path}});File* source=&input;
                 var iterator=source.Lines().GetEnumerator();iterator.MoveNext();{{invalid}}return 0;}
             """);
 

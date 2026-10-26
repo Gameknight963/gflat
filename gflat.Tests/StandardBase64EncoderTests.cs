@@ -17,7 +17,7 @@ public sealed class StandardBase64EncoderTests
     }
 
     private const string DenyAllocation = """
-        using std; using std::Encoding;
+        using std; using std::IO; using std::Encoding;
         int attempts=0;
         extern void free(void* storage);
         namespace Memory {
@@ -121,7 +121,7 @@ public sealed class StandardBase64EncoderTests
     [InlineData(2)]
     public void SinkFailuresDuringFullGroupsAndFinalPaddingLatchWithoutReplacingOriginalException(int optimization)
         => Run("""
-            using std; using std::Encoding;
+            using std; using std::IO; using std::Encoding;
             class SinkFailure:Exception{public SinkFailure():base("sink failed",77){}}
             struct Sink:ITextWriter {
                 public int Budget;public int Calls;public int Count;
@@ -161,7 +161,7 @@ public sealed class StandardBase64EncoderTests
     [InlineData(2)]
     public void CopiedCarryMovesIndependentlyAndScopeExitNeverCompletesOrDisposesDestination(int optimization)
         => Run("""
-            using std; using std::Encoding;
+            using std; using std::IO; using std::Encoding;
             struct Sink:ITextWriter {
                 private char* data;public nuint Count;public int Calls;
                 public Sink(char* storage){data=storage;Count=0;Calls=0;}

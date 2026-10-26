@@ -1,4 +1,4 @@
-namespace std;
+namespace std::IO;
 
 public class EndOfStreamException : IOException
 {

@@ -84,8 +84,8 @@ public sealed class ConsoleInputStateTests
                 if (freopen($PATH, "wb", stream) == null) return 1;
                 for (int i = 0; i < 2; i++) {
                     try { Console::ReadByte(); return 2; }
-                    catch (std::EndOfStreamException* error) { return 3; }
-                    catch (std::IOException* error) { }
+                    catch (std::IO::EndOfStreamException* error) { return 3; }
+                    catch (std::IO::IOException* error) { }
                     if (ferror(stream) == 0) return 4;
                     Console::ClearInputError();
                     if (ferror(stream) != 0 || feof(stream) != 0) return 5;

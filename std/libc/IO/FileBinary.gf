@@ -1,4 +1,4 @@
-namespace std;
+namespace std::IO;
 
 // Fixed-width integers and IEEE floating-point values with explicit byte order.
 // Borrows the stream.

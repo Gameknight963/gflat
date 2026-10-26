@@ -1,6 +1,6 @@
 # Lexical paths
 
-`PathStyle.gf` and `Paths.gf` provide `std::PathStyle` and `std::Paths`.
+`PathStyle.gf` and `Paths.gf` provide `std::IO::PathStyle` and `std::IO::Paths`.
 They require the core `String` facilities and do not call libc or inspect the
 filesystem. Every operation takes an explicit `PathStyle::Unix` or
 `PathStyle::Windows`, so a program can manipulate paths from either platform
@@ -19,6 +19,7 @@ and do not relocate it while using a result; edits through another mutable view
 remain visible. These views protect characters but do not freeze their owner.
 
 ```csharp
+using std::IO;
 using std::Memory;
 String path = s"assets/settings.json";
 Span<readonly(char)> name = Paths::GetFileName(path.AsReadOnly(), PathStyle::Unix);

@@ -32,7 +32,7 @@ public sealed class StandardPathEdgeTests
             ("Unix", "C:folder/", "", "C:folder", "", "", ""),
             ("Unix", "...", "...", "", "", "..", "")
         ];
-        var code = new StringBuilder("using std; using std::Memory; using std::Queries; using std::Collections; int main() {\n");
+        var code = new StringBuilder("using std; using std::IO; using std::Memory; using std::Queries; using std::Collections; int main() {\n");
         foreach (var item in cases)
         {
             string[] methods = ["GetFileName", "GetDirectoryName", "GetExtension", "GetFileNameWithoutExtension", "GetRoot"];
@@ -52,7 +52,7 @@ public sealed class StandardPathEdgeTests
     [InlineData(2)]
     public void OwnedResultsPreserveSpellingAndDoNotAliasInputOrEachOther(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 char[10] input = ['a', '/', 'b', '.', 'c', '\0', 'x', '.', 'y', '\0'];
                 String name = Paths::GetFileName(input, PathStyle::Unix);

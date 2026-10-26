@@ -8,7 +8,7 @@ not Unicode characters or C-string length.
 ## Validate and measure a decoded file
 
 ```csharp
-using std; using std::Encoding;
+using std; using std::IO; using std::Encoding;
 
 int main()
 {

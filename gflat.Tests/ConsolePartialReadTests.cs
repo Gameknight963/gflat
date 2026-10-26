@@ -50,8 +50,8 @@ public sealed class ConsolePartialReadTests
                         else Console::Read(&data[1], 128);
                         return 5;
                     }
-                    catch (std::EndOfStreamException* error) { return 6; }
-                    catch (std::IOException* error) { }
+                    catch (std::IO::EndOfStreamException* error) { return 6; }
+                    catch (std::IO::IOException* error) { }
                     if (ferror(stream) == 0 || data[0] != 'Z') return 7;
                     for (nuint i = 0; i < 96; i++) if ((byte)data[i + 1] != (byte)((i + 1) * 13)) return 8;
                     for (nuint i = 97; i < 130; i++) if (data[i] != 'Z') return 9;

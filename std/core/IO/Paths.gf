@@ -1,5 +1,5 @@
 using std::Memory;
-namespace std;
+namespace std::IO;
 
 // Lexical paths, independent of the host OS. No filesystem access or normalization.
 public static class Paths

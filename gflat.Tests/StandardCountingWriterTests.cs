@@ -17,7 +17,7 @@ public sealed class StandardCountingWriterTests
     }
 
     private const string DenyAllocation="""
-        using std; using std::Encoding;int attempts=0;
+        using std; using std::IO; using std::Encoding;int attempts=0;
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -54,7 +54,7 @@ public sealed class StandardCountingWriterTests
     [InlineData(2)]
     public void ThrowingOverflowPreservesPreviousCountAndDoesNotPoisonWriter(int optimization)
         => Run("""
-            using std; using std::Encoding;
+            using std; using std::IO; using std::Encoding;
             int main(){
                 CountingWriter writer=new();nuint maximum=(nuint)0-(nuint)1;
                 writer.Write((readonly(char)*)1,maximum-1);int caught=0;
@@ -74,7 +74,7 @@ public sealed class StandardCountingWriterTests
     public void TryOnlyCodeHasNoExceptionBoundary()
     {
         string ir=Compiler.Emit(Sources("""
-            using std; using std::Encoding;
+            using std; using std::IO; using std::Encoding;
             bool Inspect(nuint count) nothrow {
                 CountingWriter writer=new();
                 bool accepted=writer.TryWrite((readonly(char)*)1,count);

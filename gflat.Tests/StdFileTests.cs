@@ -25,7 +25,7 @@ public sealed class StdFileTests
         {
             string path = Path.Combine(directory, "binary.dat");
             Run(directory, $$"""
-                using std;
+                using std; using std::IO;
                 int main() {
                     File empty = new File(); empty.Close();
                     {
@@ -52,7 +52,7 @@ public sealed class StdFileTests
     public void OpenFailureAndClosedOperationsThrowIOException()
     {
         WithDirectory(directory => Run(directory, $$"""
-            using std;
+            using std; using std::IO;
             int main() {
                 try { File missing = File::OpenRead({{Literal(Path.Combine(directory, "missing"))}}); return 1; }
                 catch (IOException* error) { }
@@ -70,7 +70,7 @@ public sealed class StdFileTests
     public void OwningFileCannotBeCopied()
     {
         var error = Assert.Throws<CompileExceptions.TypeCheckException>(() => Compiler.Emit(Sources("""
-            int main() { std::File file = new std::File(); std::File copy = file; return 0; }
+            int main() { std::IO::File file = new std::IO::File(); std::IO::File copy = file; return 0; }
             """)));
         Assert.Contains("copy", error.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -84,7 +84,7 @@ public sealed class StdFileTests
             Run(directory, $$"""
                 int main() {
                     try {
-                        std::File file = std::File::OpenWrite({{Literal(path)}});
+                        std::IO::File file = std::IO::File::OpenWrite({{Literal(path)}});
                         file.Write("saved by scope cleanup");
                         throw new Exception("leave scope");
                     } catch (Exception* error) { }

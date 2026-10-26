@@ -13,6 +13,6 @@ bool TryReadLine(ref std::String line)
 std::String ReadLine()
 {
     std::String line = new std::String();
-    if (!TryReadLine(ref line)) throw new std::EndOfStreamException();
+    if (!TryReadLine(ref line)) throw new std::IO::EndOfStreamException();
     return move line;
 }

@@ -16,7 +16,7 @@ public sealed class StandardQueryDistinctTests
     }
 
     private const string Allocator="""
-        using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failAt=0;
         namespace Memory {
             public replace void*? Allocate(nuint bytes){
@@ -78,7 +78,7 @@ public sealed class StandardQueryDistinctTests
             .Concat(files.Select(file=>Path.Combine(root,file)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path)))
             .Append(new SourceFile("selective.gf","""
-                using std; using std::Memory; using std::Queries; using std::Collections;int Project(int value)=>value+1;
+                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;int Project(int value)=>value+1;
                 int main(){int[3] data=[1,2,3];Span<int> source=new(data,3);return (int)source.AsEnumerable().Select(Project).Take(1).Count();}
                 """));
         string ir=Compiler.Emit(sources);

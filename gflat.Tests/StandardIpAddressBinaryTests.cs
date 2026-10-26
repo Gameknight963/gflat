@@ -36,7 +36,7 @@ public sealed class StandardIpAddressBinaryTests
                 }
             }
             Run(directory, """
-                using std; using std::Net;
+                using std; using std::IO; using std::Net;
                 int main(int argc,char** argv){
                     File file=File::OpenRead(argv[1]);int rows=FileBinary::ReadInt32LittleEndian(&file);
                     for(int row=0;row<rows;row++){
@@ -76,7 +76,7 @@ public sealed class StandardIpAddressBinaryTests
     [InlineData(2)]
     public async Task InvalidLengthsAvoidInputReadsResetTryResultsAndPreserveThrowingDestinations(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std; using std::Net;
+            using std; using std::IO; using std::Net;
             int main(){
                 IpAddress zero=new();IpAddress seed=IpAddress::Parse("2001:db8::1234");
                 for(nuint count=0;count<=33;count++){
@@ -102,7 +102,7 @@ public sealed class StandardIpAddressBinaryTests
     [InlineData(2)]
     public async Task BinaryOperationsStageOverlappingStorageAndAllocateNothingOnSuccessOrTryFailure(int optimization)
         => await WithDirectory(directory => Run(directory, """
-            using std; using std::Net;
+            using std; using std::IO; using std::Net;
             int allocations=0;int frees=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
@@ -146,7 +146,7 @@ public sealed class StandardIpAddressBinaryTests
         var sources = names.Select(name => new SourceFile(name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("binary-contract.gf", """
-                using std; using std::Net;
+                using std; using std::IO; using std::Net;
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* value)nothrow{}}
                 bool Convert(readonly(byte)* input,nuint count,byte* output,nuint capacity,ref nuint written)nothrow{
                     IpAddress value=new();bool success=IpAddress::TryFromBytes(input,count,&value);nuint size=value.ByteCount;

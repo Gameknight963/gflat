@@ -1,6 +1,6 @@
 using std::Memory;
 using std::Collections;
-namespace std;
+namespace std::IO;
 
 // Optional owning binary conveniences. No text encoding or terminator is added.
 public static class FileBytes

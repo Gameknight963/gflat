@@ -112,8 +112,8 @@ public sealed class ConsolePeekTests
                 for (int i = 0; i < 2; i++) {
                     clearerr(stream);
                     try { Console::PeekByte(); return 2; }
-                    catch (std::EndOfStreamException* error) { return 3; }
-                    catch (std::IOException* error) { }
+                    catch (std::IO::EndOfStreamException* error) { return 3; }
+                    catch (std::IO::IOException* error) { }
                 }
                 return 0;
             }

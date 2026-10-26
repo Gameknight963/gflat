@@ -23,7 +23,7 @@ public class StandardSignedBinaryTests
     [InlineData(2)]
     public void SignedBuffersMatchDotNetForUnalignedBoundaryValuesAndShortCapacity(int optimization)
     {
-        var program = new StringBuilder("using std; using std::Binary; int main(){byte[10] data; short small=0; int medium=0; long large=0l;");
+        var program = new StringBuilder("using std; using std::IO; using std::Binary; int main(){byte[10] data; short small=0; int medium=0; long large=0l;");
         foreach (int width in new[] { 2, 4, 8 })
         foreach (bool little in new[] { true, false })
         foreach (long original in Values)
@@ -54,7 +54,7 @@ public class StandardSignedBinaryTests
     [InlineData(2)]
     public void SuccessfulReadsPermitOutputToAliasInputWithoutZeroingBytesFirst(int optimization)
     {
-        var program = new StringBuilder("using std; using std::Binary; int main(){");
+        var program = new StringBuilder("using std; using std::IO; using std::Binary; int main(){");
         foreach (int width in new[] { 2, 4, 8 })
         foreach (bool signed in new[] { true, false })
         foreach (bool little in new[] { true, false })
@@ -92,7 +92,7 @@ public class StandardSignedBinaryTests
             string source = Path.Combine(directory, "source.bin"), target = Path.Combine(directory, "target.bin"), partial = Path.Combine(directory, "partial.bin");
             var expected = new List<byte>();
             string order = little ? "LittleEndian" : "BigEndian";
-            var program = new StringBuilder($"using std; using std::Binary; int main(){{File input=File::OpenRead({Literal(source)}); File output=File::OpenWrite({Literal(target)});");
+            var program = new StringBuilder($"using std; using std::IO; using std::Binary; int main(){{File input=File::OpenRead({Literal(source)}); File output=File::OpenWrite({Literal(target)});");
             foreach (int width in new[] { 2, 4, 8 })
             foreach (long original in Values)
             {

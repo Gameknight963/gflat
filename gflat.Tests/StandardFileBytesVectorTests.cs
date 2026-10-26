@@ -10,7 +10,7 @@ public sealed class StandardFileBytesVectorTests
         await WithDirectory(directory =>
         {
             string executable = Compile(directory, """
-                using std; using std::Memory; using std::Queries; using std::Collections;
+                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
                 int main(int argc,char** argv){
                     Vector<byte> bytes=FileBytes::ReadAll(argv[1]);nuint count=bytes.Count;nuint capacity=bytes.Capacity;
                     FileBytes::WriteAll(argv[2],ref bytes);FileBytes::AppendAll(argv[3],ref bytes);
@@ -51,7 +51,7 @@ public sealed class StandardFileBytesVectorTests
         await WithDirectory(directory =>
         {
             string executable=Compile(directory,"""
-                using std; using std::Memory; using std::Queries; using std::Collections;
+                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
                 extern void*? malloc(nuint size);extern void free(void* value);
                 int allocations=0;int frees=0;bool deny=false;
                 namespace Memory{
@@ -90,7 +90,7 @@ public sealed class StandardFileBytesVectorTests
         await WithDirectory(directory =>
         {
             string executable=Compile(directory,"""
-                using std; using std::Memory; using std::Queries; using std::Collections;
+                using std; using std::IO; using std::Memory; using std::Queries; using std::Collections;
                 int main(int argc,char** argv){
                     Vector<byte> bytes=new();bytes.Add(0);bytes.Add(255);bytes.Add(128);nuint capacity=bytes.Capacity;
                     bool caught=false;try{FileBytes::WriteAll(argv[1],ref bytes);return 1;}catch(IOException* error){caught=true;}

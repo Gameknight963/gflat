@@ -5,7 +5,7 @@ It does not build a table or allocate temporary strings. The destination can
 allocate or perform IO; the writer itself needs no heap storage.
 
 ```csharp
-using std;
+using std; using std::IO;
 
 int main()
 {

@@ -105,7 +105,7 @@ public sealed class StandardBigIntegerGcdTests
         Integer first=0,second=1;for(int i=0;i<count;i++)(first,second)=(second,first+second);return(first,second);
     }
     private const string Counters="""
-        using std; using std::Memory; using std::Numerics; using std::Collections;extern void*? malloc(nuint count);extern void free(void* value);
+        using std; using std::IO; using std::Memory; using std::Numerics; using std::Collections;extern void*? malloc(nuint count);extern void free(void* value);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         bool capture=false;void*? captured=null;void*? watchFirst=null;void*? watchSecond=null;void*? watchTarget=null;int watchedFrees=0;
         namespace Memory{

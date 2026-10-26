@@ -15,7 +15,7 @@ public sealed class JsonWriterOracleTests
         var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("json-writer-oracle.gf", """
-                using std;
+                using std; using std::IO;
                 int main(int argc, char** argv) {
                     String result=new(); JsonWriter writer=new(&result);
                     if(argc==1) {

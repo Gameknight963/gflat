@@ -49,7 +49,7 @@ public sealed class StandardFileBinaryTests
         // Follow high-bit values with zeros to check full-width reads/writes.
         string order = little ? "LittleEndian" : "BigEndian";
         Run(expected, (source, target) => $$"""
-            using std;
+            using std; using std::IO;
             int main() {
                 File input = File::OpenRead({{source}});
                 if (FileBinary::ReadUInt16{{order}}(&input) != (ushort)33022) return 1;
@@ -75,7 +75,7 @@ public sealed class StandardFileBinaryTests
     public void EmptyInputIsEndOfStreamAndReadModeFailureIsIOExceptionWithoutClosingBorrow()
     {
         Run([], (source, target) => $$"""
-            using std;
+            using std; using std::IO;
             int main() {
                 File empty = File::OpenRead({{source}});
                 try { FileBinary::ReadUInt64BigEndian(&empty); return 1; }
@@ -97,7 +97,7 @@ public sealed class StandardFileBinaryTests
     public void TruncatedReadsAndClosedStreamsThrow()
     {
         Run([1, 2, 3], (source, target) => $$"""
-            using std;
+            using std; using std::IO;
             int main() {
                 File input = File::OpenRead({{source}});
                 try { FileBinary::ReadUInt32LittleEndian(&input); return 1; } catch (EndOfStreamException* error) { }

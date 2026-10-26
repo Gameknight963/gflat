@@ -5,7 +5,7 @@ the `Lines(this File*)` extension. It uses `IO/File.gf`, `IO/FileLines.gf`,
 `String`, and the existing core sequence/query types.
 
 ```csharp
-using std; using std::Queries; using std::Collections;
+using std; using std::IO; using std::Queries; using std::Collections;
 
 int main()
 {

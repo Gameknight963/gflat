@@ -1,4 +1,4 @@
-namespace std;
+namespace std::IO;
 
 // Borrows a binary File; never closes it. LF and CRLF terminate lines.
 public static class FileLines

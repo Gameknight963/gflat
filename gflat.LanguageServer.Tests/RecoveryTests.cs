@@ -167,8 +167,12 @@ public class RecoveryTests
         var files = Directory.EnumerateFiles(Path.Combine(root, "std"), "*.gf", SearchOption.AllDirectories)
             .Select(p => p == path ? source : new SourceFile(p, File.ReadAllText(p))).ToArray();
         var model = new EditorModel(new AnalysisSnapshot(files), files);
-        int offset = source.Text.IndexOf("std::IOException(\"Console flush failed", StringComparison.Ordinal);
-        Assert.Equal("namespace", Colors(model, source)[offset]);
+        int offset = source.Text.IndexOf("std::IO::IOException(\"Console flush failed", StringComparison.Ordinal);
+        Assert.True(offset >= 0, "Console flush exception qualifier was not found in the actual source");
+        var colors = Colors(model, source);
+        Assert.Equal("namespace", colors[offset]);
+        Assert.Equal("namespace", colors[offset + "std::".Length]);
+        Assert.Equal("class", colors[offset + "std::IO::".Length]);
     }
 
     [Fact]

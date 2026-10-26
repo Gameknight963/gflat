@@ -26,7 +26,7 @@ public sealed class StandardCountedPathTests
                 record[38]=Rooted(value,true)?(byte)1:(byte)0;record[39]=Qualified(value,true)?(byte)1:(byte)0;stream.Write(record);
             }
             Run($$"""
-                using std; using std::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
+                using std; using std::IO; using std::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
                 int main(){
@@ -63,7 +63,7 @@ public sealed class StandardCountedPathTests
     public void ClassificationAndEmptyJoinNeedNoAllocationOrMissingStorageReads(int optimization)
     {
         const string code="""
-            using std; using std::Memory;int allocations=0;
+            using std; using std::IO; using std::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
                 public replace void Free(void* storage) nothrow{}
@@ -100,7 +100,7 @@ public sealed class StandardCountedPathTests
                 stream.Write(left);stream.Write(right);stream.Write(expected);
             }
             Run($$"""
-                using std; using std::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
+                using std; using std::IO; using std::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
                 int main(){
@@ -133,7 +133,7 @@ public sealed class StandardCountedPathTests
     [InlineData(2)]
     public void JoinAllocationFailuresAtEachGrowthPreserveInputsAndExistingDestination(int optimization)
         =>Run("""
-            using std; using std::Memory;extern void*? malloc(nuint bytes);extern void free(void* storage);
+            using std; using std::IO; using std::Memory;extern void*? malloc(nuint bytes);extern void free(void* storage);
             int attempts=0;int failAt=0;int allocations=0;int releases=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){

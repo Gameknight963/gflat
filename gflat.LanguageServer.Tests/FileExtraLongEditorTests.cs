@@ -9,7 +9,7 @@ public sealed class FileExtraLongEditorTests
     public void FourStreamOperationsKeepTheirConcreteSignaturesAndDefinitions()
     {
         const string text = """
-            using std;
+            using std; using std::IO;
             void Observe(File* stream) {
                 extralong first = FileBinary::ReadExtraLongLittleEndian(stream);
                 extralong second = FileBinary::ReadExtraLongBigEndian(stream);

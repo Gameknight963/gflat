@@ -28,7 +28,7 @@ public sealed class StandardFileStateTests
             string path = Path.Combine(directory, "bytes.bin");
             File.WriteAllBytes(path, [65, 0, 255]);
             string exe = Compile(directory, $$"""
-                using std;
+                using std; using std::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(path)}});
                     if (input.EndOfFile || input.PeekByte() != 65 || input.PeekByte() != 65 || input.EndOfFile) return 1;
@@ -65,7 +65,7 @@ public sealed class StandardFileStateTests
             string scratch = Path.Combine(directory, "scratch");
             Directory.CreateDirectory(scratch);
             string exe = Compile(directory, """
-                using std;
+                using std; using std::IO;
                 extern int puts(immutable(char*) text);
                 extern int fflush(void*? stream);
                 extern int getchar();

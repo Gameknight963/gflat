@@ -1,4 +1,4 @@
-namespace std;
+namespace std::IO;
 
 // libc FILE
 public alias FileHandle = void*?;

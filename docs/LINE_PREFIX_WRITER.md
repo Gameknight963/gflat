@@ -13,7 +13,7 @@ even when the prefix itself contains LF. An empty prefix forwards unchanged
 bytes. Zero-length writes read no source or prefix storage and emit no calls.
 
 ```csharp
-using std;
+using std; using std::IO;
 
 int main()
 {

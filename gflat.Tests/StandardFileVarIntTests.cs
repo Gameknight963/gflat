@@ -30,7 +30,7 @@ public sealed class StandardFileVarIntTests
             string input = Path.Combine(directory, "input.bin"), output = Path.Combine(directory, "output.bin");
             byte[] oracle = expected.ToArray(); File.WriteAllBytes(input, oracle);
             string program = $$"""
-                using std; int attempts=0;
+                using std; using std::IO; int attempts=0;
                 extern void free(void* value);
                 namespace Memory {
                     public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -64,7 +64,7 @@ public sealed class StandardFileVarIntTests
     public void InvalidAndTruncatedReadsPreserveTheFirstUnconsumedByte(int optimization)
         => WithDirectory(directory => {
             string executable = Compile(directory, """
-                using std;
+                using std; using std::IO;
                 int main(int argc,char** argv){
                     File input=File::OpenRead(argv[1]);int caught=0;
                     try{
@@ -112,7 +112,7 @@ public sealed class StandardFileVarIntTests
     public void ClosedAndWrongModeFailuresKeepBorrowedFileOwnership(int optimization)
         => WithDirectory(directory => {
             string executable = Compile(directory, """
-                using std;
+                using std; using std::IO;
                 int main(int argc,char** argv){
                     File closed=new();int caught=0;
                     try{FileVarInt::ReadUInt32(&closed);}catch(EndOfStreamException* error){return 1;}catch(IOException* error){caught++;}

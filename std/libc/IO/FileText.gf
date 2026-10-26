@@ -1,4 +1,4 @@
-namespace std;
+namespace std::IO;
 
 // Owning String conveniences. File.gf itself remains usable without String.
 public static class FileText

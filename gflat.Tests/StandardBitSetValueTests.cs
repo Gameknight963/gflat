@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardBitSetValueTests
 {
     private const string Counters="""
-        using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::IO; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;int denied=0;int failAfter=-1;bool deny=false;
         bool capture=false;void*? captured=null;void*? watchSource=null;void*? watchTarget=null;int watchedFrees=0;
         namespace Memory{

@@ -17,7 +17,7 @@ closes the output, then reads the same records from the path supplied on the
 command line:
 
 ```csharp
-using std; using std::Binary;
+using std; using std::IO; using std::Binary;
 
 int main(int argc, char** argv)
 {

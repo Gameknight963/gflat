@@ -1,5 +1,5 @@
 using std::Binary;
-namespace std;
+namespace std::IO;
 
 // Optional canonical base-128 integers on borrowed File streams.
 public static class FileVarInt

@@ -38,6 +38,10 @@ changes. During migration, use the namespace declared by the checked-in source.
 Deliberate global APIs are allowed. Runtime contracts such as `Exception`,
 `Memory`, and the selected `GC` alias need not move merely to eliminate globals.
 
+Use `using std::Text;` for `String`, its `s`/`s$` literals, and borrowed text views.
+The formatting contracts `ITextWriter`, `IFormattable`, and `IStringConvertable`
+remain global; primitive `Format` overloads remain in `std`.
+
 A primary type uses a matching PascalCase filename, such as `HashSet.gf`.
 Freestanding and extension functions use descriptive snake_case filenames, such
 as `integer_parsing.gf` or `enumerable_select.gf`. Extensions belong to the

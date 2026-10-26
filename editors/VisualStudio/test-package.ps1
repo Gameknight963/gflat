@@ -187,7 +187,7 @@ int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new(7
 '@ | Set-Content -LiteralPath $managed
     & $compiler $managed (Join-Path $std 'libc/GC.gf') (Join-Path $std 'libc/TracingCollector.gf') --optimization 2 --run -o (Join-Path $extracted 'managed.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged managed allocation/root/collector smoke test failed' }
-    $consoleResult = & $compiler $console (Join-Path $std 'core/IOException.gf') (Join-Path $std 'core/EndOfStreamException.gf') (Join-Path $std 'core/BufferTooSmallException.gf') (Join-Path $std 'libc/Console/Console.gf') --run -o (Join-Path $extracted 'console.exe')
+    $consoleResult = & $compiler $console (Join-Path $std 'core/IO/IOException.gf') (Join-Path $std 'core/IO/EndOfStreamException.gf') (Join-Path $std 'core/BufferTooSmallException.gf') (Join-Path $std 'libc/Console/Console.gf') --run -o (Join-Path $extracted 'console.exe')
     if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
     $collections = Join-Path $extracted 'collections.gf'
     @'

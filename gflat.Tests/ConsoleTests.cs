@@ -8,8 +8,8 @@ public class ConsoleTests
     private static SourceFile[] Sources(string program, bool strings = false)
     {
         string[] names = strings
-            ? ["core/IOException.gf", "core/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "libc/Console/ConsoleString.gf"]
-            : ["core/IOException.gf", "core/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf"];
+            ? ["core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "libc/Console/ConsoleString.gf"]
+            : ["core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf"];
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
     }

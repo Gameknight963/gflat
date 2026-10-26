@@ -22,8 +22,8 @@ see [the freestanding example](../../docs/FREESTANDING_CORE.md).
 
 ## Console
 
-`Console/Console.gf` provides C-string and caller-buffer APIs. It needs `core/IOException.gf`,
-`core/EndOfStreamException.gf`, and `core/BufferTooSmallException.gf`, but does not require `String.gf`.
+`Console/Console.gf` provides C-string and caller-buffer APIs. It needs `core/IO/IOException.gf`,
+`core/IO/EndOfStreamException.gf`, and `core/BufferTooSmallException.gf`, but does not require `String.gf`.
 `Console/ConsoleString.gf` adds the optional owning-string conveniences. Referencing
 `std/std.gfproj` includes both.
 
@@ -202,7 +202,7 @@ The compiler links the small native standard-stream accessor only when reference
 ## Files
 
 `IO/File.gf` provides a move-only owning `std::File` for binary byte IO. It needs
-`core/IOException.gf` and `core/EndOfStreamException.gf`; it does not depend on
+`core/IO/IOException.gf` and `core/IO/EndOfStreamException.gf`; it does not depend on
 `String` or allocate a gflat buffer.
 `File` implements the automatically available `ITextWriter` contract, so
 primitive and user formatting can write directly through a borrowed `File*`.
@@ -362,7 +362,7 @@ and the IO failure contracts. The underlying core `SHA256` does not require libc
 ### Reading lines
 
 `IO/FileLines.gf` provides `std::FileLines`, borrowing a `File*` without closing
-it. Include `core/EndOfStreamException.gf` and `core/BufferTooSmallException.gf`.
+it. Include `core/IO/EndOfStreamException.gf` and `core/BufferTooSmallException.gf`.
 `TryReadLine(input, data, capacity, ref length)` reads into caller storage and
 returns false only at EOF before any input. Capacity includes the null
 terminator. LF and CRLF end a line; a bare CR and embedded zero bytes remain

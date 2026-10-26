@@ -133,7 +133,7 @@ implementation lives in `libc`.
 | CSV input | `CsvReader`, `CsvReaderText`, `CsvParseException` | [Borrowed fields and reusable String decoding](../docs/CSV_READER.md) |
 | CSV output | `CsvWriter` | [Streaming counted fields and CRLF records](../docs/CSV_WRITER.md) |
 | URI components | `PercentEncoding`, optional String conveniences | [Percent encoding](../docs/BINARY_CODECS.md#component-percent-encoding) |
-| Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/Paths/README.md) |
+| Paths | `Paths`, `PathStyle` | [Lexical Unix/Windows paths](core/IO/PATHS.md) |
 | Numbers | `Math`, `PseudoRandom` | [Scalar math](../docs/MATH.md), [seeded randomness](../docs/PSEUDORANDOM.md) |
 | Bits | `BitOperations` | [Counts, rotations, power-of-two rounding, and byte reversal](../docs/BIT_OPERATIONS.md) |
 | Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |

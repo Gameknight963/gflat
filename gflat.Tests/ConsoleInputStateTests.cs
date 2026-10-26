@@ -13,7 +13,7 @@ public sealed class ConsoleInputStateTests
             string path = Path.Combine(directory, "input.bin");
             File.WriteAllBytes(path, [65, 0, 66, 10]);
             program = program.Replace("$PATH", Literal(path));
-            var sources = new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf" }
+            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf" }
                 .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                 .Append(new SourceFile("main.gf", program));
             string ir = Path.Combine(directory, "input.ll"), executable = Path.Combine(directory, "input.exe");

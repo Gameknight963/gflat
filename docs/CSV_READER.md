@@ -142,8 +142,8 @@ before changing the output; allocation failure during growth also preserves its
 old bytes, length, capacity, and allocation. Output storage must be separate from
 the reader and its entire borrowed input, as with `TryCopyValue`.
 
-Include `CsvReaderText.gf` and the normal String dependencies only when using
-this convenience. `CsvReader.gf` itself still needs no String implementation.
+Include `Csv/CsvReaderText.gf` and the normal String dependencies only when using
+this convenience. `Csv/CsvReader.gf` itself still needs no String implementation.
 
 ## Lifetimes, aliases, and errors
 
@@ -164,8 +164,8 @@ another `Read` throws until `Reset()` restarts the same input. `Reset` does not
 change its storage or contents. Successful `Read` and `TryCopyValue` calls allocate nothing;
 constructing or throwing an exception uses the ordinary exception runtime.
 
-For explicit source selection include `core/CsvReader.gf`,
-`core/CsvParseException.gf`, and `Memory/Span.gf` with its query-interface dependencies.
+For explicit source selection include `core/Csv/CsvReader.gf`,
+`core/Csv/CsvParseException.gf`, and `Memory/Span.gf` with its query-interface dependencies.
 The complete standard library includes these files automatically.
 
 See [CSV to JSON](../examples/csv-to-json/README.md) for a complete converter

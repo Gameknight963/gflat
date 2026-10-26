@@ -1,6 +1,6 @@
 using std::Text;
 using std::Memory;
-namespace std;
+namespace std::Text;
 
 // Trim ASCII whitespace by slicing the borrowed view, never changing its bytes.
 Span<char> TrimStart(this Span<char> text)

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Invariant decimal/hex text into caller storage, without allocation or a terminator.
 // The written-count storage must be disjoint from output. Failure writes zero

@@ -6,6 +6,7 @@
 when selecting sources individually.
 
 ```csharp
+using std::Text;
 using std::Memory;
 Span<readonly(char)> token = new("name=value!", 10); // Excludes the '!'.
 bool named = token.StartsWith("name=");

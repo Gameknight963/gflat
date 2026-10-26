@@ -44,7 +44,7 @@ public sealed class StandardExtraLongHexFormattingTests
                         while(expected[length]!='\0')length++;
                         for(nuint capacity=0;capacity<=length+1;capacity++){
                             for(nuint i=0;i<43;i++)output[i]='Z';written=99;
-                            bool success=std::IntegerFormatting::TryFormatHex(value,&output[1],capacity,ref written,(nuint)widths[width],letterCase==0);
+                            bool success=std::Text::IntegerFormatting::TryFormatHex(value,&output[1],capacity,ref written,(nuint)widths[width],letterCase==0);
                             if(success!=(capacity>=length))return 1;
                             if(!success){if(written!=0)return 2;for(nuint i=0;i<43;i++)if(output[i]!='Z')return 3;}
                             else{if(written!=length||output[0]!='Z')return 4;
@@ -55,8 +55,8 @@ public sealed class StandardExtraLongHexFormattingTests
                     }
                 }
                 if(cases!={{caseCount}}||cursor!={{oracleBytes}})return 9;
-                if(std::IntegerFormatting::TryFormatHex((extralong)0,(char*)1,0,ref written)||written!=0)return 7;
-                if(std::IntegerFormatting::TryFormatHex((extralong)-1,output,43,ref written,(nuint)0-(nuint)1)||written!=0)return 8;
+                if(std::Text::IntegerFormatting::TryFormatHex((extralong)0,(char*)1,0,ref written)||written!=0)return 7;
+                if(std::Text::IntegerFormatting::TryFormatHex((extralong)-1,output,43,ref written,(nuint)0-(nuint)1)||written!=0)return 8;
                 return 0;
             }
             """;

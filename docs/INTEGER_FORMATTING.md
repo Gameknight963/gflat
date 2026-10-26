@@ -1,6 +1,6 @@
 # Integer formatting into caller buffers
 
-`std/core/Text/IntegerFormatting.gf` supplies `std::IntegerFormatting::TryFormat`
+`std/core/Text/IntegerFormatting.gf` supplies `std::Text::IntegerFormatting::TryFormat`
 overloads for `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`,
 `nint`, `nuint`, and signed 128-bit `extralong`. The functions are `nothrow` and
 require no String, libc,
@@ -9,7 +9,7 @@ allocation, exception runtime, or writer interface.
 ```csharp
 char[20] buffer;
 nuint written = 0;
-bool success = std::IntegerFormatting::TryFormat(-123, buffer, 20, ref written);
+bool success = std::Text::IntegerFormatting::TryFormat(-123, buffer, 20, ref written);
 // success == true; the first written bytes are "-123".
 ```
 
@@ -43,7 +43,7 @@ caller-buffer and freestanding code that does not need writer dispatch.
 ```csharp
 char[16] address;
 nuint written = 0;
-std::IntegerFormatting::TryFormatHex(4660ul, address, 16, ref written, 16, false);
+std::Text::IntegerFormatting::TryFormatHex(4660ul, address, 16, ref written, 16, false);
 // The counted result is "0000000000001234".
 ```
 

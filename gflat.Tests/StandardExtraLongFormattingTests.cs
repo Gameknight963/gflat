@@ -35,7 +35,7 @@ public sealed class StandardExtraLongFormattingTests
                     nuint length = 0; while(expected[test][length] != '\0') length++;
                     for(nuint capacity = 0; capacity <= 41; capacity++) {
                         for(nuint i=0;i<43;i++) output[i]='Z'; written=99;
-                        bool success=std::IntegerFormatting::TryFormat(values[test],&output[1],capacity,ref written);
+                        bool success=std::Text::IntegerFormatting::TryFormat(values[test],&output[1],capacity,ref written);
                         if(success != (capacity>=length))return 1;
                         if(!success){if(written!=0)return 2;for(nuint i=0;i<43;i++)if(output[i]!='Z')return 3;}
                         else{if(written!=length||output[0]!='Z')return 4;
@@ -43,7 +43,7 @@ public sealed class StandardExtraLongFormattingTests
                          for(nuint i=written+1;i<43;i++)if(output[i]!='Z')return 6;}
                     }
                 }
-                if(std::IntegerFormatting::TryFormat((extralong)0,(char*)1,0,ref written)||written!=0)return 7;
+                if(std::Text::IntegerFormatting::TryFormat((extralong)0,(char*)1,0,ref written)||written!=0)return 7;
                 return 0;
             }
             """;
@@ -62,7 +62,7 @@ public sealed class StandardExtraLongFormattingTests
     public void WriterReceivesOneCountedWriteAndPreservesItsException(int optimization)
     {
         string code = """
-            using std;
+            using std; using std::Text;
             struct Writer : ITextWriter {
                 public int Calls; public bool Fail;
                 public void Write(readonly(char)* text,nuint count) {

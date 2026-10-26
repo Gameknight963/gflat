@@ -62,6 +62,7 @@ form feed, and CR. Embedded zero bytes and all non-ASCII bytes are retained;
 this is not Unicode whitespace trimming or UTF-8 decoding.
 
 ```csharp
+using std::Text;
 using std::Memory;
 foreach (Span<readonly(char)> part in text.Split('=')) {
     Span<readonly(char)> token = part.Trim();

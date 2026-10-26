@@ -1,5 +1,5 @@
 using std::Memory;
-namespace std;
+namespace std::Text;
 
 // Borrow both sides of the first separator; output references must be distinct.
 bool TrySplitOnce(this Span<readonly(char)> text, char separator,

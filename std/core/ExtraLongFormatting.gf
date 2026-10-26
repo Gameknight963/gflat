@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 // Optional writer adapter; the caller-buffer formatter itself stays freestanding.

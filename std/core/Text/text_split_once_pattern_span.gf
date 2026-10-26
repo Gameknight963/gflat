@@ -1,7 +1,7 @@
 using std::Text;
 using std::Memory;
 using std::Collections;
-namespace std;
+namespace std::Text;
 
 // Borrow the two sides of the first exact counted byte-sequence separator.
 // Output references must be distinct; receiver metadata may be reused as either.

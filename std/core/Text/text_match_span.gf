@@ -1,6 +1,6 @@
 using std::Text;
 using std::Memory;
-namespace std;
+namespace std::Text;
 
 // Counted byte comparisons over borrowed text; no terminator is read from text.
 bool StartsWith(this Span<readonly(char)> text, readonly(char)* prefix, nuint count)

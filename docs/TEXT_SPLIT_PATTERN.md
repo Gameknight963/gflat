@@ -38,6 +38,7 @@ with this optional source. Existing char-based splitting has no new dependency.
 There is no new mutable-receiver family or multi-part iterator in this change.
 
 ```csharp
+using std::Text;
 using std; using std::Memory;
 
 int main()

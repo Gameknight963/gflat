@@ -722,7 +722,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
             Assert.Contains(member,hover.GetProperty("contents").GetProperty("value").GetString());
             Assert.Contains("CsvWriter.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
-        foreach(var item in new[]{("trimmedText.TryParseBool","SpanBooleanParsing.gf"),("trimmedText.ParseBool","SpanBooleanParsingThrowing.gf")})
+        foreach(var item in new[]{("trimmedText.TryParseBool","span_boolean_parsing.gf"),("trimmedText.ParseBool","span_boolean_parsing_throwing.gf")})
         {
             int call=text.IndexOf(item.Item1,StringComparison.Ordinal)+"trimmedText.".Length;
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
@@ -809,7 +809,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         int wideNumber=sourceTokens.Last(token=>token.Text=="WriteNumber").Start;
         var wideNumberHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,wideNumber),Protocol.JsonOptions);
         Assert.Contains("extralong value",wideNumberHover.GetProperty("contents").GetProperty("value").GetString());
-        foreach(var item in new[]{("TryParseLong","SpanIntegerParsing.gf"),("ParseLong","SpanIntegerParsingThrowing.gf")})
+        foreach(var item in new[]{("TryParseLong","span_integer_parsing.gf"),("ParseLong","span_integer_parsing_throwing.gf")})
         {
             int offset=sourceTokens.Last(token=>token.Text==item.Item1).Start;
             Assert.Contains(item.Item2,JsonSerializer.Serialize(model.Definition(source.Path,offset),Protocol.JsonOptions));

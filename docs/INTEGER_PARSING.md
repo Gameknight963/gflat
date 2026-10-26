@@ -43,9 +43,9 @@ length helpers are also `nothrow`. The source files also contain the throwing
 `Parse...` variants; including either complete file still requires the normal
 exception definitions and runtime.
 
-`core/Parsing.gf` supplies the existing `Int` functions. The other widths live
-in `core/IntegerParsing.gf`; neither file depends on libc. Optional
-`core/StringParsing.gf` and `core/StringIntegerParsing.gf` provide borrowed
+`core/Text/parsing.gf` supplies the existing `Int` functions. The other widths live
+in `core/Text/integer_parsing.gf`; neither file depends on libc. Optional
+`core/Text/string_parsing.gf` and `core/Text/string_integer_parsing.gf` provide borrowed
 immutable String extension methods:
 
 ```cpp
@@ -62,9 +62,9 @@ also explicitly `nothrow`; the `Parse...` wrappers retain their exceptions.
 
 ## Counted span extensions
 
-`core/SpanIntegerParsing.gf` supplies `TryParse...` extensions for
+`core/Text/span_integer_parsing.gf` supplies `TryParse...` extensions for
 `Span<readonly(char)>` at all eleven widths above. The corresponding throwing
-extensions live in `core/SpanIntegerParsingThrowing.gf`:
+extensions live in `core/Text/span_integer_parsing_throwing.gf`:
 
 ```csharp
 using std::Memory;
@@ -85,6 +85,6 @@ lifetimes. The `TryParse...` extensions are `nothrow` and allocate nothing.
 
 The two wrapper files are optional and add no dependency to `Memory/Span.gf` or the
 base parsers. Explicit source selections still need their normal Span/query
-contracts and `Parsing.gf`/`IntegerParsing.gf`; those base files include throwing
+contracts and `Text/parsing.gf`/`Text/integer_parsing.gf`; those base files include throwing
 definitions, so selecting the Try wrapper alone does not remove their exception
 dependencies. Boolean and hexadecimal parsing are separate APIs.

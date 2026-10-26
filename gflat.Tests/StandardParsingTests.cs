@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public class StandardParsingTests
 {
     private static ExecutionResult Run(string source) => CompilerTestHelper.Run(new[] {
-        new SourceFile("Parsing.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Parsing.gf"))),
+        new SourceFile("Parsing.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/parsing.gf"))),
         new SourceFile("main.gf", source)
     });
 

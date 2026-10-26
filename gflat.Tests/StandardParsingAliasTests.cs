@@ -29,7 +29,7 @@ public class StandardParsingAliasTests
             if(!TryParseInt(input,11,&storage[0]) || storage[0]!=-2147483647-1) return 4;
             return 0;}
             """);
-        var files=new[]{"Parsing.gf","IntegerParsing.gf"}
+        var files=new[]{"Text/parsing.gf","Text/integer_parsing.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("main.gf",source.ToString()));
         Assert.Equal(0,CompilerTestHelper.Run(files,optimization).ExitCode);

@@ -112,7 +112,7 @@ public sealed class StandardBooleanParsingTests
     private static string Literal(string value) => "\"" + value.Replace("\0", "\\0").Replace("\t", "\\t").Replace("\r", "\\r").Replace("\n", "\\n") + "\"";
     private static void Run(string code, int optimization)
     {
-        var sources = new[] { "BooleanParsing.gf", "BooleanParsingThrowing.gf" }
+        var sources = new[] { "Text/boolean_parsing.gf", "Text/boolean_parsing_throwing.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
         Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);

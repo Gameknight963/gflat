@@ -2,8 +2,8 @@
 
 `Ascii`, `Utf8`, `Utf16`, `UnicodeTranscoding`, `Base64`, `Hex`, `PercentEncoding`, `BinaryPrimitives`, `Hashing`,
 `BitOperations`, `CRC32`, `Adler32`, `Utf8Decoder`, `BinaryBufferReader`,
-`BinaryBufferWriter`, `IntegerFormatting`, the Try-only `HexIntegerParsing.gf`,
-`BooleanParsing.gf`, `ByteSearch`, `CString`, `JsonString`, `VarInt`, and the raw
+`BinaryBufferWriter`, `IntegerFormatting`, the Try-only `Text/hex_integer_parsing.gf`,
+`Text/boolean_parsing.gf`, `ByteSearch`, `CString`, `JsonString`, `VarInt`, and the raw
 byte operations in `Memory/Bytes.gf` can operate on caller-owned buffers
 without libc, allocation, or the gflat exception runtime. Their buffer
 and scalar functions are `nothrow`; malformed text and insufficient capacity are

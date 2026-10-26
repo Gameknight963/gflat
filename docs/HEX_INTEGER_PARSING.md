@@ -1,8 +1,8 @@
 # Hexadecimal integer parsing
 
-`core/HexIntegerParsing.gf` provides unsigned hexadecimal `TryParseHex...`
+`core/Text/hex_integer_parsing.gf` provides unsigned hexadecimal `TryParseHex...`
 functions in `std` for `Byte`, `UShort`, `UInt`, `ULong`, and `NUInt`.
-`core/HexIntegerParsingThrowing.gf` adds the optional throwing `ParseHex...`
+`core/Text/hex_integer_parsing_throwing.gf` adds the optional throwing `ParseHex...`
 wrappers. Names follow the decimal parsers:
 
 ```cpp

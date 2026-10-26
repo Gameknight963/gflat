@@ -25,7 +25,7 @@ public sealed class StandardExtensionTests
     }
 
     private static SourceFile[] Sources(string program) => InterpolationTests.Sources(program).Concat(
-        new[] { "core/Parsing.gf", "core/StringParsing.gf" }.Select(file =>
+        new[] { "core/Text/parsing.gf", "core/Text/string_parsing.gf" }.Select(file =>
             new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", file))))).ToArray();
 
     [Fact]

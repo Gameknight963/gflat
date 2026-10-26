@@ -1,6 +1,6 @@
 # Boolean parsing
 
-`core/BooleanParsing.gf` supplies standalone, allocation-free `std::TryParseBool`:
+`core/Text/boolean_parsing.gf` supplies standalone, allocation-free `std::TryParseBool`:
 
 ```cpp
 bool TryParseBool(readonly(char)* text, bool* result) nothrow;
@@ -31,7 +31,7 @@ the result pointer must designate writable bool storage. Input is read before
 the result is stored, allowing suitably aligned overlapping input/output; that
 store also changes the overlapping input bytes.
 
-`core/BooleanParsingThrowing.gf` adds optional `std::ParseBool` wrappers with
+`core/Text/boolean_parsing_throwing.gf` adds optional `std::ParseBool` wrappers with
 the same counted and C-string forms. They return the parsed bool or throw
 `Exception` for invalid text. Include both sources to use these wrappers; only
 the Try-only source is needed without an exception runtime. A `String` can be
@@ -39,10 +39,10 @@ parsed through `text.Data, text.Length` without copies or additional wrappers.
 
 ## Borrowed spans
 
-Optional `core/SpanBooleanParsing.gf` adds
+Optional `core/Text/span_boolean_parsing.gf` adds
 `text.TryParseBool(&result)` for `Span<readonly(char)>`; include
-`BooleanParsing.gf` as well. `core/SpanBooleanParsingThrowing.gf` adds
-`text.ParseBool()` and also requires `BooleanParsingThrowing.gf`. The adapters
+`Text/boolean_parsing.gf` as well. `core/Text/span_boolean_parsing_throwing.gf` adds
+`text.ParseBool()` and also requires `Text/boolean_parsing_throwing.gf`. The adapters
 forward the view's exact byte count to the existing parser, without trimming,
 copying its bytes, retaining its pointer, or allocating intermediate storage.
 

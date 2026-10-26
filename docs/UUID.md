@@ -9,6 +9,7 @@ This describes numeric significance, not the native byte layout of a struct or
 the Windows GUID ABI. `IsNil` reports whether both halves are zero.
 
 ```csharp
+using std::Text;
 using std;
 Uuid id = Uuid::Parse("00112233-4455-6677-8899-aabbccddeeff");
 String label = s$"id={id}";

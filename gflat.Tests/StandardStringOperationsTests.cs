@@ -11,7 +11,7 @@ public class StandardStringOperationsTests
     [Fact]
     public void SubstringsOwnTheirBuffersAndRejectOverflowingRanges()
         => Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String original=String::From("ab\0cd",5);
                 String part=original.Substring(1,3); String tail=original.Substring(3);
@@ -28,7 +28,7 @@ public class StandardStringOperationsTests
     [Fact]
     public void SearchesUseByteOffsetsCountedNeedlesAndDefinedEmptyBehavior()
         => Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String text=String::From("ab\0abcab",8);
                 if(text.IndexOf('a')!=0 || text.IndexOf('a',1)!=3 || text.IndexOf('z')!=String::NotFound) return 1;
@@ -53,7 +53,7 @@ public class StandardStringOperationsTests
         const string alphabet="abc\0";
         string MakeText(int count)=>new(Enumerable.Range(0,count).Select(_=>alphabet[random.Next(alphabet.Length)]).ToArray());
         string Literal(string value)=>"\""+value.Replace("\0","\\0")+"\"";
-        var body=new System.Text.StringBuilder("using std; int main(){");
+        var body=new System.Text.StringBuilder("using std; using std::Text; int main(){");
         for(int sample=0;sample<96;sample++)
         {
             string text=MakeText(random.Next(81)), needle=MakeText(random.Next(21));
@@ -81,7 +81,7 @@ public class StandardStringOperationsTests
     [Fact]
     public void AppendingBorrowedSelfWorksWithAndWithoutGrowth()
         => Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String text=s"ab"; text.Append(&text);
                 if(text.Length!=4 || !text.StartsWith("abab")) return 1;
@@ -97,7 +97,7 @@ public class StandardStringOperationsTests
     [Fact]
     public void RemoveReplaceAndAsciiTrimPreserveTerminationWithoutAllocating()
         => Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String text=s" \t hello world \r\n"; text.Trim();
                 if(text.Length!=11 || !text.StartsWith("hello world")) return 1;
@@ -121,7 +121,7 @@ public class StandardStringOperationsTests
     public void InsertHandlesAllSelfSlicesBeforeAndAfterGrowth(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Text;
             int main() {
                 for (int reserved=0; reserved<2; reserved++) {
                     for (nuint at=0; at<=5; at++) {
@@ -156,7 +156,7 @@ public class StandardStringOperationsTests
     public void FailedSelfInsertionLeavesOriginalBufferUnchangedAndReleasesSnapshot()
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             extern int printf(readonly(char)* text,...);
@@ -186,7 +186,7 @@ public class StandardStringOperationsTests
     {
         const string original="ab\0aba";
         var random=new Random(173);
-        var body=new System.Text.StringBuilder("using std; int main(){");
+        var body=new System.Text.StringBuilder("using std; using std::Text; int main(){");
         for(int test=0;test<48;test++)
         {
             int oldStart=random.Next(original.Length), oldCount=random.Next(1,original.Length-oldStart+1);
@@ -218,7 +218,7 @@ public class StandardStringOperationsTests
     [Fact]
     public void FailedTextReplacementPreservesOriginalStorage()
         => Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             namespace Memory {
@@ -240,7 +240,7 @@ public class StandardStringOperationsTests
     public void SuccessfulReplacementReleasesOldAndReplacementBuffersExactlyOnce()
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             extern int printf(readonly(char)* text,...);

@@ -176,6 +176,7 @@ int main()
 With the String conveniences:
 
 ```csharp
+using std::Text;
 using std;
 int main()
 {
@@ -185,7 +186,7 @@ int main()
 }
 ```
 
-`ReadLine()` returns an owning `std::String` and throws at EOF. `TryReadLine(ref line)`
+`ReadLine()` returns an owning `std::Text::String` and throws at EOF. `TryReadLine(ref line)`
 clears and reuses the existing string's capacity. The `Write(ref immutable(String))`
 and `WriteLine(ref immutable(String))` overloads borrow its counted buffer; they do
 not copy the string or allocate. On read or allocation errors the reused String

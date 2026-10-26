@@ -22,6 +22,7 @@ This means you should expect:
  - Breaking changes
 
 ```csharp
+using std::Text;
 using std;
 
 extern int printf(readonly(char)* text, ...);
@@ -46,7 +47,7 @@ This example uses std; see the runnable
 - Managed pointers (`T^`) with replaceable GC hooks and a single-threaded,
   non-moving conservative collector. See the [managed example](examples/managed/README.md).
 - Native stack-unwinding exceptions, with optional `nothrow` termination boundaries.
-- Custom string literal prefixes and string interpolation. For example, create a `std::String` with the 's' prefix as shown in the example above
+- Custom string literal prefixes and string interpolation. For example, create a `std::Text::String` with the 's' prefix as shown in the example above
 - Multiple source files and MSBuild `.gfproj` projects.
 - Project creation with `gflat new`, configurable optimization, and `inline` hints.
 - Compile-time `typeof(T)` metadata for names, layout, and recursive type structure.

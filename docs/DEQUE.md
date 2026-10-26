@@ -4,6 +4,7 @@
 buffer. It supports noncopyable owning values without per-element allocations.
 
 ```csharp
+using std::Text;
 using std; using std::Collections;
 
 int main()

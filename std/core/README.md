@@ -15,6 +15,7 @@ to supply your own library inputs or build std itself.
 ## Strings and formatting
 
 ```csharp
+using std::Text;
 using std;
 
 int main()
@@ -80,7 +81,7 @@ signed range without allocating an intermediate string or requiring a
 128-bit division runtime.
 
 Types can instead implement `IStringConvertable`, whose immutable `ToString()`
-returns an owning `std::String`. Interpolation keeps that temporary alive while
+returns an owning `std::Text::String`. Interpolation keeps that temporary alive while
 writing its counted bytes, then destroys it. If a type implements both contracts,
 the direct `Format` operation takes precedence. A borrowed `ToCString()` method
 is optional and is never selected implicitly for interpolation.
@@ -167,6 +168,7 @@ Its cursors own captured copies rather than borrowing the sequence's address;
 `Vector<T>` owns contiguous elements. It supports primitives and owning values:
 
 ```csharp
+using std::Text;
 using std; using std::Collections;
 
 int main()

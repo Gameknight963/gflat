@@ -1,3 +1,4 @@
+using std::Text;
 namespace std::Json;
 
 public enum JsonTokenKind

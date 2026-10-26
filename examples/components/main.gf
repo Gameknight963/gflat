@@ -1,4 +1,5 @@
-﻿using std::Memory;
+﻿using std::Text;
+using std::Memory;
 using std::Collections;
 using std;
 

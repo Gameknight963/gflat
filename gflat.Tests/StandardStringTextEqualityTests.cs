@@ -56,7 +56,7 @@ public sealed class StandardStringTextEqualityTests
         string Chars(IEnumerable<byte> values)=>string.Join(",",values.Select(value=>"(char)"+value));
         string Bools(IEnumerable<bool> values)=>string.Join(",",values.Select(value=>value?"true":"false"));
         string code=$$"""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int main(){
                 char[{{ownerBytes.Count}}] owners=[{{Chars(ownerBytes)}}];
                 char[{{inputBytes.Count}}] inputs=[{{Chars(inputBytes)}}];
@@ -87,7 +87,7 @@ public sealed class StandardStringTextEqualityTests
     [InlineData(2)]
     public void EmptyMismatchAliasedStorageAndExistingInterfacesNeedNoComparisonAllocation(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int attempts=0;bool deny=false;
             extern void*? malloc(nuint bytes);extern void free(void* storage);
             namespace Memory {

@@ -1,3 +1,4 @@
+using std::Text;
 using std;
 
 extern int printf(readonly(char)* text, ...);

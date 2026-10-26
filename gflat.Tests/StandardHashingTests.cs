@@ -28,7 +28,7 @@ public class StandardHashingTests
     [InlineData("double", "-1.25d", "1.25d")]
     public void ScalarsSupportBorrowedGenericAndInterfaceCalls(string type, string low, string high)
         => Run($$"""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             bool Same<T : IEquatable<T>>(ref immutable(T) a, ref immutable(T) b) => a.Equals(&b);
             int Order<T : IComparable<T>>(ref immutable(T) a, ref immutable(T) b) => a.CompareTo(&b);
             nuint Hash<T : IHashable>(ref immutable(T) a) => a.GetHashCode();
@@ -48,7 +48,7 @@ public class StandardHashingTests
     [Fact]
     public void StringUsesCountedOrdinalContentsWithoutCopyingOrNullTruncation()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int main() {
                 String a = String::From("a\0b", 3); String b = String::From("a\0b", 3);
                 String shorter = s"a"; String greater = String::From("a\0c", 3);
@@ -68,7 +68,7 @@ public class StandardHashingTests
     [InlineData("double", "ulong", "0x7ff8000000000001ul", "0x7ff8000000000002ul")]
     public void FloatingNaNsAndSignedZerosHaveConsistentEqualityHashAndOrdering(string type, string bits, string firstNaN, string secondNaN)
         => Run($$"""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int main() {
                 {{bits}} aBits = {{firstNaN}}; {{bits}} bBits = {{secondNaN}};
                 {{type}} a = *(({{type}}*)&aBits); {{type}} b = *(({{type}}*)&bBits);
@@ -86,7 +86,7 @@ public class StandardHashingTests
     [Fact]
     public void StringContractCallsBorrowStorageAndNeverAllocate()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             extern void* malloc(nuint count);
             extern void free(void* data);
             int allocations = 0; int releases = 0;
@@ -114,7 +114,7 @@ public class StandardHashingTests
     [Fact]
     public void StringComparisonUsesUnsignedBytesAndFullLengths()
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int main() {
                 char[2] highBytes = [(char)255, '\0'];
                 char[2] lowBytes = [(char)127, '\0'];
@@ -132,7 +132,7 @@ public class StandardHashingTests
     public void HashMapSeparatesNaNsFromZeroDespiteSharedHashes(string type, string bits, string firstNaN, string secondNaN, string infinity)
     {
         string code = $$"""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int main() {
                 {{bits}} firstBits = {{firstNaN}}; {{bits}} secondBits = {{secondNaN}}; {{bits}} infiniteBits = {{infinity}};
                 {{type}} nan = *(({{type}}*)&firstBits); {{type}} otherNaN = *(({{type}}*)&secondBits);
@@ -161,7 +161,7 @@ public class StandardHashingTests
     public void ManagedPrimitiveInterfaceReferenceKeepsItsReceiverAlive()
     {
         string code = """
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             IHashable^ Make() { int^ value = new(42); return value; }
             int main() {
                 IHashable^ hash = Make();
@@ -181,7 +181,7 @@ public class StandardHashingTests
     public void ExtraLongMapKeysKeepDistinctValuesAndSurviveRehash()
     {
         string code = """
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int main() {
                 extralong minimum = -170141183460469231731687303715884105728;
                 extralong maximum = 170141183460469231731687303715884105727;

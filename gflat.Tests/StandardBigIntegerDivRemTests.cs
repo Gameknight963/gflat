@@ -35,7 +35,7 @@ public sealed class StandardBigIntegerDivRemTests
                 }
             }
             Run(directory,"""
-                using std; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
+                using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
                 String ReadText(File* input){
                     nuint count=(nuint)FileBinary::ReadInt32LittleEndian(input);
                     String value=new();value.Resize(count);Span<char> bytes=value.AsSpan();
@@ -124,7 +124,7 @@ public sealed class StandardBigIntegerDivRemTests
             """,[],optimization));
 
     private const string Counters="""
-        using std; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
+        using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
         extern void*? malloc(nuint size);extern void free(void* value);
         int allocated=0;int released=0;int attempts=0;int failAfter=-1;bool deny=false;
         namespace Memory{

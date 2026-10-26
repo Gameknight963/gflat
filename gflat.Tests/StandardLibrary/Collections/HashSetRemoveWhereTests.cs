@@ -5,7 +5,7 @@ namespace gflat.Tests.Std.Collections;
 public sealed class HashSetRemoveWhereTests
 {
     private const string Allocator = """
-        using std; using std::Collections;
+        using std; using std::Text; using std::Collections;
         private extern void*? malloc(nuint bytes);
         private extern void free(void* storage);
         bool denied = false;
@@ -199,7 +199,7 @@ public sealed class HashSetRemoveWhereTests
     [InlineData(2)]
     public void RemovedManagedKeyFieldsReleaseTheirRootsWhileSurvivorsStayAlive(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             public static replace nuint std::TracingCollector::CollectionThreshold() => 0;
             class Node { public int Id; public Node^? Next; public Node(int id) { Id = id; } }
             struct Key : IHashable, IEquatable<Key> {
@@ -234,7 +234,7 @@ public sealed class HashSetRemoveWhereTests
     [InlineData("bool Match(int* value) => true; void Bad(ref HashSet<int> values) { values.RemoveWhere(Match); }")]
     [InlineData("bool Match(immutable(int)* value) => true; void Bad(immutable(HashSet<int>)* values) { values.RemoveWhere(Match); }")]
     public void MutablePredicatesAndImmutableReceiversAreRejected(string body)
-        => Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using std; using std::Collections; " + body)));
+        => Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("using std; using std::Text; using std::Collections; " + body)));
 
     private static IEnumerable<SourceFile> Sources(string program, bool managed = false)
     {

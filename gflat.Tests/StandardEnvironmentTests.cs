@@ -20,7 +20,7 @@ public sealed class StandardEnvironmentTests
                 Assert.DoesNotContain("%Exception", ir);
                 Assert.DoesNotContain("Memory$Allocate", ir);
                 Assert.DoesNotContain("__gflat_eh", ir);
-                Assert.DoesNotContain("%std$String", ir);
+                Assert.DoesNotContain("%std$Text$String", ir);
             }
             string llvm = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");
             File.WriteAllText(llvm, ir);
@@ -52,7 +52,7 @@ public sealed class StandardEnvironmentTests
     public void TryLookupAllowsNameBorrowedFromItsAssignmentDestination(int optimization)
     {
         Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String output = s"GFLAT_STD_PRESENT";
                 if (!EnvironmentText::TryGetVariable(output.ToCString(), ref output)
@@ -80,7 +80,7 @@ public sealed class StandardEnvironmentTests
     public void BorrowedLookupDistinguishesEmptyMissingAndNullTerminatedNamesWithoutStd()
     {
         Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 readonly(char)*? value = Environment::GetVariable("GFLAT_STD_PRESENT");
                 if (value == null) return 1;
@@ -101,7 +101,7 @@ public sealed class StandardEnvironmentTests
     public void OwningCopiesRemainIndependentAndTryLookupClearsOnlyMissingOutput()
     {
         Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String first = EnvironmentText::GetVariable("GFLAT_STD_PRESENT");
                 String second = EnvironmentText::GetVariable("GFLAT_STD_EXTRA");
@@ -126,7 +126,7 @@ public sealed class StandardEnvironmentTests
     public void AllocationFailurePreservesOldOutputAndBorrowedLookupDoesNotAllocate()
     {
         Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* data);
             static class State { public static bool Fail; public static int Allocations; }

@@ -191,6 +191,7 @@ int main() { Drop(); if (GC::Collect() != (nuint)1) return 1; int^ value = new(7
     if ($LASTEXITCODE -ne 0 -or $consoleResult -ne 'console') { throw 'Packaged Console/std bridge smoke test failed' }
     $collections = Join-Path $extracted 'collections.gf'
     @'
+using std::Text;
 using std; using std::Queries; using std::Collections;
 int WordLength(String word) => (int)word.Length;
 int main() {

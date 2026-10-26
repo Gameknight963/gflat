@@ -12,7 +12,7 @@ public sealed class TextPartsAnyEditorTests
     [InlineData("ref immutable(String)","String text=String::From(\"a,b\",3);","string_split_any.gf")]
     public void SplitAnyMergesCompletionAndSelectsTheConcreteReceiverAndSeparatorAdapter(string receiver,string setup,string adapter)
     {
-        string text="using std; using std::Memory;void Probe(){"+setup+"Span<readonly(char)> separators=new(\",;\",2);"
+        string text="using std; using std::Text; using std::Memory;void Probe(){"+setup+"Span<readonly(char)> separators=new(\",;\",2);"
             +"TextPartsAny counted=text.SplitAny(separators,false);TextPartsAny terminated=text.SplitAny(\",;\",false);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();

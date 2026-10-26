@@ -6,7 +6,7 @@ public sealed class StandardExtensionTests
     public void FloatingFormattingSupportsTheSameInstanceSyntaxWithoutStringDependencies()
     {
         var sources = ConsoleWriterTests.Sources("""
-            using std;
+            using std; using std::Text;
             int main() {
                 Console::Writer output = new Console::Writer();
                 float single = 1.25f;
@@ -32,7 +32,7 @@ public sealed class StandardExtensionTests
     public void CStringAndBorrowedStringParsingShareTheSameGrammar()
     {
         Assert.Equal(42, CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Text;
             int main() {
                 int number = 0;
                 if (!std::TryParseInt("40", &number) || number != 40) return 1;
@@ -50,7 +50,7 @@ public sealed class StandardExtensionTests
     public void CountedStringParsingRejectsEmbeddedNull()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Text;
             int main() {
                 char[3] bytes = ['4', '\0', '2'];
                 String text = String::From(bytes, 3);
@@ -67,7 +67,7 @@ public sealed class StandardExtensionTests
     public void PrimitiveFormattingWritesIntoTheExistingWriter()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Text;
             extern void* malloc(nuint size);
             extern void free(void* storage);
             extern int printf(immutable(char*) text, ...);

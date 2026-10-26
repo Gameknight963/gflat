@@ -94,7 +94,7 @@ public sealed class StandardStringTextComparisonTests
         string hex = Convert.ToHexString(packet.ToArray()).ToLowerInvariant();
 
         Run($$$"""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int Sign(int value) nothrow {
                 if (value < 0) return -1;
                 if (value > 0) return 1;
@@ -163,7 +163,7 @@ public sealed class StandardStringTextComparisonTests
     [InlineData(2)]
     public void AliasesQualifiedReceiversAndExistingComparisonContractsAllocateNothing(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             int attempts = 0;
             int live = 0;
             bool deny = false;

@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardJsonStringWriterTests
 {
     private const string Counters="""
-        using std; using std::Json; using std::IO;
+        using std; using std::Text; using std::Json; using std::IO;
         extern void*? malloc(nuint size);extern void free(void* storage);
         int allocations=0;int releases=0;int destroyed=0;
         namespace Memory {

@@ -1,3 +1,4 @@
+using std::Text;
 namespace std::Encoding;
 
 // Owning String conveniences, kept separate from the caller-buffer codec.

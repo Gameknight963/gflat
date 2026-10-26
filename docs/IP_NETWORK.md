@@ -5,6 +5,7 @@ and a prefix length. It is an ordinary fixed value with no owned allocation or
 operating-system state. The default is IPv4 `0.0.0.0/0`.
 
 ```csharp
+using std::Text;
 using std; using std::Net;
 int main()
 {

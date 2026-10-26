@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryOrderTests
 {
     private const string Allocator="""
-        using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny){denied++;return null;}if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? value=malloc(count);if(value!=null)allocated++;return value;}

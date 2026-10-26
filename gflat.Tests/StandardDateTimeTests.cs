@@ -9,7 +9,7 @@ public sealed class StandardDateTimeTests
 {
     private const long Day=864000000000L,Maximum=3155378975999999999L;
     private const string Support="""
-        using std; using std::Time;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Text; using std::Time;extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? result=malloc(count);if(result!=null)allocated++;return result;}

@@ -55,7 +55,7 @@ public sealed class DestructorFieldContextTests
                 if (alias)
                 {
                     text = text.Replace("Span<readonly(char)>", "View", StringComparison.Ordinal)
-                        .Replace("namespace std;", "namespace std;\nalias View = Span<readonly(char)>;", StringComparison.Ordinal);
+                        .Replace("namespace std::Text;", "namespace std::Text;\nalias View = Span<readonly(char)>;", StringComparison.Ordinal);
                 }
                 if (asClass)
                 {
@@ -74,6 +74,7 @@ public sealed class DestructorFieldContextTests
         }
         string program = """
             using std;
+            using std::Text;
             using std::FieldMemory;
             int main() {
                 char[3] data = ['a', '\n', 'b'];

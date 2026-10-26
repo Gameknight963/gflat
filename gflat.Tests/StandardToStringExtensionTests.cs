@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardToStringExtensionTests
 {
     private const string Allocator="""
-        using std; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Text; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(failAfter==0){failAfter=-1;denied++;return null;}if(failAfter>0)failAfter--;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -146,8 +146,8 @@ public sealed class StandardToStringExtensionTests
                 struct Label : IFormattable {
                     public immutable void Format(ITextWriter* output) { output.Write("label", 5); }
                 }
-                std::String ConvertLabel(ref immutable(Label) value) => std::ToString(ref value);
-                std::String ConvertInteger(int value) => std::ToString(value);
+                std::Text::String ConvertLabel(ref immutable(Label) value) => std::ToString(ref value);
+                std::Text::String ConvertInteger(int value) => std::ToString(value);
                 """));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotMatch(@"(?m)^declare\s+[^\r\n]*@(?:malloc|free|snprintf|printf|fwrite|strlen)\(", ir);

@@ -11,7 +11,7 @@ public sealed class HashSetRemoveWhereTests
         var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         const string text = """
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             bool Temporary(immutable(String)* key) => key.StartsWith("tmp:");
             void Use(ref HashSet<String> names) { nuint removed = names.RemoveWhere(Temporary); }
             """;
@@ -39,7 +39,7 @@ public sealed class HashSetRemoveWhereTests
         var help = Json(model.SignatureHelp(source.Path, call + "RemoveWhere(".Length));
         Assert.Equal(0, help.GetProperty("activeParameter").GetInt32());
         string label = Assert.Single(help.GetProperty("signatures").EnumerateArray()).GetProperty("label").GetString()!;
-        Assert.Equal("public nuint std::Collections::HashSet<std::String>::RemoveWhere(bool(immutable(std::String)*)* predicate)", label);
+        Assert.Equal("public nuint std::Collections::HashSet<std::Text::String>::RemoveWhere(bool(immutable(std::Text::String)*)* predicate)", label);
         Assert.Contains("predicate", label);
         Assert.DoesNotContain('$', label);
     }

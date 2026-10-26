@@ -9,6 +9,7 @@ building a `.gfproj`.
 This complete program prints `Sum: 33`:
 
 ```csharp
+using std::Text;
 using std; using std::Memory;
 
 int main()

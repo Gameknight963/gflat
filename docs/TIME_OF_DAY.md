@@ -5,6 +5,7 @@ One tick is 100 nanoseconds. Valid values range from midnight through
 `23:59:59.9999999`; default construction produces midnight.
 
 ```csharp
+using std::Text;
 using std; using std::Time;
 int main()
 {

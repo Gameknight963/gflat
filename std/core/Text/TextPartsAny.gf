@@ -1,7 +1,7 @@
 using std::Memory;
 using std::Queries;
 using std::Collections;
-namespace std;
+namespace std::Text;
 
 // Borrowed source with a copied set of delimiter bytes.
 public struct TextPartsAny : IEnumerable<Span<readonly(char)>, TextPartsAny::Enumerator>

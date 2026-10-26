@@ -26,7 +26,7 @@ public sealed class StandardJsonWriterExtraLongTests
             }
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
-                using std; using std::Json;
+                using std; using std::Text; using std::Json;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* file);
                 extern int fclose(void* file);
@@ -65,7 +65,7 @@ public sealed class StandardJsonWriterExtraLongTests
     [InlineData(2)]
     public void WideNumbersPreserveWriterStateAndOutputFailureContracts(int optimization)
         =>Run("""
-            using std; using std::Json;extern void*? malloc(nuint bytes);extern void free(void* pointer);
+            using std; using std::Text; using std::Json;extern void*? malloc(nuint bytes);extern void free(void* pointer);
             int allocations=0;int calls=0;int fail=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return malloc(bytes);}

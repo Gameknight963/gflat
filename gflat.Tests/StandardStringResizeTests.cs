@@ -8,7 +8,7 @@ public sealed class StandardStringResizeTests
         => Assert.Equal(0, CompilerTestHelper.Run(InterpolationTests.Sources(code), optimization).ExitCode);
 
     private const string Allocator = """
-        using std; using std::Collections;
+        using std; using std::Text; using std::Collections;
         int allocations=0;int releases=0;bool deny=false;
         extern void*? malloc(nuint bytes);extern void free(void* storage);
         namespace Memory{
@@ -86,7 +86,7 @@ public sealed class StandardStringResizeTests
     public void ProtectedReceiversCannotResize(string protection)
     {
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(InterpolationTests.Sources(
-            $"void F(ref {protection}(std::String) text){{text.Resize(1);}}")));
+            $"void F(ref {protection}(std::Text::String) text){{text.Resize(1);}}")));
         Assert.Contains("Resize",error.Message);
     }
 }

@@ -35,7 +35,7 @@ public sealed class StandardUuidTests
                 }
             }
             Run($$"""
-                using std; using std::Collections;
+                using std; using std::Text; using std::Collections;
                 extern void* fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* output,nuint size,nuint count,void* file);
                 extern int fclose(void* file);
@@ -85,7 +85,7 @@ public sealed class StandardUuidTests
         const string canonical="00112233-4455-6677-8899-aabbccddeeff";
         string[] invalid=[""," ","{"+canonical+"}",canonical.Replace("-",""),"urn:uuid:"+canonical,
             " "+canonical,canonical+" ","\t"+canonical,canonical+"\n",canonical+"+"];
-        var code=new StringBuilder("using std; using std::Collections;int main(){Uuid value=new Uuid(1ul,2ul);\n");
+        var code=new StringBuilder("using std; using std::Text; using std::Collections;int main(){Uuid value=new Uuid(1ul,2ul);\n");
         foreach(string text in invalid)
             code.AppendLine($$"""
                 if(Uuid::TryParse({{Literal(text)}},{{text.Length}},&value)||!value.IsNil)return 1;
@@ -129,7 +129,7 @@ public sealed class StandardUuidTests
     [InlineData(2)]
     public void UuidKeysInterpolationAndWriterExceptionsUseExistingContracts(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Text; using std::Collections;
             struct Sink:ITextWriter{
                 private char* data;public int Calls;public bool Fail;
                 public Sink(char* output,bool fail){data=output;Calls=0;Fail=fail;}
@@ -156,7 +156,7 @@ public sealed class StandardUuidTests
             "core/Exception.gf","libc/Memory/Memory.gf","libc/Exceptions/ExceptionHandling.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("nothrow.gf","""
-                using std; using std::Collections;
+                using std; using std::Text; using std::Collections;
                 bool Convert(readonly(char)* input,nuint count,char* output,nuint capacity,Uuid* result,ref nuint written)nothrow{
                     if(!Uuid::TryParse(input,count,result))return false;
                     return result.TryFormat(output,capacity,ref written);

@@ -64,6 +64,7 @@ Decoded strings contain counted binary bytes, including embedded NUL. Use
 first NUL. Empty input produces an empty String without allocating result storage.
 
 ```csharp
+using std::Text;
 using std; using std::Encoding;
 int main()
 {

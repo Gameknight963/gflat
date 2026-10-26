@@ -19,7 +19,7 @@ public sealed class StandardTextWriterExtensionsTests
     public void BorrowedBufferWriterUsesAllOverloadsWithoutAllocation()
     {
         Run("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             static class State { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { State::Allocations++; return null; }
@@ -48,7 +48,7 @@ public sealed class StandardTextWriterExtensionsTests
         try
         {
             Run("""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     File file = File::OpenWrite($PATH);
                     ITextWriter* output = &file;
@@ -71,7 +71,7 @@ public sealed class StandardTextWriterExtensionsTests
     public void ConsolePropertiesProvideLineWritingWithoutIntermediateStrings()
     {
         var result = Run("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() {
                 Console::Out.WriteLine("out");
                 Console::Error.WriteLine("E\0R", 3);
@@ -89,7 +89,7 @@ public sealed class StandardTextWriterExtensionsTests
     public void FailingBodyDoesNotWriteNewlineAndFailingNewlinePreservesBody()
     {
         Run("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             struct RejectingWriter : ITextWriter {
                 public int Calls; public int FailAt; public nuint Accepted;
                 public RejectingWriter(int failAt) { Calls = 0; FailAt = failAt; Accepted = 0; }

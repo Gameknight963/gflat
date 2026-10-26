@@ -77,6 +77,7 @@ selector, hash/equality method, or allocation propagate normally.
 ## Unique lines without loading the file
 
 ```csharp
+using std::Text;
 using std; using std::IO; using std::Queries;
 
 int main()

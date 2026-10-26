@@ -2,5 +2,5 @@
 // optional operations on individual types, not part of this contract.
 interface IStringConvertable
 {
-    immutable std::String ToString();
+    immutable std::Text::String ToString();
 }

@@ -27,7 +27,7 @@ In-place decoding support applies to the byte buffers, not these count outputs:
 storing a count into encoded or decoded bytes would overwrite their contents.
 
 `std/core/Encoding/Base64Text.gf` adds `std::Encoding::Base64Text::Encode(data, count)` and
-`Decode(text, count)`, returning owning `std::String` values. They reserve the
+`Decode(text, count)`, returning owning `std::Text::String` values. They reserve the
 result once and process small stack chunks without allocating an intermediate
 whole-size buffer. Decoded strings may contain embedded zeros; use `Length`
 rather than a C-string scan. Malformed input, length overflow, and allocation
@@ -89,6 +89,7 @@ helpers require the normal String dependencies, while `Encoding/Base64Url.gf` re
 usable without String or libc.
 
 ```csharp
+using std::Text;
 using std; using std::Encoding;
 
 int main()
@@ -130,6 +131,7 @@ separator, whitespace, newline, or terminator. Uppercase is the default, matchin
 `Hex::TryEncode` and `HexText::Encode`; pass `false` for lowercase.
 
 ```csharp
+using std::Text;
 using std; using std::Encoding;
 int main()
 {

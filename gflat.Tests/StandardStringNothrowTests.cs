@@ -21,7 +21,7 @@ public class StandardStringNothrowTests
             """));
         string failureChecks = string.Join("\n", types.Select((type, index) => $"if (text.TryParse{type.Item1}(&value{index}) || value{index} != ({type.Item2})0) return 12;"));
         string code = $$"""
-            using std;
+            using std; using std::Text;
             int Probe(ref String text, immutable(String)* other) {
                 if (text.Length != 2 || text.Capacity < 2 || text.IsEmpty || text.Data[0] != '4') return 1;
                 if (text.ToCString() != text.Data || !text.Equals(other) || text.CompareTo(other) != 0) return 2;

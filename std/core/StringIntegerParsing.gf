@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 // Borrow counted String bytes, including embedded nulls; no copy or allocation.

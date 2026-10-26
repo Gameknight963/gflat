@@ -30,7 +30,7 @@ public sealed class StandardFileLinesTests
     public void CallerBuffersHandleCrLfEmptyLinesZerosAndFinalBareCr()
     {
         Run(System.Text.Encoding.UTF8.GetBytes("\r\nhello\nA\0B\rX\r"), path => $$"""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() {
                 File input = File::OpenRead({{path}});
                 char[16] buffer; nuint length = 99;
@@ -49,7 +49,7 @@ public sealed class StandardFileLinesTests
     public void OverflowConsumesLineAndKeepsTerminatedPrefixAndCount()
     {
         Run(System.Text.Encoding.UTF8.GetBytes(new string('x', 1000) + "\r\nnext\n\n"), path => $$"""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() {
                 File input = File::OpenRead({{path}});
                 char[5] buffer; nuint length = 99;
@@ -68,7 +68,7 @@ public sealed class StandardFileLinesTests
     public void ZeroCapacityDoesNotConsumeAndClosedInputThrows()
     {
         Run([65, 10], path => $$"""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() {
                 File input = File::OpenRead({{path}});
                 char[4] buffer; nuint length = 99;
@@ -87,7 +87,7 @@ public sealed class StandardFileLinesTests
     {
         byte[] bytes = Enumerable.Repeat((byte)120, 255).Concat(new byte[] { 13, 13, 0, 90, 13, 10 }).ToArray();
         Run(bytes, path => $$"""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() {
                 File input = File::OpenRead({{path}});
                 String line = s"prefix:";

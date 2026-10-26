@@ -1,7 +1,7 @@
 using std::Memory;
 using std::Queries;
 using std::Collections;
-namespace std;
+namespace std::Text;
 
 // Single-byte delimiter splitting over borrowed counted storage.
 public struct TextParts : IEnumerable<Span<readonly(char)>, TextParts::Enumerator>

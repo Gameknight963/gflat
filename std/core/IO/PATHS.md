@@ -19,6 +19,7 @@ and do not relocate it while using a result; edits through another mutable view
 remain visible. These views protect characters but do not freeze their owner.
 
 ```csharp
+using std::Text;
 using std::IO;
 using std::Memory;
 String path = s"assets/settings.json";

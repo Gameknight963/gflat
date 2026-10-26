@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardStringTrimTests
 {
     private const string Counters="""
-        using std;
+        using std; using std::Text;
         extern void*? malloc(nuint size);extern void free(void* storage);
         int allocations=0;int releases=0;
         namespace Memory {

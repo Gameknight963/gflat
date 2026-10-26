@@ -89,6 +89,7 @@ which replacement can then release. This does not permit corrupting owner
 metadata or passing uninitialized result storage.
 
 ```csharp
+using std::Text;
 using std; using std::Numerics;
 int main()
 {
@@ -203,6 +204,7 @@ reads finish before this commit. This permits ordinary complete owning objects,
 not fabricated output references inside owner metadata or limb storage.
 
 ```csharp
+using std::Text;
 using std; using std::Numerics;
 int main()
 {
@@ -274,6 +276,7 @@ clean up intermediate owners, and preserve the receiver and any existing
 assignment target.
 
 ```csharp
+using std::Text;
 using std; using std::Numerics;
 int main()
 {
@@ -308,6 +311,7 @@ String and collection operations; this is an ordinary helper, not a built-in
 formatting mode:
 
 ```csharp
+using std::Text;
 using std; using std::Numerics; using std::Collections;
 
 String ToRadix(immutable(BigInteger)* input, int radix)

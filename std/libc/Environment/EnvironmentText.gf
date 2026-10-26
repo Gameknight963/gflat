@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 // Owning copies, separate from the C-string-only Environment API.

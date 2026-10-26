@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardStringPaddingTests
 {
     private const string Counters = """
-        using std;
+        using std; using std::Text;
         extern void*? malloc(nuint size);
         extern void free(void* storage);
         int allocations = 0;
@@ -99,7 +99,7 @@ public sealed class StandardStringPaddingTests
     [InlineData(2)]
     public void FailedGrowthAndImpossibleWidthLeaveStorageAndContentsUnchanged(int optimization)
         => Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             namespace Memory {

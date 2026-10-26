@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardSortedSetTests
 {
     private const string Owners = """
-        using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+        using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
         int made=0;int dead=0;int budget=-1;int allocations=0;int releases=0;bool fail=false;
         private extern void*? malloc(nuint bytes);private extern void free(void* storage);
         namespace Memory {
@@ -39,7 +39,7 @@ public sealed class StandardSortedSetTests
     public void MixedMutationsAndReadonlyIterationMatchDotNetInBothOrders(int optimization)
     {
         var source=new StringBuilder("""
-            using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
+            using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
             int Ascending(readonly(int)* a,readonly(int)* b)=>*a-*b;
             int Descending(readonly(int)* a,readonly(int)* b)=>*b-*a;
             bool Matches(immutable(SortedSet<int>)* values,readonly(int)* expected,nuint length){

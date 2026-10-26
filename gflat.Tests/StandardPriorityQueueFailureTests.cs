@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardPriorityQueueFailureTests
 {
     private const string Prelude = """
-        using std; using std::Memory; using std::Queries; using std::Collections;
+        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
         int made=0;int dead=0;int allocations=0;int releases=0;
         int calls=0;int failAt=-1;bool failAllocation=false;
         private extern void*? malloc(nuint bytes);

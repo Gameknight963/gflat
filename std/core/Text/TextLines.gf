@@ -1,7 +1,7 @@
 using std::Memory;
 using std::Queries;
 using std::Collections;
-namespace std;
+namespace std::Text;
 
 // Borrowed counted lines. LF and CRLF terminate lines; a bare CR is text.
 public struct TextLines : IEnumerable<Span<readonly(char)>, TextLines::Enumerator>

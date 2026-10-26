@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryHashSetTests
 {
     private const string Allocator="""
-        using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
         int allocations=0;int releases=0;int attempts=0;int failureIndex=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){

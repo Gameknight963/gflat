@@ -15,7 +15,7 @@ public sealed class StandardQueryAggregateTransferTests
     }
 
     private const string Counters = """
-        using std; using std::Memory; using std::Queries;
+        using std; using std::Text; using std::Memory; using std::Queries;
         extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocated=0;int released=0;
         namespace Memory {
@@ -25,7 +25,7 @@ public sealed class StandardQueryAggregateTransferTests
         """;
 
     private const string UniqueProgram = """
-        using std; using std::Memory; using std::Queries;
+        using std; using std::Text; using std::Memory; using std::Queries;
         Unique<int> Add(Unique<int> accumulator,int value){accumulator.Value+=value;return move accumulator;}
         int main(){
             int[4] input=[1,2,3,4];Span<int> values=new(input,4);

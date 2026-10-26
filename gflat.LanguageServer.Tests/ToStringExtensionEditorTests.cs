@@ -8,7 +8,7 @@ public sealed class ToStringExtensionEditorTests
     [Fact]
     public void PrimitiveBorrowedAndInstanceConversionsNavigateToTheirSelectedDeclarations()
     {
-        const string text = "using std;struct Label:IFormattable{public immutable void Format(ITextWriter* output){output.Write(\"label\",5);}}String Borrow<T:IFormattable>(ref immutable(T) borrowed)=>borrowed.ToString();void Probe(){int number=42;String first=number.ToString();Label label=new();String second=label.ToString();String original=s\"x\";String third=original.ToString();}";
+        const string text = "using std; using std::Text;struct Label:IFormattable{public immutable void Format(ITextWriter* output){output.Write(\"label\",5);}}String Borrow<T:IFormattable>(ref immutable(T) borrowed)=>borrowed.ToString();void Probe(){int number=42;String first=number.ToString();Label label=new();String second=label.ToString();String original=s\"x\";String third=original.ToString();}";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("to-string-editor.gf"), text);
@@ -41,7 +41,7 @@ public sealed class ToStringExtensionEditorTests
     [Fact]
     public void SingleBorrowedExtensionUsesTheOpenParametersAdvertisedAliasContract()
     {
-        const string text = "using std;namespace Views{alias Bound=IFormattable;String Describe<T:Bound>(ref immutable(T) value)=>value.ToString();}";
+        const string text = "using std; using std::Text;namespace Views{alias Bound=IFormattable;String Describe<T:Bound>(ref immutable(T) value)=>value.ToString();}";
         string[] excluded = ["PrimitiveString.gf", "ExtraLongString.gf", "FloatingString.gf"];
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Where(path => !excluded.Contains(Path.GetFileName(path)))

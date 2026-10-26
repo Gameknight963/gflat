@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 // Borrow the counted bytes; parsing does not copy or modify the owning String.

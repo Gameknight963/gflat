@@ -129,7 +129,7 @@ public class ConsoleTests
     public void StringAllocationFailurePreservesValueAndAllowsReadingRemainingInput()
     {
         var result = Run("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             extern void*? malloc(nuint size);
             extern void free(void* data);
             static class State { public static bool Fail; }
@@ -175,7 +175,7 @@ public class ConsoleTests
     public void StringOverloadsBorrowOutputAndReuseReadCapacity()
     {
         var result = Run("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() {
                 String text = s"A\0B";
                 Console::Write(ref text); Console::WriteLine(ref text);
@@ -273,7 +273,7 @@ public class ConsoleTests
     {
         string input = new string('x', 255) + "\r";
         var result = Run("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() {
                 String line = Console::ReadLine();
                 if (line.Length != (nuint)256 || line[(nuint)255] != '\r') return 1;
@@ -284,7 +284,7 @@ public class ConsoleTests
         Assert.Equal(input, result.StandardOutput);
         string longLine = new('x', 1200);
         var large = Run("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() { String line = Console::ReadLine(); Console::Write(ref line); return 42; }
             """, longLine + "\n", true);
         Assert.Equal(42, large.ExitCode);

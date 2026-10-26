@@ -8,6 +8,7 @@ IPv4 from IPv6. Default construction is IPv4 `0.0.0.0`. Immutable `IsIpv4`
 reports whether the address belongs to that family.
 
 ```csharp
+using std::Text;
 using std; using std::Net;
 int main()
 {

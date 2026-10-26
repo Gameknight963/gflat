@@ -6,6 +6,7 @@ canonical zero `0/1`. This is exact fraction arithmetic, without a fixed-width
 overflow representation, floating-point approximation, or special infinity/NaN.
 
 ```csharp
+using std::Text;
 using std; using std::Numerics;
 
 int main()

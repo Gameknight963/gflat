@@ -33,7 +33,7 @@ public sealed class StandardFileFailureTests
         {
             string path = Path.Combine(directory, "mode-errors.bin");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     File output = File::OpenWrite({{Literal(path)}});
                     try { output.ReadByte(); return 1; }
@@ -65,7 +65,7 @@ public sealed class StandardFileFailureTests
             string path = Path.Combine(directory, "allocation.bin");
             File.WriteAllText(path, new string('x', 9000));
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 extern void*? malloc(nuint size);
                 extern void free(void* data);
                 static class State { public static void*? First; public static int Released; }
@@ -101,7 +101,7 @@ public sealed class StandardFileFailureTests
             string path = Path.Combine(directory, "writer-failure.txt");
             File.WriteAllText(path, new string('x', 300) + "\nnext\n");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 struct FailingWriter : ITextWriter {
                     public void Write(readonly(char)* text, nuint count) { throw new Exception("writer rejected bytes"); }
                 }
@@ -127,7 +127,7 @@ public sealed class StandardFileFailureTests
             string path = Path.Combine(directory, "line-allocation.txt");
             File.WriteAllText(path, new string('x', 300) + "\nnext\n");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 extern void*? malloc(nuint size);
                 extern void free(void* data);
                 static class State { public static bool Fail; }
@@ -160,7 +160,7 @@ public sealed class StandardFileFailureTests
         // errors deferred by libc buffering until flush/close on Linux CI.
         if (!OperatingSystem.IsLinux()) return;
         WithDirectory(directory => Run(directory, """
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             int main() {
                 File output = File::OpenWrite("/dev/full");
                 bool buffered = false;
@@ -192,7 +192,7 @@ public sealed class StandardFileFailureTests
             File.WriteAllText(source, "source");
             File.WriteAllText(target, "target");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(source)}});
                     File output = File::OpenRead({{Literal(target)}});

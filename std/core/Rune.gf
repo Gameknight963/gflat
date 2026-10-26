@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 // A validated Unicode scalar, formatted as its counted UTF-8 encoding.

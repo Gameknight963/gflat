@@ -7,7 +7,7 @@ public sealed class StandardStringAliasingTests
     [InlineData(2)]
     public void SelfInsertionSnapshotsReadableStorageBeyondTrimmedLengthIncludingTerminators(int optimization)
         => Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 for (int padded = 0; padded < 2; padded++) {
                     nuint maximum = 7;
@@ -40,7 +40,7 @@ public sealed class StandardStringAliasingTests
     [InlineData(2)]
     public void CountedSelfAppendAndFromCopyEverySourceByteIncludingTheOldTerminator(int optimization)
         => Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 for (int reserved = 0; reserved < 2; reserved++) {
                     for (nuint start = 0; start <= 5; start++) {
@@ -67,7 +67,7 @@ public sealed class StandardStringAliasingTests
     [InlineData(2)]
     public void SnapshotFailureForTrimmedTailLeavesOriginalStorageAndInitializedBytesUntouched(int optimization)
         => Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             namespace Memory {

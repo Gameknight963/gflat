@@ -16,6 +16,7 @@ cursor copies use that value's ordinary ownership rules.
 Import `std::Queries` to make the query extensions visible:
 
 ```csharp
+using std::Text;
 using std; using std::Queries; using std::Collections;
 
 int main()

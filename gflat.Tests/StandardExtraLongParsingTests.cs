@@ -20,7 +20,7 @@ public sealed class StandardExtraLongParsingTests
             random.NextBytes(bytes);var value=new BigInteger(bytes,isUnsigned:false);
             texts.Add(value.ToString(CultureInfo.InvariantCulture));
         }
-        var code=new StringBuilder("using std;int main(){extralong value=(extralong)91;\n");
+        var code=new StringBuilder("using std; using std::Text;int main(){extralong value=(extralong)91;\n");
         foreach(string text in texts)
         {
             bool valid=Int128.TryParse(text,NumberStyles.AllowLeadingSign,CultureInfo.InvariantCulture,out var expected);
@@ -45,7 +45,7 @@ public sealed class StandardExtraLongParsingTests
     [InlineData(2)]
     public void CountedOverlapAndStringWrappersCommitOnlyAfterReadingWithoutAllocation(int optimization)
         => Run("""
-            using std;extern void*? malloc(nuint size);extern void free(void* pointer);bool deny=false;int calls=0;
+            using std; using std::Text;extern void*? malloc(nuint size);extern void free(void* pointer);bool deny=false;int calls=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){if(deny){calls++;return null;}return malloc(size);}
                 public replace void Free(void* pointer) nothrow{free(pointer);}
@@ -81,7 +81,7 @@ public sealed class StandardExtraLongParsingTests
     [Fact]
     public void ExtraLongParserDoesNotIntroduceWideDivisionOrRemainder()
     {
-        string ir=Compiler.Emit(Sources("using std;bool Test(readonly(char)* text,nuint count,extralong* value)nothrow=>TryParseExtraLong(text,count,value);"));
+        string ir=Compiler.Emit(Sources("using std; using std::Text;bool Test(readonly(char)* text,nuint count,extralong* value)nothrow=>TryParseExtraLong(text,count,value);"));
         Assert.False(NativeToolchain.RequiresWideIntegerRuntime(ir));
     }
 

@@ -1,5 +1,5 @@
 using std::Memory;
-namespace std;
+namespace std::Text;
 
 // Views borrow the current counted bytes, never the terminator or spare capacity.
 public Span<char> AsSpan(this ref String value)

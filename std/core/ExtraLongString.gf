@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 // Optional alongside ExtraLongFormatting.gf; no float/libc formatting dependency.

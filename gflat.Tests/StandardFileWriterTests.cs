@@ -33,7 +33,7 @@ public sealed class StandardFileWriterTests
         {
             string path = Path.Combine(directory, "formatted.bin");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 static class Calls { public static int Allocations; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -68,7 +68,7 @@ public sealed class StandardFileWriterTests
             string path = Path.Combine(directory, "source.bin");
             File.WriteAllBytes(path, Enumerable.Range(0, 12005).Select(i => (byte)i).ToArray());
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 static class Calls { public static int Allocations; }
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -96,7 +96,7 @@ public sealed class StandardFileWriterTests
             string path = Path.Combine(directory, "source.bin");
             File.WriteAllText(path, "AB");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(path)}});
                     ITextWriter* self = &input;
@@ -122,7 +122,7 @@ public sealed class StandardFileWriterTests
             string path = Path.Combine(directory, "source.bin");
             File.WriteAllBytes(path, Enumerable.Range(0, 5000).Select(i => (byte)i).ToArray());
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 struct Reject : ITextWriter {
                     public nuint Count;
                     public Reject() { Count = 0; }
@@ -148,7 +148,7 @@ public sealed class StandardFileWriterTests
             string path = Path.Combine(directory, "source.bin");
             File.WriteAllBytes(path, Enumerable.Range(0, 5000).Select(i => (byte)i).ToArray());
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 extern void*? malloc(nuint size);
                 extern void free(void* data);
                 namespace Memory {
@@ -179,7 +179,7 @@ public sealed class StandardFileWriterTests
             string path = Path.Combine(directory, "empty.bin");
             File.WriteAllBytes(path, []);
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 struct Reject : ITextWriter {
                     public void Write(readonly(char)* data, nuint count) { throw new Exception("unexpected sink call"); }
                 }

@@ -1,6 +1,6 @@
 # Borrowed text splitting
 
-`std/core/Text/TextParts.gf` provides `std::TextParts`, splitting counted bytes on a
+`std/core/Text/TextParts.gf` provides `std::Text::TextParts`, splitting counted bytes on a
 single-byte delimiter without copying or allocating. It takes a
 `Span<readonly(char)>` and implements
 `IEnumerable<Span<readonly(char)>, TextParts::Enumerator>`.
@@ -30,6 +30,7 @@ rejecting temporary String receivers. Neither extension file changes String or
 Span's own source dependencies.
 
 ```csharp
+using std::Text;
 using std; using std::Memory;
 String text = s"first,,last,";
 TextParts parts = text.Split(',');

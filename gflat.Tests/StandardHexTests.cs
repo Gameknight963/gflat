@@ -23,7 +23,7 @@ public sealed class StandardHexTests
         string expected = Convert.ToHexString(input);
         if (!uppercase) expected = expected.ToLowerInvariant();
         Run($$"""
-            using std; using std::Encoding;
+            using std; using std::Text; using std::Encoding;
             int main() {
                 char[256] input; char[513] output;
                 for (int i = 0; i < 256; i++) input[i] = (char)i;
@@ -48,7 +48,7 @@ public sealed class StandardHexTests
     public void MalformedInputDoesNotWriteOutput(string malformed)
     {
         Run($$"""
-            using std; using std::Encoding;
+            using std; using std::Text; using std::Encoding;
             int main() {
                 char[8] output;
                 for (int i = 0; i < 8; i++) output[i] = '?';
@@ -65,7 +65,7 @@ public sealed class StandardHexTests
     public void EmptyMixedCaseCapacityAndLengthOverflowAreHandled()
     {
         Run("""
-            using std; using std::Encoding;
+            using std; using std::Text; using std::Encoding;
             int main() {
                 char[8] output;
                 for (int i = 0; i < 8; i++) output[i] = '?';
@@ -88,7 +88,7 @@ public sealed class StandardHexTests
     public void OwningConveniencesRetainBinaryZerosAndThrowOnInvalidText()
     {
         Run("""
-            using std; using std::Encoding;
+            using std; using std::Text; using std::Encoding;
             int main() {
                 String text = HexText::Encode("A\0B", 3);
                 if (text.Length != (nuint)6 || text.Data[0] != '4' || text.Data[1] != '1' || text.Data[2] != '0' || text.Data[3] != '0' || text.Data[4] != '4' || text.Data[5] != '2') return 1;

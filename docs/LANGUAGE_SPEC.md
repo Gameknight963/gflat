@@ -54,7 +54,7 @@ terminator into writable inline storage. Larger buffers are zero-padded; smaller
 buffers are rejected. `char[] buffer = "hello"` infers the size including the
 terminator. Literal-to-buffer copying also works for fixed buffer fields, returns,
 and arguments. It does not implicitly convert arbitrary string pointers to buffers.
-The standard library's `s"text"` creates an owning `std::String`. There is no built-in
+The standard library's `s"text"` creates an owning `std::Text::String`. There is no built-in
 `c` prefix; it is available for custom literal operators.
 The identifier `string` is available for user declarations.
 
@@ -788,6 +788,7 @@ writing nested fields. Returning a whole owning local implicitly transfers it.
 Returning borrowed fields or indexed elements requires copying.
 
 ```csharp std
+using std::Text;
 using std;
 int main() {
     String a = s"hello";
@@ -1119,7 +1120,7 @@ still occur before specialization.
 `pointer.~T()` ends the lifetime of the pointed-to `T` without freeing its
 storage. The receiver is evaluated once and must be a non-null, mutable raw
 pointer to the named type. `T` may be a generic type parameter or a qualified
-type such as `std::String`.
+type such as `std::Text::String`.
 
 ```csharp
 void Destroy<T>(T* slot) {
@@ -1285,6 +1286,7 @@ Literal operators have no implicit instance (`this`), but retain access to their
 ## String interpolation
 
 ```csharp std
+using std::Text;
 using std;
 
 int main()
@@ -1300,7 +1302,7 @@ and `std/core/Formatting.gf`, or reference `std/std.gfproj`.
 Floating-point conversion additionally uses `std/libc/Formatting.gf` and libc's `snprintf`.
 
 The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,
-including qualified syntax such as `std::s$"{42}"`. Unprefixed `$"..."` is
+including qualified syntax such as `std::Text::s$"{42}"`. Unprefixed `$"..."` is
 not supported. Implementing a literal operator alone does not opt into interpolation.
 Its containing/result type must implement the automatically available global interface `ITextWriter` from `std/core/Text.gf`:
 
@@ -1322,7 +1324,7 @@ It may not retain either the input pointer or a formatter's borrowed destination
 
 Custom values, pointers, and managed references implement `IFormattable`; holes call
 `Format` with the destination. Alternatively, `IStringConvertable` declares
-`immutable std::String ToString()`: the hole converts once, writes the returned
+`immutable std::Text::String ToString()`: the hole converts once, writes the returned
 string's counted bytes, and destroys the owning temporary. `IFormattable` takes
 precedence when both contracts are implemented. Interface views support dynamic dispatch. Nullable
 receivers require a checked cast or unchecked postfix `!`. Primitives call the exact
@@ -1335,7 +1337,7 @@ Signed 128-bit formatting uses `std/core/IntegerFormatting.gf` and the optional
 standard library; explicit source selections must include them together.
 
 Formatting does not imply a heap allocation, a terminator scan, or a caller-owned
-C-string. `std::String` writes its existing counted bytes, preserving embedded nulls.
+C-string. `std::Text::String` writes its existing counted bytes, preserving embedded nulls.
 Its `ToString()` method returns an independent owning string. Its optional
 `ToCString()` method borrows immutable data, valid only while the original buffer
 remains alive and unchanged; interpolation never implicitly uses that operation.

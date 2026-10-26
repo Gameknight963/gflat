@@ -1,12 +1,13 @@
 # Strings
 
-`std::String` owns a null-terminated byte buffer. `Length` excludes the terminator;
+`std::Text::String` owns a null-terminated byte buffer. `Length` excludes the terminator;
 embedded zero bytes count toward its length. A copy owns independent storage,
 and `move` transfers storage. `Data` and `ToCString()` borrow storage until the
 string is mutated, moved, or destroyed. `String::From(text)` reads a C string;
 `String::From(text, count)` preserves every counted byte.
 
 ```csharp
+using std::Text;
 using std;
 String text = s" hello ";
 text.Trim();
@@ -129,6 +130,7 @@ cover `count` readable bytes; C-string input must contain a readable terminator.
 The String retains its full length even when compared to a C string.
 
 ```cpp
+using std::Text;
 using std;
 
 int main()

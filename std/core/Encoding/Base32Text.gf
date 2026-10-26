@@ -1,3 +1,4 @@
+using std::Text;
 namespace std::Encoding;
 
 // Owning conveniences, separate from the allocation-free Base32 codec.

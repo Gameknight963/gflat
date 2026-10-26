@@ -8,7 +8,7 @@ public class StandardStringTests
     public void OrdinaryCopiesOwnIndependentBuffersAndMovesDoNotAllocate()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
@@ -35,7 +35,7 @@ public class StandardStringTests
     public void FailedAppendPreservesLengthCapacityContentsAndTerminator()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             namespace Memory {
@@ -62,7 +62,7 @@ public class StandardStringTests
     public void ClonesAndIgnoredFactoryResultsReleaseEachAllocationOnce()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             extern int printf(readonly(char)* text, ...);
@@ -90,7 +90,7 @@ public class StandardStringTests
     public void FromCStringScansTerminatorWhileCountOverloadPreservesBytes()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String empty = String::From("");
                 String text = String::From("hello");
@@ -112,7 +112,7 @@ public class StandardStringTests
     public void OwnsCopiesGrowsAndAppendsItsOwnStorage()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             extern int printf(readonly(char)* p, ...);
             int main() {
                 char[3] input = "ab";
@@ -138,7 +138,7 @@ public class StandardStringTests
     public void TextViewsBorrowExistingStorage()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String empty = new String();
                 empty.Clear();
@@ -159,7 +159,7 @@ public class StandardStringTests
     public void BoundsAndOverflowFailWithoutChangingString()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 String text = s"abc";
                 int caught = 0;
@@ -178,7 +178,7 @@ public class StandardStringTests
     public void AllocationFailurePreservesPreviousStorage()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             namespace Memory {
@@ -204,7 +204,7 @@ public class StandardStringTests
     public void FailedGrowthUsesBadAllocAndEmergencyReserve(bool append)
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             extern void*? malloc(nuint size);
             extern void free(void* storage);
             namespace Memory {
@@ -229,7 +229,7 @@ public class StandardStringTests
     public void IntegerOverloadsPreserveSignednessAndWidth()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             extern int printf(readonly(char)* p, ...);
             int main() {
                 String text = s$"{(byte)255} {(sbyte)-128} {(short)-32768} {(ushort)65535} {4294967295u} {(nint)-12} {(nuint)17} {0}";

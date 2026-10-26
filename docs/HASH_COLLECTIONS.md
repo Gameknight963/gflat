@@ -1,6 +1,7 @@
 # Hash collections
 
 ```csharp
+using std::Text;
 using std; using std::Collections;
 
 HashMap<String, int> counts = new();
@@ -48,6 +49,7 @@ allocates no storage; noncopyable mapped values are supported. Capacity is
 retained. Output remains valid independently of the map.
 
 ```csharp
+using std::Text;
 using std; using std::Collections;
 int main()
 {
@@ -128,6 +130,7 @@ call the predicate. Capacity is retained; removed buckets remain tombstones so
 colliding survivors can still be found and the set can be reused.
 
 ```csharp
+using std::Text;
 using std; using std::Collections;
 bool Temporary(immutable(String)* key) => key.StartsWith("tmp:");
 int main()

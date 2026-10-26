@@ -8,6 +8,7 @@ the supported-range bound is a static constant and adds no per-date storage.
 An empty/default construction represents that first day, rather than an invalid date.
 
 ```csharp
+using std::Text;
 using std; using std::Time;
 Date leapDay = new(2024, 2, 29);
 Date march = leapDay.AddDays(1);

@@ -49,6 +49,7 @@ in `core/IntegerParsing.gf`; neither file depends on libc. Optional
 immutable String extension methods:
 
 ```cpp
+using std::Text;
 String text = s"18446744073709551615";
 ulong number = text.ParseULong();
 ulong attempted = 0ul;

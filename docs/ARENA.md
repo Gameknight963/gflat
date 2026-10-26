@@ -60,6 +60,7 @@ This includes compiler-generated cleanup for objects containing managed
 references, even when the type has no user-written destructor.
 
 ```csharp
+using std::Text;
 {
     String* text = new* String()
         at (String*)scratch.Allocate((nuint)sizeof(String), (nuint)alignof(String));

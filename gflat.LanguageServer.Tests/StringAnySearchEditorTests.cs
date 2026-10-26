@@ -12,7 +12,7 @@ public sealed class StringAnySearchEditorTests
     public void AnyByteSearchOffersBothOverloadsAndTheirConcreteImmutableSignatures(string member,int countedArguments)
     {
         string arguments=countedArguments==3?"\"xy\",2,1":"\"xy\",2";
-        string text="using std;void Observe(immutable(String)* text){nuint counted=text."+member+"("+arguments+");nuint terminated=text."+member+"(\"xy\");}";
+        string text="using std; using std::Text;void Observe(immutable(String)* text){nuint counted=text."+member+"("+arguments+");nuint terminated=text."+member+"(\"xy\");}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
         string[] names=["IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Text/ByteSearch.gf","Text/String.gf"];
         var files=names.Select(name=>Path.Combine(root,name)).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();

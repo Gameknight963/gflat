@@ -74,7 +74,7 @@ public sealed class StandardTextTrimSpanTests
     [InlineData(2)]
     public void TrimComposesWithBorrowedLineAndDelimiterViews(int optimization)
         => Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;
+            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;
             int main(){
                 readonly(char)* input=" name = value \r\n\tflag= yes\t\n \t = \t \n";
                 Span<readonly(char)> text=new(input,36);int lineIndex=0;

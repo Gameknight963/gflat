@@ -6,6 +6,7 @@ without a time zone or UTC offset. It does not identify an instant or consult
 the system clock. Two values compare their calendar and clock readings directly.
 
 ```csharp
+using std::Text;
 using std; using std::Time;
 int main()
 {

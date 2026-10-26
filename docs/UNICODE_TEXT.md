@@ -3,6 +3,7 @@
 The optional `std/core/UnicodeText.gf` source adds two counted conversions:
 
 ```csharp
+using std::Text;
 String UnicodeText::FromUtf16(readonly(ushort)* input, nuint units);
 Vector<ushort> UnicodeText::ToUtf16(readonly(char)* input, nuint bytes);
 ```
@@ -24,6 +25,7 @@ Empty input accesses no input bytes and allocates no output storage; a nonempty
 result reserves exactly once. Inputs remain unchanged on success or failure.
 
 ```csharp
+using std::Text;
 using std; using std::Collections;
 ushort[3] source = [(ushort)'A', (ushort)0xd83d, (ushort)0xde00];
 String utf8 = UnicodeText::FromUtf16(source, 3);

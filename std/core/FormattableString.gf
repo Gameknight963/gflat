@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 // Borrow the formatter, including noncopyable values. The returned String owns its bytes.

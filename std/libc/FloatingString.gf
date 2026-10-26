@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 // Uses the existing libc-backed formatting policy without adding it to core.

@@ -1,3 +1,4 @@
+using std::Text;
 namespace std;
 
 public String ToString(this byte value)

@@ -5,6 +5,7 @@ One tick is 100 nanoseconds. Every signed 64-bit tick value is valid, and defaul
 construction represents zero. It has no calendar, clock, timezone, or OS dependency.
 
 ```csharp
+using std::Text;
 using std; using std::Time;
 int main()
 {
@@ -110,6 +111,7 @@ nothing. The grammar is an explicit serialization format, without locale,
 floating point conversion, or clock dependencies.
 
 ```csharp
+using std::Text;
 using std; using std::Time;
 int main()
 {

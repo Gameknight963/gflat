@@ -1,3 +1,4 @@
+using std::Text;
 namespace std::Encoding;
 
 // Owning String conveniences, separate from the allocation-free buffer codec.

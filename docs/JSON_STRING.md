@@ -11,6 +11,7 @@ Each operation also accepts a `Span<readonly(char)>`, for example
 `JsonStringText::Unquote(reader.RawToken)`.
 
 ```csharp
+using std::Text;
 using std; using std::Json;
 
 int main()

@@ -24,7 +24,7 @@ public sealed class StandardJsonReaderRawTokenTests
             rows.Add($"(nuint){oracle.TokenStartIndex},(nuint){size}");
         }
         Run($$"""
-            using std; using std::Json; using std::Memory;
+            using std; using std::Text; using std::Json; using std::Memory;
             extern void*? malloc(nuint size);extern void free(void* storage);
             int allocations=0;
             namespace Memory {
@@ -60,7 +60,7 @@ public sealed class StandardJsonReaderRawTokenTests
     [InlineData(2)]
     public void SavedViewsBorrowInputAcrossAdvanceResetMoveAndReaderDestruction(int optimization)
         => Run("""
-            using std; using std::Json; using std::Memory;
+            using std; using std::Text; using std::Json; using std::Memory;
             Span<readonly(char)> Save(readonly(char)* input,nuint count){
                 JsonReader reader=new(input,count);
                 reader.Read();reader.Read();
@@ -87,7 +87,7 @@ public sealed class StandardJsonReaderRawTokenTests
     [InlineData(2)]
     public void MissingAndFailedTokensReturnCanonicalEmptyWithoutInputAccess(int optimization)
         => Run("""
-            using std; using std::Json; using std::Memory;
+            using std; using std::Text; using std::Json; using std::Memory;
             bool Empty(ref immutable(JsonReader) reader){Span<readonly(char)> raw=reader.RawToken;return raw.Length==0&&raw.Data==null;}
             int main(){
                 JsonReader unread=new((readonly(char)*)1,100);
@@ -113,7 +113,7 @@ public sealed class StandardJsonReaderRawTokenTests
     public void RawTokenElementsCannotBeModified()
     {
         var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("""
-            using std; using std::Json; using std::Memory;
+            using std; using std::Text; using std::Json; using std::Memory;
             int main(){JsonReader reader=new("true",4);reader.Read();Span<readonly(char)> raw=reader.RawToken;raw[0]='X';return 0;}
             """)));
         Assert.Contains("readonly",error.Message,StringComparison.OrdinalIgnoreCase);

@@ -1,5 +1,5 @@
 using std::Memory;
-namespace std;
+namespace std::Text;
 
 TextPartsAny SplitAny(this ref immutable(String) text, Span<readonly(char)> separators, bool removeEmpty = false)
     => new TextPartsAny(new Span<readonly(char)>(text.Data, text.Length), separators, removeEmpty);

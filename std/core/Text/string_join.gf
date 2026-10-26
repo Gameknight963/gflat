@@ -1,5 +1,5 @@
 using std::Memory;
-namespace std;
+namespace std::Text;
 
 // Borrow the source owners; only the returned String owns new storage.
 public String Join(this Span<immutable(String)> values, readonly(char)* separator, nuint separatorCount)
@@ -30,8 +30,8 @@ public String Join(this Span<immutable(String)> values, readonly(char)* separato
 
 public String Join(this Span<immutable(String)> values, readonly(char)* separator)
 {
-    if (values.Length < 2) return std::Join(values, separator, 0);
+    if (values.Length < 2) return std::Text::Join(values, separator, 0);
     nuint length = 0;
     while (separator[length] != '\0') length++;
-    return std::Join(values, separator, length);
+    return std::Text::Join(values, separator, length);
 }

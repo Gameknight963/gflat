@@ -1,6 +1,6 @@
 using std::Text;
 using std::Collections;
-namespace std;
+namespace std::Text;
 
 // Owns bytes, conventionally UTF-8, without validating their encoding.
 // Length and Capacity exclude the trailing null byte.

@@ -6,6 +6,7 @@ flushes, or destroys the destination, and destruction writes nothing. Keep the
 destination alive and at a stable address until the writer is no longer used.
 
 ```csharp
+using std::Text;
 using std; using std::Json;
 
 String output = s"";

@@ -57,7 +57,7 @@ public sealed class StandardBigIntegerTests
                 }
             }
             Run("""
-                using std; using std::Numerics; using std::Collections;
+                using std; using std::Text; using std::Numerics; using std::Collections;
                 extern void* fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* buffer,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);
@@ -93,7 +93,7 @@ public sealed class StandardBigIntegerTests
     }
 
     private const string Allocator="""
-        using std; using std::Numerics; using std::Collections;
+        using std; using std::Text; using std::Numerics; using std::Collections;
         int allocations=0;int releases=0;bool deny=false;int failAfter=-1;
         extern void*? malloc(nuint bytes);extern void free(void* storage);
         namespace Memory{

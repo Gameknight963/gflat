@@ -13,6 +13,7 @@ that separator. Further separators remain part of `after`, making it useful for
 key/value settings and command arguments.
 
 ```csharp
+using std::Text;
 using std; using std::Memory;
 String setting = s"mode=fast=checked";
 Span<readonly(char)> input = setting.AsReadOnly();

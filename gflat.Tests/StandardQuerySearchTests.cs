@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQuerySearchTests
 {
     private const string Allocator="""
-        using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
         int allocations=0;int releases=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){void*? result=malloc(size);if(result!=null)allocations++;return result;}
@@ -29,7 +29,7 @@ public sealed class StandardQuerySearchTests
             data.AddRange(values);
         }
         Run($$"""
-            using std; using std::Memory; using std::Queries; using std::Collections;int allocations=0;
+            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint size){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
             bool Three(int value)=>value==3;bool ReadOnlyThree(readonly(int) value)=>value==3;
             bool Even(int value)=>value%2==0;bool Positive(int value)=>value>=-8;
@@ -66,7 +66,7 @@ public sealed class StandardQuerySearchTests
     [InlineData(2)]
     public void SearchesReadCurrentOnceAndStopBeforeAThrowingSuffix(int optimization)
         =>Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;int target=0;int count=5;bool poison=false;
+            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;int target=0;int count=5;bool poison=false;
             struct Source{
                 public struct Iterator{
                     private int position;public Iterator(){position=0;starts++;}
@@ -157,7 +157,7 @@ public sealed class StandardQuerySearchTests
     [InlineData(2)]
     public void ManagedCurrentAndBorrowedKeyRemainRootedDuringCallbacks(int optimization)
         =>Run("""
-            using std; using std::Memory; using std::Queries; using std::Collections;class Item{public int Value;public Item(int value){Value=value;}}
+            using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;class Item{public int Value;public Item(int value){Value=value;}}
             bool Two(Item^ value){GC::Collect();return value.Value==2;}
             bool Same(immutable(Item^)* left,immutable(Item^)* right){GC::Collect();return (*left).Value==(*right).Value;}
             int main(){
@@ -172,7 +172,7 @@ public sealed class StandardQuerySearchTests
     [Fact]
     public void DefaultEqualityRequiresItsDeclaredContract()
     {
-        const string source="using std; using std::Memory; using std::Queries; using std::Collections;struct Plain{public int Value;}int main(){Plain[1] data=[default];Span<Plain> view=new(data,1);Plain key=default;std::Queries::Contains(view.AsEnumerable(),&key);return 0;}";
+        const string source="using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;struct Plain{public int Value;}int main(){Plain[1] data=[default];Span<Plain> view=new(data,1);Plain key=default;std::Queries::Contains(view.AsEnumerable(),&key);return 0;}";
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(source)));
         Assert.Contains("No matching overload for 'Contains'",error.Message);
     }
@@ -180,7 +180,7 @@ public sealed class StandardQuerySearchTests
     [Fact]
     public void QualifiedDefaultEqualityRequiresItsExactElementContract()
     {
-        const string source="using std; using std::Memory; using std::Queries; using std::Collections;int main(){int[1] data=[1];Span<int> view=new(data,1);int key=1;std::Queries::Contains(view.AsImmutable().AsEnumerable(),&key);return 0;}";
+        const string source="using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int main(){int[1] data=[1];Span<int> view=new(data,1);int key=1;std::Queries::Contains(view.AsImmutable().AsEnumerable(),&key);return 0;}";
         var error=Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources(source)));
         Assert.Contains("No matching overload for 'Contains'",error.Message);
     }

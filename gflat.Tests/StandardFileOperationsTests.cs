@@ -36,7 +36,7 @@ public sealed class StandardFileOperationsTests
             byte[] bytes = Enumerable.Range(0, 13007).Select(i => (byte)(i * 37)).ToArray();
             File.WriteAllBytes(source, bytes);
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(source)}});
                     File output = File::OpenWrite({{Literal(target)}});
@@ -62,7 +62,7 @@ public sealed class StandardFileOperationsTests
             byte[] bytes = Enumerable.Range(0, 9001).Select(i => (byte)i).ToArray();
             File.WriteAllBytes(source, bytes);
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(source)}});
                     File output = File::OpenWrite({{Literal(target)}});
@@ -84,7 +84,7 @@ public sealed class StandardFileOperationsTests
             string source = Path.Combine(directory, "short.bin");
             File.WriteAllBytes(source, [65, 0, 66]);
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(source)}});
                     char[8] buffer;
@@ -111,7 +111,7 @@ public sealed class StandardFileOperationsTests
             string source = Path.Combine(directory, "source.bin"), renamed = Path.Combine(directory, "renamed.bin");
             File.WriteAllText(source, "abc");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     File input = File::OpenRead({{Literal(source)}});
                     File closed = new File(); char[1] buffer;
@@ -143,7 +143,7 @@ public sealed class StandardFileOperationsTests
             byte[] bytes = Enumerable.Range(0, 12001).Select(i => (byte)(i * 17)).ToArray();
             File.WriteAllBytes(source, bytes);
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     String text = FileText::ReadAll({{Literal(source)}});
                     if (text.Length != (nuint)12001 || text.Data[12001] != '\0') return 1;
@@ -167,7 +167,7 @@ public sealed class StandardFileOperationsTests
             string path = Path.Combine(directory, "empty.txt");
             File.WriteAllText(path, "old content");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     FileText::WriteAll({{Literal(path)}}, "new\0ignored");
                     String first = FileText::ReadAll({{Literal(path)}});
@@ -190,7 +190,7 @@ public sealed class StandardFileOperationsTests
             string path = Path.Combine(directory, "allocation-failure.txt");
             File.WriteAllText(path, "content requiring an owning buffer");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 namespace Memory {
                     public replace void*? Allocate(nuint size) { return null; }
                     public replace void Free(void* storage) nothrow { }
@@ -213,7 +213,7 @@ public sealed class StandardFileOperationsTests
         {
             string path = Path.Combine(directory, "bytes.bin");
             Run(directory, $$"""
-                using std; using std::IO;
+                using std; using std::Text; using std::IO;
                 int main() {
                     { File output = File::OpenWrite({{Literal(path)}});
                       output.WriteByte('\0'); output.WriteByte((char)255); output.WriteByte('Z'); output.Close(); }

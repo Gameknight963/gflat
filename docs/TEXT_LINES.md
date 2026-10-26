@@ -1,10 +1,11 @@
 # Borrowed text lines
 
-`std::TextLines` iterates counted text in memory without allocating a string per
+`std::Text::TextLines` iterates counted text in memory without allocating a string per
 line. It uses the same line endings as `FileLines` and `Console`: LF and CRLF
 terminate lines; a bare CR remains text. Embedded null bytes are preserved.
 
 ```csharp
+using std::Text;
 using std; using std::Memory;
 
 Span<readonly(char)> text = new("first\r\nsecond\n", 14);

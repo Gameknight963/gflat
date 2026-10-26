@@ -8,7 +8,7 @@ public sealed class StandardTypeConstantLayoutTests
     public void StringTypeConstantDoesNotOccupyPerValueStorage(int optimization)
     {
         const string program="""
-            using std;
+            using std; using std::Text;
             int main(){
                 // String contains its byte pointer, length and capacity. Type-wide
                 // constants must not add a hidden word to every value or array slot.

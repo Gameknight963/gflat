@@ -18,25 +18,25 @@ namespace components. Both roots can contribute to the same namespace.
 
 | Namespace | APIs |
 | --- | --- |
-| `std` | General equality, ordering, and hashing contracts; `Uuid`, `Version` |
+| `std` | General equality, ordering, and hashing contracts; `Uuid`, `Version`, `Environment`, `EnvironmentText` |
 | `std::Collections` | Containers, iteration contracts, collection algorithms |
 | `std::Queries` | Query extensions and supporting sequences |
 | `std::Text` | Strings, Unicode, text writers, formatting, text parsing |
 | `std::Numerics` | Scalar math, arbitrary-precision numbers, bit operations, seeded randomness |
 | `std::Memory` | Spans, owning pointers, arenas, memory operations |
-| `std::IO` | Files, paths, console facilities, IO exceptions |
+| `std::IO` | Files, paths, IO exceptions |
 | `std::Binary` | Binary cursors, byte-order operations, variable-length integers |
 | `std::Encoding` | Base32, Base64, hexadecimal, percent encoding |
 | `std::Json`, `std::Csv` | Format readers, writers, helpers, and exceptions |
 | `std::Time` | Dates, times, durations, clocks, timers |
 | `std::Net` | Network addresses and networks |
 | `std::Hashing` | Checksums and digest implementations |
-| `std::Reflection` | Reflection descriptors |
+| `std::Reflection` (planned) | Reflection descriptors |
 
-This is the agreed layout; existing sources are being migrated in separate
-changes. During migration, use the namespace declared by the checked-in source.
-Deliberate global APIs are allowed. Runtime contracts such as `Exception`,
-`Memory`, and the selected `GC` alias need not move merely to eliminate globals.
+Ordinary library APIs use these subject namespaces. Reflection's move is
+deferred: `TypeInfo` and `TypeKind` currently remain in `std`.
+Deliberate global APIs remain valid, including `Console`, `Exception`, `Memory`,
+and the selected `GC` alias.
 
 Use `using std::Text;` for `String`, its `s`/`s$` literals, and borrowed text views.
 The formatting contracts `ITextWriter`, `IFormattable`, and `IStringConvertable`

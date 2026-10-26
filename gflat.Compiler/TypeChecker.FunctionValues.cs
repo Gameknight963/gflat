@@ -98,7 +98,13 @@ public partial class TypeChecker
         }
         if (target == null) return false;
         bool needsTarget = target is MethodDeclaration method && (method.IsGeneric || overloadFamilies.ContainsKey(method) || importedFunctionValueCandidates.ContainsKey(expression));
-        if (!needsTarget) ValidateFunctionAddress(target, expression.Line);
+        if (!needsTarget)
+        {
+            // A specialization can expose a free function before the normal
+            // signature pass reaches its declaring namespace.
+            if (target is MethodDeclaration concrete) BindMethodSignature(concrete);
+            ValidateFunctionAddress(target, expression.Line);
+        }
         _functionAddressTargets[expression] = target;
         // A method group has no function signature until a target selects it.
         RecordType(expression, needsTarget ? new FunctionPointerTypeExpression(Void, [], false, false, expression.Line)

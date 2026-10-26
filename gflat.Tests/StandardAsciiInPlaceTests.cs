@@ -75,6 +75,6 @@ public sealed class StandardAsciiInPlaceTests
     }
 
     private static SourceFile[] Sources(string source)=>[
-        new("Ascii.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Ascii.gf"))),
+        new("Ascii.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/ascii.gf"))),
         new("ascii-in-place.gf",source)];
 }

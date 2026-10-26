@@ -15,7 +15,7 @@ public sealed class StandardFileFailureTests
     private static void Run(string directory, string program, bool strings = false)
     {
         var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/IO/File.gf", "libc/IO/FileLines.gf" };
-        if (strings) names.AddRange(["libc/IO/FileText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Formatting.gf"]);
+        if (strings) names.AddRange(["libc/IO/FileText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/Text/ByteSearch.gf", "core/Formatting.gf"]);
         var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");

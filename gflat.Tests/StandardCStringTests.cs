@@ -105,7 +105,7 @@ public sealed class StandardCStringTests
 
     private static void Run(string code,int optimization)
     {
-        SourceFile[] sources=[new("CString.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/CString.gf"))),new("main.gf",code)];
+        SourceFile[] sources=[new("CString.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/CString.gf"))),new("main.gf",code)];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"invoke ","personality","@__gflat_eh_","gflat$Memory$","@malloc","@free"})Assert.DoesNotContain(forbidden,ir);
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);

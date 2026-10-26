@@ -156,7 +156,7 @@ public sealed class StandardHashMapExtractionTests
 
     private static void Run(string program,int optimization,bool managed=false)
     {
-        string[] files=["IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Collections/HashMap.gf","IStringConvertable.gf","String.gf", "ByteSearch.gf"];
+        string[] files=["IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Collections/HashMap.gf","IStringConvertable.gf","String.gf", "Text/ByteSearch.gf"];
         IEnumerable<SourceFile> sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))));
         if(managed)sources=sources.Concat(new[]{"GC.gf","TracingCollector.gf"}.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",file)))));
         sources=sources.Append(new SourceFile("extraction.gf",program));

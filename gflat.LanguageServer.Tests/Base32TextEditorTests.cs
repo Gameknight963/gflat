@@ -14,7 +14,7 @@ public sealed class Base32TextEditorTests
         string text="using std; using std::Encoding;int Probe(){String result=Base32Text::"+member+"(\""+input+"\","+count+");return (int)result.Length;}";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
         string[] names=["IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf",
-            "ByteSearch.gf","String.gf","Encoding/Base32.gf","Encoding/Base32Text.gf"];
+            "Text/ByteSearch.gf","String.gf","Encoding/Base32.gf","Encoding/Base32Text.gf"];
         var sources=names.Select(name=>Path.Combine(root,name))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var source=new SourceFile(Path.GetFullPath("base32-text-editor.gf"),text);sources.Add(source);

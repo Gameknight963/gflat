@@ -11,7 +11,7 @@ public sealed class AsciiHashingEditorTests
         const string text = "nuint Probe(readonly(char)* data,nuint count)nothrow=>std::Ascii::HashIgnoreCase(data,count);";
         var files = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "StandardLibrary"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
-        var library = files.Single(file => Path.GetFileName(file.Path) == "Ascii.gf");
+        var library = files.Single(file => Path.GetFileName(file.Path) == "ascii.gf");
         var source = new SourceFile(Path.GetFullPath("ascii-hashing-editor.gf"), text);
         files.Add(source);
         var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });

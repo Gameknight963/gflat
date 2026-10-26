@@ -76,7 +76,7 @@ public sealed class StandardCStringAppendTests
     }
 
     private static SourceFile[] Sources(string program)=>[
-        new("CString.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/CString.gf"))),
+        new("CString.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/CString.gf"))),
         new("append.gf",program)
     ];
     private static void Run(string program,int optimization)

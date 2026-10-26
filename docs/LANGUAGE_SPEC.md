@@ -1295,7 +1295,7 @@ int main()
 }
 ```
 
-Include `std/core/String.gf`, its substring-search dependency `std/core/ByteSearch.gf`,
+Include `std/core/String.gf`, its substring-search dependency `std/core/Text/ByteSearch.gf`,
 and `std/core/Formatting.gf`, or reference `std/std.gfproj`.
 Floating-point conversion additionally uses `std/libc/Formatting.gf` and libc's `snprintf`.
 

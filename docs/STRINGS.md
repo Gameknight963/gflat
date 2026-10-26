@@ -59,7 +59,7 @@ substring/removal ranges throw instead of wrapping pointer-sized arithmetic.
 Substring searches reuse `std::ByteSearch`'s Two-Way search with constant extra
 storage, no allocation, and O(string length + pattern length) worst-case work.
 Character search is linear. Explicit source selections containing `String.gf`
-must also include `ByteSearch.gf`; projects referencing the complete standard
+must also include `Text/ByteSearch.gf`; projects referencing the complete standard
 library already include it.
 
 `Substring` allocates an independent string. `Remove`, character `Replace`, and

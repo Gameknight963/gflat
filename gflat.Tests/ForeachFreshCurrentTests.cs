@@ -63,7 +63,7 @@ public sealed class ForeachFreshCurrentTests
             """;
         SourceFile[] sources =
         [
-            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/CString.gf"))),
+            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/CString.gf"))),
             new("foreach-fresh-current.gf", source)
         ];
         var result = CompilerTestHelper.Run(sources, optimization);

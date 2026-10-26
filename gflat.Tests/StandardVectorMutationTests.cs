@@ -4,7 +4,7 @@ public sealed class StandardVectorMutationTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf", "IHashable.gf",
-        "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "String.gf", "ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf"
+        "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf"
     }.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
         .Append(new SourceFile("main.gf", program));
 

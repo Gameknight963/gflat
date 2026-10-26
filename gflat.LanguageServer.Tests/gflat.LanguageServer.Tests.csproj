@@ -13,7 +13,7 @@
     <Content Include="../editors/VisualStudio/gflat.tmLanguage.tmTheme" Link="EditorAssets/gflat.tmLanguage.tmTheme" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../editors/shared/*.json" Link="EditorAssets/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../std/core/String.gf" Link="EditorFixtures/String.gf" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="../std/core/ByteSearch.gf" Link="EditorFixtures/ByteSearch.gf" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../std/core/Text/ByteSearch.gf" Link="EditorFixtures/ByteSearch.gf" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../std/**/*.gf" Link="StandardLibrary/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../libraries/platform/**/*.gf" Link="PlatformLibrary/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../std/core/IHashable.gf;../std/core/IEquatable.gf;../std/core/IComparable.gf;../std/core/Hashing/primitive_hashing.gf;../std/core/IStringConvertable.gf;../std/core/Collections/HashMap.gf;../std/core/Collections/HashSet.gf;../std/core/Collections/Queue.gf;../std/core/Collections/Stack.gf;../std/core/Collections/Vector.gf;../std/core/Memory/Span.gf;../std/core/Collections/IEnumerable.gf;../std/core/Queries/Enumerable.gf"

@@ -13,7 +13,7 @@ public sealed class StandardFileLinesTests
             string path = Path.Combine(directory, "input.bin");
             File.WriteAllBytes(path, contents);
             var names = new List<string> { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/IO/File.gf", "libc/IO/FileLines.gf" };
-            if (text) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Formatting.gf"]);
+            if (text) names.AddRange(["core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/Text/ByteSearch.gf", "core/Formatting.gf"]);
             var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                 .Append(new SourceFile("main.gf", program(Literal(path))));
             string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");

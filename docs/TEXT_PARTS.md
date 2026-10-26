@@ -53,7 +53,7 @@ these borrowing rules. Direct `foreach` is sufficient for ordinary iteration.
 
 `std/core/TextTrimSpan.gf` optionally adds `Trim()`, `TrimStart()`, and
 `TrimEnd()` to `Span<char>` and `Span<readonly(char)>`. Include `Memory/Span.gf` and
-`Ascii.gf` with this extension source. Unlike the owning String's mutating
+`Text/ascii.gf` with this extension source. Unlike the owning String's mutating
 methods, these return a sliced view and leave every source byte unchanged.
 
 Trimming uses exactly `Ascii::IsWhiteSpace`: space, tab, LF, vertical tab,

@@ -2,7 +2,7 @@
 
 `TextMatchSpan.gf` adds `StartsWith` and `EndsWith` to
 `Span<readonly(char)>`, including the views returned by `Split`, `Lines`, and
-`Trim`. Include `Memory/Span.gf`, `CString.gf`, and their ordinary span dependencies
+`Trim`. Include `Memory/Span.gf`, `Text/CString.gf`, and their ordinary span dependencies
 when selecting sources individually.
 
 ```csharp

@@ -6,7 +6,7 @@ public sealed class StandardRingShrinkTests
     {
         string[] names = ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf",
             "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf",
-            "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf",
+            "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/Text/ByteSearch.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf",
             "core/Collections/Queue.gf", "core/Collections/Deque.gf"];
         return names.Concat(managed ? ["libc/GC.gf", "libc/TracingCollector.gf"] : Array.Empty<string>())
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))

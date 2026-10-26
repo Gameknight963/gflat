@@ -1,6 +1,6 @@
 # Counted byte searches
 
-`std/core/ByteSearch.gf` is standalone: it needs neither String, Span, libc,
+`std/core/Text/ByteSearch.gf` is standalone: it needs neither String, Span, libc,
 allocation, nor an exception runtime. All methods are `nothrow`.
 
 ```csharp

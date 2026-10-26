@@ -1,6 +1,6 @@
 # Borrowed C strings
 
-`std/core/CString.gf` provides standalone `std::CString` helpers for raw
+`std/core/Text/CString.gf` provides standalone `std::CString` helpers for raw
 null-terminated strings. Its source has no String, Span, allocation, libc, or
 exception-runtime calls. Every operation is `nothrow`.
 

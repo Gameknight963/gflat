@@ -11,7 +11,7 @@ public sealed class StandardEnvironmentTests
         try
         {
             var names = new List<string> { "libc/Environment/Environment.gf" };
-            if (strings) names.AddRange(["libc/Environment/EnvironmentText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Formatting.gf"]);
+            if (strings) names.AddRange(["libc/Environment/EnvironmentText.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/Text/ByteSearch.gf", "core/Formatting.gf"]);
             var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                 .Append(new SourceFile("main.gf", program));
             string ir = Compiler.Emit(files, options: new() { NoStdLib = !strings });

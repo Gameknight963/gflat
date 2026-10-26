@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public class StandardAsciiTests
 {
     private static IEnumerable<SourceFile> Sources(string code) =>
-        [new SourceFile("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Ascii.gf"))), new SourceFile("main.gf", code)];
+        [new SourceFile("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/ascii.gf"))), new SourceFile("main.gf", code)];
 
     [Fact]
     public void EveryByteMatchesAsciiClassificationAndCaseRules()

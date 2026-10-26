@@ -1,6 +1,6 @@
 # ASCII byte utilities
 
-`core/Ascii.gf` provides `std::Ascii` functions for the language's byte-sized
+`core/Text/ascii.gf` provides `std::Ascii` functions for the language's byte-sized
 `char`. These functions do not interpret individual UTF-8 bytes as Unicode
 characters. They work without std, libc, allocation, or exception support.
 

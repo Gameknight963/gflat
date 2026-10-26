@@ -154,7 +154,7 @@ public sealed class StandardEditDistanceTests
     }
 
     private static IEnumerable<SourceFile> Sources(string program)
-        => new[] { "EditDistance.gf", "Memory/Span.gf", "Queries/Enumerable.gf", "Collections/IEnumerable.gf" }
+        => new[] { "Text/EditDistance.gf", "Memory/Span.gf", "Queries/Enumerable.gf", "Collections/IEnumerable.gf" }
             .Select(relative => Path.Combine(AppContext.BaseDirectory, "Std", "core", relative))
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("edit-distance.gf", program));

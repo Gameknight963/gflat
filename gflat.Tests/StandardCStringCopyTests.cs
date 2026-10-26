@@ -84,7 +84,7 @@ public sealed class StandardCStringCopyTests
     private static void Run(string program, int optimization)
     {
         SourceFile[] sources = [
-            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/CString.gf"))),
+            new("CString.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/CString.gf"))),
             new("main.gf", program)
         ];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true });

@@ -6,7 +6,7 @@ public sealed class StandardAsciiComparisonTests
 {
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = [new("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Ascii.gf"))), new("main.gf", program)];
+        SourceFile[] sources = [new("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/ascii.gf"))), new("main.gf", program)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         Assert.DoesNotContain("__gflat_eh", ir);
         Assert.DoesNotContain("@malloc", ir);

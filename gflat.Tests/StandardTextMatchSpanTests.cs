@@ -70,7 +70,7 @@ public sealed class StandardTextMatchSpanTests
     private static string Bool(bool value)=>value?"true":"false";
     private static void Run(string code,int optimization)
     {
-        var sources=new[]{"Memory/Span.gf","CString.gf","TextMatchSpan.gf","Collections/IEnumerable.gf","Queries/Enumerable.gf"}
+        var sources=new[]{"Memory/Span.gf","Text/CString.gf","TextMatchSpan.gf","Collections/IEnumerable.gf","Queries/Enumerable.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("match.gf",code));
         var result=CompilerTestHelper.Run(sources,optimization);

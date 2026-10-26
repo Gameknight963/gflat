@@ -148,7 +148,7 @@ public sealed class StandardByteSearchAnyTests
     private static async Task Run(string program,int optimization)
     {
         SourceFile[] sources=[
-            new("ByteSearch.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/ByteSearch.gf"))),
+            new("ByteSearch.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/ByteSearch.gf"))),
             new("byte-search-any.gf",program)
         ];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});

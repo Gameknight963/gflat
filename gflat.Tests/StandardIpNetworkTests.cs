@@ -186,7 +186,7 @@ public sealed class StandardIpNetworkTests
     [Fact]
     public void TryObserversCompileNothrowWithoutStringCollectorOrLibcSource()
     {
-        string[] names=["IpNetwork.gf","IpAddress.gf","Text.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
+        string[] names=["Net/IpNetwork.gf","Net/IpAddress.gf","Text.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("network-contract.gf","""
                 using std; using std::Memory; using std::Collections;namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}

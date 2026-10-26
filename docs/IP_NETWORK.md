@@ -94,7 +94,7 @@ containment and the default constructor are `nothrow` and allocate nothing.
 Ordinary copies retain only values. Throwing errors follow normal Exception
 runtime behavior; caller-selected writers may allocate or throw.
 
-For selective sources, include `core/IpNetwork.gf`, `core/IpAddress.gf`, their
+For selective sources, include `core/Net/IpNetwork.gf`, `core/Net/IpAddress.gf`, their
 equality/hash/formatting interfaces and `core/Hashing/primitive_hashing.gf` with normal Exception
 contracts. No sockets, DNS, interface identifiers, routing state, address lists,
 or implicit family conversions are involved.

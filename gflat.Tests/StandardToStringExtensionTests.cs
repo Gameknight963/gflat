@@ -146,8 +146,8 @@ public sealed class StandardToStringExtensionTests
                 struct Label : IFormattable {
                     public immutable void Format(ITextWriter* output) { output.Write("label", 5); }
                 }
-                std::Text::String ConvertLabel(ref immutable(Label) value) => std::ToString(ref value);
-                std::Text::String ConvertInteger(int value) => std::ToString(value);
+                std::Text::String ConvertLabel(ref immutable(Label) value) => std::Text::ToString(ref value);
+                std::Text::String ConvertInteger(int value) => std::Text::ToString(value);
                 """));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotMatch(@"(?m)^declare\s+[^\r\n]*@(?:malloc|free|snprintf|printf|fwrite|strlen)\(", ir);

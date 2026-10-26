@@ -1,5 +1,5 @@
 using std::Text;
-namespace std;
+namespace std::Text;
 
 public String ToString(this byte value)
 {

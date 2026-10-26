@@ -1,5 +1,5 @@
 using std::Text;
-namespace std;
+namespace std::Text;
 
 // Uses the existing libc-backed formatting policy without adding it to core.
 public String ToString(this float value)

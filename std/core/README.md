@@ -70,7 +70,7 @@ including embedded nulls. Primitive `std::Format(value, writer)` overloads use
 stack buffers or literal text, without allocating intermediate strings.
 With `using std;`, primitive values also support `value.Format(writer)`.
 Floating-point overloads live in `../libc/Formatting.gf`.
-Explicit `ToString()` extensions collect the same formatting into an owning
+Explicit `ToString()` extensions in `std::Text` collect the same formatting into an owning
 `String`. Primitive receivers use value parameters; the generic `IFormattable`
 extension borrows existing storage, including noncopyable values. Existing
 instance methods keep precedence. See [owning conversions](../../docs/STRING_CONVERSION.md)

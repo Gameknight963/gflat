@@ -1,5 +1,5 @@
 using std::Text;
-namespace std;
+namespace std::Text;
 
 // Optional alongside ExtraLongFormatting.gf; no float/libc formatting dependency.
 public String ToString(this extralong value)

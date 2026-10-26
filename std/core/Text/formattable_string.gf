@@ -1,5 +1,5 @@
 using std::Text;
-namespace std;
+namespace std::Text;
 
 // Borrow the formatter, including noncopyable values. The returned String owns its bytes.
 public String ToString<T : IFormattable>(this ref immutable(T) value)

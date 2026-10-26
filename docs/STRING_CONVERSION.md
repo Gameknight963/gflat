@@ -1,6 +1,6 @@
 # Convert a value to an owning String
 
-With `using std;`, `ToString()` offers the same textual representation
+With `using std::Text;`, `ToString()` offers the same textual representation
 as the value's existing `Format` operation, collected into a new owning `std::Text::String`.
 It introduces no separate formatting policy, encoding conversion, or ToCString
 helper. A returned String remains owned by its caller and must stay alive while

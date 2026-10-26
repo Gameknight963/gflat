@@ -182,7 +182,7 @@ public sealed class StandardBase32Tests
 
     private static async Task Run(string program,int optimization)
     {
-        SourceFile[] files=[new("Base32.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Base32.gf"))),new("main.gf",program)];
+        SourceFile[] files=[new("Base32.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Encoding/Base32.gf"))),new("main.gf",program)];
         string ir=Compiler.Emit(files,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
         Assert.DoesNotContain("@__gflat_eh_",ir);Assert.DoesNotContain("@malloc",ir);Assert.DoesNotContain("@__gflat_gc_",ir);
         foreach(string name in new[]{"TryGetEncodedLength","TryEncode","TryGetDecodedLength","TryDecode"})

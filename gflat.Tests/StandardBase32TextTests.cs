@@ -170,7 +170,7 @@ public sealed class StandardBase32TextTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"").Replace("\0","\\0")+"\"";
     private static void Run(string program,int optimization)
     {
-        string[] names=["Base32.gf","Base32Text.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf",
+        string[] names=["Encoding/Base32.gf","Encoding/Base32Text.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf",
             "IComparable.gf","Hashing/primitive_hashing.gf","String.gf","ByteSearch.gf","Formatting.gf","CString.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("base32-text.gf",program));

@@ -48,7 +48,7 @@ six, four, three, or one `=` characters. The final digit's unused low bits are
 zero. Complete groups require no `=`. The strict decoder accepts exactly those
 canonical shapes, so each byte sequence has one accepted representation.
 
-Include `core/Base32.gf` for selective use. The implementation needs no other
+Include `core/Encoding/Base32.gf` for selective use. The implementation needs no other
 standard source, String, libc, GC, exception allocation, or compiler feature.
 
 ## Owning results
@@ -74,8 +74,8 @@ int main()
 }
 ```
 
-For selective use, include `core/Base32Text.gf` plus the normal String
-dependencies. The owning conveniences are separate from `core/Base32.gf`.
+For selective use, include `core/Encoding/Base32Text.gf` plus the normal String
+dependencies. The owning conveniences are separate from `core/Encoding/Base32.gf`.
 
 Official [RFC test vectors](https://www.rfc-editor.org/rfc/rfc4648.html#section-10)
 include `f → MY======`, `fo → MZXQ====`, and `foo → MZXW6===`.

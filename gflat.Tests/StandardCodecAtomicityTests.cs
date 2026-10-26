@@ -17,7 +17,7 @@ public sealed class StandardCodecAtomicityTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = new[] { "Base64.gf", "Hex.gf", "PercentEncoding.gf" }
+        var sources = new[] { "Encoding/Base64.gf", "Encoding/Hex.gf", "Encoding/PercentEncoding.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);

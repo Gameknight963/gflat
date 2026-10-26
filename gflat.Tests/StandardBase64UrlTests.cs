@@ -158,7 +158,7 @@ public sealed class StandardBase64UrlTests
     }
     private static void Run(string directory, string program, int optimization)
     {
-        var sources = new[] { new SourceFile("Base64Url.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Base64Url.gf"))), new SourceFile("main.gf", program) };
+        var sources = new[] { new SourceFile("Base64Url.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Encoding/Base64Url.gf"))), new SourceFile("main.gf", program) };
         string ir = Path.Combine(directory, "codec.ll"), executable = Path.Combine(directory, "codec.exe");
         File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));
         var compilation = NativeToolchain.Compile(ir, executable, optimizationLevel: optimization);

@@ -328,8 +328,8 @@ public class FreestandingCoreUtilitiesTests
         if (RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
-        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Hex.gf", "Base64.gf", "Base64Url.gf", "Numerics/BitOperations.gf", "Hashing/primitive_hashing.gf", "Hashing/SHA256.gf",
-            "PercentEncoding.gf", "Binary/BinaryPrimitives.gf", "Hashing/CRC32.gf", "Hashing/Adler32.gf", "Utf8Decoder.gf",
+        var sources = new[] { "Ascii.gf", "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf", "Encoding/Hex.gf", "Encoding/Base64.gf", "Encoding/Base64Url.gf", "Numerics/BitOperations.gf", "Hashing/primitive_hashing.gf", "Hashing/SHA256.gf",
+            "Encoding/PercentEncoding.gf", "Binary/BinaryPrimitives.gf", "Hashing/CRC32.gf", "Hashing/Adler32.gf", "Utf8Decoder.gf",
             "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "IntegerFormatting.gf", "HexIntegerParsing.gf", "BooleanParsing.gf", "ByteSearch.gf", "CString.gf", "Memory/Bytes.gf", "JsonString.gf", "Binary/VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));

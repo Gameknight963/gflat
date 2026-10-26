@@ -477,7 +477,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         int hexWrite=sourceTokens.Last(token=>token.Text=="WriteHex").Start;
         var hexHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,hexWrite),Protocol.JsonOptions);
         Assert.Contains("uppercase = true",hexHover.GetProperty("contents").GetProperty("value").GetString());
-        Assert.Contains("HexWriter.gf",JsonSerializer.Serialize(model.Definition(source.Path,hexWrite),Protocol.JsonOptions));
+        Assert.Contains("hex_writer.gf",JsonSerializer.Serialize(model.Definition(source.Path,hexWrite),Protocol.JsonOptions));
         foreach(string member in new[]{"Utf8Length","Utf16Length"})
         {
             int offset=sourceTokens.Last(token=>token.Text==member).Start;

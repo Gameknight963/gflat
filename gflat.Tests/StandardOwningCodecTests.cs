@@ -143,8 +143,8 @@ public sealed class StandardOwningCodecTests
     private static string Literal(string value)=>"\""+value.Replace("\\","\\\\").Replace("\"","\\\"").Replace("\n","\\n")+"\"";
     private static void Run(string program,int optimization)
     {
-        string[] names=["Base64.gf","Base64Text.gf","Base64Url.gf","Base64UrlText.gf","Hex.gf","HexText.gf",
-            "PercentEncoding.gf","PercentEncodingText.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf",
+        string[] names=["Encoding/Base64.gf","Encoding/Base64Text.gf","Encoding/Base64Url.gf","Encoding/Base64UrlText.gf","Encoding/Hex.gf","Encoding/HexText.gf",
+            "Encoding/PercentEncoding.gf","Encoding/PercentEncodingText.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf",
             "IComparable.gf","Hashing/primitive_hashing.gf","String.gf","ByteSearch.gf","Formatting.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("owning-codecs.gf",program));

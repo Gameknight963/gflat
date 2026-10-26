@@ -448,7 +448,8 @@ namespace gflat
                     }
                     foreach ((string Name, TypeExpression Type) f in sInfo.Fields)
                     {
-                        if (HasDestructorInternal(f.Type, visited))
+                        using var context = EnterFieldLayoutContext(sInfo.Name, f.Name);
+                        if (HasDestructorInternal(ResolveFieldLayoutType(f.Type), visited))
                         {
                             return true;
                         }
@@ -466,7 +467,8 @@ namespace gflat
                     }
                     foreach ((string Name, TypeExpression Type, TokenKind Accessibility, string DeclaringClass) f in cInfo.Fields)
                     {
-                        if (HasDestructorInternal(f.Type, visited))
+                        using var context = EnterFieldLayoutContext(f.DeclaringClass, f.Name);
+                        if (HasDestructorInternal(ResolveFieldLayoutType(f.Type), visited))
                         {
                             return true;
                         }

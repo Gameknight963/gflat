@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Owning String conveniences kept separate from the nothrow buffer codec.
 public static class PercentEncodingText

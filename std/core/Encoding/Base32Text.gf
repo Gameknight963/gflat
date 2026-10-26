@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Owning conveniences, separate from the allocation-free Base32 codec.
 // Input remains readable and unchanged for the duration of each call.

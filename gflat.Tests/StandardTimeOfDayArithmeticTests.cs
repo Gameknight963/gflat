@@ -6,7 +6,7 @@ public sealed class StandardTimeOfDayArithmeticTests
 {
     private const long Day=864000000000;
     private const string Helpers="""
-        using std; using std::Time;
+        using std; using std::Encoding; using std::Time;
         int attempts=0;bool deny=false;
         extern void*? malloc(nuint size);extern void free(void* value);
         namespace Memory {

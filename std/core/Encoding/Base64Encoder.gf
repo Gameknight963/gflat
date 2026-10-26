@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Streams padded Base64 to a borrowed sink. Complete emits the final padding.
 public struct Base64Encoder : ITextWriter

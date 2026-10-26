@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Accepts strict padded Base64 text; writes decoded bytes to a borrowed sink.
 public struct Base64Decoder : ITextWriter

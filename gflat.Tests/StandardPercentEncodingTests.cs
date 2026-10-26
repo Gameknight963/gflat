@@ -29,7 +29,7 @@ public sealed class StandardPercentEncodingTests
     public void RfcComponentExamplesPreserveOnlyUnreservedAscii(string input, string encoded)
     {
         Run($$"""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[128] output; nuint written = 99;
                 output[{{encoded.Length}}] = '?';
@@ -52,7 +52,7 @@ public sealed class StandardPercentEncodingTests
         string encoded = Uri.EscapeDataString(input);
         int byteCount = System.Text.Encoding.UTF8.GetByteCount(input);
         Run($$"""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[256] output; nuint written = 0;
                 if (!PercentEncoding::TryEncode({{Literal(input)}}, {{byteCount}}, output, 256, ref written) || written != (nuint){{encoded.Length}}) return 1;
@@ -74,7 +74,7 @@ public sealed class StandardPercentEncodingTests
     public void InvalidEscapesNeverWritePartialOutput(string input)
     {
         Run($$"""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[32] output; for (int i = 0; i < 32; i++) output[i] = '?';
                 nuint written = 99;
@@ -93,7 +93,7 @@ public sealed class StandardPercentEncodingTests
             (i >= 65 && i <= 90) || (i >= 97 && i <= 122) || (i >= 48 && i <= 57) || i is 45 or 46 or 95 or 126
                 ? ((char)i).ToString() : "%" + i.ToString("X2")));
         Run($$"""
-            using std;
+            using std; using std::Encoding;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -117,7 +117,7 @@ public sealed class StandardPercentEncodingTests
     public void ZerosPlusCaseAndSinglePassSemanticsAreExplicit()
     {
         Run("""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[16] output; nuint written = 99;
                 if (!PercentEncoding::TryDecode("A%00B+%2b", 9, output, 5, ref written) || written != (nuint)5) return 1;
@@ -134,7 +134,7 @@ public sealed class StandardPercentEncodingTests
     public void EmptyAndInsufficientCapacityLeaveBuffersUntouched()
     {
         Run("""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[8] output; for (int i = 0; i < 8; i++) output[i] = '?';
                 nuint written = 99;
@@ -154,8 +154,8 @@ public sealed class StandardPercentEncodingTests
         string ir = Compiler.Emit(Sources("""
             int main() {
                 char[8] data; nuint written = 0;
-                if (!std::PercentEncoding::TryEncode(" ", 1, data, 8, ref written)) return 1;
-                if (!std::PercentEncoding::TryDecode(data, written, data, 8, ref written)) return 2;
+                if (!std::Encoding::PercentEncoding::TryEncode(" ", 1, data, 8, ref written)) return 1;
+                if (!std::Encoding::PercentEncoding::TryDecode(data, written, data, 8, ref written)) return 2;
                 return 0;
             }
             """), options: new() { NoStdLib = true });
@@ -167,7 +167,7 @@ public sealed class StandardPercentEncodingTests
     public void OwningConveniencesKeepBinaryZerosAndRejectMalformedEscapes()
     {
         Run("""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 String encoded = PercentEncodingText::Encode("A\0B+", 4);
                 if (encoded.Length != (nuint)8 || encoded.Data[1] != '%' || encoded.Data[5] != '%') return 1;

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Stream counted bytes as hexadecimal to a borrowed writer.
 public void WriteHex(this ITextWriter* output, readonly(char)* data, nuint count, bool uppercase = true)

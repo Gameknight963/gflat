@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardPathEndingTests
 {
     private const string Allocator="""
-        using std; using std::Memory;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Encoding; using std::Memory;extern void*? malloc(nuint size);extern void free(void* storage);
         bool deny=false;int attempts=0;int allocated=0;int released=0;
         namespace Memory{
             public replace void*? Allocate(nuint size){attempts++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}

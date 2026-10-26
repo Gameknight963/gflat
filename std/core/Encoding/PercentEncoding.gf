@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // RFC 3986 component data, not a URI parser or form-urlencoded codec.
 // Counted bytes, no allocation, and no trailing null in output.

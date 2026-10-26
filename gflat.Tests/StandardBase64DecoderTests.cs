@@ -16,7 +16,7 @@ public sealed class StandardBase64DecoderTests
     }
 
     private const string DenyAllocation="""
-        using std;int attempts=0;
+        using std; using std::Encoding;int attempts=0;
         extern void free(void* storage);
         namespace Memory {
             public replace void*? Allocate(nuint bytes){attempts++;return null;}
@@ -129,7 +129,7 @@ public sealed class StandardBase64DecoderTests
             Bytes(new string('A',260)+"!"),Bytes(new string('A',256)+"Zg==x")
         ];
         var code=new StringBuilder("""
-            using std;
+            using std; using std::Encoding;
             struct Sink:ITextWriter {
                 public int Calls;public nuint Count;
                 public Sink(){Calls=0;Count=0;}
@@ -162,7 +162,7 @@ public sealed class StandardBase64DecoderTests
     [InlineData(2)]
     public void OriginalPartialSinkFailurePoisonsBothWritesAndCompletion(int optimization)
         => Run("""
-            using std;
+            using std; using std::Encoding;
             class SinkFailure:Exception{public SinkFailure():base("sink failed",77){}}
             struct Sink:ITextWriter {
                 public int Budget;public int Calls;public int Count;
@@ -199,7 +199,7 @@ public sealed class StandardBase64DecoderTests
     [InlineData(2)]
     public void CopiedCarryAndPaddedCompletionNeverOwnOrCompleteSinkImplicitly(int optimization)
         => Run("""
-            using std;
+            using std; using std::Encoding;
             struct Sink:ITextWriter {
                 private char* data;public nuint Count;public int Calls;
                 public Sink(char* storage){data=storage;Count=0;Calls=0;}

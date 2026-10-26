@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Owning String conveniences, separate from the allocation-free buffer codec.
 public static class HexText

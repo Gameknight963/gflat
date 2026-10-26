@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // RFC 4648 URL-safe alphabet, strictly unpadded. Counted binary/ASCII buffers.
 public static class Base64Url

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Owning String conveniences, kept separate from the caller-buffer codec.
 public static class Base64Text

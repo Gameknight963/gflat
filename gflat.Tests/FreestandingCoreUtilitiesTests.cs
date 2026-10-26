@@ -31,28 +31,28 @@ public class FreestandingCoreUtilitiesTests
             if (!std::Utf8::TryDecode(input, length, &scalar, &consumed)) return 4;
             if (scalar != 0x1f600u || consumed != length) return 5;
             nuint encodedLength = 0; nuint decodedLength = 0;
-            if (!std::Base64::TryEncode(input, length, encoded, 32, ref encodedLength)) return 6;
-            if (!std::Base64::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength)) return 7;
+            if (!std::Encoding::Base64::TryEncode(input, length, encoded, 32, ref encodedLength)) return 6;
+            if (!std::Encoding::Base64::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength)) return 7;
             if (decodedLength != length) return 8;
             for (nuint i = 0; i < length; i++) if (input[i] != decoded[i]) return 9;
             char[2] urlBinary=[(char)((formatter_input()>>63)+250ul),(char)255]; char[3] urlText; char[2] urlBytes;
             nuint urlWritten=0;
-            if(!std::Base64Url::TryEncode(urlBinary,2,urlText,3,ref urlWritten)||urlWritten!=3
+            if(!std::Encoding::Base64Url::TryEncode(urlBinary,2,urlText,3,ref urlWritten)||urlWritten!=3
                 ||urlText[0]!='-'||urlText[1]!='_'||urlText[2]!='8')return 162;
-            if(!std::Base64Url::TryDecode(urlText,3,urlBytes,2,ref urlWritten)||urlWritten!=2
+            if(!std::Encoding::Base64Url::TryDecode(urlText,3,urlBytes,2,ref urlWritten)||urlWritten!=2
                 ||urlBytes[0]!=urlBinary[0]||urlBytes[1]!=urlBinary[1])return 163;
-            if (!std::Hex::TryEncode(decoded, decodedLength, encoded, 32, ref encodedLength)) return 10;
+            if (!std::Encoding::Hex::TryEncode(decoded, decodedLength, encoded, 32, ref encodedLength)) return 10;
             if (encodedLength != (nuint)8) return 11;
             readonly(char)* expected = "F09F9880";
             for (nuint i = 0; i < encodedLength; i++) if (encoded[i] != expected[i]) return 12;
             if (std::Ascii::ToLower(encoded[0]) != 'f') return 13;
-            if (!std::Hex::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength)) return 14;
+            if (!std::Encoding::Hex::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength)) return 14;
             if (!std::Utf8::IsValid(decoded, decodedLength)) return 15;
             if (std::Numerics::BitOperations::PopCount(0xffu) != 8) return 16;
             if (std::Numerics::BitOperations::RotateRight(1ul, 64) != 1ul) return 17;
             if (std::Hashing::Bytes("hello", 5) != (nuint)1335831723u) return 18;
-            if (!std::PercentEncoding::TryEncode("a +", 3, encoded, 32, ref encodedLength) || encodedLength != (nuint)7) return 19;
-            if (!std::PercentEncoding::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength) || decodedLength != (nuint)3) return 20;
+            if (!std::Encoding::PercentEncoding::TryEncode("a +", 3, encoded, 32, ref encodedLength) || encodedLength != (nuint)7) return 19;
+            if (!std::Encoding::PercentEncoding::TryDecode(encoded, encodedLength, decoded, 64, ref decodedLength) || decodedLength != (nuint)3) return 20;
             if (decoded[0] != 'a' || decoded[1] != ' ' || decoded[2] != '+') return 21;
             byte[9] binary; ulong integer = 0ul;
             if (!std::Binary::BinaryPrimitives::TryWriteUInt64BigEndian(&binary[1], 8, 0xfedcba9876543210ul)) return 22;

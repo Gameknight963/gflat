@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Counted hexadecimal bytes. No separators, whitespace, prefix, or terminator.
 public static class Hex

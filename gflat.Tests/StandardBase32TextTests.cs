@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardBase32TextTests
 {
     private const string Allocator = """
-        using std;
+        using std; using std::Encoding;
         extern void*? malloc(nuint bytes); extern void free(void* storage);
         int allocations=0; int releases=0; int large=0; bool deny=false;
         namespace Memory {

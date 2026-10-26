@@ -24,7 +24,7 @@ public sealed class StandardBase64UrlTests
                 }
             }
             Run(directory, $$"""
-                using std;
+                using std; using std::Encoding;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
@@ -75,7 +75,7 @@ public sealed class StandardBase64UrlTests
     [InlineData(2)]
     public void EveryBytePositionAndTailBitsAreStrictAndFailureIsAtomic(int optimization)
         => WithDirectory(directory => Run(directory, """
-            using std;
+            using std; using std::Encoding;
             int Digit(int value) nothrow{
                 if(value>=65&&value<=90)return value-65;
                 if(value>=97&&value<=122)return value-97+26;
@@ -118,7 +118,7 @@ public sealed class StandardBase64UrlTests
     [InlineData(2)]
     public void ZeroInputsOverflowPreflightAndOrdinaryCallsNeedNoAllocation(int optimization)
         => WithDirectory(directory => Run(directory, """
-            using std;
+            using std; using std::Encoding;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}

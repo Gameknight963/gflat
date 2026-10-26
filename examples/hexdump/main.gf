@@ -1,3 +1,4 @@
+using std::Encoding;
 using std;
 
 // One stack-backed output row, including a full-width byte offset.

@@ -5,7 +5,7 @@ It composes the existing SHA256 implementation with the inner/outer pads defined
 by [RFC 2104](https://www.rfc-editor.org/rfc/rfc2104).
 
 ```csharp
-using std; using std::Hashing;
+using std; using std::Encoding; using std::Hashing;
 
 int main()
 {

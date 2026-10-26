@@ -41,7 +41,7 @@ public sealed class StandardCodecAtomicityTests
     [InlineData(2)]
     public void EveryInsufficientInPlaceCapacityPreservesEncodedBytesAndGuards(int optimization)
     {
-        var code = new StringBuilder("using std; int main() {\n");
+        var code = new StringBuilder("using std; using std::Encoding; int main() {\n");
         foreach (var item in Cases())
         {
             code.AppendLine("{").AppendLine(Buffer(item.Encoded));
@@ -63,7 +63,7 @@ public sealed class StandardCodecAtomicityTests
     [InlineData(2)]
     public void MalformedSuffixAfterLongValidPrefixPreservesInPlaceInputAndGuards(int optimization)
     {
-        var code = new StringBuilder("using std; int main() {\n");
+        var code = new StringBuilder("using std; using std::Encoding; int main() {\n");
         foreach (var item in Cases())
         foreach (string suffix in item.Suffixes)
         {

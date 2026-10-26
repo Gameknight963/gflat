@@ -1,6 +1,6 @@
 # Base64
 
-`std/core/Encoding/Base64.gf` defines `std::Base64`, a caller-buffer codec with no
+`std/core/Encoding/Base64.gf` defines `std::Encoding::Base64`, a caller-buffer codec with no
 allocation and no libc dependency. It uses the standard RFC 4648 alphabet
 (`A-Z`, `a-z`, `0-9`, `+`, `/`) with required `=` padding. It does not accept
 whitespace or URL-safe variants. This is an encoding, not encryption.
@@ -26,7 +26,7 @@ variables must occupy separate storage from the input and output byte buffers.
 In-place decoding support applies to the byte buffers, not these count outputs:
 storing a count into encoded or decoded bytes would overwrite their contents.
 
-`std/core/Encoding/Base64Text.gf` adds `std::Base64Text::Encode(data, count)` and
+`std/core/Encoding/Base64Text.gf` adds `std::Encoding::Base64Text::Encode(data, count)` and
 `Decode(text, count)`, returning owning `std::String` values. They reserve the
 result once and process small stack chunks without allocating an intermediate
 whole-size buffer. Decoded strings may contain embedded zeros; use `Length`
@@ -45,7 +45,7 @@ output failure can occur after earlier chunks have already reached the sink.
 
 # URL-safe Base64
 
-`std/core/Encoding/Base64Url.gf` defines `std::Base64Url`, a separate caller-buffer codec
+`std/core/Encoding/Base64Url.gf` defines `std::Encoding::Base64Url`, a separate caller-buffer codec
 using the RFC 4648 section 5 alphabet (`-` and `_` instead of `+` and `/`). This
 API explicitly selects the **unpadded** profile: it emits no `=` and rejects
 padding on input. It also rejects whitespace, standard-alphabet `+`/`/`, and
@@ -89,7 +89,7 @@ helpers require the normal String dependencies, while `Encoding/Base64Url.gf` re
 usable without String or libc.
 
 ```csharp
-using std;
+using std; using std::Encoding;
 
 int main()
 {
@@ -105,7 +105,7 @@ int main()
 
 # Hexadecimal
 
-`std/core/Encoding/Hex.gf` defines `std::Hex`, with the same counted-buffer conventions:
+`std/core/Encoding/Hex.gf` defines `std::Encoding::Hex`, with the same counted-buffer conventions:
 
 - `TryGetEncodedLength(count, ref length)` checks multiplication by two for
   pointer-sized overflow.
@@ -119,7 +119,7 @@ int main()
 Failures set the output count to zero and leave the output buffer untouched.
 Results have no null terminator. Input/output must be disjoint for encoding;
 decoding additionally supports the exact same starting address. Empty input
-succeeds. `std/core/Encoding/HexText.gf` adds owning `std::HexText::Encode(data, count,
+succeeds. `std/core/Encoding/HexText.gf` adds owning `std::Encoding::HexText::Encode(data, count,
 uppercase = true)` and `Decode(text, count)` conveniences. Decoded strings retain
 embedded zeros and report malformed input through an exception.
 
@@ -130,7 +130,7 @@ separator, whitespace, newline, or terminator. Uppercase is the default, matchin
 `Hex::TryEncode` and `HexText::Encode`; pass `false` for lowercase.
 
 ```csharp
-using std;
+using std; using std::Encoding;
 int main()
 {
     char[3] bytes = [(char)0, (char)0xab, (char)0xff];
@@ -162,7 +162,7 @@ language's exception runtime retain their existing dependency requirements.
 
 # Component percent encoding
 
-`std/core/Encoding/PercentEncoding.gf` defines `std::PercentEncoding`. This encodes
+`std/core/Encoding/PercentEncoding.gf` defines `std::Encoding::PercentEncoding`. This encodes
 component **data**, not an entire URI: only unreserved ASCII letters, digits,
 `-`, `.`, `_`, and `~` pass through. Other bytes become uppercase `%HH` escapes,
 following [RFC 3986 sections 2.1–2.4](https://www.rfc-editor.org/rfc/rfc3986.html#section-2.1).

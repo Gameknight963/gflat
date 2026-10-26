@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Canonical RFC 4648 Base64, using '+'/'/' and required padding.
 // Counted buffers include embedded zeros; output is not null-terminated.

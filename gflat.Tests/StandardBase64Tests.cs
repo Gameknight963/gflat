@@ -25,7 +25,7 @@ public sealed class StandardBase64Tests
     public void RfcVectorsAndExactCapacityHaveNoImplicitTerminator(string plain, string encoded)
     {
         Run($$"""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[32] encoded; char[32] decoded;
                 for (int i = 0; i < 32; i++) { encoded[i] = '?'; decoded[i] = '?'; }
@@ -57,7 +57,7 @@ public sealed class StandardBase64Tests
     {
         string literal = Literal(encoded).Replace("\n", "\\n");
         Run($$"""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[32] output;
                 for (int i = 0; i < 32; i++) output[i] = '?';
@@ -76,7 +76,7 @@ public sealed class StandardBase64Tests
         byte[] input = Enumerable.Range(0, 257).Select(i => (byte)i).ToArray();
         string expected = Convert.ToBase64String(input);
         Run($$"""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[257] input; char[344] output;
                 for (int i = 0; i < 257; i++) input[i] = (char)i;
@@ -94,7 +94,7 @@ public sealed class StandardBase64Tests
     public void CapacityAndLengthOverflowFailuresLeaveOutputUntouched()
     {
         Run("""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 char[8] output; for (int i = 0; i < 8; i++) output[i] = '?';
                 nuint written = 99;
@@ -115,7 +115,7 @@ public sealed class StandardBase64Tests
     public void OwningStringHelpersPreserveZerosAndRejectMalformedInput()
     {
         Run("""
-            using std;
+            using std; using std::Encoding;
             int main() {
                 String encoded = Base64Text::Encode("A\0B", 3);
                 if (encoded.Length != (nuint)4 || encoded.Data[0] != 'Q' || encoded.Data[1] != 'Q' || encoded.Data[2] != 'B' || encoded.Data[3] != 'C') return 1;

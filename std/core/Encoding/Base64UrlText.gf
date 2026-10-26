@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Owning conveniences, separate from the allocation-free URL-safe codec.
 // Input must remain readable and unchanged for the duration of the call.

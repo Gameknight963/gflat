@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryGenericSumTests
 {
     private const string Allocator="""
-        using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
+        using std; using std::Encoding; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint size){attempts++;if(deny)return null;void*? result=malloc(size);if(result!=null)allocated++;return result;}
@@ -200,7 +200,7 @@ public sealed class StandardQueryGenericSumTests
 
         IEnumerable<SourceFile> Inputs(string type, string value)
             => library.Append(new SourceFile("query-sum.gf", $$"""
-                using std; using std::Memory; using std::Queries; using std::Collections;
+                using std; using std::Encoding; using std::Memory; using std::Queries; using std::Collections;
                 enum Code : int { One = 1 }
                 int main() {
                     {{type}}[1] values = [{{value}}];

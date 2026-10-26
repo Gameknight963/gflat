@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Encoding;
 
 // Canonical uppercase RFC 4648 Base32, with required '=' padding.
 // Counted results have no terminator. Encoding requires disjoint buffers.

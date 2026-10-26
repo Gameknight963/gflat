@@ -1,6 +1,6 @@
 # Streaming Base64 decoding
 
-`std::Base64Decoder` implements `ITextWriter`: its input is encoded Base64 text,
+`std::Encoding::Base64Decoder` implements `ITextWriter`: its input is encoded Base64 text,
 and its borrowed destination receives decoded binary bytes. This lets existing
 writer pipelines decode a stream without allocating a complete input or result
 string. [Base64Encoder](BASE64_ENCODER.md) performs the opposite transformation.
@@ -8,7 +8,7 @@ string. [Base64Encoder](BASE64_ENCODER.md) performs the opposite transformation.
 ## Decode a file into binary output
 
 ```csharp
-using std;
+using std; using std::Encoding;
 
 int main()
 {

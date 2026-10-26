@@ -45,7 +45,7 @@ public sealed class StandardBase32Tests
         string encoded=string.Concat(cases.Select(Encode));
         string lengths=string.Join(',',cases.Select(value=>value.Length.ToString(CultureInfo.InvariantCulture)));
         await Run($$"""
-            using std;
+            using std; using std::Encoding;
             int Digit(char value) nothrow{if(value<='9')return (int)value-48;return (int)value-65+10;}
             int main(){
                 int[{{cases.Count}}] lengths=[{{lengths}}];readonly(char)* data="{{data}}";
@@ -130,7 +130,7 @@ public sealed class StandardBase32Tests
         string blob=string.Concat(values.Select(value=>Convert.ToHexString(value.Select(character=>(byte)character).ToArray())));
         string lengths=string.Join(',',values.Select(value=>value.Length.ToString(CultureInfo.InvariantCulture)));
         await Run($$"""
-            using std;
+            using std; using std::Encoding;
             int Digit(char value) nothrow{if(value<='9')return (int)value-48;return (int)value-65+10;}
             int main(){
                 readonly(char)* blob="{{blob}}";int[{{values.Length}}] lengths=[{{lengths}}];nuint offset=0;
@@ -159,7 +159,7 @@ public sealed class StandardBase32Tests
     [InlineData(2)]
     public async Task OverflowAndCountPreflightsDoNotReadInputAndPureCodecNeedsNoRuntime(int optimization)
         =>await Run("""
-            using std;
+            using std; using std::Encoding;
             int main(){
                 nuint maximum=(nuint)0-1;nuint boundary=(maximum/8)*5;nuint written=99;
                 if(!Base32::TryGetEncodedLength(boundary,ref written)||written!=maximum-7)return 1;

@@ -1,3 +1,4 @@
+using std::Encoding;
 using std::Binary;
 using std::Hashing;
 using std;

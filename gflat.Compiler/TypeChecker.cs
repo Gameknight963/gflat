@@ -4732,6 +4732,7 @@ namespace gflat
             if (ext != null)
             {
                 ValidateExternAccess(ext, node.Span);
+                BindExternSignature(ext);
                 _resolvedCalls[node] = ext;
                 AddDefaultArguments(node.Arguments, ext.Parameters, node);
                 if (node.Arguments.Count < ext.Parameters.Count || !ext.IsVariadic && node.Arguments.Count > ext.Parameters.Count)

@@ -100,10 +100,11 @@ public partial class TypeChecker
         bool needsTarget = target is MethodDeclaration method && (method.IsGeneric || overloadFamilies.ContainsKey(method) || importedFunctionValueCandidates.ContainsKey(expression));
         if (!needsTarget)
         {
+            ValidateFunctionAddress(target, expression.Line);
             // A specialization can expose a free function before the normal
             // signature pass reaches its declaring namespace.
             if (target is MethodDeclaration concrete) BindMethodSignature(concrete);
-            ValidateFunctionAddress(target, expression.Line);
+            else if (target is ExternDeclaration external) BindExternSignature(external);
         }
         _functionAddressTargets[expression] = target;
         // A method group has no function signature until a target selects it.

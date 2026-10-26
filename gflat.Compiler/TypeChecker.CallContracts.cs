@@ -5,6 +5,14 @@ namespace gflat;
 
 public partial class TypeChecker
 {
+    private void BindExternSignature(ExternDeclaration declaration)
+    {
+        using var context = EnterSignatureContext(declaration, null, false);
+        declaration.ReturnType = ResolveAlias(declaration.ReturnType);
+        foreach (var parameter in declaration.Parameters)
+            parameter.Type = ResolveAlias(parameter.Type);
+    }
+
     private void ValidateExternAccess(ExternDeclaration declaration, SourceSpan use)
     {
         if (declaration.Accessibility == TokenKind.Private &&

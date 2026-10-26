@@ -5,7 +5,7 @@
 result type, so no pair or tuple allocation is needed.
 
 ```csharp
-using std; using std::Queries;
+using std; using std::Memory; using std::Queries;
 int[3] numbers = [1, 2, 3];
 int[2] offsets = [10, 20];
 Span<int> first = new(numbers, 3);

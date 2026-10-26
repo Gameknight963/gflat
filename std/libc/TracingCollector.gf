@@ -68,7 +68,7 @@ namespace std
 
         private static void* RequiredAllocate(nuint bytes) nothrow
         {
-            void*? result = Memory::Allocate(bytes);
+            void*? result = global::Memory::Allocate(bytes);
             if (result == null) collector_detail::abort();
             return result!;
         }
@@ -114,7 +114,7 @@ namespace std
                     throw new Exception("Allocation is already managed");
                 existing = existing!.next;
             }
-            Allocation*? allocation = (Allocation*?)Memory::Allocate((nuint)sizeof(Allocation));
+            Allocation*? allocation = (Allocation*?)global::Memory::Allocate((nuint)sizeof(Allocation));
             if (allocation == null) throw new BadAllocException();
             allocation!.address = address;
             allocation!.bytes = bytes;
@@ -134,16 +134,16 @@ namespace std
             if (alignment == 0) throw new BadAllocException();
             nuint threshold = CollectionThreshold();
             if (threshold != 0 && state.bytesSinceCollection >= threshold) Collect();
-            void*? storage = Memory::Allocate(bytes);
-            if (storage == null) { Collect(); storage = Memory::Allocate(bytes); }
+            void*? storage = global::Memory::Allocate(bytes);
+            if (storage == null) { Collect(); storage = global::Memory::Allocate(bytes); }
             if (storage == null) throw new BadAllocException();
             if ((nuint)storage % alignment != 0)
             {
-                Memory::Free(storage!);
+                global::Memory::Free(storage!);
                 throw new BadAllocException();
             }
             try { Register(storage!, bytes); }
-            catch { Memory::Free(storage!); throw; }
+            catch { global::Memory::Free(storage!); throw; }
             byte* data = (byte*)storage;
             for (nuint index = 0; index < bytes; index++) data[index] = 0;
             return storage!;
@@ -184,7 +184,7 @@ namespace std
                 buckets[bucket] = slot;
                 slot = slot!.next;
             }
-            Memory::Free((void*)state.buckets);
+            global::Memory::Free((void*)state.buckets);
             state.buckets = buckets;
             state.bucketCount = capacity;
         }
@@ -251,7 +251,7 @@ namespace std
                         state.freeSlots = slot;
                         state.cachedSlots++;
                     }
-                    else Memory::Free((void*)slot);
+                    else global::Memory::Free((void*)slot);
                     return;
                 }
                 previous = slot;
@@ -281,7 +281,7 @@ namespace std
 
         // A deallocator failure cannot safely resume a partially completed sweep.
         // The normal nothrow boundary uses the application's unhandled hook.
-        private static void Release(void* storage) nothrow => Memory::Free(storage);
+        private static void Release(void* storage) nothrow => global::Memory::Free(storage);
 
         public static nuint Collect()
         {
@@ -345,7 +345,7 @@ namespace std
                 garbage = garbage!.next;
                 RemoveOwnedSlots(state, allocation!);
                 Release(allocation!.address);
-                Memory::Free((void*)allocation);
+                global::Memory::Free((void*)allocation);
                 reclaimed++;
             }
             state.collecting = false;

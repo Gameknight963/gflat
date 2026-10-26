@@ -6,6 +6,7 @@
 when selecting sources individually.
 
 ```csharp
+using std::Memory;
 Span<readonly(char)> token = new("name=value!", 10); // Excludes the '!'.
 bool named = token.StartsWith("name=");
 bool suffix = token.EndsWith("value", 5);
@@ -14,6 +15,7 @@ bool suffix = token.EndsWith("value", 5);
 Both methods accept a null-terminated pattern or a pointer plus byte count:
 
 ```csharp
+using std::Memory;
 bool StartsWith(this Span<readonly(char)> text, readonly(char)* prefix);
 bool StartsWith(this Span<readonly(char)> text, readonly(char)* prefix, nuint count);
 bool EndsWith(this Span<readonly(char)> text, readonly(char)* suffix);

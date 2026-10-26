@@ -37,7 +37,7 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
     {
         if (requested == 0)
         {
-            if (data != null) Memory::Free((void*)data);
+            if (data != null) global::Memory::Free((void*)data);
             data = null; capacity = 0; head = 0;
             return;
         }
@@ -45,11 +45,11 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
         nuint stride = (nuint)sizeof(T);
         if (stride == 0) stride = 1;
         if (requested > maximum / stride) throw new Exception("Deque capacity overflow");
-        void*? allocation = Memory::Allocate(requested * stride);
+        void*? allocation = global::Memory::Allocate(requested * stride);
         if (allocation == null) throw new BadAllocException("Deque allocation failed");
         T* replacement = (T*)allocation;
         for (nuint i = 0; i < count; i++) move *(data! + this.Physical(i)) at replacement + i;
-        if (data != null) Memory::Free((void*)data);
+        if (data != null) global::Memory::Free((void*)data);
         data = replacement; capacity = requested; head = 0;
     }
 
@@ -205,7 +205,7 @@ struct Deque<T> : IEnumerable<T, Deque<T>::Enumerator>
     public Enumerable<T, Deque<T>::View, Deque<T>::Enumerator> AsEnumerable()
         => new Enumerable<T, Deque<T>::View, Deque<T>::Enumerator>(new View(data, capacity, head, count));
 
-    ~Deque() { this.Clear(); if (data != null) Memory::Free((void*)data); }
+    ~Deque() { this.Clear(); if (data != null) global::Memory::Free((void*)data); }
 
     // Captures ring metadata, borrowing storage without copying the owning deque.
     public struct View : IEnumerable<T, Deque<T>::Enumerator>

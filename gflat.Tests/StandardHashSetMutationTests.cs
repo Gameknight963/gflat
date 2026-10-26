@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardHashSetMutationTests
 {
     private const string Owners="""
-        using std; using std::Numerics; using std::Collections;
+        using std; using std::Memory; using std::Numerics; using std::Collections;
         int made=0;int dead=0;int copies=0;int hashCalls=0;int equalityCalls=0;
         int failCopy=0;int failHash=0;int failEquality=0;int allocations=0;int releases=0;bool failLarge=false;
         private extern void*? malloc(nuint bytes);private extern void free(void* storage);
@@ -30,7 +30,7 @@ public sealed class StandardHashSetMutationTests
     {
         var random=new Random(81119);HashSet<int>[] sets=[[],[]];
         var source=new StringBuilder("""
-            using std; using std::Numerics; using std::Collections;extern int puts(immutable(char*) text);
+            using std; using std::Memory; using std::Numerics; using std::Collections;extern int puts(immutable(char*) text);
             bool Matches(immutable(HashSet<int>)* values,readonly(int)* expected,nuint count){
                 if(values.Count!=count)return false;for(nuint i=0;i<count;i++)if(!values.Contains(expected+i))return false;return true;
             }
@@ -132,7 +132,7 @@ public sealed class StandardHashSetMutationTests
     [InlineData(2)]
     public void ManagedKeyFieldsRemainRootedByTheirActualOwningSets(int optimization)
         => Run("""
-            using std; using std::Numerics; using std::Collections;
+            using std; using std::Memory; using std::Numerics; using std::Collections;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;}}
             struct Key:IHashable,IEquatable<Key>{
                 public int Id;public immutable(Node^) Value;

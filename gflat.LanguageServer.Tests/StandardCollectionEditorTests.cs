@@ -16,7 +16,7 @@ public class StandardCollectionEditorTests
     [InlineData("String text=s\"ad\"; text.Insert(1,\"bc\");", "Insert(", "Insert")]
     public void ActualStandardCollectionCallsHaveReadableHoversAndDefinitions(string body, string target, string member)
     {
-        var (model, source, text)=Analyze("using std; using std::Queries; using std::Collections; int main(){"+body+"return 0;}");
+        var (model, source, text)=Analyze("using std; using std::Memory; using std::Queries; using std::Collections; int main(){"+body+"return 0;}");
         int offset=text.LastIndexOf(target,StringComparison.Ordinal);
         var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,offset),Protocol.JsonOptions);
         string signature=hover.GetProperty("contents").GetProperty("value").GetString()!;
@@ -28,7 +28,7 @@ public class StandardCollectionEditorTests
     [Fact]
     public void NestedMapEnumeratorKeepsStructClassificationAndNavigation()
     {
-        var (model,source,text)=Analyze("using std; using std::Queries; using std::Collections; int main(){HashMap<String,int> map=new(); HashMap<String,int>::Enumerator iterator=map.GetEnumerator(); return 0;}");
+        var (model,source,text)=Analyze("using std; using std::Memory; using std::Queries; using std::Collections; int main(){HashMap<String,int> map=new(); HashMap<String,int>::Enumerator iterator=map.GetEnumerator(); return 0;}");
         int offset=text.IndexOf("Enumerator iterator",StringComparison.Ordinal);
         Assert.NotNull(model.Hover(source.Path,offset));
         Assert.NotNull(model.Definition(source.Path,offset));

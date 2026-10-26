@@ -10,7 +10,7 @@ public sealed class StandardElementAtQueryTests
         int[] values=Enumerable.Range(0,16).Select(i=>i*13-81).ToArray();
         int[] expected=Enumerable.Range(0,17).SelectMany(length=>values.Take(length).Select(value=>value*2)).ToArray();
         Run($$"""
-            using std; using std::Queries;int callbacks=0;
+            using std; using std::Memory; using std::Queries;int callbacks=0;
             int Project(int value){callbacks++;return value*2;}
             int main(){
                 int[16] values=[{{string.Join(",",values)}}];
@@ -38,7 +38,7 @@ public sealed class StandardElementAtQueryTests
     [InlineData(2)]
     public void QualifiedViewsReturnIndependentOwningValues(int optimization)
         =>Run("""
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             int main(){
                 String[2] values=[s"one",s"two"];Span<String> source=new(values,2);
                 readonly(String) shallow=source.AsReadOnly().AsEnumerable().ElementAt(1);
@@ -57,7 +57,7 @@ public sealed class StandardElementAtQueryTests
     [InlineData(2)]
     public void NoncopyableIteratorsAndOwningResultsCleanUpOnReturnAndFailures(int optimization)
         =>Run("""
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int releases=0;int active=0;int created=0;int destroyed=0;
             int moves=0;int reads=0;int mode=0;

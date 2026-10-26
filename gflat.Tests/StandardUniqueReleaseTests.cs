@@ -66,12 +66,12 @@ public sealed class StandardUniqueReleaseTests
     [InlineData("immutable")]
     public void ReleaseRequiresMutableOwner(string qualifier)
         => Assert.Throws<TypeCheckException>(()=>Compiler.Check(Sources($$"""
-            using std;
+            using std; using std::Memory;
             void Invalid({{qualifier}}(Unique<int>)* owner){owner.Release();}
             """)));
 
     private const string Counters="""
-        using std;
+        using std; using std::Memory;
         extern void*? malloc(nuint size);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int dead=0;int baseDead=0;int derivedDead=0;
         void*? watched=null;int watchedFrees=0;bool deny=false;

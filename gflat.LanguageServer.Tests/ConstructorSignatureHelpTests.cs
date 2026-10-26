@@ -12,8 +12,8 @@ public sealed class ConstructorSignatureHelpTests
         var sources = Directory.GetFiles(directory, "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         const string text = """
-            using std;
-            alias IntIterator = std::Span<int>::Enumerator;
+            using std; using std::Memory;
+            alias IntIterator = std::Memory::Span<int>::Enumerator;
             int main() {
                 int[1] buffer = [42];
                 Span<int>::Enumerator inferred = new(buffer, 1);

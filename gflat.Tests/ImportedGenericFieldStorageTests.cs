@@ -70,7 +70,7 @@ public sealed class ImportedGenericFieldStorageTests
         var sources = names.Select(name => new SourceFile("std/" + name,
                 File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("consumer.gf", """
-                using std; using std::Queries; using std::Collections;
+                using std; using std::Memory; using std::Queries; using std::Collections;
                 Vector<int>*? watched=null;
                 int Sum(){Span<readonly(int)> values=watched!.AsImmutable();int total=0;for(nuint i=0;i<values.Length;i++)total+=values[i];return total;}
                 int main(){Vector<int> values=new();values.Add(17);values.Add(25);watched=&values;

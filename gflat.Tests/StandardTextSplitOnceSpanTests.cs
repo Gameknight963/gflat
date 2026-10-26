@@ -14,7 +14,7 @@ public sealed class StandardTextSplitOnceSpanTests
             ("=="u8.ToArray(),61),(" a = b = c "u8.ToArray(),61),("a\0b\0c"u8.ToArray(),0),
             ([255,120,128],255),([255,120,128],128),([0],0)];
         var code=new StringBuilder("""
-            using std;int allocations=0;
+            using std; using std::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}
@@ -52,7 +52,7 @@ public sealed class StandardTextSplitOnceSpanTests
     [InlineData(2)]
     public void KeyValueViewsRetainRemainderAndAllowReceiverMetadataReuseWithoutCopyingOwner(int optimization)
         => Run("""
-            using std;extern void*? malloc(nuint size);extern void free(void* pointer);
+            using std; using std::Memory;extern void*? malloc(nuint size);extern void free(void* pointer);
             int allocations=0;int releases=0;bool deny=false;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;if(deny)return null;return malloc(size);}

@@ -57,12 +57,12 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (requested <= capacity) return;
         nuint maximum = (nuint)0 - (nuint)1;
         if (requested == maximum) throw new Exception("String capacity overflow", 1);
-        void*? allocation = Memory::Allocate(requested + 1);
+        void*? allocation = global::Memory::Allocate(requested + 1);
         if (allocation == null) throw new BadAllocException("String allocation failed");
         char* replacement = (char*)allocation;
         for (nuint i = 0; i < length; i++) replacement[i] = data[i];
         replacement[length] = '\0';
-        if (capacity != 0) Memory::Free((void*)data);
+        if (capacity != 0) global::Memory::Free((void*)data);
         data = replacement;
         capacity = requested;
     }
@@ -72,18 +72,18 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         if (length == capacity) return;
         if (length == 0)
         {
-            if (capacity != 0) Memory::Free((void*)data);
+            if (capacity != 0) global::Memory::Free((void*)data);
             data = (char*)"";
             capacity = 0;
             return;
         }
         // Existing String invariants guarantee length < nuint maximum.
-        void*? allocation = Memory::Allocate(length + 1);
+        void*? allocation = global::Memory::Allocate(length + 1);
         if (allocation == null) throw new BadAllocException("String allocation failed");
         char* replacement = (char*)allocation;
         for (nuint i = 0; i < length; i++) replacement[i] = data[i];
         replacement[length] = '\0';
-        if (capacity != 0) Memory::Free((void*)data);
+        if (capacity != 0) global::Memory::Free((void*)data);
         data = replacement;
         capacity = length;
     }
@@ -113,14 +113,14 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
             nuint grown = required;
             if (capacity <= (maximum - 1) / 2 && capacity * 2 > grown)
                 grown = capacity * 2;
-            void*? allocation = Memory::Allocate(grown + 1);
+            void*? allocation = global::Memory::Allocate(grown + 1);
             if (allocation == null) throw new BadAllocException("String allocation failed");
             char* replacement = (char*)allocation;
             for (nuint i = 0; i < length; i++) replacement[i] = data[i];
             // Copy before freeing: text may refer to this string's own buffer.
             for (nuint i = 0; i < count; i++) replacement[length + i] = text[i];
             replacement[required] = '\0';
-            if (capacity != 0) Memory::Free((void*)data);
+            if (capacity != 0) global::Memory::Free((void*)data);
             data = replacement;
             capacity = grown;
         }
@@ -514,5 +514,5 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         }
     }
 
-    ~String() { if (capacity != 0) Memory::Free((void*)data); }
+    ~String() { if (capacity != 0) global::Memory::Free((void*)data); }
 }

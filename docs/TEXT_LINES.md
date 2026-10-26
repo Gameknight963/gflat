@@ -5,7 +5,7 @@ line. It uses the same line endings as `FileLines` and `Console`: LF and CRLF
 terminate lines; a bare CR remains text. Embedded null bytes are preserved.
 
 ```csharp
-using std;
+using std; using std::Memory;
 
 Span<readonly(char)> text = new("first\r\nsecond\n", 14);
 TextLines lines = new(text);

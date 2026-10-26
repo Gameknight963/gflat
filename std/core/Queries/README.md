@@ -238,7 +238,7 @@ accumulator is transferred to the callback and back using the same ownership
 rules as the seeded overload; the source's elements are read normally.
 
 ```csharp
-using std; using std::Queries;
+using std; using std::Memory; using std::Queries;
 
 int Subtract(int accumulated, int next) => accumulated - next;
 
@@ -254,7 +254,7 @@ int main()
 For example, a fold can update one uniquely owned integer without reallocating it:
 
 ```csharp
-using std; using std::Queries;
+using std; using std::Memory; using std::Queries;
 
 Unique<int> Add(Unique<int> accumulator, int value)
 {
@@ -332,7 +332,7 @@ An explicit comparer is accepted as `MinBy(selector, compare)` or
 `IComparable<K>` contract and forwards through `Comparer<K>::Compare`.
 
 ```csharp
-using std; using std::Queries;
+using std; using std::Memory; using std::Queries;
 
 long Magnitude(int value)
 {

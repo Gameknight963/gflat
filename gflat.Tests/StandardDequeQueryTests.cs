@@ -9,7 +9,7 @@ public sealed class StandardDequeQueryTests
     [InlineData(2)]
     public void WrappedRingQueriesAreLazyReusableAndObserveElementReplacement(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int predicates=0;int selections=0;
             bool Even(int value){predicates++;return value%2==0;}
             int Twice(int value){selections++;return value*2;}
@@ -44,7 +44,7 @@ public sealed class StandardDequeQueryTests
     [InlineData(2)]
     public void NoncopyableOwnerQueriesBorrowWithoutAllocatingOrConsumingElements(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int made=0;int dead=0;int allocations=0;int releases=0;bool deny=false;
             extern void*? malloc(nuint bytes);extern void free(void* storage);
             namespace Memory{
@@ -84,7 +84,7 @@ public sealed class StandardDequeQueryTests
     public void ProtectedOwnersCannotProduceWritableQueries(string qualifier)
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources($$"""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main(){Deque<int> values=new();{{qualifier}}(Deque<int>)* view=&values;view.AsEnumerable();return 0;}
             """)));
         Assert.Contains("non-" + qualifier, error.Message);
@@ -93,7 +93,7 @@ public sealed class StandardDequeQueryTests
     [Fact]
     public void CapturedViewConstructorDoesNotExposeRawRingMetadata()
         => Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main(){Deque<int>::View view=new Deque<int>::View(null,0,0,0);return 0;}
             """)));
 

@@ -22,7 +22,7 @@ public sealed class StandardQuerySequenceEqualTests
         // Spare terminal elements keep even the last empty view's pointer backed.
         leftData.Add(0);rightData.Add(0);
         Run($$"""
-            using std; using std::Queries; using std::Collections;int allocations=0;
+            using std; using std::Memory; using std::Queries; using std::Collections;int allocations=0;
             namespace Memory{public replace void*? Allocate(nuint count){allocations++;return null;}public replace void Free(void* storage)nothrow{} }
             int Identity(int value)=>value;bool Keep(int value)=>value>=0;
             bool Equal(immutable(int)* left,immutable(int)* right)=>*left==*right;
@@ -55,7 +55,7 @@ public sealed class StandardQuerySequenceEqualTests
     [InlineData(2)]
     public void EnumerationOrderLengthMismatchAndPairMismatchHaveExactObservableEffects(int optimization)
         =>Run("""
-            using std; using std::Queries; using std::Collections;char[128] events;nuint used=0;int leftLength=0;int rightLength=0;bool mismatch=false;bool poison=false;
+            using std; using std::Memory; using std::Queries; using std::Collections;char[128] events;nuint used=0;int leftLength=0;int rightLength=0;bool mismatch=false;bool poison=false;
             void Event(char value){events[used]=value;used++;events[used]='\0';}
             void Reset(){used=0;events[0]='\0';}
             struct Source{
@@ -87,7 +87,7 @@ public sealed class StandardQuerySequenceEqualTests
     [InlineData(2)]
     public void BothIteratorsAndOwningCurrentsCleanUpAcrossConstructionReadCopyAndComparisonFailures(int optimization)
         =>Run("""
-            using std; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+            using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
             int allocations=0;int releases=0;int starts=0;int ends=0;int live=0;int mode=0;int calls=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){void*? value=malloc(count);if(value!=null)allocations++;return value;}
@@ -135,7 +135,7 @@ public sealed class StandardQuerySequenceEqualTests
     [InlineData(2)]
     public void ManagedPairLocalsRemainRootedDuringComparerCollection(int optimization)
         =>Run("""
-            using std; using std::Queries; using std::Collections;int calls=0;class Item{public int Value;public Item(int value){Value=value;}}
+            using std; using std::Memory; using std::Queries; using std::Collections;int calls=0;class Item{public int Value;public Item(int value){Value=value;}}
             bool Equal(immutable(Item^)* left,immutable(Item^)* right){calls++;GC::Collect();return (*left).Value==(*right).Value;}
             Item^ Identity(Item^ value)=>value;
             int main(){

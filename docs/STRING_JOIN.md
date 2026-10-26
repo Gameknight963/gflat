@@ -4,6 +4,7 @@ The optional `std/core/StringJoin.gf` source joins a borrowed span of String
 owners into one independent owning String. It adds these nongeneric extensions:
 
 ```csharp
+using std::Memory;
 String Join(this Span<immutable(String)> values, readonly(char)* separator);
 String Join(this Span<immutable(String)> values, readonly(char)* separator, nuint separatorCount);
 ```

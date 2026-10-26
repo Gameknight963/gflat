@@ -9,7 +9,7 @@ a DOM. Its `Vector<byte>` nesting stack grows as needed; there is no recursive
 parser call stack or fixed nesting limit. Allocation can throw `BadAllocException`.
 
 ```cpp
-using std;
+using std; using std::Memory;
 
 readonly(char)* document = "{\"ready\":true}";
 JsonReader reader = new(document, 14);

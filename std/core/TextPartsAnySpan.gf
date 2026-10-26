@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 TextPartsAny SplitAny(this Span<readonly(char)> text, Span<readonly(char)> separators, bool removeEmpty = false)

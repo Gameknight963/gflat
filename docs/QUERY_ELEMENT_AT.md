@@ -17,7 +17,7 @@ qualifies the destination and prevents assignment. `TryFirst`, `TryLast`, and
 does not by itself make the pointer's output slot readonly.
 
 ```csharp
-using std; using std::Queries;
+using std; using std::Memory; using std::Queries;
 
 int main()
 {

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Memory;
 
 // Assignment into initialized elements, not construction into raw storage.
 // Kept separate so merely using Span<T> never requires T to support copying.
@@ -26,6 +26,6 @@ public void CopyTo<T>(this Span<immutable(T)> source, Span<T> destination)
 public bool TryCopyTo<T>(this Span<immutable(T)> source, Span<T> destination)
 {
     if (destination.Length < source.Length) return false;
-    std::CopyTo<T>(source, destination);
+    std::Memory::CopyTo<T>(source, destination);
     return true;
 }

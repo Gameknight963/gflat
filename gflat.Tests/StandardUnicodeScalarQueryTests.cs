@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardUnicodeScalarQueryTests
 {
     private const string Allocator="""
-        using std; using std::Queries; using std::Collections;int allocations=0;
+        using std; using std::Memory; using std::Queries; using std::Collections;int allocations=0;
         namespace Memory{
             public replace void*? Allocate(nuint count){allocations++;return null;}
             public replace void Free(void* pointer) nothrow{}

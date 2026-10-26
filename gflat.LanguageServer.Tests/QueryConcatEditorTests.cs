@@ -9,7 +9,7 @@ public sealed class QueryConcatEditorTests
     public void DifferentSourcesSelectConcreteConcatAndNavigateItsValueReturningCursor()
     {
         const string text = """
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             void Observe() {
                 int[2] data = [1, 2];
                 Span<int> first = new(data, 2);

@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardCollectionOutputAliasTests
 {
     private const string Prelude="""
-        using std; using std::Queries; using std::Collections;
+        using std; using std::Memory; using std::Queries; using std::Collections;
         int made=0;int dead=0;int calls=0;
         struct Item {
             public int Id;
@@ -89,7 +89,7 @@ public sealed class StandardCollectionOutputAliasTests
     [InlineData(2)]
     public void ZeroSizedOwnersStillRejectAliasedOutputsAndAcceptExternalStorage(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int made=0;int dead=0;
             struct Empty{public Empty(){made++;}~Empty(){dead++;}}
             int Compare(immutable(Empty)* left,immutable(Empty)* right)=>0;

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Memory;
 
 // Owns one individually allocated object. Raw-pointer construction transfers its
 // deletion responsibility; the caller must not adopt the same object twice.

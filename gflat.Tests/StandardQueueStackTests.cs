@@ -13,7 +13,7 @@ public sealed class StandardQueueStackTests
     public void QueueWrapsGrowsAndEnumeratesInFifoOrder()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Queue<int> items = new();
                 items.Reserve(4);
@@ -51,7 +51,7 @@ public sealed class StandardQueueStackTests
     public void StackEnumeratesAndPopsFromTheTop()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Stack<int> items = new(); items.Reserve(100);
                 for (int i = 0; i < 100; i++) items.Push(i);
@@ -73,7 +73,7 @@ public sealed class StandardQueueStackTests
     public void StringsAreCopiedOnInsertionAndTransferredOnRemoval()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 String original = s"original";
                 Queue<String> queue = new(); Stack<String> stack = new();
@@ -102,7 +102,7 @@ public sealed class StandardQueueStackTests
     public void EachOwnedElementIsDestroyedExactlyOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Item {
                 private int* destroyed;
                 public Item(int* counter) { destroyed = counter; }
@@ -129,7 +129,7 @@ public sealed class StandardQueueStackTests
     public void RawPointerElementsNeverTransferPointeeDestructionToContainers()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Resource {
                 private int* destroyed;
                 public Resource(int* counter) { destroyed = counter; }
@@ -158,7 +158,7 @@ public sealed class StandardQueueStackTests
     public void ZeroSizedElementsAndCapacityOverflowRemainWellDefined()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Empty {}
             int main() {
                 Queue<Empty> queue = new(); Stack<Empty> stack = new();
@@ -180,7 +180,7 @@ public sealed class StandardQueueStackTests
     public void TryRemovalPreservesEmptyOutputsAndReplacesOwningValues()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Queue<String> queue = new(); Stack<String> stack = new();
                 String output = s"unchanged";
@@ -199,7 +199,7 @@ public sealed class StandardQueueStackTests
     public void FailedQueueGrowthPreservesExistingElementsAndDestroysArgument()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             extern void* malloc(nuint bytes);
             extern void free(void* address);
             namespace Memory {
@@ -232,7 +232,7 @@ public sealed class StandardQueueStackTests
     public void EmptyOperationsAndUnpositionedEnumeratorsThrow()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Queue<int> queue = new(); Stack<int> stack = new(); int caught = 0;
                 try { queue.Dequeue(); } catch (ref Exception error) { caught++; }

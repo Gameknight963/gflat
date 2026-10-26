@@ -30,7 +30,7 @@ rejecting temporary String receivers. Neither extension file changes String or
 Span's own source dependencies.
 
 ```csharp
-using std;
+using std; using std::Memory;
 String text = s"first,,last,";
 TextParts parts = text.Split(',');
 foreach (Span<readonly(char)> part in parts)
@@ -61,6 +61,7 @@ form feed, and CR. Embedded zero bytes and all non-ASCII bytes are retained;
 this is not Unicode whitespace trimming or UTF-8 decoding.
 
 ```csharp
+using std::Memory;
 foreach (Span<readonly(char)> part in text.Split('=')) {
     Span<readonly(char)> token = part.Trim();
     // Use token while text's underlying storage remains alive.

@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Trim ASCII whitespace by slicing the borrowed view, never changing its bytes.

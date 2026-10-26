@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std::Collections;
 
 // Owns sorted contiguous entries. Ordering equivalence identifies duplicate keys.

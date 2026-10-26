@@ -7,7 +7,7 @@ public sealed class StandardStringSpanTests
     [InlineData(2)]
     public void ViewsBorrowCountedBytesWithoutCopyingOrAllocating(int optimization)
         => Run("""
-            using std;
+            using std; using std::Memory;
             extern void*? malloc(nuint count);extern void free(void* storage);
             bool deny=false;int allocations=0;int releases=0;
             namespace Memory{
@@ -38,7 +38,7 @@ public sealed class StandardStringSpanTests
     [InlineData(2)]
     public void EveryEmptyViewHasNullDataAndExposesNeitherCapacityNorSentinel(int optimization)
         => Run("""
-            using std;
+            using std; using std::Memory;
             bool Empty(ref String text){
                 Span<char> bytes=text.AsSpan();Span<readonly(char)> read=text.AsImmutable();
                 return bytes.Length==0&&bytes.Data==null&&read.Length==0&&read.Data==null;
@@ -55,7 +55,7 @@ public sealed class StandardStringSpanTests
     [InlineData("String::From(\"temporary\").AsSpan();")]
     [InlineData("String::From(\"temporary\").AsImmutable();")]
     public void ViewsRejectReadonlyMutationAndTemporaryOwners(string statement)
-        => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("using std;int main(){"+statement+"return 0;}")));
+        => Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("using std; using std::Memory;int main(){"+statement+"return 0;}")));
 
     private static IEnumerable<SourceFile> Sources(string code)
         => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)

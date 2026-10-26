@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Views borrow the current counted bytes, never the terminator or spare capacity.

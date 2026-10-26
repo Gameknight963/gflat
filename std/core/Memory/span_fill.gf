@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Memory;
 
 // Assign into initialized storage. The value parameter snapshots aliased input.
 // Keep copying lazy: Span<Noncopyable> remains usable without calling Fill.

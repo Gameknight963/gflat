@@ -26,7 +26,7 @@ public sealed class StandardSpanBooleanParsingTests
                 output.Write(record);
             }
             Run($$"""
-                using std;
+                using std; using std::Memory;
                 extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* stream);
                 extern int fclose(void* stream);extern int ferror(void* stream);
@@ -59,7 +59,7 @@ public sealed class StandardSpanBooleanParsingTests
     public void EmptyViewsAndOverlappingResultKeepTryParsingAllocationFreeAndNothrow(int optimization)
     {
         const string program="""
-            using std;int allocations=0;
+            using std; using std::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint bytes){allocations++;return null;}
                 public replace void Free(void* storage) nothrow{}
@@ -94,7 +94,7 @@ public sealed class StandardSpanBooleanParsingTests
     [InlineData(2)]
     public void ThrowingDefaultAndZeroViewsDoNotReadMissingStorage(int optimization)
         =>Run("""
-            using std;
+            using std; using std::Memory;
             int main(){
                 Span<readonly(char)> empty=new();Span<readonly(char)> zero=new((readonly(char)*)1,0);
                 bool value=true;int caught=0;

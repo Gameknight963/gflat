@@ -9,7 +9,7 @@ public sealed class QueryIndexedWhereEditorTests
     public void PredicateAritySelectsIndexedFilteringAndNavigatesBothActualDeclarations()
     {
         const string text = """
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             void Observe()
             {
                 int[2] data = [4, 8];

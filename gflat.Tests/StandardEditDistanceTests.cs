@@ -33,7 +33,7 @@ public sealed class StandardEditDistanceTests
         Assert.Equal(225, rows);
         string hex = Convert.ToHexString(packet.ToArray());
         string program = $$$"""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int attempts = 0;
             namespace Memory {
                 public replace void*? Allocate(nuint bytes) { attempts++; return null; }
@@ -122,7 +122,7 @@ public sealed class StandardEditDistanceTests
     public void ReachableDistanceKernelIsNothrowAndHasNoAllocatorCollectorOrExceptionCalls()
     {
         string ir = Compiler.Emit(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Span<readonly(char)> first = new("kitten", 6);
                 Span<readonly(char)> second = new("sitting", 7);
@@ -140,7 +140,7 @@ public sealed class StandardEditDistanceTests
         {
             Assert.Contains("nounwind", body.Split('\n')[0]);
             Assert.DoesNotMatch(@"\b(invoke|landingpad|catchpad|cleanuppad)\b", body);
-            Assert.DoesNotMatch(@"@(malloc|free|__gflat[^ (]*|[^ (]*(Memory|Collect|GC)[^ (]*)\(", body);
+            Assert.DoesNotMatch(@"@(malloc|free|__gflat[^ (]*|gflat\$Memory\$[^ (]*|[^ (]*(Collect|GC)[^ (]*)\(", body);
         }
         string[] getters = Regex.Matches(ir, @"(?ms)^define[^\r\n]*\$Span\$[^\r\n]*\$get\$(Data|Length)\([^\r\n]*\{.*?^\}")
             .Select(match => match.Value).ToArray();

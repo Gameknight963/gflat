@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardDequeTests
 {
     private const string Owner="""
-        using std; using std::Numerics; using std::Queries; using std::Collections;
+        using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
         extern int puts(immutable(char*) text);
         int made=0;int dead=0;
         struct Owned{
@@ -94,7 +94,7 @@ public sealed class StandardDequeTests
     [Fact]
     public void EmptyIndexAndIteratorErrorsDoNotCorruptTheDeque()
         => Run("""
-            using std; using std::Numerics; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
             int main(){Deque<int> values=new();int caught=0;
                 try{values.RemoveFirst();}catch{caught++;}try{values.RemoveLast();}catch{caught++;}
                 try{values.Front;}catch{caught++;}try{values.Back;}catch{caught++;}try{values[0];}catch{caught++;}
@@ -128,7 +128,7 @@ public sealed class StandardDequeTests
     [InlineData(2)]
     public void ManagedElementsSurviveBothEndGrowthAndReleaseOnRemoval(int optimization)
         => Run("""
-            using std; using std::Numerics; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
             class Node{public int Value;public Node^? Next;public Node(int value){Value=value;}}
             void Fill(Deque<Node^>* values){for(int i=0;i<32;i++){Node^ value=new^ Node(i);value.Next=value;if(i%2==0)values.AddFirst(value);else values.AddLast(value);GC::Collect();}}
             int main(){Deque<Node^> values=new();Fill(&values);values.Reserve(1000);GC::Collect();

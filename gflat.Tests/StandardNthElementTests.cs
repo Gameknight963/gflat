@@ -177,7 +177,7 @@ public sealed class StandardNthElementTests
             """,optimization);
 
     private const string Memory="""
-        using std; using std::Collections;
+        using std; using std::Memory; using std::Collections;
         int attempts=0;int allocated=0;int released=0;bool deny=false;
         extern void*? malloc(nuint count);extern void free(void* value);
         namespace Memory{

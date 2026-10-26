@@ -7,7 +7,7 @@ public sealed class StandardUniqueTests
     [InlineData(2)]
     public void MovesAndFailuresDestroyNoncopyablePointeesExactlyOnce(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Memory; using std::Collections;
             extern void*? malloc(nuint size);extern void free(void* ptr);
             void*? watched=null;int watchedFrees=0;int dead=0;
             namespace Memory {
@@ -44,7 +44,7 @@ public sealed class StandardUniqueTests
     [InlineData(2)]
     public void VectorRelocationAndRemovalTransferOwnersWithoutMovingPointees(int optimization)
         => Run("""
-            using std; using std::Collections;int dead=0;
+            using std; using std::Memory; using std::Collections;int dead=0;
             struct Payload{public int Number;public Payload(int n){Number=n;}~Payload(){dead++;}}
             int main(){
                 {Vector<Unique<Payload>> owners=new();
@@ -68,7 +68,7 @@ public sealed class StandardUniqueTests
     [InlineData(2)]
     public void ReadonlyOwnerBorrowsMutablePointeeAndRefParametersUpdateInPlace(int optimization)
         => Run("""
-            using std; using std::Collections;
+            using std; using std::Memory; using std::Collections;
             void Increment(ref int value){value++;}
             int main(){
                 Unique<int> owner=new(new* int(7));
@@ -91,7 +91,7 @@ public sealed class StandardUniqueTests
     public void CopiesMovedSourcesImmutableMutationAndInterfaceValuesAreRejected(string statements,string diagnostic)
     {
         var error=Assert.Throws<gflat.CompileExceptions.TypeCheckException>(()=>Compiler.Emit(Sources("""
-            using std; using std::Collections;interface I{int Read();}class Item:I{public int Read()=>42;}
+            using std; using std::Memory; using std::Collections;interface I{int Read();}class Item:I{public int Read()=>42;}
             int main(){
             """+statements+"return 0;}")));
         Assert.Contains(diagnostic,error.Message,StringComparison.OrdinalIgnoreCase);

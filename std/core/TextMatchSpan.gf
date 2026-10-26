@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Counted byte comparisons over borrowed text; no terminator is read from text.

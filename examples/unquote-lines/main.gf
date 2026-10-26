@@ -1,3 +1,4 @@
+using std::Memory;
 using std;
 
 // Decode in place: validation completes before JsonString writes any bytes.

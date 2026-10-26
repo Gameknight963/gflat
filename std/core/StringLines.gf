@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Borrow a named String without copying or retaining a temporary receiver.

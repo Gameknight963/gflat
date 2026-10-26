@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 TextPartsAny SplitAny(this ref immutable(String) text, Span<readonly(char)> separators, bool removeEmpty = false)

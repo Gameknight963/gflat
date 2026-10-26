@@ -9,7 +9,7 @@ public sealed class QueryDistinctByEditorTests
     public void WholeRowsAndPrimitiveKeysInferConcreteQueryAndNavigateActualAdapter()
     {
         const string text = """
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             struct Row { public int Id; public int Payload; }
             int Key(Row value) => value.Id;
             void Observe() {

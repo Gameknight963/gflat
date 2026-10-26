@@ -33,7 +33,7 @@ public sealed class StandardSpanIntegerParsingTests
                 """));
             string literal="\""+file.Replace("\\","\\\\")+"\"";
             Run($$"""
-                using std;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
+                using std; using std::Memory;extern void*? fopen(readonly(char)* path,readonly(char)* mode);
                 extern nuint fread(void* data,nuint size,nuint count,void* file);extern int fclose(void* file);
                 int main(){
                     void*? input=fopen({{literal}},"rb");if(input==null)return 1;defer{fclose(input!);}
@@ -64,7 +64,7 @@ public sealed class StandardSpanIntegerParsingTests
               if(zero.TryParse{{type.Name}}(&result)||result!=({{type.Type}})0)return false; }
             """));
         string program=$$"""
-            using std;int allocations=0;
+            using std; using std::Memory;int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint size){allocations++;return null;}
                 public replace void Free(void* pointer) nothrow{}

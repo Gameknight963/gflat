@@ -9,7 +9,7 @@ public sealed class SpanTryCopyEditorTests
     public void ImmutableSourceSelectsConcreteTypedCopyAndNavigatesActualExtension()
     {
         const string text = """
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             void Observe() {
                 int[2] input = [1, 2]; int[3] output = [3, 4, 5];
                 Span<int> source = new(input, 2);

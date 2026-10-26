@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Lexical paths, independent of the host OS. No filesystem access or normalization.

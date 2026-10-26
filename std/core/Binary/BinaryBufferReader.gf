@@ -29,7 +29,7 @@ public struct BinaryBufferReader
     {
         if (count > length - position) return false;
         if (count == 0) return true;
-        Memory::Move((void*)output, (readonly(void)*)(data! + position), count);
+        global::Memory::Move((void*)output, (readonly(void)*)(data! + position), count);
         position += count; return true;
     }
 

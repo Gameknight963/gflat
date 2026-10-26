@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 bool TryParseByte(this Span<readonly(char)> text, byte* result) nothrow
 {

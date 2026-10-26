@@ -70,7 +70,7 @@ public sealed class StandardVectorResizeTests
             """, optimization);
 
         const string unique = """
-            using std; using std::Collections;
+            using std; using std::Memory; using std::Collections;
             struct Unique {
                 private int* counter;
                 public Unique(int* value){counter=value;}
@@ -152,7 +152,7 @@ public sealed class StandardVectorResizeTests
             """, optimization);
 
     private const string Memory = """
-        using std; using std::Collections;
+        using std; using std::Memory; using std::Collections;
         int attempts=0;int allocations=0;int releases=0;int failAt=0;bool deny=false;
         extern void*? malloc(nuint bytes);extern void free(void* value);
         namespace Memory {

@@ -89,7 +89,7 @@ struct HashMap<K : IHashable, V>
     private void Rehash(nuint size)
     {
         nuint stride = (nuint)sizeof(Entry);
-        void*? allocation = Memory::Allocate(size * (stride + 1));
+        void*? allocation = global::Memory::Allocate(size * (stride + 1));
         if (allocation == null) throw new BadAllocException("HashMap allocation failed");
         Entry* replacement = (Entry*)allocation;
         byte* flags = (byte*)allocation + size * stride;
@@ -104,7 +104,7 @@ struct HashMap<K : IHashable, V>
                 flags[slot] = 1;
             }
         }
-        if (entries != null) Memory::Free((void*)entries);
+        if (entries != null) global::Memory::Free((void*)entries);
         entries = replacement; states = flags; capacity = size; used = count;
     }
 
@@ -246,7 +246,7 @@ struct HashMap<K : IHashable, V>
 
     public immutable Enumerator GetEnumerator() => new Enumerator(entries, states, capacity);
 
-    ~HashMap() { this.Clear(); if (entries != null) Memory::Free((void*)entries); }
+    ~HashMap() { this.Clear(); if (entries != null) global::Memory::Free((void*)entries); }
 
     // Enumeration borrows the map; do not mutate or destroy it while enumerating.
     public struct Enumerator

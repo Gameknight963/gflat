@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std::Collections;
 
 // Optional copying operation: merely including it does not require copyable T.

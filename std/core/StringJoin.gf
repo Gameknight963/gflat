@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Borrow the source owners; only the returned String owns new storage.

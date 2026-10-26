@@ -10,7 +10,7 @@ public sealed class StandardTextPartsTests
     public void ProtectedSequencesAndCurrentObserversRetainIndependentBorrowedViews(int optimization)
     {
         var result=CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
@@ -40,7 +40,7 @@ public sealed class StandardTextPartsTests
     public void ImmutableCurrentObserverCannotWriteBorrowedCharacters()
     {
         const string prefix="""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             void Test(immutable(TextParts::Enumerator)* observer){Span<readonly(char)> part=observer.Current;
             """;
         Compiler.Check(Sources(prefix+"char value=part[0];}"));
@@ -79,7 +79,7 @@ public sealed class StandardTextPartsTests
             string checks = string.Join(Environment.NewLine, expected.Select((part, i) =>
                 $"if (!Part(&iterator, {Literal(part)}, {part.Length})) return {i + 1};"));
             Run($$"""
-                using std; using std::Queries; using std::Collections;
+                using std; using std::Memory; using std::Queries; using std::Collections;
                 bool Part(TextParts::Enumerator* iterator, immutable(char*) expected, nuint count) {
                     if (!iterator.MoveNext()) return false;
                     Span<readonly(char)> part = iterator.Current;
@@ -103,7 +103,7 @@ public sealed class StandardTextPartsTests
     public void CurrentBoundsAndDefaultEmptySpanHaveDefinedBehavior()
     {
         Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Span<readonly(char)> empty = new Span<readonly(char)>();
                 TextParts parts = new TextParts(empty, ',');
@@ -124,7 +124,7 @@ public sealed class StandardTextPartsTests
     public void ViewsBorrowMutableStorageAndIteratorsAreIndependent()
     {
         Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -158,7 +158,7 @@ public sealed class StandardTextPartsTests
     public void CountedZeroDelimiterAndForeachUseViewsWithoutAllocating()
     {
         Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }
@@ -182,7 +182,7 @@ public sealed class StandardTextPartsTests
     public void StringReceiverBorrowsWithoutCopyAndUsesCountedContents()
     {
         Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             extern void*? malloc(nuint size);
             extern void free(void* data);
             static class Calls { public static int Allocations; }
@@ -216,7 +216,7 @@ public sealed class StandardTextPartsTests
     public void TemporaryOwningStringCannotSupplyBorrowedParts()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() { TextParts parts = s"a,b".Split(','); return 0; }
             """, strings: true)));
         Assert.Contains("Split", error.Message);
@@ -226,7 +226,7 @@ public sealed class StandardTextPartsTests
     public void EnumerableInterfaceAndFormattingRemainAllocationFree()
     {
         Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint size) { Calls::Allocations++; return null; }

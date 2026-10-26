@@ -1,11 +1,11 @@
 # Arena storage
 
-`std::Arena` groups temporary raw allocations into backing blocks obtained from
+`std::Memory::Arena` groups temporary raw allocations into backing blocks obtained from
 `Memory::Allocate`. Each arena has independent state; it does not replace the
 program's default allocator. Growing an arena leaves earlier addresses valid.
 
 ```csharp
-using std;
+using std; using std::Memory;
 
 int main()
 {

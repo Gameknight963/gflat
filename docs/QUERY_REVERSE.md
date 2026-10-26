@@ -6,7 +6,7 @@ independent `Vector<T>` buffer; this differs from the existing span `Reverse`
 algorithm, which changes a mutable span in place.
 
 ```csharp
-using std; using std::Queries;
+using std; using std::Memory; using std::Queries;
 int main()
 {
     int[4] values = [1, 2, 3, 4];
@@ -49,7 +49,7 @@ For a readonly integer view, explicitly project each value to `int` before
 buffering:
 
 ```csharp
-using std; using std::Queries;
+using std; using std::Memory; using std::Queries;
 int main()
 {
     int[3] values = [1, 2, 3];

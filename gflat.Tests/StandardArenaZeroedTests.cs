@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardArenaZeroedTests
 {
     private const string Allocator="""
-        using std;
+        using std; using std::Memory;
         int allocations=0;int releases=0;bool fail=false;
         private extern void*? malloc(nuint bytes);private extern void free(void* storage);
         namespace Memory{

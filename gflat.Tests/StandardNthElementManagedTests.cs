@@ -21,7 +21,7 @@ public sealed class StandardNthElementManagedTests
 
     private const string Program =
     """
-    using std; using std::Queries; using std::Collections;
+    using std; using std::Memory; using std::Queries; using std::Collections;
     
     class Node
     {

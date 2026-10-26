@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Memory;
 
 // Owns bump-allocated raw storage. Reset invalidates every returned pointer;
 // it never runs destructors for objects placed in that storage.
@@ -57,7 +57,7 @@ struct Arena
         if (bytes > capacity) capacity = bytes;
         if (capacity > maximum - header - slack) capacity = bytes;
         nuint payload = capacity + slack;
-        void*? allocation = Memory::Allocate(header + payload);
+        void*? allocation = global::Memory::Allocate(header + payload);
         if (allocation == null) throw new BadAllocException("Arena allocation failed");
         byte* data = (byte*)allocation + header;
         Block* block = new* Block(head, data, payload) at (Block*)allocation!;
@@ -84,7 +84,7 @@ struct Arena
         {
             Block* current = head!;
             head = current.Next;
-            Memory::Free((void*)current);
+            global::Memory::Free((void*)current);
         }
     }
 

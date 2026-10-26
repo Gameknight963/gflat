@@ -29,7 +29,7 @@ public struct BinaryBufferWriter
     {
         if (count > capacity - position) return false;
         if (count == 0) return true;
-        Memory::Move((void*)(data! + position), (readonly(void)*)input, count);
+        global::Memory::Move((void*)(data! + position), (readonly(void)*)input, count);
         position += count; return true;
     }
 

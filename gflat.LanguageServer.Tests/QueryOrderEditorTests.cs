@@ -8,7 +8,7 @@ public sealed class QueryOrderEditorTests
     [Fact]
     public void DefaultAndCustomOrderShareCompletionAndSelectTheirSourceOverloads()
     {
-        const string text="using std; using std::Queries;int Compare(immutable(int)* a,immutable(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}void Probe(){int[3] data=[3,1,2];Span<int> values=new(data,3);var ascending=values.AsEnumerable().Order();var custom=values.AsEnumerable().Order(&Compare);}";
+        const string text="using std; using std::Memory; using std::Queries;int Compare(immutable(int)* a,immutable(int)* b){if(*a<*b)return -1;if(*a>*b)return 1;return 0;}void Probe(){int[3] data=[3,1,2];Span<int> values=new(data,3);var ascending=values.AsEnumerable().Order();var custom=values.AsEnumerable().Order(&Compare);}";
         var (model,source,files)=Analyze(text);
         var library=files.Single(file=>Path.GetFileName(file.Path)=="enumerable_order.gf");
         foreach(var row in new[]{(Call:".Order()",Arity:0,Declaration:"Order<T : IComparable<T>, S, E>"),(Call:".Order(&Compare)",Arity:1,Declaration:"Order<T, S, E>")})
@@ -30,7 +30,7 @@ public sealed class QueryOrderEditorTests
     [Fact]
     public void QualifiedNestedCursorRetainsConcreteTypeNavigationAndBorrowedCurrent()
     {
-        const string text="using std; using std::Queries;int Probe(){int[2] data=[2,1];std::Span<int> values=new(data,2);var query=values.AsEnumerable().Order();std::Queries::OrderSource<int,std::Span<int>,std::Span<int>::Enumerator>::Enumerator iterator=query.GetEnumerator();bool moved=iterator.MoveNext();immutable(int)* borrowed=&iterator.Current;return *borrowed;}";
+        const string text="using std; using std::Memory; using std::Queries;int Probe(){int[2] data=[2,1];std::Memory::Span<int> values=new(data,2);var query=values.AsEnumerable().Order();std::Queries::OrderSource<int,std::Memory::Span<int>,std::Memory::Span<int>::Enumerator>::Enumerator iterator=query.GetEnumerator();bool moved=iterator.MoveNext();immutable(int)* borrowed=&iterator.Current;return *borrowed;}";
         var (model,source,files)=Analyze(text);
         var library=files.Single(file=>Path.GetFileName(file.Path)=="OrderSource.gf");
         int nested=text.IndexOf("Enumerator iterator",StringComparison.Ordinal);

@@ -10,7 +10,7 @@ bytes are ordinary values. No Unicode decoding, normalization, or case folding
 is applied, so this is not a Unicode-character distance.
 
 ```csharp
-using std;
+using std; using std::Memory;
 int main()
 {
     Span<readonly(char)> first = new("kitten", 6);

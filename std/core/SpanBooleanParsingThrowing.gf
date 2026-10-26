@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Optional throwing adapter; include BooleanParsingThrowing.gf as well.

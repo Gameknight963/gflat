@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Borrows complete counted byte input. Read emits one field, not one record.

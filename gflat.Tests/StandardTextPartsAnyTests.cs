@@ -42,7 +42,7 @@ public sealed class StandardTextPartsAnyTests
         }
         string hex = Convert.ToHexString(manifest.ToArray());
         Run($$"""
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             int attempts=0;
             namespace Memory {
                 public replace void*? Allocate(nuint count){attempts++;return null;}
@@ -84,7 +84,7 @@ public sealed class StandardTextPartsAnyTests
     public void SnapshotsIndependentCursorsBorrowSourceAndComposeWithoutAllocation(int optimization)
     {
         Run("""
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             extern void*? malloc(nuint count);extern void free(void* value);
             int attempts=0;bool deny=false;
             namespace Memory {
@@ -135,7 +135,7 @@ public sealed class StandardTextPartsAnyTests
     public void CurrentStateAndReadonlyPartsFollowTextPartsContract(int optimization)
     {
         Run("""
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             int main(){
                 TextPartsAny parts=new(new Span<readonly(char)>("a",1),",");
                 TextPartsAny::Enumerator iterator=parts.GetEnumerator();bool caught=false;
@@ -149,7 +149,7 @@ public sealed class StandardTextPartsAnyTests
             }
             """, optimization);
         const string prefix="""
-            using std; using std::Queries;
+            using std; using std::Memory; using std::Queries;
             void Inspect(immutable(TextPartsAny::Enumerator)* value){Span<readonly(char)> part=value.Current;
             """;
         Compiler.Check(Sources(prefix+"char byteValue=part[0];}"));

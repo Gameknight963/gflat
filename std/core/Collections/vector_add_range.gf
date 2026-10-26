@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std::Collections;
 
 // Kept outside Vector<T>: only calls to this copying operation instantiate its

@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 byte ParseByte(this Span<readonly(char)> text)
 {

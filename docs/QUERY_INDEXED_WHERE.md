@@ -5,7 +5,7 @@ It can select every nth record or filter by original position without keeping
 mutable state outside the query.
 
 ```csharp
-using std; using std::Queries; using std::Collections;
+using std; using std::Memory; using std::Queries; using std::Collections;
 int main()
 {
     int[5] data = [8, 3, 6, 2, 9];

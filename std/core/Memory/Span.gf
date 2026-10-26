@@ -1,6 +1,6 @@
 using std::Queries;
 using std::Collections;
-namespace std;
+namespace std::Memory;
 
 // Borrows storage; the caller keeps the buffer alive for every use of this view.
 struct Span<T> : IEnumerable<T, Span<T>::Enumerator>

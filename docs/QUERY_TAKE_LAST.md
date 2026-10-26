@@ -6,7 +6,7 @@ enumerator owns
 an independent `Deque<T>` tail buffer.
 
 ```csharp
-using std; using std::Queries;
+using std; using std::Memory; using std::Queries;
 int main()
 {
     int[5] input = [1, 2, 3, 4, 5];

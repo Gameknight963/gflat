@@ -9,7 +9,7 @@ public sealed class DefaultIfEmptyEditorTests
     [Fact]
     public void ActualDefaultIfEmptyExtensionHasOneConcreteValueArgumentAndItsSourceDefinition()
     {
-        const string text="using std; using std::Queries; using std::Collections;int Probe(){int[2] data=[1,2];Span<int> view=new(data,2);var query=view.AsEnumerable().DefaultIfEmpty(7);return 0;}";
+        const string text="using std; using std::Memory; using std::Queries; using std::Collections;int Probe(){int[2] data=[1,2];Span<int> view=new(data,2);var query=view.AsEnumerable().DefaultIfEmpty(7);return 0;}";
         var (model,source,files)=Analyze(text);
         int call=text.IndexOf("DefaultIfEmpty",StringComparison.Ordinal);
         var items=Json(model.Completion(source.Path,call)).GetProperty("items");
@@ -33,7 +33,7 @@ public sealed class DefaultIfEmptyEditorTests
     [Fact]
     public void NamedQueryCursorRetainsNestedStructIdentityAndConcreteCurrentServices()
     {
-        const string text="using std; using std::Queries; using std::Collections;int Probe(){int[1] data=[7];Span<int> view=new(data,1);var query=view.AsEnumerable().DefaultIfEmpty(9);DefaultIfEmptySource<int,Span<int>,Span<int>::Enumerator>::Enumerator cursor=query.GetEnumerator();if(!cursor.MoveNext())return 1;int current=cursor.Current;return current;}";
+        const string text="using std; using std::Memory; using std::Queries; using std::Collections;int Probe(){int[1] data=[7];Span<int> view=new(data,1);var query=view.AsEnumerable().DefaultIfEmpty(9);DefaultIfEmptySource<int,Span<int>,Span<int>::Enumerator>::Enumerator cursor=query.GetEnumerator();if(!cursor.MoveNext())return 1;int current=cursor.Current;return current;}";
         var (model,source,files)=Analyze(text);
         int type=text.IndexOf("Enumerator cursor",StringComparison.Ordinal);
         Assert.Equal("struct",Color(model,source,type));

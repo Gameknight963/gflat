@@ -6,7 +6,7 @@ public class StandardVectorTests
     public void FailedReservePreservesElementsAndUsesEmergencyReserve()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             extern void* malloc(nuint size);
             extern void free(void* pointer);
             namespace Memory {
@@ -36,7 +36,7 @@ public class StandardVectorTests
     public void AddingAStringCopiesItWhenNotExplicitlyMoved()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Vector<String> values = new Vector<String>();
                 String original = s"abc";
@@ -53,7 +53,7 @@ public class StandardVectorTests
     public void StringsAreOrdinaryElementsWithExplicitMovement()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Vector<String> words = new Vector<String>();
                 words.Add(s"one");
@@ -82,7 +82,7 @@ public class StandardVectorTests
     public void PrimitiveElementsUseTheSameContainer()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Vector<int> values = new Vector<int>();
                 for (int i = 0; i < 100; i++) values.Add(i);
@@ -100,7 +100,7 @@ public class StandardVectorTests
     public void EmptyElementsCanGrowAndBeRemoved()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Empty {}
             int main() {
                 Vector<Empty> values = new Vector<Empty>();
@@ -117,7 +117,7 @@ public class StandardVectorTests
     public void FailedGrowthCleansItsArgumentAndPreservesExistingElements()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             extern void* malloc(nuint size);
             extern void free(void* pointer);
             namespace Memory {

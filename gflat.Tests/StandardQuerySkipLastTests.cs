@@ -198,7 +198,7 @@ public sealed class StandardQuerySkipLastTests
     [InlineData(2)]
     public void ManagedElementsRemainRootedAcrossEvictionAndReleaseOnEofOrEarlyExit(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int created = 0;
             class Cell {
                 public int Id;
@@ -264,7 +264,7 @@ public sealed class StandardQuerySkipLastTests
             """, optimization);
 
     private const string Memory = """
-        using std; using std::Queries; using std::Collections;
+        using std; using std::Memory; using std::Queries; using std::Collections;
         int attempts=0;int allocated=0;int released=0;int failAt=0;bool deny=false;
         extern void*? malloc(nuint count);extern void free(void* value);
         namespace Memory {

@@ -30,7 +30,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     {
         if (requested == 0)
         {
-            if (data != null) Memory::Free((void*)data);
+            if (data != null) global::Memory::Free((void*)data);
             data = null; capacity = 0; head = 0;
             return;
         }
@@ -38,7 +38,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
         nuint stride = (nuint)sizeof(T);
         if (stride == 0) stride = 1;
         if (requested > maximum / stride) throw new Exception("Queue capacity overflow");
-        void*? allocation = Memory::Allocate(requested * stride);
+        void*? allocation = global::Memory::Allocate(requested * stride);
         if (allocation == null) throw new BadAllocException("Queue allocation failed");
         T* replacement = (T*)allocation;
         nuint source = head;
@@ -48,7 +48,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
             source++;
             if (source == capacity) source = 0;
         }
-        if (data != null) Memory::Free((void*)data);
+        if (data != null) global::Memory::Free((void*)data);
         data = replacement;
         capacity = requested;
         head = 0;
@@ -146,7 +146,7 @@ struct Queue<T> : IEnumerable<T, Queue<T>::Enumerator>
     ~Queue()
     {
         this.Clear();
-        if (data != null) Memory::Free((void*)data);
+        if (data != null) global::Memory::Free((void*)data);
     }
 
     public struct Enumerator

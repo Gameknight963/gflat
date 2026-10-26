@@ -13,7 +13,7 @@ public sealed class StandardArenaTests
     public void ResetHasNonthrowingDefinitionAndUsesPlainCallFromNothrowCaller()
     {
         string ir = Compiler.Emit(Sources("""
-            using std;
+            using std; using std::Memory;
             void ResetOnly(Arena* arena) nothrow { arena.Reset(); }
             int main() => 0;
             """));
@@ -34,7 +34,7 @@ public sealed class StandardArenaTests
     public void NonthrowingResetReleasesBlocksWithoutAllocationOrPlacementDestruction(int optimization)
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Memory;
             int allocated=0;int released=0;int denied=0;int destroyed=0;bool deny=false;
             extern void*? malloc(nuint bytes);extern void free(void* pointer);
             namespace Memory{
@@ -71,7 +71,7 @@ public sealed class StandardArenaTests
     public void AlignmentGrowthAndZeroLengthRequestsKeepEarlierStorageValid()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Memory;
             int main() {
                 Arena arena = new(32);
                 byte* first = (byte*)arena.Allocate(1, 1); *first = (byte)42;
@@ -96,7 +96,7 @@ public sealed class StandardArenaTests
     public void InvalidSizesAndAlignmentsPreserveEarlierAllocations()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Memory;
             int main() {
                 Arena arena = new(32); int* value = (int*)arena.Allocate((nuint)sizeof(int)); *value = 42;
                 int caught = 0;
@@ -117,7 +117,7 @@ public sealed class StandardArenaTests
     public void FailedBlockAllocationPreservesExistingStorageAndItsFreeSpace()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Memory;
             bool fail = false;
             extern void* malloc(nuint bytes); extern void free(void* pointer);
             namespace Memory {
@@ -143,7 +143,7 @@ public sealed class StandardArenaTests
     public void MovingResettingAndDestroyingBalanceAllBackingAllocations()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Memory;
             int allocated = 0; int released = 0;
             extern void*? malloc(nuint bytes); extern void free(void* pointer);
             namespace Memory {
@@ -174,7 +174,7 @@ public sealed class StandardArenaTests
     public void PlacementObjectDestructionRemainsTheCallersResponsibility()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std;
+            using std; using std::Memory;
             struct Resource {
                 private int* destroyed;
                 public Resource(int* counter) { destroyed = counter; }
@@ -200,7 +200,7 @@ public sealed class StandardArenaTests
     public void ArenaCannotBeCopiedImplicitly()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std;
+            using std; using std::Memory;
             int main() { Arena first = new(); Arena second = first; return 0; }
             """)));
         Assert.Contains("copy", error.Message, StringComparison.OrdinalIgnoreCase);

@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 TextLines Lines(this Span<readonly(char)> text) => new TextLines(text);

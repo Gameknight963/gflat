@@ -33,7 +33,7 @@ public sealed class StandardSpanCopyTests
         Assert.Equal(285, scenarios);
         string hex = Convert.ToHexString(packet.ToArray());
         Run($$$"""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             extern int puts(immutable(char*) text);
             int Nibble(char value) {
                 if (value <= '9') return (int)value - (int)'0';
@@ -76,7 +76,7 @@ public sealed class StandardSpanCopyTests
     }
 
     private const string Owner = """
-        using std; using std::Queries; using std::Collections;
+        using std; using std::Memory; using std::Queries; using std::Collections;
         int constructed = 0; int destroyed = 0; int budget = -1;
         struct Owned {
             public int Value;
@@ -148,7 +148,7 @@ public sealed class StandardSpanCopyTests
     [InlineData(2)]
     public void CopyFailureAfterOwningFieldInitializationCleansTemporaryAndPreservesDestination(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int allocations = 0; int releases = 0; int copies = 0;
             int constructed = 0; int destroyed = 0; int budget = -1;
             private extern void*? malloc(nuint bytes);
@@ -194,7 +194,7 @@ public sealed class StandardSpanCopyTests
     public void CopyToCannotWriteThroughReadonlyDestination()
     {
         Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 int[2] source = [1,2]; int[2] destination = [3,4];
                 Span<int> input = new((int*)source,2);
@@ -208,7 +208,7 @@ public sealed class StandardSpanCopyTests
     [Fact]
     public void NoncopyableSpansRemainUsableWithoutInstantiatingCopyTo()
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int destroyed = 0;
             struct Unique { public int Value; public Unique(int value) { Value = value; } ~Unique() { destroyed++; } }
             int main() { {
@@ -223,7 +223,7 @@ public sealed class StandardSpanCopyTests
     public void CopyToDoesNotBypassNoncopyableElementOwnership()
     {
         var error = Assert.Throws<TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Unique { public int Value; public Unique(int value) { Value = value; } ~Unique() {} }
             int main() {
                 Vector<Unique> source = new(); source.Add(new Unique(7));

@@ -66,6 +66,7 @@ also explicitly `nothrow`; the `Parse...` wrappers retain their exceptions.
 extensions live in `core/SpanIntegerParsingThrowing.gf`:
 
 ```csharp
+using std::Memory;
 char[4] buffer = ['x', '1', '2', 'x'];
 Span<readonly(char)> text = new(&buffer[1], 2);
 long value = text.ParseLong(); // 12; neither surrounding byte is read.

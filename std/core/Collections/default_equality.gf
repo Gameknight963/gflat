@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std::Collections;
 
 // Optional equality-contract conveniences; explicit callback APIs stay independent.

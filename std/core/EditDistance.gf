@@ -1,3 +1,4 @@
+using std::Memory;
 namespace std;
 
 // Unit-cost Levenshtein distance over counted bytes, using one caller-owned row.

@@ -5,7 +5,7 @@ optional query extension using the existing `HashSet<T>`, without materializing
 the entire result before yielding its first value.
 
 ```csharp
-using std; using std::Queries; using std::Collections;
+using std; using std::Memory; using std::Queries; using std::Collections;
 
 int main()
 {

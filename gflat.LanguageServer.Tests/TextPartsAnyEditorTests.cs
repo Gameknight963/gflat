@@ -12,7 +12,7 @@ public sealed class TextPartsAnyEditorTests
     [InlineData("ref immutable(String)","String text=String::From(\"a,b\",3);","StringSplitAny.gf")]
     public void SplitAnyMergesCompletionAndSelectsTheConcreteReceiverAndSeparatorAdapter(string receiver,string setup,string adapter)
     {
-        string text="using std;void Probe(){"+setup+"Span<readonly(char)> separators=new(\",;\",2);"
+        string text="using std; using std::Memory;void Probe(){"+setup+"Span<readonly(char)> separators=new(\",;\",2);"
             +"TextPartsAny counted=text.SplitAny(separators,false);TextPartsAny terminated=text.SplitAny(\",;\",false);}";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
@@ -41,7 +41,7 @@ public sealed class TextPartsAnyEditorTests
             string label=selected.GetProperty("label").GetString()!;
             Assert.Contains("TextPartsAny",label);Assert.Contains("SplitAny(",label);Assert.DoesNotContain('$',label);
             Assert.Matches(@"bool\s+removeEmpty\s*=\s*false",label);
-            if(row.Counted)Assert.Matches(@"(?:std::)?Span<readonly\(char\)>\s+separators",label);
+            if(row.Counted)Assert.Matches(@"(?:std::Memory::)?Span<readonly\(char\)>\s+separators",label);
             else {Assert.Contains("char",label);Assert.Contains("* separators",label);}
 
             string declaration="TextPartsAny SplitAny(this "+receiver+" text, "

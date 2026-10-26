@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardQueryExtremaTests
 {
     private const string Allocator="""
-        using std; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
+        using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;void*? value=malloc(count);if(value!=null)allocated++;return value;}
@@ -111,7 +111,7 @@ public sealed class StandardQueryExtremaTests
     [InlineData(2)]
     public void EachCurrentAndComparisonHasExactOrderAndIteratorFailuresPreserveTheSource(int optimization)
         =>Run("""
-            using std; using std::Queries; using std::Collections;int mode=0;int length=5;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;int[8] pairs;
+            using std; using std::Memory; using std::Queries; using std::Collections;int mode=0;int length=5;int starts=0;int ends=0;int moves=0;int reads=0;int calls=0;int[8] pairs;
             struct Source{
                 private int* values;public Source(int* data){values=data;}
                 public struct Iterator{
@@ -196,7 +196,7 @@ public sealed class StandardQueryExtremaTests
     [Fact]
     public void ExplicitComparisonDoesNotRequireTheDefaultComparableContract()
     {
-        const string declarations="using std; using std::Queries; using std::Collections;struct Plain{public int Key;public Plain(int key){Key=key;}}int Compare(immutable(Plain)* left,immutable(Plain)* right)=>left.Key-right.Key;";
+        const string declarations="using std; using std::Memory; using std::Queries; using std::Collections;struct Plain{public int Key;public Plain(int key){Key=key;}}int Compare(immutable(Plain)* left,immutable(Plain)* right)=>left.Key-right.Key;";
         const string setup="int main(){Plain[2] values=[new Plain(2),new Plain(1)];Span<Plain> view=new(values,2);";
         Compiler.Check(Sources(declarations+setup+"Plain low=view.AsEnumerable().Min(&Compare);Plain high=view.AsEnumerable().Max(&Compare);return low.Key+high.Key;}"));
         foreach(string operation in new[]{"Min","Max"}){

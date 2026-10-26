@@ -222,7 +222,7 @@ obtaining a view from a temporary vector does not keep that vector alive.
 one span type; use `Span<readonly(T)>` for a view of readonly elements.
 
 ```csharp
-using std;
+using std; using std::Memory;
 
 int main()
 {

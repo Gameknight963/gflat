@@ -9,7 +9,7 @@ public sealed class StandardTextLinesTests
     [InlineData(2)]
     public void ProtectedSequencesAndCurrentObserversRetainIndependentBorrowedViews(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int allocations=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return null;}
@@ -37,7 +37,7 @@ public sealed class StandardTextLinesTests
     public void ImmutableCurrentObserverCannotWriteBorrowedCharacters()
     {
         const string prefix="""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             void Test(immutable(TextLines::Enumerator)* observer){Span<readonly(char)> line=observer.Current;
             """;
         Compiler.Check(Sources(prefix+"char value=line[0];}"));
@@ -57,7 +57,7 @@ public sealed class StandardTextLinesTests
         const string alphabet = "ab\r\n\0";
         for (int n = 1; n <= 40; n++) cases.Add(new string(Enumerable.Range(0, n).Select(_ => alphabet[random.Next(alphabet.Length)]).ToArray()));
         var program = new StringBuilder("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             namespace Memory { replace void*? Allocate(nuint size) => null; replace void Free(void* data) nothrow {} }
             bool Next(TextLines::Enumerator* iterator, readonly(char)* expected, nuint length) {
                 if(!iterator.MoveNext())return false;
@@ -93,7 +93,7 @@ public sealed class StandardTextLinesTests
     [InlineData(2)]
     public void IteratorsBorrowExactSlicesAndCopiesAdvanceIndependently(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main(){
                 char[7] bytes=['a','\r','\n','b','\0','c','\n'];
                 TextLines lines=new(new Span<readonly(char)>(bytes,7));
@@ -125,7 +125,7 @@ public sealed class StandardTextLinesTests
     [InlineData(2)]
     public void NamedStringAndSpanConveniencesBorrowAndSupportLazyQueries(int optimization)
         => Run("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             static class Calls { public static int Allocations; }
             namespace detail {
                 extern void*? malloc(nuint size); extern void free(void* data);
@@ -162,7 +162,7 @@ public sealed class StandardTextLinesTests
     public void StringConvenienceRejectsTemporaryOwners()
     {
         var error = Assert.Throws<gflat.CompileExceptions.TypeCheckException>(() => Compiler.Check(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main(){ TextLines lines=s"a\n".Lines(); return 0; }
             """, conveniences: true)));
         Assert.Contains("Lines", error.Message);

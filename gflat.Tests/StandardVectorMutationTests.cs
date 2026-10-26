@@ -12,7 +12,7 @@ public sealed class StandardVectorMutationTests
     public void InsertionAndRemovalPreserveOrderAtEveryPosition()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Vector<int> values = new();
                 values.Insert(0, 2); values.Insert(0, 1); values.Insert(2, 4); values.Insert(2, 3);
@@ -37,7 +37,7 @@ public sealed class StandardVectorMutationTests
     public void AliasedStringInsertionCopiesBeforeGrowthAndRemovalTransfers()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             int main() {
                 Vector<String> values = new(); values.Reserve(4);
                 values.Add(s"one"); values.Add(s"two"); values.Add(s"three"); values.Add(s"four");
@@ -59,7 +59,7 @@ public sealed class StandardVectorMutationTests
     public void NoncopyableElementsAreRelocatedAndDestroyedExactlyOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -89,7 +89,7 @@ public sealed class StandardVectorMutationTests
     public void InvalidBoundsDestroyInsertionArgumentAndPreserveContents()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -116,7 +116,7 @@ public sealed class StandardVectorMutationTests
     public void UnorderedRemovalMovesTheLastOwnerAndDestroysEveryValueOnce()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Item {
                 private int* destroyed;
                 public int Key;
@@ -145,7 +145,7 @@ public sealed class StandardVectorMutationTests
     public void ThrowingArgumentCopyHappensBeforeAnyVectorMutation()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             struct Item {
                 private int* copies;
                 private int* destroyed;
@@ -179,7 +179,7 @@ public sealed class StandardVectorMutationTests
     public void FailedGrowthDestroysInsertionArgumentAndPreservesOrdering()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Queries; using std::Collections;
             extern void* malloc(nuint bytes); extern void free(void* address);
             namespace Memory {
                 replace void*? Allocate(nuint bytes) { if (bytes > 64) return null; return malloc(bytes); }

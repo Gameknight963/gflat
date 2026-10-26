@@ -9,7 +9,7 @@ public sealed class StandardUniqueImmutableTests
     [InlineData(2)]
     public void DeepBorrowReadsNoncopyablePayloadWithoutAllocationCopyOrEarlyDestruction(int optimization)
         => Run("""
-            using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* data);
+            using std; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* data);
             int allocations=0;int dead=0;
             namespace Memory{
                 public replace void*? Allocate(nuint count){allocations++;return malloc(count);}
@@ -43,7 +43,7 @@ public sealed class StandardUniqueImmutableTests
     [InlineData(2)]
     public void ManagedFieldsAndBorrowedAddressSurviveOwnerMovesAndVectorRelocation(int optimization)
         => Run("""
-            using std; using std::Collections;int dead=0;
+            using std; using std::Memory; using std::Collections;int dead=0;
             class Node{public int Value;public Node(int value){Value=value;}public immutable int Read()nothrow=>Value;}
             struct Payload{
                 public int* Data;public Node^ Child;
@@ -81,7 +81,7 @@ public sealed class StandardUniqueImmutableTests
     public void DeepBorrowCannotMutateOrExposeWritableAliases(string operation)
     {
         string source="""
-            using std; using std::Collections;
+            using std; using std::Memory; using std::Collections;
             class Node{public int Value;public Node(int value){Value=value;}public void Change(){Value=1;}}
             struct Payload{
                 public int Number;public int* Data;public Node^ Child;

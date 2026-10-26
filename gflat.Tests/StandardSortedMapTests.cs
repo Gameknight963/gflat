@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardSortedMapTests
 {
     private const string Prelude = """
-        using std; using std::Numerics; using std::Queries; using std::Collections;
+        using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
         extern int puts(immutable(char*) text);
         int made = 0; int dead = 0; int budget = -1;
         struct Owned {
@@ -190,7 +190,7 @@ public sealed class StandardSortedMapTests
     [InlineData(2)]
     public void ManagedValuesStayRootedAcrossShiftsGrowthAndRemoval(int optimization)
         => Run("""
-            using std; using std::Numerics; using std::Queries; using std::Collections;
+            using std; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;
             class Node { public int Value; public Node^? Next; public Node(int value) { Value = value; } }
             int Compare(readonly(int)* a, readonly(int)* b) => *a - *b;
             void Fill(SortedMap<int,Node^>* map) {

@@ -1,6 +1,6 @@
 # UTF-8 codec
 
-`core/Utf8.gf` provides allocation-free, strict UTF-8 operations in
+`core/Text/utf8.gf` provides allocation-free, strict UTF-8 operations in
 `std::Utf8`. It can be compiled with `NoStdLib`; it does not depend on libc,
 String, GC, or exception support.
 

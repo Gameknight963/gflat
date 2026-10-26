@@ -1,6 +1,6 @@
 # Owning Unicode conversions
 
-The optional `std/core/UnicodeText.gf` source adds two counted conversions:
+The optional `std/core/Text/UnicodeText.gf` source adds two counted conversions:
 
 ```csharp
 using std::Text;
@@ -44,7 +44,7 @@ requiring null-terminated UTF-16 units, append `(ushort)0` to the returned Vecto
 then borrow its data while the owner remains alive and unmodified. Embedded zeros
 still terminate such native calls early; use counted native APIs when necessary.
 
-Explicit source selections need `UnicodeText.gf`, `UnicodeTranscoding.gf`,
-`Utf8.gf`, `Utf16.gf`, String and Vector with their ordinary dependencies. The
+Explicit source selections need `Text/UnicodeText.gf`, `Text/UnicodeTranscoding.gf`,
+`Text/utf8.gf`, `Text/utf16.gf`, String and Vector with their ordinary dependencies. The
 complete standard library includes them. The caller-buffer codecs remain usable
 without these owning conveniences.

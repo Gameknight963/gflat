@@ -43,6 +43,6 @@ current APIs, and `Utf8::TryEncode(rune.Value, ...)` remains available.
 
 A scalar is not necessarily a displayed character or grapheme cluster.
 `Rune` adds no Unicode category tables, case conversion, normalization, display
-width, or cultural rules. Selective source users include `Rune.gf`, `Utf8.gf`,
-`Utf16.gf`, equality/order/hash and text contracts, `Hashing/primitive_hashing.gf`, and `String`
+width, or cultural rules. Selective source users include `Text/Rune.gf`, `Text/utf8.gf`,
+`Text/utf16.gf`, equality/order/hash and text contracts, `Hashing/primitive_hashing.gf`, and `String`
 dependencies for its owning conversion contract.

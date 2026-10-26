@@ -159,7 +159,7 @@ public class StandardUtf8DecoderTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = new[] { "Utf8.gf", "Utf8Decoder.gf" }
+        var sources = new[] { "Text/utf8.gf", "Text/Utf8Decoder.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });

@@ -3,8 +3,8 @@
 `std::Utf8Decoder` decodes strict UTF-8 across input chunks. It retains only
 the partially decoded scalar, never a pointer to a previous chunk. Construction,
 `Reset()`, and `Read()` are `nothrow`, allocate nothing, and require no libc,
-exception runtime, String, or GC. Include `core/Utf8Decoder.gf`; the separate
-whole-buffer functions in `core/Utf8.gf` remain available.
+exception runtime, String, or GC. Include `core/Text/Utf8Decoder.gf`; the separate
+whole-buffer functions in `core/Text/utf8.gf` remain available.
 
 ```cpp
 std::Utf8Decoder decoder = new();

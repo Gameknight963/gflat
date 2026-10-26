@@ -6,7 +6,7 @@ public sealed class StandardUtf16Tests
 {
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = [new("Utf16.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Utf16.gf"))), new("main.gf", program)];
+        SourceFile[] sources = [new("Utf16.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/utf16.gf"))), new("main.gf", program)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         Assert.DoesNotContain("__gflat_eh", ir);
         Assert.DoesNotContain("@malloc", ir);

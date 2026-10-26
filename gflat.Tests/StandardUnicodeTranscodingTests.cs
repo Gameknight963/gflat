@@ -111,7 +111,7 @@ public sealed class StandardUnicodeTranscodingTests
 
     private static void Run(string program, int optimization)
     {
-        SourceFile[] files = new[] { "Utf8.gf", "Utf16.gf", "UnicodeTranscoding.gf" }
+        SourceFile[] files = new[] { "Text/utf8.gf", "Text/utf16.gf", "Text/UnicodeTranscoding.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(files, options: new() { NoStdLib = true });

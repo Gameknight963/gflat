@@ -1,7 +1,7 @@
 # Borrowed UTF-16 scalar iteration
 
-`std/core/Utf16Scalars.gf` provides `std::Utf16Scalars`, a repeatable borrowed view
-of counted host `ushort` code units. Include `Utf16.gf`, `Collections/IEnumerable.gf`,
+`std/core/Text/Utf16Scalars.gf` provides `std::Utf16Scalars`, a repeatable borrowed view
+of counted host `ushort` code units. Include `Text/utf16.gf`, `Collections/IEnumerable.gf`,
 `Collections/IEnumerator.gf`, and `Queries/Enumerable.gf` alongside the view source.
 
 ```csharp

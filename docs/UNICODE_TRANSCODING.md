@@ -1,7 +1,7 @@
 # Counted Unicode transcoding
 
 `std::UnicodeTranscoding` converts whole buffers between strict UTF-8 and UTF-16.
-Include `core/UnicodeTranscoding.gf`, `core/Utf8.gf`, and `core/Utf16.gf`. It uses
+Include `core/Text/UnicodeTranscoding.gf`, `core/Text/utf8.gf`, and `core/Text/utf16.gf`. It uses
 no String, GC, allocation, libc, replacement characters, or exception support.
 All four methods are `nothrow`.
 

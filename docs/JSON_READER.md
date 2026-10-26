@@ -116,7 +116,7 @@ transfer it with `move`; it does not provide a copy constructor. No chunked-inpu
 incremental-document, or resumable-error protocol is provided.
 
 For explicit source selection, include `Json/JsonReader.gf`, `Json/JsonTokenKind.gf`,
-`Json/JsonParseException.gf`, `Json/JsonString.gf`, `Utf8.gf`, and the ordinary `Vector`
+`Json/JsonParseException.gf`, `Json/JsonString.gf`, `Text/utf8.gf`, and the ordinary `Vector`
 dependencies. The complete standard library includes them automatically.
 
 Grammar reference: [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259.html).

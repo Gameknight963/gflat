@@ -42,8 +42,8 @@ calling `MoveNext()` again on unchanged input throws again.
 
 `Current` throws before the first successful `MoveNext()`, after exhaustion,
 and after a decoding error. Valid enumeration allocates nothing; failures use
-the normal exception runtime. `Utf8.gf`, the generic enumeration interface
-definitions, and `Queries/Enumerable.gf` are dependencies of `Utf8Scalars.gf`.
+the normal exception runtime. `Text/utf8.gf`, the generic enumeration interface
+definitions, and `Queries/Enumerable.gf` are dependencies of `Text/Utf8Scalars.gf`.
 Query operators additionally require their ordinary collection source files.
 
 Scalar values are not grapheme clusters or necessarily user-perceived

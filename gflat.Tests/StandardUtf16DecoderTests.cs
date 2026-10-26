@@ -6,7 +6,7 @@ public sealed class StandardUtf16DecoderTests
 {
     private static void Run(string program, int optimization)
     {
-        var sources = new[] { "Utf16.gf", "Utf16Decoder.gf" }
+        var sources = new[] { "Text/utf16.gf", "Text/Utf16Decoder.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
@@ -157,7 +157,7 @@ public sealed class StandardUtf16DecoderTests
     [Fact]
     public void DecoderSourceDoesNotRequireStaticCodecsOrAnyOtherLibrarySource()
     {
-        Compiler.Emit([new SourceFile("Utf16Decoder.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Utf16Decoder.gf"))),
+        Compiler.Emit([new SourceFile("Utf16Decoder.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/Utf16Decoder.gf"))),
             new SourceFile("main.gf", "int main() nothrow { std::Utf16Decoder decoder = new(); return 0; }")], options: new() { NoStdLib = true });
     }
 }

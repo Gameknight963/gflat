@@ -46,7 +46,7 @@ codec remains independent of owning strings and allocation.
 
 `std::Json::JsonString` quotes or unquotes one counted UTF-8 string into caller-owned storage. It
 is a string primitive, not a JSON parser, object model, or serializer. Its only
-std source dependency is `Utf8.gf`; it performs no allocation and calls neither
+std source dependency is `Text/utf8.gf`; it performs no allocation and calls neither
 libc nor the exception runtime. All counted-buffer methods are `nothrow`.
 
 ```csharp
@@ -168,7 +168,7 @@ using std::Json;
 void WriteJsonString(this ITextWriter* output, readonly(char)* input, nuint length);
 ```
 
-Include it alongside `Json/JsonString.gf` and `Utf8.gf`. For example:
+Include it alongside `Json/JsonString.gf` and `Text/utf8.gf`. For example:
 
 ```csharp
 using std::Json;

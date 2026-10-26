@@ -18,7 +18,7 @@ public sealed class StandardUtf16ScalarsTests
 
     private static void Run(string program, int optimization)
     {
-        var sources = new[] { "Utf16.gf", "Utf16Scalars.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" }
+        var sources = new[] { "Text/utf16.gf", "Text/Utf16Scalars.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", Allocator + program));
         var result = CompilerTestHelper.Run(sources, optimization);

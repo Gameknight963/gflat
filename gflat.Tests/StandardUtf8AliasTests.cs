@@ -71,7 +71,7 @@ public class StandardUtf8AliasTests
 
     private static void Run(string code, int optimization)
     {
-        SourceFile[] sources = [new("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Utf8.gf"))), new("main.gf", code)];
+        SourceFile[] sources = [new("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/utf8.gf"))), new("main.gf", code)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotContain("@__gflat_eh_", ir);
         Assert.DoesNotContain("personality", ir);

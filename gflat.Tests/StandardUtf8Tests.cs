@@ -7,13 +7,13 @@ public class StandardUtf8Tests
     [Fact]
     public void CoreCodecCompilesWithoutStandardLibraryOrRuntimeDefinitions()
     {
-        var codec = new SourceFile("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Utf8.gf")));
+        var codec = new SourceFile("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/utf8.gf")));
         Compiler.Emit([codec, new SourceFile("main.gf", "int main() => (int)std::Utf8::EncodedLength(65u);")], options: new() { NoStdLib = true });
     }
 
     private static void Run(string code)
     {
-        var source = new SourceFile("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Utf8.gf")));
+        var source = new SourceFile("Utf8.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/utf8.gf")));
         Assert.Equal(0, CompilerTestHelper.Run([source, new SourceFile("main.gf", code)]).ExitCode);
     }
 

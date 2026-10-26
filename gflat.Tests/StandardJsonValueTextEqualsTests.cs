@@ -40,7 +40,7 @@ public sealed class StandardJsonValueTextEqualsTests
                 return 0;
             }
             """;
-        SourceFile[] sources=[new("JsonString.gf",Read("Json/JsonString.gf")),new("Utf8.gf",Read("Utf8.gf")),new("main.gf",code)];
+        SourceFile[] sources=[new("JsonString.gf",Read("Json/JsonString.gf")),new("Utf8.gf",Read("Text/utf8.gf")),new("main.gf",code)];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
         foreach(string forbidden in new[]{"__gflat_eh","@malloc","@free","gflat$Memory$","llvm.memcpy"})Assert.DoesNotContain(forbidden,ir);
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
@@ -63,7 +63,7 @@ public sealed class StandardJsonValueTextEqualsTests
             if(std::Json::JsonString::ValueTextEquals("\"\"",2,invalid,2))return 4;
             return 0;}
             """);
-        Assert.Equal(0,CompilerTestHelper.Run([new("JsonString.gf",Read("Json/JsonString.gf")),new("Utf8.gf",Read("Utf8.gf")),new("main.gf",code.ToString())],optimization).ExitCode);
+        Assert.Equal(0,CompilerTestHelper.Run([new("JsonString.gf",Read("Json/JsonString.gf")),new("Utf8.gf",Read("Text/utf8.gf")),new("main.gf",code.ToString())],optimization).ExitCode);
     }
 
     [Theory]

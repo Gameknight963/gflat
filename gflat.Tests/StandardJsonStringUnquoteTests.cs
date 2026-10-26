@@ -15,7 +15,7 @@ public sealed class StandardJsonStringUnquoteTests
 
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = new[] { "Utf8.gf", "Json/JsonString.gf" }
+        SourceFile[] sources = new[] { "Text/utf8.gf", "Json/JsonString.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });

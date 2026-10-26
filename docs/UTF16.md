@@ -1,6 +1,6 @@
 # Strict UTF-16 code-unit helpers
 
-`std/core/Utf16.gf` supplies `std::Utf16`, an allocation-free, `nothrow` core
+`std/core/Text/utf16.gf` supplies `std::Utf16`, an allocation-free, `nothrow` core
 codec with no String, libc, GC, or exception-runtime dependency.
 
 Inputs and outputs are **host `ushort` code-unit values**. Lengths, capacities,
@@ -42,7 +42,7 @@ its complete surrogate pair; failures never leave a partially encoded pair.
 
 ## Incremental decoding
 
-`std/core/Utf16Decoder.gf` independently supplies the value type
+`std/core/Text/Utf16Decoder.gf` independently supplies the value type
 `std::Utf16Decoder`, mirroring `Utf8Decoder` with `ushort` input. Its constructor,
 `Reset`, and `Read` are `nothrow`; no other library source is required.
 

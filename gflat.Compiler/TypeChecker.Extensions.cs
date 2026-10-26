@@ -371,6 +371,7 @@ public partial class TypeChecker
     private bool HasCallableMember(TypeExpression receiver, string name)
     {
         receiver = ResolveAlias(receiver);
+        if (HasDeclaredCallableMember(receiver, name) is { } declared) return declared;
         receiver = receiver switch { PointerTypeExpression p => p.Inner, ManagedTypeExpression p => p.Inner, _ => receiver };
         if (receiver is not NamedTypeExpression named) return false;
         bool Callable(TypeExpression? type) => type != null && ResolveAlias(type) is FunctionPointerTypeExpression;

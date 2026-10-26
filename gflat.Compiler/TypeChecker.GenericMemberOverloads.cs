@@ -30,14 +30,7 @@ public partial class TypeChecker
         }
         else return null;
         if (receiver == null) return null;
-        var view = ReceiverView(receiver);
-        IReadOnlyList<TypeExpression>? constraints = view?.Constraints;
-        bool aliasReceiver = false;
-        if (aliasContracts.TryGetValue(receiver, out var alias) && boundAliasConstraints.TryGetValue(alias, out var exposedAlias))
-        {
-            constraints = exposedAlias;
-            aliasReceiver = true;
-        }
+        var constraints = DeclaredReceiverMemberConstraints(receiver, out bool aliasReceiver);
         if (constraints == null) return null;
         var implementations = overloadFamilies.GetValueOrDefault(method) ?? [method];
         // Unconstrained receivers retain the existing template-style member lookup.
@@ -50,7 +43,7 @@ public partial class TypeChecker
         foreach (var implementation in implementations.ToArray()) BindMethodSignature(implementation);
         var candidates = new List<DeclaredMemberCandidate>();
         var visited = new HashSet<string>();
-        foreach (var constraint in constraints) AddConstraint(constraint);
+        foreach (var constraint in EnumerateDeclaredReceiverMemberConstraints(constraints)) AddConstraint(constraint);
         if (candidates.Count == 0)
             throw new TypeCheckException($"No matching declared member '{memberName}'", call.Span);
         var selected = SelectBestOverload(candidates, candidate => candidate.Parameters, call.Arguments,
@@ -60,12 +53,6 @@ public partial class TypeChecker
 
         void AddConstraint(TypeExpression constraint)
         {
-            if (constraint.GenericParameterView is { } inherited)
-            {
-                if (!visited.Add(inherited.OriginIdentity)) return;
-                foreach (var parent in inherited.Constraints) AddConstraint(parent);
-                return;
-            }
             if (ResolveAlias(constraint) is not NamedTypeExpression named) return;
             var use = constraint.GenericUse ?? named.GenericUse ?? extensionGenericTypeOrigins.GetValueOrDefault(named.Name);
             AstNode? definition = use == null ? null :
@@ -80,13 +67,8 @@ public partial class TypeChecker
             };
             var bindings = genericParameters == null || use == null ? new Dictionary<string, TypeExpression>() :
                 genericParameters.Zip(use.TypeArguments).ToDictionary(pair => pair.First.Name, pair => pair.Second);
-            var interfaceConstraint = ResolveInterface(named);
-            IEnumerable<MethodDeclaration> exposed = interfaceConstraint?.Methods ??
-                GetClassByIdentity(named.Name)?.Methods.Values.Select(entry => entry.Method) ?? [];
-            foreach (var representative in exposed.Where(candidate => candidate.Name == memberName && candidate.IsStatic == staticAccess))
-            foreach (var contract in overloadFamilies.GetValueOrDefault(representative) ?? [representative])
+            foreach (var contract in DeclaredReceiverMemberMethods(constraint, memberName, staticAccess, aliasReceiver))
             {
-                if (aliasReceiver && interfaceConstraint == null && contract.Accessibility != TokenKind.Public) continue;
                 BindMethodSignature(contract);
                 var parameters = contract.Parameters.Select(parameter =>
                 {
@@ -128,12 +110,77 @@ public partial class TypeChecker
             }
         }
 
-        static GenericParameterContractView? ReceiverView(TypeExpression type) => type.GenericParameterView ?? (type switch
-        {
-            PointerTypeExpression pointer => ReceiverView(pointer.Inner),
-            ManagedTypeExpression managed => ReceiverView(managed.Inner),
-            ReferenceTypeExpression reference => ReceiverView(reference.Inner),
-            _ => null
-        });
     }
+
+    private IReadOnlyList<TypeExpression>? DeclaredReceiverMemberConstraints(TypeExpression receiver, out bool aliasReceiver)
+    {
+        IReadOnlyList<TypeExpression>? constraints = GetDeclaredParameterView(receiver)?.Constraints;
+        aliasReceiver = false;
+        if (aliasContracts.TryGetValue(receiver, out var alias) && boundAliasConstraints.TryGetValue(alias, out var exposedAlias))
+        {
+            constraints = exposedAlias;
+            aliasReceiver = true;
+        }
+        return constraints;
+    }
+
+    private IEnumerable<TypeExpression> EnumerateDeclaredReceiverMemberConstraints(IReadOnlyList<TypeExpression> constraints)
+    {
+        var visited = new HashSet<string>();
+        foreach (var constraint in constraints)
+            foreach (var terminal in Walk(constraint)) yield return terminal;
+
+        IEnumerable<TypeExpression> Walk(TypeExpression constraint)
+        {
+            if (constraint.GenericParameterView is { } inherited)
+            {
+                if (!visited.Add(inherited.OriginIdentity)) yield break;
+                foreach (var parent in inherited.Constraints)
+                    foreach (var terminal in Walk(parent)) yield return terminal;
+            }
+            else yield return constraint;
+        }
+    }
+
+    private IEnumerable<MethodDeclaration> DeclaredReceiverMemberMethods(TypeExpression constraint, string name,
+        bool? staticAccess, bool aliasReceiver)
+    {
+        if (ResolveAlias(constraint) is not NamedTypeExpression named) yield break;
+        var contract = ResolveInterface(named);
+        IEnumerable<MethodDeclaration> methods = contract?.Methods ??
+            GetClassByIdentity(named.Name)?.Methods.Values.Select(entry => entry.Method) ?? [];
+        foreach (var representative in methods.Where(method => method.Name == name && (staticAccess == null || method.IsStatic == staticAccess)))
+        foreach (var method in overloadFamilies.GetValueOrDefault(representative) ?? [representative])
+        {
+            if (aliasReceiver && contract == null && method.Accessibility != TokenKind.Public) continue;
+            yield return method;
+        }
+    }
+
+    // A hidden implementation member must not change extension lookup through
+    // a nonempty declared contract. An unconstrained template keeps duck lookup.
+    private bool? HasDeclaredCallableMember(TypeExpression receiver, string name)
+    {
+        var constraints = DeclaredReceiverMemberConstraints(receiver, out bool aliasReceiver);
+        if (constraints == null || constraints.Count == 0) return null;
+        foreach (var constraint in EnumerateDeclaredReceiverMemberConstraints(constraints))
+        {
+            if (DeclaredReceiverMemberMethods(constraint, name, staticAccess: null, aliasReceiver).Any()) return true;
+            foreach (var getter in DeclaredReceiverMemberMethods(constraint, "$get$" + name,
+                staticAccess: null, aliasReceiver))
+            {
+                using var context = EnterMethodSignatureContext(getter);
+                if (ResolveAlias(getter.ReturnType) is FunctionPointerTypeExpression) return true;
+            }
+            if (ResolveAlias(constraint) is not NamedTypeExpression named || GetClassByIdentity(named.Name) is not { } cls) continue;
+            foreach (var field in cls.Fields.Where(field => field.Name == name &&
+                (!aliasReceiver || field.Accessibility == TokenKind.Public)))
+            {
+                using var context = EnterFieldLayoutContext(field.DeclaringClass, field.Name);
+                if (ResolveFieldLayoutType(field.Type) is FunctionPointerTypeExpression) return true;
+            }
+        }
+        return false;
+    }
+
 }

@@ -170,8 +170,8 @@ public sealed class StandardTextLinesTests
 
     private static SourceFile[] Sources(string program, bool conveniences = false)
     {
-        var names = new List<string> { "Memory/Span.gf", "TextLines.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" };
-        if(conveniences) names.AddRange(["TextLinesSpan.gf","StringLines.gf","Collections/Vector.gf","String.gf", "Text/ByteSearch.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Formatting.gf",
+        var names = new List<string> { "Memory/Span.gf", "Text/TextLines.gf", "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf" };
+        if(conveniences) names.AddRange(["Text/text_lines_span.gf","Text/string_lines.gf","Collections/Vector.gf","Text/String.gf", "Text/ByteSearch.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Formatting.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf","Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"]);
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();

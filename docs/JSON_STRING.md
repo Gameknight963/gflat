@@ -38,7 +38,7 @@ Keep the input alive and unchanged during the call; no input pointer is retained
 and later input changes do not affect the returned owner.
 
 These optional conveniences live in `Json/JsonStringText.gf`, with normal String,
-`StringSpan.gf`, Span and JSON string codec dependencies. The `JsonString` buffer
+`string_span.gf`, Span and JSON string codec dependencies. The `JsonString` buffer
 codec remains independent of owning strings and allocation.
 
 ## Caller-owned buffers

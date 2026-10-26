@@ -98,7 +98,7 @@ public sealed class StandardStringTrimTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => new[]{"IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","IStringConvertable.gf","String.gf", "Text/ByteSearch.gf"}
+        => new[]{"IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","IStringConvertable.gf","Text/String.gf", "Text/ByteSearch.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("main.gf",code));
     private static void Run(string code,int optimization)=>Assert.Equal(0,CompilerTestHelper.Run(Sources(code),optimization).ExitCode);

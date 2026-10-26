@@ -39,7 +39,7 @@ public sealed class StandardLibraryTypingRecoveryTests
     public void TypingInsideActualStringPreservesOtherFileEditorServices(string original, string replacement)
     {
         string directory = Path.Combine(AppContext.BaseDirectory, "StandardLibrary");
-        string stringPath = Path.Combine(directory, "core", "String.gf");
+        string stringPath = Path.Combine(directory, "core", "Text","String.gf");
         string text = File.ReadAllText(stringPath);
         int edit = text.IndexOf(original, StringComparison.Ordinal);
         Assert.True(edit >= 0, "The mutation must match the actual String fixture.");

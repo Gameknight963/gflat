@@ -4,7 +4,7 @@ public sealed class StandardSpanSearchTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf",
-            "Memory/Span.gf", "Collections/Vector.gf", "String.gf", "Text/ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf" }
+            "Memory/Span.gf", "Collections/Vector.gf", "Text/String.gf", "Text/ByteSearch.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", code));
 

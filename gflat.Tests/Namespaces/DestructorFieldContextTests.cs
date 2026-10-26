@@ -35,7 +35,7 @@ public sealed class DestructorFieldContextTests
         // The generic helper deliberately cannot see this file's memory import.
         string root = Path.Combine(AppContext.BaseDirectory, "Std/core");
         foreach (string relative in new[] { "Collections/IEnumerable.gf", "Collections/IEnumerator.gf",
-            "Queries/Enumerable.gf", "Memory/Span.gf", "TextLines.gf" })
+            "Queries/Enumerable.gf", "Memory/Span.gf", "Text/TextLines.gf" })
         {
             string path = Path.Combine(root, relative);
             string text = File.ReadAllText(path);
@@ -46,7 +46,7 @@ public sealed class DestructorFieldContextTests
                 text = text.Replace("namespace std;", "namespace std::FieldMemory;", StringComparison.Ordinal)
                     .Replace("namespace std::Memory;", "namespace std::FieldMemory;", StringComparison.Ordinal);
             }
-            if (relative == "TextLines.gf")
+            if (relative == "Text/TextLines.gf")
             {
                 text = "using std::FieldMemory;\n" + text
                     .Replace("using std::Memory;", "", StringComparison.Ordinal)

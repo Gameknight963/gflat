@@ -24,8 +24,8 @@ The constructor takes `Span<readonly(char)>`. Build that span from a live
 counted buffer, or from `String.Data` and `String.Length`. The input does not
 need a null terminator, and no encoding conversion or validation is performed.
 
-The optional `TextLinesSpan.gf` provides `.Lines()` for mutable and immutable
-character spans. `StringLines.gf` provides `.Lines()` for a named `String`,
+The optional `text_lines_span.gf` provides `.Lines()` for mutable and immutable
+character spans. `string_lines.gf` provides `.Lines()` for a named `String`,
 borrowing it through an immutable reference without copying its allocation.
 Temporary owning strings cannot be receivers of this convenience: retain the
 owner in a variable for as long as the line views are used. These optional

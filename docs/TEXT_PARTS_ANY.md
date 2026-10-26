@@ -1,8 +1,8 @@
 # Splitting on a byte set
 
 `TextPartsAny` lazily splits borrowed counted text whenever it encounters any
-delimiter byte. `TextPartsAnySpan.gf` adds `SplitAny` to `Span<char>` and
-`Span<readonly(char)>`; optional `StringSplitAny.gf` adds it to a borrowed
+delimiter byte. `text_parts_any_span.gf` adds `SplitAny` to `Span<char>` and
+`Span<readonly(char)>`; optional `string_split_any.gf` adds it to a borrowed
 `ref immutable(String)` receiver, rejecting temporary owning receivers.
 
 ```csharp
@@ -46,7 +46,7 @@ storage: keep it alive and at the same address. Mutating a source byte through
 another alias is visible through parts and can affect delimiters ahead of a cursor.
 The source is not snapshotted or protected from unrelated mutable aliases.
 
-For selective compilation include `TextPartsAny.gf`, `TextPartsAnySpan.gf`,
+For selective compilation include `Text/TextPartsAny.gf`, `text_parts_any_span.gf`,
 `Memory/Span.gf`, `Collections/IEnumerable.gf`, `Collections/IEnumerator.gf`, and
 `Queries/Enumerable.gf`. The optional String adapter needs the usual String
 dependencies. Normal query operators need their ordinary source files.

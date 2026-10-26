@@ -1,6 +1,6 @@
 # Joining borrowed Strings
 
-The optional `std/core/StringJoin.gf` source joins a borrowed span of String
+The optional `std/core/Text/string_join.gf` source joins a borrowed span of String
 owners into one independent owning String. It adds these nongeneric extensions:
 
 ```csharp
@@ -42,6 +42,6 @@ source strings: only the fresh result is modified. After success the result no
 longer borrows any input. These are ordinary raw lifetime preconditions, without
 compiler lifetime tracking or concurrent mutation support.
 
-Explicit source selections need `StringJoin.gf`, String and Span with their
+Explicit source selections need `string_join.gf`, String and Span with their
 ordinary dependencies. This optional source adds no Span dependency to
-`String.gf` itself. The complete standard library includes it automatically.
+`Text/String.gf` itself. The complete standard library includes it automatically.

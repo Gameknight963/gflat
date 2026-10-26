@@ -5,7 +5,7 @@ public sealed class StandardVectorRangeTests
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/vector_add_range.gf",
         "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf",
-        "String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf"
+        "Text/String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf"
     }.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
         .Append(new SourceFile("main.gf", program));
 

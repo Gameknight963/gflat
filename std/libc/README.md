@@ -23,7 +23,7 @@ see [the freestanding example](../../docs/FREESTANDING_CORE.md).
 ## Console
 
 `Console/Console.gf` provides C-string and caller-buffer APIs. It needs `core/IO/IOException.gf`,
-`core/IO/EndOfStreamException.gf`, and `core/BufferTooSmallException.gf`, but does not require `String.gf`.
+`core/IO/EndOfStreamException.gf`, and `core/BufferTooSmallException.gf`, but does not require `Text/String.gf`.
 `Console/ConsoleString.gf` adds the optional owning-string conveniences. Referencing
 `std/std.gfproj` includes both.
 

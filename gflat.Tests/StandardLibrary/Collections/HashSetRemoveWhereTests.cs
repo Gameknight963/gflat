@@ -239,7 +239,7 @@ public sealed class HashSetRemoveWhereTests
     private static IEnumerable<SourceFile> Sources(string program, bool managed = false)
     {
         string[] files = ["IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/HashMap.gf", "Collections/HashSet.gf",
-            "IStringConvertable.gf", "String.gf", "Text/ByteSearch.gf"];
+            "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf"];
         IEnumerable<SourceFile> sources = files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))));
         if (managed) sources = sources.Concat(new[] { "GC.gf", "TracingCollector.gf" }
             .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/libc", file)))));

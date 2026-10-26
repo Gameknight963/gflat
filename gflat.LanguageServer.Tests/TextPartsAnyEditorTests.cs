@@ -7,9 +7,9 @@ namespace gflat.LanguageServer.Tests;
 public sealed class TextPartsAnyEditorTests
 {
     [Theory]
-    [InlineData("Span<char>","char[3] buffer=['a',',','b'];Span<char> text=new(&buffer[0],3);","TextPartsAnySpan.gf")]
-    [InlineData("Span<readonly(char)>","Span<readonly(char)> text=new(\"a,b\",3);","TextPartsAnySpan.gf")]
-    [InlineData("ref immutable(String)","String text=String::From(\"a,b\",3);","StringSplitAny.gf")]
+    [InlineData("Span<char>","char[3] buffer=['a',',','b'];Span<char> text=new(&buffer[0],3);","text_parts_any_span.gf")]
+    [InlineData("Span<readonly(char)>","Span<readonly(char)> text=new(\"a,b\",3);","text_parts_any_span.gf")]
+    [InlineData("ref immutable(String)","String text=String::From(\"a,b\",3);","string_split_any.gf")]
     public void SplitAnyMergesCompletionAndSelectsTheConcreteReceiverAndSeparatorAdapter(string receiver,string setup,string adapter)
     {
         string text="using std; using std::Memory;void Probe(){"+setup+"Span<readonly(char)> separators=new(\",;\",2);"

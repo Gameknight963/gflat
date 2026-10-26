@@ -7,7 +7,7 @@ public sealed class StandardPercentEncodingTests
     private static SourceFile[] Sources(string program, bool strings = false)
     {
         var names = new List<string> { "Encoding/PercentEncoding.gf" };
-        if (strings) names.AddRange(["Encoding/PercentEncodingText.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "String.gf", "Text/ByteSearch.gf", "Formatting.gf"]);
+        if (strings) names.AddRange(["Encoding/PercentEncodingText.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Text/String.gf", "Text/ByteSearch.gf", "Formatting.gf"]);
         return names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program)).ToArray();
     }

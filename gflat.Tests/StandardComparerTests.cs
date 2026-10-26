@@ -7,7 +7,7 @@ public sealed class StandardComparerTests
     {
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf",
             "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/Comparer.gf", "Collections/EqualityComparer.gf",
-            "IStringConvertable.gf", "String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf", "Collections/PriorityQueue.gf"];
+            "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf", "Collections/Vector.gf", "Memory/Span.gf", "Collections/PriorityQueue.gf"];
         var result = CompilerTestHelper.Run(files.Select(file => new SourceFile(file,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("main.gf", """

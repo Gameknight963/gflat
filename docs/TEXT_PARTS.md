@@ -1,6 +1,6 @@
 # Borrowed text splitting
 
-`std/core/TextParts.gf` provides `std::TextParts`, splitting counted bytes on a
+`std/core/Text/TextParts.gf` provides `std::TextParts`, splitting counted bytes on a
 single-byte delimiter without copying or allocating. It takes a
 `Span<readonly(char)>` and implements
 `IEnumerable<Span<readonly(char)>, TextParts::Enumerator>`.
@@ -22,9 +22,9 @@ parts; empty input then yields none. Embedded zero bytes remain ordinary bytes,
 and zero itself can be used as the delimiter. This is byte splitting, not a
 Unicode code-point or multi-character delimiter operation.
 
-`TextPartsSpan.gf` adds `Split(delimiter, removeEmpty = false)` extensions for
+`text_parts_span.gf` adds `Split(delimiter, removeEmpty = false)` extensions for
 `Span<char>` and `Span<readonly(char)>`. These copy only the borrowed view's
-metadata. `StringSplit.gf` separately adds the same convenience to an owning
+metadata. `string_split.gf` separately adds the same convenience to an owning
 String through a `ref immutable(String)` receiver, avoiding a deep copy and
 rejecting temporary String receivers. Neither extension file changes String or
 Span's own source dependencies.

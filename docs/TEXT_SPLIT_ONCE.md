@@ -45,7 +45,7 @@ through the returned views remain forbidden. Mutable spans can use
 For selective source use, include `TextSplitOnceSpan.gf`, `Memory/Span.gf`, and the
 ordinary span/enumeration dependencies. The helper itself needs no String,
 CString, ByteSearch, or allocator implementation. The owning String example also
-uses the optional `StringSpan.gf` view convenience.
+uses the optional `string_span.gf` view convenience.
 
 See [all-delimiter splitting and ASCII trimming](TEXT_PARTS.md) for enumerating
 every field rather than preserving the whole remainder.

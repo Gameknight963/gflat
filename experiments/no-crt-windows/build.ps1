@@ -59,7 +59,7 @@ $cases = @(
     @{ Name = 'constructor'; Source = 'Constructor.gf'; Library = @(); MustLink = $true },
     @{ Name = 'heap-new'; Source = 'HeapNew.gf'; Library = $exceptions },
     @{ Name = 'throw-catch'; Source = 'ThrowCatch.gf'; Library = $exceptions },
-    @{ Name = 'core-string'; Source = 'CoreString.gf'; Library = $exceptions + @('core/Text.gf', 'core/IStringConvertable.gf', 'core/String.gf', 'core/Text/ByteSearch.gf') }
+    @{ Name = 'core-string'; Source = 'CoreString.gf'; Library = $exceptions + @('core/Text.gf', 'core/IStringConvertable.gf', 'core/Text/String.gf', 'core/Text/ByteSearch.gf') }
 )
 $allowedImports = @('ExitProcess', 'GetProcessHeap', 'GetStdHandle', 'HeapAlloc', 'HeapFree', 'WriteFile')
 $results = @()

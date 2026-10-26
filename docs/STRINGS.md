@@ -28,7 +28,7 @@ is false; use the counted overload to compare all three bytes. A counted length
 mismatch returns false without reading the input buffer. These methods also work
 through an immutable String pointer.
 
-The optional `StringSpan.gf` source adds `text.AsSpan()`, `text.AsReadOnly()`, and
+The optional `string_span.gf` source adds `text.AsSpan()`, `text.AsReadOnly()`, and
 `text.AsImmutable()`. All borrow exactly `Length` bytes, including embedded zeros, without copying the
 owner or allocating. `AsSpan` requires a mutable `ref String` receiver and returns
 `Span<char>`. `AsReadOnly` accepts `ref readonly(String)`; `AsImmutable` accepts
@@ -43,7 +43,7 @@ mutable span changes the String without changing its length; it does not validat
 UTF-8. Slice bounds remain byte bounds. End a view's use before calling `Remove`,
 `Append`, or another structural operation. These are raw borrows, without lifetime
 tracking. Explicit source selections also need the ordinary `Span` dependencies;
-`String.gf` alone does not acquire a dependency on Span.
+`Text/String.gf` alone does not acquire a dependency on Span.
 
 `IndexOf` and `LastIndexOf` return `String::NotFound` (the largest `nuint`) when
 no match exists. An empty needle matches at the search start for `IndexOf`,
@@ -58,7 +58,7 @@ substring/removal ranges throw instead of wrapping pointer-sized arithmetic.
 
 Substring searches reuse `std::Text::ByteSearch`'s Two-Way search with constant extra
 storage, no allocation, and O(string length + pattern length) worst-case work.
-Character search is linear. Explicit source selections containing `String.gf`
+Character search is linear. Explicit source selections containing `Text/String.gf`
 must also include `Text/ByteSearch.gf`; projects referencing the complete standard
 library already include it.
 

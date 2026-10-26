@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Net;
 
 // Numeric address only: no port, zone, network prefix, or operating-system state.
 public struct IpAddress : IEquatable<IpAddress>, IComparable<IpAddress>, IHashable, IFormattable

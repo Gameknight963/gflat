@@ -6,7 +6,7 @@ namespace gflat.Tests;
 public sealed class StandardIpNetworkLastAddressTests
 {
     private const string Allocator="""
-        using std;extern void*? malloc(nuint count);extern void free(void* storage);int attempts=0;bool deny=false;
+        using std; using std::Net;extern void*? malloc(nuint count);extern void free(void* storage);int attempts=0;bool deny=false;
         namespace Memory{
             public replace void*? Allocate(nuint count){attempts++;if(deny)return null;return malloc(count);}
             public replace void Free(void* storage)nothrow{free(storage);}

@@ -9,12 +9,12 @@ public sealed class IpNetworkLastAddressEditorTests
     [Fact]
     public void ImmutableNumericEndpointUsesItsIpAddressPropertyTypeAndActualSource()
     {
-        const string text="using std;IpAddress Observe(immutable(IpNetwork)* network)nothrow=>network.LastAddress;";
+        const string text="using std; using std::Net;IpAddress Observe(immutable(IpNetwork)* network)nothrow=>network.LastAddress;";
         var files=Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"StandardLibrary"),"*.gf",SearchOption.AllDirectories).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
         var library=files.Single(file=>Path.GetFileName(file.Path)=="IpNetwork.gf");var source=new SourceFile(Path.GetFullPath("ip-network-endpoint-editor.gf"),text);files.Add(source);
         var snapshot=new AnalysisSnapshot(files,new(){NoStdLib=true});Assert.DoesNotContain(snapshot.Diagnostics,error=>error.Severity==DiagnosticSeverity.Error);
         var access=Assert.Single(snapshot.Nodes.Where(node=>node.Span.SourceId==source.Id).Select(node=>node.Node).OfType<MemberAccessExpression>());
-        Assert.Equal("std::IpAddress",snapshot.Checker!.DisplayTypeName(snapshot.Checker.GetType(access)));
+        Assert.Equal("std::Net::IpAddress",snapshot.Checker!.DisplayTypeName(snapshot.Checker.GetType(access)));
         var model=new EditorModel(snapshot,files);int use=text.IndexOf("LastAddress",StringComparison.Ordinal);
         Assert.Contains(Json(model.Completion(source.Path,use)).GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="LastAddress");
         string hover=Json(model.Hover(source.Path,use)).GetProperty("contents").GetProperty("value").GetString()!;Assert.Contains("IpAddress",hover);Assert.Contains("LastAddress",hover);Assert.Contains("immutable get nothrow",hover);Assert.DoesNotContain('$',hover);

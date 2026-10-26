@@ -13,7 +13,7 @@ public sealed class IpNetworkRelationsEditorTests
     [InlineData("Overlaps","IpNetwork","other",1)]
     public void ImmutableRelationsPresentTheSelectedSourceSignatureAndCompleteContainsFamily(string member,string targetType,string parameter,int count)
     {
-        string text="using std;bool Observe(immutable(IpNetwork)* receiver,immutable("+targetType+")* target) nothrow=>receiver."+member+"(target);";
+        string text="using std; using std::Net;bool Observe(immutable(IpNetwork)* receiver,immutable("+targetType+")* target) nothrow=>receiver."+member+"(target);";
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
         string[] names=["Net/IpNetwork.gf","Net/IpAddress.gf","IEquatable.gf","IComparable.gf","IHashable.gf","Hashing/primitive_hashing.gf"];
         var sources=names.Select(name=>Path.Combine(root,name)).Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();
@@ -38,12 +38,12 @@ public sealed class IpNetworkRelationsEditorTests
         var signatures=help.GetProperty("signatures");Assert.Equal(count,signatures.GetArrayLength());
         string selected=signatures[help.GetProperty("activeSignature").GetInt32()].GetProperty("label").GetString()!;
         // Check overload identity independently of signature-label qualification.
-        Assert.Contains(expectedParameter,selected.Replace("std::","",StringComparison.Ordinal));Assert.Contains("bool",selected);Assert.Equal(0,help.GetProperty("activeParameter").GetInt32());
+        Assert.Contains(expectedParameter,selected.Replace("std::Net::","",StringComparison.Ordinal));Assert.Contains("bool",selected);Assert.Equal(0,help.GetProperty("activeParameter").GetInt32());
         foreach(var signature in signatures.EnumerateArray())Assert.DoesNotContain('$',signature.GetProperty("label").GetString()!);
         if(member=="Contains")
         {
-            Assert.Contains(signatures.EnumerateArray(),signature=>signature.GetProperty("label").GetString()!.Replace("std::","",StringComparison.Ordinal).Contains("immutable(IpAddress)* address",StringComparison.Ordinal));
-            Assert.Contains(signatures.EnumerateArray(),signature=>signature.GetProperty("label").GetString()!.Replace("std::","",StringComparison.Ordinal).Contains("immutable(IpNetwork)* other",StringComparison.Ordinal));
+            Assert.Contains(signatures.EnumerateArray(),signature=>signature.GetProperty("label").GetString()!.Replace("std::Net::","",StringComparison.Ordinal).Contains("immutable(IpAddress)* address",StringComparison.Ordinal));
+            Assert.Contains(signatures.EnumerateArray(),signature=>signature.GetProperty("label").GetString()!.Replace("std::Net::","",StringComparison.Ordinal).Contains("immutable(IpNetwork)* other",StringComparison.Ordinal));
         }
     }
 

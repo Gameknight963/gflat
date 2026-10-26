@@ -1,5 +1,5 @@
 using std::Collections;
-namespace std;
+namespace std::Net;
 
 // A canonical numeric prefix; no socket or operating-system state.
 public struct IpNetwork : IEquatable<IpNetwork>, IHashable, IFormattable

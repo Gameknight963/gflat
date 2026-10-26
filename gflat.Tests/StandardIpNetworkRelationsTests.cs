@@ -81,7 +81,7 @@ public sealed class StandardIpNetworkRelationsTests
         }
         string text=Convert.ToHexString(manifest.ToArray());
         Run($$"""
-            using std;
+            using std; using std::Net;
             int attempts=0;
             namespace Memory {
                 public replace void*? Allocate(nuint count) { attempts++;return null; }
@@ -123,8 +123,8 @@ public sealed class StandardIpNetworkRelationsTests
     public void ExistingAndNewContainmentAndProtectedWrappersRemainNothrowWithoutExceptionBoundaries()
     {
         string ir=Compiler.Emit(Sources("""
-            bool Observe(immutable(std::IpNetwork)* a,immutable(std::IpNetwork)* b) nothrow => a.Contains(b)&&a.Overlaps(b);
-            bool ObserveReadOnly(readonly(std::IpNetwork)* a,immutable(std::IpNetwork)* b) nothrow => a.Contains(b)&&a.Overlaps(b);
+            bool Observe(immutable(std::Net::IpNetwork)* a,immutable(std::Net::IpNetwork)* b) nothrow => a.Contains(b)&&a.Overlaps(b);
+            bool ObserveReadOnly(readonly(std::Net::IpNetwork)* a,immutable(std::Net::IpNetwork)* b) nothrow => a.Contains(b)&&a.Overlaps(b);
             int main() { return 0; }
             """));
         var members=Regex.Matches(ir,@"(?ms)^define [^\r\n]*\$IpNetwork\$(Contains|Overlaps)(?:\$[^\r\n(]*)?\([^\r\n]*\{\r?\n.*?^\}");

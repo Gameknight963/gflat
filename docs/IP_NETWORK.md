@@ -1,11 +1,11 @@
 # IP network prefixes
 
-`std::IpNetwork` represents an IPv4 or IPv6 network prefix using an `IpAddress`
+`std::Net::IpNetwork` represents an IPv4 or IPv6 network prefix using an `IpAddress`
 and a prefix length. It is an ordinary fixed value with no owned allocation or
 operating-system state. The default is IPv4 `0.0.0.0/0`.
 
 ```csharp
-using std;
+using std; using std::Net;
 int main()
 {
     IpNetwork network = IpNetwork::Parse("192.0.2.0/024");
@@ -115,7 +115,7 @@ The getter is immutable and `nothrow`, returns an ordinary `IpAddress` value
 copy, and allocates nothing.
 
 ```cpp
-using std;
+using std; using std::Net;
 int main()
 {
     IpNetwork network = IpNetwork::Parse("192.0.2.128/25");

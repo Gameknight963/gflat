@@ -67,7 +67,7 @@ public partial class TypeChecker
                                 .Any(m => m.Parameters.Count == 2 && ResolveAlias(m.Parameters[0].Type) is NamedTypeExpression parameter && parameter.Name == primitive.Name))
                         {
                             string source = primitive.Name == "extralong"
-                                ? "std/core/IntegerFormatting.gf and std/core/ExtraLongFormatting.gf"
+                                ? "std/core/Text/IntegerFormatting.gf and std/core/ExtraLongFormatting.gf"
                                 : "std/core/Formatting.gf (and std/libc/Formatting.gf for floating-point values)";
                             throw new TypeCheckException($"Primitive interpolation requires std::Format({primitive.Name}, ITextWriter*); include {source}", part.Line);
                         }

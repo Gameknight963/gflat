@@ -7,7 +7,7 @@ public sealed class StandardIntegerFormattingTests
 {
     private static void Run(string program, int optimization)
     {
-        SourceFile[] sources = [new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/IntegerFormatting.gf"))), new("main.gf", program)];
+        SourceFile[] sources = [new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/IntegerFormatting.gf"))), new("main.gf", program)];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         foreach (string forbidden in new[] { "__gflat_eh", "@malloc", "@free", "gflat$Memory$", "ITextWriter" })
             Assert.DoesNotContain(forbidden, ir);

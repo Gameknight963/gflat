@@ -330,7 +330,7 @@ public class FreestandingCoreUtilitiesTests
 
         var sources = new[] { "Text/ascii.gf", "Text/utf8.gf", "Text/utf16.gf", "Text/UnicodeTranscoding.gf", "Encoding/Hex.gf", "Encoding/Base64.gf", "Encoding/Base64Url.gf", "Numerics/BitOperations.gf", "Hashing/primitive_hashing.gf", "Hashing/SHA256.gf",
             "Encoding/PercentEncoding.gf", "Binary/BinaryPrimitives.gf", "Hashing/CRC32.gf", "Hashing/Adler32.gf", "Text/Utf8Decoder.gf",
-            "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "IntegerFormatting.gf", "Text/hex_integer_parsing.gf", "Text/boolean_parsing.gf", "Text/ByteSearch.gf", "Text/CString.gf", "Memory/Bytes.gf", "Json/JsonString.gf", "Binary/VarInt.gf" }
+            "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Text/IntegerFormatting.gf", "Text/hex_integer_parsing.gf", "Text/boolean_parsing.gf", "Text/ByteSearch.gf", "Text/CString.gf", "Memory/Bytes.gf", "Json/JsonString.gf", "Binary/VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", ProgramSource));
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true, InternalizeFunctions = true });

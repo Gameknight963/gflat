@@ -1332,7 +1332,7 @@ receivers require a checked cast or unchecked postfix `!`. Primitives call the e
 Supported primitives are `bool`, `char`, `byte`, `sbyte`, `short`, `ushort`, `int`,
 `uint`, `long`, `ulong`, `extralong`, `nint`, `nuint`, `float`, and `double`. Character pointers and
 arrays are not implicitly converted to text; provide an explicit string value.
-Signed 128-bit formatting uses `std/core/IntegerFormatting.gf` and the optional
+Signed 128-bit formatting uses `std/core/Text/IntegerFormatting.gf` and the optional
 `std/core/ExtraLongFormatting.gf` writer adapter. Both are included by the full
 standard library; explicit source selections must include them together.
 

@@ -76,7 +76,7 @@ extension borrows existing storage, including noncopyable values. Existing
 instance methods keep precedence. See [owning conversions](../../docs/STRING_CONVERSION.md)
 for receiver restrictions and selective source dependencies.
 Signed 128-bit `extralong` uses `ExtraLongFormatting.gf` together with
-`IntegerFormatting.gf`, including for interpolation. It supports the whole
+`Text/IntegerFormatting.gf`, including for interpolation. It supports the whole
 signed range without allocating an intermediate string or requiring a
 128-bit division runtime.
 

@@ -52,7 +52,7 @@ these borrowing rules. Direct `foreach` is sufficient for ordinary iteration.
 
 ## Trimming borrowed text
 
-`std/core/TextTrimSpan.gf` optionally adds `Trim()`, `TrimStart()`, and
+`std/core/Text/text_trim_span.gf` optionally adds `Trim()`, `TrimStart()`, and
 `TrimEnd()` to `Span<char>` and `Span<readonly(char)>`. Include `Memory/Span.gf` and
 `Text/ascii.gf` with this extension source. Unlike the owning String's mutating
 methods, these return a sliced view and leave every source byte unchanged.

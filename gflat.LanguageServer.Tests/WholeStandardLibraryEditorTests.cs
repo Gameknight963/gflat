@@ -554,7 +554,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
             int call=text.IndexOf("TrySplitOnce",text.IndexOf(marker,StringComparison.Ordinal),StringComparison.Ordinal);
             var hover=JsonSerializer.SerializeToElement(model.Hover(source.Path,call),Protocol.JsonOptions);
             Assert.Contains("TrySplitOnce",hover.GetProperty("contents").GetProperty("value").GetString());
-            Assert.Contains("TextSplitOncePatternSpan.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
+            Assert.Contains("text_split_once_pattern_span.gf",JsonSerializer.Serialize(model.Definition(source.Path,call),Protocol.JsonOptions));
         }
         var prefixHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,prefixCall),Protocol.JsonOptions);
         Assert.Contains("Write",prefixHover.GetProperty("contents").GetProperty("value").GetString());

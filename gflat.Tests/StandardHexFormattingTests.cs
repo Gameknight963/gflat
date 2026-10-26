@@ -142,7 +142,7 @@ public sealed class StandardHexFormattingTests
     private static void Run(string program, int optimization)
     {
         SourceFile[] sources = [
-            new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/IntegerFormatting.gf"))),
+            new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/IntegerFormatting.gf"))),
             new("main.gf", program)
         ];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });

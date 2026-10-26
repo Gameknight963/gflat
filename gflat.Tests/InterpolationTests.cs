@@ -31,7 +31,7 @@ public class InterpolationTests
                 printf("%s", text.Data);
                 return 0;
             }
-            """).Concat(new[] { "IntegerFormatting.gf", "ExtraLongFormatting.gf" }
+            """).Concat(new[] { "Text/IntegerFormatting.gf", "ExtraLongFormatting.gf" }
                 .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file)))));
         var result = CompilerTestHelper.Run(sources, optimization);
         Assert.Equal(0, result.ExitCode);
@@ -46,7 +46,7 @@ public class InterpolationTests
             String Render(extralong value) => s$"{value}";
             """)));
         Assert.Contains("std::Format(extralong, ITextWriter*)", error.Message);
-        Assert.Contains("std/core/IntegerFormatting.gf and std/core/ExtraLongFormatting.gf", error.Message);
+        Assert.Contains("std/core/Text/IntegerFormatting.gf and std/core/ExtraLongFormatting.gf", error.Message);
     }
 
     [Fact]

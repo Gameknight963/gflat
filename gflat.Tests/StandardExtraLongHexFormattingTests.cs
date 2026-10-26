@@ -82,5 +82,5 @@ public sealed class StandardExtraLongHexFormattingTests
     }
 
     private static IEnumerable<SourceFile> Sources(string code)
-        => new[]{new SourceFile("IntegerFormatting.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/IntegerFormatting.gf"))),new SourceFile("main.gf",code)};
+        => new[]{new SourceFile("IntegerFormatting.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/IntegerFormatting.gf"))),new SourceFile("main.gf",code)};
 }

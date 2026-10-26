@@ -47,7 +47,7 @@ public sealed class StandardExtraLongFormattingTests
                 return 0;
             }
             """;
-        SourceFile[] sources = [new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/IntegerFormatting.gf"))), new("main.gf",code)];
+        SourceFile[] sources = [new("IntegerFormatting.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/IntegerFormatting.gf"))), new("main.gf",code)];
         string ir = Compiler.Emit(sources, options:new(){NoStdLib=true,NoBuiltins=true,InternalizeFunctions=true});
         Assert.DoesNotMatch(@"\b(?:sdiv|udiv|srem|urem)\s+i128\b",ir);
         foreach(string forbidden in new[]{"__divti3","__udivti3","llvm.memcpy","@malloc","@free","__gflat_eh","gflat$Memory$"}) Assert.DoesNotContain(forbidden,ir);
@@ -85,7 +85,7 @@ public sealed class StandardExtraLongFormattingTests
                 return 0;
             }
             """;
-        var sources = new[] { "IntegerFormatting.gf", "ExtraLongFormatting.gf" }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name)))).Append(new SourceFile("main.gf",code));
+        var sources = new[] { "IntegerFormatting.gf", "ExtraLongFormatting.gf" }.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name == "IntegerFormatting.gf" ? "Text/IntegerFormatting.gf" : name)))).Append(new SourceFile("main.gf",code));
         Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
     }
 }

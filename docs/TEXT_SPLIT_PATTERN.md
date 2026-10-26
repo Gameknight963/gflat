@@ -1,6 +1,6 @@
 # Split borrowed text once on a byte-sequence delimiter
 
-Optional `core/TextSplitOncePatternSpan.gf` adds three non-generic overloads on
+Optional `core/Text/text_split_once_pattern_span.gf` adds three non-generic overloads on
 `Span<readonly(char)>`, complementing the existing single-character API:
 
 - `TrySplitOnce(separator, count, ref before, ref after)` takes counted bytes.

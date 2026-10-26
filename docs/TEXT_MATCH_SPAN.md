@@ -1,6 +1,6 @@
 # Borrowed text prefix and suffix checks
 
-`TextMatchSpan.gf` adds `StartsWith` and `EndsWith` to
+`Text/text_match_span.gf` adds `StartsWith` and `EndsWith` to
 `Span<readonly(char)>`, including the views returned by `Split`, `Lines`, and
 `Trim`. Include `Memory/Span.gf`, `Text/CString.gf`, and their ordinary span dependencies
 when selecting sources individually.

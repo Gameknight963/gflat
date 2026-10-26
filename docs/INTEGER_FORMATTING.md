@@ -1,6 +1,6 @@
 # Integer formatting into caller buffers
 
-`std/core/IntegerFormatting.gf` supplies `std::IntegerFormatting::TryFormat`
+`std/core/Text/IntegerFormatting.gf` supplies `std::IntegerFormatting::TryFormat`
 overloads for `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`,
 `nint`, `nuint`, and signed 128-bit `extralong`. The functions are `nothrow` and
 require no String, libc,
@@ -78,7 +78,7 @@ use 128-bit division or introduce a compiler-runtime dependency. Counting and
 writing use scalar locals, with no temporary-buffer copy.
 
 The optional `std/core/ExtraLongFormatting.gf` supplies writer-based
-`Format(extralong, ITextWriter*)`. Include `IntegerFormatting.gf` and the normal
+`Format(extralong, ITextWriter*)`. Include `Text/IntegerFormatting.gf` and the normal
 `ITextWriter` contract when selecting sources explicitly. It writes the counted
 result once using a 40-byte local buffer; destination exceptions propagate
 unchanged. Full standard-library builds include both sources automatically.

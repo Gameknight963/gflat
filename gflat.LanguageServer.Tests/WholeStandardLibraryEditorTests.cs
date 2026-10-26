@@ -431,7 +431,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         int repeatedCall=text.IndexOf("hexWriter.WriteRepeated",StringComparison.Ordinal)+"hexWriter.".Length;
         var repeatedHover=JsonSerializer.SerializeToElement(model.Hover(source.Path,repeatedCall),Protocol.JsonOptions);
         Assert.Contains("WriteRepeated",repeatedHover.GetProperty("contents").GetProperty("value").GetString());
-        Assert.Contains("TextWriterExtensions.gf",JsonSerializer.Serialize(model.Definition(source.Path,repeatedCall),Protocol.JsonOptions));
+        Assert.Contains("text_writer_repeated.gf",JsonSerializer.Serialize(model.Definition(source.Path,repeatedCall),Protocol.JsonOptions));
         int nativeCall=text.IndexOf("malloc(8)",StringComparison.Ordinal);
         Assert.Contains("complete.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeCall),Protocol.JsonOptions));
         Assert.DoesNotContain("Memory.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeCall),Protocol.JsonOptions));

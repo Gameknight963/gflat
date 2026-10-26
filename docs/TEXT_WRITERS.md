@@ -1,6 +1,7 @@
 # Text writer helpers
 
-`std/core/TextWriterExtensions.gf` adds optional line and repeated-byte extensions
+`std/core/Text/text_writer_line.gf` and
+`std/core/Text/text_writer_repeated.gf` add optional line and repeated-byte extensions
 to borrowed `ITextWriter*` values. Bring them into scope with `using std;`:
 
 ```csharp

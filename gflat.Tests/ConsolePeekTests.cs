@@ -12,7 +12,7 @@ public sealed class ConsolePeekTests
         {
             string path = Path.Combine(directory, "write-only.bin").Replace("\\", "\\\\").Replace("\"", "\\\"");
             program = program.Replace("$PATH", "\"" + path + "\"");
-            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf" }
+            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "libc/Console/Console.gf" }
                 .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                 .Append(new SourceFile("main.gf", program));
             string ir = Path.Combine(directory, "peek.ll"), executable = Path.Combine(directory, "peek.exe");

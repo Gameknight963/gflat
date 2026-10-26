@@ -108,8 +108,8 @@ public sealed class StandardWriterRepeatTests
 
     private static void Run(string program,int optimization)
     {
-        SourceFile[] sources=[new("TextWriterExtensions.gf",File.ReadAllText(
-            Path.Combine(AppContext.BaseDirectory,"Std/core/TextWriterExtensions.gf"))),new("main.gf",program)];
+        SourceFile[] sources=[new("text_writer_repeated.gf",File.ReadAllText(
+            Path.Combine(AppContext.BaseDirectory,"Std/core/Text/text_writer_repeated.gf"))),new("main.gf",program)];
         var result=CompilerTestHelper.Run(sources,optimization);
         Assert.True(result.ExitCode==0,$"Writer repeat exit {result.ExitCode}: {result.StandardError}");
     }

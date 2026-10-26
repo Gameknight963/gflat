@@ -4,7 +4,7 @@ public sealed class StandardBufferWriterTryTests
 {
     private static void Run(string program, int optimization)
     {
-        var sources = new[] { "BufferTooSmallException.gf", "BufferWriter.gf" }
+        var sources = new[] { "Text/BufferTooSmallException.gf", "Text/BufferWriter.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(sources, optimization);

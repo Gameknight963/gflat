@@ -5,7 +5,7 @@ public sealed class StandardBufferWriterTests
     [Fact]
     public void BufferMetadataAndUnboundedRandomDrawsDoNotIntroduceExceptionBoundaries()
     {
-        var files = new[] { "BufferTooSmallException.gf", "BufferWriter.gf", "Numerics/PseudoRandom.gf" }
+        var files = new[] { "Text/BufferTooSmallException.gf", "Text/BufferWriter.gf", "Numerics/PseudoRandom.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))
             .Append(new SourceFile("main.gf", """
                 using std; using std::Numerics;
@@ -30,7 +30,7 @@ public sealed class StandardBufferWriterTests
 
     private static void Run(string program)
     {
-        var files = new[] { "core/BufferTooSmallException.gf", "core/BufferWriter.gf", "core/Formatting.gf" }
+        var files = new[] { "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/Formatting.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
         var result = CompilerTestHelper.Run(files);

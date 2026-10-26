@@ -58,7 +58,7 @@ public sealed class ConsolePartialReadTests
                     return 0;
                 }
                 """;
-            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/BufferTooSmallException.gf", "libc/Console/Console.gf" }
+            var sources = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "libc/Console/Console.gf" }
                 .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                 .Append(new SourceFile("main.gf", program));
             string ir = Path.Combine(directory, "input.ll"), executable = Path.Combine(directory, "input.exe");

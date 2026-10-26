@@ -137,7 +137,7 @@ public partial class TypeChecker
         return found;
     }
 
-    private PropertyAccess? FindProperty(AstNode expression)
+    private PropertyAccess? FindProperty(AstNode expression, bool bindReceiver = true)
     {
         if (!_hasProperties) return null;
         string name;
@@ -236,9 +236,9 @@ public partial class TypeChecker
         if (expression is IdentifierExpression && !method.IsStatic)
         {
             receiver = new IdentifierExpression("this", expression.Line) { Span = expression.Span };
-            receiver.Accept(this);
+            if (bindReceiver) receiver.Accept(this);
         }
-        if (getter?.IsRefReturn == true && receiver != null && ((ResolveAlias(GetType(receiver)) is not PointerTypeExpression and not ManagedTypeExpression && IsExpressionReadOnly(receiver)) || ResolveAlias(GetType(receiver)) is PointerTypeExpression { IsReadOnly: true } or ManagedTypeExpression { IsReadOnly: true }))
+        if (bindReceiver && getter?.IsRefReturn == true && receiver != null && ((ResolveAlias(GetType(receiver)) is not PointerTypeExpression and not ManagedTypeExpression && IsExpressionReadOnly(receiver)) || ResolveAlias(GetType(receiver)) is PointerTypeExpression { IsReadOnly: true } or ManagedTypeExpression { IsReadOnly: true }))
         {
             string readName = (IsReceiverImmutable(receiver) ? "$get$immutable$" : "$get$readonly$") + name;
             getter = _structs.TryGetValue(owner, out var rs) ? rs.Methods.GetValueOrDefault(readName) :

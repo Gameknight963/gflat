@@ -4957,6 +4957,8 @@ namespace gflat
 
             if (node is IdentifierExpression ident)
             {
+                if (TryLookupVariable(ident.Name, out _) || FindProperty(ident, bindReceiver: false) != null)
+                    return null;
                 return ResolveNamespaceByName(ident.Name);
             }
 

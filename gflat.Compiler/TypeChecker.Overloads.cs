@@ -136,6 +136,7 @@ public partial class TypeChecker
     {
         if (SelectDeclaredMemberOverload(method, call) is { } declaredMember) return declaredMember;
         overloadFamilies.TryGetValue(method, out var family);
+        foreach (var candidate in (family ?? [method]).ToArray()) BindMethodSignature(candidate);
         if (method.IsGeneric || family?.Any(candidate => candidate.IsGeneric) == true)
         {
             var selected = SelectCallableOverload(family ?? [method], call, method.Name);

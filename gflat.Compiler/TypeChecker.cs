@@ -4529,6 +4529,7 @@ namespace gflat
                     if (!ifaceInfo.MethodsByName.TryGetValue(memberAccess.Member, out MethodDeclaration? ifaceMethod))
                         throw new TypeCheckException($"Interface '{DisplayName(namedIface.Name)}' has no method '{memberAccess.Member}'", node.Span);
 
+                    BindMethodSignature(ifaceMethod);
                     CheckReceiverCapability(ifaceMethod, isReceiverReadOnly, isReceiverImmutable, node.Line);
 
                     if (!ifaceMethod.IsNoThrow)
@@ -5033,6 +5034,7 @@ namespace gflat
             {
                 if (ifaceInfo.MethodsByName.TryGetValue(node.Member, out MethodDeclaration? ifaceMethod))
                 {
+                    BindMethodSignature(ifaceMethod);
                     RecordType(node, ifaceMethod.ReturnType);
                     return;
                 }
@@ -5044,6 +5046,7 @@ namespace gflat
 
             if (_classes.TryGetValue(named.Name, out ClassInfo? classInfo))
             {
+                EnsureClassMembers(classInfo);
                 int fIdx = classInfo.FieldIndex(node.Member);
                 if (fIdx >= 0)
                 {
@@ -5056,7 +5059,7 @@ namespace gflat
                     {
                         throw new TypeCheckException($"Cannot access protected field '{node.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
                     }
-                    RecordType(node, PrimitiveFieldType(node, field.Type));
+                    RecordType(node, PrimitiveFieldType(node, ResolveFieldLayoutType(field.DeclaringClass, field.Name, field.Type)));
                     return;
                 }
 
@@ -5072,6 +5075,7 @@ namespace gflat
                     {
                         throw new TypeCheckException($"Cannot access protected method '{node.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     }
+                    BindMethodSignature(mEntry.Method);
                     RecordType(node, mEntry.Method.ReturnType);
                     return;
                 }
@@ -5087,7 +5091,7 @@ namespace gflat
             {
                 if (info.FieldDeclarationsByName.TryGetValue(node.Member, out var field))
                     ValidateStructMemberAccess(info, field.Name, field.Accessibility, false, node.Span);
-                RecordType(node, PrimitiveFieldType(node, info.Fields[idx].Type));
+                RecordType(node, PrimitiveFieldType(node, ResolveFieldLayoutType(info.Name, node.Member, info.Fields[idx].Type)));
                 return;
             }
 
@@ -5095,6 +5099,7 @@ namespace gflat
             {
                 if (!overloadFamilies.TryGetValue(method, out var family) || !family.Any(candidate => CanAccessStructMember(info, candidate.Accessibility)))
                     ValidateStructMemberAccess(info, method.Name, method.Accessibility, true, node.Span);
+                BindMethodSignature(method);
                 RecordType(node, method.ReturnType);
                 return;
             }
@@ -5191,8 +5196,7 @@ namespace gflat
                     return;
                 }
 
-                if (!cInfo.HierarchyResolved)
-                    new HierarchyResolutionPass(_symbols).ResolveHierarchy(cInfo);
+                EnsureClassMembers(cInfo);
                 GetClassSize(cInfo);
                 foreach (var constructor in cInfo.Constructors.ToArray())
                     BindConstructorSignature(constructor, cInfo.Name, isClass: true);

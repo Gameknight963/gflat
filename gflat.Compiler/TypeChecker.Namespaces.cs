@@ -324,4 +324,12 @@ public partial class TypeChecker
             }
         }
     }
+
+    // A caller may inspect a class before the normal whole-program hierarchy pass.
+    private void EnsureClassMembers(ClassInfo info)
+    {
+        if (!info.HierarchyResolved)
+            new HierarchyResolutionPass(_symbols).ResolveHierarchy(info);
+    }
+
 }

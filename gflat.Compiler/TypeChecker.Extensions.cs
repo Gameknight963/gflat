@@ -379,6 +379,7 @@ public partial class TypeChecker
             Callable(iface.MethodsByName.GetValueOrDefault("$get$" + name)?.ReturnType))) return true;
         if (_classes.TryGetValue(named.Name, out var cls))
         {
+            EnsureClassMembers(cls);
             if (cls.Methods.ContainsKey(name)) return true;
             if (Callable(cls.Fields.FirstOrDefault(f => f.Name == name).Type)) return true;
             if (Callable(cls.Methods.GetValueOrDefault("$get$" + name).Method?.ReturnType)) return true;

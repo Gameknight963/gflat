@@ -59,4 +59,11 @@ public partial class TypeChecker
         }
         return alignment;
     }
+
+    private TypeExpression ResolveFieldLayoutType(string owner, string member, TypeExpression type)
+    {
+        using var context = EnterFieldLayoutContext(owner, member);
+        return ResolveFieldLayoutType(type);
+    }
+
 }

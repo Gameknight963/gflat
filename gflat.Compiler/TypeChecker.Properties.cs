@@ -251,6 +251,7 @@ public partial class TypeChecker
     private void ValidatePropertyAccessor(MethodDeclaration method)
     {
         if (method.PropertyName == null) return;
+        BindMethodSignature(method);
         InferAutoGetterReceiver(method);
         if (method.Parameters.Take(method.Name.StartsWith("$get$") ? method.Parameters.Count : method.Parameters.Count - 1).Any(p => RequiresCopy(p.Type)))
             throw new TypeCheckException("Indexer arguments must be copyable; borrow owning arguments through pointers", method.Line);

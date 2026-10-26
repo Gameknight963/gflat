@@ -1,6 +1,6 @@
 # Canonical variable-length integers in files
 
-The optional `libc/File/FileVarInt.gf` connects `File` to the existing
+The optional `libc/IO/FileVarInt.gf` connects `File` to the existing
 allocation-free `VarInt` codec. Values use canonical unsigned base-128 encoding:
 least-significant seven-bit group first, with bit 7 indicating another byte.
 These are not fixed-width little-endian integers.
@@ -58,6 +58,6 @@ application allocator call. libc File buffering and exception storage remain
 separate. Signed values can compose the existing `VarInt::ZigZagEncode` and
 `ZigZagDecode` methods; there is no separate signed file family.
 
-Explicit source selection needs `File/FileVarInt.gf`, `File.gf`, `Binary/VarInt.gf`, and
+Explicit source selection needs `IO/FileVarInt.gf`, `IO/File.gf`, `Binary/VarInt.gf`, and
 ordinary File exception/runtime dependencies. The core VarInt codec stays
 independent of IO, allocation, and libc.

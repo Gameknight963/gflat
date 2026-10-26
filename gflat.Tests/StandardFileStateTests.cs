@@ -8,7 +8,7 @@ public sealed class StandardFileStateTests
 
     private static string Compile(string directory, string program)
     {
-        var files = new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/File.gf" }
+        var files = new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/IO/File.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
         string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");

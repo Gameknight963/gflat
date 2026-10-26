@@ -1,6 +1,6 @@
 # Hash file bytes with SHA-256
 
-The optional `libc/File/FileHash.gf` convenience connects binary `File` IO to the
+The optional `libc/IO/FileHash.gf` convenience connects binary `File` IO to the
 existing [SHA-256 core](SHA256.md). It returns the raw digest as an independent
 `byte[32]` value, without allocating an input String, Vector, or digest object.
 
@@ -73,6 +73,6 @@ buffering a libc File can allocate inside the host CRT, and throwing exceptions
 can allocate too. No file length or snapshot is captured: concurrent file changes
 can change the bytes observed during the read.
 
-For explicit source selection, include `File/FileHash.gf`, `File.gf`, `Hashing/SHA256.gf`,
+For explicit source selection, include `IO/FileHash.gf`, `IO/File.gf`, `Hashing/SHA256.gf`,
 `Numerics/BitOperations.gf`, and the ordinary File exception/runtime dependencies. The
 core `SHA256` remains usable independently of File IO or libc.

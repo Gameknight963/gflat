@@ -142,7 +142,7 @@ public sealed class StandardFileExtraLongTests
 
     private static void Run(string code, int optimization)
     {
-        var sources = new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/File.gf", "libc/File/FileBinary.gf" }
+        var sources = new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/IO/File.gf", "libc/IO/FileBinary.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("file-extra-long.gf", code));
         var result = CompilerTestHelper.Run(sources, optimization);

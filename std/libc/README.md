@@ -201,7 +201,7 @@ The compiler links the small native standard-stream accessor only when reference
 
 ## Files
 
-`File.gf` provides a move-only owning `std::File` for binary byte IO. It needs
+`IO/File.gf` provides a move-only owning `std::File` for binary byte IO. It needs
 `core/IOException.gf` and `core/EndOfStreamException.gf`; it does not depend on
 `String` or allocate a gflat buffer.
 `File` implements the automatically available `ITextWriter` contract, so
@@ -301,7 +301,7 @@ int main()
 
 ### Owning binary and text conveniences
 
-`File/FileBytes.gf` adds `std::FileBytes` for owning binary data, requiring core
+`IO/FileBytes.gf` adds `std::FileBytes` for owning binary data, requiring core
 `Vector`, `Span`, and their enumerable contracts, but no String or GC sources.
 `ReadAll(path)` returns a `Vector<byte>` owned by the caller. Reads use a stack
 chunk and geometric vector growth; an empty file returns an empty vector without
@@ -323,7 +323,7 @@ empty vector still opens and closes the file: writing creates or truncates it,
 and appending creates it or preserves existing contents. Both report delayed
 close failures and retain the counted overloads' partial-output behavior.
 
-`File/FileText.gf` adds `std::FileText`, requiring the core `String` facilities.
+`IO/FileText.gf` adds `std::FileText`, requiring the core `String` facilities.
 `FileText::ReadAll(path)` returns an owning `String`; embedded zeros are retained.
 It reads raw bytes without validating UTF-8, removing a BOM, or translating
 newlines. Memory grows with the file; use `File::Read` or `CopyTo` for bounded
@@ -351,7 +351,7 @@ assignment target unchanged. Allocation failure remains `BadAllocException`.
 
 ### File digests
 
-`File/FileHash.gf` provides `FileHash::SHA256(path)` and borrowed `File*`
+`IO/FileHash.gf` provides `FileHash::SHA256(path)` and borrowed `File*`
 overloads returning an independent `byte[32]` digest. Borrowed calls hash from
 the current position to EOF, leaving the file open. Supply scratch storage or
 use the overload with a 4096-byte stack buffer; no owning input buffer is needed.
@@ -361,7 +361,7 @@ and the IO failure contracts. The underlying core `SHA256` does not require libc
 
 ### Reading lines
 
-`File/FileLines.gf` provides `std::FileLines`, borrowing a `File*` without closing
+`IO/FileLines.gf` provides `std::FileLines`, borrowing a `File*` without closing
 it. Include `core/EndOfStreamException.gf` and `core/BufferTooSmallException.gf`.
 `TryReadLine(input, data, capacity, ref length)` reads into caller storage and
 returns false only at EOF before any input. Capacity includes the null
@@ -381,7 +381,7 @@ the source or output can leave a partially consumed line; no rollback is
 promised. Reading uses libc's existing stream buffering, with a 256-byte stack
 chunk for batched writer calls and no additional gflat heap allocation.
 
-`File/FileLineSequence.gf` adds `FileLineSequence` and `.Lines()` on `File*` for
+`IO/FileLineSequence.gf` adds `FileLineSequence` and `.Lines()` on `File*` for
 lazy enumeration and existing query operators. Its iterator owns and reuses one
 String buffer, while the file stays borrowed and open. Each enumeration consumes
 the shared current file position; it does not reopen or rewind the file.
@@ -391,7 +391,7 @@ or calling `ToVector()` creates independent owning values. See
 
 ### Binary numbers
 
-`File/FileBinary.gf` supplies `std::FileBinary`, borrowing `File*` streams. Its
+`IO/FileBinary.gf` supplies `std::FileBinary`, borrowing `File*` streams. Its
 `ReadUInt16LittleEndian`, `ReadUInt32LittleEndian`, and `ReadUInt64LittleEndian`
 methods read fixed-width unsigned values; the corresponding `BigEndian` methods
 use network byte order. Matching `WriteUInt16/32/64LittleEndian` and
@@ -426,7 +426,7 @@ requirement beyond the existing FileBinary dependencies. Truncated reads may
 consume an available prefix before throwing; writes can make partial progress
 before an IO failure. They do not rewind, flush, or close the borrowed file.
 
-`File/FileVarInt.gf` provides `FileVarInt::ReadUInt32/64` and `WriteUInt32/64`
+`IO/FileVarInt.gf` provides `FileVarInt::ReadUInt32/64` and `WriteUInt32/64`
 for canonical unsigned base-128 integers. These borrow an open File and reuse the
 core `VarInt` codec with at most ten stack bytes. Reads stop at a terminator or
 the width limit without consuming the next field; malformed and truncated input

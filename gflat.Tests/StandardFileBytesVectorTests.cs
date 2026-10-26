@@ -124,7 +124,7 @@ public sealed class StandardFileBytesVectorTests
     {
         // Every native fixture selects only binary owning dependencies: no String or GC implementation.
         string[] names=["core/IOException.gf","core/EndOfStreamException.gf","core/Collections/IEnumerable.gf",
-            "core/Queries/Enumerable.gf","core/Memory/Span.gf","core/Collections/Vector.gf","libc/File.gf","libc/File/FileBytes.gf"];
+            "core/Queries/Enumerable.gf","core/Memory/Span.gf","core/Collections/Vector.gf","libc/IO/File.gf","libc/IO/FileBytes.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("file-bytes-vector-test.gf",program));
         string ir=Path.Combine(directory,"main.ll"),executable=Path.Combine(directory,"main.exe");

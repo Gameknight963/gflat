@@ -115,7 +115,7 @@ public class StandardSignedBinaryTests
             }
             program.Append("return 0;}");
             File.WriteAllBytes(source, expected.ToArray()); File.WriteAllBytes(partial, [255]);
-            var sources = new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/File.gf", "libc/File/FileBinary.gf" }
+            var sources = new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/IO/File.gf", "libc/IO/FileBinary.gf" }
                 .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                 .Append(new SourceFile("main.gf", program.ToString()));
             RunNative(Compiler.Emit(sources), optimization);

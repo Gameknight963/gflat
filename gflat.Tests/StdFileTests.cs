@@ -2,7 +2,7 @@ namespace gflat.Tests;
 
 public sealed class StdFileTests
 {
-    private static SourceFile[] Sources(string program) => new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/File.gf" }
+    private static SourceFile[] Sources(string program) => new[] { "core/IOException.gf", "core/EndOfStreamException.gf", "libc/IO/File.gf" }
         .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
         .Append(new SourceFile("main.gf", program)).ToArray();
 

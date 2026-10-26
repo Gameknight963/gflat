@@ -194,7 +194,7 @@ public sealed class StandardFileLineSequenceTests
     {
         var core=Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory,"Std/core"),"*.gf",SearchOption.AllDirectories)
             .Select(path=>new SourceFile(path,File.ReadAllText(path)));
-        var io=new[]{"File.gf","File/FileLines.gf","File/FileLineSequence.gf"}
+        var io=new[]{"IO/File.gf","IO/FileLines.gf","IO/FileLineSequence.gf"}
             .Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/libc",file))));
         return core.Concat(io).Append(new SourceFile("lines.gf",program));
     }

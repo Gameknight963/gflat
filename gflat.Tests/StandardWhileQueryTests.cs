@@ -133,7 +133,7 @@ public sealed class StandardWhileQueryTests
     {
         string[] files=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf",
             "Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf",
-            "Collections/Vector.gf","Span.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","String.gf", "ByteSearch.gf"];
+            "Collections/Vector.gf","Memory/Span.gf","IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","String.gf", "ByteSearch.gf"];
         var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))))
             .Append(new SourceFile("while.gf",program));
         string directory=Path.Combine(Path.GetTempPath(),"gflat_while_query_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);

@@ -69,7 +69,7 @@ address, but its lifetime is then controlled by the destination owner. Keep that
 owner alive while using the borrow. Raw-pointer aliases are not tracked; this is
 an explicit ownership convenience, not a memory-safety guarantee.
 
-Include `core/Unique.gf` with the ordinary exception and allocation runtime
+Include `core/Memory/Unique.gf` with the ordinary exception and allocation runtime
 contracts, or use the complete standard library. No reset, shared-owner, or
 custom-deleter policy API is provided.
 

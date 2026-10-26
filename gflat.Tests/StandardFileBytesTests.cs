@@ -16,7 +16,7 @@ public sealed class StandardFileBytesTests
     {
         // Deliberately no String, text codecs, or managed collector sources.
         string[] names = ["core/IOException.gf", "core/EndOfStreamException.gf",
-            "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Span.gf", "core/Collections/Vector.gf",
+            "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Memory/Span.gf", "core/Collections/Vector.gf",
             "libc/File.gf", "libc/File/FileBytes.gf"];
         var files = names.Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));

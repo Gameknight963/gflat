@@ -41,7 +41,7 @@ through another valid alias are visible in the returned spans. Character writes
 through the returned views remain forbidden. Mutable spans can use
 `text.AsReadOnly().TrySplitOnce(...)`.
 
-For selective source use, include `TextSplitOnceSpan.gf`, `Span.gf`, and the
+For selective source use, include `TextSplitOnceSpan.gf`, `Memory/Span.gf`, and the
 ordinary span/enumeration dependencies. The helper itself needs no String,
 CString, ByteSearch, or allocator implementation. The owning String example also
 uses the optional `StringSpan.gf` view convenience.

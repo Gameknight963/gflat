@@ -41,7 +41,7 @@ assignment destination. Empty input on both sides requires no result allocation.
 These lexical byte operations do not make counted null bytes valid filenames
 for a filesystem API.
 
-Explicit source selections also need `Span.gf`, `Collections/IEnumerable.gf`,
+Explicit source selections also need `Memory/Span.gf`, `Collections/IEnumerable.gf`,
 and `Queries/Enumerable.gf` for these overload declarations. Ordinary
 projects including the standard library already include these sources.
 

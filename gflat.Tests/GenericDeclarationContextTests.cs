@@ -10,7 +10,7 @@ public sealed class GenericDeclarationContextTests
         var result = CompilerTestHelper.Run([
             new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/IEnumerable.gf"))),
             new SourceFile("core/Queries/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Queries/Enumerable.gf"))),
-            new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Span.gf"))),
+            new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Memory/Span.gf"))),
             new SourceFile("main.gf", "using std; using std::Queries; using std::Collections; int main() { int[1] data = [42]; Span<int> view = new Span<int>(data, 1); foreach (int item in view) return item; return 1; }")
         ]);
         Assert.Equal(42, result.ExitCode);

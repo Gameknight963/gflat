@@ -33,7 +33,7 @@ not overlap the byte storage being searched. Calls do not allocate, change input
 bytes, construct Strings, or require disposal. Ordinary raw-pointer validity
 requirements still apply for nonempty accepted buffers.
 
-Include `Span.gf`, `ByteSearch.gf`, `CString.gf` and ordinary Span dependencies
+Include `Memory/Span.gf`, `ByteSearch.gf`, `CString.gf` and ordinary Span dependencies
 with this optional source. Existing char-based splitting has no new dependency.
 There is no new mutable-receiver family or multi-part iterator in this change.
 

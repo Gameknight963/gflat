@@ -165,7 +165,7 @@ change its storage or contents. Successful `Read` and `TryCopyValue` calls alloc
 constructing or throwing an exception uses the ordinary exception runtime.
 
 For explicit source selection include `core/CsvReader.gf`,
-`core/CsvParseException.gf`, and `Span.gf` with its query-interface dependencies.
+`core/CsvParseException.gf`, and `Memory/Span.gf` with its query-interface dependencies.
 The complete standard library includes these files automatically.
 
 See [CSV to JSON](../examples/csv-to-json/README.md) for a complete converter

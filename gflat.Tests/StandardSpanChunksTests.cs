@@ -126,7 +126,7 @@ public sealed class StandardSpanChunksTests
 
     private static IEnumerable<SourceFile> Sources(string source)
     {
-        string[] names=["Span.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Collections/SpanChunks.gf",
+        string[] names=["Memory/Span.gf","Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Collections/SpanChunks.gf",
             "Queries/enumerable_predicates.gf", "Queries/enumerable_count.gf", "Queries/enumerable_elements.gf", "Queries/enumerable_for_each.gf", "Queries/enumerable_to_vector.gf", "Queries/enumerable_select.gf", "Queries/enumerable_aggregate.gf", "Queries/enumerable_where.gf", "Queries/enumerable_slice.gf", "Queries/enumerable_while.gf","Queries/WhereSource.gf","Queries/SelectSource.gf","Queries/SliceSource.gf","Queries/TakeWhileSource.gf","Queries/SkipWhileSource.gf"];
         return names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("span-chunks.gf",source));

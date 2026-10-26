@@ -52,7 +52,7 @@ public sealed class DefaultIfEmptyEditorTests
     private static (EditorModel Model,SourceFile Source,SourceFile[] Files) Analyze(string text)
     {
         string root=Path.Combine(AppContext.BaseDirectory,"StandardLibrary","core");
-        string[] names=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Span.gf",
+        string[] names=["Collections/IEnumerable.gf","Collections/IEnumerator.gf","Queries/Enumerable.gf","Memory/Span.gf",
             "Queries/DefaultIfEmptySource.gf","Queries/enumerable_default_if_empty.gf"];
         var files=names.Select(name=>Path.Combine(root,name.Replace('/',Path.DirectorySeparatorChar)))
             .Select(path=>new SourceFile(path,File.ReadAllText(path))).ToList();

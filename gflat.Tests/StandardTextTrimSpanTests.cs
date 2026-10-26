@@ -114,7 +114,7 @@ public sealed class StandardTextTrimSpanTests
 
     private static IEnumerable<SourceFile> Sources(string program)
     {
-        string[] files = ["Span.gf", "Ascii.gf", "TextTrimSpan.gf", "TextParts.gf", "TextPartsSpan.gf", "TextLines.gf", "TextLinesSpan.gf",
+        string[] files = ["Memory/Span.gf", "Ascii.gf", "TextTrimSpan.gf", "TextParts.gf", "TextPartsSpan.gf", "TextLines.gf", "TextLinesSpan.gf",
             "Collections/IEnumerable.gf", "Collections/IEnumerator.gf", "Queries/Enumerable.gf"];
         return files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile("main.gf", program));

@@ -47,7 +47,7 @@ another alias is visible through parts and can affect delimiters ahead of a curs
 The source is not snapshotted or protected from unrelated mutable aliases.
 
 For selective compilation include `TextPartsAny.gf`, `TextPartsAnySpan.gf`,
-`Span.gf`, `Collections/IEnumerable.gf`, `Collections/IEnumerator.gf`, and
+`Memory/Span.gf`, `Collections/IEnumerable.gf`, `Collections/IEnumerator.gf`, and
 `Queries/Enumerable.gf`. The optional String adapter needs the usual String
 dependencies. Normal query operators need their ordinary source files.
 `NoStdLib` builds also supply the normal exception contracts.

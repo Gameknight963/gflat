@@ -19,7 +19,7 @@ public sealed class EditDistanceEditorTests
             }
             """;
         string root = Path.Combine(AppContext.BaseDirectory, "StandardLibrary", "core");
-        string[] names = ["EditDistance.gf", "Span.gf", "Queries/Enumerable.gf", "Collections/IEnumerable.gf"];
+        string[] names = ["EditDistance.gf", "Memory/Span.gf", "Queries/Enumerable.gf", "Collections/IEnumerable.gf"];
         var files = names.Select(name => Path.Combine(root, name))
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("edit-distance-editor.gf"), text);

@@ -146,7 +146,7 @@ prefix. Copy constructors must not mutate either collection through another alia
 allocate. The views keep borrowing the same storage. Like `AddRange`, this copying
 extension is checked only when called; spans of noncopyable values remain usable
 without calling it. For source-library selection its file is
-`Collections/SpanCopy.gf`.
+`Memory/span_copy.gf`.
 
 `source.TryCopyTo(destination)` has the same receiver and element-copy contract
 as `CopyTo`, but returns false when the destination is too short. That length
@@ -174,7 +174,7 @@ mutate the destination through another alias.
 
 `Fill` allocates no container storage, although value copies may allocate. It
 requires mutable, copyable elements only when called, and lives separately in
-`Collections/SpanFill.gf`. It does not initialize raw storage.
+`Memory/span_fill.gf`. It does not initialize raw storage.
 
 ## Stable sorting
 

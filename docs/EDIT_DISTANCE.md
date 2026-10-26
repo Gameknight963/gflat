@@ -48,7 +48,7 @@ with saturating increments to prevent pointer-width arithmetic wraparound in
 unused high-cost alternatives. The exact distance is always representable because
 it is at most the longer input length.
 
-Explicit source users include `core/EditDistance.gf`, `Span.gf`, and its ordinary
+Explicit source users include `core/EditDistance.gf`, `Memory/Span.gf`, and its ordinary
 Enumerable/IEnumerable declaration dependencies, along with the normal exception
 and runtime declarations required by Span's checked operations. The helper itself
 performs no String/GC allocation or libc call, but selecting these files does not

@@ -51,5 +51,5 @@ another alias. Sets do not own objects pointed to by pointer-valued elements.
 There are no cross-set relation or mutation methods yet: sets can use different
 comparisons, so such operations need an explicit compatibility contract first.
 Source-library selection requires `Collections/SortedSet.gf`, `Collections/SortedMap.gf`, `Collections/Vector.gf`,
-`Span.gf`, and their query interface declarations. No tree nodes or GC allocations
+`Memory/Span.gf`, and their query interface declarations. No tree nodes or GC allocations
 are introduced. The selected `Memory` implementation supplies vector storage.

@@ -23,7 +23,7 @@ public sealed class FunctionPointerInferenceTests
         var result = CompilerTestHelper.Run([
             new SourceFile("core/Collections/IEnumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Collections/IEnumerable.gf"))),
             new SourceFile("core/Queries/Enumerable.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Queries/Enumerable.gf"))),
-            new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Span.gf"))),
+            new SourceFile("Span.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Memory/Span.gf"))),
             new SourceFile("main.gf", """
                 using std; using std::Queries; using std::Collections;
                 U Select<T, U>(this Span<T> source, U(T)* callback) => callback(source[(nuint)0]);

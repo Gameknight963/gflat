@@ -6,7 +6,7 @@ public sealed class StandardVectorShrinkTests
     {
         string[] names = ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf",
             "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf",
-            "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Collections/Vector.gf", "core/Span.gf"];
+            "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf"];
         return names.Concat(managed ? ["libc/GC.gf", "libc/TracingCollector.gf"] : Array.Empty<string>())
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("vector-shrink.gf", program));

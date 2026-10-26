@@ -7,7 +7,7 @@ public sealed class StandardCollectionManagedLifetimeTests
     {
         string[] files = [
             "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Collections/span_algorithms.gf",
-            "core/Collections/Vector.gf", "core/Span.gf", "core/Collections/Queue.gf", "core/Collections/Stack.gf", "core/Collections/PriorityQueue.gf",
+            "core/Collections/Vector.gf", "core/Memory/Span.gf", "core/Collections/Queue.gf", "core/Collections/Stack.gf", "core/Collections/PriorityQueue.gf",
             "libc/GC.gf", "libc/TracingCollector.gf"
         ];
         var result = CompilerTestHelper.Run(files.Select(file => new SourceFile("std/" + file,

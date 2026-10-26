@@ -10,7 +10,7 @@ public sealed class StandardEmptyVectorNoThrowTests
     public async Task EmptyHeadersAreNothrowWithoutAllocationOrElementConstruction(int optimization)
     {
         string[] names = ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf",
-            "core/Span.gf", "core/Collections/Vector.gf"];
+            "core/Memory/Span.gf", "core/Collections/Vector.gf"];
         var sources = names.Select(name => new SourceFile(name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("empty-vector.gf", """

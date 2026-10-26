@@ -175,7 +175,7 @@ public sealed class StandardQueryGenericSumTests
         string[] dependencies =
         [
             "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Queries/enumerable_sum.gf",
-            "Span.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf",
+            "Memory/Span.gf", "IStringConvertable.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf",
             "Hashing/primitive_hashing.gf", "String.gf", "ByteSearch.gf"
         ];
         SourceFile[] library = dependencies.Select(relative =>

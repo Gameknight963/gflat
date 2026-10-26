@@ -1,6 +1,6 @@
 # Sliding windows over borrowed spans
 
-Include `core/Collections/SpanWindows.gf` alongside `Span.gf`, `IEnumerable.gf`,
+Include `core/Collections/SpanWindows.gf` alongside `Memory/Span.gf`, `IEnumerable.gf`,
 `IEnumerator.gf`, and `Enumerable.gf` when selecting standard-library sources.
 The full standard library includes these sources automatically.
 

@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class CollectionIterationTests
 {
     private static IEnumerable<SourceFile> Sources(string program, bool gc = false) =>
-        new[] { "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Span.gf", "core/Collections/Vector.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf" }.Concat(gc ? ["libc/GC.gf", "libc/TracingCollector.gf"] : [])
+        new[] { "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "core/Memory/Span.gf", "core/Collections/Vector.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf", "core/String.gf", "core/ByteSearch.gf" }.Concat(gc ? ["libc/GC.gf", "libc/TracingCollector.gf"] : [])
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", program));
 

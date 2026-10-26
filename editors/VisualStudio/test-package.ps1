@@ -211,7 +211,7 @@ int main() {
     $bundledStd = Join-Path $extracted 'Sdk/std/core'
     $querySources = @('Collections', 'Queries' | ForEach-Object { Get-ChildItem -LiteralPath (Join-Path $bundledStd $_) -Filter '*.gf' -File | ForEach-Object FullName })
     $contractSources = @('IHashable.gf', 'IEquatable.gf', 'IComparable.gf', 'Hashing/primitive_hashing.gf') | ForEach-Object { Join-Path $bundledStd $_ }
-    & $compiler $collections (Join-Path $bundledStd 'Span.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'ByteSearch.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
+    & $compiler $collections (Join-Path $bundledStd 'Memory/Span.gf') (Join-Path $bundledStd 'String.gf') (Join-Path $bundledStd 'ByteSearch.gf') (Join-Path $bundledStd 'IStringConvertable.gf') @contractSources @querySources --run -o (Join-Path $extracted 'collections.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Packaged collection iteration and owning-element copy smoke test failed' }
     $expandedStd = Join-Path $extracted 'expanded-std.gf'
     @'

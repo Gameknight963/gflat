@@ -135,7 +135,7 @@ public sealed class PathfindingExampleTests
     private static IEnumerable<SourceFile> Sources(string program)
     {
         string[] files = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf",
-            "Collections/Vector.gf", "Span.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf", "Collections/PriorityQueue.gf"];
+            "Collections/Vector.gf", "Memory/Span.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf", "Collections/PriorityQueue.gf"];
         string grid = Path.Combine(TestSupport.ProjectFileFixture.RepositoryRoot, "examples", "pathfinding", "Grid.gf");
         return files.Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))
             .Append(new SourceFile(grid, File.ReadAllText(grid))).Append(new SourceFile("main.gf", program));

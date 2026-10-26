@@ -18,12 +18,12 @@ public sealed class SpanTryCopyEditorTests
             }
             """;
         string root = Path.Combine(AppContext.BaseDirectory, "StandardLibrary", "core");
-        string[] names = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Span.gf", "Collections/SpanCopy.gf"];
+        string[] names = ["Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/Span.gf", "Memory/span_copy.gf"];
         var files = names.Select(name => Path.Combine(root, name))
             .Select(path => new SourceFile(path, File.ReadAllText(path))).ToList();
         var source = new SourceFile(Path.GetFullPath("span-try-copy-editor.gf"), text);
         files.Add(source);
-        SourceFile library = files.Single(file => Path.GetFileName(file.Path) == "SpanCopy.gf");
+        SourceFile library = files.Single(file => Path.GetFileName(file.Path) == "span_copy.gf");
         var snapshot = new AnalysisSnapshot(files);
         Assert.DoesNotContain(snapshot.Diagnostics, error => error.Severity == DiagnosticSeverity.Error);
         var model = new EditorModel(snapshot, files);

@@ -4,7 +4,7 @@ public sealed class GarbageCollectionTests
 {
     private static ExecutionResult Run(string source, bool vector = false)
     {
-        string[] names = vector ? ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "libc/GC.gf", "libc/TracingCollector.gf", "core/Collections/Vector.gf", "core/Span.gf"] : ["libc/GC.gf", "libc/TracingCollector.gf"];
+        string[] names = vector ? ["core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "libc/GC.gf", "libc/TracingCollector.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf"] : ["libc/GC.gf", "libc/TracingCollector.gf"];
         return CompilerTestHelper.Run(names.Select(name => new SourceFile(name,
             System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", source)));

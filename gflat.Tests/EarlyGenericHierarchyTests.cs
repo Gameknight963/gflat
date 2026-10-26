@@ -34,7 +34,7 @@ public sealed class EarlyGenericHierarchyTests
     [Fact]
     public void ManagedVectorGrowthFailureUsesBadAllocAndPreservesRoots()
     {
-        var result = CompilerTestHelper.Run(new[] { "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "libc/GC.gf", "libc/TracingCollector.gf", "core/Collections/Vector.gf", "core/Span.gf" }
+        var result = CompilerTestHelper.Run(new[] { "core/Collections/IEnumerable.gf", "core/Queries/Enumerable.gf", "libc/GC.gf", "libc/TracingCollector.gf", "core/Collections/Vector.gf", "core/Memory/Span.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
             .Append(new SourceFile("main.gf", """
                 using std; using std::Queries; using std::Collections;

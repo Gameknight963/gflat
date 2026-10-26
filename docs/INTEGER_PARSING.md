@@ -81,7 +81,7 @@ and failed overlapping outputs follow the counted pointer rules above. Keep
 input and output storage valid for the call; the span does not extend their
 lifetimes. The `TryParse...` extensions are `nothrow` and allocate nothing.
 
-The two wrapper files are optional and add no dependency to `Span.gf` or the
+The two wrapper files are optional and add no dependency to `Memory/Span.gf` or the
 base parsers. Explicit source selections still need their normal Span/query
 contracts and `Parsing.gf`/`IntegerParsing.gf`; those base files include throwing
 definitions, so selecting the Try wrapper alone does not remove their exception

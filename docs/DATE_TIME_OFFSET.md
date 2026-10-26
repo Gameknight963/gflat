@@ -109,5 +109,5 @@ throwing errors or a destination writer can allocate. `UtcDateTime` uses the
 checked DateTime factory internally and has an ordinary getter. Other primitive
 observers, equality and formatting are declared `nothrow` where shown in source.
 
-Include `DateTimeOffset.gf` and the existing DateTime/TimeSpan dependencies.
+Include `Time/DateTimeOffset.gf` and the existing DateTime/TimeSpan dependencies.
 No OS, String, libc or time-zone database dependency is added by this source.

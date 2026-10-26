@@ -73,6 +73,6 @@ overlap the receiver when enough writable storage backs that region. The
 `written` variable must be separate from output and receiver storage.
 
 The implementation uses the existing pure `TimeSpan` codec with a restricted
-time-only grammar and range. For selective source builds, include `TimeOfDay.gf`,
-`TimeSpan.gf`, their comparison/hash interfaces, `Hashing/primitive_hashing.gf`, and the normal
+time-only grammar and range. For selective source builds, include `Time/TimeOfDay.gf`,
+`Time/TimeSpan.gf`, their comparison/hash interfaces, `Hashing/primitive_hashing.gf`, and the normal
 formatting and exception contracts. No clock or operating-system API is needed.

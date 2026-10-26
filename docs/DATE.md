@@ -134,7 +134,7 @@ if (Date::TryParse("2024-12-31", &parsed)) {
 }
 ```
 
-The sources are `core/Date.gf` and `core/DayOfWeek.gf`, with the normal
+The sources are `core/Time/Date.gf` and `core/Time/DayOfWeek.gf`, with the normal
 equality/comparison/hash and text interface dependencies. The complete standard library includes them. No
 current-date lookup, custom formats, other calendars, or timezone conversion is
 provided by this API.

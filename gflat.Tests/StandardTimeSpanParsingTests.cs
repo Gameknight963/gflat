@@ -153,7 +153,7 @@ public sealed class StandardTimeSpanParsingTests
     [Fact]
     public void SelectiveSourceTryParseOverloadsUseDirectNothrowCallsWithoutStringOrLibcSources()
     {
-        string[] names = ["core/TimeSpan.gf", "core/Text.gf", "core/IEquatable.gf", "core/IComparable.gf",
+        string[] names = ["core/Time/TimeSpan.gf", "core/Text.gf", "core/IEquatable.gf", "core/IComparable.gf",
             "core/IHashable.gf", "core/Hashing/primitive_hashing.gf", "core/Exception.gf"];
         var sources = names.Select(name => new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("parse-contract.gf", """

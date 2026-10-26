@@ -45,11 +45,11 @@ public static class FileLines
     public static bool TryReadLine(File* input, char* data, nuint capacity, ref nuint length)
     {
         length = 0;
-        if (capacity == 0) throw new BufferTooSmallException();
+        if (capacity == 0) throw new std::Text::BufferTooSmallException();
         BufferWriter output = new BufferWriter(data, capacity);
         defer { length = output.Length; }
         bool read = FileLines::TryReadLine(input, &output);
-        if (output.Overflow) throw new BufferTooSmallException();
+        if (output.Overflow) throw new std::Text::BufferTooSmallException();
         return read;
     }
 

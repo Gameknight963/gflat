@@ -148,7 +148,7 @@ int main()
   Windows a physical CR-CR-LF sequence can first become CR-LF in text mode,
   which the line reader then removes as a line ending.
 - If a line is too large, the whole line is consumed, a null-terminated prefix and
-  its length remain in the buffer, and `std::BufferTooSmallException` is thrown.
+  its length remain in the buffer, and `std::Text::BufferTooSmallException` is thrown.
   The next read starts at the next line. Actual read/write failures throw
   `std::IO::IOException`; partial input/output can already have occurred.
 
@@ -156,6 +156,7 @@ For example, count each stdin line without storing its text or imposing a maximu
 line length in a caller buffer:
 
 ```csharp
+using std::Text;
 using std;
 
 int main()

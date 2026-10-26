@@ -173,7 +173,7 @@ Include it alongside `Json/JsonString.gf` and `Text/utf8.gf`. For example:
 ```csharp
 using std::Json;
 char[128] storage;
-std::BufferWriter buffer = new(storage, 128);
+std::Text::BufferWriter buffer = new(storage, 128);
 ITextWriter* output = &buffer;
 output.WriteJsonString("hello", 5);
 ```

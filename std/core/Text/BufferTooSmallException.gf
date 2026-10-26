@@ -1,4 +1,4 @@
-﻿namespace std;
+﻿namespace std::Text;
 
 public class BufferTooSmallException : Exception
 {

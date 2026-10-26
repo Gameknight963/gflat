@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Borrows caller storage. Capacity is payload bytes; constructor size includes
 // the trailing null. No allocation, ownership transfer, or libc dependency.

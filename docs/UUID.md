@@ -99,6 +99,7 @@ This program checks one identifier and prints its canonical lowercase form.
 It uses the standard project library and does not construct an owning String:
 
 ```csharp
+using std::Text;
 using std;
 
 int main(int argc, char** argv)

@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Borrow the writer; stack bytes are consumed synchronously by each Write.
 public void WriteRepeated(this ITextWriter* writer, char value, nuint count)

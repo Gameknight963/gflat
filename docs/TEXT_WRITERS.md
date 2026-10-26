@@ -2,9 +2,10 @@
 
 `std/core/Text/text_writer_line.gf` and
 `std/core/Text/text_writer_repeated.gf` add optional line and repeated-byte extensions
-to borrowed `ITextWriter*` values. Bring them into scope with `using std;`:
+to borrowed `ITextWriter*` values. Bring them into scope with `using std::Text;`:
 
 ```csharp
+using std::Text;
 using std;
 Console::Error.WriteLine("warning");
 Console::Out.WriteLine("A\0B", 3);
@@ -37,6 +38,7 @@ it adds no terminator or newline. This is useful for padding or rulers, not
 Unicode-character repetition.
 
 ```csharp
+using std::Text;
 using std;
 int main()
 {

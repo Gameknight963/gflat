@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Counts bytes without reading or retaining the supplied data pointer.
 public struct CountingWriter : ITextWriter

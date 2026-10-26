@@ -16,7 +16,7 @@ public sealed class ConsoleStandardWriterTests
     public void StandardWritersSeparateStreamsFormatDirectlyAndNeverAllocate()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             static class Calls { public static int Allocations; }
             namespace Memory {
                 public replace void*? Allocate(nuint count) { Calls::Allocations++; return null; }

@@ -12,7 +12,7 @@ public sealed class ConsoleWriterTests
     public void WriterPreservesCountedBytesAndFormatsWithoutAnIntermediateAllocation()
     {
         var result = CompilerTestHelper.Run(Sources("""
-            using std; using std::IO;
+            using std; using std::Text; using std::IO;
             extern int printf(immutable(char*) text, ...);
             extern void* malloc(nuint count);
             extern void free(void* storage);

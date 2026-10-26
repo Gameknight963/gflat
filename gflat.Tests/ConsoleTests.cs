@@ -98,7 +98,7 @@ public class ConsoleTests
             int main() {
                 char[4] buffer; nuint length = 0;
                 try { Console::TryReadLine(buffer, 4, ref length); return 1; }
-                catch (ref std::BufferTooSmallException error) { }
+                catch (ref std::Text::BufferTooSmallException error) { }
                 if (length != (nuint)3 || buffer[0] != 'a' || buffer[2] != 'c' || buffer[3] != '\0') return 2;
                 if (Console::ReadLine(buffer, 4) != (nuint)2 || buffer[0] != 'o' || buffer[1] != 'k') return 3;
                 try { Console::ReadLine(buffer, 4); return 4; }
@@ -115,7 +115,7 @@ public class ConsoleTests
             int main() {
                 char sentinel = '?'; nuint length = 99;
                 try { Console::TryReadLine(&sentinel, 0, ref length); return 1; }
-                catch (ref std::BufferTooSmallException error) { }
+                catch (ref std::Text::BufferTooSmallException error) { }
                 if (sentinel != '?' || length != (nuint)0) return 2;
                 char[8] buffer;
                 if (Console::ReadLine(buffer, 8) != (nuint)3 || buffer[0] != 'a' || buffer[2] != 'c') return 3;

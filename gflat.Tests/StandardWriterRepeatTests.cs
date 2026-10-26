@@ -3,7 +3,7 @@ namespace gflat.Tests;
 public sealed class StandardWriterRepeatTests
 {
     private const string Probe = """
-        using std;
+        using std; using std::Text;
         int destroyed=0;
         struct Sink : ITextWriter {
             private char* data;

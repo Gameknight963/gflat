@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Borrows the sink and a counted or formatted prefix. LF starts each input line.
 public struct LinePrefixWriter : ITextWriter

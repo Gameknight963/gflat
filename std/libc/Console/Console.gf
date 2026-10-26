@@ -78,11 +78,11 @@ bool TryReadLine(ITextWriter* output) { return detail::ReadLine(output); }
 bool TryReadLine(char* data, nuint capacity, ref nuint length)
 {
     length = 0;
-    if (capacity == 0) throw new std::BufferTooSmallException();
+    if (capacity == 0) throw new std::Text::BufferTooSmallException();
     detail::BufferWriter writer = new detail::BufferWriter(data, capacity);
     defer { length = writer.Length; }
     bool read = detail::ReadLine(&writer);
-    if (writer.Overflow) throw new std::BufferTooSmallException();
+    if (writer.Overflow) throw new std::Text::BufferTooSmallException();
     return read;
 }
 

@@ -1,6 +1,6 @@
 # Caller-owned text output
 
-`std/core/Text/BufferWriter.gf` defines `std::BufferWriter : ITextWriter`.
+`std/core/Text/BufferWriter.gf` defines `std::Text::BufferWriter : ITextWriter`.
 Include `core/Text/BufferTooSmallException.gf` too. Formatting contracts are
 automatically available; primitive formatting implementations live in
 `core/Formatting.gf`. Neither the writer nor integer formatting requires
@@ -10,7 +10,7 @@ Construct a writer over writable storage:
 
 ```csharp
 char[128] bytes;
-std::BufferWriter writer = new std::BufferWriter(bytes, 128);
+std::Text::BufferWriter writer = new std::Text::BufferWriter(bytes, 128);
 writer.Write("value: ");
 int value = 42;
 value.Format(&writer);

@@ -297,15 +297,19 @@ public partial class TypeChecker
     {
         foreach (var alias in constrainedAliases.Values)
         {
-            var implementation = ResolveAliasBindingTarget(alias.TargetType);
-            var constraints = new List<TypeExpression>();
-            foreach (var constraint in alias.Constraints)
-                if (!TypeSatisfiesDeclaredConstraint(alias, implementation, constraint, constraints.Add))
-                    throw new TypeCheckException($"Implementation of alias '{alias.Name}' does not satisfy '{TypeName(constraint)}'", alias.Span);
-            boundAliasConstraints[alias] = constraints;
+            AnalyzeSafely(() =>
+            {
+                var implementation = ResolveAliasBindingTarget(alias.TargetType);
+                var constraints = new List<TypeExpression>();
+                foreach (var constraint in alias.Constraints)
+                    if (!TypeSatisfiesDeclaredConstraint(alias, implementation, constraint, constraints.Add))
+                        throw new TypeCheckException($"Implementation of alias '{alias.Name}' does not satisfy '{TypeName(constraint)}'", alias.Span);
+                boundAliasConstraints[alias] = constraints;
+            });
         }
         // Diagnose cycles even when an alias is never used by a body.
-        foreach (var target in selectedAliasTargets.ToArray()) ResolveAliasBindingTarget(target);
+        foreach (var target in selectedAliasTargets.ToArray())
+            AnalyzeSafely(() => ResolveAliasBindingTarget(target));
     }
 
     private void ValidateAliasMember(NamespaceAccessExpression access, MethodDeclaration? selectedMethod = null)

@@ -2071,7 +2071,8 @@ namespace gflat
             ExpandPrimitiveImplementations(node);
 
             // Pass 1: Symbol collection
-            SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration);
+            SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration,
+                _recoverErrors ? AnalyzeSafely : null);
             collectionPass.Execute(node);
             ResolveFunctionReplacements(node);
             collectionPass.Execute(node);

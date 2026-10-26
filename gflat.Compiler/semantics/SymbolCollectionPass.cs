@@ -11,11 +11,14 @@ namespace gflat.semantics
     {
         private readonly SymbolTable _symbols;
         private readonly Func<AstNode, bool>? _namespaceVisible;
+        private readonly Action<Action>? _analyzeSafely;
 
-        public SymbolCollectionPass(SymbolTable symbols, Func<AstNode, bool>? namespaceVisible = null)
+        public SymbolCollectionPass(SymbolTable symbols, Func<AstNode, bool>? namespaceVisible = null,
+            Action<Action>? analyzeSafely = null)
         {
             _symbols = symbols;
             _namespaceVisible = namespaceVisible;
+            _analyzeSafely = analyzeSafely;
         }
 
         public void Execute(CompilationUnit node)
@@ -72,20 +75,25 @@ namespace gflat.semantics
                 foreach (AstNode m in iface.Members)
                 {
                     if (m is PropertyDeclaration) continue;
-                    if (m is MethodDeclaration sm)
+                    void RegisterInterfaceMember()
                     {
-                        if (info.MethodsByName.ContainsKey(sm.Name))
+                        if (m is MethodDeclaration sm)
                         {
-                            throw new TypeCheckException($"Interface '{iface.Name}' already contains a method named '{sm.Name}'", sm.Line);
+                            if (info.MethodsByName.ContainsKey(sm.Name))
+                            {
+                                throw new TypeCheckException($"Interface '{iface.Name}' already contains a method named '{sm.Name}'", sm.Line);
+                            }
+                            info.Methods.Add(sm);
+                            info.MethodsByName[sm.Name] = sm;
+                            info.MethodIndices[sm.Name] = slotIndex++;
                         }
-                        info.Methods.Add(sm);
-                        info.MethodsByName[sm.Name] = sm;
-                        info.MethodIndices[sm.Name] = slotIndex++;
+                        else
+                        {
+                            throw new TypeCheckException($"Interface '{iface.Name}' can only contain method declarations", m.Line);
+                        }
                     }
-                    else
-                    {
-                        throw new TypeCheckException($"Interface '{iface.Name}' can only contain method declarations", m.Line);
-                    }
+                    if (_analyzeSafely == null) RegisterInterfaceMember();
+                    else _analyzeSafely(RegisterInterfaceMember);
                 }
                 _symbols.Interfaces[iface.Name] = info;
                 if (namespaceVisible) scope.Interfaces[iface.SourceName] = info;

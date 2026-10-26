@@ -9,7 +9,7 @@ public sealed class CsvReaderTextEditorTests
     [Fact]
     public void HasValueIsAVisibleImmutableNoThrowBooleanPropertyWithItsSourceDefinition()
     {
-        const string text="using std;bool Observe(immutable(CsvReader)* reader) nothrow=>reader.HasValue;";
+        const string text="using std; using std::Csv;bool Observe(immutable(CsvReader)* reader) nothrow=>reader.HasValue;";
         var (model,source,files)=Analyze(text);int use=text.IndexOf("HasValue",StringComparison.Ordinal);
         Assert.Single(Json(model.Completion(source.Path,use)).GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="HasValue");
         string hover=Hover(model,source,use);
@@ -23,7 +23,7 @@ public sealed class CsvReaderTextEditorTests
     [Fact]
     public void CopyValuePresentsItsQualifiedStaticReaderAndRefStringArguments()
     {
-        const string text="using std;void Copy(immutable(CsvReader)* reader,ref String output){CsvReaderText::CopyValue(reader,ref output);}";
+        const string text="using std; using std::Csv;void Copy(immutable(CsvReader)* reader,ref String output){CsvReaderText::CopyValue(reader,ref output);}";
         var (model,source,files)=Analyze(text);int use=text.IndexOf("CopyValue",StringComparison.Ordinal);
         Assert.Single(Json(model.Completion(source.Path,use)).GetProperty("items").EnumerateArray(),item=>item.GetProperty("label").GetString()=="CopyValue");
         string hover=Hover(model,source,use);

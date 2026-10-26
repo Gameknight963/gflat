@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Csv;
 
 // Borrows a destination; never flushes, closes, or disposes it.
 public struct CsvWriter

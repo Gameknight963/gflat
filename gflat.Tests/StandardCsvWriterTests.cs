@@ -17,7 +17,7 @@ public sealed class StandardCsvWriterTests
     }
 
     private const string Allocator = """
-        using std;
+        using std; using std::Csv;
         int attempts=0;
         extern void free(void* storage);
         namespace Memory {
@@ -135,7 +135,7 @@ public sealed class StandardCsvWriterTests
     [InlineData(2)]
     public void EveryPartialSinkFailurePropagatesAndPoisonsFutureOperations(int optimization)
         => Run("""
-            using std;
+            using std; using std::Csv;
             class SinkFailure:Exception{public SinkFailure():base("sink failed",77){}}
             struct Sink:ITextWriter {
                 public int Budget;public int Calls;public nuint Count;

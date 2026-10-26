@@ -5,7 +5,7 @@ namespace gflat.Tests;
 public sealed class StandardCsvReaderTextTests
 {
     private const string Counters="""
-        using std; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
+        using std; using std::Csv; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint bytes);extern void free(void* storage);
         int allocated=0;int released=0;int attempts=0;int failAfter=-1;bool deny=false;
         namespace Memory {
             public replace void*? Allocate(nuint bytes) {
@@ -139,7 +139,7 @@ public sealed class StandardCsvReaderTextTests
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("csv-value-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint bytes){return null;}public void Free(void* storage)nothrow{}}
-                bool Observe(immutable(std::CsvReader)* reader)nothrow=>reader.HasValue;
+                bool Observe(immutable(std::Csv::CsvReader)* reader)nothrow=>reader.HasValue;
                 """));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,NoBuiltins=true});
         string body=Regex.Match(ir,@"(?ms)^define [^\r\n]*@gflat\$Observe\([^\r\n]*\{\r?\n(?<body>.*?)^\}").Groups["body"].Value;

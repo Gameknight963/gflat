@@ -1,6 +1,6 @@
 using std::Memory;
 using std::Collections;
-namespace std;
+namespace std::Csv;
 
 // Optional owning output; CsvReader itself does not depend on String.
 public static class CsvReaderText

@@ -1,5 +1,5 @@
 using std::Memory;
-namespace std;
+namespace std::Csv;
 
 // Borrows complete counted byte input. Read emits one field, not one record.
 public struct CsvReader

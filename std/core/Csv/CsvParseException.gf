@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Csv;
 
 public class CsvParseException : Exception
 {

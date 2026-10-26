@@ -18,10 +18,10 @@ public class StandardNumericNothrowTests
     {
         string checks = string.Join("\n", IntegerTypes.Select((type, index) => $$"""
             {{type.Type}} value{{index}} = ({{type.Type}})99;
-            if (!std::TryParse{{type.Suffix}}("42", &value{{index}}) || value{{index}} != ({{type.Type}})42) return 1;
-            if (!std::TryParse{{type.Suffix}}("+42suffix", 3, &value{{index}}) || value{{index}} != ({{type.Type}})42) return 2;
-            if (std::TryParse{{type.Suffix}}("bad", &value{{index}}) || value{{index}} != ({{type.Type}})0) return 3;
-            if (std::TryParse{{type.Suffix}}("", 0, &value{{index}}) || value{{index}} != ({{type.Type}})0) return 4;
+            if (!std::Text::TryParse{{type.Suffix}}("42", &value{{index}}) || value{{index}} != ({{type.Type}})42) return 1;
+            if (!std::Text::TryParse{{type.Suffix}}("+42suffix", 3, &value{{index}}) || value{{index}} != ({{type.Type}})42) return 2;
+            if (std::Text::TryParse{{type.Suffix}}("bad", &value{{index}}) || value{{index}} != ({{type.Type}})0) return 3;
+            if (std::Text::TryParse{{type.Suffix}}("", 0, &value{{index}}) || value{{index}} != ({{type.Type}})0) return 4;
             if (std::Numerics::Math::Min(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})4) return 5;
             if (std::Numerics::Math::Max(({{type.Type}})7, ({{type.Type}})4) != ({{type.Type}})7) return 6;
             """));
@@ -47,8 +47,8 @@ public class StandardNumericNothrowTests
         Assert.NotEmpty(main);
         Assert.DoesNotContain("invoke", main);
         Assert.DoesNotContain("__gflat_eh_", main);
-        Assert.Contains("call zeroext i1 @gflat$std$TryParseInt", main);
-        Assert.Contains("call zeroext i1 @gflat$std$TryParseExtraLong", main);
+        Assert.Contains("call zeroext i1 @gflat$std$Text$TryParseInt", main);
+        Assert.Contains("call zeroext i1 @gflat$std$Text$TryParseExtraLong", main);
         Assert.Matches(@"call i32 @[^\r\n ]*\$Math\$Min", main);
 
         string[] definitions = Regex.Matches(ir, @"(?m)^define [^\r\n]+").Select(match => match.Value).ToArray();

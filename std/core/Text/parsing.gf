@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Parse exactly count bytes as a signed decimal int. No whitespace is skipped.
 // Returns false and writes zero on empty input, invalid text, or overflow.

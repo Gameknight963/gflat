@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Strict unsigned hexadecimal text, with an optional 0x/0X prefix.
 // Signs, whitespace, separators, and empty digit sequences are rejected.

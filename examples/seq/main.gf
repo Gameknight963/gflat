@@ -11,8 +11,8 @@ int main(int argc, char** argv)
     }
     try
     {
-        int start = std::ParseInt(argv[1]);
-        int count = std::ParseInt(argv[2]);
+        int start = std::Text::ParseInt(argv[1]);
+        int count = std::Text::ParseInt(argv[2]);
         bool(int)* predicate = (int n) => true;
         if (argc == 4) predicate = (int n) => n % 2 == 0;
         FilteredIntRange values = new IntRange(start, count).Where(predicate);

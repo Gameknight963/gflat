@@ -19,7 +19,7 @@ public sealed class StandardHexIntegerParsingTests
     public void StrictCountedAndCStringParsingMatchUnsignedHexOracleAtEveryWidth(int optimization)
     {
         var random = new Random(99831);
-        var code = new StringBuilder("using std; int main() {\n");
+        var code = new StringBuilder("using std; using std::Text; int main() {\n");
         foreach (var (name, type, maximum) in Widths)
         {
             List<string> cases = ["", "0", "f", "F", "0x0", "0XAf", "+F", "-0", "0x", "0X",
@@ -77,7 +77,7 @@ public sealed class StandardHexIntegerParsingTests
     [InlineData(2)]
     public void OutputsMayOverlapAlignedInputAndZeroLengthNeverReadsInput(int optimization)
     {
-        var code = new StringBuilder("using std; int main() {\n");
+        var code = new StringBuilder("using std; using std::Text; int main() {\n");
         foreach (var (name, type, _) in Widths)
             code.AppendLine($$"""
                 {
@@ -105,7 +105,7 @@ public sealed class StandardHexIntegerParsingTests
     [InlineData(2)]
     public void TryParsersAreAllocationFreeNothrowAndAcceptLongLeadingZeroes(int optimization)
         => Run("""
-            using std;
+            using std; using std::Text;
             namespace Memory {
                 replace void*? Allocate(nuint count) => null;
                 replace void Free(void* storage) nothrow {}

@@ -1,7 +1,7 @@
 using std::Text;
-namespace std;
+namespace std::Text;
 
 // Borrow the counted bytes; parsing does not copy or modify the owning String.
-int ParseInt(this ref immutable(String) text) => std::ParseInt(text.Data, text.Length);
+int ParseInt(this ref immutable(String) text) => std::Text::ParseInt(text.Data, text.Length);
 bool TryParseInt(this ref immutable(String) text, int* result) nothrow
-    => std::TryParseInt(text.Data, text.Length, result);
+    => std::Text::TryParseInt(text.Data, text.Length, result);

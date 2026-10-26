@@ -1,8 +1,9 @@
 # Boolean parsing
 
-`core/Text/boolean_parsing.gf` supplies standalone, allocation-free `std::TryParseBool`:
+`core/Text/boolean_parsing.gf` supplies standalone, allocation-free `std::Text::TryParseBool`:
 
 ```cpp
+using std::Text;
 bool TryParseBool(readonly(char)* text, bool* result) nothrow;
 bool TryParseBool(readonly(char)* text, nuint count, bool* result) nothrow;
 ```
@@ -17,7 +18,7 @@ it returns false and stores false. A valid `false` word therefore differs from
 failure through the function's return value:
 
 ```cpp
-using std;
+using std; using std::Text;
 bool enabled = true;
 bool valid = TryParseBool("FaLsE", &enabled); // valid=true, enabled=false
 ```
@@ -31,7 +32,7 @@ the result pointer must designate writable bool storage. Input is read before
 the result is stored, allowing suitably aligned overlapping input/output; that
 store also changes the overlapping input bytes.
 
-`core/Text/boolean_parsing_throwing.gf` adds optional `std::ParseBool` wrappers with
+`core/Text/boolean_parsing_throwing.gf` adds optional `std::Text::ParseBool` wrappers with
 the same counted and C-string forms. They return the parsed bool or throw
 `Exception` for invalid text. Include both sources to use these wrappers; only
 the Try-only source is needed without an exception runtime. A `String` can be

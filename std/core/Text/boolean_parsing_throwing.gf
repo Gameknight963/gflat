@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Optional wrappers requiring the normal exception definitions and runtime.
 bool ParseBool(readonly(char)* text, nuint count)

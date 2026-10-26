@@ -30,7 +30,7 @@ public class StandardParsingTests
     public void ParsesOnlyCompleteDecimalIntegers(string text, bool success, int expected)
     {
         var result = Run($$"""
-            using std;
+            using std; using std::Text;
             int main() {
                 int value = 99;
                 bool success = TryParseInt("{{text}}", &value);
@@ -62,7 +62,7 @@ public class StandardParsingTests
     public void CountedInputNeedsNoTerminatorAndRejectsEmbeddedNulls()
     {
         var result = Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 char[3] buffer = ['1', '2', 'x'];
                 int value = 99;

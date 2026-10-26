@@ -15,7 +15,7 @@ public sealed class StandardBooleanParsingTests
                 cases.Add(new string(word.Select((letter, index) => (mask & (1 << index)) == 0 ? letter : char.ToUpperInvariant(letter)).ToArray()));
         cases.AddRange(["", "t", "tru", "fals", "trues", "FALSES", "0", "1", "+true", "-false", " true", "false ",
             "\ttrue", "false\r\n", "t_rue", "fals_e", "truth", "null", "true\0suffix", "false\0", "tr\0ue", "fa\0lse"]);
-        var code = new StringBuilder("using std; int main() {\n");
+        var code = new StringBuilder("using std; using std::Text; int main() {\n");
         foreach (string text in cases)
         {
             bool valid = Strict(text, out bool value);
@@ -46,7 +46,7 @@ public sealed class StandardBooleanParsingTests
     [InlineData(2)]
     public void EveryByteMutationRespectsAsciiOnlyMatchingAndCountedGuards(int optimization)
         => Run("""
-            using std;
+            using std; using std::Text;
             int main() {
                 char[7] buffer;
                 for (int word = 0; word < 2; word++) {
@@ -79,7 +79,7 @@ public sealed class StandardBooleanParsingTests
     [InlineData(2)]
     public void OverlappingOutputsAndZeroLengthAreAllocationFreeNothrow(int optimization)
         => Run("""
-            using std;
+            using std; using std::Text;
             namespace Memory {
                 replace void*? Allocate(nuint count) => null;
                 replace void Free(void* storage) nothrow {}

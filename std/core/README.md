@@ -101,6 +101,7 @@ Its default U+0000 remains a counted byte in an owning string. See
 a terminator. Both return `bool` and write an `int` through the result pointer:
 
 ```csharp
+using std::Text;
 int value = 0;
 if (TryParseInt("-42", &value)) {
     // value is -42.
@@ -110,7 +111,7 @@ if (TryParseInt("-42", &value)) {
 An optional leading `+` or `-` is accepted. Empty input, whitespace, nondecimal
 characters, and values outside the signed 32-bit range return `false` and set
 the result to zero. Parsing consumes the entire input and does not allocate,
-throw, or call libc. With `using std;`, C strings support
+throw, or call libc. With `using std::Text;`, C strings support
 `text.TryParseInt(&value)` and `text.ParseInt()`. A `String` supports the same
 calls using its counted bytes, without copying the string.
 
@@ -118,6 +119,7 @@ calls using its counted bytes, without copying the string.
 using the same rules. They throw `Exception` on invalid input or overflow:
 
 ```csharp
+using std::Text;
 int value = ParseInt("42");
 ```
 

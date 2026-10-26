@@ -9,7 +9,7 @@ public class StandardParsingAliasTests
     {
         (string Type,string Suffix)[] types=[("sbyte","SByte"),("byte","Byte"),("short","Short"),("ushort","UShort"),
             ("int","Int"),("uint","UInt"),("long","Long"),("ulong","ULong"),("nint","NInt"),("nuint","NUInt")];
-        var source=new System.Text.StringBuilder("using std; int main(){");
+        var source=new System.Text.StringBuilder("using std; using std::Text; int main(){");
         foreach(var (type,suffix) in types)
         {
             source.Append($$"""

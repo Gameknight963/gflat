@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // Optional throwing wrappers; TryParseHex... alone needs no exception runtime.
 

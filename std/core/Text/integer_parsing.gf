@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 namespace integer_parsing_detail
 {

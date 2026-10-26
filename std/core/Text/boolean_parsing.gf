@@ -1,4 +1,4 @@
-namespace std;
+namespace std::Text;
 
 // ASCII true/false only, with arbitrary letter case and no surrounding bytes.
 // Failure writes false. The input is read before committing overlapping output.

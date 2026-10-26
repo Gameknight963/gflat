@@ -94,9 +94,9 @@ Moving a `JsonWriter` transfers its nesting state; implicit copying is rejected
 because its state owns storage. Moving the destination while it is borrowed is
 also invalid. Call the destination's own flush operation explicitly if needed.
 
-For explicit source selection, include `JsonWriter.gf`, `JsonWriteException.gf`,
-`JsonStringWriter.gf`, `JsonString.gf`, `Utf8.gf`, `IntegerFormatting.gf`,
-`JsonReader.gf`, `JsonParseException.gf`, `JsonTokenKind.gf`, `Text.gf`
+For explicit source selection, include `Json/JsonWriter.gf`, `Json/JsonWriteException.gf`,
+`Json/json_string_writer.gf`, `Json/JsonString.gf`, `Utf8.gf`, `IntegerFormatting.gf`,
+`Json/JsonReader.gf`, `Json/JsonParseException.gf`, `Json/JsonTokenKind.gf`, `Text.gf`
 (`ITextWriter`), and the ordinary `Vector` dependencies. No DOM, reflection, GC, or libc-specific
 writer implementation is required.
 

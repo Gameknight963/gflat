@@ -152,7 +152,7 @@ public sealed class StandardJsonStringTests
 
     private static string Run(string code,int optimization)
     {
-        SourceFile[] sources=new[]{"Utf8.gf","JsonString.gf"}
+        SourceFile[] sources=new[]{"Utf8.gf","Json/JsonString.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new("main.gf",code)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});

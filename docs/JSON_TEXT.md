@@ -74,5 +74,5 @@ Binary destinations retain LF bytes, while a CRT console in text mode can
 translate them to platform newlines. The adapter itself allocates only the
 reader's nesting stack; a destination writer can allocate normally.
 
-For selective source use, include `JsonText.gf` alongside the dependencies of
+For selective source use, include `Json/JsonText.gf` alongside the dependencies of
 `JsonReader` and `ITextWriter`; `String` and `JsonWriter` are not required.

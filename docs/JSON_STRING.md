@@ -37,7 +37,7 @@ String terminator beyond `Length`. Allocation failure propagates normally.
 Keep the input alive and unchanged during the call; no input pointer is retained,
 and later input changes do not affect the returned owner.
 
-These optional conveniences live in `JsonStringText.gf`, with normal String,
+These optional conveniences live in `Json/JsonStringText.gf`, with normal String,
 `StringSpan.gf`, Span and JSON string codec dependencies. The `JsonString` buffer
 codec remains independent of owning strings and allocation.
 
@@ -159,13 +159,13 @@ source dependencies beyond the existing `JsonString` and `Utf8` files.
 
 ## Writing through ITextWriter
 
-The optional `std/core/JsonStringWriter.gf` adapter adds:
+The optional `std/core/Json/json_string_writer.gf` adapter adds:
 
 ```csharp
 void WriteJsonString(this ITextWriter* output, readonly(char)* input, nuint length);
 ```
 
-Include it alongside `JsonString.gf` and `Utf8.gf`. For example:
+Include it alongside `Json/JsonString.gf` and `Utf8.gf`. For example:
 
 ```csharp
 char[128] storage;

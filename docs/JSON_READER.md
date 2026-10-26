@@ -114,8 +114,8 @@ alive. The reader owns only its stack and follows ordinary owning-value rules:
 transfer it with `move`; it does not provide a copy constructor. No chunked-input,
 incremental-document, or resumable-error protocol is provided.
 
-For explicit source selection, include `JsonReader.gf`, `JsonTokenKind.gf`,
-`JsonParseException.gf`, `JsonString.gf`, `Utf8.gf`, and the ordinary `Vector`
+For explicit source selection, include `Json/JsonReader.gf`, `Json/JsonTokenKind.gf`,
+`Json/JsonParseException.gf`, `Json/JsonString.gf`, `Utf8.gf`, and the ordinary `Vector`
 dependencies. The complete standard library includes them automatically.
 
 Grammar reference: [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259.html).

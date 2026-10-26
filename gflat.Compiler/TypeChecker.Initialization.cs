@@ -43,6 +43,8 @@ public partial class TypeChecker
                     throw new TypeCheckException($"Base class '{DisplayName(parent.Name)}' requires an explicit constructor call", line);
                 else
                 {
+                    foreach (var baseConstructor in parent.Constructors.ToArray())
+                        BindConstructorSignature(baseConstructor, parent.Name, isClass: true);
                     var arguments = new List<AstNode>();
                     var constructor = SelectBestOverload(parent.Constructors, c => c.Parameters, arguments, parent.Name, line, useDeclaredTypes: false);
                     // The generated constructor belongs to this derived type,

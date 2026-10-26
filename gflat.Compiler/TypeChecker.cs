@@ -3096,6 +3096,8 @@ namespace gflat
                     }
 
                     ClassInfo baseClass = _classes[_currentClass.BaseClass];
+                    foreach (var constructor in baseClass.Constructors.ToArray())
+                        BindConstructorSignature(constructor, baseClass.Name, isClass: true);
                     foreach (AstNode arg in node.BaseArguments)
                     {
                         CheckNullableArgument(arg);
@@ -3137,6 +3139,8 @@ namespace gflat
                 else if (_currentClass != null && _currentClass.BaseClass != null)
                 {
                     ClassInfo baseClass = _classes[_currentClass.BaseClass];
+                    foreach (var constructor in baseClass.Constructors.ToArray())
+                        BindConstructorSignature(constructor, baseClass.Name, isClass: true);
                     if (baseClass.Constructors.Count == 0) ValidateImplicitConstruction(baseClass.Name, node.Line);
                     if (baseClass.Constructors.Count > 0 && !baseClass.Constructors.Any(c => AcceptsArgumentCount(c.Parameters, 0)))
                     {
@@ -5186,7 +5190,11 @@ namespace gflat
                     return;
                 }
 
+                if (!cInfo.HierarchyResolved)
+                    new HierarchyResolutionPass(_symbols).ResolveHierarchy(cInfo);
                 GetClassSize(cInfo);
+                foreach (var constructor in cInfo.Constructors.ToArray())
+                    BindConstructorSignature(constructor, cInfo.Name, isClass: true);
                 ConstructorDeclaration? matchedCtor = null;
                 if (cInfo.Constructors.Count == 0)
                 {
@@ -5283,6 +5291,8 @@ namespace gflat
             }
 
             GetStructSize(sInfo);
+            foreach (var constructor in sInfo.Constructors.ToArray())
+                BindConstructorSignature(constructor, sInfo.Name, isClass: false);
             ConstructorDeclaration? matchedStructCtor = null;
 
             if (sInfo.Constructors.Count == 0)

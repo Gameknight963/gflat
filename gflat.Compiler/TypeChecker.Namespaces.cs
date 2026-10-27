@@ -71,7 +71,10 @@ public partial class TypeChecker
         if (!_localAliases.Any(local => local.ContainsKey(name)) && ResolveEnclosingNestedTypeName(name) is { } nested)
             return nested;
         for (var scope = _currentNamespace; scope != null; scope = scope.Parent)
+        {
             if (scope.TypeNames.TryGetValue(name, out var identity)) return identity;
+            if (scope.Aliases.ContainsKey(name)) return null;
+        }
         string? found = null;
         foreach (var imported in CurrentUsings)
         {

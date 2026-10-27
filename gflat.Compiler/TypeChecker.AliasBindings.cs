@@ -226,13 +226,25 @@ public partial class TypeChecker
         using var source = SourceContext.Enter(target.Span);
         using var locals = IsolateDeclarationContext();
         var previous = _currentNamespace;
+        var previousPath = _currentNamespacePath;
+        var previousClass = _currentClass;
+        var previousStruct = _currentStruct;
         _currentNamespace = ns.Length == 0 ? _globalScope : ResolveNamespaceByName(ns)!;
+        _currentNamespacePath = ns;
+        _currentClass = null;
+        _currentStruct = null;
         try
         {
             var result = ResolveAlias(target, publish == null ? null : value => publish(ContractView(value)));
             return ContractView(result);
         }
-        finally { _currentNamespace = previous; }
+        finally
+        {
+            _currentNamespace = previous;
+            _currentNamespacePath = previousPath;
+            _currentClass = previousClass;
+            _currentStruct = previousStruct;
+        }
 
         TypeExpression ContractView(TypeExpression result)
         {

@@ -1,8 +1,10 @@
 # Getting started with the standard library
 
-A normal gflat project includes the standard library. Add `using std;` to use its
-types and extension methods; [project setup](PROJECTS.md) covers creating and
-building a `.gfproj`.
+A normal gflat project includes the standard library. Import the namespaces for
+the APIs you need, such as `using std::Text;` for strings and text parsing or
+`using std::Memory;` for spans. `using std;` imports only the general APIs in
+`std`, not its nested namespaces. See the [namespace layout](../std/README.md#namespaces-and-files)
+and [project setup](PROJECTS.md) for creating and building a `.gfproj`.
 
 ## Parse some text and print a result
 
@@ -10,7 +12,8 @@ This complete program prints `Sum: 33`:
 
 ```csharp
 using std::Text;
-using std; using std::Memory;
+using std;
+using std::Memory;
 
 int main()
 {

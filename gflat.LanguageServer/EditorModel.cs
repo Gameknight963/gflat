@@ -252,6 +252,34 @@ public sealed partial class EditorModel
         var context = Context(path, offset);
         return context == null ? new ScopeEnvironment("", null, false, false) : scopeEnvironments[context];
     }
+    private Symbol? SourceOwnerType(string owner)
+    {
+        int separator = owner.LastIndexOf("::", StringComparison.Ordinal);
+        string name = separator < 0 ? owner : owner[(separator + 2)..];
+        return SymbolsNamed(name).FirstOrDefault(symbol => !symbol.IsTypeParameter && IsType(symbol.Syntax.Node) && symbol.Qualified == owner);
+    }
+
+    private IEnumerable<Symbol> EnclosingTypeDeclarations(string owner, string? name)
+    {
+        if (SourceOwnerType(owner) is not { } current) yield break;
+        foreach (var ancestor in Parents(current.Syntax))
+        {
+            if (!IsType(ancestor.Node) || !declarations.TryGetValue(ancestor.Node, out var containing)) continue;
+            foreach (var candidate in TypeMembers(containing.Qualified))
+                if (IsType(candidate.Syntax.Node) && candidate.Owner == containing.Qualified &&
+                    (name == null || candidate.Name == name)) yield return candidate;
+        }
+    }
+
+    private bool NestedPrivateAccess(string accessor, string declaring)
+    {
+        var first = SourceOwnerType(accessor);
+        var second = SourceOwnerType(declaring);
+        return first != null && second != null &&
+            (Parents(first.Syntax).Any(parent => ReferenceEquals(parent.Node, second.Syntax.Node)) ||
+             Parents(second.Syntax).Any(parent => ReferenceEquals(parent.Node, first.Syntax.Node)));
+    }
+
     private IEnumerable<Symbol> Visible(string path, int offset, string? name = null)
     {
         var environment = ScopeAt(path, offset);
@@ -259,7 +287,11 @@ public sealed partial class EditorModel
         string? owner = environment.Owner;
         bool isStatic = environment.IsStatic;
         var imports = snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? [];
-        var inheritedOrder = owner == null ? Array.Empty<Symbol>() : TypeMembers(owner)
+        IEnumerable<Symbol> memberOrder = owner == null ? [] : TypeMembers(owner);
+        var inheritedOrder = owner == null ? Array.Empty<Symbol>() : memberOrder
+            .Where(s => !IsType(s.Syntax.Node) || s.Owner == owner)
+            .Concat(EnclosingTypeDeclarations(owner, name))
+            .Concat(memberOrder.Where(s => IsType(s.Syntax.Node) && s.Owner != owner))
             .Where(s => (name == null || s.Name == name) && Accessible(s, path, offset)).ToArray();
         var inherited = inheritedOrder.ToHashSet();
         return SymbolsNamed(name).Where(s => s.Scope != null
@@ -418,6 +450,7 @@ public sealed partial class EditorModel
         if (s.Access is TokenKind.Public or TokenKind.Internal || s.Owner == null) return true;
         string? owner = ScopeAt(path, offset).Owner;
         return s.Owner == owner ||
+            s.Access == TokenKind.Private && owner != null && NestedPrivateAccess(owner, s.Owner) ||
             s.Access == TokenKind.Protected && owner != null && TypeMembers(owner).Any(m => m.Owner == s.Owner);
     }
     private static string TemplateName(string name)
@@ -457,15 +490,17 @@ public sealed partial class EditorModel
             }
             if (type is not NamedTypeExpression named) return null;
             string name = named.Namespace == null ? named.Name : Join(named.Namespace, named.Name);
-            var parameter = Visible(path, offset, name).FirstOrDefault(s => s.IsTypeParameter && s.Name == name);
+            var lexical = Visible(path, offset, name).FirstOrDefault(s => s.Name == name &&
+                (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration));
+            var parameter = lexical?.IsTypeParameter == true ? lexical : null;
             if (parameter != null)
             {
                 if (parameter.TypeConstraint == null || !aliases.Add(parameter)) return null;
                 type = parameter.TypeConstraint;
                 continue;
             }
-            var alias = Visible(path, offset, name).FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Name == name)
-                ?? symbols.FirstOrDefault(s => s.Scope == null && s.Syntax.Node is AliasDeclaration && s.Qualified == name);
+            var alias = lexical?.Syntax.Node is AliasDeclaration ? lexical : lexical == null
+                ? symbols.FirstOrDefault(s => s.Scope == null && s.Syntax.Node is AliasDeclaration && s.Qualified == name) : null;
             if (alias != null)
             {
                 if (!aliases.Add(alias)) return null;
@@ -478,7 +513,10 @@ public sealed partial class EditorModel
             // their registered origin before falling back to incomplete-source
             // name recovery, which cannot distinguish a nested specialization
             // from its generic containing type.
-            var nominal = snapshot.Checker?.GetSourceTypeBinding(named) as NamedTypeExpression ?? named;
+            var known = snapshot.Checker?.GetSourceTypeBinding(named) as NamedTypeExpression;
+            if (known == null && snapshot.Checker?.IsResolvedTypeIdentity(named) != true &&
+                lexical != null && IsType(lexical.Syntax.Node)) return lexical.Qualified;
+            var nominal = known ?? named;
             if (snapshot.Checker?.GetTypeDeclaration(nominal.Name) is { } declaration &&
                 sourceTypeDeclarations.TryGetValue((declaration.GetType(), declaration.Span), out var sourceType))
                 return sourceType.Qualified;

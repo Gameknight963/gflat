@@ -39,8 +39,8 @@ public sealed partial class EditorModel
         // An alias and a type parameter name denote their own declarations,
         // even when checking has resolved the use to a concrete implementation.
         var lexical = candidates.FirstOrDefault(s => s.Name == token.Text &&
-            (s.IsTypeParameter || s.Syntax.Node is AliasDeclaration));
-        if (lexical != null) return lexical;
+            (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration));
+        if (lexical != null && (lexical.IsTypeParameter || lexical.Syntax.Node is AliasDeclaration)) return lexical;
         if (snapshot.Checker?.GetSourceTypeBinding(source) is NamedTypeExpression bound &&
             snapshot.Checker.GetTypeDeclaration(bound.Name) is { } declaration &&
             sourceTypeDeclarations.TryGetValue((declaration.GetType(), declaration.Span), out var symbol))

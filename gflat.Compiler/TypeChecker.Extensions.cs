@@ -156,7 +156,8 @@ public partial class TypeChecker
     }
 
     private TypeExpression SubstituteExtensionType(TypeExpression type, IReadOnlyDictionary<string, TypeExpression> bindings)
-        => new AstCloner(bindings.ToDictionary(p => p.Key, p => p.Value)).CloneType(type);
+        // Cloning writes spans onto replacements; preserve borrowed binding objects.
+        => new AstCloner(bindings.ToDictionary(p => p.Key, p => p.Value.WithReadOnlyValue(p.Value.IsReadOnlyValue))).CloneType(type);
 
     private bool ExtensionConstraintSatisfied(TypeExpression argument, TypeExpression? constraint, bool strictDeclared)
     {

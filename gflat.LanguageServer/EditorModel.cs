@@ -294,8 +294,9 @@ public sealed partial class EditorModel
             bool globalQualifier = qualifier.StartsWith("global::");
             if (globalQualifier) qualifier = qualifier[8..];
             if (qualifier == "global") qualifier = "";
-            var resolved = Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier &&
-                (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration))
+            var resolved = qualifier.Length == 0 ? null
+                : Candidates(path, offset, separatorIndex - 1, left.Text).FirstOrDefault(s => s.Name == left.Text &&
+                    (s.IsTypeParameter || IsType(s.Syntax.Node) || s.Syntax.Node is AliasDeclaration))
                 ?? symbols.FirstOrDefault(s => s.Syntax.Node is AliasDeclaration && s.Qualified == qualifier);
             string head = qualifier.Split("::")[0];
             bool typePrefix = resolved != null || Visible(path, offset, head).Any(s =>

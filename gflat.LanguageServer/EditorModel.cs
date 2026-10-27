@@ -376,7 +376,7 @@ public sealed partial class EditorModel
         if (checkedType != null && TypeChecker.TypeName(checkedType) != "<error>") return checkedType;
         // Incomplete access often prevents checking. Recover only unambiguous
         // declaration types; never guess between overloads with different returns.
-        if (node is IdentifierExpression identifier) return Visible(path, offset).FirstOrDefault(s => s.Name == identifier.Name)?.Type;
+        if (node is IdentifierExpression identifier) return Visible(path, offset, identifier.Name).FirstOrDefault(s => s.Name == identifier.Name)?.Type;
         if (node is NewExpression creation) return creation.Type;
         if (node is CastExpression cast) return cast.TargetType;
         if (node is UnaryExpression { Operator: TokenKind.Bang, IsPrefix: false } suppression)

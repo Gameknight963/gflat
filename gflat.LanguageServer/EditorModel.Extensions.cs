@@ -101,7 +101,7 @@ public sealed partial class EditorModel
     {
         if (receiver is IdentifierExpression identifier)
             return snapshot.Checker?.CanBorrowExtensionReceiver(receiver) == true ||
-                Visible(path, offset).FirstOrDefault(symbol => symbol.Name == identifier.Name)?.Syntax.Node is
+                Visible(path, offset, identifier.Name).FirstOrDefault(symbol => symbol.Name == identifier.Name)?.Syntax.Node is
                 VariableDeclaration { IsConst: false } or Parameter { IsConst: false } or FieldDeclaration { IsConst: false };
         if (snapshot.Checker is { } checker && TypeChecker.TypeName(checker.GetType(receiver)) != "<error>")
             return checker.CanBorrowExtensionReceiver(receiver);
@@ -111,7 +111,7 @@ public sealed partial class EditorModel
     private bool ExtensionReceiverReadOnly(AstNode receiver, string path, int offset)
     {
         if (receiver is IdentifierExpression identifier &&
-            Visible(path, offset).FirstOrDefault(symbol => symbol.Name == identifier.Name)?.Syntax.Node is
+            Visible(path, offset, identifier.Name).FirstOrDefault(symbol => symbol.Name == identifier.Name)?.Syntax.Node is
                 VariableDeclaration { IsConst: true } or Parameter { IsConst: true } or FieldDeclaration { IsConst: true })
             return true;
         return snapshot.Checker?.IsExtensionReceiverReadOnly(receiver) == true;

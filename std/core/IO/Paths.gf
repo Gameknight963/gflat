@@ -139,6 +139,24 @@ public static class Paths
         return path.Slice(0, Paths::RootLength(path.Data!, path.Length, style));
     }
 
+    // Replaces the final filename extension; empty extension removes it.
+    // Preserves directory/root bytes and paths with no filename.
+    public static String ChangeExtension(immutable(char*) path, immutable(char*) extension, PathStyle style)
+    {
+        nuint length = Paths::Length(path);
+        if (Paths::FileNameStart(path, length, style) == length) return String::From(path, length);
+        return Paths::ChangeExtensionCore(path, length, extension, Paths::Length(extension), style);
+    }
+
+    public static String ChangeExtension(Span<readonly(char)> path, Span<readonly(char)> extension, PathStyle style)
+    {
+        readonly(char)* text = "";
+        readonly(char)* suffix = "";
+        if (!path.IsEmpty) text = path.Data!;
+        if (!extension.IsEmpty) suffix = extension.Data!;
+        return Paths::ChangeExtensionCore(text, path.Length, suffix, extension.Length, style);
+    }
+
     // Concatenates components, even if right is rooted. Removes one duplicated
     // separator at the join boundary; otherwise preserves the original spelling.
     // Does not resolve dot segments, validate names, or change existing separators.
@@ -154,6 +172,27 @@ public static class Paths
         if (!left.IsEmpty) leftData = left.Data!;
         if (!right.IsEmpty) rightData = right.Data!;
         return Paths::JoinCore(leftData, left.Length, rightData, right.Length, style);
+    }
+
+    private static String ChangeExtensionCore(immutable(char*) path, nuint length,
+        immutable(char*) extension, nuint extensionLength, PathStyle style)
+    {
+        nuint start = Paths::FileNameStart(path, length, style);
+        if (start == length) return String::From(path, length);
+        nuint prefix = Paths::ExtensionStart(path, start, length);
+        nuint separator = 0;
+        if (extensionLength != 0 && extension[0] != '.') separator = 1;
+        nuint maximum = (nuint)0 - 1;
+        if (prefix >= maximum || separator > maximum - 1 - prefix
+            || extensionLength > maximum - 1 - prefix - separator)
+            throw new Exception("Path length overflow", 1);
+        nuint required = prefix + separator + extensionLength;
+        String result = new();
+        result.Reserve(required);
+        result.AppendLiteral(path, prefix);
+        if (separator != 0) result.AppendLiteral(".", 1);
+        result.AppendLiteral(extension, extensionLength);
+        return move result;
     }
 
     // Inspect only the root prefix of a C string, preserving constant-time checks.

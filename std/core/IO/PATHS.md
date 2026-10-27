@@ -57,6 +57,25 @@ projects including the standard library already include these sources.
   dot. A leading dot counts (`.config` has extension `.config`); a final dot
   produces an empty extension. Dots in directory components are ignored.
 - `GetFileNameWithoutExtension(path, style)` removes that final dot and suffix.
+- `ChangeExtension(path, extension, style)` replaces only the final filename's last
+  dot and suffix, preserving all preceding directory/root bytes. It follows the
+  same leading-dot and final-dot policy as `GetExtension`: `.config` with `json`
+  becomes `.json`, and `file.` with `txt` becomes `file.txt`.
+  A nonempty replacement gets a leading `.` unless it already starts with one;
+  `.` requests a trailing dot, while an empty replacement removes the dot and
+  suffix. With no existing extension, a nonempty replacement is appended.
+  Empty paths and paths with no filename (roots, drive-only prefixes and trailing
+  separators) return an unchanged independent copy; no filename is invented.
+  Both the C-string pair and counted-span pair return an owning `String`. Counted
+  inputs preserve embedded null/high bytes and never read outside their views;
+  empty ranges need no storage. The result is null-terminated outside its length
+  and independent even when the two inputs overlap or borrow the assignment
+  destination's old storage. Keep inputs readable/stable during the call. The
+  complete result length, including space for String's terminator, is checked
+  before result allocation; allocation or length failure preserves the inputs
+  and an existing assignment destination. This is a lexical operation, not
+  filesystem validation, normalization, or a platform-dependent `ChangeExtension`.
+
 - `GetRoot(path, style)` returns `/` for a Unix absolute path; Windows paths can
   have drive roots (`C:\`), drive-relative prefixes (`C:`), rooted separators,
   or UNC server/share roots. A root's existing trailing separator is preserved.

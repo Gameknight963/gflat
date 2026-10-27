@@ -539,6 +539,9 @@ public sealed partial class EditorModel
             // from its generic containing type.
             var known = snapshot.Checker?.GetSourceTypeBinding(named) as NamedTypeExpression;
             if (known == null && snapshot.Checker?.IsResolvedTypeIdentity(named) != true &&
+                sourceTypeNames.TryGetValue(named.NameSpan, out var origin))
+                known = snapshot.Checker?.GetSourceTypeBinding(origin) as NamedTypeExpression;
+            if (known == null && snapshot.Checker?.IsResolvedTypeIdentity(named) != true &&
                 lexical != null && IsType(lexical.Syntax.Node)) return lexical.Qualified;
             var nominal = known ?? named;
             if (snapshot.Checker?.GetTypeDeclaration(nominal.Name) is { } declaration &&

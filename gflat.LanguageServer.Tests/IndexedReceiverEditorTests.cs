@@ -64,19 +64,22 @@ public sealed class IndexedReceiverEditorTests
     }
 
     [Theory]
-    [InlineData("Storage")]
-    [InlineData("readonly(Storage)")]
-    [InlineData("immutable(Storage)")]
-    public void PointerAliasesKeepDeclarationContextWhenCallerHasCompetingEntry(string parameter)
+    [InlineData("Storage",true)]
+    [InlineData("readonly(Storage)",true)]
+    [InlineData("immutable(Storage)",true)]
+    [InlineData("Storage",false)]
+    [InlineData("readonly(Storage)",false)]
+    [InlineData("immutable(Storage)",false)]
+    public void PointerAliasesKeepDeclarationContextWhenCallerHasCompetingEntry(string parameter,bool qualified)
     {
-        const string definitions="""
+        string definitions=$$"""
             namespace Definitions;
             public struct Entry {
                 public int Value;
                 public void Mutate(){Value++;}
                 public immutable int Frozen()=>Value;
             }
-            public alias Storage=Definitions::Entry*;
+            public alias Storage={{(qualified?"Definitions::Entry":"Entry")}}*;
             """;
         var library=new SourceFile(Path.GetFullPath("indexed-definitions.gf"),definitions);
         string text=$$"""

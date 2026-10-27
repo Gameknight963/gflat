@@ -421,7 +421,10 @@ public sealed partial class EditorModel
             return operand is PointerTypeExpression pointer ? pointer.Inner : null;
         }
         if (node is IndexExpression { Indices.Count: 1 } indexed)
-            return BuiltinIndexedElementType(ExpressionType(indexed.Target, path, offset), path, offset);
+        {
+            var receiver = ExpressionType(indexed.Target, path, offset);
+            return BuiltinIndexedElementType(receiver, path, offset) ?? SourceIndexerElementType(indexed, receiver, path, offset);
+        }
         if (node is MemberAccessExpression member)
         {
             var receiver = ExpressionType(member.Object, path, offset);

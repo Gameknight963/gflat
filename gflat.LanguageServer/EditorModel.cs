@@ -420,6 +420,8 @@ public sealed partial class EditorModel
             var operand = ExpressionType(dereference.Operand, path, offset);
             return operand is PointerTypeExpression pointer ? pointer.Inner : null;
         }
+        if (node is IndexExpression { Indices.Count: 1 } indexed)
+            return BuiltinIndexedElementType(ExpressionType(indexed.Target, path, offset), path, offset);
         if (node is MemberAccessExpression member)
         {
             string? owner = TypeOwner(ExpressionType(member.Object, path, offset), path, offset);
@@ -438,6 +440,28 @@ public sealed partial class EditorModel
         }
         return null;
     }
+    private TypeExpression? BuiltinIndexedElementType(TypeExpression? type, string path, int offset)
+    {
+        var aliases = new HashSet<Symbol>();
+        while (type != null)
+        {
+            if (type is ReferenceTypeExpression reference) { type = reference.Inner; continue; }
+            if (type is PointerTypeExpression pointer) return pointer.Inner;
+            if (type is ArrayTypeExpression array) return array.ElementType;
+            if (type is not NamedTypeExpression named) return null;
+            string name = named.Namespace == null ? named.Name : Join(named.Namespace, named.Name);
+            var lexical = Visible(path, offset, name).FirstOrDefault(symbol => symbol.Name == name &&
+                (symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration));
+            var alias = lexical?.Syntax.Node is AliasDeclaration ? lexical : lexical == null
+                ? symbols.FirstOrDefault(symbol => symbol.Scope == null && symbol.Syntax.Node is AliasDeclaration && symbol.Qualified == name) : null;
+            if (alias == null || !aliases.Add(alias)) return null;
+            path = alias.NameSpan.Source?.Path ?? path;
+            offset = alias.NameSpan.Start;
+            type = alias.Type?.WithQualifiersFrom(named);
+        }
+        return null;
+    }
+
     private IEnumerable<Syntax> ContextParents(string path, int offset)
     {
         var context = Context(path, offset);

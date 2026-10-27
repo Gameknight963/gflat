@@ -198,7 +198,7 @@ public sealed partial class EditorModel
             Infer(snapshot.DeclaredTypes.GetValueOrDefault(original) ?? original.Type, concrete.Type);
         // Unused method parameters have no signature evidence. Retain their
         // source names rather than guess from caller aliases or mangled names.
-        var cloner = new AstCloner(bindings);
+        var cloner = CreateDisplayCloner(bindings);
         var parametersBound = definition.Parameters.Select(parameter => new Parameter(parameter.Name,
             cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type), parameter.Line,
             parameter.IsConst, parameter.DefaultValue) { Span = parameter.Span }).ToArray();

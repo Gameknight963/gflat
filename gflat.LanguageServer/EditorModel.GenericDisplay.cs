@@ -4,6 +4,10 @@ namespace gflat.LanguageServer;
 
 public sealed partial class EditorModel
 {
+    // AstCloner writes replacement spans; display projections must preserve borrowed types.
+    private static AstCloner CreateDisplayCloner(IReadOnlyDictionary<string, TypeExpression> bindings)
+        => new(bindings.ToDictionary(pair => pair.Key, pair => pair.Value.WithReadOnlyValue(pair.Value.IsReadOnlyValue)));
+
     private HashSet<string> DisplayGenericNames(Symbol source) => new[] { source.Syntax }.Concat(Parents(source.Syntax)).SelectMany(syntax => syntax.Node switch {
         MethodDeclaration method => method.GenericParameters,
         ClassDeclaration type => type.GenericParameters,

@@ -48,7 +48,7 @@ public sealed partial class EditorModel
             var bindings = new Dictionary<string, TypeExpression>();
             if (owner != null) BindDisplayOwnerArguments(source, owner, bindings);
             InferDisplayBindings(declared, field.Type, names, bindings);
-            var display = new AstCloner(bindings).CloneType(declared);
+            var display = CreateDisplayCloner(bindings).CloneType(declared);
             // Nested owners may not carry all enclosing generic arguments. Use
             // the checked declaration type if its source spelling cannot be bound.
             if (HasUnboundDisplayParameter(display, names)) display = field.Type;

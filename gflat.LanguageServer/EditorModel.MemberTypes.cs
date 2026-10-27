@@ -42,12 +42,11 @@ public sealed partial class EditorModel
             foreach (var child in TypeMembers(owner.Qualified).Where(child => !child.IsTypeParameter &&
                 IsType(child.Syntax.Node) && child.Owner == owner.Qualified && Parameters(child).Count == 0))
                 bindings[child.Name] = new NestedTypeExpression(actual.Type, child.Name, [], child.Syntax.Node.Line);
-            // AstCloner writes source spans onto replacements; keep snapshot arguments untouched.
             foreach (var pair in Parameters(owner).Zip(actual.Arguments))
-                bindings[pair.First.Name] = pair.Second.WithReadOnlyValue(pair.Second.IsReadOnlyValue);
+                bindings[pair.First.Name] = pair.Second;
         }
         if (bindings.Count == 0) return source;
-        var display = new AstCloner(bindings).CloneType(snapshot.DeclaredTypes.GetValueOrDefault(source.Syntax.Node) ?? source.Type);
+        var display = CreateDisplayCloner(bindings).CloneType(snapshot.DeclaredTypes.GetValueOrDefault(source.Syntax.Node) ?? source.Type);
         if (source.Syntax.Node is FieldDeclaration && receiver != null)
         {
             if (receiver.IsImmutableValue) display = TypeQualifiers.Immutable(display);

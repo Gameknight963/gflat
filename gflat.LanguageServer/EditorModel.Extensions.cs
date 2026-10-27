@@ -19,7 +19,7 @@ public sealed partial class EditorModel
             return null;
         var bindings = definition.GenericParameters.Select(parameter => parameter.Name)
             .Zip(checker.GetExtensionCall(call)!.TypeArguments).ToDictionary(pair => pair.First, pair => pair.Second);
-        var cloner = new AstCloner(bindings);
+        var cloner = CreateDisplayCloner(bindings);
         var parameters = definition.Parameters.Skip(1).Select(parameter => new Parameter(parameter.Name,
             cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type), parameter.Line,
             parameter.IsConst, parameter.DefaultValue) { Span = parameter.Span }).ToArray();
@@ -43,7 +43,7 @@ public sealed partial class EditorModel
         var storageType = receiver == null ? null : checker.GetExtensionReceiverStorageType(receiver);
         if (OpenExtensionParameterBinding(path, offset, receiverType) is { } binding)
         {
-            var cloner = new AstCloner(binding);
+            var cloner = CreateDisplayCloner(binding);
             receiverType = cloner.CloneType(receiverType);
             if (storageType != null) storageType = cloner.CloneType(storageType);
         }
@@ -85,7 +85,7 @@ public sealed partial class EditorModel
     private Symbol? ExtensionCandidateSymbol(TypeChecker.ExtensionMethodCandidate candidate)
     {
         if (!declarations.TryGetValue(candidate.Definition, out var symbol)) return null;
-        var cloner = new AstCloner(candidate.GenericBindings.ToDictionary(pair => pair.Key, pair => pair.Value));
+        var cloner = CreateDisplayCloner(candidate.GenericBindings);
         var parameters = candidate.Definition.Parameters.Skip(1).Select(parameter => new Parameter(parameter.Name,
             cloner.CloneType(snapshot.DeclaredTypes.GetValueOrDefault(parameter) ?? parameter.Type), parameter.Line,
             parameter.IsConst, parameter.DefaultValue) { Span = parameter.Span }).ToArray();

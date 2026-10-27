@@ -41,12 +41,14 @@ public sealed partial class EditorModel
         bool storage = receiver != null && ExtensionReceiverStorage(receiver, path, offset);
         bool readOnly = receiverType.IsReadOnlyValue || receiver != null && ExtensionReceiverReadOnly(receiver, path, offset);
         var storageType = receiver == null ? null : checker.GetExtensionReceiverStorageType(receiver);
+        var sourceReceiver = receiverType;
         if (OpenExtensionParameterBinding(path, offset, receiverType) is { } binding)
         {
             var cloner = CreateDisplayCloner(binding);
             receiverType = cloner.CloneType(receiverType);
             if (storageType != null) storageType = cloner.CloneType(storageType);
         }
+        receiverType = SourceNominalExtensionReceiver(receiverType, sourceReceiver, path, offset);
         return checker.GetVisibleExtensions(ns, imports, receiverType, storage, readOnly, memberName: memberName, receiverStorageType: storageType)
             .GroupBy(candidate => candidate.Definition.Name)
             .SelectMany(group => group.Any(candidate => candidate.Adaptation == TypeChecker.ExtensionReceiverAdaptation.Exact)
@@ -55,11 +57,36 @@ public sealed partial class EditorModel
             .Where(symbol => Accessible(symbol, path, offset));
     }
 
+    private TypeExpression SourceNominalExtensionReceiver(TypeExpression receiver, TypeExpression source, string path, int offset)
+    {
+        if (receiver is not NamedTypeExpression { Namespace: null, TypeArguments.Count: > 0 } named ||
+            source is not NamedTypeExpression original || snapshot.Checker!.IsResolvedTypeIdentity(named) ||
+            !sourceTypeNames.TryGetValue(original.NameSpan, out var captured) || !ReferenceEquals(original, captured)) return receiver;
+        var lexical = Visible(path, offset, original.Name).FirstOrDefault(symbol => symbol.Name == original.Name &&
+            (symbol.IsTypeParameter || IsType(symbol.Syntax.Node) || symbol.Syntax.Node is AliasDeclaration));
+        string? identity = lexical?.IsTypeParameter == false ? lexical.Syntax.Node switch {
+            ClassDeclaration declaration => declaration.Name, StructDeclaration declaration => declaration.Name,
+            InterfaceDeclaration declaration => declaration.Name, _ => null
+        } : null;
+        if (identity == null || identity == named.Name) return receiver;
+        return new NamedTypeExpression(identity, null, named.Line, named.TypeArguments.ToList()) {
+            Span = named.Span, NameSpan = named.NameSpan
+        }.WithQualifiersFrom(named);
+    }
+
     private Dictionary<string, TypeExpression>? OpenExtensionParameterBinding(string path, int offset, TypeExpression type)
     {
         while (type is ReferenceTypeExpression or PointerTypeExpression or ManagedTypeExpression)
             type = type switch { ReferenceTypeExpression reference => reference.Inner,
                 PointerTypeExpression pointer => pointer.Inner, ManagedTypeExpression managed => managed.Inner, _ => type };
+        if (type is NamedTypeExpression { TypeArguments.Count: > 0 } applied)
+        {
+            var bindings = new Dictionary<string, TypeExpression>();
+            foreach (var argument in applied.TypeArguments)
+                if (OpenExtensionParameterBinding(path, offset, argument) is { } argumentBindings)
+                    foreach (var binding in argumentBindings) bindings[binding.Key] = binding.Value;
+            return bindings.Count == 0 ? null : bindings;
+        }
         if (type is not NamedTypeExpression { Namespace: null, TypeArguments.Count: 0 } named ||
             snapshot.Checker!.IsResolvedTypeIdentity(named) ||
             Visible(path, offset, named.Name).FirstOrDefault(symbol => symbol.IsTypeParameter) is not { } parameter)

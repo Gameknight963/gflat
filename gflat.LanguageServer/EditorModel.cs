@@ -359,7 +359,7 @@ public sealed partial class EditorModel
         string? owner = TypeOwner(type, path, offset);
         if (left.Text == "this") owner = ScopeAt(path, offset).Owner;
         var members = owner == null ? [] : TypeMembers(owner).Where(s => (name == null || s.Name == name) && !s.Static && !IsType(s.Syntax.Node) && Accessible(s, path, offset) && ReceiverAllowsMember(s, type))
-            .Select(member => BindInstanceMember(member, type)).ToArray();
+            .Select(member => ProjectSourceMemberType(BindInstanceMember(member, type), type, path, offset)).ToArray();
         return members.Concat(ExtensionMembers(path, offset, expression?.Node, type, name)
             .Where(extension => name == null || extension.Name == name)
             .Where(extension => !members.Any(member => member.Name == extension.Name && IsCallableMember(member))));
@@ -424,8 +424,10 @@ public sealed partial class EditorModel
             return BuiltinIndexedElementType(ExpressionType(indexed.Target, path, offset), path, offset);
         if (node is MemberAccessExpression member)
         {
-            string? owner = TypeOwner(ExpressionType(member.Object, path, offset), path, offset);
-            return owner == null ? null : TypeMembers(owner).FirstOrDefault(s => s.Name == member.Member)?.Type;
+            var receiver = ExpressionType(member.Object, path, offset);
+            string? owner = TypeOwner(receiver, path, offset);
+            var source = owner == null ? null : TypeMembers(owner).FirstOrDefault(s => s.Name == member.Member);
+            return source == null ? null : ProjectSourceMemberType(source, receiver, path, offset).Type;
         }
         if (node is CallExpression call)
         {

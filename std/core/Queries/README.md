@@ -55,7 +55,7 @@ Its adapter currently requires a mutable owner. See [Deque views](../../../docs/
 Queue queries preserve FIFO order, while stack queries visit the top first.
 Their adapters likewise borrow captured storage metadata and require a mutable
 owner. Keep that owner alive and avoid structural mutation while using the query;
-ordinary element edits remain visible. See [queue and stack views](OWNING_COLLECTIONS.md#queue-and-stack).
+ordinary element edits remain visible. See [queue and stack views](../Collections/OWNING_COLLECTIONS.md#queue-and-stack).
 
 Linked-list queries capture the first node and visit values from first to last.
 Do not insert or remove nodes while using them. As with node handles, an owner
@@ -77,7 +77,7 @@ storage. BitSet's adapter captures its packed storage and bit length, yielding
 set-bit indices. These adapters do not copy their owners or extend a buffer's
 lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 [Unicode scalars](../../../docs/UTF8_SCALARS.md), and
-[BitSet queries](OWNING_COLLECTIONS.md#packed-bits) for their invalidation rules.
+[BitSet queries](../Collections/OWNING_COLLECTIONS.md#packed-bits) for their invalidation rules.
 
 ## Operations
 

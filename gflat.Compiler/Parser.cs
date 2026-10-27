@@ -1572,14 +1572,17 @@ namespace gflat
             List<EnumMemberDeclaration> members = new List<EnumMemberDeclaration>();
             while (!Check(TokenKind.CloseBrace) && !Check(TokenKind.EndOfFile))
             {
-                int memberLine = Current.Line;
-                string memberName = Expect(TokenKind.Identifier).Text;
-                AstNode? memberValue = null;
-                if (Match(TokenKind.Equals))
+                members.Add(Located(() =>
                 {
-                    memberValue = ParseExpression();
-                }
-                members.Add(new EnumMemberDeclaration(memberName, memberValue, memberLine));
+                    int memberLine = Current.Line;
+                    string memberName = Expect(TokenKind.Identifier).Text;
+                    AstNode? memberValue = null;
+                    if (Match(TokenKind.Equals))
+                    {
+                        memberValue = ParseExpression();
+                    }
+                    return new EnumMemberDeclaration(memberName, memberValue, memberLine);
+                }));
 
                 if (!Match(TokenKind.Comma))
                     break;

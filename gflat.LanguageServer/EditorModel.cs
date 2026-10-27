@@ -306,6 +306,7 @@ public sealed partial class EditorModel
                 globalQualifier ? [] : snapshot.Imports.GetValueOrDefault(sources[path].Id) ?? []);
             if (resolved == null && snapshot.Checker == null)
                 resolved = Visible(path, offset, qualifier).FirstOrDefault(s => s.Name == qualifier && s.Classification == "namespace");
+            if (resolved is { IsTypeParameter: true, TypeConstraint: null }) return [];
             if (resolved != null && ContractOwners(resolved, path, offset) is { } owners)
             {
                 return SymbolsNamed(name).Where(s => owners.Contains(s.Owner) && s.Static && Accessible(s, path, offset));
@@ -313,7 +314,7 @@ public sealed partial class EditorModel
             qualifier = namespacePath ?? (resolved is { IsTypeParameter: true }
                 ? TypeOwner(resolved.TypeConstraint, path, offset) ?? qualifier
                 : resolved?.Syntax.Node is AliasDeclaration
-                    ? TypeOwner(resolved.Type, path, offset) ?? qualifier
+                    ? TypeOwner(resolved.Type, resolved.NameSpan.Source?.Path ?? path, resolved.NameSpan.Start) ?? qualifier
                     : resolved?.Qualified ?? qualifier);
             return SymbolsNamed(name).Where(s => s.Scope == null &&
                 (s.Namespace == qualifier && s.Owner == null || s.Owner == qualifier && (s.Static || IsType(s.Syntax.Node))) && Accessible(s, path, offset));
@@ -443,10 +444,12 @@ public sealed partial class EditorModel
                 string? parent = TypeOwner(nested.Parent, path, offset) ?? SourceTypeNamespace(nested.Parent, path, offset);
                 if (parent == null) return null;
                 string qualified = Join(parent, nested.Member);
-                var target = symbols.FirstOrDefault(s => s.Qualified == qualified);
+                var target = symbols.FirstOrDefault(s => !s.IsTypeParameter && s.Qualified == qualified);
                 if (target?.Syntax.Node is AliasDeclaration)
                 {
                     if (!aliases.Add(target)) return null;
+                    path = target.NameSpan.Source?.Path ?? path;
+                    offset = target.NameSpan.Start;
                     type = target.Type;
                     continue;
                 }
@@ -455,9 +458,9 @@ public sealed partial class EditorModel
             if (type is not NamedTypeExpression named) return null;
             string name = named.Namespace == null ? named.Name : Join(named.Namespace, named.Name);
             var parameter = Visible(path, offset, name).FirstOrDefault(s => s.IsTypeParameter && s.Name == name);
-            if (parameter?.TypeConstraint != null)
+            if (parameter != null)
             {
-                if (!aliases.Add(parameter)) return null;
+                if (parameter.TypeConstraint == null || !aliases.Add(parameter)) return null;
                 type = parameter.TypeConstraint;
                 continue;
             }
@@ -466,6 +469,8 @@ public sealed partial class EditorModel
             if (alias != null)
             {
                 if (!aliases.Add(alias)) return null;
+                path = alias.NameSpan.Source?.Path ?? path;
+                offset = alias.NameSpan.Start;
                 type = alias.Type;
                 continue;
             }
@@ -473,18 +478,19 @@ public sealed partial class EditorModel
             // their registered origin before falling back to incomplete-source
             // name recovery, which cannot distinguish a nested specialization
             // from its generic containing type.
-            if (snapshot.Checker?.GetTypeDeclaration(named.Name) is { } declaration &&
+            var nominal = snapshot.Checker?.GetSourceTypeBinding(named) as NamedTypeExpression ?? named;
+            if (snapshot.Checker?.GetTypeDeclaration(nominal.Name) is { } declaration &&
                 sourceTypeDeclarations.TryGetValue((declaration.GetType(), declaration.Span), out var sourceType))
                 return sourceType.Qualified;
             // Source declarations retain their internal names after checking. Match
             // those before decoding a specialization, even when checking is incomplete.
-            var internalMatch = symbols.Where(s => IsType(s.Syntax.Node)).Select(s => (Symbol: s, Name: s.Syntax.Node switch {
+            var internalMatch = symbols.Where(s => !s.IsTypeParameter && IsType(s.Syntax.Node)).Select(s => (Symbol: s, Name: s.Syntax.Node switch {
                 ClassDeclaration c => c.Name, StructDeclaration st => st.Name, InterfaceDeclaration i => i.Name, EnumDeclaration e => e.Name, _ => "" }))
                 .Where(s => named.Name == s.Name || named.Name.StartsWith(s.Name + "$", StringComparison.Ordinal))
                 .OrderByDescending(s => s.Name.Length).FirstOrDefault();
             if (internalMatch.Symbol != null && (named.Namespace == null || named.Namespace == internalMatch.Symbol.Namespace)) return internalMatch.Symbol.Qualified;
             string display = TemplateName(DisplayType(named.WithoutValueProtection()));
-            return symbols.FirstOrDefault(s => IsType(s.Syntax.Node) && (s.Qualified == name || s.Qualified == display))?.Qualified
+            return symbols.FirstOrDefault(s => !s.IsTypeParameter && IsType(s.Syntax.Node) && (s.Qualified == name || s.Qualified == display))?.Qualified
                 ?? Visible(path, offset, name).FirstOrDefault(s => IsType(s.Syntax.Node) && s.Name == name)?.Qualified;
         }
     }

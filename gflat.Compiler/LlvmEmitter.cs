@@ -3903,6 +3903,7 @@ public partial class LlvmEmitter : IVisitor
             finalVal = temp;
         }
 
+        finalVal = PreserveClassAssignmentHeader(node, targetType, ptr, finalVal);
         if (_typeChecker.HasDestructor(targetType)) DestroyAssignmentTarget(node, targetType, ptr);
         EmitManagedStore(targetType, finalVal, ptr, initialize: _typeChecker.HasDestructor(targetType));
         Push(finalVal);
@@ -4295,6 +4296,8 @@ public partial class LlvmEmitter : IVisitor
             Push(first);
         }
         else expression.Accept(this);
+        if (_typeChecker.ResolveAlias(target) is NamedTypeExpression owned && _typeChecker.IsClassByIdentity(owned.Name))
+            Push(EmitOwnedClassHeader(target, Pop()));
     }
 
     public void Visit(IndexExpression node)

@@ -26,6 +26,37 @@ public partial class LlvmEmitter
     private readonly List<IDeferAction> _parameterOwners = new();
     private readonly Dictionary<AssignmentExpression, string> _constructorLiveFlags = new();
 
+    private string PreserveClassAssignmentHeader(AssignmentExpression node, TypeExpression type, string address, string value)
+    {
+        if (_typeChecker.ResolveAlias(type) is not NamedTypeExpression named ||
+            _typeChecker.GetClassByIdentity(named.Name) is not { } cls) return value;
+        string? live = _constructorLiveFlags.GetValueOrDefault(node) ?? _ownerLiveFlags.GetValueOrDefault(address);
+        if (live == null && _typeChecker.IsInitialization(node)) return value;
+        string llvm = EmitType(type), header;
+        string LoadHeader()
+        {
+            string slot = NewTemp(), old = NewTemp();
+            Emit($"    {slot} = getelementptr {llvm}, {llvm}* {address}, i32 0, i32 0");
+            Emit($"    {old} = load i8**, i8*** {slot}");
+            return old;
+        }
+        if (live == null) header = LoadHeader();
+        else
+        {
+            string flag = NewTemp(), initialized = NewLabel("class_assignment_live"), empty = NewLabel("class_assignment_empty"), ready = NewLabel("class_assignment_header");
+            Emit($"    {flag} = load i1, i1* {live}");
+            Emit($"    br i1 {flag}, label %{initialized}, label %{empty}"); Emit(initialized + ":");
+            string old = LoadHeader();
+            Emit($"    br label %{ready}"); Emit(empty + ":");
+            Emit($"    br label %{ready}"); Emit(ready + ":");
+            header = NewTemp();
+            Emit($"    {header} = phi i8** [ {old}, %{initialized} ], [ bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**), %{empty} ]");
+        }
+        string result = NewTemp();
+        Emit($"    {result} = insertvalue {llvm} {value}, i8** {header}, 0");
+        return result;
+    }
+
     private void DestroyAssignmentTarget(AssignmentExpression node, TypeExpression type, string address)
     {
         if (_constructorLiveFlags.TryGetValue(node, out string? flag))
@@ -49,7 +80,14 @@ public partial class LlvmEmitter
             Emit($"    store i1 true, i1* {live}");
             CompleteManagedOwnerInitialization(address);
         }
-        else if (!_typeChecker.IsInitialization(node)) EmitDestroy(type, address);
+        else if (!_typeChecker.IsInitialization(node))
+        {
+            // Replacing a base subobject must not destroy the derived tail.
+            if (_typeChecker.ResolveAlias(type) is NamedTypeExpression named &&
+                _typeChecker.GetClassByIdentity(named.Name) is { } cls)
+                new ClassDestructorDeferAction(cls, address, false, cls.DestructorSlot).Execute(this);
+            else EmitDestroy(type, address);
+        }
     }
 
     private void WithArgumentOwnership(Action body)

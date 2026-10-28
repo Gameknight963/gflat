@@ -4,6 +4,17 @@ namespace gflat;
 
 public partial class LlvmEmitter
 {
+    // A materialized class value owns only its static type's storage. Borrowed
+    // reads keep their original header and never pass through this boundary.
+    private string EmitOwnedClassHeader(TypeExpression type, string value)
+    {
+        if (_typeChecker.ResolveAlias(type) is not NamedTypeExpression named ||
+            _typeChecker.GetClassByIdentity(named.Name) is not { } cls) return value;
+        string result = NewTemp();
+        Emit($"    {result} = insertvalue %{cls.Name} {value}, i8** bitcast ([{cls.VirtualMethods.Count} x i8*]* @{cls.Name}$vtable to i8**), 0");
+        return result;
+    }
+
     private void EmitConstructorCall(string name, ConstructorDeclaration? constructor, string arguments)
     {
         EmitCallInstruction("void", "@" + name, arguments, handleUnwind: constructor?.IsNoThrow != true);
@@ -31,6 +42,7 @@ public partial class LlvmEmitter
         {
             string value = NewTemp();
             Emit($"    {value} = load {llvm}, {llvm}* {source}");
+            value = EmitOwnedClassHeader(type, value);
             EmitManagedStore(type, value, destination);
             return;
         }

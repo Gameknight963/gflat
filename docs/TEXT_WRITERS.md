@@ -113,3 +113,72 @@ propagates without rollback. Retrying can duplicate accepted output. The tee
 keeps no failure latch, so later writes are forwarded normally, subject to each
 endpoint's own recovery rules. It provides no synchronization, completion,
 reset, flush or close operation.
+
+## Buffer small writes before forwarding
+
+`std::Text::BufferedWriter` borrows an `ITextWriter*` sink and caller-provided
+scratch storage. It combines small writes without allocating a String. The
+constructor's capacity is entirely payload space; it reserves no terminator and
+does not touch scratch or write to the sink.
+
+```csharp
+using std; using std::Text;
+
+int main()
+{
+    char[32] bytes;
+    BufferWriter output = new(bytes, 32);
+    char[8] scratch;
+    BufferedWriter buffered = new(&output, scratch, 8);
+    ITextWriter* writer = &buffered;
+    writer.WriteLine("A\0B", 3);
+    if (output.Length != 0) return 1;
+    buffered.Flush();
+    if (output.Length != 4 || bytes[1] != '\0' || bytes[3] != '\n') return 2;
+    return 0;
+}
+```
+
+For positive capacity, every nonempty write copies bytes into scratch, draining
+each full buffer immediately through one sink `Write`. Large writes use the same
+path, with no bypass. A partial buffer remains pending until later input fills it
+or `Flush()` is called. Binary NUL and high bytes are ordinary payload. Zero
+capacity instead forwards every nonempty write directly, never touching scratch.
+Empty writes and empty flushes make no sink calls and access no data storage.
+The language's non-null pointer requirement still applies to zero-capacity
+scratch and zero-length input.
+
+`Flush()` sends only this adapter's pending bytes. `ITextWriter` has no flush
+method, so it does not call the sink's device flush. For File or Console output,
+explicitly flush the adapter before flushing the concrete sink when needed.
+Nested buffers likewise require flushing from the outer adapter inward.
+Successful writes can leave pending data; ending the adapter's lifetime performs
+no output, including when bytes remain pending. It never closes or destroys the
+sink. There is no reset or completion operation.
+
+Constructor and successful forwarding allocate nothing internally. Formatters
+and sinks retain their ordinary allocation and exception behavior. A sink can
+accept a prefix before throwing. Its original exception propagates and latches
+that adapter as failed: later `Write`, including zero count, and `Flush` throw
+before accessing input or calling the sink. Earlier completed drains remain
+written. There is no rollback or safe replay guarantee for the buffered bytes.
+
+Keep the sink and full scratch region alive and at stable addresses throughout
+use. Nonempty input must remain readable and unchanged during each `Write` and
+must be disjoint from scratch and storage the sink might modify or reallocate.
+Scratch must also be separate from adapter/sink state and storage that sink
+writes might modify, move or reallocate. The sink consumes each supplied span
+during its call; the adapter retains no input pointer. No callback reentrancy,
+concurrent access or arbitrary external mutation of pending scratch is supported.
+
+Copies share scratch while duplicating the pending count and failure flag.
+They are not independent output branches: flushing both untouched copies emits
+the same pending bytes twice, and writes through either copy can replace bytes
+the other still considers pending. An existing copy does not automatically
+become failed when another copy fails. These sequential shared-buffer effects
+can be intentional; they are not prevented by the adapter. For one logical
+stream, prefer borrowing the writer through a pointer/reference, or moving its
+metadata for handoff, and use separate scratch for independent branches.
+
+Explicit source selection needs `Text/BufferedWriter.gf`, the ordinary
+`Text.gf` and Exception contracts, and the chosen sink/formatter definitions.

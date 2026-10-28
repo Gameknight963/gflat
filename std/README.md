@@ -70,6 +70,7 @@ implementation lives in `libc`.
 | Caller-buffer text | `BufferWriter` | [Allocation-free formatting](../docs/BUFFER_WRITER.md) |
 | Byte measurement | `CountingWriter` | [Count writer output without storing it](../docs/COUNTING_WRITER.md) |
 | Shared output | `TeeWriter` | [Forward one stream to two borrowed writers](../docs/TEXT_WRITERS.md#send-one-stream-to-two-writers) |
+| Buffered output | `BufferedWriter` | [Coalesce writes with caller-owned scratch](../docs/TEXT_WRITERS.md#buffer-small-writes-before-forwarding) |
 | Prefixed lines | `LinePrefixWriter` | [Prefix streamed lines without buffering them](../docs/LINE_PREFIX_WRITER.md) |
 | Writer helpers | `ITextWriter*` `WriteLine` overloads and `WriteRepeated` | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split`, Span `TrySplitOnce`/`TrySplitLastOnce`/`Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md), [key/value views](../docs/TEXT_SPLIT_ONCE.md), [multi-byte delimiters](../docs/TEXT_SPLIT_PATTERN.md) |

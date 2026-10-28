@@ -79,9 +79,12 @@ internal static class ExampleOutputFailure
                 """.Replace("SETUP", setup)
                 .Replace("ARGCOUNT", argumentCount.ToString())
                 .Replace("INPUTINDEX", readOnlyPathIndex.ToString());
+            string combinedSource = example + failure + wrapper;
+            string sourcePath = Path.Combine(directory, "example-with-output-failure.gf");
+            File.WriteAllText(sourcePath, combinedSource);
             var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
                 .Select(path => new SourceFile(path, File.ReadAllText(path)))
-                .Append(new SourceFile("example-with-output-failure.gf", example + failure + wrapper));
+                .Append(new SourceFile(sourcePath, combinedSource));
             string ir = Path.Combine(directory, "main.ll"), executable = Path.Combine(directory, "tool.exe");
             File.WriteAllText(ir, Compiler.Emit(sources, options: new() { InternalizeFunctions = true }));
             var compiled = NativeToolchain.Compile(ir, executable, optimizationLevel: optimization);
@@ -105,6 +108,7 @@ internal static class ExampleOutputFailure
                 Assert.DoesNotContain("Unable to read", run.StandardError);
             }
         }
-        finally { Directory.Delete(directory, true); }
+        catch (Exception error) { error.Data["ExampleOutputFailureDirectory"] = directory; throw; }
+        Directory.Delete(directory, true);
     }
 }

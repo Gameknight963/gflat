@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardDateLayoutTests
+public sealed class DateLayoutTests
 {
     [Theory]
     [InlineData(0)]

@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardDateFormattingAliasTests
+public sealed class DateFormattingAliasTests
 {
     [Theory]
     [InlineData(0)]

@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardDateDayPropertiesTests
+public sealed class DateDayPropertiesTests
 {
     [Theory]
     [InlineData(0)]

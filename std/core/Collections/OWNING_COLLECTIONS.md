@@ -89,7 +89,7 @@ A failing argument copy leaves the vector unchanged. If a later element copy or
 allocation fails during growth, the successfully appended prefix remains valid;
 capacity may have grown and existing borrows may have been invalidated. Copy
 constructors must not structurally mutate the target through another alias.
-`Resize` requires copying even when a particular call shrinks. Noncopyable vectors
+The fill overload requires copying even when a particular call shrinks. Noncopyable vectors
 can continue to use `Truncate`, `Add(move value)`, and their other instance methods.
 No default construction of `T` is involved.
 The fill argument participates in type inference: for `Vector<nuint>`, use a
@@ -106,6 +106,39 @@ int main()
     if (row.Count != 12 || row[0] != 7 || row[11] != 0) return 1;
     row.Resize(3, (nuint)0);
     if (row.Count != 3) return 2;
+    return 0;
+}
+```
+
+`vector.Resize(count)` instead default-constructs each new element, without copying.
+It requires an accessible valid zero-argument construction of `T`, even when a
+particular call shrinks; use `Truncate` for types without one. Merely including
+the extension does not impose that requirement on other `Vector<T>` operations.
+For scalars such as `char`, new elements are zero-initialized. Owning elements run
+their ordinary constructors, which may allocate or throw.
+
+Growth reserves `count` once when needed, then constructs in ascending order.
+Shrink retains capacity and destroys the suffix; an equal count does nothing.
+Allocation or capacity-overflow failure leaves the vector unchanged and invokes
+no element constructor. Constructor failure destroys the newly appended prefix
+and restores the original count and contents, but capacity may have grown and
+old borrows may be invalidated. Constructors must not structurally mutate the
+target through another alias. Constructor side effects, including writes through
+external aliases, are not rolled back. Reacquire views after growth, including failed growth.
+
+This provides initialized storage for caller-buffer IO; reserve alone does not
+create elements. After a short read, truncate to the number actually read:
+
+```cpp
+using std; using std::Collections; using std::IO;
+int main()
+{
+    Vector<char> buffer = new();
+    buffer.Resize(4096);
+    File input = File::OpenTemporary();
+    nuint read = input.Read(buffer.AsSpan().Data!, buffer.Count);
+    buffer.Truncate(read);
+    if (!buffer.IsEmpty || buffer.Capacity != 4096) return 1;
     return 0;
 }
 ```

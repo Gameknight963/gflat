@@ -52,6 +52,7 @@ launch page sets arguments and working directory; see [debugging projects](../do
 - [checksum](checksum/README.md): compute file checksums or SHA-256/SHA-512 digests.
 - [hexdump](hexdump/README.md): print hexadecimal byte rows with an optional initial skip.
 - [riff-list](riff-list/README.md): list top-level RIFF chunk offsets and lengths.
+- [png-list](png-list/README.md): list PNG chunk offsets and lengths, checking framing and CRCs.
 
 ## Numbers, algorithms, and commands
 

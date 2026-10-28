@@ -23,6 +23,7 @@
   <Project Path="managed/managed.gfproj" />
   <Project Path="number-stats/number-stats.gfproj" />
   <Project Path="pathfinding/pathfinding.gfproj" />
+  <Project Path="png-list/png-list.gfproj" />
   <Project Path="providers/providers.gfproj" />
   <Project Path="queries/queries.gfproj" />
   <Project Path="quote-lines/quote-lines.gfproj" />

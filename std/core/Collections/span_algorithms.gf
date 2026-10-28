@@ -117,6 +117,26 @@ public nuint UpperBound<T>(Span<immutable(T)> values, immutable(T)* key,
     return first;
 }
 
+// First false predicate result in a true-prefix/false-suffix span.
+// The input must already be partitioned under this stable predicate.
+public nuint PartitionPoint<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
+{
+    nuint first = 0;
+    nuint count = values.Length;
+    while (count != 0)
+    {
+        nuint step = count / 2;
+        nuint middle = first + step;
+        if (predicate(&values[middle]))
+        {
+            first = middle + 1;
+            count -= step + 1;
+        }
+        else count = step;
+    }
+    return first;
+}
+
 // First matching index in sorted input, or Length when the key is absent.
 // Use the same ordering as Sort; neither elements nor the key are copied.
 public nuint BinarySearch<T>(Span<immutable(T)> values, immutable(T)* key,

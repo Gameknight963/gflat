@@ -40,6 +40,7 @@ int main()
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
 | `LowerBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
 | `UpperBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
+| `PartitionPoint<T>(Span<immutable(T)>, predicate)` | First false index in an already partitioned true-prefix/false-suffix span, or span length when all match. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `default_equality.gf`. |
@@ -136,6 +137,51 @@ predicate borrows an element through `immutable(T)*` and runs once per element
 unless an earlier invocation throws. `FindIndex` stops at the first match;
 `IsSorted` stops at the first out-of-order adjacent pair. Empty spans are sorted
 and compare equal to other empty spans without invoking callbacks.
+
+## Partition boundary search
+
+`PartitionPoint` finds the boundary of an already partitioned span: every element
+for which the predicate returns true must precede every element for which it
+returns false. The predicate must remain consistent throughout the call. Elements
+within either group need not be sorted. Input that does not meet this precondition
+has no specified result; the search does not validate it with a linear scan.
+
+The result is the first false element's index. All-true input returns `Length`,
+and all-false or empty input returns zero. Empty spans never read element storage
+or call the predicate. Unlike `Partition`, this search does not rearrange elements;
+it can find the boundary of data that was grouped earlier or supplied externally.
+
+```csharp
+using std; using std::Memory; using std::Collections;
+
+struct Record
+{
+    public int Code;
+    public bool Complete;
+    public Record(int code, bool complete) { Code = code; Complete = complete; }
+}
+
+bool IsComplete(immutable(Record)* value) => value.Complete;
+
+int main()
+{
+    Record[5] data = [new Record(8, true), new Record(3, true),
+        new Record(5, true), new Record(9, false), new Record(1, false)];
+    Span<Record> records = new(data, 5);
+    nuint boundary = PartitionPoint<Record>(records.AsImmutable(), IsComplete);
+    if (boundary != 3 || records[boundary].Code != 9) return 1;
+    return 0;
+}
+```
+
+For nonempty input the search makes at most `floor(log2(Length)) + 1` predicate
+calls, using constant extra storage. Callbacks borrow `immutable(T)*` pointers;
+the search allocates nothing and never copies, destroys, or modifies elements,
+including noncopyable owners. Keep the backing storage alive and unchanged
+through other aliases. Original predicate exceptions propagate, while callback
+side effects are not rolled back. The function is an ordinary throwing function.
+Selective source users need `Collections/span_algorithms.gf` and the ordinary
+Span dependencies; no ordering or equality interface is required.
 
 ## Adjacent pair search
 

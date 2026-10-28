@@ -1234,10 +1234,7 @@ namespace gflat
                 Token nameToken = Current;
 
                 // handle built-in type keywords
-                if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
-                    TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Double or TokenKind.Bool or
-                    TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or TokenKind.ExtraLong or
-                    TokenKind.Void or TokenKind.Managed)
+                if (IsBuiltInTypeKeyword(Current.Kind))
                 {
                     name = Current.Text;
                     Consume();
@@ -1451,12 +1448,8 @@ namespace gflat
             return ParseVariableOrExpressionStatement();
         }
 
-        private bool IsTypeStart() =>
-            Current.Kind is TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or
-            TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
-            TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Double or TokenKind.Bool or
-            TokenKind.Char or TokenKind.ExtraLong or
-            TokenKind.Void or TokenKind.Managed or TokenKind.Identifier or TokenKind.Readonly or TokenKind.Immutable;
+        private bool IsTypeStart() => IsBuiltInTypeKeyword(Current.Kind) ||
+            Current.Kind is TokenKind.Identifier or TokenKind.Readonly or TokenKind.Immutable;
 
         private AstNode ParseVariableOrExpressionStatement()
         {

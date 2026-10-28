@@ -1235,7 +1235,7 @@ namespace gflat
 
                 // handle built-in type keywords
                 if (Current.Kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
-                    TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
+                    TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Double or TokenKind.Bool or
                     TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or TokenKind.ExtraLong or
                     TokenKind.Void or TokenKind.Managed)
                 {
@@ -1454,7 +1454,7 @@ namespace gflat
         private bool IsTypeStart() =>
             Current.Kind is TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or
             TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
-            TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
+            TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Double or TokenKind.Bool or
             TokenKind.Char or TokenKind.ExtraLong or
             TokenKind.Void or TokenKind.Managed or TokenKind.Identifier or TokenKind.Readonly or TokenKind.Immutable;
 
@@ -2203,7 +2203,7 @@ namespace gflat
 
         private static bool IsBuiltInTypeKeyword(TokenKind kind) =>
             kind is TokenKind.Int or TokenKind.UInt or TokenKind.Long or TokenKind.ULong or
-            TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Bool or
+            TokenKind.NInt or TokenKind.NUInt or TokenKind.Float or TokenKind.Double or TokenKind.Bool or
             TokenKind.Char or TokenKind.Byte or TokenKind.SByte or TokenKind.Short or TokenKind.UShort or
             TokenKind.ExtraLong or TokenKind.Void or TokenKind.Managed;
 

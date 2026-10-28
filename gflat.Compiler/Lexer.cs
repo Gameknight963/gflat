@@ -282,6 +282,7 @@ public class Lexer
             "void" => TokenKind.Void,
             "int" => TokenKind.Int,
             "float" => TokenKind.Float,
+            "double" => TokenKind.Double,
             "bool" => TokenKind.Bool,
             "char" => TokenKind.Char,
             "long" => TokenKind.Long,

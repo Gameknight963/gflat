@@ -104,6 +104,7 @@ namespace gflat
         Void,
         Int,
         Float,
+        Double,
         Bool,
         Char,
         Long,

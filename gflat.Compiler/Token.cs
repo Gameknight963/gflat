@@ -115,6 +115,7 @@ namespace gflat
             TokenKind.Void => "void",
             TokenKind.Int => "int",
             TokenKind.Float => "float",
+            TokenKind.Double => "double",
             TokenKind.Bool => "bool",
             TokenKind.Char => "char",
             TokenKind.Long => "long",

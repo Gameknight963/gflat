@@ -51,3 +51,37 @@ int main()
     return 0;
 }
 ```
+
+For the last complete match, include
+`core/Text/text_split_last_once_pattern_span.gf` and call `TrySplitLastOnce`.
+It accepts the same counted-pointer, C-string, and separator-span forms and
+reuses `ByteSearch::LastIndexOf`. Overlapping matches are considered:
+`"aaaaa"` split on `"aaa"` gives `"aa"` and an empty suffix.
+
+An empty separator matches at the **end**: `before` retains the complete receiver
+metadata and `after` is a default empty span. Empty source and separator spans,
+and counted zero-length separator pointers, are accepted without reading their
+data. Missing separators clear both outputs. The same lifetime, no-allocation,
+and distinct-output requirements apply; receiver or separator metadata may be
+reused as either output. Both result views are computed before either assignment.
+The optional pattern file has the same source dependencies as first-match splitting.
+
+```csharp
+using std::Text;
+using std::Memory;
+
+int main()
+{
+    String qualified = s"std::Text::String";
+    Span<readonly(char)> owner = new();
+    Span<readonly(char)> name = new();
+    bool found = qualified.AsReadOnly().TrySplitLastOnce("::", ref owner, ref name);
+    // owner is "std::Text" and name is "String".
+    if (!found || owner.Length != 9 || name.Length != 6) return 1;
+    return 0;
+}
+```
+
+This owning String example additionally uses `Text/String.gf` and its dependencies,
+plus the optional `Text/string_span.gf` view convenience. A caller-buffer span
+does not require String.

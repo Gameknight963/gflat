@@ -54,3 +54,10 @@ every field rather than preserving the whole remainder.
 Optional [multi-byte separator overloads](TEXT_SPLIT_PATTERN.md) accept counted
 bytes, a C string, or a separator span. They reuse `ByteSearch` and have their own
 source file, leaving the single-character helper's dependencies unchanged.
+
+`Text/text_split_last_once_span.gf` provides the matching `TrySplitLastOnce`
+character overload. It searches from the end, preserving earlier separators in
+`before`. For example, splitting `"a=b=c"` at `'='` gives `"a=b"` and `"c"`.
+It has the same borrowing, failure, empty-side, and output-alias contracts as
+`TrySplitOnce`, and needs only the ordinary Span dependencies. Optional
+[byte-sequence overloads](TEXT_SPLIT_PATTERN.md) also support last-match splitting.

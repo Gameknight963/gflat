@@ -211,7 +211,7 @@ public sealed class HexDecoderTests
     [Fact]
     public void SelectiveCodecSourcesDoNotRequireStringOrCollector()
     {
-        string[] names = ["Encoding/Hex.gf", "Encoding/HexDecoder.gf", "Text.gf", "Exception.gf"];
+        string[] names = ["Encoding/Hex.gf", "Encoding/HexDecoder.gf", "ITextWriter.gf", "IFormattable.gf", "Exception.gf"];
         var sources = names.Select(name => Path.Combine(AppContext.BaseDirectory, "Std/core", name))
             .Select(path => new SourceFile(path, File.ReadAllText(path))).Append(new SourceFile("selective-hex.gf", """
                 using std::Encoding;

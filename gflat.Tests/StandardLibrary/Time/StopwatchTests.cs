@@ -146,7 +146,7 @@ public sealed class StopwatchTests
     [Fact]
     public void SelectedCoreSourcesNeedNoStringLibcOrWideDivisionAndResetHasNoExceptionBoundary()
     {
-        string[] names=["Time/IMonotonicClock.gf","Time/Stopwatch.gf","Time/TimeSpan.gf","Text.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
+        string[] names=["Time/IMonotonicClock.gf","Time/Stopwatch.gf","Time/TimeSpan.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("stopwatch-contract.gf","""
                 namespace Memory{public void*? Allocate(nuint count){return null;}public void Free(void* storage)nothrow{}}

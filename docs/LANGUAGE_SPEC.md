@@ -1310,7 +1310,7 @@ Floating-point conversion additionally uses `std/libc/floating_format.gf` and li
 The prefix follows the same namespace lookup and ambiguity rules as ordinary custom literals,
 including qualified syntax such as `std::Text::s$"{42}"`. Unprefixed `$"..."` is
 not supported. Implementing a literal operator alone does not opt into interpolation.
-Its containing/result type must implement the automatically available global interface `ITextWriter` from `std/core/Text.gf`:
+Its containing/result type must implement the automatically available global interface `ITextWriter` from `std/core/ITextWriter.gf`:
 
 ```text
 interface ITextWriter
@@ -1385,7 +1385,7 @@ A compilation accepts multiple named source snapshots and produces one LLVM modu
 
 Defined functions with the same name in imported namespaces participate together in overload resolution. Calls select by their arguments; function values select by their target signature. Import order does not select a function, and repeated imports do not duplicate candidates. A callable declaration in the nearest lexical scope shadows imported functions even when it cannot accept the call. Equally good imported matches remain ambiguous and require qualification. Combining candidates does not combine their declarations or change their emitted identities. Each candidate retains its own declaration imports, default arguments, and generic constraints; imported alternatives cannot expose capabilities hidden by a constrained alias or generic parameter view. This rule does not introduce overloading of foreign `extern` declarations.
 
-Compilation setup automatically includes `std/core/Attribute.gf`, `std/core/Exception.gf`, `std/core/Text.gf`, and `std/libc/Memory/Memory.gf`. These ordinary source files are shipped in the compiler?s `Std` directory. Their current global names remain available without imports. The default `Exception` is omitted if explicitly supplied by the program. Explicit inputs at these std-relative paths take precedence over bundled files and are not included twice. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
+Compilation setup automatically includes `std/core/Attribute.gf`, `std/core/Exception.gf`, `std/core/ITextWriter.gf`, `std/core/IFormattable.gf`, and `std/libc/Memory/Memory.gf`. These ordinary source files are shipped in the compiler?s `Std` directory. Their current global names remain available without imports. The default `Exception` is omitted if explicitly supplied by the program. Explicit inputs at these std-relative paths take precedence over bundled files and are not included twice. The syntax parser itself does not inject declarations. `weak`/`replace` selection covers the complete compilation. Duplicate declaration diagnostics retain both source locations.
 
 The C# compiler API accepts immutable `SourceFile(path, text)` snapshots through `Compiler.Check(IEnumerable<SourceFile>, diagnostics)` and `Compiler.Emit(IEnumerable<SourceFile>, diagnostics)`. The path identifies the snapshot; the compiler does not read its text from disk. This permits unsaved editor buffers and independent command-line or IDE hosts. Source spans use UTF-16 offsets and one-based lines and columns. Diagnostics expose their source span, code, severity, message, and related declaration locations.
 

@@ -96,7 +96,7 @@ A formatter writes to the tee once, so each emitted chunk reaches both endpoints
 without formatting twice or materializing a String. Constructor and adapter
 forwarding allocate nothing internally; sinks and formatters may allocate or
 throw. Explicit source selection needs `Text/TeeWriter.gf` and the ordinary
-formatting contract in `Text.gf`, plus the selected endpoint/helper definitions.
+formatting contracts in `ITextWriter.gf` and `IFormattable.gf`, plus the selected endpoint/helper definitions.
 
 The adapter owns neither endpoint. Keep both alive and valid for every write;
 copying or moving the tee shares those same borrowed endpoints. Ending an
@@ -181,4 +181,4 @@ stream, prefer borrowing the writer through a pointer/reference, or moving its
 metadata for handoff, and use separate scratch for independent branches.
 
 Explicit source selection needs `Text/BufferedWriter.gf`, the ordinary
-`Text.gf` and Exception contracts, and the chosen sink/formatter definitions.
+`ITextWriter.gf`, `IFormattable.gf` and Exception contracts, and the chosen sink/formatter definitions.

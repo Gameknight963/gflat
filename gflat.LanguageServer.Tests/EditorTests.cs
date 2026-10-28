@@ -139,7 +139,7 @@ public class EditorTests
     public void WorkspaceUsesUnsavedLibrarySnapshotsAndWatchesTheirFiles()
     {
         string app = Path.Combine(Path.GetTempPath(), "gflat-stdlib-editor", "main.gf");
-        var library = StandardLibrary.Load("core/Text.gf");
+        var library = StandardLibrary.Load("core/ITextWriter.gf");
         var documents = new Dictionary<string, OpenDocument> {
             [app] = new(app, "int main() => UnsavedLibraryAnswer();", 1),
             [library.Path] = new(library.Path, library.Text + "int UnsavedLibraryAnswer() => 42;", 2)
@@ -152,7 +152,8 @@ public class EditorTests
     [Theory]
     [InlineData("void F(|Exception* e) {}", "core/Exception.gf", "class Exception")]
     [InlineData("class Tag : |Attribute {}", "core/Attribute.gf", "abstract class Attribute")]
-    [InlineData("void F(|ITextWriter* output) {}", "core/Text.gf", "interface ITextWriter")]
+    [InlineData("void F(|ITextWriter* output) {}", "core/ITextWriter.gf", "interface ITextWriter")]
+    [InlineData("void F(|IFormattable* value) {}", "core/IFormattable.gf", "interface IFormattable")]
     [InlineData("void F() { Memory::|Allocate(1); }", "libc/Memory/Memory.gf", "Allocate(nuint")]
     public void LibraryDefinitionsNavigateToShippedSource(string marked, string relative, string declaration)
     {

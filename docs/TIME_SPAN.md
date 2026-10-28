@@ -131,7 +131,7 @@ Hashes serve collections and are not a stable serialized representation.
 Use `Ticks` when persistence matters. No arithmetic operators, clocks,
 or calendar arithmetic are provided.
 
-For selective source use, include `core/Time/TimeSpan.gf`, `core/Text.gf`,
+For selective source use, include `core/Time/TimeSpan.gf`, `core/ITextWriter.gf`, `core/IFormattable.gf`,
 `core/IEquatable.gf`, `core/IComparable.gf`, and `core/IHashable.gf` with
 `core/Hashing/primitive_hashing.gf` and their normal Exception/runtime dependencies.
 

@@ -209,7 +209,7 @@ The compiler links the small native standard-stream accessor only when reference
 `File` implements the automatically available `ITextWriter` contract, so
 primitive and user formatting can write directly through a borrowed `File*`.
 This adds no fields or ownership transfer; a File remains one native stream
-pointer in size. With `NoStdLib`, supply `core/Text.gf` explicitly alongside
+pointer in size. With `NoStdLib`, supply `core/ITextWriter.gf`, `core/IFormattable.gf` explicitly alongside
 the other selected sources.
 The nullable `std::IO::FileHandle` alias represents libc's opaque `FILE*` internally.
 It is not a Windows kernel handle, and callers must not free it through `Memory`.

@@ -97,7 +97,7 @@ also invalid. Call the destination's own flush operation explicitly if needed.
 
 For explicit source selection, include `Json/JsonWriter.gf`, `Json/JsonWriteException.gf`,
 `Json/json_string_writer.gf`, `Json/JsonString.gf`, `Text/utf8.gf`, `Text/IntegerFormatting.gf`,
-`Json/JsonReader.gf`, `Json/JsonParseException.gf`, `Json/JsonTokenKind.gf`, `Text.gf`
+`Json/JsonReader.gf`, `Json/JsonParseException.gf`, `Json/JsonTokenKind.gf`, `ITextWriter.gf`, `IFormattable.gf`
 (`ITextWriter`), and the ordinary `Vector` dependencies. No DOM, reflection, GC, or libc-specific
 writer implementation is required.
 

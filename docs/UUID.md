@@ -85,7 +85,7 @@ cryptographic authentication. Constructors, getters, comparisons, hashing, and
 Try operations allocate nothing and are `nothrow` under their pointer-storage
 preconditions. Buffers remain caller-owned; no pointers are retained.
 
-For selective source use, include `Uuid.gf`, `Text.gf`, `IEquatable.gf`,
+For selective source use, include `Uuid.gf`, `ITextWriter.gf`, `IFormattable.gf`, `IEquatable.gf`,
 `IComparable.gf`, `IHashable.gf`, and `Hashing/primitive_hashing.gf`. Throwing Parse and FromBytes
 methods require the ordinary Exception/runtime contracts. This API generates no identifiers and
 uses no clock, operating-system generator, or random source.

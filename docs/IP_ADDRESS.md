@@ -112,7 +112,7 @@ allocate nothing. Exact-address filtering can use equality or hash collections.
 
 This API has no sockets, DNS, endpoints, subnet matching, address classification,
 or automatic conversion between IPv4 and IPv4-mapped IPv6. For selective source
-use, include `core/Net/IpAddress.gf`, `core/Text.gf`, the equality/comparison/hash
+use, include `core/Net/IpAddress.gf`, `core/ITextWriter.gf`, `core/IFormattable.gf`, the equality/comparison/hash
 interfaces, and `core/Hashing/primitive_hashing.gf` with their normal Exception/runtime contracts.
 
 Strict dotted decimal follows [RFC 3986 section 3.2.2](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2).

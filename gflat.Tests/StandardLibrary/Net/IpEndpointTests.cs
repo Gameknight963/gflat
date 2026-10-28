@@ -222,7 +222,7 @@ public sealed class IpEndpointTests
 
     private static IEnumerable<SourceFile> Sources(string program)
     {
-        string[] names = ["Net/IpEndpoint.gf", "Net/IpAddress.gf", "Text.gf", "IEquatable.gf", "IComparable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf", "Exception.gf"];
+        string[] names = ["Net/IpEndpoint.gf", "Net/IpAddress.gf", "ITextWriter.gf", "IFormattable.gf", "IEquatable.gf", "IComparable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf", "Exception.gf"];
         return names.Select(name => {
             string path = Path.Combine(AppContext.BaseDirectory, "Std/core", name);
             return new SourceFile(path, File.ReadAllText(path));

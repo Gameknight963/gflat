@@ -110,6 +110,6 @@ dependency; ordinary interpolation uses its formatting interface and follows
 String's normal allocation behavior.
 
 For selective sources, include `core/Net/IpEndpoint.gf`, `core/Net/IpAddress.gf`,
-`core/Text.gf`, the equality/comparison/hash interfaces, and
+`core/ITextWriter.gf`, `core/IFormattable.gf`, the equality/comparison/hash interfaces, and
 `core/Hashing/primitive_hashing.gf` with their normal Exception/runtime contracts.
 The value introduces no DNS, socket, native layout, platform, or scope-ID API.

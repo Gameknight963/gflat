@@ -104,7 +104,7 @@ public sealed class HexWriterTests
                 return 0;
             }
             """;
-        string[] names=["Encoding/Hex.gf","Encoding/hex_writer.gf","Text.gf","Exception.gf"];
+        string[] names=["Encoding/Hex.gf","Encoding/hex_writer.gf","ITextWriter.gf", "IFormattable.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("hex-writer-contract.gf",program));
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true,InternalizeFunctions=true});

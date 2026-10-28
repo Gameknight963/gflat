@@ -121,7 +121,7 @@ public sealed class StandardIsoWeekTests
     [Fact]
     public void IsoPropertiesAreNothrowWithoutStringGcOrLibcSourceDependencies()
     {
-        string[] names=["Time/Date.gf","Time/DayOfWeek.gf","Text.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
+        string[] names=["Time/Date.gf","Time/DayOfWeek.gf","ITextWriter.gf", "IFormattable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","Exception.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",name))))
             .Append(new SourceFile("iso-contract.gf","""
                 using std; using std::Time;

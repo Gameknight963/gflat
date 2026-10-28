@@ -50,24 +50,39 @@ public sealed class NativeToolchainRunTests(ITestOutputHelper output)
         Directory.CreateDirectory(directory);
         try
         {
+            // Cold Windows process setup exceeded 1.2s. Grant 15s, with a 30s holder:
+            // the old unbounded EOF wait still returns success and fails this test.
+            int timeout = OperatingSystem.IsWindows() ? 15000 : 1200;
+            int holderSeconds = OperatingSystem.IsWindows() ? 30 : 4;
+            TimeSpan watchdog = TimeSpan.FromSeconds(OperatingSystem.IsWindows() ? 90 : 12);
+            TimeSpan cleanupWatchdog = TimeSpan.FromSeconds(OperatingSystem.IsWindows() ? 60 : 7);
             string started = Path.Combine(directory, "child.started");
             string done = Path.Combine(directory, "child.done");
             string parentExit = Path.Combine(directory, "parent.exiting");
+            string parentEntry = Path.Combine(directory, "parent.entry");
+            string childPid = Path.Combine(directory, "parent.child-pid");
+            string parentError = Path.Combine(directory, "parent.error");
+            string childError = Path.Combine(directory, "child.error");
             (string Executable, string[] Arguments) command;
             if (OperatingSystem.IsWindows())
             {
                 // No child pipe writes: cancellation may close the reader before the finite child exits.
-                string child = "$ProgressPreference = 'SilentlyContinue'; " +
-                    $"[IO.File]::WriteAllText({PowerShellQuote(started)}, 'started'); " +
-                    $"Start-Sleep -Seconds 4; [IO.File]::WriteAllText({PowerShellQuote(done)}, 'done')";
+                string child = "$ProgressPreference = 'SilentlyContinue'; $ErrorActionPreference = 'Stop'; try { " +
+                    $"[IO.File]::WriteAllText({PowerShellQuote(started)}, [string]$PID + ' ' + [DateTime]::UtcNow.ToString('O')); " +
+                    $"Start-Sleep -Seconds {holderSeconds}; [IO.File]::WriteAllText({PowerShellQuote(done)}, [DateTime]::UtcNow.ToString('O')) " +
+                    $"}} catch {{ [IO.File]::WriteAllText({PowerShellQuote(childError)}, $_.Exception.ToString()); exit 1 }}";
                 string encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(child));
                 // Launch directly so temporary paths never pass through batch expansion (% or !).
-                command = PowerShell($"$info = [Diagnostics.ProcessStartInfo]::new({PowerShellQuote(PowerShellExecutable)}); " +
+                command = PowerShell("$ErrorActionPreference = 'Stop'; try { " +
+                    $"[IO.File]::WriteAllText({PowerShellQuote(parentEntry)}, [string]$PID + ' ' + [DateTime]::UtcNow.ToString('O')); " +
+                    $"$info = [Diagnostics.ProcessStartInfo]::new({PowerShellQuote(PowerShellExecutable)}); " +
                     "$info.UseShellExecute = $false; $info.CreateNoWindow = $true; " +
                     $"$info.{(holdStderr ? "RedirectStandardOutput" : "RedirectStandardError")} = $true; " +
                     $"$info.Arguments = '-NoLogo -NoProfile -NonInteractive -EncodedCommand {encoded}'; " +
                     "$child = [Diagnostics.Process]::Start($info); " +
-                    $"[IO.File]::WriteAllText({PowerShellQuote(parentExit)}, 'exiting'); $child.Dispose(); exit 0");
+                    $"[IO.File]::WriteAllText({PowerShellQuote(childPid)}, [string]($child.Id)); $child.Dispose(); " +
+                    $"[IO.File]::WriteAllText({PowerShellQuote(parentExit)}, [DateTime]::UtcNow.ToString('O')); exit 0 " +
+                    $"}} catch {{ [IO.File]::WriteAllText({PowerShellQuote(parentError)}, $_.Exception.ToString()); exit 1 }}");
             }
             else
             {
@@ -76,19 +91,20 @@ public sealed class NativeToolchainRunTests(ITestOutputHelper output)
             }
             var observation = await Task.Run(() =>
             {
-                var result = ObserveRun(command, 1200);
+                var result = ObserveRun(command, timeout);
                 return (Run: result, ParentReachedExit: File.Exists(parentExit), ChildDoneAtReturn: File.Exists(done));
-            }).WaitAsync(TimeSpan.FromSeconds(12));
-            output.WriteLine($"stderr={holdStderr}; elapsed={observation.Run.ElapsedMilliseconds}ms; parent-exiting={observation.ParentReachedExit}; child-done-at-return={observation.ChildDoneAtReturn}; result={observation.Run.Result}; error={observation.Run.Error}");
+            }).WaitAsync(watchdog);
+            output.WriteLine($"stderr={holdStderr}; timeout={timeout}ms; holder={holderSeconds}s; elapsed={observation.Run.ElapsedMilliseconds}ms; parent-exiting={observation.ParentReachedExit}; child-done-at-return={observation.ChildDoneAtReturn}; result={observation.Run.Result}; error={observation.Run.Error}");
             // Let the self-limiting child finish before either cleanup or assertion failure.
             var childWait = Stopwatch.StartNew();
-            while (!File.Exists(done) && childWait.Elapsed < TimeSpan.FromSeconds(7)) await Task.Delay(25);
+            while (!File.Exists(done) && !File.Exists(childError) && childWait.Elapsed < cleanupWatchdog) await Task.Delay(25);
+            foreach (string path in new[] { parentEntry, childPid, parentExit, started, done, parentError, childError })
+                output.WriteLine($"{Path.GetFileName(path)}: {(File.Exists(path) ? File.ReadAllText(path) : "<missing>")}");
             Assert.True(observation.ParentReachedExit, "Parent must have reached its immediate exit before the timeout.");
             Assert.True(File.Exists(started), "Child must have started and inherited the pipe.");
             Assert.True(File.Exists(done), "Finite child did not finish.");
             Assert.IsType<TimeoutException>(observation.Run.Error);
             Assert.False(observation.ChildDoneAtReturn, "Run must time out before the finite pipe holder finishes.");
-            Assert.True(observation.Run.ElapsedMilliseconds < 3500, $"Run returned after {observation.Run.ElapsedMilliseconds}ms.");
         }
         catch (Exception error)
         {

@@ -7,9 +7,9 @@
   <ItemGroup>
     <None Include="../std/core/Attribute.gf;../std/core/Exception.gf;../std/core/BadAllocException.gf;../std/core/ITextWriter.gf;../std/core/IFormattable.gf;../std/core/TypeInfo.gf;../std/core/IGarbageCollector.gf"
           Link="Std/core/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../std/libc/Memory/Memory.gf" Link="Std/libc/Memory/%(Filename)%(Extension)"
+    <None Include="../std/libc/Memory/allocation.gf" Link="Std/libc/Memory/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <None Include="../std/libc/Exceptions/ExceptionHandling.gf" Link="Std/libc/Exceptions/%(Filename)%(Extension)"
+    <None Include="../std/libc/Exceptions/unhandled.gf" Link="Std/libc/Exceptions/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

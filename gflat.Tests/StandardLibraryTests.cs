@@ -45,8 +45,8 @@ public class StandardLibraryTests
     [Fact]
     public void DefaultMemoryImplementationLivesInLibc()
     {
-        Assert.Contains("namespace Memory", StandardLibrary.Load("libc/Memory/Memory.gf").Text);
-        Assert.Contains("extern void*? malloc", StandardLibrary.Load("libc/Memory/Memory.gf").Text);
+        Assert.Contains("namespace Memory", StandardLibrary.Load("libc/Memory/allocation.gf").Text);
+        Assert.Contains("extern void*? malloc", StandardLibrary.Load("libc/Memory/allocation.gf").Text);
         foreach (string relative in StandardLibrary.AutomaticFiles.Where(p => p.StartsWith("core/")))
             Assert.DoesNotContain("extern ", StandardLibrary.Load(relative).Text);
     }

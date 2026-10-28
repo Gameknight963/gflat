@@ -2,7 +2,7 @@
 
 `Memory::Copy`, `Move`, `Fill`, `Compare`, and `Equal` operate on raw storage.
 Their source file, `std/core/Memory/bytes.gf`, is independent of the default
-allocator implementation in `std/libc/Memory/Memory.gf`.
+allocator implementation in `std/libc/Memory/allocation.gf`.
 
 | Operation | Signature and meaning |
 | --- | --- |

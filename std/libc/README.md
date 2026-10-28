@@ -1,6 +1,6 @@
 # libc-dependent facilities
 
-`Exceptions/ExceptionHandling.gf` supplies the automatically included weak
+`Exceptions/unhandled.gf` supplies the automatically included weak
 `Exceptions::Unhandled(Exception*? error)` hook. Its default `void` implementation calls libc `exit` with the exception's
 `GetCode()` (1 by default), or 1 for a foreign exception, without printing.
 Replace it to report the error and terminate explicitly. If it returns or throws,
@@ -14,7 +14,7 @@ The result is written from a stack buffer; there is no intermediate heap string.
 Supply only core sources when these facilities are unwanted. `std.gfproj`
 currently includes both directories.
 
-`Memory/Memory.gf` supplies the automatically included weak `Memory::Allocate` and
+`Memory/allocation.gf` supplies the automatically included weak `Memory::Allocate` and
 `Memory::Free` implementations using libc. Replace both functions to provide a
 custom allocator. This default requires libc. A `NoStdLib` program can select
 individual core sources and supply its own memory hooks and native startup;

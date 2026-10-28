@@ -35,7 +35,7 @@ public sealed class MemoryImportScopeTests
                 return 0;
             }
             """;
-        SourceFile[] sources=[StandardLibrary.Load("libc/Memory/Memory.gf"),new("private-memory-consumer.gf",program)];
+        SourceFile[] sources=[StandardLibrary.Load("libc/Memory/allocation.gf"),new("private-memory-consumer.gf",program)];
         string ir=Compiler.Emit(sources,options:new(){InternalizeFunctions=true});
         Assert.Equal(1,ir.Split("declare i8* @malloc(").Length-1);
         Assert.Equal(1,ir.Split("declare void @free(").Length-1);

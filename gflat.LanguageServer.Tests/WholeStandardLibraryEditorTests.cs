@@ -434,7 +434,7 @@ public class WholeStandardLibraryEditorTests(ITestOutputHelper output)
         Assert.Contains("text_writer_repeated.gf",JsonSerializer.Serialize(model.Definition(source.Path,repeatedCall),Protocol.JsonOptions));
         int nativeCall=text.IndexOf("malloc(8)",StringComparison.Ordinal);
         Assert.Contains("complete.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeCall),Protocol.JsonOptions));
-        Assert.DoesNotContain("Memory.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeCall),Protocol.JsonOptions));
+        Assert.DoesNotContain("allocation.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeCall),Protocol.JsonOptions));
         int nativeAddress=text.IndexOf("&malloc",StringComparison.Ordinal)+1;
         Assert.Contains("complete.gf",JsonSerializer.Serialize(model.Definition(source.Path,nativeAddress),Protocol.JsonOptions));
         int linkedRemoval=text.IndexOf("list.RemoveAll",StringComparison.Ordinal)+"list.".Length;

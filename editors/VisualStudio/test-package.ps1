@@ -27,7 +27,7 @@ try {
         foreach ($file in @('Sdk.props', 'Sdk.targets')) {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Sdks/Gflat.Sdk/Sdk/$file"))) { throw "VSIX is missing $tool's private SDK entry $file" }
         }
-        foreach ($source in @('core/TypeInfo.gf', 'core/Attribute.gf', 'core/Exception.gf', 'libc/Exceptions/ExceptionHandling.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'libc/Memory/Memory.gf')) {
+        foreach ($source in @('core/TypeInfo.gf', 'core/Attribute.gf', 'core/Exception.gf', 'libc/Exceptions/unhandled.gf', 'core/ITextWriter.gf', 'core/IFormattable.gf', 'libc/Memory/allocation.gf')) {
             if (-not (Test-Path -LiteralPath (Join-Path $extracted "$tool/Std/$source"))) { throw "VSIX is missing $tool/Std/$source" }
         }
     }

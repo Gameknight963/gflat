@@ -154,7 +154,7 @@ public class EditorTests
     [InlineData("class Tag : |Attribute {}", "core/Attribute.gf", "abstract class Attribute")]
     [InlineData("void F(|ITextWriter* output) {}", "core/ITextWriter.gf", "interface ITextWriter")]
     [InlineData("void F(|IFormattable* value) {}", "core/IFormattable.gf", "interface IFormattable")]
-    [InlineData("void F() { Memory::|Allocate(1); }", "libc/Memory/Memory.gf", "Allocate(nuint")]
+    [InlineData("void F() { Memory::|Allocate(1); }", "libc/Memory/allocation.gf", "Allocate(nuint")]
     public void LibraryDefinitionsNavigateToShippedSource(string marked, string relative, string declaration)
     {
         var (model, path, offset, _) = Analyze(marked);

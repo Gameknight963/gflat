@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardCountedPathTests
+public sealed class CountedPathTests
 {
     [Theory]
     [InlineData(0)]

@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardPathSpanTests
+public sealed class PathSpanTests
 {
     [Theory]
     [InlineData(0)]

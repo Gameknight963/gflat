@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardPathEdgeTests
+public sealed class PathEdgeTests
 {
     [Theory]
     [InlineData(0)]

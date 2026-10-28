@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardPathEndingTests
+public sealed class PathEndingTests
 {
     private const string Allocator="""
         using std; using std::Text; using std::IO; using std::Encoding; using std::Memory;extern void*? malloc(nuint size);extern void free(void* storage);

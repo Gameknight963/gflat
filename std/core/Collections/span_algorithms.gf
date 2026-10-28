@@ -216,6 +216,16 @@ public int SequenceCompare<T>(Span<immutable(T)> first, Span<immutable(T)> secon
     return 0;
 }
 
+/// Counts matches while borrowing each element once from left to right.
+/// Empty spans return zero without calling the predicate; exceptions propagate.
+public nuint CountIf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
+{
+    nuint count = 0;
+    for (nuint i = 0; i < values.Length; i++)
+        if (predicate(&values[i])) count++;
+    return count;
+}
+
 // Returns Length when no element matches, including for an empty span.
 public nuint FindIndex<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
 {

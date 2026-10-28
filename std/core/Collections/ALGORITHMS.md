@@ -48,6 +48,7 @@ int main()
 | `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
+| `CountIf<T>(Span<immutable(T)>, predicate)` | Count matching borrowed elements in a complete left-to-right scan. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
 | `AdjacentFind<T>(Span<immutable(T)>, predicate)` | Left index of the first matching adjacent pair, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `FindLastIndex<T>(Span<immutable(T)>, predicate)` | Last matching index, or span length when no element matches. |
@@ -118,6 +119,14 @@ take O(n) comparisons and constant extra storage without allocating or modifying
 elements. Callbacks may throw; the exception propagates without changing the
 source. Callbacks must keep the span and key alive and must not mutate them
 through another alias. These searches do not require sorted input.
+
+`CountIf` returns a `nuint` count of matches. It calls the predicate once per
+element from left to right unless a callback throws; empty spans return zero
+without reading storage or calling the predicate. It takes O(n) calls and
+constant extra storage, allocating nothing and copying or modifying no elements.
+The callback borrows an `immutable(T)*`, so noncopyable owners are supported.
+Callback exceptions propagate unchanged and callback effects are not rolled back;
+keep storage alive and avoid mutation through other aliases during the scan.
 
 `Rotate` takes a split index in `[0, Length]`: rotating `[1, 2, 3, 4, 5]` at
 2 produces `[3, 4, 5, 1, 2]`. Zero and `Length` leave the span unchanged.

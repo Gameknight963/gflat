@@ -8,7 +8,8 @@ examples/hexdump/bin/Debug/hexdump.exe --skip 4097 input.bin
 
 Prints 16 bytes per row, with a 64-bit hexadecimal byte offset and printable ASCII
 on the right. Other bytes display as dots. The final partial row is padded; an
-empty file produces no rows. On Linux, omit the executable's `.exe` suffix.
+empty file produces no rows. On Linux, prefix the executable path with `./`;
+the default project output still uses `.exe`.
 
 `--skip <count> <file>` sequentially reads and discards the requested bytes
 before printing. The first row's offset is the skipped count, including when it

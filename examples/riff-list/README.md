@@ -36,7 +36,8 @@ argument count. Errors go to stderr with the filename. Listing streams to stdout
 the root and earlier complete chunks can already be printed when a later failure
 occurs. A child row is emitted only after its payload and pad have been consumed.
 The input closes on success and during unwinding; success flushes stdout. Input
-bytes are never modified. On Linux omit the executable's `.exe` suffix.
+bytes are never modified. On Linux, prefix the executable path with `./`;
+the default project output still uses `.exe`.
 
 Format references: Microsoft's [RIFF overview](https://learn.microsoft.com/en-us/windows/win32/xaudio2/resource-interchange-file-format--riff-),
 [RIFF services](https://learn.microsoft.com/en-us/windows/win32/multimedia/resource-interchange-file-format-services),

@@ -5,7 +5,8 @@ gflat build examples/sort-bench/sort-bench.gfproj --configuration Release
 examples/sort-bench/bin/Release/sort-bench.exe 100000
 ```
 
-On Linux, run `examples/sort-bench/bin/Release/sort-bench` instead.
+On Linux, prefix the executable path with `./`; the default project output
+still uses `.exe`.
 Use a toolchain containing Stopwatch and the optional platform source projects.
 For Visual Studio, these first ship in VSIX 0.14.158.
 

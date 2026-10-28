@@ -1,10 +1,10 @@
 using System.Numerics;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
 // Check provider-independent state and exact conversion with deterministic clocks.
-public sealed class StandardStopwatchTests
+public sealed class StopwatchTests
 {
     private const string Support="""
         using std; using std::Time;extern void*? malloc(nuint count);extern void free(void* storage);

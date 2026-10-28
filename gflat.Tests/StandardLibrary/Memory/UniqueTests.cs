@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Memory;
 
-public sealed class StandardUniqueTests
+public sealed class UniqueTests
 {
     [Theory]
     [InlineData(0)]

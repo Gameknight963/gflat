@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Memory;
 
-public sealed class StandardUniqueImmutableTests
+public sealed class UniqueImmutableTests
 {
     [Theory]
     [InlineData(0)]

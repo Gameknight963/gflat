@@ -29,7 +29,7 @@ namespace components. Both roots can contribute to the same namespace.
 | `std::Encoding` | Base32, Base64, hexadecimal, percent encoding |
 | `std::Json`, `std::Csv` | Format readers, writers, helpers, and exceptions |
 | `std::Time` | Dates, times, durations, clocks, timers |
-| `std::Net` | Network addresses and networks |
+| `std::Net` | Numeric addresses, endpoints, and networks |
 | `std::Hashing` | Checksums and digest implementations |
 | `std::Reflection` (planned) | Reflection descriptors |
 
@@ -114,6 +114,7 @@ implementation lives in `libc`.
 | Identifiers | `Uuid` | [Canonical UUID parsing, formatting, comparison, and hashing](../docs/UUID.md) |
 | Numeric versions | `Version` | [Dotted version parsing, ordering, and caller-buffer formatting](../docs/VERSION.md) |
 | IP addresses | `IpAddress` | [IPv4 and IPv6 parsing, canonical formatting, network-byte conversion, comparison, and hashing](../docs/IP_ADDRESS.md) |
+| IP endpoints | `IpEndpoint` | [Numeric address/port parsing, canonical formatting, and collection keys](../docs/IP_ENDPOINT.md) |
 | IP networks | `IpNetwork`, `NetworkAddress`, `LastAddress` | [CIDR prefixes, numeric endpoints, and family-specific containment](../docs/IP_NETWORK.md) |
 | Calendar dates | `Date` | [Gregorian values, calendar arithmetic, strict ISO parsing, and formatting](../docs/DATE.md) |
 | Durations | `TimeSpan` | [Signed tick values, checked arithmetic, invariant parsing and formatting](../docs/TIME_SPAN.md) |

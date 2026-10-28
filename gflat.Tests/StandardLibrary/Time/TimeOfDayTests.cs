@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardTimeOfDayTests
+public sealed class TimeOfDayTests
 {
     private const long Day=864000000000L;
     private const string Counters="""

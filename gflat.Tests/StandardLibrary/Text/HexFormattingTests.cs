@@ -1,9 +1,9 @@
 ﻿using System.Globalization;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardHexFormattingTests
+public sealed class HexFormattingTests
 {
     private static ulong[] Values(bool wide)
     {

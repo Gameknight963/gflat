@@ -3,9 +3,9 @@ using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardExtraLongFormattingTests
+public sealed class ExtraLongFormattingTests
 {
     [Theory]
     [InlineData(0)]

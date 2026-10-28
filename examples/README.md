@@ -49,7 +49,7 @@ launch page sets arguments and working directory; see [debugging projects](../do
 - [quote-lines](quote-lines/README.md): encode UTF-8 text lines as JSON strings.
 - [unquote-lines](unquote-lines/README.md): decode lines containing JSON string literals.
 - [transcode](transcode/README.md): convert files between UTF-8 and UTF-16LE.
-- [checksum](checksum/README.md): compute file checksums or SHA-256 digests.
+- [checksum](checksum/README.md): compute file checksums or SHA-256/SHA-512 digests.
 - [hexdump](hexdump/README.md): print hexadecimal byte rows with an optional initial skip.
 - [riff-list](riff-list/README.md): list top-level RIFF chunk offsets and lengths.
 

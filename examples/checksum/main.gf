@@ -50,26 +50,29 @@ uint ReadCRC32C(readonly(char)* path)
 int main(int argc, char** argv)
 {
     bool sha256 = false;
+    bool sha512 = false;
     bool crc32c = false;
     int firstPath = 1;
     while (firstPath < argc)
     {
         readonly(char)* argument = argv[firstPath];
         if (CString::Equals(argument, "--")) { firstPath++; break; }
-        if (CString::Equals(argument, "--sha256") && !sha256 && !crc32c)
+        if (CString::Equals(argument, "--sha256") && !sha256 && !sha512 && !crc32c)
         { sha256 = true; firstPath++; continue; }
-        if (CString::Equals(argument, "--crc32c") && !sha256 && !crc32c)
+        if (CString::Equals(argument, "--sha512") && !sha256 && !sha512 && !crc32c)
+        { sha512 = true; firstPath++; continue; }
+        if (CString::Equals(argument, "--crc32c") && !sha256 && !sha512 && !crc32c)
         { crc32c = true; firstPath++; continue; }
         if (argument[0] == '-')
         {
-            Console::Error.WriteLine("Usage: checksum [--sha256 | --crc32c] [--] <file> [more files...]");
+            Console::Error.WriteLine("Usage: checksum [--sha256 | --sha512 | --crc32c] [--] <file> [more files...]");
             return 2;
         }
         break;
     }
     if (firstPath >= argc)
     {
-        Console::Error.WriteLine("Usage: checksum [--sha256 | --crc32c] [--] <file> [more files...]");
+        Console::Error.WriteLine("Usage: checksum [--sha256 | --sha512 | --crc32c] [--] <file> [more files...]");
         return 2;
     }
     int status = 0;
@@ -80,9 +83,11 @@ int main(int argc, char** argv)
             uint crc = 0;
             uint adler = 0;
             byte[32] digest;
+            byte[64] digest512;
             try
             {
-                if (sha256) digest = FileHash::SHA256(argv[i]);
+                if (sha512) digest512 = FileHash::SHA512(argv[i]);
+                else if (sha256) digest = FileHash::SHA256(argv[i]);
                 else if (crc32c) crc = ReadCRC32C(argv[i]);
                 else ReadChecksums(argv[i], ref crc, ref adler);
             }
@@ -93,7 +98,11 @@ int main(int argc, char** argv)
                 status = 1;
                 continue;
             }
-            if (sha256)
+            if (sha512)
+            {
+                Console::Out.WriteHex((readonly(char)*)(byte*)digest512, 64, false);
+            }
+            else if (sha256)
             {
                 Console::Out.WriteHex((readonly(char)*)(byte*)digest, 32, false);
             }

@@ -103,3 +103,55 @@ Lookups use O(log n) comparisons. Insertion and removal also shift O(n) entries;
 enumeration is O(n), with contiguous storage and no per-entry allocation. This
 is useful for smaller ordered tables or read-heavy maps. `HashMap` offers a
 different tradeoff when sorted iteration is unnecessary.
+
+## Borrowed key ranges
+
+`GetRange(lowerInclusive, upperExclusive)` returns a
+`Span<immutable(SortedMap<K,V>::Entry)>` covering a half-open key interval in the
+map's comparer order. Both bounds borrow keys as `immutable(K)*`, and the method
+accepts immutable or readonly map receivers. A stored key belongs to the result
+when it compares greater than or equal to the lower bound and less than the
+upper bound. Comparer-equivalent keys follow that same rule; bounds need not
+exist in the map. Equal or reversed bounds, an interval containing no keys, and
+an empty map produce a default empty span (null `Data`, zero `Length`). With a
+descending comparer, the lower bound comes first in that descending order.
+
+```csharp
+using std::Collections;
+using std::Memory;
+
+int Compare(immutable(int)* left, immutable(int)* right)
+{
+    if (*left < *right) return -1;
+    if (*left > *right) return 1;
+    return 0;
+}
+
+int main()
+{
+    SortedMap<int,int> scores = new(Compare);
+    scores.Add(10, 100); scores.Add(20, 200); scores.Add(30, 300);
+    int lower = 15; int upper = 30;
+    Span<immutable(SortedMap<int,int>::Entry)> selected = scores.GetRange(&lower, &upper);
+    if (selected.Length != 1 || *selected[0].Key != 20) return 1;
+    if (*selected[0].ValueImmutable != 200) return 2;
+    return 0;
+}
+```
+
+The span borrows entries without copying keys or values, constructing owners, or
+allocating container storage. It supports noncopyable owners and uses the existing
+Span operations for indexing, slicing, enumeration, and queries. Keys and mapped
+values are immutable through this view. Bounds are needed only during the call;
+they may borrow stored keys, provided the map remains stable during comparisons.
+
+The method performs two binary lower-bound searches, then slices the existing
+storage. Comparers may allocate or throw; a thrown exception propagates without
+changing the map. A comparer must not mutate the map or its keys through another
+alias. The result has the same invalidation rules as ordinary entry iteration:
+insertion, removal, growth, clearing, destruction, or moving the map invalidate
+the view. Replacing a mapped value with `Set` retains its entry address while
+destroying the previous value's resources, so do not retain derived resource
+borrows across replacement. Keep the owning map alive throughout use of the span.
+No additional std source files are required beyond the ordinary SortedMap/Span
+dependencies.

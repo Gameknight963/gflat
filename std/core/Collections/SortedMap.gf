@@ -48,6 +48,15 @@ struct SortedMap<K, V>
         return compare(items[index].Key, key) == 0;
     }
 
+    // Borrow a half-open interval in comparer order; no entry is copied.
+    public immutable Span<immutable(Entry)> GetRange(immutable(K)* lowerInclusive, immutable(K)* upperExclusive)
+    {
+        nuint first = this.LowerBound(lowerInclusive);
+        nuint end = this.LowerBound(upperExclusive);
+        if (end <= first) return new Span<immutable(Entry)>();
+        return storage.AsImmutable().Slice(first, end - first);
+    }
+
     public immutable bool ContainsKey(immutable(K)* key)
         => this.Matches(this.LowerBound(key), key);
 

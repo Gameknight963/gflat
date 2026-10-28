@@ -84,7 +84,13 @@ public sealed class JsonReaderOracleTests
                 Assert.Empty(result.Error);
             }
         }
-        finally { Directory.Delete(directory, true); }
+        catch (Exception error)
+        {
+            // Keep the fixture and original failure; cleanup must not replace it.
+            error.Data["JsonReaderOracleDirectory"] = directory;
+            throw;
+        }
+        await TestDirectoryCleanup.DeleteAsync(directory);
     }
 
     private static object? Value(Random random, int depth)

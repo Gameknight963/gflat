@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardMath128Tests
+public sealed class Math128Tests
 {
     [Theory]
     [InlineData(0)]

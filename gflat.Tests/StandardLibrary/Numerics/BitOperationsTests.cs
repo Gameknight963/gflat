@@ -1,8 +1,8 @@
 using System.Numerics;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public class StandardBitOperationsTests
+public class BitOperationsTests
 {
     private static readonly int[] Offsets = [int.MinValue, -129, -65, -64, -63, -33, -32, -31, -1, 0, 1, 7, 31, 32, 33, 63, 64, 65, int.MaxValue];
 

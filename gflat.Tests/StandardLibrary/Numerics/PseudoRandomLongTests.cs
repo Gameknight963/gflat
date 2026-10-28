@@ -1,9 +1,9 @@
 using System.Numerics;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardPseudoRandomLongTests
+public sealed class PseudoRandomLongTests
 {
     private const string Reader = """
         using std; using std::Text; using std::Numerics;

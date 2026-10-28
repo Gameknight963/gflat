@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardMathTests
+public sealed class MathTests
 {
     private static void Run(string program)
     {

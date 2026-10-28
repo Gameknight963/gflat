@@ -1,8 +1,8 @@
 using System.Numerics;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardBitRoundingTests
+public sealed class BitRoundingTests
 {
     [Theory]
     [InlineData(0)]

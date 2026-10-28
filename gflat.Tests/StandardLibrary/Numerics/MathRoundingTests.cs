@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardMathRoundingTests
+public sealed class MathRoundingTests
 {
     [Theory]
     [InlineData(false, 0)]

@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public class StandardPseudoRandomTests
+public class PseudoRandomTests
 {
     private static void Run(string code)
     {

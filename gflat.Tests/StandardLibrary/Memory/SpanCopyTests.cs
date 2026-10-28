@@ -1,9 +1,9 @@
 using System.Text;
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Memory;
 
-public sealed class StandardSpanCopyTests
+public sealed class SpanCopyTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/span_copy.gf", "Memory/Span.gf", "Collections/Vector.gf",

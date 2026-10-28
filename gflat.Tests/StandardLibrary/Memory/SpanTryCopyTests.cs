@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Memory;
 
-public sealed class StandardSpanTryCopyTests
+public sealed class SpanTryCopyTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/span_copy.gf",

@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Memory;
 
-public sealed class StandardSpanFillTests
+public sealed class SpanFillTests
 {
     private static IEnumerable<SourceFile> Sources(string program, bool managed = false)
     {

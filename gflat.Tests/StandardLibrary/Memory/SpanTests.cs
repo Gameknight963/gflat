@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Memory;
 
-public class StandardSpanTests
+public class SpanTests
 {
     private static SourceFile[] Sources(string program) => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Memory/Span.gf", "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf" }
         .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

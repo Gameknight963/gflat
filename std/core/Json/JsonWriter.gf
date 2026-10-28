@@ -2,7 +2,11 @@ using std::Text;
 using std::Collections;
 namespace std::Json;
 
-// Owns nesting state; borrows the destination without flushing or closing it.
+/// Owns nesting state and borrows the output writer, without buffering the document.
+/// Keep the destination stable and alive; input must not alias storage that writing may modify.
+/// Destruction writes nothing and does not complete the document, flush or close the destination.
+/// Validation, ordering and pre-output nesting allocation failures remain retryable.
+/// After an output exception, writes and Complete fail; discard this instance, which has no Reset.
 public struct JsonWriter
 {
     private static const byte ArrayFirst = (byte)0;
@@ -17,6 +21,8 @@ public struct JsonWriter
     private bool failed;
     private readonly(bool) indented;
 
+    /// Borrows the destination without clearing it; output is compact by default.
+    /// Indented mode sends two-space indentation and LF to the sink; no final newline is added.
     public JsonWriter(ITextWriter* destination, bool indented = false)
     {
         output = destination; stack = new(); rootWritten = false; failed = false;
@@ -120,9 +126,15 @@ public struct JsonWriter
         failed = false;
     }
 
+    /// Writes an object opener where a value is expected, automatically separating values.
+    /// Reserves nesting capacity before output; allocation failure preserves state and output.
     public void WriteStartObject() { this.Start(ObjectFirst, "{"); }
+    /// Writes an array opener where a value is expected, automatically separating values.
+    /// Reserves nesting capacity before output; allocation failure preserves state and output.
     public void WriteStartArray() { this.Start(ArrayFirst, "["); }
 
+    /// Writes a closing object delimiter when the current object awaits a name or its end.
+    /// A missing property value or wrong container is a retryable structural error with no output.
     public void WriteEndObject()
     {
         this.CheckUsable();
@@ -136,6 +148,8 @@ public struct JsonWriter
         stack.Pop(); failed = false;
     }
 
+    /// Writes a closing array delimiter only when an array is the current container.
+    /// A wrong or missing container is a retryable structural error with no output.
     public void WriteEndArray()
     {
         this.CheckUsable();
@@ -149,6 +163,9 @@ public struct JsonWriter
         stack.Pop(); failed = false;
     }
 
+    /// Writes a counted strict-UTF-8 property name with JSON quoting, including embedded zeros.
+    /// Requires an object awaiting a name; a value must follow the name.
+    /// Invalid text or ordering writes nothing and is retryable; sink errors can leave partial output.
     public void WritePropertyName(readonly(char)* data, nuint length)
     {
         this.CheckUsable();
@@ -166,9 +183,13 @@ public struct JsonWriter
         stack[last] = ObjectValue; failed = false;
     }
 
+    /// Uses bytes before the first zero as the property name, then validates and quotes them.
     public void WritePropertyName(readonly(char)* text)
         { this.WritePropertyName(text, CStringLength(text)); }
 
+    /// Writes counted strict UTF-8 as a JSON string, retaining embedded zeros through escapes.
+    /// Input must stay unchanged and separate from destination storage that writing may modify.
+    /// Validation failures emit nothing and are retryable; output exceptions fault this writer.
     public void WriteString(readonly(char)* data, nuint length)
     {
         this.CheckValue();
@@ -179,13 +200,17 @@ public struct JsonWriter
         this.CommitValue(); failed = false;
     }
 
+    /// Uses bytes before the first zero as string contents, then validates and quotes them.
     public void WriteString(readonly(char)* text) { this.WriteString(text, CStringLength(text)); }
+    /// Writes the true or false JSON literal in the current value position.
     public void WriteBoolean(bool value)
     {
         if (value) this.WriteToken("true", 4); else this.WriteToken("false", 5);
     }
+    /// Writes the null JSON literal in the current value position.
     public void WriteNull() { this.WriteToken("null", 4); }
 
+    /// Writes an invariant decimal integer using a fixed stack buffer, without allocating number text.
     public void WriteNumber(long value)
     {
         char[21] buffer; nuint written = 0;
@@ -193,6 +218,7 @@ public struct JsonWriter
             throw new JsonWriteException("JSON integer formatting failed");
         this.WriteToken(buffer, written);
     }
+    /// Writes an invariant unsigned decimal integer without allocating number text.
     public void WriteNumber(ulong value)
     {
         char[21] buffer; nuint written = 0;
@@ -200,6 +226,7 @@ public struct JsonWriter
             throw new JsonWriteException("JSON integer formatting failed");
         this.WriteToken(buffer, written);
     }
+    /// Writes the full signed 128-bit decimal value using fixed stack storage.
     public void WriteNumber(extralong value)
     {
         char[40] buffer; nuint written = 0;
@@ -216,6 +243,9 @@ public struct JsonWriter
     public void WriteNumber(nint value) { this.WriteNumber((long)value); }
     public void WriteNumber(nuint value) { this.WriteNumber((ulong)value); }
 
+    /// Validates exactly one counted JSON number, with no surrounding whitespace or extra data.
+    /// Preserves its literal spelling without conversion through a machine numeric type.
+    /// Validation failure writes nothing and is retryable; output failure can partially write and fault.
     public void WriteRawNumber(readonly(char)* data, nuint length)
     {
         this.CheckValue();
@@ -235,7 +265,9 @@ public struct JsonWriter
         this.WriteToken(data, length);
     }
 
-    // Validation only: does not close containers, flush, or modify the output.
+    /// Validates that this writer has written one root value and closed every container.
+    /// Writes nothing, does not flush or close, and may be called repeatedly after success.
+    /// An incomplete-document error remains retryable after supplying missing values or closing delimiters.
     public immutable void Complete()
     {
         this.CheckUsable();

@@ -60,7 +60,7 @@ that order does not matter.
 All middle mutations invalidate iterators and views of the vector. Allocation
 failure, invalid indices, and a failing argument copy preserve existing contents.
 
-With `using std;`, `vector.AddRange(immutableSpan)` copies a range into the tail.
+With `using std::Collections;`, `vector.AddRange(immutableSpan)` copies a range into the tail.
 A span borrowed from that same vector is supported, including across growth;
 the implementation preserves its offset and rebinds it after reserving storage.
 Empty ranges do nothing. Allocation failure before copying preserves contents.
@@ -129,7 +129,7 @@ target suffix length, with no auxiliary element buffer.
 
 ## Copying borrowed spans
 
-With `using std;`, `source.AsImmutable().CopyTo(destination)` assigns copies into
+With `using std::Memory;`, `source.AsImmutable().CopyTo(destination)` assigns copies into
 an existing `Span<T>`. The destination must contain initialized elements and
 have room for every source element. Its unused tail stays unchanged. This is
 typed copying: normal copy constructors run and replaced destination values are

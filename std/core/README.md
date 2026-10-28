@@ -125,7 +125,7 @@ int value = ParseInt("42");
 
 ## Integer sequences
 
-With `using std;`, `new IntRange(start, count)` describes consecutive integers without
+With `using std::Queries;`, `new IntRange(start, count)` describes consecutive integers without
 allocating a buffer. `Where` accepts a `bool(int)*` callback; typed noncapturing
 lambdas work directly. `Take` and `Skip` return new sequence values:
 

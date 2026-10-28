@@ -41,6 +41,38 @@ regardless of the signed representation of `char`. `Equals` uses that same
 ordering. No bytes after the first terminator contribute to an operation.
 Empty prefixes and suffixes match every string, including the empty string.
 
+## Character search
+
+`IndexOf(text, value)` and `LastIndexOf(text, value)` return the first or last
+matching byte offset in the logical string content. Missing values return
+`CString::NotFound`, the maximum `nuint` value, matching `String::NotFound`.
+The first NUL ends the content and is excluded from search: searching for `'\0'`
+always returns `NotFound`, including in empty strings. This differs from C's
+`strchr`/`strrchr`, which can return the terminator itself. Bytes after the first
+NUL are never searched. Both helpers are `nothrow` and need only `CString.gf`.
+
+```csharp
+using std::Text;
+
+int main()
+{
+    readonly(char)* argument = "mode=fast=checked";
+    nuint first = CString::IndexOf(argument, '=');
+    nuint last = CString::LastIndexOf(argument, '=');
+    if (first == CString::NotFound || last == CString::NotFound) return 1;
+    if (first != 4 || last != 9) return 2;
+    if (!CString::Equals(argument + first + 1, "fast=checked")) return 3;
+    if (!CString::Equals(argument + last + 1, "checked")) return 4;
+    return 0;
+}
+```
+
+The same calls accept borrowed command arguments such as `argv[1]` after checking
+`argc`. The offsets and derived pointers borrow the original storage; no string
+is copied or allocated. `IndexOf` stops at its first match or terminator;
+`LastIndexOf` scans to the terminator while retaining the latest match. Inputs
+remain nonnullable and must have a readable terminator.
+
 These are byte operations, with no Unicode decoding, normalization, case
 folding, locale, or grapheme handling. Unbounded operations require every input
 to contain a readable terminator. `nothrow` does not make invalid pointers or

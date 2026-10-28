@@ -3,6 +3,8 @@ namespace std::Text;
 // Borrowed null-terminated byte strings; no encoding or ownership is implied.
 public static class CString
 {
+    public static const nuint NotFound = (nuint)0 - (nuint)1;
+
     public static bool IsNullOrEmpty(readonly(char)*? text) nothrow
     {
         if (text == null) return true;
@@ -14,6 +16,30 @@ public static class CString
         nuint length = 0;
         while (text[length] != '\0') length++;
         return length;
+    }
+
+    // Search logical content only: the first null terminates, never matches.
+    public static nuint IndexOf(readonly(char)* text, char value) nothrow
+    {
+        nuint index = 0;
+        while (text[index] != '\0')
+        {
+            if (text[index] == value) return index;
+            index++;
+        }
+        return NotFound;
+    }
+
+    public static nuint LastIndexOf(readonly(char)* text, char value) nothrow
+    {
+        nuint result = NotFound;
+        nuint index = 0;
+        while (text[index] != '\0')
+        {
+            if (text[index] == value) result = index;
+            index++;
+        }
+        return result;
     }
 
     public static bool TryGetLength(readonly(char)* text, nuint capacity, ref nuint length) nothrow

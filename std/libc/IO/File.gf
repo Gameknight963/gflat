@@ -104,6 +104,22 @@ public struct File : ITextWriter
             throw new EndOfStreamException();
     }
 
+    /// Sequentially reads and discards count bytes using a 4096-byte stack buffer.
+    /// Short EOF throws EndOfStreamException; IO errors propagate after any consumed prefix.
+    /// Leaves the file open without rollback; a closed file rejects even zero count.
+    public void SkipExactly(nuint count)
+    {
+        if (handle == null) throw new IOException("File is closed");
+        char[4096] buffer;
+        while (count != 0)
+        {
+            nuint chunk = count;
+            if (chunk > 4096) chunk = 4096;
+            this.ReadExactly(buffer, chunk);
+            count -= chunk;
+        }
+    }
+
     /// Borrows both files and the caller buffer, copying from the current source position.
     /// Rejects empty buffers, the same File instance or closed files before reading input.
     /// Failures may consume input or leave partial output; both files remain open.

@@ -252,6 +252,12 @@ int main()
 - `ReadExactly(data, count)` fills the requested region or throws
   `EndOfStreamException` on unexpected EOF. Actual read errors throw `IOException`.
   On a truncated file the available prefix has already been consumed and stored.
+- `SkipExactly(count)` sequentially reads and discards exactly that many bytes
+  using a 4096-byte stack buffer, without seeking or allocating gflat storage.
+  Short EOF throws `EndOfStreamException`; actual IO errors propagate as
+  `IOException`. Any available prefix is already consumed on failure, without
+  rollback. The file remains open. Zero count performs no read; a closed file
+  still throws `IOException`, including for zero count.
 - `ReadByte()` returns an integer from 0 through 255, or -1 at EOF; read errors
   throw. `WriteByte(char)` writes exactly one byte, including zero.
 - `PeekByte()` has the same result/error convention without consuming the byte.

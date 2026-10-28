@@ -49,6 +49,7 @@ int main()
 | `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
+| `AllOf<T>(Span<immutable(T)>, predicate)` | Check every borrowed element, stopping at the first false result; empty spans return true. |
 | `CountIf<T>(Span<immutable(T)>, predicate)` | Count matching borrowed elements in a complete left-to-right scan. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
 | `AdjacentFind<T>(Span<immutable(T)>, predicate)` | Left index of the first matching adjacent pair, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
@@ -132,6 +133,15 @@ take O(n) comparisons and constant extra storage without allocating or modifying
 elements. Callbacks may throw; the exception propagates without changing the
 source. Callbacks must keep the span and key alive and must not mutate them
 through another alias. These searches do not require sorted input.
+
+`AllOf` tests borrowed elements once from left to right and returns false at the
+first false predicate result. Empty spans return true without reading storage or
+calling the predicate. It allocates nothing and copies or modifies no elements;
+unlike value-producing query `All`, its `immutable(T)*` callback supports
+noncopyable owners. Worst-case time is O(n), with constant extra storage.
+Visited callback exceptions propagate unchanged; later callbacks are skipped
+after a false result, and callback effects are not rolled back. Keep backing
+storage alive and stable during the call.
 
 `CountIf` returns a `nuint` count of matches. It calls the predicate once per
 element from left to right unless a callback throws; empty spans return zero

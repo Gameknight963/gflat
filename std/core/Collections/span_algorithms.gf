@@ -227,6 +227,15 @@ public int SequenceCompare<T>(Span<immutable(T)> first, Span<immutable(T)> secon
     return 0;
 }
 
+/// Tests borrowed elements from left to right, stopping at the first false result.
+/// Empty spans return true without calling the predicate; exceptions propagate.
+public bool AllOf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
+{
+    for (nuint i = 0; i < values.Length; i++)
+        if (!predicate(&values[i])) return false;
+    return true;
+}
+
 /// Counts matches while borrowing each element once from left to right.
 /// Empty spans return zero without calling the predicate; exceptions propagate.
 public nuint CountIf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)

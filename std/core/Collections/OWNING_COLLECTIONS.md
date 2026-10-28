@@ -119,7 +119,7 @@ their ordinary constructors, which may allocate or throw.
 
 Growth reserves `count` once when needed, then constructs in ascending order.
 Shrink retains capacity and destroys the suffix; an equal count does nothing.
-Allocation or capacity-overflow failure leaves the vector unchanged and invokes
+Vector storage allocation or capacity-overflow failure leaves the vector unchanged and invokes
 no element constructor. Constructor failure destroys the newly appended prefix
 and restores the original count and contents, but capacity may have grown and
 old borrows may be invalidated. Constructors must not structurally mutate the

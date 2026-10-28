@@ -50,6 +50,31 @@ public class StandardLibraryTests
         foreach (string relative in StandardLibrary.AutomaticFiles.Where(p => p.StartsWith("core/")))
             Assert.DoesNotContain("extern ", StandardLibrary.Load(relative).Text);
     }
+
+    [Fact]
+    public void AllCoreSourcesTypeCheckWithoutLibcUsingOnlyExplicitMemoryBindings()
+    {
+        string core = Path.Combine(AppContext.BaseDirectory, "Std", "core");
+        string[] paths = Directory.GetFiles(core, "*.gf", SearchOption.AllDirectories);
+        Assert.NotEmpty(paths);
+        SourceFile[] sources = paths.Order(StringComparer.Ordinal)
+            .Select(path => new SourceFile(path, File.ReadAllText(path)))
+            .Append(new SourceFile("core-memory-contract.gf", """
+                namespace Memory {
+                    public void*? Allocate(nuint count) => null;
+                    public void Free(void* storage) nothrow { }
+                }
+                int main() => 0;
+                """))
+            .ToArray();
+
+        var (unit, _) = Compiler.Check(sources, options: new() { NoStdLib = true });
+
+        // FileUsings records every parsed input, including files without imports.
+        // Exact identity excludes any injected standard-library source.
+        Assert.True(sources.Select(source => source.Id).ToHashSet().SetEquals(unit.FileUsings.Keys));
+    }
+
     [Fact]
     public void ExplicitLibraryInputsPreserveCustomExceptionAndExternContracts()
     {

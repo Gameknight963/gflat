@@ -46,6 +46,7 @@ int main()
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `default_equality.gf`. |
+| `CommonPrefixLength<T>(first, second, equal)` | Count matching corresponding elements up to the first difference or shorter length. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
@@ -110,6 +111,16 @@ length when one is an equal prefix. Its length-only results are -1, 0, or 1.
 These three algorithms allocate nothing, copy no elements, and support immutable
 views of noncopyable owning types. Comparator failures leave their sources
 unchanged, provided the callback does not modify them through another alias.
+
+`CommonPrefixLength` compares corresponding borrowed addresses from left to right,
+returning the number of matching elements before the first false callback result.
+If one span is a full prefix, it returns the shorter length; compare lengths too
+when checking whole-sequence equality. Empty input returns zero without reading
+either span or calling the callback. The algorithm allocates nothing and copies
+or mutates no elements. Overlapping or identical views still invoke the callback
+normally. Keep storage alive and stable during comparison. Callback exceptions
+propagate unchanged.
+The result counts elements, including counted zero bytes when comparing text.
 
 For types implementing `IComparable<T>`, `Comparer<T>::Compare` supplies the
 comparison callback, for example `Sort<int>(span, Comparer<int>::Compare)`.
@@ -503,6 +514,7 @@ int main()
 ```
 
 The optional `default_equality.gf` provides `SequenceEqual(first, second)`,
+`CommonPrefixLength(first, second)`,
 `IndexOf(values, key)`, `LastIndexOf(values, key)`, and `Contains(values, key)`
 for `IEquatable<T>`, forwarding through `EqualityComparer<T>::Equals`.
 Searches borrow the key and elements. `IndexOf` and `LastIndexOf` return

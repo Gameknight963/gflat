@@ -192,6 +192,17 @@ public bool SequenceEqual<T>(Span<immutable(T)> first, Span<immutable(T)> second
     return true;
 }
 
+/// Counts matching corresponding borrowed elements, stopping at the first difference or shorter length.
+public nuint CommonPrefixLength<T>(Span<immutable(T)> first, Span<immutable(T)> second,
+    bool(immutable(T)*, immutable(T)*)* equal)
+{
+    nuint count = first.Length;
+    if (second.Length < count) count = second.Length;
+    for (nuint i = 0; i < count; i++)
+        if (!equal(&first[i], &second[i])) return i;
+    return count;
+}
+
 // Return Length for an empty span; strict comparisons keep the first equal item.
 public nuint MinIndex<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(T)*)* compare)
 {

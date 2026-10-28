@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Codecs;
 
-public sealed class StandardBase32TextTests
+public sealed class Base32TextTests
 {
     private const string Allocator = """
         using std; using std::Text; using std::Encoding;

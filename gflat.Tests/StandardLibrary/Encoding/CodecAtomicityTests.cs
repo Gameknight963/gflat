@@ -1,8 +1,8 @@
 ﻿using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Codecs;
 
-public sealed class StandardCodecAtomicityTests
+public sealed class CodecAtomicityTests
 {
     private static readonly byte[] Payload = Enumerable.Range(0, 255).Select(value => (byte)value).ToArray();
 

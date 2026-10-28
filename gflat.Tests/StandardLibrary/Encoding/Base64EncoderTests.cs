@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Codecs;
 
-public sealed class StandardBase64EncoderTests
+public sealed class Base64EncoderTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
         => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)

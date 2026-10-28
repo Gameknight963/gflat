@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Codecs;
 
-public sealed class StandardBase32Tests
+public sealed class Base32Tests
 {
     private const string Alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 

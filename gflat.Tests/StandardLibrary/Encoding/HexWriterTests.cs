@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Codecs;
 
-public sealed class StandardHexWriterTests
+public sealed class HexWriterTests
 {
     [Theory]
     [InlineData(0)]

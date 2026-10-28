@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Codecs;
 
-public sealed class StandardBase64UrlTests
+public sealed class Base64UrlTests
 {
     [Theory]
     [InlineData(0)]

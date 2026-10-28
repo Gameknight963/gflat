@@ -117,8 +117,10 @@ public nuint UpperBound<T>(Span<immutable(T)> values, immutable(T)* key,
     return first;
 }
 
-// First false predicate result in a true-prefix/false-suffix span.
-// The input must already be partitioned under this stable predicate.
+/// Finds the first false predicate result in an already partitioned span.
+/// True results must precede false results; keep the predicate consistent.
+/// Returns Length when all match. Empty spans never call the predicate.
+/// Borrows elements without allocation or copying; predicate exceptions propagate.
 public nuint PartitionPoint<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
 {
     nuint first = 0;

@@ -119,6 +119,7 @@ public sealed partial class EditorModel
         IndexBoundCallables();
         IndexBoundProperties();
         IndexBoundFields();
+        IndexDocumentation();
         // Resolve once on the analysis worker. Hover and semantic-token requests
         // must not repeatedly walk the tree on the server's message loop.
         foreach (var (path, ts) in tokens)
@@ -707,7 +708,7 @@ public sealed partial class EditorModel
         bool member = index > 0 && ts[index - 1].Kind is TokenKind.Dot or TokenKind.DoubleColon;
         var completionContext = CompletionContext(path, index);
         var items = Candidates(path, offset, index).Where(s => s.Syntax.Node is not ConstructorDeclaration && completionContext.Allows(s))
-            .DistinctBy(s => (s.Name, member && s.BoundExtension ? "extension" : "symbol")).Select(s => (object)new { label = s.Name, kind = s.Kind, detail = Detail(s), textEdit = new { range, newText = s.Name } }).ToList();
+            .DistinctBy(s => (s.Name, member && s.BoundExtension ? "extension" : "symbol")).Select(s => (object)new { label = s.Name, kind = s.Kind, detail = Detail(s), documentation = Documentation(s) is { } prose ? new Markup("plaintext", prose) : null, textEdit = new { range, newText = s.Name } }).ToList();
         if (!member && !completionContext.Restricted)
         {
             bool inBody = ContextParents(path, offset).Any(p => p.Node is BlockStatement);
@@ -788,6 +789,8 @@ public sealed partial class EditorModel
         var parts = Signature(symbol, navigable: true, hoverPath: path, hoverOffset: offset);
         if (symbol.Parameters != null) parts = [.. parts, new("punctuation", ";")];
         HoverDetail[] details = options.ShowTypeLayout && !symbol.IsTypeParameter ? LayoutDetails(symbol) : [];
+        if (Documentation(symbol) is { } prose)
+            details = [new("", DocumentationMarkdown(prose), [new("text", prose)]), .. details];
         if (!symbol.IsTypeParameter && options.ShowKnownExceptions && (symbol.BoundMethod ?? symbol.Syntax.Node as MethodDeclaration) is { } hoveredMethod && snapshot.Checker is { } exceptionChecker &&
             !snapshot.Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error))
         {

@@ -26,6 +26,15 @@ other clients receive a flat list with source locations and container names.
 Method hovers show the signature. An optional `Exceptions:` section lists known outgoing
 exceptions, one type per line; it is disabled by default. Caught exceptions and terminating
 `nothrow` boundaries do not appear as outgoing exceptions. Unknown dispatch targets are omitted.
+
+Consecutive `///` lines immediately before a named declaration provide plain-prose
+documentation in hover and completion, including native Visual Studio hover. A blank
+`///` line separates paragraphs; a physical blank line or an ordinary comment detaches
+the preceding documentation. Put documentation before any declaration attributes.
+XML tags, Markdown punctuation, and links are shown literally. Generic and inherited
+members use their original declaration's text; aliases use their own documentation.
+Documentation is not inferred for locals or type parameters.
+
 Type names in hover, completion, signature help, and editor diagnostics use source spelling,
 including nested types and generic specializations. Literal hovers show the checked literal type.
 In Visual Studio, source-backed types in signatures and exception lists can be clicked to

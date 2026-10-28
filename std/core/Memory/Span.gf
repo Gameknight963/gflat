@@ -2,7 +2,8 @@ using std::Queries;
 using std::Collections;
 namespace std::Memory;
 
-// Borrows storage; the caller keeps the buffer alive for every use of this view.
+/// Borrows contiguous storage without owning or copying its elements.
+/// Keep the backing buffer alive for every use of this view.
 struct Span<T> : IEnumerable<T, Span<T>::Enumerator>
 {
     private T*? data;

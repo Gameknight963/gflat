@@ -1,8 +1,12 @@
 namespace std;
 
-// Primitive equality treats all NaNs as equal and signed zeros as equal.
+/// Equality contract used by EqualityComparer and default collection equality.
+/// Primitive float/double implementations equate all NaNs and both signed zeros.
+/// Unlike IEEE ==, this treats a NaN as equal to another NaN.
 interface IEquatable<T>
 {
+    /// Compares this value with a borrowed other value; ownership is not transferred.
+    /// Keep equality consistent with GetHashCode when the type is also IHashable.
     immutable bool Equals(immutable(T)* other);
 
     implementation byte : IEquatable<byte>

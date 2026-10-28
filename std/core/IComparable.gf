@@ -1,8 +1,12 @@
 namespace std;
 
-// Primitive equality treats all NaNs as equal and signed zeros as equal.
+/// Ordering contract used by Comparer and default ordering algorithms.
+/// Primitive float/double implementations order all NaNs before non-NaNs.
+/// All NaNs compare equivalent to each other; both signed zeros compare equivalent.
 interface IComparable<T>
 {
+    /// Returns a negative value, zero, or a positive value for less, equivalent, or greater.
+    /// Borrows other without ownership transfer; zero defines ordering equivalence.
     immutable int CompareTo(immutable(T)* other);
 
     implementation byte : IComparable<byte>

@@ -1,8 +1,11 @@
 namespace std;
 
-// Equal values must produce equal hashes. Hashes are not persistent identifiers.
+/// Hashing contract used by default hash collections.
+/// Pair with consistent equality when using a custom key type.
 interface IHashable
 {
+    /// Returns a hash consistent with equality; unequal values may share a hash.
+    /// Hash codes are not persistent identifiers.
     immutable nuint GetHashCode();
 
     implementation byte

@@ -40,7 +40,7 @@ public partial class TypeChecker
                 var method = methods.FirstOrDefault(candidate => candidate.Accessibility != TokenKind.Private || candidate.Span.SourceId == node.Span.SourceId) ?? methods[0];
                 CheckNameofSourceAccess(method, method.Accessibility, node);
                 // Naming a group does not bind a signature or an open return T.
-                return Bound(callables.IsMerged || method.IsGeneric ? Void : method.ReturnType) with { IsMethodGroup = true };
+                return new(IsMethodGroup: true);
             }
             if (ResolveExtern(name) is { } external) { ValidateExternAccess(external, node.Span); return Bound(external.ReturnType) with { IsMethodGroup = true }; }
             if (ResolveGlobalField(name) is { } field) { CheckNameofSourceAccess(field, field.Accessibility, node); return Bound(field.Type); }
@@ -100,6 +100,7 @@ public partial class TypeChecker
         var method = scope.Functions.GetValueOrDefault(name) ?? scope.GenericFunctions.GetValueOrDefault(name) ??
             scope.Functions.GetValueOrDefault("$get$" + name) ?? scope.Functions.GetValueOrDefault("$set$" + name);
         if (method != null) CheckNameofSourceAccess(method, method.Accessibility, node);
+        if (method is { PropertyName: null }) return new(IsMethodGroup: true);
         TypeExpression? type = method == null ? null : method.Name.StartsWith("$set$") ? method.Parameters[^1].Type : method.ReturnType;
         if (type == null && scope.Fields.TryGetValue(name, out var field)) { CheckNameofSourceAccess(field, field.Accessibility, node); type = field.Type; }
         if (type == null && scope.Externs.TryGetValue(name, out var external)) { ValidateExternAccess(external, node.Span); type = external.ReturnType; }
@@ -113,8 +114,9 @@ public partial class TypeChecker
         if (matches.Length == 0) return null;
         var selected = matches.FirstOrDefault(method => NameofAccessible(method.Accessibility, owner)) ?? matches[0];
         CheckNameofAccess(selected.Accessibility, owner, name, node);
+        if (selected.PropertyName == null) return new(IsMethodGroup: true);
         var type = selected.Name.StartsWith("$set$") ? selected.Parameters[^1].Type : selected.ReturnType;
-        RecordType(node, type); return new(type, IsMethodGroup: selected.PropertyName == null);
+        RecordType(node, type); return new(type);
     }
 
     private void CheckNameofSourceAccess(AstNode declaration, TokenKind accessibility, AstNode use)

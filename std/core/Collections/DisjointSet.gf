@@ -28,6 +28,17 @@ public struct DisjointSet
     public nuint ElementCount { immutable get nothrow => parents.Count; }
     public nuint SetCount { immutable get nothrow => setCount; }
 
+    // Restore singleton components while retaining the fixed universe and storage.
+    public void Reset() nothrow
+    {
+        for (nuint index = 0; index < parents.Count; index++)
+        {
+            parents[index] = index;
+            sizes[index] = 1;
+        }
+        setCount = parents.Count;
+    }
+
     // Does not compress paths: callers can query through immutable views.
     public immutable nuint Find(nuint index)
     {

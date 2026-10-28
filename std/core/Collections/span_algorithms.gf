@@ -187,6 +187,16 @@ public nuint FindIndex<T>(Span<immutable(T)> values, bool(immutable(T)*)* predic
     return values.Length;
 }
 
+// First matching adjacent pair's left index, or Length if no pair matches.
+// Borrow both elements, visiting pairs left to right until the first match.
+public nuint AdjacentFind<T>(Span<immutable(T)> values,
+    bool(immutable(T)*, immutable(T)*)* predicate)
+{
+    for (nuint i = 1; i < values.Length; i++)
+        if (predicate(&values[i - 1], &values[i])) return i - 1;
+    return values.Length;
+}
+
 // Returns Length when no element matches, including for an empty span.
 public nuint FindLastIndex<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
 {

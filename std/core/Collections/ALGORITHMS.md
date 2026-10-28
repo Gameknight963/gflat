@@ -47,6 +47,7 @@ int main()
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
+| `AdjacentFind<T>(Span<immutable(T)>, predicate)` | Left index of the first matching adjacent pair, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `FindLastIndex<T>(Span<immutable(T)>, predicate)` | Last matching index, or span length when no element matches. |
 | `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
@@ -135,6 +136,41 @@ predicate borrows an element through `immutable(T)*` and runs once per element
 unless an earlier invocation throws. `FindIndex` stops at the first match;
 `IsSorted` stops at the first out-of-order adjacent pair. Empty spans are sorted
 and compare equal to other empty spans without invoking callbacks.
+
+## Adjacent pair search
+
+`AdjacentFind` borrows consecutive elements through two `immutable(T)*` pointers.
+It visits pairs from left to right, calling the predicate once per pair until
+the first match, and returns that pair's **left** index. No match returns
+`Length`; empty and singleton spans never read elements or call the predicate.
+The optional `default_equality.gf` overload uses `EqualityComparer<T>::Equals`
+for `T : IEquatable<T>`, which can find duplicates in sorted input. Custom
+predicates can instead detect transitions without requiring sorted input:
+
+```csharp
+using std; using std::Memory; using std::Collections;
+
+bool Drops(immutable(int)* left, immutable(int)* right) => *left > *right;
+
+int main()
+{
+    int[5] data = [1, 2, 2, 4, 3];
+    Span<int> values = new(data, 5);
+    nuint duplicate = AdjacentFind<int>(values.AsImmutable());
+    nuint drop = AdjacentFind<int>(values.AsImmutable(), Drops);
+    if (duplicate != 1 || drop != 3) return 1;
+    return 0;
+}
+```
+
+The search takes O(n) predicate calls and constant extra storage. It allocates
+nothing and never copies, destroys, or changes elements, including noncopyable
+owners. Keep the backing storage alive and unchanged through other aliases while
+searching. Predicate exceptions propagate unchanged; callback side effects are
+not rolled back. Selective source users need `Collections/span_algorithms.gf`
+and ordinary Span dependencies; the default overload additionally needs
+`Collections/default_equality.gf`, `Collections/EqualityComparer.gf`, and
+`IEquatable.gf`.
 
 ## Reverse predicate search
 

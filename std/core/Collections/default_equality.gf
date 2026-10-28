@@ -5,6 +5,9 @@ namespace std::Collections;
 public bool SequenceEqual<T : IEquatable<T>>(Span<immutable(T)> first, Span<immutable(T)> second)
     => std::Collections::SequenceEqual<T>(first, second, EqualityComparer<T>::Equals);
 
+public nuint AdjacentFind<T : IEquatable<T>>(Span<immutable(T)> values)
+    => std::Collections::AdjacentFind<T>(values, EqualityComparer<T>::Equals);
+
 public nuint IndexOf<T : IEquatable<T>>(Span<immutable(T)> values, immutable(T)* key)
     => std::Collections::IndexOf<T>(values, key, EqualityComparer<T>::Equals);
 

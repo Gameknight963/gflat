@@ -2,7 +2,9 @@ using std::Memory;
 using std::Queries;
 namespace std::Collections;
 
-// Owns contiguous elements. Growth invalidates pointers and spans into the buffer.
+/// Owns contiguous elements, destroying them and freeing the buffer on destruction.
+/// Buffer relocation invalidates all element pointers, spans and iterators.
+/// Insertion or removal may move elements; spans and iterators retain their original ranges.
 struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
 {
     private T*? data;
@@ -18,18 +20,25 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
     public Enumerable<T, Span<T>, Span<T>::Enumerator> AsEnumerable()
         => new Enumerable<T, Span<T>, Span<T>::Enumerator>(this.AsSpan());
 
+    /// Borrows the current elements without copying or transferring ownership.
+    /// Keep the vector alive; buffer relocation invalidates the view.
+    /// Count changes do not update its Length.
     public Span<T> AsSpan()
     {
         if (count == 0) return new Span<T>();
         return new Span<T>(data!, count);
     }
 
+    /// Borrows a shallow readonly view of the current elements, without owning the buffer.
     public readonly Span<readonly(T)> AsReadOnly()
     {
         if (count == 0) return new Span<readonly(T)>();
         return new Span<readonly(T)>((readonly(T)*)data, count);
     }
 
+    /// Borrows a deep immutable view without copying or freezing other mutable aliases.
+    /// Keep the vector alive; buffer relocation invalidates the view.
+    /// Count changes do not update its Length.
     public immutable Span<immutable(T)> AsImmutable()
     {
         if (count == 0) return new Span<immutable(T)>();
@@ -45,13 +54,16 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         }
     }
 
+    /// Ensures capacity is at least requested without changing Count.
+    /// Relocation invalidates borrows; allocation failure preserves existing contents.
     public void Reserve(nuint requested)
     {
         if (requested <= capacity) return;
         this.RelocateStorage(requested);
     }
 
-    // Release unused peak storage explicitly; structural borrows are invalidated.
+    /// Reduces Capacity to Count, freeing the buffer when empty; an already tight buffer is unchanged.
+    /// Successful relocation invalidates borrows; allocation failure preserves the original buffer.
     public void ShrinkToFit()
     {
         if (count == capacity) return;
@@ -101,6 +113,8 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         }
     }
 
+    /// Appends a value into owned storage; capacity growth invalidates buffer borrows.
+    /// Use explicit move for a named noncopyable owner, never for an element still owned here.
     public void Add(T value)
     {
         this.EnsureCapacityForOne();
@@ -108,6 +122,8 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         count++;
     }
 
+    /// Inserts before index, allowing Count for append, and preserves survivor order.
+    /// Growth invalidates all borrows; otherwise elements at and after index move.
     public void Insert(nuint index, T value)
     {
         if (index > count) throw new Exception("Vector insertion index out of range");
@@ -122,7 +138,8 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         count++;
     }
 
-    // Transfer the removed element to the caller, like Pop at an arbitrary index.
+    /// Transfers the removed value to the caller; discarding a returned owner destroys it.
+    /// Following elements move left; earlier elements retain their storage.
     public T RemoveAt(nuint index)
     {
         if (index >= count) throw new Exception("Vector removal index out of range");
@@ -133,7 +150,8 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return result;
     }
 
-    // Destroy a window and shift its suffix once; no copies or allocations.
+    /// Destroys the selected range and shifts survivors without copying; capacity is retained.
+    /// Validates the entire range first; an empty valid range does nothing.
     public void RemoveRange(nuint start, nuint length)
     {
         if (start > count || length > count - start)
@@ -151,7 +169,10 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         count -= length;
     }
 
-    // Stable retained prefix; matched owners stay initialized until cleanup.
+    /// Destroys predicate matches, preserves survivor order and returns the removed count.
+    /// Visits elements in order through borrowed pointers; do not structurally mutate the vector.
+    /// If the predicate throws, earlier matches are removed; the failing and unvisited elements remain.
+    /// Capacity is retained; reacquire views after removal because elements and ranges may change.
     public nuint RemoveAll(bool(immutable(T)*)* predicate)
     {
         nuint originalCount = count;
@@ -183,7 +204,8 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return originalCount - write;
     }
 
-    // Constant-time removal when preserving element order is unnecessary.
+    /// Transfers the removed value, filling its slot with the last value in constant time.
+    /// Changes survivor order; discarding a returned owner destroys it normally.
     public T SwapRemoveAt(nuint index)
     {
         if (index >= count) throw new Exception("Vector removal index out of range");
@@ -194,6 +216,8 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return result;
     }
 
+    /// Transfers the last element to the caller, throwing when empty and retaining capacity.
+    /// Discarding a returned owner destroys it normally.
     public T Pop()
     {
         if (count == 0) throw new Exception("Cannot pop an empty vector");
@@ -203,6 +227,9 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return result;
     }
 
+    /// Transfers the last element into initialized result; false leaves result unchanged.
+    /// Result must be separate from the vector header and its entire backing allocation.
+    /// Success updates Count before destroying the previous result value and retains capacity.
     public bool TryPop(ref T result)
     {
         if (count == 0) return false;
@@ -216,6 +243,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         return true;
     }
 
+    /// Destroys the suffix after length, retaining capacity; length cannot exceed Count.
     public void Truncate(nuint length)
     {
         if (length > count) throw new Exception("Vector truncation length out of range");
@@ -226,6 +254,7 @@ struct Vector<T> : IEnumerable<T, Span<T>::Enumerator>
         }
     }
 
+    /// Destroys all elements while retaining allocated capacity.
     public void Clear() { this.Truncate(0); }
 
     ~Vector()

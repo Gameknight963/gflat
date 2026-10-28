@@ -14,6 +14,9 @@ public nuint LowerBound<T : IComparable<T>>(Span<immutable(T)> values, immutable
 public nuint UpperBound<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* key)
     => std::Collections::UpperBound<T>(values, key, Comparer<T>::Compare);
 
+public Span<immutable(T)> EqualRange<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* key)
+    => std::Collections::EqualRange<T>(values, key, Comparer<T>::Compare);
+
 public nuint BinarySearch<T : IComparable<T>>(Span<immutable(T)> values, immutable(T)* key)
     => std::Collections::BinarySearch<T>(values, key, Comparer<T>::Compare);
 

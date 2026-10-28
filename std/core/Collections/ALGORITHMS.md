@@ -40,6 +40,7 @@ int main()
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
 | `LowerBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
 | `UpperBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
+| `EqualRange<T>(Span<immutable(T)>, key, compare)` | Borrow all contiguous comparer-equivalent elements. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `IsPartitioned<T>(Span<immutable(T)>, predicate)` | Check that true results precede false results, stopping at the first violation. |
 | `PartitionPoint<T>(Span<immutable(T)>, predicate)` | First false index in an already partitioned true-prefix/false-suffix span, or span length when all match. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
@@ -80,6 +81,18 @@ Both bounds return the span length if no such element exists, including zero
 for an empty span. Input must already be sorted under the same comparator.
 Their result identifies the insertion position, whether or not the key exists.
 For duplicate keys, `[LowerBound, UpperBound)` describes the matching range.
+
+`EqualRange` returns that range as a borrowed `Span<immutable(T)>`, using two
+logarithmic bound searches and constant extra storage. Input must be sorted under
+the same consistent comparator; equivalence means a zero comparison, which need
+not agree with `Equals`. No elements or keys are copied, moved, or allocated.
+The key may alias an input element. Every empty result has null `Data` and zero
+`Length`, including missing keys before, between, or after elements; use the bounds
+when an insertion index is needed. Empty input reads neither elements nor key and
+never calls the comparator. Keep storage and key alive and stable during the call;
+comparator exceptions propagate unchanged without rolling back callback effects.
+Collection mutation can change or invalidate the returned view under its
+container's borrowing rules; keep its backing storage alive for subsequent use.
 
 Comparators borrow two elements through `immutable(T)*` pointers and return a negative,
 zero, or positive `int`. They must provide a consistent ordering and must not

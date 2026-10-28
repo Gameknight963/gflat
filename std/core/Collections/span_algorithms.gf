@@ -117,6 +117,17 @@ public nuint UpperBound<T>(Span<immutable(T)> values, immutable(T)* key,
     return first;
 }
 
+/// Borrows the contiguous comparer-equivalent range in an already sorted span.
+/// Use a consistent ordering; empty results have null Data and zero Length.
+/// Elements and key are not copied; comparator exceptions propagate.
+public Span<immutable(T)> EqualRange<T>(Span<immutable(T)> values, immutable(T)* key,
+    int(immutable(T)*, immutable(T)*)* compare)
+{
+    nuint first = std::Collections::LowerBound<T>(values, key, compare);
+    nuint last = std::Collections::UpperBound<T>(values, key, compare);
+    return values.Slice(first, last - first);
+}
+
 /// Checks that all true predicate results precede all false results.
 /// Visits borrowed elements once from left to right, stopping at the first violation.
 /// Empty spans return true without calling the predicate; predicate exceptions propagate.

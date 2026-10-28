@@ -19,9 +19,14 @@ internal static class ExampleOutputFailure
         => AssertReportedCore(exampleName, optimization, bufferedFailureDiagnostic, "", [], [],
             arguments, readOnlyFailureDiagnostic);
 
+    internal static void AssertReportedWithArguments(string exampleName, int optimization,
+        string bufferedFailureDiagnostic, string readOnlyFailureDiagnostic, int expectedExitCode, params string[] arguments)
+        => AssertReportedCore(exampleName, optimization, bufferedFailureDiagnostic, "", [], [],
+            arguments, readOnlyFailureDiagnostic, expectedExitCode);
+
     private static void AssertReportedCore(string exampleName, int optimization, string diagnostic,
         string inputText, string[] leadingArguments, string[] extraArguments,
-        string[]? exactArguments = null, string? readOnlyDiagnostic = null)
+        string[]? exactArguments = null, string? readOnlyDiagnostic = null, int expectedExitCode = 1)
     {
         if (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux()) return;
         string directory = Path.Combine(Path.GetTempPath(), "gflat-output-failure-" + Guid.NewGuid().ToString("N"));
@@ -94,7 +99,7 @@ internal static class ExampleOutputFailure
             })
             {
                 var run = NativeToolchain.Run(executable, mode, 30000);
-                Assert.Equal(1, run.ExitCode);
+                Assert.Equal(expectedExitCode, run.ExitCode);
                 Assert.Equal("", run.StandardOutput);
                 Assert.Equal(expectedDiagnostic, run.StandardError.TrimEnd('\r', '\n'));
                 Assert.DoesNotContain("Unable to read", run.StandardError);

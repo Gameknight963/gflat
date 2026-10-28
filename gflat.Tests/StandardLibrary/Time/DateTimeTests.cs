@@ -2,10 +2,10 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
 // Exercise the civil value against independent calendar and exact-integer oracles.
-public sealed class StandardDateTimeTests
+public sealed class DateTimeTests
 {
     private const long Day=864000000000L,Maximum=3155378975999999999L;
     private const string Support="""

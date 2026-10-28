@@ -41,9 +41,7 @@ public partial class TypeChecker
                         throw new TypeCheckException("String literal operators require a non-generic class or struct", method.Line);
                     if (!method.IsStatic || method.Accessibility != TokenKind.Public || method.Body == null)
                         throw new TypeCheckException("String literal operators must be public static methods with a body", method.Line);
-                    var previous = _currentNamespace;
-                    _currentNamespace = scope;
-                    try
+                    using (EnterSignatureContext(method, owner, _classes.ContainsKey(owner)))
                     {
                         method.ReturnType = ResolveAlias(method.ReturnType);
                         foreach (Parameter parameter in method.Parameters) parameter.Type = ResolveAlias(parameter.Type);
@@ -52,12 +50,9 @@ public partial class TypeChecker
                             { IsReadOnly: true, IsNullable: false, Inner: NamedTypeExpression { Name: "char" } } ||
                             method.Parameters[1].Type is not NamedTypeExpression { Name: "nuint" })
                             throw new TypeCheckException("String literal operators must take (readonly(char)* data, nuint length)", method.Line);
-                        if (method.ReturnType is not NamedTypeExpression result ||
-                            (result.Name != owner && result.Name != owner.Split('.').Last()))
+                        if (method.ReturnType is not NamedTypeExpression result || result.Name != owner)
                             throw new TypeCheckException("A string literal operator must return its containing class or struct", method.Line);
-                        method.ReturnType = NamedTypeExpression.Resolved(owner, method.Line);
                     }
-                    finally { _currentNamespace = previous; }
                     if (_literalOperators.Any(o => o.Scope == scope && o.Method.StringLiteralPrefix == method.StringLiteralPrefix))
                         throw new TypeCheckException($"Duplicate string prefix '{method.StringLiteralPrefix}' in the same namespace", method.Line);
                     _literalOperators.Add(new(method, owner, scope));

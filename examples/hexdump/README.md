@@ -3,11 +3,22 @@
 ```console
 gflat build examples/hexdump/hexdump.gfproj
 examples/hexdump/bin/Debug/hexdump.exe input.bin
+examples/hexdump/bin/Debug/hexdump.exe --skip 4097 input.bin
 ```
 
 Prints 16 bytes per row, with a 64-bit hexadecimal byte offset and printable ASCII
 on the right. Other bytes display as dots. The final partial row is padded; an
 empty file produces no rows. On Linux, omit the executable's `.exe` suffix.
+
+`--skip <count> <file>` sequentially reads and discards the requested bytes
+before printing. The first row's offset is the skipped count, including when it
+is not a multiple of 16. Skipping exactly the file length succeeds without rows;
+skipping past EOF reports an I/O failure. No seeking or rollback occurs.
+
+The count is a nonnegative decimal integer fitting the native unsigned pointer
+width. Leading zeros and an optional `+` are accepted; minus signs, whitespace,
+radix prefixes, and overflow produce usage error 2 before opening the file.
+A single argument is always a filename, so `hexdump --skip` opens that literal path.
 
 The tool reads in 4096-byte chunks. It uses `Hex`, `IntegerFormatting`, `Ascii`,
 and a stack-backed `BufferWriter` to format each complete row before writing it

@@ -34,11 +34,12 @@ void PrintRow(ulong offset, readonly(char)* bytes, nuint count)
     Console::Write(output.Data, output.Length);
 }
 
-void DumpFile(readonly(char)* path)
+void DumpFile(readonly(char)* path, nuint skip)
 {
     File input = File::OpenRead(path);
+    input.SkipExactly(skip);
     char[4096] buffer;
-    ulong offset = 0ul;
+    ulong offset = (ulong)skip;
     while (true)
     {
         nuint count = input.Read(buffer, 4096);
@@ -57,12 +58,19 @@ void DumpFile(readonly(char)* path)
 
 int main(int argc, char** argv)
 {
-    if (argc != 2) { Console::Error.WriteLine("Usage: hexdump <file>"); return 2; }
-    try { DumpFile(argv[1]); }
+    nuint skip = 0;
+    if (argc != 2 && (argc != 4 || !CString::Equals(argv[1], "--skip") || !TryParseNUInt(argv[2], &skip)))
+    {
+        Console::Error.WriteLine("Usage: hexdump [--skip <count>] <file>");
+        return 2;
+    }
+    readonly(char)* path = argv[1];
+    if (argc == 4) path = argv[3];
+    try { DumpFile(path, skip); }
     catch (ref IOException error)
     {
         Console::Error.Write("Unable to dump: ", 16);
-        Console::Error.WriteLine(argv[1]);
+        Console::Error.WriteLine(path);
         return 1;
     }
     return 0;

@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardRationalParsingTests
+public sealed class RationalParsingTests
 {
     private const string Support="""
         using std; using std::Text; using std::Memory; using std::Numerics; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);

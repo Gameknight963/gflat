@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardStringTextEqualityTests
+public sealed class StringTextEqualityTests
 {
     // Deliberately excludes CString.gf: String text equality needs no new source dependency.
     private static IEnumerable<SourceFile> Sources(string program)

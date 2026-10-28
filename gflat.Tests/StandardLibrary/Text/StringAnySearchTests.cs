@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardStringAnySearchTests
+public sealed class StringAnySearchTests
 {
     private const string Counters="""
         using std; using std::Text;extern void*? malloc(nuint bytes);extern void free(void* storage);

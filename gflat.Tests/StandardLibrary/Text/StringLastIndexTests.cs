@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardStringLastIndexTests
+public sealed class StringLastIndexTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => new[]{"IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf","IStringConvertable.gf","Text/String.gf", "Text/ByteSearch.gf"}

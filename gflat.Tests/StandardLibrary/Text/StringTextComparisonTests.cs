@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardStringTextComparisonTests
+public sealed class StringTextComparisonTests
 {
     // CString.gf is intentionally absent: the String methods scan locally.
     private static IEnumerable<SourceFile> Sources(string program)

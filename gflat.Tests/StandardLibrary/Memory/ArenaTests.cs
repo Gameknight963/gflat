@@ -1,9 +1,9 @@
 using gflat.CompileExceptions;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Memory;
 
-public sealed class StandardArenaTests
+public sealed class ArenaTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] { "Memory/Arena.gf" }
         .Select(file => new SourceFile(file, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", file))))

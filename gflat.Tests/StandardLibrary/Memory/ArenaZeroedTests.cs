@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Memory;
 
-public sealed class StandardArenaZeroedTests
+public sealed class ArenaZeroedTests
 {
     private const string Allocator="""
         using std; using std::Memory;

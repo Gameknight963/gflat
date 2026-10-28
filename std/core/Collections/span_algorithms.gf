@@ -236,6 +236,16 @@ public bool AllOf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
     return true;
 }
 
+/// Tests borrowed elements from left to right, stopping at the first true result.
+/// Empty spans return false without calling the predicate; exceptions propagate.
+public bool AnyOf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
+    => std::Collections::FindIndex<T>(values, predicate) != values.Length;
+
+/// Tests borrowed elements from left to right, stopping at the first true result.
+/// Returns true when none match, including empty spans; exceptions propagate.
+public bool NoneOf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
+    => std::Collections::FindIndex<T>(values, predicate) == values.Length;
+
 /// Counts matches while borrowing each element once from left to right.
 /// Empty spans return zero without calling the predicate; exceptions propagate.
 public nuint CountIf<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)

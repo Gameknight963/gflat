@@ -50,6 +50,8 @@ int main()
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `AllOf<T>(Span<immutable(T)>, predicate)` | Check every borrowed element, stopping at the first false result; empty spans return true. |
+| `AnyOf<T>(Span<immutable(T)>, predicate)` | Test whether any borrowed element matches, stopping at the first true result; empty spans return false. |
+| `NoneOf<T>(Span<immutable(T)>, predicate)` | Test whether no borrowed element matches, stopping at the first true result; empty spans return true. |
 | `CountIf<T>(Span<immutable(T)>, predicate)` | Count matching borrowed elements in a complete left-to-right scan. |
 | `FindIndex<T>(Span<immutable(T)>, predicate)` | First matching index, or span length when no element matches. |
 | `AdjacentFind<T>(Span<immutable(T)>, predicate)` | Left index of the first matching adjacent pair, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
@@ -142,6 +144,16 @@ noncopyable owners. Worst-case time is O(n), with constant extra storage.
 Visited callback exceptions propagate unchanged; later callbacks are skipped
 after a false result, and callback effects are not rolled back. Keep backing
 storage alive and stable during the call.
+
+`AnyOf` and `NoneOf` search for the first true predicate result. `AnyOf` returns
+true when one is found; `NoneOf` returns false. With no match, including empty
+input, their results are false and true respectively. Both visit borrowed
+`immutable(T)*` addresses once from left to right until that match or a callback
+exception, with no allocation, element copies, or mutation by the algorithm.
+They take O(n) calls in the worst case and constant extra storage. Empty spans
+read no storage and invoke no callback. Original exceptions propagate unchanged;
+later callbacks are skipped after a match, and callback effects are not rolled
+back. Keep backing storage alive and stable during the call.
 
 `CountIf` returns a `nuint` count of matches. It calls the predicate once per
 element from left to right unless a callback throws; empty spans return zero

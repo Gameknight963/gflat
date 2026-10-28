@@ -1,4 +1,7 @@
 // Default exception base. Automatically available unless the program supplies one.
+// Borrows its null-terminated message; constructors do not copy or free the bytes.
+// Keep message storage alive while the exception or any copy can be inspected,
+// including after stack unwinding. String literals satisfy this requirement.
 class Exception
 {
     public immutable(char*) message;

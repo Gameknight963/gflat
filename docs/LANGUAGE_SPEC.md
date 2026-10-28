@@ -1080,6 +1080,12 @@ does not relax the allocation hooks' non-throwing callback contract.
 
 `throw new Error(...)` transfers a fresh exception-derived value to runtime storage. `throw value` copies and requires a copyable type; `throw move value` consumes it. Pointers cannot be thrown. `catch (ref Error error)` borrows the runtime-owned object, which remains live until the handler exits. The binding aliases the exception value, without a copy or ownership transfer. The older `catch (Error* error)` form also remains available; its pointer is borrowed and must not be deleted or retained. `throw;` inside a handler rethrows the original object, preserving its dynamic type. Throwing a borrowed base value with `throw error` instead copies its static base type. Bare `catch` also handles foreign exceptions; typed gflat catches do not.
 
+The default `Exception` borrows its null-terminated message pointer. Its constructors
+do not copy or take ownership of the bytes, and `GetMessage()` returns the stored
+pointer. Keep the backing storage alive while the exception or any copy can be
+inspected, including after stack unwinding; string literals satisfy this contract.
+Throwing or copying an exception does not extend external message storage's lifetime.
+
 Scope destructors and deferred actions run during unwinding. Failed construction destroys completed owning fields and the completed base, without invoking the incomplete object's destructor. Failed `new*` frees its fresh storage; failed placement construction leaves storage ownership with the caller. Raw resources acquired during construction still require explicit cleanup on failure paths.
 
 `void Boundary() nothrow { ... }` permits local handlers but terminates if an exception escapes. Destructors and `main` are also termination boundaries. Cleanup runs up to the boundary; outer callers cannot catch past it. An exception escaping cleanup while another exception is unwinding terminates; cleanup may catch its own failures locally.

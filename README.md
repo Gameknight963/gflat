@@ -103,6 +103,12 @@ GFLAT_CLANG=clang-18 ./compiler/gflat build examples/interpolation/interpolation
 ```
 
 You can also compile individual files: `gflat main.gf helper.gf --run`.
+This mode adds only the minimal runtime sources; `using` directives do not load
+library files. A `.gfproj` includes the full standard library by default. For
+selective library use, pass the required source files explicitly; `--no-stdlib`
+also disables the automatic runtime sources. See
+[standard library selection](docs/PROJECTS.md#standard-library-selection).
+
 Add the bundle's `compiler` directory to PATH to use `gflat` anywhere.
 Keep std and the `build` directory together. The CLI and language server support
 both `<Project Sdk="Gflat.Sdk">` and explicit imports of `Gflat.props` and

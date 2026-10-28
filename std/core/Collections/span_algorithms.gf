@@ -192,6 +192,22 @@ public bool SequenceEqual<T>(Span<immutable(T)> first, Span<immutable(T)> second
     return true;
 }
 
+/// Tests the leading borrowed elements; an empty prefix matches and an oversized prefix reads nothing.
+public bool StartsWith<T>(Span<immutable(T)> values, Span<immutable(T)> prefix,
+    bool(immutable(T)*, immutable(T)*)* equal)
+{
+    if (prefix.Length > values.Length) return false;
+    return std::Collections::SequenceEqual<T>(values.Slice(0, prefix.Length), prefix, equal);
+}
+
+/// Tests the trailing borrowed elements from left to right, without copying or changing storage.
+public bool EndsWith<T>(Span<immutable(T)> values, Span<immutable(T)> suffix,
+    bool(immutable(T)*, immutable(T)*)* equal)
+{
+    if (suffix.Length > values.Length) return false;
+    return std::Collections::SequenceEqual<T>(values.Slice(values.Length - suffix.Length, suffix.Length), suffix, equal);
+}
+
 /// Counts matching corresponding borrowed elements, stopping at the first difference or shorter length.
 public nuint CommonPrefixLength<T>(Span<immutable(T)> first, Span<immutable(T)> second,
     bool(immutable(T)*, immutable(T)*)* equal)

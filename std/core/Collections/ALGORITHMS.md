@@ -47,6 +47,8 @@ int main()
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `CommonPrefixLength<T>(first, second, equal)` | Count matching corresponding elements up to the first difference or shorter length. Optional `IEquatable<T>` default in `default_equality.gf`. |
+| `StartsWith<T>(values, prefix, equal)` | Match the leading elements of two borrowed spans. Optional `IEquatable<T>` default in `default_equality.gf`. |
+| `EndsWith<T>(values, suffix, equal)` | Match the trailing elements of two borrowed spans. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `SequenceCompare<T>(first, second, compare)` | Lexicographically compare `Span<immutable(T)>` views, preserving the first nonzero comparator result; an equal prefix sorts by length. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MinIndex<T>(Span<immutable(T)>, compare)` | Index of the first least element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
 | `MaxIndex<T>(Span<immutable(T)>, compare)` | Index of the first greatest element, or span length when empty. Optional `IComparable<T>` default in `default_ordering.gf`. |
@@ -545,3 +547,50 @@ with explicit callbacks remain available without either optional source file.
 Selective source users need `span_algorithms.gf`, `Span` and its dependencies, the
 appropriate `IComparable`/`Comparer` or `IEquatable`/`EqualityComparer` pair, and
 the chosen default convenience file. Ordinary std projects include them already.
+
+## Prefix and suffix matching
+
+`StartsWith` and `EndsWith` accept `Span<immutable(T)>` views. Empty patterns
+match every span, including an empty span. A pattern longer than the source
+returns false without reading elements or invoking the callback. Otherwise,
+comparison visits the selected leading/trailing region from left to right,
+passing a source address first and a pattern address second. It stops on the
+first false result. Identical and overlapping views still invoke the callback
+normally. A user callback or Equals implementation may allocate, change external state or throw.
+Callback effects are not rolled back; callback exceptions propagate
+unchanged and later elements are not visited. Keep both backing regions alive
+and stable during comparison.
+
+The functions themselves allocate nothing, copy no elements and do not mutate either span;
+noncopyable values can be compared through borrowed callbacks. The overloads
+without a callback lazily use `IEquatable<T>` through `EqualityComparer<T>`.
+These are free functions in `std::Collections`, following `SequenceEqual`, not
+new extensions on `Span<T>`. The separate `std::Text` character-span
+`text.AsReadOnly().StartsWith("RI")` extension remains available with its current
+C-string/character semantics. General matching counts elements, including zeros,
+and supplies no case folding, encoding conversion or pattern search.
+
+```csharp
+using std;
+using std::Memory;
+using std::Collections;
+using std::Text;
+
+bool EqualInt(immutable(int)* left, immutable(int)* right) => *left == *right;
+
+int main()
+{
+    int[5] data = [10, 20, 30, 40, 50];
+    int[2] first = [10, 20];
+    int[2] last = [40, 50];
+    Span<int> values = new(data, 5);
+    Span<int> prefix = new(first, 2);
+    Span<int> suffix = new(last, 2);
+    if (!StartsWith<int>(values.AsImmutable(), prefix.AsImmutable())) return 1;
+    if (!EndsWith<int>(values.AsImmutable(), suffix.AsImmutable(), EqualInt)) return 2;
+    char[4] header = ['R', 'I', 'F', 'F'];
+    Span<char> text = new(header, 4);
+    if (!text.AsReadOnly().StartsWith("RI")) return 3;
+    return 0;
+}
+```

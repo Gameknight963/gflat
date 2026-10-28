@@ -5,6 +5,12 @@ namespace std::Collections;
 public bool SequenceEqual<T : IEquatable<T>>(Span<immutable(T)> first, Span<immutable(T)> second)
     => std::Collections::SequenceEqual<T>(first, second, EqualityComparer<T>::Equals);
 
+public bool StartsWith<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> prefix)
+    => std::Collections::StartsWith<T>(values, prefix, EqualityComparer<T>::Equals);
+
+public bool EndsWith<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> suffix)
+    => std::Collections::EndsWith<T>(values, suffix, EqualityComparer<T>::Equals);
+
 public nuint CommonPrefixLength<T : IEquatable<T>>(Span<immutable(T)> first, Span<immutable(T)> second)
     => std::Collections::CommonPrefixLength<T>(first, second, EqualityComparer<T>::Equals);
 

@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardTimeSpanTotalsTests
+public sealed class TimeSpanTotalsTests
 {
     [Theory]
     [InlineData(0)]

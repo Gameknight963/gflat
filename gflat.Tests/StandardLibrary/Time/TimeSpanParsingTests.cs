@@ -3,9 +3,9 @@ using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardTimeSpanParsingTests
+public sealed class TimeSpanParsingTests
 {
     [Theory]
     [InlineData(0)]

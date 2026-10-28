@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardBooleanParsingTests
+public sealed class BooleanParsingTests
 {
     [Theory]
     [InlineData(0)]

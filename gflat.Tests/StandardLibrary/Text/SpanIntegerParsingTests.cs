@@ -2,9 +2,9 @@ using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardSpanIntegerParsingTests
+public sealed class SpanIntegerParsingTests
 {
     private static readonly (string Type,string Name)[] Types=[("byte","Byte"),("sbyte","SByte"),("short","Short"),("ushort","UShort"),("int","Int"),("uint","UInt"),("long","Long"),("ulong","ULong"),("extralong","ExtraLong"),("nint","NInt"),("nuint","NUInt")];
 

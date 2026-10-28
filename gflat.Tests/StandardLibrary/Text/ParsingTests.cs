@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardParsingTests
+public class ParsingTests
 {
     private static ExecutionResult Run(string source) => CompilerTestHelper.Run(new[] {
         new SourceFile("Parsing.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/parsing.gf"))),

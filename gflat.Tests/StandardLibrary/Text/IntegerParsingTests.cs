@@ -1,8 +1,8 @@
 using System.Numerics;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardIntegerParsingTests
+public class IntegerParsingTests
 {
     private static IEnumerable<SourceFile> Sources(string code, bool strings = false) =>
         new[] { "Text/integer_parsing.gf" }

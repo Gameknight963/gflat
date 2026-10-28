@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardExtraLongParsingTests
+public sealed class ExtraLongParsingTests
 {
     [Theory]
     [InlineData(0)]

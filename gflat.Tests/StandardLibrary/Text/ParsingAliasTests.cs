@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardParsingAliasTests
+public class ParsingAliasTests
 {
     [Theory]
     [InlineData(0)]

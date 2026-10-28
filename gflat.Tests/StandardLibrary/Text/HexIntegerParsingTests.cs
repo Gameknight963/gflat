@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardHexIntegerParsingTests
+public sealed class HexIntegerParsingTests
 {
     private static readonly (string Name, string Type, ulong Maximum)[] Widths =
     [

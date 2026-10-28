@@ -131,6 +131,7 @@ implementation lives in `libc`.
 | Binary text | `Base64`, unpadded `Base64Url`, `Hex`; owning `Base64Text`, `Base64UrlText`, `HexText` helpers and writer `WriteHex` | [Caller-buffer, owning, and writer codecs](../docs/BINARY_CODECS.md) |
 | Padded Base32 | `Base32`, `Base32Text` | [Strict canonical caller-buffer codecs and owning results](../docs/BASE32.md) |
 | Streaming Base64 | `Base64Encoder`, `Base64Decoder` | [Encoding](../docs/BASE64_ENCODER.md), [strict decoding](../docs/BASE64_DECODER.md) through borrowed writers |
+| Streaming hexadecimal | `HexDecoder` | [Strict decoding](../docs/HEX_DECODER.md) through a borrowed writer |
 | JSON strings | `JsonString`, `JsonStringText`, writer `WriteJsonString` | [Strict UTF-8 buffer codecs and owning String conveniences](../docs/JSON_STRING.md) |
 | JSON documents | `JsonReader`, `JsonTokenKind`, `JsonParseException` | [Forward-only tokens, borrowed raw lexemes, and decoded text comparison](../docs/JSON_READER.md) |
 | JSON text | `JsonText::Minify`, `JsonText::PrettyPrint` | [Validate first and format whitespace while preserving raw tokens](../docs/JSON_TEXT.md) |

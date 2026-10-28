@@ -1,16 +1,20 @@
 namespace std::Text;
 
-// Borrowed null-terminated byte strings; no encoding or ownership is implied.
+/// Helpers borrow byte buffers without owning, retaining or allocating their storage.
+/// Unbounded inputs require a readable zero terminator; bounded operations use their capacities.
+/// Operations use byte values without Unicode decoding or encoding validation.
 public static class CString
 {
     public static const nuint NotFound = (nuint)0 - (nuint)1;
 
+    /// Returns true for null or an initial zero, reading at most the first byte of a nonnull input.
     public static bool IsNullOrEmpty(readonly(char)*? text) nothrow
     {
         if (text == null) return true;
         return text![0] == '\0';
     }
 
+    /// Counts bytes before the first readable zero; the terminator is excluded.
     public static nuint Length(readonly(char)* text) nothrow
     {
         nuint length = 0;
@@ -18,7 +22,8 @@ public static class CString
         return length;
     }
 
-    // Search logical content only: the first null terminates, never matches.
+    /// Searches logical bytes before the first zero; the zero itself never matches.
+    /// Returns the first matching byte offset, or NotFound.
     public static nuint IndexOf(readonly(char)* text, char value) nothrow
     {
         nuint index = 0;
@@ -30,6 +35,7 @@ public static class CString
         return NotFound;
     }
 
+    /// Returns the last matching byte offset before the first zero, or NotFound; zero never matches.
     public static nuint LastIndexOf(readonly(char)* text, char value) nothrow
     {
         nuint result = NotFound;
@@ -42,6 +48,9 @@ public static class CString
         return result;
     }
 
+    /// Scans at most capacity readable bytes for a zero, returning true and its byte offset.
+    /// Returns false and sets length to zero when no terminator is found.
+    /// Zero capacity does not read input; length is still set to zero.
     public static bool TryGetLength(readonly(char)* text, nuint capacity, ref nuint length) nothrow
     {
         for (nuint i = 0; i < capacity; i++)
@@ -56,8 +65,9 @@ public static class CString
         return false;
     }
 
-    // Capacity includes the terminator. Preflight leaves output unchanged on
-    // failure; successful copies permit any overlap between the byte buffers.
+    /// Copies bytes and their first zero when they fit; capacity includes the terminator.
+    /// Failure leaves output unchanged; zero capacity accesses neither byte buffer.
+    /// Successful copies allow overlap and leave bytes beyond the copied terminator unchanged.
     public static bool TryCopy(readonly(char)* text, char* output, nuint capacity) nothrow
     {
         nuint length = 0;
@@ -73,7 +83,9 @@ public static class CString
         return true;
     }
 
-    // Find the current terminator before reusing the bounded overlap-safe copy.
+    /// Appends terminated input to terminated output; capacity is the entire output extent.
+    /// Failure leaves output unchanged; zero capacity accesses neither byte buffer.
+    /// Overlap is allowed; an unterminated output returns false without reading input.
     public static bool TryAppend(readonly(char)* text, char* output, nuint capacity) nothrow
     {
         nuint length = 0;
@@ -81,6 +93,8 @@ public static class CString
         return TryCopy(text, output + length, capacity - length);
     }
 
+    /// Compares unsigned bytes through the first zero, returning -1, zero or 1.
+    /// Uses no locale, Unicode normalization or case folding.
     public static int Compare(readonly(char)* left, readonly(char)* right) nothrow
     {
         nuint index = 0;
@@ -95,6 +109,7 @@ public static class CString
         }
     }
 
+    /// Tests equality of bytes before the first zero in each input.
     public static bool Equals(readonly(char)* left, readonly(char)* right) nothrow
         => Compare(left, right) == 0;
 

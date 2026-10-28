@@ -1,6 +1,7 @@
 namespace Console;
 
-// C strings stop at the first null. The counted overload writes every byte.
+/// Writes bytes through the current stdout text mode up to the first zero.
+/// Adds no newline and does not explicitly flush; failures can leave partial output.
 void Write(immutable(char*) message)
 {
     nuint length = 0;
@@ -8,6 +9,8 @@ void Write(immutable(char*) message)
     Write(message, length);
 }
 
+/// Writes the counted bytes, including embedded zeros, through the current stdout mode.
+/// Does not explicitly flush or retry; failures can leave partial output.
 void Write(immutable(char*) data, nuint length)
 {
     if (length == 0) return;
@@ -16,17 +19,24 @@ void Write(immutable(char*) data, nuint length)
         throw new std::IO::IOException("Console write failed");
 }
 
+/// Writes a newline through the current stdout mode without explicitly calling Flush.
 void WriteLine() { Write("\n", 1); }
+/// Writes bytes before the first zero, then a newline, without explicitly calling Flush.
 void WriteLine(immutable(char*) message) { Write(message); WriteLine(); }
+/// Writes counted bytes, including zeros, then a newline through the current stdout mode.
+/// A text or newline write failure can leave partial output.
 void WriteLine(immutable(char*) data, nuint length) { Write(data, length); WriteLine(); }
 
+/// Flushes stdout and throws IOException if the host stream reports a failure.
 void Flush()
 {
     if (fflush(__gflat_stdio_stdout()) != 0)
         throw new std::IO::IOException("Console flush failed");
 }
 
-// Counted input from the current stdin mode; no terminator or line processing.
+/// Reads up to count bytes from the current stdin mode and returns the byte count.
+/// Adds no terminator or line processing; zero count consumes nothing.
+/// IO errors throw IOException after possible partial input; EOF may return fewer bytes.
 nuint Read(char* data, nuint count)
 {
     if (count == 0) return 0;
@@ -37,7 +47,7 @@ nuint Read(char* data, nuint count)
     return read;
 }
 
-// Returns 0..255, or -1 at EOF. IO errors remain distinct from end of input.
+/// Returns the next byte from zero through 255, or -1 at EOF; IO errors throw IOException.
 int ReadByte()
 {
     void* stream = __gflat_stdio_stdin();
@@ -47,7 +57,8 @@ int ReadByte()
     return value;
 }
 
-// One-byte lookahead on the same stdin stream used by all other input APIs.
+/// Returns the next stdin byte without consuming it on success, or -1 at EOF.
+/// Read or pushback failure throws IOException; uses the same stream mode and position as other reads.
 int PeekByte()
 {
     void* stream = __gflat_stdio_stdin();
@@ -61,20 +72,29 @@ int PeekByte()
     return value;
 }
 
-// Reset sticky stdin EOF/error indicators without discarding buffered input.
+/// Clears sticky stdin EOF and error indicators without discarding buffered input.
+/// Does not repair the underlying descriptor, change stream mode or rewind.
 void ClearInputError() { clearerr(__gflat_stdio_stdin()); }
 
-// Consumes an available prefix before reporting unexpected EOF.
+/// Requires count bytes or throws EndOfStreamException when EOF arrives early.
+/// The available prefix is already consumed and stored; actual IO errors throw IOException.
 void ReadExactly(char* data, nuint count)
 {
     if (Read(data, count) != count) throw new std::IO::EndOfStreamException();
 }
 
-// Appends one line without its ending. Borrows the sink; never clears or closes it.
+/// Appends a line without its ending or an added terminator to the borrowed sink.
+/// Does not clear, flush, close or destroy the sink; LF and CRLF endings are removed after host translation.
+/// False means EOF before a line; blank lines and nonempty final unterminated lines return true.
+/// Sink exceptions propagate unchanged; consumed input and prior output are not rolled back.
+/// A sink or IO failure can stop midline; remaining input is not automatically drained.
 bool TryReadLine(ITextWriter* output) { return detail::ReadLine(output); }
 
-// capacity includes the terminator. No String or application buffer allocation is needed.
-// On overflow the whole line is consumed and a terminated prefix remains.
+/// Reads a line into caller storage; capacity includes room for a trailing zero.
+/// False means EOF before a line; blank lines return true with zero length.
+/// Removes LF and CRLF endings after host input translation; final unterminated lines are returned.
+/// Zero capacity throws BufferTooSmallException before accessing stdin or the buffer.
+/// On a completed overflow read, drains the line then throws BufferTooSmallException; its terminated prefix and length remain.
 bool TryReadLine(char* data, nuint capacity, ref nuint length)
 {
     length = 0;
@@ -86,6 +106,8 @@ bool TryReadLine(char* data, nuint capacity, ref nuint length)
     return read;
 }
 
+/// Returns the line byte count or throws EndOfStreamException when no line remains.
+/// Uses the same capacity and overflow rules as TryReadLine and leaves a trailing zero.
 nuint ReadLine(char* data, nuint capacity)
 {
     nuint length = 0;

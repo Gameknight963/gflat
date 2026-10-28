@@ -205,9 +205,11 @@ gflat clean examples/hello/hello.gfproj
 
 In a checkout, substitute `dotnet run --project gflat --` for `gflat`.
 Executables default to `bin/<Configuration>/<project-name>.exe`; LLVM output uses
-`.ll`. `-o` overrides the CLI output. Clean removes the configured executable,
-its default `.ll`, the generated source list, and incremental stamps, preserving other files. Custom
-IR outputs are retained. Clean currently requires an `.exe` target name.
+`.ll`. `-o` overrides the CLI output. Clean removes the configured executable and
+`GflatIROutput` (the corresponding `.ll` by default), generated intermediates, and
+incremental stamps, preserving unrelated files. A previous CLI `-o` override is
+not remembered by a later clean command. Clean currently requires an `.exe`
+target name.
 
 The targets choose `GflatCompilerCommand` if explicitly configured, otherwise the
 compiler shipped with the SDK distribution/VSIX, the checkout's Debug compiler

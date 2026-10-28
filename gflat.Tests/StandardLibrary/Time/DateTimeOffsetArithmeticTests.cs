@@ -91,6 +91,83 @@ public sealed class DateTimeOffsetArithmeticTests
             """,optimization);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void CalendarShiftsMatchDotNetAndPreserveOffsetTimeAndOperands(int optimization)
+    {
+        System.DateTime[] clocks=[System.DateTime.MinValue,System.DateTime.MaxValue,
+            new(1,2,1),new(2,1,1),new(9999,10,31,23,59,59),new(9998,12,31,23,59,59),
+            new System.DateTime(2024,1,31,12,34,56).AddTicks(1234567),new(2024,2,29),new(1900,3,31)];
+        var values=new List<System.DateTimeOffset>();
+        foreach(var clock in clocks)foreach(int minutes in new[]{-840,0,345,840}){
+            try{values.Add(new(clock,TimeSpan.FromMinutes(minutes)));}catch(ArgumentException){}
+        }
+        int[] deltas=[int.MinValue,-120000,-9999,-13,-1,0,1,13,9999,120000,int.MaxValue];
+        using var bytes=new MemoryStream();using(var writer=new BinaryWriter(bytes,Encoding.UTF8,true))foreach(var value in values)foreach(int delta in deltas){
+            writer.Write(value.Ticks);writer.Write(value.Offset.Ticks);writer.Write((long)delta);
+            WriteOutcome(writer,()=>value.AddMonths(delta));WriteOutcome(writer,()=>value.AddYears(delta));
+        }
+        string hex=Convert.ToHexString(bytes.ToArray());
+        Run(Support+$$$"""
+            int main(){readonly(char)* packet="{{{hex}}}";nuint at=0;
+                for(int row=0;row<{{{values.Count*deltas.Length}}};row++){
+                    long wall=ReadLong(packet,ref at);long offset=ReadLong(packet,ref at);int delta=(int)ReadLong(packet,ref at);
+                    bool monthValid=ReadByte(packet,ref at)!=0;long monthWall=ReadLong(packet,ref at);long monthUtc=ReadLong(packet,ref at);
+                    bool yearValid=ReadByte(packet,ref at)!=0;long yearWall=ReadLong(packet,ref at);long yearUtc=ReadLong(packet,ref at);
+                    DateTimeOffset value=new(DateTime::FromTicks(wall),TimeSpan::FromTicks(offset));DateTimeOffset saved=value;
+                    immutable(DateTimeOffset)* view=&value;int before=attempts;deny=true;
+                    if(monthValid){DateTimeOffset result=view.AddMonths(delta);if(result.DateTime.Ticks!=monthWall||result.UtcDateTime.Ticks!=monthUtc||result.Offset.Ticks!=offset)return 1;}
+                    if(yearValid){DateTimeOffset result=view.AddYears(delta);if(result.DateTime.Ticks!=yearWall||result.UtcDateTime.Ticks!=yearUtc||result.Offset.Ticks!=offset)return 2;}
+                    deny=false;if(attempts!=before||!value.EqualsExact(&saved))return 3;
+                    DateTimeOffset target=saved;
+                    if(!monthValid){bool caught=false;try{target=view.AddMonths(delta);}catch(ref Exception error){caught=true;}if(!caught||!target.EqualsExact(&saved))return 4;}
+                    if(!yearValid){bool caught=false;try{target=view.AddYears(delta);}catch(ref Exception error){caught=true;}if(!caught||!target.EqualsExact(&saved))return 5;}
+                    if(!value.EqualsExact(&saved)||allocated!=released)return 6;
+                }
+                if(at!={{{hex.Length}}})return 7;return 0;
+            }
+            """,optimization);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void CalendarUtcBoundsErrorsAndChainedClampingUseExistingContracts(int optimization)
+        =>Run(Support+"""
+            int main(){
+                readonly(char)*[4] inputs=["0001-02-01T00:00:00+14:00","0002-01-01T00:00:00+14:00",
+                    "9999-10-31T23:59:59.9999999-14:00","9998-12-31T23:59:59.9999999-14:00"];
+                int[4] shifts=[-1,-1,2,1];
+                for(nuint i=0;i<4;i++){
+                    DateTimeOffset source=DateTimeOffset::Parse(inputs[i]);DateTimeOffset saved=source;DateTimeOffset target=saved;
+                    immutable(DateTimeOffset)* view=&source;DateTime wall=source.DateTime;
+                    DateTime shifted=new();if(i%2==0)shifted=wall.AddMonths(shifts[i]);else shifted=wall.AddYears(shifts[i]);
+                    long utc=shifted.Ticks-source.Offset.Ticks;if(utc>=0l&&utc<=3155378975999999999l)return 1;
+                    bool caught=false;try{if(i%2==0)target=view.AddMonths(shifts[i]);else target=view.AddYears(shifts[i]);}
+                    catch(ref Exception error){if(!CString::Equals(error.GetMessage(),"DateTimeOffset clock or offset is out of range"))return 2;caught=true;}
+                    if(!caught||!source.EqualsExact(&saved)||!target.EqualsExact(&saved))return 3;
+                }
+                DateTimeOffset start=DateTimeOffset::Parse("2024-01-31T12:34:56.1234567+05:45");DateTimeOffset saved=start;
+                DateTimeOffset february=DateTimeOffset::Parse("2024-02-29T12:34:56.1234567+05:45");
+                DateTimeOffset anniversary=DateTimeOffset::Parse("2025-02-28T12:34:56.1234567+05:45");
+                int[2] extremes=[(-2147483647-1),2147483647];
+                for(nuint kind=0;kind<2;kind++)for(nuint i=0;i<2;i++){
+                    DateTimeOffset target=saved;bool caught=false;
+                    try{if(kind==0)target=start.AddMonths(extremes[i]);else target=start.AddYears(extremes[i]);}
+                    catch(ref Exception error){if(!CString::Equals(error.GetMessage(),"Date addition is outside the supported range"))return 4;caught=true;}
+                    if(!caught||!target.EqualsExact(&saved)||!start.EqualsExact(&saved))return 5;
+                }
+                immutable(DateTimeOffset)* view=&start;int before=attempts;deny=true;
+                DateTimeOffset next=view.AddMonths(1);DateTimeOffset repeated=next.AddMonths(1);DateTimeOffset direct=view.AddMonths(2);
+                DateTimeOffset year=next.AddYears(1);DateTimeOffset same=view.AddMonths(0).AddYears(0);
+                if(!next.EqualsExact(&february)||!year.EqualsExact(&anniversary)||!same.EqualsExact(&saved))return 6;
+                if(repeated.DateTime.Date.Day!=29||direct.DateTime.Date.Day!=31)return 7;
+                if(repeated.DateTime.TimeOfDay.Ticks!=start.DateTime.TimeOfDay.Ticks||direct.Offset.Ticks!=start.Offset.Ticks)return 8;
+                deny=false;if(attempts!=before||!start.EqualsExact(&saved)||allocated!=released)return 9;return 0;
+            }
+            """,optimization);
+
     private static void WriteOutcome(BinaryWriter writer,Func<System.DateTimeOffset> operation)
     {
         System.DateTimeOffset result;

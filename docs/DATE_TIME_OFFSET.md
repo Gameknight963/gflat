@@ -79,6 +79,36 @@ int main()
 }
 ```
 
+## Calendar arithmetic
+
+`AddMonths(int)` and `AddYears(int)` return a new timestamp using DateTime's
+calendar rules. They clamp the day to the destination month's length and preserve
+the exact time of day, fractional ticks and displayed offset. Chained calls use
+the already clamped day; they do not remember an earlier month's day.
+
+Both wall time and UTC must remain within years 1 through 9999. Calendar overflow
+propagates `Exception("Date addition is outside the supported range")`; a valid
+wall time whose retained offset puts UTC outside that range throws
+`Exception("DateTimeOffset clock or offset is out of range")`. The receiver and a
+failed assignment's destination remain unchanged. Successful calls allocate
+nothing internally. These are fixed-offset calendar operations, with no named
+time zone or daylight-saving adjustment.
+
+```csharp
+using std; using std::Time;
+
+int main()
+{
+    DateTimeOffset start = DateTimeOffset::Parse("2024-01-31T12:34:56.1234567+05:45");
+    DateTimeOffset february = start.AddMonths(1);
+    DateTimeOffset nextYear = february.AddYears(1);
+    DateTimeOffset expected = DateTimeOffset::Parse("2025-02-28T12:34:56.1234567+05:45");
+    if (february.DateTime.Date.Day != 29 || !nextYear.EqualsExact(&expected)) return 1;
+    if (start.DateTime.Date.Day != 31) return 2;
+    return 0;
+}
+```
+
 ## Parsing and formatting
 
 Accepted text is exactly `yyyy-MM-ddTHH:mm:ss[.fraction]Z` or the same civil prefix

@@ -2,10 +2,10 @@ using System.Globalization;
 using System.Text;
 using Integer=System.Numerics.BigInteger;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
 // Branch witnesses are algebraic/host oracles, independent of the implementation.
-public sealed class StandardBigIntegerDivisionTests
+public sealed class BigIntegerDivisionTests
 {
     private static readonly Integer B=1_000_000_000;
     private static (Integer Left,Integer Right)[] Branches()=>[

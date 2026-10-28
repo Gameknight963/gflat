@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Text;
 using Integer = System.Numerics.BigInteger;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardBigIntegerParsingTests
+public sealed class BigIntegerParsingTests
 {
     [Theory]
     [InlineData(0)]

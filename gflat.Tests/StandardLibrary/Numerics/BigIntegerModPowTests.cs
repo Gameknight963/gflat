@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Numerics;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardBigIntegerModPowTests
+public sealed class BigIntegerModPowTests
 {
     [Theory]
     [InlineData(0)]

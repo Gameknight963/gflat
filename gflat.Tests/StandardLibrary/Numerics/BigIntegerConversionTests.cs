@@ -3,9 +3,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Integer = System.Numerics.BigInteger;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardBigIntegerConversionTests
+public sealed class BigIntegerConversionTests
 {
     [Theory]
     [InlineData(0)]

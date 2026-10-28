@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Text;
 using Integer = System.Numerics.BigInteger;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardBigIntegerTests
+public sealed class BigIntegerTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)

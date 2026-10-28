@@ -1,9 +1,9 @@
 using System.Globalization;
 using Integer=System.Numerics.BigInteger;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardBigIntegerLcmTests
+public sealed class BigIntegerLcmTests
 {
     private static Integer Lcm(Integer a,Integer b)=>a.IsZero||b.IsZero?Integer.Zero:Integer.Abs(a/Integer.GreatestCommonDivisor(a,b)*b);
     private static string Text(Integer value)=>value.ToString(CultureInfo.InvariantCulture);

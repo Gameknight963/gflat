@@ -1,9 +1,9 @@
 using System.Globalization;
 using Integer = System.Numerics.BigInteger;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardBigIntegerDivRemTests
+public sealed class BigIntegerDivRemTests
 {
     [Theory]
     [InlineData(0)]

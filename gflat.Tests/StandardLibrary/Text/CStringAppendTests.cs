@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardCStringAppendTests
+public sealed class CStringAppendTests
 {
     [Theory]
     [InlineData(0)]

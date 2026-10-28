@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardCStringTests
+public sealed class CStringTests
 {
     [Theory]
     [InlineData(0)]

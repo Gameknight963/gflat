@@ -22,6 +22,22 @@ public class FreestandingCoreUtilitiesTests
             for (nuint i = 0; i < 32; i++) if (actual[i] != expected[i]) return 2;
             return 0;
         }
+        int Sha512Proof() nothrow {
+            std::Hashing::SHA512 hash = new();
+            char[3] text = ['a', 'b', (char)(98ul + (formatter_input() >> 63))];
+            if (!hash.TryAppend(text, 3)) return 1;
+            byte[64] actual = hash.GetHash();
+            byte[64] expected = [(byte)0xdd,(byte)0xaf,(byte)0x35,(byte)0xa1,(byte)0x93,(byte)0x61,(byte)0x7a,(byte)0xba,
+                (byte)0xcc,(byte)0x41,(byte)0x73,(byte)0x49,(byte)0xae,(byte)0x20,(byte)0x41,(byte)0x31,
+                (byte)0x12,(byte)0xe6,(byte)0xfa,(byte)0x4e,(byte)0x89,(byte)0xa9,(byte)0x7e,(byte)0xa2,
+                (byte)0x0a,(byte)0x9e,(byte)0xee,(byte)0xe6,(byte)0x4b,(byte)0x55,(byte)0xd3,(byte)0x9a,
+                (byte)0x21,(byte)0x92,(byte)0x99,(byte)0x2a,(byte)0x27,(byte)0x4f,(byte)0xc1,(byte)0xa8,
+                (byte)0x36,(byte)0xba,(byte)0x3c,(byte)0x23,(byte)0xa3,(byte)0xfe,(byte)0xeb,(byte)0xbd,
+                (byte)0x45,(byte)0x4d,(byte)0x44,(byte)0x23,(byte)0x64,(byte)0x3c,(byte)0xe8,(byte)0x0e,
+                (byte)0x2a,(byte)0x9a,(byte)0xc9,(byte)0x4f,(byte)0xa5,(byte)0x4c,(byte)0xa4,(byte)0x9f];
+            for (nuint i = 0; i < 64; i++) if (actual[i] != expected[i]) return 2;
+            return 0;
+        }
         int main() {
             if (!std::Text::Ascii::IsHexDigit('f')) return 1;
             if (std::Text::Ascii::IsAscii((char)255)) return 2;
@@ -315,6 +331,7 @@ public class FreestandingCoreUtilitiesTests
             if(!std::Json::JsonString::ValueTextEquals(escaped,8,"A",1)
                 ||std::Json::JsonString::ValueTextEquals(escaped,8,"B",1)) return 179;
             if (Sha256Proof() != 0) return 180;
+            if (Sha512Proof() != 0) return 181;
             return 42;
         }
         """;
@@ -328,7 +345,7 @@ public class FreestandingCoreUtilitiesTests
         if (RuntimeInformation.ProcessArchitecture != Architecture.X64 ||
             (!OperatingSystem.IsWindows() && !OperatingSystem.IsLinux())) return;
 
-        var sources = new[] { "Text/ascii.gf", "Text/utf8.gf", "Text/utf16.gf", "Text/UnicodeTranscoding.gf", "Encoding/Hex.gf", "Encoding/Base64.gf", "Encoding/Base64Url.gf", "Numerics/BitOperations.gf", "Hashing/primitive_hashing.gf", "Hashing/SHA256.gf",
+        var sources = new[] { "Text/ascii.gf", "Text/utf8.gf", "Text/utf16.gf", "Text/UnicodeTranscoding.gf", "Encoding/Hex.gf", "Encoding/Base64.gf", "Encoding/Base64Url.gf", "Numerics/BitOperations.gf", "Hashing/primitive_hashing.gf", "Hashing/SHA256.gf", "Hashing/SHA512.gf",
             "Encoding/PercentEncoding.gf", "Binary/BinaryPrimitives.gf", "Hashing/CRC32.gf", "Hashing/Adler32.gf", "Text/Utf8Decoder.gf",
             "Binary/BinaryBufferReader.gf", "Binary/BinaryBufferWriter.gf", "Text/IntegerFormatting.gf", "Text/hex_integer_parsing.gf", "Text/boolean_parsing.gf", "Text/ByteSearch.gf", "Text/CString.gf", "Memory/bytes.gf", "Json/JsonString.gf", "Binary/VarInt.gf" }
             .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core", name))))

@@ -65,3 +65,51 @@ total. No total-output buffer is allocated.
 [`LinePrefixWriter`](LINE_PREFIX_WRITER.md) adds a counted prefix to each
 LF-delimited input line as bytes arrive. It borrows its destination and prefix,
 preserves source bytes, and needs no intermediate String or completion call.
+
+## Send one stream to two writers
+
+`std::Text::TeeWriter` borrows two `ITextWriter*` endpoints. Each `Write(data,
+count)` calls the first writer, then the second with the same pointer and count,
+including zero-length writes. Identical endpoints receive two calls. Counted
+bytes include NUL and high bytes; no encoding or newline conversion is added by
+the adapter. Each endpoint retains its own output behavior; Console streams can
+apply host text-mode transformations.
+
+```csharp
+using std; using std::Text;
+
+int main()
+{
+    char[32] bytes;
+    BufferWriter output = new(bytes, 32);
+    CountingWriter count = new();
+    TeeWriter tee = new(&output, &count);
+    ITextWriter* writer = &tee;
+    writer.WriteLine("A\0B", 3);
+    if (output.Length != 4 || count.Length != 4 || bytes[1] != '\0'
+        || bytes[3] != '\n') return 1;
+    return 0;
+}
+```
+
+A formatter writes to the tee once, so each emitted chunk reaches both endpoints
+without formatting twice or materializing a String. Constructor and adapter
+forwarding allocate nothing internally; sinks and formatters may allocate or
+throw. Explicit source selection needs `Text/TeeWriter.gf` and the ordinary
+formatting contract in `Text.gf`, plus the selected endpoint/helper definitions.
+
+The adapter owns neither endpoint. Keep both alive and valid for every write;
+copying or moving the tee shares those same borrowed endpoints. Ending an
+adapter's lifetime does not write, flush, close or destroy either endpoint.
+No input pointer is retained by the tee. Input must remain readable and stable
+through both calls and must not overlap storage either sink might modify, move
+or reallocate, including their object state. Endpoints consume the supplied bytes
+during their calls; the tee does not supply storage for deferred use.
+
+Output is not transactional. If the first writer throws, the second is not
+called. If the second throws, the first may already have accepted the complete
+chunk. Either endpoint can emit a prefix before failing; the original exception
+propagates without rollback. Retrying can duplicate accepted output. The tee
+keeps no failure latch, so later writes are forwarded normally, subject to each
+endpoint's own recovery rules. It provides no synchronization, completion,
+reset, flush or close operation.

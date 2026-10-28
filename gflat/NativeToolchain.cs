@@ -66,8 +66,10 @@ public static class NativeToolchain
         throw new FileNotFoundException("Clang was not found. Install LLVM or set GFLAT_CLANG to its executable path.");
     }
 
+    /// <summary>Capture a process's output within one timeout covering exit and both output streams; -1 waits indefinitely.</summary>
     public static ProcessResult Run(string executable, IEnumerable<string> arguments, int timeoutMilliseconds = 30000)
     {
+        if (timeoutMilliseconds < -1) throw new ArgumentOutOfRangeException(nameof(timeoutMilliseconds));
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo(executable)
         {
@@ -76,12 +78,25 @@ public static class NativeToolchain
         };
         foreach (string argument in arguments) process.StartInfo.ArgumentList.Add(argument);
         process.Start();
-        Task<string> stdout = process.StandardOutput.ReadToEndAsync();
-        Task<string> stderr = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(timeoutMilliseconds))
+        using var deadline = new CancellationTokenSource(timeoutMilliseconds);
+        Task<string> stdout = process.StandardOutput.ReadToEndAsync(deadline.Token);
+        Task<string> stderr = process.StandardError.ReadToEndAsync(deadline.Token);
+        Task completion = Task.WhenAll(process.WaitForExitAsync(deadline.Token), stdout, stderr);
+        try
         {
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit();
+            completion.WaitAsync(deadline.Token).GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+        {
+            // Readers may still be finishing cancellation; observe late faults without waiting for EOF.
+            _ = completion.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            if (!process.HasExited)
+            {
+                try { process.Kill(entireProcessTree: true); }
+                catch (InvalidOperationException) when (process.HasExited) { }
+                process.WaitForExit();
+            }
             throw new TimeoutException($"'{executable}' exceeded {timeoutMilliseconds} ms.");
         }
         return new(process.ExitCode, stdout.GetAwaiter().GetResult(), stderr.GetAwaiter().GetResult());

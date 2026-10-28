@@ -72,11 +72,18 @@ public sealed class NamespaceTypeVisibilityTests
             weak int Read(Box<int>::Item value)=>1;
             int main()=>0;
             """, options: new() { NoStdLib = true });
+        var definition = result.Ast.Members.OfType<StructDeclaration>().Single(s => s.IsGeneric);
         var generated = result.Ast.Members.OfType<StructDeclaration>().Single(s => !s.IsGeneric);
-        Assert.Contains(generated.Name, result.Checker.Symbols.Structs.Keys);
-        Assert.DoesNotContain(generated.SourceName, result.Checker.Symbols.GlobalScope.TypeNames.Keys);
-        Assert.DoesNotContain(generated.SourceName, result.Checker.Symbols.GlobalScope.Structs.Keys);
-        Assert.DoesNotContain("Item", result.Checker.Symbols.GlobalScope.TypeNames.Keys);
-        Assert.DoesNotContain("Item", result.Checker.Symbols.GlobalScope.Structs.Keys);
+        var symbols = result.Checker.Symbols;
+        var scope = symbols.GlobalScope;
+        Assert.Contains(generated.Name, symbols.Structs.Keys);
+        Assert.Same(definition, symbols.GenericStructs[definition.Name]);
+        Assert.Equal(definition.Name, scope.TypeNames[definition.SourceName]);
+        Assert.DoesNotContain(generated.Name, scope.TypeNames.Keys);
+        Assert.DoesNotContain(generated.Name, scope.TypeNames.Values);
+        Assert.DoesNotContain(generated.Name, scope.Structs.Keys);
+        Assert.DoesNotContain(scope.Structs.Values, info => info.Name == generated.Name);
+        Assert.DoesNotContain("Item", scope.TypeNames.Keys);
+        Assert.DoesNotContain("Item", scope.Structs.Keys);
     }
 }

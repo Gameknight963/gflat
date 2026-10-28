@@ -45,7 +45,7 @@ This example uses std; see the runnable
 - Nullable pointers with local null-check analysis.
 - Namespace extension methods with ordinary value, reference, and readonly receivers.
 - Managed pointers (`T^`) with replaceable GC hooks and a single-threaded,
-  non-moving conservative collector. See the [managed example](examples/managed/README.md).
+  non-moving tracing collector. See the [managed example](examples/managed/README.md).
 - Native stack-unwinding exceptions, with optional `nothrow` termination boundaries.
 - Custom string literal prefixes and string interpolation. For example, create a `std::Text::String` with the 's' prefix as shown in the example above
 - Multiple source files and MSBuild `.gfproj` projects.
@@ -123,6 +123,7 @@ The [word-count tool](examples/word-count/README.md) and
 [weighted pathfinding example](examples/pathfinding/README.md) exercise the newer collections.
 The [tail tool](examples/tail/README.md) combines file line iteration with a bounded owning queue.
 The [big-calc tool](examples/big-calc/README.md) performs exact arbitrary-precision arithmetic and GCD calculations.
+Browse the [example index](examples/README.md) for all runnable projects.
 
 If setup fails, run `gflat doctor --native` to check SDK discovery, MSBuild,
 Clang, and native exception runtime linking.

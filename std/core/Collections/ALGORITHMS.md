@@ -40,6 +40,7 @@ int main()
 | `Rotate<T>(Span<T>, middle)` | Move the prefix before `middle` after the suffix, preserving order within each part. |
 | `LowerBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than or equal to the borrowed key. |
 | `UpperBound<T>(Span<immutable(T)>, key, compare)` | First index whose element compares greater than the borrowed key. |
+| `IsPartitioned<T>(Span<immutable(T)>, predicate)` | Check that true results precede false results, stopping at the first violation. |
 | `PartitionPoint<T>(Span<immutable(T)>, predicate)` | First false index in an already partitioned true-prefix/false-suffix span, or span length when all match. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
@@ -137,6 +138,38 @@ predicate borrows an element through `immutable(T)*` and runs once per element
 unless an earlier invocation throws. `FindIndex` stops at the first match;
 `IsSorted` stops at the first out-of-order adjacent pair. Empty spans are sorted
 and compare equal to other empty spans without invoking callbacks.
+
+## Partition validation
+
+`IsPartitioned` checks whether all true predicate results precede all false results.
+It visits elements once from left to right and returns false at the first true
+result following a false result. Empty, all-true, and all-false spans return true;
+empty spans never read storage or call the predicate. The scan takes O(n) calls
+in the worst case and constant extra storage, without allocating, copying, or
+modifying elements. Predicate exceptions propagate unchanged; callback effects
+are not rolled back. Keep input storage alive and avoid mutation through aliases.
+
+Validation is an explicit linear pass. `PartitionPoint` keeps its logarithmic
+search and does not call `IsPartitioned` automatically. Keep both input and
+predicate consistent between validation and boundary search.
+
+```csharp
+using std; using std::Memory; using std::Collections;
+
+bool Positive(immutable(int)* value) => *value > 0;
+
+int main()
+{
+    int[5] data = [4, 2, 0, -1, -3];
+    Span<int> values = new(data, 5);
+    if (!IsPartitioned<int>(values.AsImmutable(), Positive)) return 1;
+    if (PartitionPoint<int>(values.AsImmutable(), Positive) != 2) return 2;
+    int[3] mixed = [1, 0, 2];
+    Span<int> invalid = new(mixed, 3);
+    if (IsPartitioned<int>(invalid.AsImmutable(), Positive)) return 3;
+    return 0;
+}
+```
 
 ## Partition boundary search
 

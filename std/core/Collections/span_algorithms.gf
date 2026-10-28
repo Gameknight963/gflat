@@ -117,6 +117,21 @@ public nuint UpperBound<T>(Span<immutable(T)> values, immutable(T)* key,
     return first;
 }
 
+/// Checks that all true predicate results precede all false results.
+/// Visits borrowed elements once from left to right, stopping at the first violation.
+/// Empty spans return true without calling the predicate; predicate exceptions propagate.
+public bool IsPartitioned<T>(Span<immutable(T)> values, bool(immutable(T)*)* predicate)
+{
+    bool seenFalse = false;
+    for (nuint i = 0; i < values.Length; i++)
+    {
+        bool matches = predicate(&values[i]);
+        if (!matches) seenFalse = true;
+        else if (seenFalse) return false;
+    }
+    return true;
+}
+
 /// Finds the first false predicate result in an already partitioned span.
 /// True results must precede false results; keep the predicate consistent.
 /// Returns Length when all match. Empty spans never call the predicate.

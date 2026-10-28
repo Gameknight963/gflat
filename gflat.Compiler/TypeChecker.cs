@@ -2072,7 +2072,7 @@ namespace gflat
 
             // Pass 1: Symbol collection
             SymbolCollectionPass collectionPass = new SymbolCollectionPass(_symbols, IsNamespaceVisibleDeclaration,
-                _recoverErrors ? AnalyzeSafely : null);
+                _recoverErrors ? AnalyzeSafely : null, DisplayName);
             collectionPass.Execute(node);
             ResolveFunctionReplacements(node);
             collectionPass.Execute(node);
@@ -2180,14 +2180,14 @@ namespace gflat
                     if (m is MethodDeclaration sm)
                     {
                         if (info.MethodsByName.ContainsKey(sm.Name))
-                            throw new TypeCheckException($"Interface '{iface.Name}' already contains a method named '{sm.Name}'", sm.Line);
+                            throw new TypeCheckException($"Interface '{DisplayName(iface.Name)}' already contains a method named '{sm.Name}'", sm.Line);
                         info.Methods.Add(sm);
                         info.MethodsByName[sm.Name] = sm;
                         info.MethodIndices[sm.Name] = slotIndex++;
                     }
                     else
                     {
-                        throw new TypeCheckException($"Interface '{iface.Name}' can only contain method declarations", m.Line);
+                        throw new TypeCheckException($"Interface '{DisplayName(iface.Name)}' can only contain method declarations", m.Line);
                     }
                 }
                 _interfaces[iface.Name] = info;
@@ -2267,12 +2267,12 @@ namespace gflat
                     else if (m is DestructorDeclaration dtor)
                     {
                         if (info.Destructor != null)
-                            throw new TypeCheckException($"Struct '{str.Name}' already defines a destructor", dtor.Line);
+                            throw new TypeCheckException($"Struct '{DisplayName(str.Name)}' already defines a destructor", dtor.Line);
                         if (dtor.IsVirtual)
-                            throw new TypeCheckException($"Struct '{str.Name}' destructor cannot be virtual", dtor.Line);
+                            throw new TypeCheckException($"Struct '{DisplayName(str.Name)}' destructor cannot be virtual", dtor.Line);
                         string shortStrName = str.Name.Split('.').Last().Split('$').Last();
                         if (dtor.Name != str.Name && dtor.Name != shortStrName)
-                            throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match struct name '{str.Name}'", dtor.Line);
+                            throw new TypeCheckException($"Destructor name '~{DisplayName(dtor.Name)}' does not match struct name '{DisplayName(str.Name)}'", dtor.Line);
                         info.Destructor = dtor;
                     }
                     else if (m is OperatorDeclaration op)
@@ -2361,10 +2361,10 @@ namespace gflat
                     else if (m is DestructorDeclaration dtor)
                     {
                         if (info.Destructor != null)
-                            throw new TypeCheckException($"Class '{cls.Name}' already defines a destructor", dtor.Line);
+                            throw new TypeCheckException($"Class '{DisplayName(cls.Name)}' already defines a destructor", dtor.Line);
                         string shortClsName = cls.Name.Contains('.') ? cls.Name.Substring(cls.Name.LastIndexOf('.') + 1) : cls.Name;
                         if (dtor.Name != cls.Name && dtor.Name != shortClsName)
-                            throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match class name '{cls.Name}'", dtor.Line);
+                            throw new TypeCheckException($"Destructor name '~{DisplayName(dtor.Name)}' does not match class name '{DisplayName(cls.Name)}'", dtor.Line);
                         info.Destructor = dtor;
                     }
                     else if (m is MethodDeclaration cm)
@@ -5693,7 +5693,7 @@ namespace gflat
                 Accessibility = enumDecl.Accessibility
             };
 
-            EnumConstantEvaluator.Populate(enumDecl, info, ResolveEnum);
+            EnumConstantEvaluator.Populate(enumDecl, info, ResolveEnum, DisplayName);
 
             if (namespaceVisible) scope.Enums[enumDecl.SourceName] = info;
             if (namespaceVisible) scope.TypeNames[enumDecl.SourceName] = enumDecl.Name;

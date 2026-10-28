@@ -7,7 +7,7 @@ namespace gflat.comptime;
 internal static class EnumConstantEvaluator
 {
     public static void Populate(EnumDeclaration declaration, TypeChecker.EnumInfo info,
-        Func<AstNode, TypeChecker.EnumInfo?> resolveEnum)
+        Func<AstNode, TypeChecker.EnumInfo?> resolveEnum, Func<string, string> displayName)
     {
         if (info.UnderlyingType is not NamedTypeExpression named ||
             NumericSemantics.IntegerType(named.Name) is not { } representation)
@@ -55,7 +55,7 @@ internal static class EnumConstantEvaluator
                 if (resolveEnum(access.Left) is { } other) return Referenced(other, access.Member, access);
             }
             if (expression is MemberAccessExpression legacy && resolveEnum(legacy.Object) is { } legacyEnum)
-                throw new TypeCheckException($"Enum member '{legacyEnum.Name}::{legacy.Member}' must be accessed with '::', not '.'", legacy.Span);
+                throw new TypeCheckException($"Enum member '{displayName(legacyEnum.Name)}::{legacy.Member}' must be accessed with '::', not '.'", legacy.Span);
             if (expression is UnaryExpression unary)
             {
                 if (TypeChecker.SignedMinimumLiteralOperand(unary) != null) return -(BigInteger.One << 63);

@@ -12,13 +12,15 @@ namespace gflat.semantics
         private readonly SymbolTable _symbols;
         private readonly Func<AstNode, bool>? _namespaceVisible;
         private readonly Action<Action>? _analyzeSafely;
+        private readonly Func<string, string> _displayName;
 
         public SymbolCollectionPass(SymbolTable symbols, Func<AstNode, bool>? namespaceVisible = null,
-            Action<Action>? analyzeSafely = null)
+            Action<Action>? analyzeSafely = null, Func<string, string>? displayName = null)
         {
             _symbols = symbols;
             _namespaceVisible = namespaceVisible;
             _analyzeSafely = analyzeSafely;
+            _displayName = displayName ?? (name => name);
         }
 
         public void Execute(CompilationUnit node)
@@ -81,7 +83,7 @@ namespace gflat.semantics
                         {
                             if (info.MethodsByName.ContainsKey(sm.Name))
                             {
-                                throw new TypeCheckException($"Interface '{iface.Name}' already contains a method named '{sm.Name}'", sm.Line);
+                                throw new TypeCheckException($"Interface '{_displayName(iface.Name)}' already contains a method named '{sm.Name}'", sm.Line);
                             }
                             info.Methods.Add(sm);
                             info.MethodsByName[sm.Name] = sm;
@@ -89,7 +91,7 @@ namespace gflat.semantics
                         }
                         else
                         {
-                            throw new TypeCheckException($"Interface '{iface.Name}' can only contain method declarations", m.Line);
+                            throw new TypeCheckException($"Interface '{_displayName(iface.Name)}' can only contain method declarations", m.Line);
                         }
                     }
                     if (_analyzeSafely == null) RegisterInterfaceMember();
@@ -171,16 +173,16 @@ namespace gflat.semantics
                     {
                         if (info.Destructor != null)
                         {
-                            throw new TypeCheckException($"Struct '{str.Name}' already defines a destructor", dtor.Line);
+                            throw new TypeCheckException($"Struct '{_displayName(str.Name)}' already defines a destructor", dtor.Line);
                         }
                         if (dtor.IsVirtual)
                         {
-                            throw new TypeCheckException($"Struct '{str.Name}' destructor cannot be virtual", dtor.Line);
+                            throw new TypeCheckException($"Struct '{_displayName(str.Name)}' destructor cannot be virtual", dtor.Line);
                         }
                         string shortStrName = str.Name.Split('.').Last().Split('$').Last();
                         if (dtor.Name != str.Name && dtor.Name != shortStrName)
                         {
-                            throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match struct name '{str.Name}'", dtor.Line);
+                            throw new TypeCheckException($"Destructor name '~{_displayName(dtor.Name)}' does not match struct name '{_displayName(str.Name)}'", dtor.Line);
                         }
                         info.Destructor = dtor;
                     }
@@ -269,12 +271,12 @@ namespace gflat.semantics
                     {
                         if (info.Destructor != null)
                         {
-                            throw new TypeCheckException($"Class '{cls.Name}' already defines a destructor", dtor.Line);
+                            throw new TypeCheckException($"Class '{_displayName(cls.Name)}' already defines a destructor", dtor.Line);
                         }
                         string shortClsName = cls.Name.Contains('.') ? cls.Name.Substring(cls.Name.LastIndexOf('.') + 1) : cls.Name;
                         if (dtor.Name != cls.Name && dtor.Name != shortClsName)
                         {
-                            throw new TypeCheckException($"Destructor name '~{dtor.Name}' does not match class name '{cls.Name}'", dtor.Line);
+                            throw new TypeCheckException($"Destructor name '~{_displayName(dtor.Name)}' does not match class name '{_displayName(cls.Name)}'", dtor.Line);
                         }
                         info.Destructor = dtor;
                     }
@@ -380,7 +382,7 @@ namespace gflat.semantics
                 Accessibility = enumDecl.Accessibility
             };
 
-            EnumConstantEvaluator.Populate(enumDecl, info, _symbols.ResolveEnum);
+            EnumConstantEvaluator.Populate(enumDecl, info, _symbols.ResolveEnum, _displayName);
 
             if (namespaceVisible) scope.Enums[enumDecl.SourceName] = info;
             if (namespaceVisible) scope.TypeNames[enumDecl.SourceName] = enumDecl.Name;

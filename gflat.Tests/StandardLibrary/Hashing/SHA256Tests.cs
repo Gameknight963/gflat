@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Hashing;
 
-public sealed class StandardSHA256Tests
+public sealed class SHA256Tests
 {
     [Theory]
     [InlineData(0)]

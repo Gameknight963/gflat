@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Hashing;
 
-public sealed class StandardHMACSHA256Tests
+public sealed class HMACSHA256Tests
 {
     private const string DenyAllocation = """
         using std; using std::IO; using std::Hashing;

@@ -2,9 +2,9 @@ using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Hashing;
 
-public class StandardChecksumTests
+public class ChecksumTests
 {
     private static uint ReferenceCRC32(byte[] bytes)
     {

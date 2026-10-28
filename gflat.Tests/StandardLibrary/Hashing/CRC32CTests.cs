@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Hashing;
 
-public sealed class StandardCRC32CTests
+public sealed class CRC32CTests
 {
     private static void AssertReferenceAnchors()
     {

@@ -129,7 +129,8 @@ namespace gflat.semantics
                             nestedCls.IsAbstract,
                             nestedCls.Line,
                             nestedCls.Attributes,
-                            nestedCls.GenericParameters
+                            nestedCls.GenericParameters,
+                            sourceName: nestedCls.SourceName
                         );
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.BaseTypes = nestedCls.BaseTypes;
@@ -146,7 +147,8 @@ namespace gflat.semantics
                             nestedStruct.Accessibility,
                             nestedStruct.Line,
                             nestedStruct.Attributes,
-                            nestedStruct.GenericParameters
+                            nestedStruct.GenericParameters,
+                            sourceName: nestedStruct.SourceName
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
@@ -179,8 +181,7 @@ namespace gflat.semantics
                         {
                             throw new TypeCheckException($"Struct '{_displayName(str.Name)}' destructor cannot be virtual", dtor.Line);
                         }
-                        string shortStrName = str.Name.Split('.').Last().Split('$').Last();
-                        if (dtor.Name != str.Name && dtor.Name != shortStrName)
+                        if (dtor.Name != str.Name && dtor.Name != str.SourceName)
                         {
                             throw new TypeCheckException($"Destructor name '~{_displayName(dtor.Name)}' does not match struct name '{_displayName(str.Name)}'", dtor.Line);
                         }
@@ -235,7 +236,8 @@ namespace gflat.semantics
                             nestedCls.IsAbstract,
                             nestedCls.Line,
                             nestedCls.Attributes,
-                            nestedCls.GenericParameters
+                            nestedCls.GenericParameters,
+                            sourceName: nestedCls.SourceName
                         );
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.BaseTypes = nestedCls.BaseTypes;
@@ -252,7 +254,8 @@ namespace gflat.semantics
                             nestedStruct.Accessibility,
                             nestedStruct.Line,
                             nestedStruct.Attributes,
-                            nestedStruct.GenericParameters
+                            nestedStruct.GenericParameters,
+                            sourceName: nestedStruct.SourceName
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
@@ -273,8 +276,7 @@ namespace gflat.semantics
                         {
                             throw new TypeCheckException($"Class '{_displayName(cls.Name)}' already defines a destructor", dtor.Line);
                         }
-                        string shortClsName = cls.Name.Contains('.') ? cls.Name.Substring(cls.Name.LastIndexOf('.') + 1) : cls.Name;
-                        if (dtor.Name != cls.Name && dtor.Name != shortClsName)
+                        if (dtor.Name != cls.Name && dtor.Name != cls.SourceName)
                         {
                             throw new TypeCheckException($"Destructor name '~{_displayName(dtor.Name)}' does not match class name '{_displayName(cls.Name)}'", dtor.Line);
                         }

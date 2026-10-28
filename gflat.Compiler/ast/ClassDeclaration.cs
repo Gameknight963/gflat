@@ -15,10 +15,10 @@ namespace gflat.ast
         public List<GenericParameter> GenericParameters { get; }
         public bool IsGeneric => GenericParameters.Count > 0;
 
-        public ClassDeclaration(string name, string? baseClass, List<string> interfaces, List<AstNode> members, TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null) : base(line)
+        public ClassDeclaration(string name, string? baseClass, List<string> interfaces, List<AstNode> members, TokenKind accessibility, bool isAbstract, int line, List<AttributeNode>? attributes = null, List<GenericParameter>? genericParameters = null, string? sourceName = null) : base(line)
         {
             Name = name;
-            SourceName = name;
+            SourceName = sourceName ?? name;
             BaseClass = baseClass;
             Interfaces = interfaces;
             Members = members;

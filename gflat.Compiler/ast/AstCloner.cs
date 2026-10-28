@@ -66,7 +66,7 @@ namespace gflat.ast
             }
             List<AstNode> clonedMembers = s.Members.Select(scope.CloneNode).ToList();
             var genericParams = scope.CloneGenericParameters(s.Name, s.GenericParameters);
-            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams) { BaseTypes = s.BaseTypes.Select(scope.CloneType).ToList() };
+            return new StructDeclaration(structName, s.Interfaces.ToList(), clonedMembers, s.Accessibility, s.Line, s.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams, sourceName: s.SourceName) { BaseTypes = s.BaseTypes.Select(scope.CloneType).ToList() };
         }
 
         public ClassDeclaration CloneClass(ClassDeclaration c)
@@ -94,7 +94,7 @@ namespace gflat.ast
             }
             List<AstNode> clonedMembers = c.Members.Select(scope.CloneNode).ToList();
             var genericParams = scope.CloneGenericParameters(c.Name, c.GenericParameters);
-            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams) { IsStatic = c.IsStatic, BaseTypes = c.BaseTypes.Select(scope.CloneType).ToList() };
+            return new ClassDeclaration(className, c.BaseClass, c.Interfaces.ToList(), clonedMembers, c.Accessibility, c.IsAbstract, c.Line, c.Attributes.Select(scope.CloneAttribute).ToList(), genericParameters: genericParams, sourceName: c.SourceName) { IsStatic = c.IsStatic, BaseTypes = c.BaseTypes.Select(scope.CloneType).ToList() };
         }
 
         public InterfaceDeclaration CloneInterface(InterfaceDeclaration declaration)

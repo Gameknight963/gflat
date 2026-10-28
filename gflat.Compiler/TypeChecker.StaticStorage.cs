@@ -144,10 +144,9 @@ public partial class TypeChecker
     {
         if (method.StaticConstructorName == null) return;
         string? owner = _currentClass?.Name ?? _currentStruct?.Name;
-        string localOwner = owner?.Split('.').Last() ?? "";
+        string? sourceOwner = _currentClass?.Declaration?.SourceName ?? _currentStruct?.Declaration?.SourceName;
         string name = method.StaticConstructorName;
-        if (owner == null || !(localOwner == name || localOwner.EndsWith("$" + name) ||
-            localOwner.StartsWith(name + "$") || localOwner.Contains("$" + name + "$")))
+        if (owner == null || name != owner && name != sourceOwner)
             throw new TypeCheckException("Static constructor name must match its containing type", method.Span);
     }
 }

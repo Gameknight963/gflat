@@ -2222,7 +2222,8 @@ namespace gflat
                             nestedCls.IsAbstract,
                             nestedCls.Line,
                             nestedCls.Attributes,
-                            nestedCls.GenericParameters
+                            nestedCls.GenericParameters,
+                            sourceName: nestedCls.SourceName
                         );
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.BaseTypes = nestedCls.BaseTypes;
@@ -2239,7 +2240,8 @@ namespace gflat
                             nestedStruct.Accessibility,
                             nestedStruct.Line,
                             nestedStruct.Attributes,
-                            nestedStruct.GenericParameters
+                            nestedStruct.GenericParameters,
+                            sourceName: nestedStruct.SourceName
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
@@ -2270,8 +2272,7 @@ namespace gflat
                             throw new TypeCheckException($"Struct '{DisplayName(str.Name)}' already defines a destructor", dtor.Line);
                         if (dtor.IsVirtual)
                             throw new TypeCheckException($"Struct '{DisplayName(str.Name)}' destructor cannot be virtual", dtor.Line);
-                        string shortStrName = str.Name.Split('.').Last().Split('$').Last();
-                        if (dtor.Name != str.Name && dtor.Name != shortStrName)
+                        if (dtor.Name != str.Name && dtor.Name != str.SourceName)
                             throw new TypeCheckException($"Destructor name '~{DisplayName(dtor.Name)}' does not match struct name '{DisplayName(str.Name)}'", dtor.Line);
                         info.Destructor = dtor;
                     }
@@ -2324,7 +2325,8 @@ namespace gflat
                             nestedCls.IsAbstract,
                             nestedCls.Line,
                             nestedCls.Attributes,
-                            nestedCls.GenericParameters
+                            nestedCls.GenericParameters,
+                            sourceName: nestedCls.SourceName
                         );
                         qualifiedCls.IsStatic = nestedCls.IsStatic;
                         qualifiedCls.BaseTypes = nestedCls.BaseTypes;
@@ -2341,7 +2343,8 @@ namespace gflat
                             nestedStruct.Accessibility,
                             nestedStruct.Line,
                             nestedStruct.Attributes,
-                            nestedStruct.GenericParameters
+                            nestedStruct.GenericParameters,
+                            sourceName: nestedStruct.SourceName
                         );
                         qualifiedStruct.Span = nestedStruct.Span;
                         qualifiedStruct.BaseTypes = nestedStruct.BaseTypes;
@@ -2362,8 +2365,7 @@ namespace gflat
                     {
                         if (info.Destructor != null)
                             throw new TypeCheckException($"Class '{DisplayName(cls.Name)}' already defines a destructor", dtor.Line);
-                        string shortClsName = cls.Name.Contains('.') ? cls.Name.Substring(cls.Name.LastIndexOf('.') + 1) : cls.Name;
-                        if (dtor.Name != cls.Name && dtor.Name != shortClsName)
+                        if (dtor.Name != cls.Name && dtor.Name != cls.SourceName)
                             throw new TypeCheckException($"Destructor name '~{DisplayName(dtor.Name)}' does not match class name '{DisplayName(cls.Name)}'", dtor.Line);
                         info.Destructor = dtor;
                     }
@@ -3056,12 +3058,12 @@ namespace gflat
                 throw new TypeCheckException("Constructor must be declared inside a struct or class", node.Line);
             }
             string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
-            string shortOwnerName = ownerName.Split('.').Last().Split('$').Last();
+            string? sourceOwnerName = _currentStruct?.Declaration?.SourceName ?? _currentClass?.Declaration?.SourceName;
             ValidateParameterDefaults(node, node.Parameters);
-            if (node.Name != ownerName && node.Name != shortOwnerName)
+            if (node.Name != ownerName && node.Name != sourceOwnerName)
             {
                 string kindStr = _currentStruct != null ? "struct" : "class";
-                throw new TypeCheckException($"Constructor name '{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
+                throw new TypeCheckException($"Constructor name '{DisplayName(node.Name)}' does not match {kindStr} name '{DisplayName(ownerName)}'", node.Line);
             }
             if (node.IsCopy)
             {
@@ -3178,11 +3180,11 @@ namespace gflat
                 throw new TypeCheckException("Destructor must be declared inside a class or struct", node.Line);
             }
             string ownerName = _currentStruct?.Name ?? _currentClass!.Name;
-            string shortOwnerName = ownerName.Split('.').Last().Split('$').Last();
-            if (node.Name != ownerName && node.Name != shortOwnerName)
+            string? sourceOwnerName = _currentStruct?.Declaration?.SourceName ?? _currentClass?.Declaration?.SourceName;
+            if (node.Name != ownerName && node.Name != sourceOwnerName)
             {
                 string kindStr = _currentStruct != null ? "struct" : "class";
-                throw new TypeCheckException($"Destructor name '~{node.Name}' does not match {kindStr} name '{ownerName}'", node.Line);
+                throw new TypeCheckException($"Destructor name '~{DisplayName(node.Name)}' does not match {kindStr} name '{DisplayName(ownerName)}'", node.Line);
             }
 
             AstNode? prevFunc = _currentFunction;

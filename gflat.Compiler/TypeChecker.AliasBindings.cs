@@ -76,7 +76,7 @@ public partial class TypeChecker
                 InterfaceDeclaration iface => iface.Name,
                 _ => throw new InvalidOperationException("A provider specialization requires a generic declaration")
             };
-            var clone = new AstCloner(map, name).CloneNode(definition);
+            var clone = new AstCloner(map, name, renameTypeOwner: definition is not MethodDeclaration).CloneNode(definition);
             Walk(clone);
         }
         finally { _currentNamespace = previous; validatingAliasSpecializations.Remove(key); }

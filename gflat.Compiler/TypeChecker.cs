@@ -1037,7 +1037,7 @@ namespace gflat
 
             Dictionary<string, TypeExpression> typeMap = ConstrainedTypeArguments(genericDef, genericDef.GenericParameters, typeArgs);
 
-            AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName);
+            AstCloner cloner = new AstCloner(typeMap, genericDef.Name, mangledName, renameTypeOwner: false);
             MethodDeclaration specialized = cloner.CloneMethod(genericDef);
             RegisterAliasSpecialization(genericDef, typeArgs, specialized);
 

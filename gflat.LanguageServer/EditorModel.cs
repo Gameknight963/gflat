@@ -320,6 +320,16 @@ public sealed partial class EditorModel
         var left = ts[separatorIndex - 1];
         if (separator.Kind == TokenKind.DoubleColon)
         {
+            if (left.Kind is TokenKind.Greater or TokenKind.GreaterGreater)
+            {
+                var access = nodes[path].Select(node => node.Node).OfType<NamespaceAccessExpression>()
+                    .FirstOrDefault(access => access.Left is TypeExpression type &&
+                        type.Span.Start + type.Span.Length == left.End + 1 &&
+                        separatorIndex + 1 < ts.Length && access.Member == ts[separatorIndex + 1].Text &&
+                        access.Span.Start <= separator.Start && access.Span.Start + access.Span.Length >= ts[separatorIndex + 1].End + 1);
+                return access?.Left is TypeExpression qualifierType
+                    ? SourceGenericStaticMethods(qualifierType, path, offset, name) : [];
+            }
             int start = separatorIndex - 1;
             while (start >= 2 && ts[start - 1].Kind == TokenKind.DoubleColon) start -= 2;
             string qualifier = string.Concat(ts[start..separatorIndex].Select(t => t.Text));
@@ -438,7 +448,11 @@ public sealed partial class EditorModel
             int index = Array.FindLastIndex(ts, t => t.Kind == TokenKind.Identifier && t.End + 1 == call.Callee.Span.Start + call.Callee.Span.Length);
             if (index >= 0)
             {
+                // A source method's unbound generic return is display metadata,
+                // not an inferred result type in the caller's lexical scope.
                 var returns = Candidates(path, offset, index).Where(s => s.Name == ts[index].Text && s.Parameters != null)
+                    .Where(s => s.Type == null || s.Syntax.Node is not MethodDeclaration method || method.GenericParameters.Count == 0 ||
+                        !HasUnboundDisplayParameter(s.Type, method.GenericParameters.Select(parameter => parameter.Name).ToHashSet()))
                     .Select(s => s.Type).OfType<TypeExpression>().DistinctBy(TypeChecker.TypeName).ToArray();
                 if (returns.Length == 1) return returns[0];
             }

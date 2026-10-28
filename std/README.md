@@ -154,6 +154,7 @@ implementation lives in `libc`.
 | SHA-256 digests | `SHA256` | [Incremental hashing and fixed-buffer results](../docs/SHA256.md) |
 | SHA-512 digests | `SHA512` | [Incremental hashing and independent snapshots](../docs/SHA512.md) |
 | Keyed digests | `HMACSHA256`, `HMACSHA512` | [HMAC-SHA256](../docs/HMAC_SHA256.md), [HMAC-SHA512](../docs/HMAC_SHA512.md) with counted keys |
+| Key extraction/expansion | `HKDFSHA256` | [HKDF-SHA256 with caller-buffer expansion](../docs/HKDF_SHA256.md) |
 | Temporary storage | `Arena` | [Independent raw-storage arenas](../docs/ARENA.md) |
 | Raw memory | `Memory::Copy`, `Move`, `Fill`, `Compare`, `Equal` | [Byte operations and linking](../docs/MEMORY.md) |
 | Integer alignment | `Memory::AlignUp`, `AlignDown`, `IsAligned` | [Checked offsets and alignment tests](../docs/MEMORY.md#integer-alignment) |

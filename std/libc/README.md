@@ -359,13 +359,14 @@ assignment target unchanged. Allocation failure remains `BadAllocException`.
 
 ### File digests
 
-`IO/FileHash.gf` provides `FileHash::SHA256(path)` and borrowed `File*`
-overloads returning an independent `byte[32]` digest. Borrowed calls hash from
+`IO/FileHash.gf` provides `FileHash::SHA256(path)` and `FileHash::SHA512(path)`,
+with borrowed `File*` overloads. They return independent `byte[32]` and `byte[64]`
+digests respectively. Borrowed calls hash from
 the current position to EOF, leaving the file open. Supply scratch storage or
 use the overload with a 4096-byte stack buffer; no owning input buffer is needed.
 The path overload opens in binary mode and closes explicitly before returning.
 See [file hashing](../../docs/FILE_HASH.md) for an executable hex-output example
-and the IO failure contracts. The underlying core `SHA256` does not require libc.
+and the IO failure contracts. The underlying core `SHA256` and `SHA512` do not require libc.
 
 ### Reading lines
 

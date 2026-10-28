@@ -1,8 +1,9 @@
-# Hash file bytes with SHA-256
+# Hash file bytes with SHA-256 or SHA-512
 
 The optional `libc/IO/FileHash.gf` convenience connects binary `File` IO to the
-existing [SHA-256 core](SHA256.md). It returns the raw digest as an independent
-`byte[32]` value, without allocating an input String, Vector, or digest object.
+existing [SHA-256](SHA256.md) and [SHA-512](SHA512.md) cores. They return raw
+digests as independent `byte[32]` and `byte[64]` values, without allocating an
+input String, Vector, or digest object.
 
 This complete program prints a file's digest as lowercase hexadecimal:
 
@@ -23,7 +24,9 @@ int main(int argc, char** argv)
 }
 ```
 
-The digest is always 32 bytes; hex encoding produces 64 characters. Neither the
+For SHA-256 the digest is 32 bytes; hex encoding produces 64 characters.
+For SHA-512, use `byte[64] digest = FileHash::SHA512(argv[1])`, a `char[128]`
+hex buffer, and byte/hex counts 64/128 in the same example. Neither the
 digest nor the local hex buffer needs disposal. The counted output call does not
 require a null terminator.
 
@@ -34,6 +37,9 @@ require a null terminator.
 | `FileHash::SHA256(path)` | Opens a binary File, hashes the complete file, and closes it before returning. |
 | `FileHash::SHA256(File* input)` | Borrows an open File and hashes from its current position to EOF, using a 4096-byte stack buffer. |
 | `FileHash::SHA256(File* input, char* buffer, nuint capacity)` | Same borrowed behavior, using caller-provided scratch storage. |
+| `FileHash::SHA512(path)` | Owns and closes a binary File; returns a 64-byte digest. |
+| `FileHash::SHA512(File* input)` | Borrows an open File from its current position to EOF, using 4096 stack bytes. |
+| `FileHash::SHA512(File* input, char* buffer, nuint capacity)` | Same borrowed behavior with caller scratch storage; returns 64 bytes. |
 
 Borrowed overloads never rewind, close, flush, or clear the File's state. Successful
 hashing leaves it open at EOF. Hashing an already exhausted stream returns the
@@ -46,7 +52,7 @@ not overlap the File object. The buffer may be reused immediately after the call
 its contents are scratch data, not an encoded or returned digest. Any positive
 chunk size produces the same hash of the same remaining bytes.
 
-An empty file is valid and produces SHA-256's empty-message digest. Embedded NUL,
+An empty file is valid and produces the selected algorithm's empty-message digest. Embedded NUL,
 CR/LF, and non-ASCII values are ordinary bytes; no text decoding, BOM stripping,
 line-ending conversion, or newline insertion is performed. The path overload
 uses the host's narrow-character file API, like other File conveniences.
@@ -58,8 +64,8 @@ failure throws `IOException`. Zero capacity is rejected before consuming input
 or touching scratch storage. On a read failure, the borrowed File remains owned
 by the caller with its ordinary IO error state. No digest is returned.
 
-The core hash accepts fewer than `2^64` message bits: at most `2^61 - 1` bytes.
-Exceeding that limit throws `Exception`. Input may already have advanced by the
+SHA-256 accepts at most `2^61 - 1` message bytes; SHA-512 accepts at most
+`2^125 - 1` bytes. Exceeding the selected core limit throws `Exception`. Input may already have advanced by the
 offending read; there is no stream-position rollback. IO errors can also consume
 an available prefix before throwing.
 
@@ -73,6 +79,7 @@ buffering a libc File can allocate inside the host CRT, and throwing exceptions
 can allocate too. No file length or snapshot is captured: concurrent file changes
 can change the bytes observed during the read.
 
-For explicit source selection, include `IO/FileHash.gf`, `IO/File.gf`, `Hashing/SHA256.gf`,
-`Numerics/BitOperations.gf`, and the ordinary File exception/runtime dependencies. The
-core `SHA256` remains usable independently of File IO or libc.
+For explicit source selection, include `IO/FileHash.gf`, `IO/File.gf`, both
+`Hashing/SHA256.gf` and `Hashing/SHA512.gf`, `Numerics/BitOperations.gf`, and the
+ordinary File exception/runtime dependencies. Both hash cores remain usable
+independently of File IO or libc.

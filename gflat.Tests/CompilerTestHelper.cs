@@ -61,7 +61,7 @@ namespace gflat.Tests
         public static ExecutionResult Run(string code, int optimizationLevel)
             => RunIr(Compiler.Emit(code, options: new() { InternalizeFunctions = true }), optimizationLevel);
 
-        private static ExecutionResult RunIr(string ir, int? optimizationLevel = null)
+        internal static ExecutionResult RunIr(string ir, int? optimizationLevel = null)
         {
             string testId = Guid.NewGuid().ToString("N");
             string tempDir = Path.Combine(Path.GetTempPath(), $"gflat_test_{testId}");
@@ -70,6 +70,7 @@ namespace gflat.Tests
             string llPath = Path.Combine(tempDir, "test.ll");
             string exePath = Path.Combine(tempDir, "test.exe");
 
+            ExecutionResult result;
             try
             {
                 File.WriteAllText(llPath, ir);
@@ -78,17 +79,20 @@ namespace gflat.Tests
                 if (compilation.ExitCode != 0)
                     throw new Exception($"clang compilation failed: {compilation.StandardError}\nIR:\n{ir}");
                 ProcessResult execution = NativeToolchain.Run(exePath, []);
-                return new ExecutionResult(execution.ExitCode, execution.StandardOutput, execution.StandardError);
+                result = new ExecutionResult(execution.ExitCode, execution.StandardOutput, execution.StandardError);
             }
-            finally
+            catch (Exception error)
             {
-                try
-                {
-                    if (Directory.Exists(tempDir))
-                        Directory.Delete(tempDir, true);
-                }
-                catch { }
+                error.Data["CompilerTestHelperDirectory"] = tempDir;
+                throw;
             }
+            try
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+            catch { }
+            return result;
         }
     }
 }

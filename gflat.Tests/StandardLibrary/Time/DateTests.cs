@@ -1,8 +1,8 @@
 using System.Globalization;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardDateTests
+public sealed class DateTests
 {
     [Theory]
     [InlineData(0)]

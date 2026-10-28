@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardDateParsingTests
+public sealed class DateParsingTests
 {
     [Theory]
     [InlineData(0)]

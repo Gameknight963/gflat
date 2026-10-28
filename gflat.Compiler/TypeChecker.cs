@@ -4456,18 +4456,27 @@ namespace gflat
             }
 
             // Check if callee is an expression evaluating to a function pointer (e.g. member access, index, call)
+            bool memberMethodCallee = false;
             if (node.Callee is not IdentifierExpression and not NamespaceAccessExpression)
             {
                 if (node.Callee is not MemberAccessExpression { IsArrow: true })
                 {
-                    node.Callee.Accept(this);
-                    TypeExpression calleeType = ResolveAlias(GetType(node.Callee));
-                    if (calleeType is FunctionPointerTypeExpression fnPtr &&
-                        (node.Callee is not MemberAccessExpression || _propertyReads.ContainsKey(node.Callee)))
+                    if (node.Callee is MemberAccessExpression memberCallee)
                     {
-                        CheckArguments();
-                        CheckIndirectCall(node, fnPtr);
-                        return;
+                        // Method return types need the selected method arguments; fields/properties are values now.
+                        memberMethodCallee = CheckMemberAccess(memberCallee, asCallCallee: true);
+                    }
+                    else node.Callee.Accept(this);
+                    if (!memberMethodCallee)
+                    {
+                        TypeExpression calleeType = ResolveAlias(GetType(node.Callee));
+                        if (calleeType is FunctionPointerTypeExpression fnPtr &&
+                            (node.Callee is not MemberAccessExpression || _propertyReads.ContainsKey(node.Callee)))
+                        {
+                            CheckArguments();
+                            CheckIndirectCall(node, fnPtr);
+                            return;
+                        }
                     }
                 }
             }
@@ -4568,6 +4577,7 @@ namespace gflat
                     }
 
                     RecordType(node, ifaceMethod.ReturnType);
+                    if (memberMethodCallee) RecordType(memberAccess, ifaceMethod.ReturnType);
                     return;
                 }
 
@@ -4838,7 +4848,9 @@ namespace gflat
                 }
             }
 
-            RecordType(node, BindCallableOwnerType(method, node.Callee, PrimitiveCallResult(node, method)));
+            TypeExpression resultType = BindCallableOwnerType(method, node.Callee, PrimitiveCallResult(node, method));
+            RecordType(node, resultType);
+            if (memberMethodCallee) RecordType(node.Callee, resultType);
         }
 
         private void CheckIndirectCall(CallExpression node, FunctionPointerTypeExpression fnPtr)
@@ -4991,9 +5003,24 @@ namespace gflat
         }
 
         public void Visit(MemberAccessExpression node)
+            => CheckMemberAccess(node, asCallCallee: false);
+
+        // True identifies a method group; false identifies an already typed field/property value.
+        private bool CheckMemberAccess(MemberAccessExpression node, bool asCallCallee)
         {
             using var sourceContext = SourceContext.Enter(node.Span);
-            if (CheckPropertyRead(node)) return;
+            bool CompleteMethodGroup(MethodDeclaration method)
+            {
+                BindMethodSignature(method);
+                if (!asCallCallee)
+                {
+                    if (method.IsGeneric)
+                        throw new TypeCheckException($"Unspecialized generic member '{node.Member}' cannot be used as a value", node.Span);
+                    RecordType(node, method.ReturnType);
+                }
+                return true;
+            }
+            if (CheckPropertyRead(node)) return false;
             EnumInfo? enumInfo = ResolveEnum(node.Object);
             if (enumInfo != null)
             {
@@ -5036,9 +5063,7 @@ namespace gflat
             {
                 if (ifaceInfo.MethodsByName.TryGetValue(node.Member, out MethodDeclaration? ifaceMethod))
                 {
-                    BindMethodSignature(ifaceMethod);
-                    RecordType(node, ifaceMethod.ReturnType);
-                    return;
+                    return CompleteMethodGroup(ifaceMethod);
                 }
                 throw new TypeCheckException($"Interface '{DisplayName(namedIface.Name)}' has no method '{node.Member}'", node.Span);
             }
@@ -5062,7 +5087,7 @@ namespace gflat
                         throw new TypeCheckException($"Cannot access protected field '{node.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
                     }
                     RecordType(node, PrimitiveFieldType(node, ResolveFieldLayoutType(field.DeclaringClass, field.Name, field.Type)));
-                    return;
+                    return false;
                 }
 
                 if (classInfo.Methods.TryGetValue(node.Member, out (MethodDeclaration Method, string DeclaringClass) mEntry))
@@ -5077,9 +5102,7 @@ namespace gflat
                     {
                         throw new TypeCheckException($"Cannot access protected method '{node.Member}' of class '{DisplayName(mEntry.DeclaringClass)}'", node.Span);
                     }
-                    BindMethodSignature(mEntry.Method);
-                    RecordType(node, mEntry.Method.ReturnType);
-                    return;
+                    return CompleteMethodGroup(mEntry.Method);
                 }
 
                 throw new TypeCheckException($"Class '{DisplayName(named.Name)}' has no field or method '{node.Member}'", node.Line);
@@ -5094,16 +5117,14 @@ namespace gflat
                 if (info.FieldDeclarationsByName.TryGetValue(node.Member, out var field))
                     ValidateStructMemberAccess(info, field.Name, field.Accessibility, false, node.Span);
                 RecordType(node, PrimitiveFieldType(node, ResolveFieldLayoutType(info.Name, node.Member, info.Fields[idx].Type)));
-                return;
+                return false;
             }
 
             if (info.Methods.TryGetValue(node.Member, out MethodDeclaration? method))
             {
                 if (!overloadFamilies.TryGetValue(method, out var family) || !family.Any(candidate => CanAccessStructMember(info, candidate.Accessibility)))
                     ValidateStructMemberAccess(info, method.Name, method.Accessibility, true, node.Span);
-                BindMethodSignature(method);
-                RecordType(node, method.ReturnType);
-                return;
+                return CompleteMethodGroup(method);
             }
 
             throw new TypeCheckException($"'{DisplayName(named.Name)}' has no field or method '{node.Member}'", node.Line);

@@ -13,6 +13,8 @@ namespace std
         private struct Slot
         {
             public void* address;
+            // Refreshed for each collection; read only during its mark phase.
+            public Allocation*? owner;
             public Slot*? next;
             public Slot*? previous;
             public Slot*? hashNext;
@@ -214,6 +216,7 @@ namespace std
                 state.cachedSlots--;
             }
             added.address = address;
+            added.owner = null;
             added.previous = null;
             added.next = state.slots;
             if (state.slots != null) state.slots!.previous = added;
@@ -295,10 +298,17 @@ namespace std
                 allocation!.scanned = false;
                 allocation = allocation!.next;
             }
+            // Adoption can change a registered slot's owner without a new notification.
             Slot*? slot = state.slots;
             while (slot != null)
             {
-                if (Owner(state, slot!.address) == null) Mark(state, slot!.address);
+                slot!.owner = Owner(state, slot!.address);
+                slot = slot!.next;
+            }
+            slot = state.slots;
+            while (slot != null)
+            {
+                if (slot!.owner == null) Mark(state, slot!.address);
                 slot = slot!.next;
             }
             bool work = true;
@@ -314,7 +324,7 @@ namespace std
                         slot = state.slots;
                         while (slot != null)
                         {
-                            if (Owner(state, slot!.address) == allocation) Mark(state, slot!.address);
+                            if (slot!.owner == allocation) Mark(state, slot!.address);
                             slot = slot!.next;
                         }
                         work = true;

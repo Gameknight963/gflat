@@ -96,7 +96,13 @@ public sealed class JsonWriterOracleTests
                 Assert.Equal(original, File.ReadAllBytes(input));
             }
         }
-        finally { Directory.Delete(directory, true); }
+        catch (Exception error)
+        {
+            // Keep the fixture and original failure; cleanup must not replace it.
+            error.Data["JsonWriterOracleDirectory"] = directory;
+            throw;
+        }
+        await TestDirectoryCleanup.DeleteAsync(directory);
     }
 
     private static string[] Tokens(byte[] bytes)

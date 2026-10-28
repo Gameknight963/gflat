@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardDateTimeOffsetUnixTests
+public sealed class DateTimeOffsetUnixTests
 {
     [Theory]
     [InlineData(0)]

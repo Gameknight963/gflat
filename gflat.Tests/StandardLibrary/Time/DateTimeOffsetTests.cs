@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardDateTimeOffsetTests
+public sealed class DateTimeOffsetTests
 {
     private const long Minute=600000000L,Maximum=3155378975999999999L;
     private const string Support="""

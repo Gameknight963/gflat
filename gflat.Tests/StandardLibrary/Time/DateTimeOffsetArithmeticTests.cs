@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Time;
 
-public sealed class StandardDateTimeOffsetArithmeticTests
+public sealed class DateTimeOffsetArithmeticTests
 {
     private const long Maximum=3155378975999999999L,Epoch=621355968000000000L,Minute=600000000L;
     private const string Support="""

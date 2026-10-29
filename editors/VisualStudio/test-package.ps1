@@ -314,6 +314,10 @@ int SmokeCore() {
     int[5] stableData = [1, 9, 2, 9, 3]; Span<int> stableValues = new(stableData, 5);
     if (StablePartition<int>(stableValues, SmokeRemove) != 2 || stableData[0] != 9 || stableData[1] != 9
         || stableData[2] != 1 || stableData[3] != 2 || stableData[4] != 3) return 9021;
+    if (!MatchesWildcard("folder/report.csv", "*.csv") || MatchesWildcard("Report", "report")
+        || !MatchesWildcard("a\0b", 3, "a?b", 3)) return 9022;
+    String wildcardText = s"notes.gf";
+    if (!wildcardText.AsReadOnly().MatchesWildcard("*.gf")) return 9023;
     Uuid generated = UuidGenerator::CreateVersion4(SmokeUuidFill);
     if (generated.High != 0xffffffffffff4ffful || generated.Low != 0xbffffffffffffffful) return 9016;
     Uuid generatedAgain = new();

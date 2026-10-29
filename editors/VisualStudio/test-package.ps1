@@ -197,6 +197,19 @@ int main() {
         throw 'Packaged compiler discarded callback qualifiers during overload selection'
     }
 
+    $arrayGroup = Join-Path $extracted 'array-function-group.gf'
+    [IO.File]::WriteAllText($arrayGroup, 'void F(int value){} void F(long value){} int main(){bool()*[1] callbacks=[F];return 0;}')
+    $oldArrayErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $arrayDiagnostics = & $compiler $arrayGroup --no-stdlib --check 2>&1
+        $arrayExitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $oldArrayErrorAction }
+    if ($arrayExitCode -ne 1 -or ($arrayDiagnostics -join "`n") -notmatch "error GF1000: Cannot initialize array element of type 'bool\(\)\*' with 'function group'") {
+        throw 'Packaged compiler exposed the placeholder signature of an unresolved array function group'
+    }
+
     $scopedCast = Join-Path $extracted 'imported-cast.gf'
     @'
 using PackageCast;

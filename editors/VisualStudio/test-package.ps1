@@ -260,6 +260,9 @@ int SmokeCore() {
     if (IndexOf<int>(runValues.AsImmutable(), runPattern) != 4) return 290;
     if (IndexOf<int>(runValues.AsImmutable(), runPattern, EqualityComparer<int>::Equals) != 4) return 291;
     if (IndexOf<int>(runValues.AsImmutable(), &runKey) != 1) return 292;
+    Span<immutable(int)> repeatedPattern = runValues.Slice(1, 2).AsImmutable();
+    if (LastIndexOf<int>(runValues.AsImmutable(), repeatedPattern) != 5) return 295;
+    if (LastIndexOf<int>(runValues.AsImmutable(), repeatedPattern, EqualityComparer<int>::Equals) != 5) return 296;
     byte[4] exceptData = [0, 7, 255, 7]; byte[1] exceptSet = [7];
     if (ByteSearch::IndexOfAnyExcept(exceptData, 4, exceptSet, 1) != 0) return 293;
     if (ByteSearch::LastIndexOfAnyExcept(exceptData, 4, exceptSet, 1) != 2) return 294;

@@ -45,6 +45,11 @@ try {
         }
     }
     $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $extracted 'BUILD-INFO.json') | ConvertFrom-Json
+    foreach ($source in @('SystemRandom.gf', 'WindowsRandom.gfproj', 'README.md')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/libraries/platform/windows-random/$source"))) {
+            throw "Packaged SDK is missing windows-random/$source"
+        }
+    }
     if ($buildInfo.commit -notmatch '^[0-9a-f]{40}$') { throw 'VSIX source commit is missing' }
     # Exercise the grammar and configuration actually shipped in the archive.
     Copy-Item -LiteralPath (Join-Path $extracted 'gflat-language-configuration.json') -Destination (Join-Path $extracted 'Grammars')
@@ -1163,9 +1168,9 @@ int main(int argc, char** argv) {
     [IO.File]::WriteAllBytes($boundedInput, [byte[]](97, 0, 98))
     & $compiler $expandedStd --source-list $allSourcesList --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
     if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
-    foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj')) {
+    foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj', 'windows-random/WindowsRandom.gfproj')) {
         & $compiler check (Join-Path $extracted "Sdk/libraries/platform/$project")
-        if ($LASTEXITCODE -ne 0) { throw "Packaged optional clock project check failed: $project" }
+        if ($LASTEXITCODE -ne 0) { throw "Packaged optional platform project check failed: $project" }
     }
     $clockProbe = Join-Path $extracted 'clock-provider.gf'
     @'
@@ -1194,6 +1199,27 @@ int main() {
 '@ | Set-Content -LiteralPath (Join-Path $clockConsumer 'clock.gfproj')
     & $compiler build (Join-Path $clockConsumer 'clock.gfproj') --configuration Release --run
     if ($LASTEXITCODE -ne 0) { throw 'Packaged SDK consumer could not build and run through the optional clock project reference' }
+    $randomConsumer = Join-Path $extracted 'random consumer'
+    New-Item -ItemType Directory -Force -Path $randomConsumer | Out-Null
+    @'
+int main()
+{
+    byte[32] bytes;
+    if (!Windows::SystemRandom::TryFill(bytes, 32)) return 1;
+    return 0;
+}
+'@ | Set-Content -LiteralPath (Join-Path $randomConsumer 'main.gf')
+    @'
+<Project DefaultTargets="Build">
+  <PropertyGroup><GflatSdkRoot>../Sdk</GflatSdkRoot></PropertyGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
+  <PropertyGroup><NoStdLib>true</NoStdLib></PropertyGroup>
+  <ItemGroup><ProjectReference Include="$(GflatSdkRoot)/libraries/platform/windows-random/WindowsRandom.gfproj" /></ItemGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
+</Project>
+'@ | Set-Content -LiteralPath (Join-Path $randomConsumer 'random.gfproj')
+    & $compiler build (Join-Path $randomConsumer 'random.gfproj') --configuration Release --run
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged SDK consumer could not build and run through the optional Windows random project reference' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal

@@ -299,6 +299,14 @@ struct SmokeTemporary {
     public SmokeTemporary() { Value = 42; }
     ~SmokeTemporary() { smokeDestroyed++; }
 }
+struct SmokeByteReader : IByteReader {
+    private nuint position;
+    public SmokeByteReader() nothrow { position = 0; }
+    public nuint Read(char* output, nuint count) nothrow {
+        if (count == 0 || position == 5) return 0;
+        output[0] = (char)(65 + position); position++; return 1;
+    }
+}
 SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
 int SmokeHeapCompare(immutable(int)* left, immutable(int)* right) {
     if (*left < *right) return -1;
@@ -318,6 +326,12 @@ void SmokeIncomingRef(ref int entry) { entry++; }
 Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
 Unique<int> SmokeFreshOwner(int value) => new Unique<int>(new* int(value));
 int SmokeCore() {
+    SmokeByteReader byteSource = new(); IByteReader* byteInput = &byteSource;
+    char[2] byteHeader; byteInput.ReadExactly(byteHeader, 2);
+    if (byteHeader[0] != 'A' || byteHeader[1] != 'B') return 9034;
+    char[4] bytePayload; BufferWriter byteSink = new(bytePayload, 4); char[1] byteScratch;
+    if (byteInput.CopyTo(&byteSink, byteScratch, 1) != 3 || byteSink.Length != 3
+        || bytePayload[0] != 'C' || bytePayload[2] != 'E' || bytePayload[3] != '\0') return 9035;
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
     BigInteger unsignedBig = BigInteger::FromULong(18446744073709551615ul);

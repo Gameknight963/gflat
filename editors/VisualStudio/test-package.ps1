@@ -270,6 +270,8 @@ int SmokeCore() {
     map.Add(s"answer", 42);
     String key = s"answer";
     if (map[&key] != 42) return 1;
+    immutable(String)*? canonicalMapKey = map.FindKey(&key);
+    if (canonicalMapKey == null || canonicalMapKey == &key || !canonicalMapKey!.Equals(&key)) return 9003;
     Queue<int> queue = new(); queue.Enqueue(42);
     if (queue.Dequeue() != 42) return 2;
     queue.ShrinkToFit();
@@ -286,6 +288,8 @@ int SmokeCore() {
     SortedSet<int> ordered = new(Comparer<int>::Compare);
     ordered.Add(9); ordered.Add(3); int search = 3;
     if (!ordered.Contains(&search)) return 7;
+    immutable(int)*? canonicalSortedSetKey = ordered.Find(&search);
+    if (canonicalSortedSetKey == null || *canonicalSortedSetKey! != search || canonicalSortedSetKey == &search) return 9004;
     Deque<int> ends = new(); ends.AddFirst(42);
     if (ends.RemoveLast() != 42) return 8;
     ends.ShrinkToFit();
@@ -360,6 +364,8 @@ int SmokeCore() {
     if (wideHex[0] != '8') return 43;
     for (nuint i = 1; i < 32; i++) if (wideHex[i] != '0') return 44;
     SortedMap<int, int> sortedOwners = new(Comparer<int>::Compare); sortedOwners.Add(3, 42);
+    immutable(int)*? canonicalSortedMapKey = sortedOwners.FindKey(&search);
+    if (canonicalSortedMapKey == null || *canonicalSortedMapKey! != search || canonicalSortedMapKey == &search) return 9005;
     SortedMap<int, int>::Entry transferred = sortedOwners.Extract(&search);
     if (sortedOwners.Count != 0 || *transferred.Key != 3 || transferred.Value != 42) return 46;
     smokeVector = &window;
@@ -397,6 +403,8 @@ int SmokeCore() {
     HashSet<int> otherSet = new(); otherSet.Add(2); otherSet.Add(3);
     overlap.IntersectWith(&otherSet); int shared = 2;
     if (overlap.Count != 1 || !overlap.Contains(&shared)) return 55;
+    immutable(int)*? canonicalHashSetKey = overlap.Find(&shared);
+    if (canonicalHashSetKey == null || *canonicalHashSetKey! != shared || canonicalHashSetKey == &shared) return 9006;
     overlap.SymmetricExceptWith(&otherSet); int different = 3;
     if (overlap.Count != 1 || !overlap.Contains(&different) || otherSet.Count != 2) return 56;
     readonly(char)* skipDocument = "{\"ignored\":[1,{\"x\":2}],\"kept\":3}";

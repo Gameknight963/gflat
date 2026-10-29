@@ -1,8 +1,8 @@
 using System.Buffers.Binary;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileExtraLongTests
+public sealed class FileExtraLongTests
 {
     [Theory]
     [InlineData(0)]

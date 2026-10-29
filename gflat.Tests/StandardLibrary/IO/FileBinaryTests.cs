@@ -1,8 +1,8 @@
 using System.Buffers.Binary;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileBinaryTests
+public sealed class FileBinaryTests
 {
     private static string Literal(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 

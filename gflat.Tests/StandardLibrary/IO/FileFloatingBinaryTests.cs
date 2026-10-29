@@ -1,9 +1,9 @@
 ﻿using System.Buffers.Binary;
 using System.Globalization;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileFloatingBinaryTests
+public sealed class FileFloatingBinaryTests
 {
     [Theory]
     [InlineData(0,true)]

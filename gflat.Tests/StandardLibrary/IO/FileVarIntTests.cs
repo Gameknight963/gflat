@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileVarIntTests
+public sealed class FileVarIntTests
 {
     [Theory]
     [InlineData(0)]

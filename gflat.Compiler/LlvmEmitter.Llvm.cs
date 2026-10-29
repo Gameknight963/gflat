@@ -18,6 +18,7 @@ public partial class LlvmEmitter
         string name = prefix + "body";
         string resultType = EmitType(info.Result);
         string[] types = info.Arguments.Select(EmitType).ToArray();
+        bool doesNotUnwind = false;
         if (info.Entry == null)
         {
             RegisterLlvmRuntimeReferences(MaskLlvmCode(info.Ir, node, requireUnquotedSymbols: false));
@@ -28,7 +29,7 @@ public partial class LlvmEmitter
         else
         {
             name = prefix + info.Entry;
-            llvmFunctions.AppendLine(PrepareLlvmModule(info.Ir, info.Entry, prefix, resultType, types, node));
+            llvmFunctions.AppendLine(PrepareLlvmModule(info.Ir, info.Entry, prefix, resultType, types, node, out doesNotUnwind));
         }
         var values = new List<string>();
         foreach (var expression in node.Arguments.Skip(info.SourceArguments))
@@ -37,11 +38,11 @@ public partial class LlvmEmitter
             values.Add(Pop());
         }
         string arguments = string.Join(", ", types.Zip(values, (type, value) => type + " " + value));
-        if (resultType == "void") EmitCallInstruction("void", "@" + name, arguments);
+        if (resultType == "void") EmitCallInstruction("void", "@" + name, arguments, handleUnwind: !doesNotUnwind);
         else
         {
             string value = NewTemp();
-            EmitCallInstruction(resultType, "@" + name, arguments, value);
+            EmitCallInstruction(resultType, "@" + name, arguments, value, handleUnwind: !doesNotUnwind);
             Push(value);
         }
         return true;
@@ -85,7 +86,7 @@ public partial class LlvmEmitter
         }
     }
 
-    private string PrepareLlvmModule(string ir, string entry, string prefix, string resultType, string[] argumentTypes, AstNode node)
+    private string PrepareLlvmModule(string ir, string entry, string prefix, string resultType, string[] argumentTypes, AstNode node, out bool doesNotUnwind)
     {
         string code = MaskLlvmCode(ir, node, requireUnquotedSymbols: true);
         if (Regex.IsMatch(code, @"(?m)^\s*(target\s|source_filename\s|attributes\s|!|\$)"))
@@ -106,6 +107,11 @@ public partial class LlvmEmitter
             if (code[end] == ')') depth--;
         }
         if (depth != 0) throw new TypeCheckException("LLVM entry has an incomplete parameter list", node.Span);
+        // Only an explicit attribute on this entry can suppress unwind handling.
+        // Masked strings/comments and LLVM symbol tokens cannot supply attributes.
+        int bodyStart = code.IndexOf('{', end);
+        doesNotUnwind = bodyStart >= 0 && Regex.IsMatch(code[end..bodyStart],
+            @"(?<![@%A-Za-z0-9_$.-])nounwind(?![A-Za-z0-9_$.-])");
         var parameterText = code[parameterStart..(end - 1)].Trim();
         var parameters = new List<string>();
         int nested = 0, start = 0;

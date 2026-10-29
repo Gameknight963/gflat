@@ -993,6 +993,9 @@ int SmokeHashesAndViews() {
         Span<int> projectedView = new(projectedValues, 4);
         if (projectedView.AsEnumerable().MinBy(SmokeMagnitude) != 3
             || projectedView.AsEnumerable().MaxBy(SmokeMagnitude) != -7) return 259;
+        int projectedWinner = 99;
+        if (!projectedView.AsEnumerable().TryMinBy(SmokeMagnitude, ref projectedWinner) || projectedWinner != 3) return 297;
+        if (!projectedView.AsEnumerable().TryMaxBy(SmokeMagnitude, Comparer<long>::Compare, ref projectedWinner) || projectedWinner != -7) return 298;
         Version numericVersion = Version::Parse("001.02");
         Version extendedVersion = new(1, 2, 0);
         if (numericVersion.Major != 1 || numericVersion.Minor != 2 || numericVersion.Build != -1

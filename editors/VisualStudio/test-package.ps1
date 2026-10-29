@@ -316,6 +316,13 @@ int SmokeCore() {
         || stableData[2] != 1 || stableData[3] != 2 || stableData[4] != 3) return 9021;
     if (!MatchesWildcard("folder/report.csv", "*.csv") || MatchesWildcard("Report", "report")
         || !MatchesWildcard("a\0b", 3, "a?b", 3)) return 9022;
+    int atomicValue = 40;
+    if (std::Threading::Interlocked::Increment(ref atomicValue) != 41
+        || std::Threading::Interlocked::CompareExchange(ref atomicValue, 42, 41) != 41
+        || std::Threading::Interlocked::Read(ref atomicValue) != 42) return 9024;
+    long atomicWide = 4294967297l;
+    if (std::Threading::Interlocked::CompareExchange(ref atomicWide, 9l, 1l) != 4294967297l
+        || std::Threading::Interlocked::Exchange(ref atomicWide, 0l) != 4294967297l) return 9025;
     String wildcardText = s"notes.gf";
     if (!wildcardText.AsReadOnly().MatchesWildcard("*.gf")) return 9023;
     Uuid generated = UuidGenerator::CreateVersion4(SmokeUuidFill);

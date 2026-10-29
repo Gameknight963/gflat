@@ -49,11 +49,11 @@ public sealed class AbiScalarInteropTests
         string result = extension.Length == 0 ? llvm : extension + " " + llvm;
         string parameter = extension.Length == 0 ? llvm : llvm + " " + extension;
         Assert.Contains($"declare {result} @Native({parameter})", ir);
-        Assert.Contains($"define {result} @gflat$Identity({parameter} %value)", ir);
+        Assert.Contains($"define {result} @gflat$Identity({parameter} %arg.value)", ir);
         Assert.Contains($"call {result} @Native({parameter} ", ir);
         Assert.Matches(@"call " + Regex.Escape(result) + @" %[^\s(]+\(" + Regex.Escape(parameter) + " ", ir);
         // Pointer storage is erased; call sites retain scalar ABI attributes.
-        Assert.Contains($"@gflat$Invoke(i8* %callback, {parameter} %value)", ir);
+        Assert.Contains($"@gflat$Invoke(i8* %arg.callback, {parameter} %arg.value)", ir);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class AbiScalarInteropTests
     {
         string ir = Compiler.Emit("extern void Native(ref bool value,bool* pointer);void Forward(ref bool value,bool* pointer){Native(ref value,pointer);}", options: new() { NoStdLib = true });
         Assert.Contains("declare void @Native(i1*, i1*)", ir);
-        Assert.Contains("define void @gflat$Forward(i1* %value, i1* %pointer)", ir);
+        Assert.Contains("define void @gflat$Forward(i1* %arg.value, i1* %arg.pointer)", ir);
     }
 
     [Fact]
@@ -106,11 +106,11 @@ public sealed class AbiScalarInteropTests
             """;
         string ir = Compiler.Emit(source);
         Assert.Contains("define zeroext i1 @gflat$Value$op_Equality", ir);
-        Assert.Contains("define zeroext i1 @gflat$Value$Echo(%Value* %this, i1 zeroext %value)", ir);
-        Assert.Matches(@"define void @[^\s(]+\(%Value\* %this, i1 zeroext %value\)", ir);
+        Assert.Contains("define zeroext i1 @gflat$Value$Echo(%Value* %this, i1 zeroext %arg.value)", ir);
+        Assert.Matches(@"define void @[^\s(]+\(%Value\* %this, i1 zeroext %arg\.value\)", ir);
         Assert.Matches(@"define internal zeroext i1 @[^\s(]+\$interface_thunk\([^,]+, i1 zeroext %arg1\)", ir);
-        Assert.Matches(@"define zeroext i1 @[^\s(]*lambda[^\s(]*\(i1 zeroext %item\)", ir);
-        Assert.Contains("define zeroext i1 @gflat$Raw(i1 zeroext %value)", ir);
+        Assert.Matches(@"define zeroext i1 @[^\s(]*lambda[^\s(]*\(i1 zeroext %arg\.item\)", ir);
+        Assert.Contains("define zeroext i1 @gflat$Raw(i1 zeroext %arg.value)", ir);
         Assert.Matches(@"define private i1 @gflat\$llvm\$[^\s(]+\(i1 %0\)", ir);
         Assert.Matches(@"call i1 @gflat\$llvm\$[^\s(]+\(i1 ", ir);
         Assert.Equal(0, CompilerTestHelper.Run(source).ExitCode);
@@ -129,8 +129,8 @@ public sealed class AbiScalarInteropTests
             int^ Forward(int^ item,bool flag)=>item;
             int^ Invoke(int^(int^,bool)* callback,int^ item,bool flag)=>callback(item,flag);
             """);
-        Assert.Contains("define void @gflat$Forward(i32* %item, i1 zeroext %flag, i32** %gc.result)", ir);
-        Assert.Contains("@gflat$Invoke(i8* %callback, i32* %item, i1 zeroext %flag, i32** %gc.result)", ir);
+        Assert.Contains("define void @gflat$Forward(i32* %arg.item, i1 zeroext %arg.flag, i32** %gc.result)", ir);
+        Assert.Contains("@gflat$Invoke(i8* %arg.callback, i32* %arg.item, i1 zeroext %arg.flag, i32** %gc.result)", ir);
         Assert.Matches(@"(?:call|invoke) void %[^\s(]+\(i32\* %[^,]+, i1 zeroext %[^,]+, i32\*\* %", ir);
     }
 }

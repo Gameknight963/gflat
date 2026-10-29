@@ -563,6 +563,9 @@ public partial class LlvmEmitter : IVisitor
         finally { foreach (var action in added) _activeCleanupActions.Remove(action); }
     }
 
+    // Source identifiers cannot contain dots; keep incoming arguments disjoint from SSA temporaries and labels.
+    private static string EmitParameterName(string name) => $"%arg.{name}";
+
     private string NewTemp() => $"%t{_tempCounter++}";
     private string NewGlobal() => $"@str{_stringCounter++}";
 
@@ -1306,7 +1309,7 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{className}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}");
 
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
@@ -1322,11 +1325,11 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
-            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            Emit($"    store {type} {EmitParameterName(p.Name)}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
             EmitDebugVariable(p.Name, p.Type, ptr, p);
@@ -1393,7 +1396,7 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{className}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}");
 
         string parameters = string.Join(", ", paramList);
 
@@ -1409,11 +1412,11 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
-            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            Emit($"    store {type} {EmitParameterName(p.Name)}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
             EmitDebugVariable(p.Name, p.Type, ptr, p);
@@ -1789,7 +1792,7 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new();
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}");
 
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
@@ -1798,11 +1801,11 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
-            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            Emit($"    store {type} {EmitParameterName(p.Name)}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
             EmitDebugVariable(p.Name, p.Type, ptr, p);
@@ -1841,7 +1844,7 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{structName}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}");
 
         AddManagedResultParameter(node.ReturnType, paramList, named: true);
         string parameters = string.Join(", ", paramList);
@@ -1857,11 +1860,11 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
-            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            Emit($"    store {type} {EmitParameterName(p.Name)}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
             EmitDebugVariable(p.Name, p.Type, ptr, p);
@@ -1938,7 +1941,7 @@ public partial class LlvmEmitter : IVisitor
 
         List<string> paramList = new() { $"%{structName}* %this" };
         foreach (Parameter p in node.Parameters)
-            paramList.Add($"{EmitAbiParamType(p.Type)} %{p.Name}");
+            paramList.Add($"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}");
 
         string parameters = string.Join(", ", paramList);
 
@@ -1954,11 +1957,11 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
-            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            Emit($"    store {type} {EmitParameterName(p.Name)}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
             EmitDebugVariable(p.Name, p.Type, ptr, p);
@@ -2165,7 +2168,7 @@ public partial class LlvmEmitter : IVisitor
             name = $"gflat${node.Name}" + _typeChecker.GetOverloadSuffix(node);
 
         string parameters = string.Join(", ", node.Parameters.Select(p =>
-            $"{EmitAbiParamType(p.Type)} %{p.Name}"));
+            $"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}"));
         parameters = WithManagedResultParameter(node.ReturnType, parameters, named: true);
 
         BeginFunction(EmitAbiFunctionReturnType(node.ReturnType), name, parameters,
@@ -2174,11 +2177,11 @@ public partial class LlvmEmitter : IVisitor
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
             string type = EmitParamType(p.Type);
             string ptr = NewTemp();
             EmitAlloca($"{type}", ptr);
-            Emit($"    store {type} %{p.Name}, {type}* {ptr}");
+            Emit($"    store {type} {EmitParameterName(p.Name)}, {type}* {ptr}");
             _locals[p.Name] = ptr;
             RegisterManagedParameter(p, ptr);
             EmitDebugVariable(p.Name, p.Type, ptr, p);
@@ -4505,17 +4508,17 @@ public partial class LlvmEmitter : IVisitor
         _isInsideMain = false;
         _deferScopes.Clear();
 
-        string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitAbiParamType(p.Type)} %{p.Name}"));
+        string parameters = string.Join(", ", node.Parameters.Select(p => $"{EmitAbiParamType(p.Type)} {EmitParameterName(p.Name)}"));
         parameters = WithManagedResultParameter(returnType, parameters, named: true);
         BeginFunction(EmitAbiFunctionReturnType(returnType), funcName, parameters, inline: node.IsInline, source: node);
 
         foreach (Parameter p in node.Parameters)
         {
-            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = $"%{p.Name}"; EmitDebugVariable(p.Name, p.Type, $"%{p.Name}", p); continue; }
+            if (p.Type is ReferenceTypeExpression) { _locals[p.Name] = EmitParameterName(p.Name); EmitDebugVariable(p.Name, p.Type, EmitParameterName(p.Name), p); continue; }
             string pType = EmitType(p.Type);
             string allocaPtr = NewTemp();
             EmitAlloca($"{pType}", allocaPtr);
-            Emit($"    store {pType} %{p.Name}, {pType}* {allocaPtr}");
+            Emit($"    store {pType} {EmitParameterName(p.Name)}, {pType}* {allocaPtr}");
             RegisterManagedParameter(p, allocaPtr);
             EmitDebugVariable(p.Name, p.Type, allocaPtr, p);
             _locals[p.Name] = allocaPtr;

@@ -13,6 +13,12 @@ public partial class TypeChecker
         right = ResolveAlias(right);
         bool Numeric(TypeExpression type) => IsInteger(type) || type is NamedTypeExpression { Name: "float" or "double" };
         bool Address(TypeExpression type) => type is PointerTypeExpression or ManagedTypeExpression or FunctionPointerTypeExpression or NamedTypeExpression { Name: "null" };
+        bool InterfaceAddress(TypeExpression type) => (type switch
+        {
+            PointerTypeExpression pointer => ResolveAlias(pointer.Inner),
+            ManagedTypeExpression managed => ResolveAlias(managed.Inner),
+            _ => null
+        }) is NamedTypeExpression named && IsInterface(named);
         bool numeric = Numeric(left) && Numeric(right);
         bool integers = IsInteger(left) && IsInteger(right);
         bool booleans = TypesMatch(left, Bool) && TypesMatch(right, Bool);
@@ -30,6 +36,8 @@ public partial class TypeChecker
                 => numeric || booleans || Address(left) && Address(right),
             _ => true // Logical and shift operators retain their more specific checks.
         };
+        if (operation is TokenKind.Less or TokenKind.LessEquals or TokenKind.Greater or TokenKind.GreaterEquals &&
+            (InterfaceAddress(left) || InterfaceAddress(right))) valid = false;
         if (valid) return true;
         ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, site.Line, 0,
             OperatorText(operation), DisplayTypeName(left), DisplayTypeName(right));

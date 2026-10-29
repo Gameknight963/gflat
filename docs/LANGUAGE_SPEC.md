@@ -229,7 +229,8 @@ int main() {
 `IEnumerable<T, Iterator>` in the library names a concrete iterator return type;
 neither this contract nor generic interfaces generally require heap allocation.
 Ordinary interface pointer calls retain the existing interface representation
-and dispatch rules. `foreach` still accepts the enumeration pattern without an
+and dispatch rules. Interface references support equality and inequality, but
+not ordered comparisons. `foreach` still accepts the enumeration pattern without an
 interface declaration.
 
 ## Primitive interface implementations

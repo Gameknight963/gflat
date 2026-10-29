@@ -30,6 +30,28 @@ bool TryDecode(readonly(ushort)* input, nuint count, uint* scalar, nuint* consum
     return true;
 }
 
+// Decode only the final scalar; preceding code units are not validated.
+// Outputs must be disjoint from each other but may overlap input storage.
+// All required input reads precede result stores; failure clears both outputs.
+bool TryDecodeLast(readonly(ushort)* input, nuint count, uint* scalar, nuint* consumed) nothrow
+{
+    if (count == 0) return DecodeFailure(scalar, consumed);
+    nuint start = count - 1;
+    uint last = (uint)input[start];
+    if (last >= 0xdc00u && last <= 0xdfffu)
+    {
+        if (start == 0) return DecodeFailure(scalar, consumed);
+        start--;
+    }
+    uint value = 0u;
+    nuint length = 0;
+    if (!TryDecode(input + start, count - start, &value, &length) || length != count - start)
+        return DecodeFailure(scalar, consumed);
+    *scalar = value;
+    *consumed = length;
+    return true;
+}
+
 private bool DecodeFailure(uint* scalar, nuint* consumed) nothrow
 {
     *scalar = 0u; *consumed = 0; return false;

@@ -14,6 +14,7 @@ ordinary scalar, and embedded U+0000 participates in counted input.
 | `IsValidScalar(uint scalar)` | Excludes surrogate values and values above U+10FFFF. |
 | `EncodedLength(uint scalar)` | 1 or 2 code units; zero for invalid scalars. |
 | `TryDecode(input, count, scalar, consumed)` | Decodes the first scalar; remaining input is not validated. |
+| `TryDecodeLast(input, count, scalar, consumed)` | Decodes the final scalar; preceding input is not validated. |
 | `TryEncode(scalar, output, capacity, written)` | Writes one scalar without a terminator. |
 | `TryCount(input, count, scalarCount)` | Validates all input and counts Unicode scalars. |
 | `IsValid(input, count)` | Validates all input. |
@@ -39,6 +40,32 @@ Encoding invalid scalars or with insufficient capacity returns false, sets
 written to zero, and leaves encoded output untouched. The written-count storage
 must be disjoint from encoded output. A successful supplementary scalar writes
 its complete surrogate pair; failures never leave a partially encoded pair.
+
+`TryDecodeLast` accesses only the final one or two code units, returning the
+final scalar and its length. An isolated final low surrogate, a wrong preceding
+surrogate, or a truncated final high surrogate fails with both outputs zero.
+The preceding prefix is not validated: a valid final BMP scalar or surrogate
+pair after malformed units can succeed. Its output alignment and overlap rules
+are the same as `TryDecode`; result stores may overwrite the retained prefix.
+
+To shorten a counted view by one scalar, decode its end and subtract the
+consumed code units. Repeating this operation walks backward without an index
+or transcoding. This follows scalar boundaries, not grapheme clusters.
+
+```csharp
+int main()
+{
+    ushort[3] text = [(ushort)65, (ushort)0xd83d, (ushort)0xde00];
+    nuint length = 3;
+    uint scalar = 0u;
+    nuint consumed = 0;
+    if (!std::Text::Utf16::TryDecodeLast(text, length, &scalar, &consumed)) return 1;
+    if (scalar != 0x1f600u || consumed != (nuint)2) return 2;
+    length -= consumed;
+    if (length != (nuint)1 || text[0] != (ushort)65) return 3;
+    return 0;
+}
+```
 
 ## Incremental decoding
 

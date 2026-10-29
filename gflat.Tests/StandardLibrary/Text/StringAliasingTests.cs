@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardStringAliasingTests
+public sealed class StringAliasingTests
 {
     [Theory]
     [InlineData(0)]

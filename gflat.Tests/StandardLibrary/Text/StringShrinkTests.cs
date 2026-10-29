@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardStringShrinkTests
+public sealed class StringShrinkTests
 {
     private const string Allocator = """
         using std; using std::Text; using std::Collections;

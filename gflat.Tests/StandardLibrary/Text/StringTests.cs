@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardStringTests
+public class StringTests
 {
     private static ExecutionResult Run(string source) => CompilerTestHelper.Run(InterpolationTests.Sources(source));
 

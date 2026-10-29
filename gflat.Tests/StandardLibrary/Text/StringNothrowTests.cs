@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardStringNothrowTests
+public class StringNothrowTests
 {
     [Theory]
     [InlineData(0)]

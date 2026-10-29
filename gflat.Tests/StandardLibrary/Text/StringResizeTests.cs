@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardStringResizeTests
+public sealed class StringResizeTests
 {
     private static void Run(string code, int optimization)
         => Assert.Equal(0, CompilerTestHelper.Run(InterpolationTests.Sources(code), optimization).ExitCode);

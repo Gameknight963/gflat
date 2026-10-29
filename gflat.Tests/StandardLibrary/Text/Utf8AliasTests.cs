@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardUtf8AliasTests
+public class Utf8AliasTests
 {
     [Theory]
     [InlineData(0)]

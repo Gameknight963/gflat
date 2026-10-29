@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardUtf8Tests
+public class Utf8Tests
 {
     [Fact]
     public void CoreCodecCompilesWithoutStandardLibraryOrRuntimeDefinitions()

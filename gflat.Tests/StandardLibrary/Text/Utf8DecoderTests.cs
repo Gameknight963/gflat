@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardUtf8DecoderTests
+public class Utf8DecoderTests
 {
     [Theory]
     [InlineData(0)]

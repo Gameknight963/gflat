@@ -295,6 +295,9 @@ int SmokeCore() {
     if (unsignedBig.ToULong() != 18446744073709551615ul) return 9019;
     BigInteger unsignedZero = BigInteger::FromULong(0ul);
     if (unsignedZero.Sign != 0) return 9020;
+    int[5] stableData = [1, 9, 2, 9, 3]; Span<int> stableValues = new(stableData, 5);
+    if (StablePartition<int>(stableValues, SmokeRemove) != 2 || stableData[0] != 9 || stableData[1] != 9
+        || stableData[2] != 1 || stableData[3] != 2 || stableData[4] != 3) return 9021;
     Uuid generated = UuidGenerator::CreateVersion4(SmokeUuidFill);
     if (generated.High != 0xffffffffffff4ffful || generated.Low != 0xbffffffffffffffful) return 9016;
     Uuid generatedAgain = new();

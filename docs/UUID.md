@@ -119,3 +119,50 @@ int main(int argc, char** argv)
     return 0;
 }
 ```
+
+## Version 4 generation with an explicit source
+
+`std::UuidGenerator` creates version 4 UUIDs from a caller-selected random-byte
+callback. It has no default source, global state, or operating-system dependency.
+The existing `Uuid` value and parsing APIs do not require the generator source.
+
+```csharp
+static bool TryCreateVersion4(bool(byte*, nuint)* fill, ref Uuid result);
+static Uuid CreateVersion4(bool(byte*, nuint)* fill);
+```
+
+Each call invokes `fill` exactly once with a writable 16-byte stack buffer and a
+count of 16. The callback must fill all 16 bytes before returning true. That buffer
+is valid only during the callback: do not retain its address or access it after
+returning. The generator retains no callback or buffer pointers and allocates no
+heap storage on success; the callback may perform its own work or allocate.
+
+On success, canonical byte 6 receives the version nibble 4, and canonical byte 8
+receives the variant bits 10. The other 122 bits retain the supplied random bits.
+The result is an ordinary `Uuid` in the same canonical byte order as
+`Uuid::TryFromBytes`. Randomness quality comes from the chosen callback; masking
+these six bits does not make a weak source secure or guarantee uniqueness.
+
+If `fill` returns false, `TryCreateVersion4` discards any partial bytes, writes Nil
+to `result`, and returns false. `CreateVersion4` throws `Exception` instead.
+Exceptions thrown by the callback propagate through both methods. The generator
+itself does not assign the result before the callback completes, so a callback
+exception leaves the caller's result unchanged unless the callback changes it
+through another alias. Neither method is declared `nothrow`.
+
+Optional platform libraries already expose compatible callbacks. After adding the
+appropriate project reference, a Windows caller can write:
+
+```csharp
+Uuid id = UuidGenerator::CreateVersion4(Windows::SystemRandom::TryFill);
+```
+
+The Linux counterpart is `Linux::SystemRandom::TryFill`. Reference only the
+platform library appropriate to the application; no platform detection or fallback
+is performed. Existing platform requirements and native linkage remain those of
+the selected library. A custom callback needs neither optional library.
+
+For selective source use, add `UuidGenerator.gf` alongside `Uuid.gf` and its
+existing contract sources. The throwing convenience method uses the ordinary
+Exception/runtime contracts; the Try method still permits callback exceptions.
+Version 4 layout follows [RFC 9562, section 5.4](https://www.rfc-editor.org/rfc/rfc9562.html#section-5.4).

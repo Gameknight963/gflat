@@ -113,7 +113,7 @@ implementation lives in `libc`.
 | Exact fractions | `Rational` | [Normalized BigInteger fractions with owning value semantics](../docs/RATIONAL.md) |
 | Hexadecimal numbers | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Explicit hexadecimal parsing](../docs/HEX_INTEGER_PARSING.md) |
 | Boolean text | `TryParseBool`, `ParseBool` | [Strict ASCII Boolean parsing](../docs/BOOLEAN_PARSING.md) |
-| Identifiers | `Uuid` | [Canonical UUID parsing, formatting, comparison, and hashing](../docs/UUID.md) |
+| Identifiers | `Uuid`, `UuidGenerator` | [Canonical UUID values and explicit-source version 4 generation](../docs/UUID.md) |
 | Numeric versions | `Version` | [Dotted version parsing, ordering, and caller-buffer formatting](../docs/VERSION.md) |
 | IP addresses | `IpAddress` | [IPv4 and IPv6 parsing, canonical formatting, network-byte conversion, comparison, and hashing](../docs/IP_ADDRESS.md) |
 | IP endpoints | `IpEndpoint` | [Numeric address/port parsing, canonical formatting, and collection keys](../docs/IP_ENDPOINT.md) |

@@ -203,3 +203,36 @@ int main()
     return 0;
 }
 ```
+
+
+## Peeking at a bounded payload
+
+`TryPeekSlice(count, ref slice)` borrows the next `count` bytes without changing
+any parent metadata. On success the child has Length `count`, Position zero and
+its own cursor. Zero count succeeds with the normalized empty child (null Data,
+zero Length/Position), including at the end of input. An oversized request
+returns false and resets the child to that same empty state. Neither case reads
+input bytes or forms an address from an empty cursor's Data.
+
+This immutable method works through mutable, readonly and immutable parent views.
+The child can advance independently but exposes only readonly bytes. Its contents
+are a live view, so later edits through a permitted external backing alias remain
+visible. Keep backing storage alive; moving the parent's position does not move
+or invalidate the child's captured region. Output must remain separate from the
+parent and its backing bytes, as with the other cursor operations. The method is
+`nothrow`, allocates nothing and copies no payload.
+
+For example, a parser can inspect a fixed header and commit its parent position
+after checking the fields:
+
+```csharp
+BinaryBufferReader header = new();
+if (reader.TryPeekSlice(8, ref header))
+{
+    uint tag = 0u;
+    uint length = 0u;
+    header.TryReadUInt32LittleEndian(ref tag);
+    header.TryReadUInt32LittleEndian(ref length);
+    // Validate tag and length, then explicitly reader.TrySkip(8) when accepted.
+}
+```

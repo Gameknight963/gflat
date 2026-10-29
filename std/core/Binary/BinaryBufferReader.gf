@@ -48,6 +48,16 @@ public struct BinaryBufferReader
         position += count; return true;
     }
 
+    /// Borrows the next count bytes without advancing this reader; the child starts at zero.
+    /// Empty success and failure reset the child to empty; keep output separate from this reader and backing bytes.
+    public immutable bool TryPeekSlice(nuint count, ref BinaryBufferReader slice) nothrow
+    {
+        if (count > length - position) { slice = new(); return false; }
+        if (count == 0) slice = new();
+        else slice = new(data! + position, count);
+        return true;
+    }
+
     public immutable bool TryPeekByte(ref byte value) nothrow
     {
         if (position == length) { value = (byte)0; return false; }

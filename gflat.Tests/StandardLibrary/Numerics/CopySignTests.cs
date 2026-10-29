@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardCopySignTests
+public sealed class CopySignTests
 {
     private static ulong[] Boundaries(bool wide)
     {

@@ -1,9 +1,9 @@
 using System.Numerics;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardCommonMultipleTests
+public sealed class CommonMultipleTests
 {
     [Theory]
     [InlineData(0)]

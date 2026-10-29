@@ -1,8 +1,8 @@
 using System.Numerics;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Numerics;
 
-public sealed class StandardCheckedCommonMultipleTests
+public sealed class CheckedCommonMultipleTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "Numerics/Math.gf", "Text/CString.gf" }

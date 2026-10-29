@@ -6,6 +6,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Project Path="big-calc/big-calc.gfproj" />
+  <Project Path="binary-info/binary-info.gfproj" />
   <Project Path="checksum/checksum.gfproj" />
   <Project Path="closest/closest.gfproj" />
   <Project Path="components/components.gfproj" />

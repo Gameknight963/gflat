@@ -54,6 +54,7 @@ launch page sets arguments and working directory; see [debugging projects](../do
 - [file-compare](file-compare/README.md): report the first byte or length difference between binary files.
 - [riff-list](riff-list/README.md): list top-level RIFF chunk offsets and lengths.
 - [png-list](png-list/README.md): list PNG chunk offsets and lengths, checking framing and CRCs.
+- [binary-info](binary-info/README.md): inspect PE32+/ELF64LE declared dependency metadata.
 
 ## Numbers, algorithms, and commands
 

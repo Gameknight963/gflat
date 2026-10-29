@@ -40,3 +40,6 @@ public bool NextPermutation<T : IComparable<T>>(Span<T> values)
 
 public bool PreviousPermutation<T : IComparable<T>>(Span<T> values)
     => std::Collections::PreviousPermutation<T>(values, Comparer<T>::Compare);
+
+public nuint FindUnsortedIndex<T : IComparable<T>>(Span<immutable(T)> values)
+    => std::Collections::FindUnsortedIndex<T>(values, Comparer<T>::Compare);

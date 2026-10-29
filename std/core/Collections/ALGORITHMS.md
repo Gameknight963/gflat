@@ -45,6 +45,7 @@ int main()
 | `PartitionPoint<T>(Span<immutable(T)>, predicate)` | First false index in an already partitioned true-prefix/false-suffix span, or span length when all match. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
+| `FindUnsortedIndex<T>(Span<immutable(T)>, compare)` | First right-hand element that breaks nondecreasing order, or Length when ordered; optional IComparable default. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `CommonPrefixLength<T>(first, second, equal)` | Count matching corresponding elements up to the first difference or shorter length. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `StartsWith<T>(values, prefix, equal)` | Match the leading elements of two borrowed spans. Optional `IEquatable<T>` default in `default_equality.gf`. |
@@ -740,3 +741,22 @@ int main()
     return 0;
 }
 ```
+
+
+## First ordering violation
+
+`FindUnsortedIndex(values, compare)` returns the first index `i` for which
+`compare(&values[i - 1], &values[i]) > 0`, or `Length` when every adjacent pair is
+ordered. Equal neighbors are allowed; empty and singleton spans return their
+length without comparisons. For `[1, 3, 2, 4]`, the result is `2`: the record at that
+index breaks ordering, while the prefix `[0, 2)` remains ordered. This diagnoses
+input before a binary search; the full input still needs the required ordering.
+
+The callback receives the previous element first and current element second,
+once per adjacent pair from left to right until the first violation. Work is
+linear with constant storage, no element copies, no library allocation and no
+input mutation. Keep the span valid, live and stable; do not change it through
+callback aliases. Comparator exceptions propagate without library mutation;
+callback allocations and side effects are not rolled back. The optional overload
+in `default_ordering.gf` uses `IComparable<T>` through `Comparer<T>::Compare`,
+matching `IsSorted`.

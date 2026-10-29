@@ -183,6 +183,16 @@ public bool IsSorted<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(
     return true;
 }
 
+/// First element that breaks nondecreasing order, or Length if every pair is ordered.
+/// Compares borrowed previous/current elements left to right; empty and singleton spans make no calls.
+/// Does not copy elements or allocate storage; comparator exceptions propagate.
+public nuint FindUnsortedIndex<T>(Span<immutable(T)> values, int(immutable(T)*, immutable(T)*)* compare)
+{
+    for (nuint i = 1; i < values.Length; i++)
+        if (compare(&values[i - 1], &values[i]) > 0) return i;
+    return values.Length;
+}
+
 public bool SequenceEqual<T>(Span<immutable(T)> first, Span<immutable(T)> second,
     bool(immutable(T)*, immutable(T)*)* equal)
 {

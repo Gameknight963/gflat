@@ -2,9 +2,9 @@ using System.Buffers.Binary;
 using System.Numerics;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public sealed class StandardBinaryCursorZigZagTests
+public sealed class BinaryCursorZigZagTests
 {
     [Theory]
     [InlineData(0)]

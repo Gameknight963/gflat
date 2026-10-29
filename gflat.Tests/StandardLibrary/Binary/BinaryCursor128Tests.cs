@@ -1,8 +1,8 @@
 using System.Buffers.Binary;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public sealed class StandardBinaryCursor128Tests
+public sealed class BinaryCursor128Tests
 {
     [Theory]
     [InlineData(0)]

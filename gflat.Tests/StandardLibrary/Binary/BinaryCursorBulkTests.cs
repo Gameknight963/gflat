@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public sealed class StandardBinaryCursorBulkTests
+public sealed class BinaryCursorBulkTests
 {
     [Theory]
     [InlineData(0)]

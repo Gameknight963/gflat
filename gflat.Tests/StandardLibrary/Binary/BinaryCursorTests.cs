@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public class StandardBinaryCursorTests
+public class BinaryCursorTests
 {
     [Theory]
     [InlineData(0)]

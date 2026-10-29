@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardLinePrefixWriterTests
+public sealed class LinePrefixWriterTests
 {
     private const string DenyAllocation = """
         using std; using std::Text; using std::IO;

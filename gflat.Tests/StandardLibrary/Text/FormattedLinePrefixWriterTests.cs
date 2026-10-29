@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardFormattedLinePrefixWriterTests
+public sealed class FormattedLinePrefixWriterTests
 {
     private const string Allocator="""
         using std; using std::Text;extern void*? malloc(nuint count);extern void free(void* storage);

@@ -31,6 +31,8 @@ functions, with ordinary name mangling and exception propagation.
 
 Identifiers contain ASCII letters, digits, and underscores and cannot begin with a digit. Double-underscore names are used by compiler hooks. They must not be treated as a security boundary. Comments are `//` to end of line or non-nesting `/* ... */`; unterminated comments are errors.
 
+LF, CRLF, and bare CR each end a logical source line. Source text and offsets retain the original line-ending characters.
+
 Strings use double quotes and escape sequences; raw newlines are rejected. Decimal numeric separators must appear between digits. Prefixed interpolation uses `s$"text {expression}"`; doubled braces `{{` and `}}` represent literal braces. Hole expressions may contain nested strings, comments, and interpolation.
 
 Character literals hold one 8-bit value; characters above U+00FF are rejected.

@@ -726,6 +726,87 @@ public sealed class ServerTests
         Assert.DoesNotContain(result.Diagnostics["broken.gf"], d => d.Code == "GFLS0002");
     }
 
+    [Theory]
+    [InlineData("\n", "\n")]
+    [InlineData("\r\n", "\r\n")]
+    [InlineData("\r", "\r")]
+    [InlineData("\r", "\n")]
+    public void IncrementalRangesRoundTripRepresentableBoundariesWithoutNormalizingText(string first, string second)
+    {
+        string text = "abc" + first + "de" + second;
+        var source = new SourceFile("line-endings.gf", text);
+        var points = Enumerable.Range(0, 4).Select(character => (Line: 0, Character: character, Offset: character))
+            .Concat(Enumerable.Range(0, 3).Select(character => (Line: 1, Character: character, Offset: 3 + first.Length + character)))
+            .Append((Line: 2, Character: 0, Offset: text.Length));
+        foreach (var point in points)
+        {
+            var position = JsonSerializer.SerializeToElement(new { line = point.Line, character = point.Character });
+            Assert.Equal(point.Offset, Workspace.Offset(text, position));
+            Assert.Equal(new TextRange(new(point.Line, point.Character), new(point.Line, point.Character)),
+                Workspace.ToRange(source.Span(point.Offset)));
+        }
+        Assert.Throws<ArgumentException>(() => Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 0, character = 4 })));
+        Assert.Throws<ArgumentException>(() => Workspace.Offset(text, JsonSerializer.SerializeToElement(new { line = 2, character = 1 })));
+        var changes = JsonSerializer.SerializeToElement(new[] {
+            new { range = new { start = new { line = 1, character = 0 }, end = new { line = 1, character = 1 } }, text = "X" },
+            new { range = new { start = new { line = 2, character = 0 }, end = new { line = 2, character = 0 } }, text = "Z" }
+        });
+        Assert.Equal("abc" + first + "Xe" + second + "Z", Workspace.ApplyChanges(text, changes));
+        Assert.Equal(text, source.Text);
+    }
+
+    [Theory]
+    [InlineData("\n", "\n")]
+    [InlineData("\r\n", "\r\n")]
+    [InlineData("\r", "\r")]
+    [InlineData("\r", "\n")]
+    public async Task DiagnosticsAndSemanticRequestsFollowMixedLineEndingsAfterIncrementalEdits(string first, string second)
+    {
+        await using var session = new Session();
+        await session.Initialize();
+        const string name = "line-endings.gf";
+        string text = "// leading comment" + first + "int Value()=>41;" + second + "int main()=>Missing();" + first;
+        await session.Open(name, text);
+        var errors = (await session.Diagnostics(name, 1)).GetProperty("params").GetProperty("diagnostics");
+        var missing = Assert.Single(errors.EnumerateArray(), item => item.GetProperty("severity").GetInt32() == 1);
+        Assert.Contains("Missing", missing.GetProperty("message").GetString());
+        Assert.Equal(2, missing.GetProperty("range").GetProperty("start").GetProperty("line").GetInt32());
+        Assert.Equal(12, missing.GetProperty("range").GetProperty("start").GetProperty("character").GetInt32());
+        await session.Notify("textDocument/didChange", new {
+            textDocument = new { uri = session.Uri(name), version = 2 },
+            contentChanges = new[] {
+                new { range = new { start = new { line = 2, character = 12 }, end = new { line = 2, character = 19 } }, text = "Value" },
+                new { range = new { start = new { line = 1, character = 13 }, end = new { line = 1, character = 15 } }, text = "42" },
+                new { range = new { start = new { line = 3, character = 0 }, end = new { line = 3, character = 0 } }, text = "// tail" }
+            }
+        });
+        var changed = (await session.Diagnostics(name, 2)).GetProperty("params").GetProperty("diagnostics");
+        Assert.DoesNotContain(changed.EnumerateArray(), item => item.GetProperty("severity").GetInt32() == 1);
+        await session.Send(new { jsonrpc = "2.0", id = 801, method = "textDocument/hover", @params = new {
+            textDocument = new { uri = session.Uri(name) }, position = new { line = 2, character = 13 } } });
+        var hover = (await session.Receive(message => message.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 801)).GetProperty("result");
+        Assert.Contains("int Value()", hover.GetProperty("contents").GetProperty("value").GetString());
+        await session.Send(new { jsonrpc = "2.0", id = 802, method = "textDocument/definition", @params = new {
+            textDocument = new { uri = session.Uri(name) }, position = new { line = 2, character = 13 } } });
+        var definition = (await session.Receive(message => message.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 802)).GetProperty("result");
+        Assert.Equal(session.Uri(name), definition.GetProperty("uri").GetString());
+        var range = JsonSerializer.Deserialize<TextRange>(definition.GetProperty("range"), Protocol.JsonOptions);
+        Assert.Equal(new TextRange(new(1, 4), new(1, 9)), range);
+        await session.Send(new { jsonrpc = "2.0", id = 803, method = "textDocument/semanticTokens/full", @params = new {
+            textDocument = new { uri = session.Uri(name) } } });
+        var tokens = (await session.Receive(message => message.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.GetInt32() == 803))
+            .GetProperty("result").GetProperty("data").EnumerateArray().Select(value => value.GetInt32()).ToArray();
+        int line = 0, character = 0;bool declaration = false, use = false;
+        for (int index = 0; index < tokens.Length; index += 5)
+        {
+            int delta = tokens[index];line += delta;character = delta == 0 ? character + tokens[index + 1] : tokens[index + 1];
+            if (line == 1 && character == 4 && tokens[index + 2] == 5) declaration = true;
+            if (line == 2 && character == 12 && tokens[index + 2] == 5) use = true;
+        }
+        Assert.True(declaration);Assert.True(use);
+        await session.Stop();
+    }
+
     [Fact]
     public void IncrementalChangesUseUtf16AndCrLfPositions()
     {

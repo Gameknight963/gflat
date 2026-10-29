@@ -185,13 +185,14 @@ public static class Workspace
         int start = 0;
         for (int i = 0; i < line; i++)
         {
-            int newline = text.IndexOf('\n', start);
-            if (newline < 0) throw new ArgumentException("Edit line is outside the document");
+            int relativeNewline = text.AsSpan(start).IndexOfAny('\r', '\n');
+            if (relativeNewline < 0) throw new ArgumentException("Edit line is outside the document");
+            int newline = start + relativeNewline;
             start = newline + 1;
+            if (text[newline] == '\r' && start < text.Length && text[start] == '\n') start++;
         }
-        int end = text.IndexOf('\n', start);
-        if (end < 0) end = text.Length;
-        if (end > start && text[end - 1] == '\r') end--;
+        int relativeEnd = text.AsSpan(start).IndexOfAny('\r', '\n');
+        int end = relativeEnd < 0 ? text.Length : start + relativeEnd;
         if (character > end - start) throw new ArgumentException("Edit character is outside the line");
         return start + character; // .NET string indices and LSP's default positions are UTF-16.
     }

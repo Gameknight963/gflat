@@ -29,14 +29,14 @@ public class Lexer
 
             if (char.IsWhiteSpace(c))
             {
-                if (c == '\n') line++;
+                if (c == '\r' || c == '\n' && (i == 0 || code[i - 1] != '\r')) line++;
                 i++;
                 continue;
             }
 
             if (c == '/' && i + 1 < code.Length && code[i + 1] == '/')
             {
-                while (i < code.Length && code[i] != '\n') i++;
+                while (i < code.Length && code[i] is not ('\r' or '\n')) i++;
                 continue;
             }
             if (c == '/' && i + 1 < code.Length && code[i + 1] == '*')
@@ -45,7 +45,7 @@ public class Lexer
                 int commentLine = line;
                 while (i + 1 < code.Length && !(code[i] == '*' && code[i + 1] == '/'))
                 {
-                    if (code[i] == '\n') line++;
+                    if (code[i] == '\r' || code[i] == '\n' && code[i - 1] != '\r') line++;
                     i++;
                 }
                 if (i + 1 >= code.Length) throw new TypeCheckException("Unterminated block comment", commentLine);
@@ -172,7 +172,7 @@ public class Lexer
                     if (i + 1 < code.Length && code[i + 1] == '"')
                     {
                         tokens.AddRange(ReadInterpolatedString(code, i, out int istrEnd, line));
-                        for (int offset = i; offset < istrEnd; offset++) if (code[offset] == '\n') line++;
+                        for (int offset = i; offset < istrEnd; offset++) if (code[offset] == '\r' || code[offset] == '\n' && (offset == 0 || code[offset - 1] != '\r')) line++;
                         i = istrEnd;
                         continue;
                     }
@@ -222,12 +222,11 @@ public class Lexer
             }
         }
         tokens.Add(new Token(TokenKind.EndOfFile, line, code.Length, code.Length));
-        var lineStarts = new List<int> { 0 };
-        for (int offset = 0; offset < code.Length; offset++) if (code[offset] == '\n') lineStarts.Add(offset + 1);
+        int[] lineStarts = SourceFile.FindLineStarts(code);
         for (int t = 0; t < tokens.Count; t++)
         {
             Token token = tokens[t];
-            int row = lineStarts.BinarySearch(token.Start);
+            int row = Array.BinarySearch(lineStarts, token.Start);
             if (row < 0) row = ~row - 1;
             tokens[t] = new Token(token.Kind, row + 1, token.Start, token.End, token.Text, token.Start - lineStarts[row] + 1);
         }
@@ -373,7 +372,7 @@ public class Lexer
                     i++; continue;
                 }
                 if (source[i] == '/' && i + 1 < source.Length && source[i + 1] == '/')
-                { while (i < source.Length && source[i] != '\n') i++; continue; }
+                { while (i < source.Length && source[i] is not ('\r' or '\n')) i++; continue; }
                 if (source[i] == '/' && i + 1 < source.Length && source[i + 1] == '*')
                 {
                     i += 2;

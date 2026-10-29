@@ -16,7 +16,23 @@ public sealed class SourceFile
         ArgumentNullException.ThrowIfNull(text);
         Id = new(path);
         Text = text;
-        lineStarts = new[] { 0 }.Concat(text.Select((c, i) => (c, i)).Where(x => x.c == '\n').Select(x => x.i + 1)).ToArray();
+        lineStarts = FindLineStarts(text);
+    }
+
+    // Share original-text line indexing with the lexer; CRLF is one delimiter.
+    internal static int[] FindLineStarts(string text)
+    {
+        var starts = new List<int> { 0 };
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '\r')
+            {
+                if (i + 1 < text.Length && text[i + 1] == '\n') i++;
+                starts.Add(i + 1);
+            }
+            else if (text[i] == '\n') starts.Add(i + 1);
+        }
+        return starts.ToArray();
     }
 
     public SourceSpan Span(int start, int length = 0)
@@ -30,8 +46,8 @@ public sealed class SourceFile
     public SourceSpan LineSpan(int line)
     {
         int start = lineStarts[Math.Clamp(line - 1, 0, lineStarts.Length - 1)];
-        int end = Text.IndexOf('\n', start);
-        if (end < 0) end = Text.Length;
+        int relativeEnd = Text.AsSpan(start).IndexOfAny('\r', '\n');
+        int end = relativeEnd < 0 ? Text.Length : start + relativeEnd;
         while (start < end && char.IsWhiteSpace(Text[start])) start++;
         return Span(start, end - start);
     }

@@ -44,8 +44,10 @@ try {
             throw "Packaged SDK is missing the $platform UTC clock"
         }
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Sdk/std/core/Collections/span_find_run.gf'))) {
-        throw 'Packaged SDK is missing the borrowed span run search'
+    foreach ($source in @('span_find_run.gf', 'span_subsequence_search.gf')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/std/core/Collections/$source"))) {
+            throw "Packaged SDK is missing $source"
+        }
     }
     $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $extracted 'BUILD-INFO.json') | ConvertFrom-Json
     foreach ($source in @('SystemRandom.gf', 'WindowsRandom.gfproj', 'README.md')) {
@@ -254,6 +256,10 @@ int SmokeCore() {
     if (FindRun<int>(runValues.AsImmutable(), 3, &runKey) != 4) return 288;
     if (FindRun<int>(runValues.AsImmutable(), 2, &runKey,
         (immutable(int)* left, immutable(int)* right) => *left == *right) != 1) return 289;
+    Span<immutable(int)> runPattern = runValues.Slice(4, 3).AsImmutable();
+    if (IndexOf<int>(runValues.AsImmutable(), runPattern) != 4) return 290;
+    if (IndexOf<int>(runValues.AsImmutable(), runPattern, EqualityComparer<int>::Equals) != 4) return 291;
+    if (IndexOf<int>(runValues.AsImmutable(), &runKey) != 1) return 292;
     HashMap<String, int> map = new();
     map.Add(s"answer", 42);
     String key = s"answer";

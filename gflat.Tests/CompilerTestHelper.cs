@@ -61,7 +61,7 @@ namespace gflat.Tests
         public static ExecutionResult Run(string code, int optimizationLevel)
             => RunIr(Compiler.Emit(code, options: new() { InternalizeFunctions = true }), optimizationLevel);
 
-        internal static ExecutionResult RunIr(string ir, int? optimizationLevel = null)
+        internal static ExecutionResult RunIr(string ir, int? optimizationLevel = null, int? expectedExitCode = null)
         {
             string testId = Guid.NewGuid().ToString("N");
             string tempDir = Path.Combine(Path.GetTempPath(), $"gflat_test_{testId}");
@@ -80,6 +80,10 @@ namespace gflat.Tests
                     throw new Exception($"clang compilation failed: {compilation.StandardError}\nIR:\n{ir}");
                 ProcessResult execution = NativeToolchain.Run(exePath, []);
                 result = new ExecutionResult(execution.ExitCode, execution.StandardOutput, execution.StandardError);
+                if (expectedExitCode.HasValue && result.ExitCode != expectedExitCode.Value)
+                    throw new InvalidOperationException(
+                        $"Unexpected native exit code: actual={result.ExitCode}, expected={expectedExitCode.Value}.\n" +
+                        $"stdout:\n{result.StandardOutput}\nstderr:\n{result.StandardError}");
             }
             catch (Exception error)
             {

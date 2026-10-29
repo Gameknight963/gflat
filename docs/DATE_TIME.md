@@ -28,7 +28,10 @@ and `Ticks`. Ticks count 100-nanosecond intervals since the default value;
 `FromTicks(long)` accepts 0 through 3155378975999999999, covering years 1..9999.
 Invalid tick counts throw `Exception`.
 
-`Add(TimeSpan)` returns a new value and rejects results outside that range.
+`Add(TimeSpan)` and `Subtract(TimeSpan)` return new values and reject results outside that range.
+Subtraction accepts signed durations: a negative duration moves the result later,
+and zero preserves the value. Neither operation changes its receiver; accepted
+arithmetic performs no library allocation.
 `Difference(other)` returns this value minus the other as a `TimeSpan`.
 `AddMonths(int)` and `AddYears(int)` use Date's calendar rules, including clamping
 the day to the destination month's length, and preserve the time of day.

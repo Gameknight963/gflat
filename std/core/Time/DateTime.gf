@@ -33,6 +33,17 @@ public struct DateTime : IEquatable<DateTime>, IComparable<DateTime>, IHashable,
         return FromTicks(current + delta);
     }
 
+    /// Returns this civil date and time minus the signed duration, rejecting results outside years 1 through 9999.
+    public immutable DateTime Subtract(TimeSpan value)
+    {
+        long current = this.Ticks;
+        long delta = value.Ticks;
+        // Do not negate delta: TimeSpan can contain long minimum.
+        if (delta > current || delta < current - MaximumTicks)
+            throw new Exception("DateTime subtraction is outside years 1 through 9999");
+        return FromTicks(current - delta);
+    }
+
     public immutable TimeSpan Difference(DateTime other) nothrow
         => TimeSpan::FromTicks(this.Ticks - other.Ticks);
 

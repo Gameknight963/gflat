@@ -265,9 +265,18 @@ SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
 bool SmokeRemove(readonly(int)* value) => *value == 9;
 long SmokeMagnitude(int value) { if (value < 0) return -(long)value; return (long)value; }
 bool SmokeRangeFailure(int value) { throw new Exception("Range predicate evaluated", 77); }
+bool SmokeUuidFill(byte* output, nuint count) {
+    if (count != 16) return false;
+    for (nuint i = 0; i < count; i++) output[i] = (byte)255;
+    return true;
+}
 Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
 Unique<int> SmokeFreshOwner(int value) => new Unique<int>(new* int(value));
 int SmokeCore() {
+    Uuid generated = UuidGenerator::CreateVersion4(SmokeUuidFill);
+    if (generated.High != 0xffffffffffff4ffful || generated.Low != 0xbffffffffffffffful) return 9016;
+    Uuid generatedAgain = new();
+    if (!UuidGenerator::TryCreateVersion4(SmokeUuidFill, ref generatedAgain) || !generatedAgain.Equals(&generated)) return 9017;
     int[7] runData = [0, 5, 5, 1, 5, 5, 5];
     Span<int> runValues = new(runData, 7); int runKey = 5;
     if (FindUnsortedIndex<int>(runValues.AsImmutable()) != 3) return 9007;

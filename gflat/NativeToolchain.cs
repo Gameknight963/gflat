@@ -148,7 +148,7 @@ public static class NativeToolchain
         var paths = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
         string fullOutput = Path.GetFullPath(outputPath);
         string ir = File.ReadAllText(irPath);
-        bool debug = ir.Contains("!llvm.dbg.cu", StringComparison.Ordinal);
+        bool debug = HasDebugInformation(ir);
         var (exceptions, stdio) = RequiredNativeRuntimes(ir);
         if (linkInputs.Libraries.Any(library => library.Kind == "File" &&
             (paths.Equals(library.Value, fullOutput) ||
@@ -201,8 +201,29 @@ public static class NativeToolchain
     internal static (bool Exceptions, bool Stdio) RequiredNativeRuntimes(string ir)
     {
         if (!ir.Contains("__gflat_", StringComparison.Ordinal)) return default;
-        // Keep line boundaries and quoted global identifiers, but hide metadata,
-        // string constants, inline assembly text and comments from header matching.
+        string code = MaskLlvmStringsAndComments(ir, keepQuotedGlobals: true);
+        // The first @ in an emitted function header names that function. Do not
+        // skip a different name to find a reserved-looking name in its body.
+        const string header = "(?m)^[\\t ]*(?:declare|define)\\b[^@{}=]*@(?:\"__gflat_(?<runtime>eh|stdio)_[A-Za-z0-9_]+\"|__gflat_(?<runtime>eh|stdio)_[A-Za-z0-9_]+)\\s*\\(";
+        bool exceptions = false, stdio = false;
+        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(code, header))
+        {
+            if (match.Groups["runtime"].Value == "eh") exceptions = true;
+            else stdio = true;
+            if (exceptions && stdio) break;
+        }
+        return (exceptions, stdio);
+    }
+
+    internal static bool HasDebugInformation(string ir)
+        => ir.Contains("!llvm.dbg.cu", StringComparison.Ordinal) &&
+           System.Text.RegularExpressions.Regex.IsMatch(MaskLlvmStringsAndComments(ir, keepQuotedGlobals: false),
+               @"(?m)^[\t ]*!llvm\.dbg\.cu\s*=\s*!\{");
+
+    // Preserve line boundaries while hiding quoted text and comments. Runtime
+    // declaration matching also needs to retain quoted global identifiers.
+    private static string MaskLlvmStringsAndComments(string ir, bool keepQuotedGlobals)
+    {
         char[] code = ir.ToCharArray();
         for (int at = 0; at < ir.Length; at++)
         {
@@ -212,7 +233,7 @@ public static class NativeToolchain
             }
             else if (ir[at] == '"')
             {
-                bool globalSymbol = at > 0 && ir[at - 1] == '@';
+                bool globalSymbol = keepQuotedGlobals && at > 0 && ir[at - 1] == '@';
                 if (!globalSymbol) code[at] = ' ';
                 for (at++; at < ir.Length; at++)
                 {
@@ -227,17 +248,7 @@ public static class NativeToolchain
                 }
             }
         }
-        // The first @ in an emitted function header names that function. Do not
-        // skip a different name to find a reserved-looking name in its body.
-        const string header = "(?m)^[\\t ]*(?:declare|define)\\b[^@{}=]*@(?:\"__gflat_(?<runtime>eh|stdio)_[A-Za-z0-9_]+\"|__gflat_(?<runtime>eh|stdio)_[A-Za-z0-9_]+)\\s*\\(";
-        bool exceptions = false, stdio = false;
-        foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(new string(code), header))
-        {
-            if (match.Groups["runtime"].Value == "eh") exceptions = true;
-            else stdio = true;
-            if (exceptions && stdio) break;
-        }
-        return (exceptions, stdio);
+        return new string(code);
     }
 
     internal static bool RequiresWideIntegerRuntime(string ir)

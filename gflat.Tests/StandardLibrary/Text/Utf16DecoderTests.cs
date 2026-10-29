@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardUtf16DecoderTests
+public sealed class Utf16DecoderTests
 {
     private static void Run(string program, int optimization)
     {

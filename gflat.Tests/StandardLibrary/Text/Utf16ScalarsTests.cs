@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardUtf16ScalarsTests
+public sealed class Utf16ScalarsTests
 {
     private const string Allocator = """
         extern void*? malloc(nuint count);

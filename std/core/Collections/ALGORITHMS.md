@@ -67,6 +67,7 @@ int main()
 | `LastIndexOf<T>(Span<immutable(T)>, Span<immutable(T)>, equal)` | Last contiguous pattern match, or span length when absent; an empty pattern returns span length. Defined in `span_subsequence_search.gf`, with an optional `IEquatable<T>` default in `default_equality.gf`. |
 | `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
+| `StablePartition<T>(Span<T>, predicate)` | Stable matching prefix and nonmatching suffix; optional `Collections/span_stable_partition.gf`, no heap scratch. |
 | `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
 
 `Swap` supports ordinary values and noncopyable owners such as `Unique<T>`.
@@ -785,3 +786,24 @@ callback allocations and external effects are not rolled back.
 The optional overload in `default_ordering.gf` uses `IComparable<T>` through
 `Comparer<T>::Compare`. It shares the ordering conventions of `IsSorted` and
 binary search.
+
+## Stable partitioning
+
+`StablePartition<T>(values, predicate)` rearranges initialized mutable elements
+into a matching prefix followed by a nonmatching suffix, preserving the original
+relative order within both groups. It returns the matching prefix length, from
+zero through `values.Length`. Empty spans return zero without calling the
+predicate. Include `Collections/span_stable_partition.gf` together with the
+existing span algorithm and Span dependencies when selecting sources manually.
+
+The predicate borrows each original element exactly once, in original left-to-right
+order. It must not mutate or invalidate the span through aliases. Elements are not copied: balanced recursive halves are joined with the existing `Rotate`
+relocation operation. This uses O(n log n) relocations and O(log n) stack space,
+without a heap scratch buffer or element copy constructors. Callback allocations
+and external effects are outside that guarantee.
+
+Relocation invalidates assumptions about which value occupies a borrowed element
+address. Predicate exceptions propagate without rollback: completed subranges may
+already be rearranged, but every element remains initialized and owned. No element
+is destroyed by the algorithm. The existing unstable `Partition` remains the
+constant-extra-storage alternative when preserving both groups' order is unnecessary.

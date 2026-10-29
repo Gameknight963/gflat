@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardStableSortTests
+public sealed class StableSortTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/stable_sort.gf",

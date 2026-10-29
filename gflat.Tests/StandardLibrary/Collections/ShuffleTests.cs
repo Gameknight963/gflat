@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardShuffleTests
+public sealed class ShuffleTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_shuffle.gf",

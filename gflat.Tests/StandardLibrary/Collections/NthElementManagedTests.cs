@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardNthElementManagedTests
+public sealed class NthElementManagedTests
 {
     [Theory]
     [InlineData(0)]

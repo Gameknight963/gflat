@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std;
 
-public sealed class StandardVersionTests
+public sealed class VersionTests
 {
     private const string Support="""
         using std; using std::Text;extern void*? malloc(nuint count);extern void free(void* storage);

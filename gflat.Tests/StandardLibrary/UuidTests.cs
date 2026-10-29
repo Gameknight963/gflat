@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std;
 
-public sealed class StandardUuidTests
+public sealed class UuidTests
 {
     [Theory]
     [InlineData(0)]

@@ -2,9 +2,9 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std;
 
-public sealed class StandardUuidByteTests
+public sealed class UuidByteTests
 {
     private const string Counters="""
         using std;extern void*? malloc(nuint count);extern void free(void* storage);

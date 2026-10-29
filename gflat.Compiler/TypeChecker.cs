@@ -3095,7 +3095,7 @@ namespace gflat
                 {
                     if (_currentClass == null || _currentClass.BaseClass == null)
                     {
-                        throw new TypeCheckException($"Cannot call base constructor because '{ownerName}' does not inherit from a base class", node.Line);
+                        throw new TypeCheckException($"Cannot call base constructor because '{DisplayName(ownerName)}' does not inherit from a base class", node.Line);
                     }
 
                     ClassInfo baseClass = _classes[_currentClass.BaseClass];
@@ -3131,8 +3131,8 @@ namespace gflat
 
                     if (matches.Count == 0)
                     {
-                        string argTypes = string.Join(", ", node.BaseArguments.Select(a => TypeName(GetType(a))));
-                        throw new TypeCheckException($"No matching base constructor found for '{baseClass.Name}' with arguments ({argTypes})", node.Line);
+                        string argTypes = string.Join(", ", node.BaseArguments.Select(a => DisplayTypeName(GetType(a))));
+                        throw new TypeCheckException($"No matching base constructor found for '{DisplayName(baseClass.Name)}' with arguments ({argTypes})", node.Line);
                     }
                     var selectedBase = SelectBestOverload(matches, c => c.Parameters, node.BaseArguments, baseClass.Name, node.Line, useDeclaredTypes: false);
                     ValidateConstructorAccess(selectedBase, baseClass.Name, ownerName, node.Span);
@@ -3147,7 +3147,7 @@ namespace gflat
                     if (baseClass.Constructors.Count == 0) ValidateImplicitConstruction(baseClass.Name, node.Line);
                     if (baseClass.Constructors.Count > 0 && !baseClass.Constructors.Any(c => AcceptsArgumentCount(c.Parameters, 0)))
                     {
-                        throw new TypeCheckException($"Class '{ownerName}' must explicitly call a base constructor because base class '{baseClass.Name}' does not define a parameterless constructor", node.Line);
+                        throw new TypeCheckException($"Class '{DisplayName(ownerName)}' must explicitly call a base constructor because base class '{DisplayName(baseClass.Name)}' does not define a parameterless constructor", node.Line);
                     }
                     if (baseClass.Constructors.Count > 0)
                     {
@@ -3444,7 +3444,7 @@ namespace gflat
 
                 if (!IsAssignable(node.ElementType, arr.ElementType, node.Collection))
                 {
-                    throw new TypeCheckException($"Cannot assign array element type '{TypeName(arr.ElementType)}' to foreach variable of type '{TypeName(node.ElementType)}'", node.Line);
+                    throw new TypeCheckException($"Cannot assign array element type '{DisplayTypeName(arr.ElementType)}' to foreach variable of type '{DisplayTypeName(node.ElementType)}'", node.Line);
                 }
 
                 node.IsArrayIteration = true;

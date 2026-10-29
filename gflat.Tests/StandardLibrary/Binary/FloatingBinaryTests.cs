@@ -2,9 +2,9 @@ using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public sealed class StandardFloatingBinaryTests
+public sealed class FloatingBinaryTests
 {
     [Fact]
     public void IntegerOnlyWindowsO0ObjectNeedsNoCrtFunctions()

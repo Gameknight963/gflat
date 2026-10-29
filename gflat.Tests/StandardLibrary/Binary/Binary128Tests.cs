@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public sealed class StandardBinary128Tests
+public sealed class Binary128Tests
 {
     [Theory]
     [InlineData(0)]

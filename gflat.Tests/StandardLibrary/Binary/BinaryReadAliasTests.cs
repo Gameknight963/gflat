@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public class StandardBinaryReadAliasTests
+public class BinaryReadAliasTests
 {
     [Theory]
     [InlineData(0)]

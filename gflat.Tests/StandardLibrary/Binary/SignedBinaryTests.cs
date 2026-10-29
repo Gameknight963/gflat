@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public class StandardSignedBinaryTests
+public class SignedBinaryTests
 {
     private static readonly long[] Values = [long.MinValue, long.MaxValue, int.MinValue, int.MaxValue, short.MinValue, short.MaxValue, -1, 0, 1, -128, -129, 255, 256, -0x0123456789abcdefL];
     private static string Number(long value) => value == long.MinValue ? "(-9223372036854775807l - 1l)" : value + "l";

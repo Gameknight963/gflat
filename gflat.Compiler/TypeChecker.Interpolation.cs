@@ -85,7 +85,7 @@ public partial class TypeChecker
                             new MemberAccessExpression(converted, "Length", false, part.Line)
                         }, part.Line) { Span = part.Span };
                     }
-                    else throw new TypeCheckException($"Interpolation value of type '{TypeName(type)}' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text", part.Line);
+                    else throw new TypeCheckException($"Interpolation value of type '{DisplayTypeName(type)}' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text", part.Line);
                 }
                 action.Accept(this);
                 parts.Add(new(action, conversion, converted));

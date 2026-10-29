@@ -71,6 +71,15 @@ public sealed class TypeNameDiagnosticTests
     [InlineData(
         "namespace Lib { struct Item<T> {} } int main(){int[1] values;foreach(Lib::Item<int> value in values){}return 0;}",
         "Cannot assign array element type 'int' to foreach variable of type 'Lib::Item<int>'")]
+    [InlineData(
+        "interface ITextWriter { void Write(readonly(char)* data, nuint count); }\nstruct Destination : ITextWriter {\n    public static Destination operator t\"\"(readonly(char)* text, nuint count) => new Destination();\n    public void Write(readonly(char)* text, nuint count) {}\n}\r\nnamespace Lib { struct Item {} }\nint main() { Lib::Item value; t$\"{value}\"; return 0; }",
+        "Interpolation value of type 'Lib::Item' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text")]
+    [InlineData(
+        "interface ITextWriter { void Write(readonly(char)* data, nuint count); }\nstruct Destination : ITextWriter {\n    public static Destination operator t\"\"(readonly(char)* text, nuint count) => new Destination();\n    public void Write(readonly(char)* text, nuint count) {}\n}\r\nnamespace Lib { struct Box<T> {} }\nint main() { Lib::Box<int> value; t$\"{value}\"; return 0; }",
+        "Interpolation value of type 'Lib::Box<int>' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text")]
+    [InlineData(
+        "interface ITextWriter { void Write(readonly(char)* data, nuint count); }\nstruct Destination : ITextWriter {\n    public static Destination operator t\"\"(readonly(char)* text, nuint count) => new Destination();\n    public void Write(readonly(char)* text, nuint count) {}\n}\r\nnamespace Lib { struct Item {} }\nint main() { Lib::Item value; t$\"{&value}\"; return 0; }",
+        "Interpolation value of type 'Lib::Item*' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text")]
     public void SourceDiagnosticsUseReadableTypeNamesWithoutEditorPostprocessing(string source, string expected)
     {
         var diagnostics = Compiler.Analyze([new SourceFile("type-name.gf", source)], new() { NoStdLib = true });

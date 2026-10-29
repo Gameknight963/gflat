@@ -856,6 +856,10 @@ int SmokeHashesAndViews() {
         filteredNodes.Clear();
         if (filteredNodes.RemoveAll(SmokeRemove) != 0 || !filteredNodes.IsEmpty) return 200;
         BinaryBufferReader peekInput = new(delimiterData, 4); byte peekValue = 0;
+        BinaryBufferReader peekSlice = new();
+        if (!peekInput.TryPeekSlice(2, ref peekSlice) || peekInput.Position != 0 || peekSlice.Data != &delimiterData[0] || peekSlice.Length != 2 || peekSlice.Position != 0) return 9013;
+        if (!peekSlice.TryReadByte(ref peekValue) || peekValue != 255 || peekSlice.Position != 1 || peekInput.Position != 0) return 9014;
+        if (peekInput.TryPeekSlice(5, ref peekSlice) || peekSlice.Data != null || peekSlice.Length != 0 || peekInput.Position != 0) return 9015;
         if (!peekInput.TryPeekByte(ref peekValue) || peekValue != 255 || peekInput.Position != 0) return 201;
         if (!peekInput.TrySkip(4) || peekInput.TryPeekByte(ref peekValue) || peekValue != 0 || peekInput.Position != 4) return 202;
         LinkedList<int> reversedNodes = new();

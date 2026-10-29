@@ -372,7 +372,7 @@ namespace gflat.semantics
             if (!IsInteger(underlying))
             {
                 throw new TypeCheckException(
-                    $"Enum underlying type must be an integral type, but got '{TypeChecker.TypeNamePublic(underlying)}'",
+                    $"Enum underlying type must be an integral type, but got '{_symbols.DisplayTypeName(underlying)}'",
                     enumDecl.Line);
             }
 

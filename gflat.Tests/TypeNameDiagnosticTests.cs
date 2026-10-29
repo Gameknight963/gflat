@@ -95,6 +95,18 @@ public sealed class TypeNameDiagnosticTests
     [InlineData(
         "namespace Lib { struct A { public static int operator +(A first,B second)=>0; } struct B { public static int operator +(A first,B second)=>0; } } int main(){Lib::A first=new();Lib::B second=new();return first+second;}",
         "Operator '+' is ambiguous between 'Lib::A' and 'Lib::B'")]
+    [InlineData(
+        "namespace Lib { struct Result {} struct Number { public static Result operator +(Number first,Number second)=>new Result(); } } int main(){Lib::Number first=new();Lib::Number second=new();first+=second;return 0;}",
+        "Cannot assign result of operator '+' ('Lib::Result') to 'Lib::Number'")]
+    [InlineData(
+        "namespace Lib { struct Payload {} } enum Bad:Lib::Payload { Value=0 } int main()=>0;",
+        "Enum underlying type must be an integral type, but got 'Lib::Payload'")]
+    [InlineData(
+        "class Exception {} namespace Lib { class Failure:Exception {} } void Test(){try{}catch(ref Lib::Failure first){}catch(ref Lib::Failure second){}} int main()=>0;",
+        "Catch clause for 'Lib::Failure' is unreachable because a previous catch clause catches 'Lib::Failure'")]
+    [InlineData(
+        "namespace Lib { struct Payload<T> {} } int main(){enum Bad:Lib::Payload<int>{Value=0}return 0;}",
+        "Enum underlying type must be an integral type, but got 'Lib::Payload<int>'")]
     public void SourceDiagnosticsUseReadableTypeNamesWithoutEditorPostprocessing(string source, string expected)
     {
         var diagnostics = Compiler.Analyze([new SourceFile("type-name.gf", source)], new() { NoStdLib = true });

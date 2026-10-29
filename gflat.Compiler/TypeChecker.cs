@@ -4366,7 +4366,7 @@ namespace gflat
                     if (!IsAssignable(targetType, returnType))
                     {
                         throw new TypeCheckException(
-                            $"Cannot assign result of operator '{opDecl.OperatorSymbol}' ('{TypeName(returnType)}') to '{TypeName(targetType)}'", node.Line);
+                            $"Cannot assign result of operator '{opDecl.OperatorSymbol}' ('{DisplayTypeName(returnType)}') to '{DisplayTypeName(targetType)}'", node.Line);
                     }
                     _compoundOperatorTargets[node] = (opStruct, opDecl);
                     RecordType(node, targetType);
@@ -5713,7 +5713,7 @@ namespace gflat
             if (!IsInteger(underlying))
             {
                 throw new TypeCheckException(
-                    $"Enum underlying type must be an integral type, but got '{TypeName(underlying)}'",
+                    $"Enum underlying type must be an integral type, but got '{DisplayTypeName(underlying)}'",
                     enumDecl.Line);
             }
 
@@ -6327,7 +6327,7 @@ namespace gflat
                     {
                         if (prevCaught == "Exception" || (typeName != prevCaught && TypeDerivesFromClass(NamedTypeExpression.Resolved(typeName, clause.Line), prevCaught)) || typeName == prevCaught)
                         {
-                            throw new TypeCheckException($"Catch clause for '{typeName}' is unreachable because a previous catch clause catches '{prevCaught}'", clause.Line);
+                            throw new TypeCheckException($"Catch clause for '{DisplayName(typeName)}' is unreachable because a previous catch clause catches '{DisplayName(prevCaught)}'", clause.Line);
                         }
                     }
                     caughtTypeNames.Add(typeName);

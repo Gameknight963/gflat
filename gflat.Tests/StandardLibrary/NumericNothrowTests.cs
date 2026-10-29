@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std;
 
-public class StandardNumericNothrowTests
+public class NumericNothrowTests
 {
     private static readonly (string Suffix, string Type)[] IntegerTypes =
     [

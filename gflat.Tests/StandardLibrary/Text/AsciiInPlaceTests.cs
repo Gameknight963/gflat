@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardAsciiInPlaceTests
+public sealed class AsciiInPlaceTests
 {
     [Theory]
     [InlineData(0)]

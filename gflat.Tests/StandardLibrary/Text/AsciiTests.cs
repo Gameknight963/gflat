@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public class StandardAsciiTests
+public class AsciiTests
 {
     private static IEnumerable<SourceFile> Sources(string code) =>
         [new SourceFile("Ascii.gf", File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std/core/Text/ascii.gf"))), new SourceFile("main.gf", code)];

@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardAsciiHashingTests
+public sealed class AsciiHashingTests
 {
     [Theory]
     [InlineData(0)]

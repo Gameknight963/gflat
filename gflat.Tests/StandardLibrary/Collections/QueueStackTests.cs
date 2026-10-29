@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardQueueStackTests
+public sealed class QueueStackTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "IStringConvertable.gf",

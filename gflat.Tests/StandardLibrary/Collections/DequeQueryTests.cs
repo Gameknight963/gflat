@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardDequeQueryTests
+public sealed class DequeQueryTests
 {
     [Theory]
     [InlineData(0)]

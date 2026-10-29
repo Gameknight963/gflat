@@ -1,9 +1,9 @@
 using System.Text;
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardQueueStackQueryTests
+public sealed class QueueStackQueryTests
 {
     [Theory]
     [InlineData(0)]

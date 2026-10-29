@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardDequeTryRemoveTests
+public sealed class DequeTryRemoveTests
 {
     private const string Allocator="""
         using std; using std::Text; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);

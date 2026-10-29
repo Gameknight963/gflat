@@ -2734,27 +2734,20 @@ public partial class LlvmEmitter : IVisitor
 
             if (cmpLlvm == "{ i8*, i8** }" || rightLlvm == "{ i8*, i8** }")
             {
-                string leftData;
-                if (left == "null" || left == "zeroinitializer")
+                string ComparisonAddress(string value, string llvmType)
                 {
-                    leftData = "null";
-                }
-                else
-                {
-                    leftData = NewTemp();
-                    Emit($"    {leftData} = extractvalue {{ i8*, i8** }} {left}, 0");
+                    if (value == "null" || value == "zeroinitializer") return "null";
+                    if (llvmType == "i8*") return value;
+                    string address = NewTemp();
+                    if (llvmType == "{ i8*, i8** }")
+                        Emit($"    {address} = extractvalue {{ i8*, i8** }} {value}, 0");
+                    else
+                        Emit($"    {address} = bitcast {llvmType} {value} to i8*");
+                    return address;
                 }
 
-                string rightData;
-                if (right == "null" || right == "zeroinitializer")
-                {
-                    rightData = "null";
-                }
-                else
-                {
-                    rightData = NewTemp();
-                    Emit($"    {rightData} = extractvalue {{ i8*, i8** }} {right}, 0");
-                }
+                string leftData = ComparisonAddress(left, cmpLlvm);
+                string rightData = ComparisonAddress(right, rightLlvm);
 
                 string cmpOp = node.Operator switch
                 {

@@ -108,10 +108,10 @@ public partial class LlvmEmitter
         }
         if (depth != 0) throw new TypeCheckException("LLVM entry has an incomplete parameter list", node.Span);
         // Only an explicit attribute on this entry can suppress unwind handling.
-        // Masked strings/comments and LLVM symbol tokens cannot supply attributes.
+        // Masked strings/comments, LLVM symbols, and metadata keys cannot supply attributes.
         int bodyStart = code.IndexOf('{', end);
         doesNotUnwind = bodyStart >= 0 && Regex.IsMatch(code[end..bodyStart],
-            @"(?<![@%A-Za-z0-9_$.-])nounwind(?![A-Za-z0-9_$.-])");
+            @"(?<![@%!A-Za-z0-9_$.-])nounwind(?![A-Za-z0-9_$.-])");
         var parameterText = code[parameterStart..(end - 1)].Trim();
         var parameters = new List<string>();
         int nested = 0, start = 0;

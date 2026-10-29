@@ -31,6 +31,7 @@ public sealed class LlvmModuleNoUnwindTests
     {
         (string Name, string Module)[] modules = [
             ("unannotated", "define i32 @entry() { ret i32 42 }"),
+            ("metadata-key", "define i32 @entry() !nounwind !{} { ret i32 42 }"),
             ("header-comment", "define i32 @entry() ; nounwind\n{ ret i32 42 }"),
             ("quoted-attribute", "define i32 @entry() \"nounwind\"=\"true\" { ret i32 42 }"),
             ("string-data", "@text = private constant [8 x i8] c\"nounwind\"\ndefine i32 @entry() { ret i32 42 }"),

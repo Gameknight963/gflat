@@ -1571,7 +1571,7 @@ parameter attributes are currently unsupported. Function attributes written
 inline remain available. An explicit `nounwind` attribute on the selected module
 entry suppresses unwind handling at that call. Without it, and for raw-body
 `__llvm`, calls retain conservative unwind handling. Attributes on other
-functions, comments, and string data do not establish this contract.
+functions, metadata names, comments, and string data do not establish this contract.
 
 Both forms require ordinary string literals. Arguments are evaluated once, in
 source order. Primitive values, enums, function pointers, and raw pointers are

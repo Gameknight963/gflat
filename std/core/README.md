@@ -12,6 +12,51 @@ allocator delegates to libc; replacing it does not require changing these source
 Projects using the standard build rules reference `std/std.gfproj` by default. Set `NoStdLib` to `true`
 to supply your own library inputs or build std itself.
 
+## Owning an exception message
+
+The default `Exception` borrows its message bytes. For dynamically created text,
+an application can own a `String` field and override the immutable virtual getter:
+
+```csharp
+using std;
+using std::Text;
+
+class MessageError : Exception
+{
+    private String text;
+
+    public MessageError(readonly(char)* message) { text = String::From(message); }
+    public immutable override readonly(char)* GetMessage() => text.Data;
+}
+
+void Fail()
+{
+    String local = String::From("owned message");
+    throw new MessageError(local.Data);
+}
+
+int main()
+{
+    try { Fail(); }
+    catch (ref Exception error)
+    {
+        if (CString::Equals(error.GetMessage(), "owned message")) return 0;
+        return 1;
+    }
+    return 2;
+}
+```
+
+Synthesized copying and cleanup give each exception copy its own string storage.
+Construction and copying can throw on allocation failure. The getter still returns
+a borrowed C-string view: keep the exception alive, and do not retain the pointer
+after its handler ends. Embedded zero bytes end that view.
+
+Leave the inherited `message` field at its default static empty string; caching
+`text.Data` there would leave copies pointing into another owner's buffer.
+The current debugger exception snapshot reads that base field directly, so it
+remains empty for this recipe. Overriding the getter does not change that snapshot.
+
 ## Strings and formatting
 
 ```csharp

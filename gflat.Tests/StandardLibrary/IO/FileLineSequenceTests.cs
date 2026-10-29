@@ -1,9 +1,9 @@
 using System.Text;
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileLineSequenceTests
+public sealed class FileLineSequenceTests
 {
     private const string Counters="""
         using std; using std::Text; using std::IO; using std::Queries; using std::Collections;

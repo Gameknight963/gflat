@@ -1,8 +1,8 @@
 using CryptoSHA256 = System.Security.Cryptography.SHA256;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileHashTests
+public sealed class FileHashTests
 {
     private static IEnumerable<SourceFile> Sources(string program)
         => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory,"Std"),"*.gf",SearchOption.AllDirectories)

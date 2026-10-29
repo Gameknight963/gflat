@@ -92,7 +92,7 @@ void PrintName(BinaryBufferReader name)
     Console::WriteLine("\"");
 }
 
-void ListFile(readonly(char)* path)
+void ListFile(readonly(char)* path, bool filtered, readonly(char)* pattern, nuint count)
 {
     Vector<byte> image = FileBytes::ReadAll(path, 134217728);
     // No mutation or growth after this point; both passes borrow this owner.
@@ -106,6 +106,11 @@ void ListFile(readonly(char)* path)
     Entry entry = new();
     for (nuint i = 0; i < (nuint)entries; i++) {
         TryReadEntry(ref directory, ref entry);
+        if (filtered) {
+            readonly(char)* name = "";
+            if (entry.Name.Length != 0) name = (readonly(char)*)entry.Name.Data!;
+            if (!MatchesWildcard(name, entry.Name.Length, pattern, count)) continue;
+        }
         entry.Compressed.Format(Console::Out); Console::Write(" ");
         entry.Uncompressed.Format(Console::Out); Console::Write(" ");
         entry.Method.Format(Console::Out); Console::Write(" ");
@@ -116,12 +121,16 @@ void ListFile(readonly(char)* path)
 
 int main(int argc, char** argv)
 {
-    if (argc != 2) {
-        try { Console::Error.WriteLine("Usage: zip-list <file>"); Console::FlushError(); }
+    if (argc != 2 && (argc != 4 || !CString::Equals(argv[2], "--match"))) {
+        try { Console::Error.WriteLine("Usage: zip-list <file> [--match <pattern>]"); Console::FlushError(); }
         catch (ref Exception ignored) { }
         return 2;
     }
-    try { ListFile(argv[1]); }
+    bool filtered = argc == 4;
+    readonly(char)* pattern = "";
+    nuint count = 0;
+    if (filtered) { pattern = argv[3]; count = CString::Length(pattern); }
+    try { ListFile(argv[1], filtered, pattern, count); }
     catch (ref Exception error) {
         try {
             Console::Error.Write("zip-list: ", 10);

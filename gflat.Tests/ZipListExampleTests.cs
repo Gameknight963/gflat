@@ -21,12 +21,28 @@ public sealed class ZipListExampleTests
                 new("deflated.txt", Encoding.UTF8.GetBytes(new string('x', 5000)), CompressionLevel.Optimal, 8),
                 new("folder/", [], CompressionLevel.NoCompression, 0),
                 new("empty", [], CompressionLevel.NoCompression, 0),
+                new("literal*name", [42], CompressionLevel.NoCompression, 0),
                 new("unicode-\u20ac-\ud83d\ude00", [0, 255, 128], CompressionLevel.Optimal, 8),
                 new("controls-\0\n\r\u001b-\"-\\", [1, 2, 3], CompressionLevel.NoCompression, 0)
             ];
             byte[] archive = Archive(items);
             Row[] rows = Oracle(archive, items);
             Check(executable, directory, "ordinary", archive, Render(rows));
+            Check(executable, directory, "match-extension", archive,
+                Render(rows.Where(row => row.Name.EndsWith(".txt", StringComparison.Ordinal)).ToArray()), "--match", "*.txt");
+            Check(executable, directory, "match-exact", archive,
+                Render(rows.Where(row => row.Name == "stored.bin").ToArray()), "--match", "stored.bin");
+            Check(executable, directory, "match-counted-nul-prefix", archive,
+                Render(rows.Where(row => row.Name.StartsWith("controls-", StringComparison.Ordinal)).ToArray()), "--match", "controls-*");
+            Check(executable, directory, "match-escaped-star", archive,
+                Render(rows.Where(row => row.Name == "literal*name").ToArray()), "--match", "literal\\*name");
+            Check(executable, directory, "match-utf8-eight-bytes", archive,
+                Render(rows.Where(row => row.Name.StartsWith("unicode-", StringComparison.Ordinal)).ToArray()), "--match", "unicode-????????");
+            Check(executable, directory, "match-utf8-seven-bytes", archive, Render([]), "--match", "unicode-???????");
+            Check(executable, directory, "match-none", archive, Render([]), "--match", "absent*");
+            Check(executable, directory, "match-case-sensitive", archive, Render([]), "--match", "STORED.BIN");
+            Check(executable, directory, "match-dangling-escape", archive, Render([]), "--match", "\\");
+            Check(executable, directory, "match-empty-pattern", archive, Render([]), "--match", "");
             Check(executable, directory, "empty", Archive([]), Render([]));
             Check(executable, directory, "ordinary-comment", WithComment(archive, "archive comment"u8.ToArray()), Render(rows));
             Check(executable, directory, "maximum-comment", WithComment(archive, Enumerable.Repeat((byte)'x', 65535).ToArray()), Render(rows));
@@ -96,14 +112,17 @@ public sealed class ZipListExampleTests
             // Locate the second record in this trusted host-created fixture, solely to mutate it.
             int second = central + 46 + Read16(archive, central + 28) + Read16(archive, central + 30) + Read16(archive, central + 32);
             Changed("late-entry-signature", bytes => bytes[second] ^= 1);
+            byte[] filteredBadDirectory = archive.ToArray();filteredBadDirectory[second] ^= 1;
+            Check(executable, directory, "filtered-late-entry-signature", filteredBadDirectory, null, "--match", "absent*");
 
             var missing = NativeToolchain.Run(executable, [Path.Combine(directory, "missing.zip")], 30000);
             Assert.Equal(1, missing.ExitCode); Assert.Empty(missing.StandardOutput); Assert.StartsWith("zip-list: ", missing.StandardError);
-            foreach (string[] arguments in new[] { Array.Empty<string>(), new[] { "one", "two" } })
+            foreach (string[] arguments in new[] { Array.Empty<string>(), new[] { "one", "two" }, new[] { "one", "--match" },
+                new[] { "one", "--unknown", "*" }, new[] { "one", "--match", "*", "extra" } })
             {
                 var usage = NativeToolchain.Run(executable, arguments, 30000);
                 Assert.Equal(2, usage.ExitCode); Assert.Empty(usage.StandardOutput);
-                Assert.Equal("Usage: zip-list <file>\n", Normalize(usage.StandardError));
+                Assert.Equal("Usage: zip-list <file> [--match <pattern>]\n", Normalize(usage.StandardError));
             }
         });
 
@@ -145,10 +164,10 @@ public sealed class ZipListExampleTests
         await TestDirectoryCleanup.DeleteAsync(directory);
     }
 
-    private static void Check(string executable, string directory, string name, byte[] bytes, string? expected)
+    private static void Check(string executable, string directory, string name, byte[] bytes, string? expected, params string[] arguments)
     {
         string input = Path.Combine(directory, name + ".zip"); File.WriteAllBytes(input, bytes);
-        var result = NativeToolchain.Run(executable, [input], 30000);
+        var result = NativeToolchain.Run(executable, [input, .. arguments], 30000);
         if (expected is null)
         {
             Assert.Equal(1, result.ExitCode); Assert.Empty(result.StandardOutput);

@@ -291,6 +291,10 @@ Unique<int> SmokeFreshOwner(int value) => new Unique<int>(new* int(value));
 int SmokeCore() {
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
+    BigInteger unsignedBig = BigInteger::FromULong(18446744073709551615ul);
+    if (unsignedBig.ToULong() != 18446744073709551615ul) return 9019;
+    BigInteger unsignedZero = BigInteger::FromULong(0ul);
+    if (unsignedZero.Sign != 0) return 9020;
     Uuid generated = UuidGenerator::CreateVersion4(SmokeUuidFill);
     if (generated.High != 0xffffffffffff4ffful || generated.Low != 0xbffffffffffffffful) return 9016;
     Uuid generatedAgain = new();

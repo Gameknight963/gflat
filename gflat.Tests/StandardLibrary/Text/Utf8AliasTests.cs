@@ -75,6 +75,6 @@ public class Utf8AliasTests
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         Assert.DoesNotContain("@__gflat_eh_", ir);
         Assert.DoesNotContain("personality", ir);
-        Assert.Equal(0, CompilerTestHelper.Run(sources, optimization).ExitCode);
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 }

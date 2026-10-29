@@ -89,7 +89,6 @@ public sealed class CStringCopyTests
         ];
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, NoBuiltins = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$", "@malloc", "@free" }) Assert.DoesNotContain(forbidden, ir);
-        var result = CompilerTestHelper.Run(sources, optimization);
-        Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 }

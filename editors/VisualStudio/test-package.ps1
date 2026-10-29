@@ -968,6 +968,10 @@ int SmokeHashesAndViews() {
         if (calendarNext.Date.Month != 3 || calendarNext.Date.Day != 1
             || calendarNext.TimeOfDay.Hour != 1
             || calendarNext.Difference(calendar).Ticks != TimeSpan::FromHours(2).Ticks) return 250;
+        DateTime calendarPrevious = calendarNext.Subtract(TimeSpan::FromHours(2));
+        if (!calendarPrevious.Equals(&calendar)) return 299;
+        DateTime calendarInverse = calendar.Subtract(TimeSpan::FromHours(-2));
+        if (!calendarInverse.Equals(&calendarNext)) return 300;
         DateTime calendarClamped = calendar.AddYears(1);
         if (calendarClamped.Date.Day != 28 || calendarClamped.TimeOfDay.Ticks != calendar.TimeOfDay.Ticks) return 251;
         char[28] calendarOutput; calendarOutput[19] = '?'; nuint calendarWritten = 0;

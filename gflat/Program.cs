@@ -29,6 +29,7 @@ public static class Program
             bool? noBuiltins = null;
             NativeLinkInputs nativeLinkInputs = NativeLinkInputs.Empty;
             var nativeManifests = new List<string>();
+            var sourceLists = new List<string>();
             void AddLibrary(string kind, string value) => nativeLinkInputs = nativeLinkInputs.Append(
                 NativeLinkInputs.Create([new NativeLibraryInput(kind, value)], [], Environment.CurrentDirectory));
             for (int i = 0; i < args.Length; i++)
@@ -42,6 +43,7 @@ public static class Program
                         Console.WriteLine("Debug symbols: -g or --debug; --no-debug disables the project's DebugSymbols setting.");
                         Console.WriteLine("Libc builtin recognition: --no-builtins disables it; --builtins overrides the project's NoBuiltins setting. Explicit calls/intrinsics may still require runtime helpers.");
                         Console.WriteLine("Native linking: repeat --native-library NAME, --native-library-file PATH, and --native-library-dir PATH. Project options append to declared requirements.");
+                        Console.WriteLine("Source lists contain one source-file path per line. Pass project files directly.");
                         Console.WriteLine("gflat <source.gf> [more.gf ...] [-o output] [--emit-ir] [--run] [--check] [--clang path] [--target <host-target-triple>] [--exception-reserve-bytes N] [--no-stdlib]\ngflat [build|check|clean] <project.gfproj> [--configuration Debug|Release] [--platform AnyCPU] [--run] [-o output] [--emit-ir]\ngflat --source-list <file> [compiler options]\nPass program arguments after --run -- (for example: --run -- input.txt \"some text\").");
                         return 0;
                     case "build" when i == 0: break;
@@ -59,7 +61,11 @@ public static class Program
                     case "--optimization": optimizationLevel = OptimizationLevel.Parse(Value()); break;
                     case "--configuration": configuration = Value(); explicitConfiguration = true; break;
                     case "--platform": platform = Value(); explicitPlatform = true; break;
-                    case "--source-list": sourcePaths.AddRange(File.ReadAllLines(Value()).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath)); break;
+                    case "--source-list":
+                        string sourceList = Path.GetFullPath(Value());
+                        sourceLists.Add(sourceList);
+                        sourcePaths.AddRange(File.ReadAllLines(sourceList).Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath));
+                        break;
                     case "--native-library": AddLibrary("Name", Value()); break;
                     case "--native-library-file": AddLibrary("File", Value()); break;
                     case "--native-library-dir": nativeLinkInputs = nativeLinkInputs.Append(NativeLinkInputs.Create([], [Value()], Environment.CurrentDirectory)); break;
@@ -81,6 +87,8 @@ public static class Program
             ProjectGraph? graph = null;
             if (sourcePaths.Any(p => p.EndsWith(".gfproj", StringComparison.OrdinalIgnoreCase)))
             {
+                if (sourceLists.Count != 0)
+                    throw new ArgumentException("--source-list is a source-build option. Pass project files directly.");
                 if (nativeManifests.Count != 0)
                     throw new ArgumentException("--native-link-inputs is an internal source-build option. Use --native-library, --native-library-file, and --native-library-dir with projects.");
                 if (sourcePaths.Count != 1) throw new ArgumentException("Pass one project file, without extra source files.");
@@ -117,13 +125,16 @@ public static class Program
             var pathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             if (sourcePaths.Distinct(pathComparer).Count() != sourcePaths.Count)
                 throw new ArgumentException("A source file may only be supplied once.");
-            if (sourcePaths.Contains(outputPath, pathComparer) || graph?.Projects.Any(p => pathComparer.Equals(p.FilePath, outputPath)) == true)
-                throw new ArgumentException("Output must differ from every source file.");
-            if (nativeLinkInputs.Libraries.Any(library => library.Kind == "File" && pathComparer.Equals(library.Value, outputPath)) ||
-                nativeManifests.Contains(outputPath, pathComparer) ||
-                (OperatingSystem.IsWindows() && debugSymbols == true && !irOnly &&
-                 nativeManifests.Contains(Path.ChangeExtension(outputPath, ".pdb"), pathComparer)))
-                throw new ArgumentException("Output must differ from native library files and link manifests.");
+            void ValidateOutput(string path)
+            {
+                if (sourcePaths.Contains(path, pathComparer) || sourceLists.Contains(path, pathComparer) ||
+                    graph?.Projects.Any(project => pathComparer.Equals(project.FilePath, path)) == true)
+                    throw new ArgumentException("Output must differ from every source file and source list.");
+                if (nativeLinkInputs.Libraries.Any(library => library.Kind == "File" && pathComparer.Equals(library.Value, path)) ||
+                    nativeManifests.Contains(path, pathComparer))
+                    throw new ArgumentException("Output must differ from native library files and link manifests.");
+            }
+            ValidateOutput(outputPath);
             if (graph != null)
             {
                 int result = ProjectBuild.Run(graph.Root, check ? "Check" : "Build", configuration, platform,
@@ -140,6 +151,9 @@ public static class Program
             }
             string ir = Compiler.Emit(sources, diagnostics, new() { NoStdLib = noStdLib, NoBuiltins = noBuiltins == true, InternalizeFunctions = !irOnly, DebugSymbols = debugSymbols == true });
             if (diagnostics.Count > 0) Console.Error.WriteLine(diagnostics.FormatAll());
+            // Use the native toolchain's emitted-IR predicate to validate its PDB output.
+            if (OperatingSystem.IsWindows() && !irOnly && NativeToolchain.HasDebugInformation(ir))
+                ValidateOutput(Path.ChangeExtension(outputPath, ".pdb"));
             if (projectPath != null) Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
             if (irOnly) { File.WriteAllText(outputPath, ir); return 0; }
             string temporaryIr = Path.Combine(Path.GetTempPath(), "gflat_" + Guid.NewGuid().ToString("N") + ".ll");

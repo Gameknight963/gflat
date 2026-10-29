@@ -211,6 +211,12 @@ incremental stamps, preserving unrelated files. A previous CLI `-o` override is
 not remembered by a later clean command. Clean currently requires an `.exe`
 target name.
 
+Direct source builds can use `--source-list PATH` to read one source-file path
+per line. Blank lines are ignored; relative entries use the command's working
+directory. Pass `.gfproj` files directly rather than through a source list, and
+do not combine project commands with `--source-list`. Direct outputs and Windows
+debug PDBs must differ from every supplied source file and source list.
+
 The targets choose `GflatCompilerCommand` if explicitly configured, otherwise the
 compiler shipped with the SDK distribution/VSIX, the checkout's Debug compiler
 if available, or `gflat` from PATH. Keep the installed SDK and its build/std assets together, as supplied in nightlies and the VSIX.

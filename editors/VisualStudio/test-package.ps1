@@ -12,6 +12,7 @@ $oldExecutable = $env:GFLAT_LSP_EXECUTABLE
 $oldEditorAssets = $env:GFLAT_EDITOR_ASSETS
 $oldHoverCatalog = $env:GFLAT_HOVER_CATALOG
 $oldHoverCapture = $env:GFLAT_HOVER_CAPTURE
+$packageSucceeded = $false
 try {
     $env:GFLAT_LSP_EXECUTABLE = Join-Path $extracted 'Server/gflat.LanguageServer.exe'
     if (-not (Test-Path -LiteralPath $env:GFLAT_LSP_EXECUTABLE)) { throw 'VSIX is missing the server executable' }
@@ -1316,15 +1317,22 @@ int main()
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $extracted 'interpolation.ll'))) { throw 'Bundled compiler interpolation/std integration failed' }
     & $compiler build (Join-Path $repoRoot 'examples/values/values.gfproj') --emit-ir -o (Join-Path $extracted 'values.ll')
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $extracted 'values.ll'))) { throw 'Bundled compiler owning-vector integration failed' }
+    & (Join-Path $PSScriptRoot 'test-package-failure-retention.ps1')
+    $packageSucceeded = $true
 }
 finally {
     $env:GFLAT_LSP_EXECUTABLE = $oldExecutable
     $env:GFLAT_EDITOR_ASSETS = $oldEditorAssets
     $env:GFLAT_HOVER_CATALOG = $oldHoverCatalog
     $env:GFLAT_HOVER_CAPTURE = $oldHoverCapture
-    # Only remove this run's unique extraction directory under the selected test root.
-    $resolved = [IO.Path]::GetFullPath($extracted)
-    $allowedRoot = [IO.Path]::GetFullPath($testRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
-    if (-not $resolved.StartsWith($allowedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe package test cleanup path' }
-    Remove-Item -LiteralPath $resolved -Recurse -Force
+    if ($packageSucceeded) {
+        # Only remove this run's unique extraction directory under the selected test root.
+        $resolved = [IO.Path]::GetFullPath($extracted)
+        $allowedRoot = [IO.Path]::GetFullPath($testRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+        if (-not $resolved.StartsWith($allowedRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe package test cleanup path' }
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+    else {
+        Write-Warning -Message "Package test failed; retained artifacts: $extracted" -WarningAction Continue
+    }
 }

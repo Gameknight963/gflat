@@ -34,6 +34,7 @@ normally. Streaming `Format` does not allocate a temporary decimal string.
 | --- | --- |
 | `new BigInteger()` | Zero, without allocation. |
 | `new BigInteger(long)` | Exact signed 64-bit value, including `long` minimum. |
+| `BigInteger::FromULong(value)` | Independent nonnegative owner from the full unsigned 64-bit range; zero needs no allocation. |
 | `BigInteger::Parse(text)` | Strict, null-terminated decimal input. |
 | `BigInteger::Parse(data, count)` | Strict, counted decimal input; no terminator is required. |
 | `BigInteger::TryParse(data, count, ref result)` | Parse counted decimal input into an initialized owning result; false resets it to zero. |
@@ -226,6 +227,14 @@ support, or external dependency. Like the other arithmetic, it is not constant
 time and makes no cryptographic timing guarantee.
 
 ## Checked primitive conversions
+
+`BigInteger::FromULong(ulong value)` constructs the exact nonnegative value,
+including values above `long` maximum. It builds decimal limbs directly without
+parsing text or converting through `long`. Zero produces canonical zero without
+allocation; a nonzero result owns independent storage and allocation failure
+throws `BadAllocException`. Assigning a result transfers that owner; failure
+leaves an existing assignment target unchanged. Existing constructors remain
+unchanged, and this named factory adds no implicit conversion.
 
 Immutable `TryToLong(ref long result)` accepts the entire signed 64-bit range,
 including `long` minimum. `TryToULong(ref ulong result)` accepts zero through

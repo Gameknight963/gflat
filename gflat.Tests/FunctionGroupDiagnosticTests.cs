@@ -63,6 +63,52 @@ public sealed class FunctionGroupDiagnosticTests
         Assert.DoesNotContain("function group", diagnostic.Message);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void TypedArrayElementsDescribeUnresolvedGroupsAndPreserveTheirSpans(bool nested, bool address)
+    {
+        string expression = address ? "&F" : "F";
+        string arrayType = nested ? "bool()*[1][1]" : "bool()*[1]";
+        string initializer = nested ? "[[" + expression + "]]" : "[" + expression + "]";
+        string source = Group + "int main(){" + arrayType + " callbacks=" + initializer + ";return 0;}";
+        var diagnostic = Assert.Single(Analyze(source), d =>
+            d.Message.StartsWith("Cannot initialize array element", StringComparison.Ordinal));
+        Assert.Equal("GF1000", diagnostic.Descriptor.Id);
+        Assert.Equal("Cannot initialize array element of type 'bool()*' with 'function group'", diagnostic.Message);
+        Assert.Equal(expression, source.Substring(diagnostic.Span.Start, diagnostic.Span.Length));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TypedArrayElementsKeepSingletonAndExplicitlySelectedSignatures(bool selected)
+    {
+        string expression = selected ? "(void(int)*)F" : "&Zero";
+        string definitions = selected ? Group : "void Zero(){}";
+        string actual = selected ? "void(int)*" : "void()*";
+        string source = definitions + "int main(){bool()*[1] callbacks=[" + expression + "];return 0;}";
+        var diagnostic = Assert.Single(Analyze(source), d =>
+            d.Message.StartsWith("Cannot initialize array element", StringComparison.Ordinal));
+        Assert.Equal("GF1000", diagnostic.Descriptor.Id);
+        Assert.Equal("Cannot initialize array element of type 'bool()*' with '" + actual + "'", diagnostic.Message);
+        Assert.Equal(expression, source.Substring(diagnostic.Span.Start, diagnostic.Span.Length));
+        Assert.DoesNotContain("function group", diagnostic.Message);
+    }
+
+    [Fact]
+    public void TypedArraysStillSelectOverloadsForEveryElementAndNestedRow()
+        => Compiler.Check(Group + """
+            int main(){
+                void(int)*[2] callbacks=[F,&F];
+                void(int)*[1][1] nested=[[F]];
+                callbacks[0](1);callbacks[1](2);nested[0][0](3);
+                return 0;
+            }
+            """, options: new() { NoStdLib = true });
+
     private static Diagnostic[] Analyze(string source)
         => Compiler.Analyze([new SourceFile("function-group-diagnostics.gf", source)], new() { NoStdLib = true })
             .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ToArray();

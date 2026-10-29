@@ -5507,7 +5507,7 @@ namespace gflat
                 if (target != null)
                 {
                     if (!IsAssignable(target.ElementType, type, element))
-                        throw new TypeCheckException($"Cannot initialize array element of type '{DisplayTypeName(target.ElementType)}' with '{DisplayTypeName(type)}'", element.Span);
+                        throw new TypeCheckException($"Cannot initialize array element of type '{DisplayTypeName(target.ElementType)}' with '{DisplayExpressionTypeName(element, type)}'", element.Span);
                     continue;
                 }
                 elementType ??= type;

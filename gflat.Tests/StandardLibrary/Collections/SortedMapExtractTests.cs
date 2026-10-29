@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardSortedMapExtractTests
+public sealed class SortedMapExtractTests
 {
     private const string Prelude="""
         using std; using std::Collections;extern void*? malloc(nuint size);extern void free(void* storage);

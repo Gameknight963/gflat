@@ -1,9 +1,9 @@
 using System.Text;
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardSortedSetTests
+public sealed class SortedSetTests
 {
     private const string Owners = """
         using std; using std::Text; using std::Memory; using std::Numerics; using std::Queries; using std::Collections;

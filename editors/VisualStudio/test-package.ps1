@@ -260,6 +260,9 @@ int SmokeCore() {
     if (IndexOf<int>(runValues.AsImmutable(), runPattern) != 4) return 290;
     if (IndexOf<int>(runValues.AsImmutable(), runPattern, EqualityComparer<int>::Equals) != 4) return 291;
     if (IndexOf<int>(runValues.AsImmutable(), &runKey) != 1) return 292;
+    byte[4] exceptData = [0, 7, 255, 7]; byte[1] exceptSet = [7];
+    if (ByteSearch::IndexOfAnyExcept(exceptData, 4, exceptSet, 1) != 0) return 293;
+    if (ByteSearch::LastIndexOfAnyExcept(exceptData, 4, exceptSet, 1) != 2) return 294;
     HashMap<String, int> map = new();
     map.Add(s"answer", 42);
     String key = s"answer";

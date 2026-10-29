@@ -1675,6 +1675,11 @@ namespace gflat
             }
             if (type is PointerTypeExpression ptr)
             {
+                if (ResolveAlias(ptr.Inner) is NamedTypeExpression iface && IsInterface(iface))
+                {
+                    error = "Pointer arithmetic is not allowed on interface pointers; use a pointer to interface-pointer storage for array traversal";
+                    return false;
+                }
                 if (HasIncompleteArrayValueShape(ptr.Inner))
                 {
                     error = "Pointer arithmetic requires array element types with fixed sizes";

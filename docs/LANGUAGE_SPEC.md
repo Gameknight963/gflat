@@ -230,7 +230,8 @@ int main() {
 neither this contract nor generic interfaces generally require heap allocation.
 Ordinary interface pointer calls retain the existing interface representation
 and dispatch rules. Interface references support equality and inequality, but
-not ordered comparisons. `foreach` still accepts the enumeration pattern without an
+not ordered comparisons or pointer arithmetic. A pointer to interface-reference
+storage (`I**`) supports ordinary array traversal. `foreach` still accepts the enumeration pattern without an
 interface declaration.
 
 ## Primitive interface implementations

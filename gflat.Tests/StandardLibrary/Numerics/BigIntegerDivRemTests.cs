@@ -123,6 +123,65 @@ public sealed class BigIntegerDivRemTests
             }
             """,[],optimization));
 
+    [Fact]
+    public async Task DirectoryActionFailureRetainsItsOriginalExceptionAndDivisionArtifacts()
+    {
+        const string ir = "controlled DivRem fixture IR\n";
+        byte[] executable = [1, 2, 3, 4];
+        byte[] expectedManifest = [];
+        string? expectedDirectory = null;
+        var original = new InvalidOperationException("controlled DivRem action failure");
+        var error = Assert.Throws<InvalidOperationException>(() => WithDirectory(directory =>
+        {
+            expectedDirectory = directory;
+            string manifest = Path.Combine(directory, "division.bin");
+            using (var writer = new BinaryWriter(File.Create(manifest)))
+            {
+                writer.Write(1);
+                WriteText(writer, new Integer(17));writer.Write(5);
+                WriteText(writer, new Integer(3));writer.Write(2);
+            }
+            expectedManifest = File.ReadAllBytes(manifest);
+            File.WriteAllText(Path.Combine(directory, "main.ll"), ir);
+            File.WriteAllBytes(Path.Combine(directory, "main.exe"), executable);
+            throw original;
+        }));
+        string retained = Assert.IsType<string>(error.Data["BigIntegerDivRemDirectory"]);
+        try
+        {
+            Assert.Same(original, error);
+            Assert.Contains("WithDirectory", error.StackTrace);
+            Assert.NotNull(expectedDirectory);
+            Assert.Equal(expectedDirectory, retained);
+            Assert.True(Directory.Exists(retained));
+            Assert.NotEmpty(expectedManifest);
+            Assert.Equal(expectedManifest, File.ReadAllBytes(Path.Combine(retained, "division.bin")));
+            Assert.Equal(ir, File.ReadAllText(Path.Combine(retained, "main.ll")));
+            Assert.Equal(executable, File.ReadAllBytes(Path.Combine(retained, "main.exe")));
+        }
+        catch (Exception assertionError)
+        {
+            assertionError.Data["BigIntegerDivRemDirectory"] = retained;
+            throw;
+        }
+        // Delete only this expected fixture after every retention assertion passed.
+        await TestDirectoryCleanup.DeleteAsync(retained);
+    }
+
+    [Fact]
+    public void SuccessfulDirectoryActionCleansItsNonemptyFixture()
+    {
+        string? completed = null;
+        WithDirectory(directory =>
+        {
+            completed = directory;
+            Assert.True(Directory.Exists(directory));
+            File.WriteAllText(Path.Combine(directory, "completed.txt"), "completed action");
+        });
+        Assert.NotNull(completed);
+        Assert.False(Directory.Exists(completed), $"Successful DivRem fixture was retained: {completed}");
+    }
+
     private const string Counters="""
         using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;
         extern void*? malloc(nuint size);extern void free(void* value);
@@ -144,7 +203,10 @@ public sealed class BigIntegerDivRemTests
     private static void WithDirectory(Action<string> action)
     {
         string directory=Path.Combine(Path.GetTempPath(),"gflat-bigint-divrem-"+Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);try{action(directory);}finally{Directory.Delete(directory,true);}
+        Directory.CreateDirectory(directory);
+        try{action(directory);}
+        catch(Exception error){error.Data["BigIntegerDivRemDirectory"]=directory;throw;}
+        Directory.Delete(directory,true);
     }
     private static void Run(string directory,string program,string[] arguments,int optimization)
     {

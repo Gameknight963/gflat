@@ -108,8 +108,7 @@ public sealed class FloatingBinaryTests
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true });
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$Allocate", "gflat$Memory$Free", "@malloc", "@free" })
             Assert.DoesNotContain(forbidden, ir);
-        var result = CompilerTestHelper.Run(sources, optimization);
-        Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 
     [Theory]

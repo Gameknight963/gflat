@@ -115,7 +115,6 @@ public sealed class BinaryCursor128Tests
         foreach (string forbidden in new[] { "@__gflat_eh_", "personality", "gflat$Memory$Allocate", "@malloc", "@free" })
             Assert.DoesNotContain(forbidden, ir);
         Assert.False(NativeToolchain.RequiresWideIntegerRuntime(ir));
-        var result = CompilerTestHelper.Run(sources, optimization);
-        Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 }

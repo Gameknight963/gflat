@@ -123,6 +123,6 @@ public class BinaryCursorTests
             .Append(new SourceFile("main.gf", program)).ToArray();
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"@__gflat_eh_","personality","gflat$Memory$Allocate","gflat$Memory$Free","@malloc","@free"}) Assert.DoesNotContain(forbidden,ir);
-        Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 }

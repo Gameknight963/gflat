@@ -50,6 +50,28 @@ bool TryDecode(readonly(char)* input, nuint count, uint* scalar, nuint* consumed
     return true;
 }
 
+// Decode only the final scalar; preceding bytes are not validated.
+// Outputs must be disjoint from each other but may overlap input storage.
+// All required input reads precede result stores; failure clears both outputs.
+bool TryDecodeLast(readonly(char)* input, nuint count, uint* scalar, nuint* consumed) nothrow
+{
+    if (count == 0) return DecodeFailure(scalar, consumed);
+    nuint start = count - 1;
+    while (start > 0 && count - start < 4)
+    {
+        uint next = (uint)(byte)input[start];
+        if (next < 0x80u || next > 0xbfu) break;
+        start--;
+    }
+    uint value = 0u;
+    nuint length = 0;
+    if (!TryDecode(input + start, count - start, &value, &length) || length != count - start)
+        return DecodeFailure(scalar, consumed);
+    *scalar = value;
+    *consumed = length;
+    return true;
+}
+
 // Delay every output store until the bytes needed for the result were examined.
 // Scalar/count outputs may borrow input storage, but must not overlap each other.
 private bool DecodeFailure(uint* scalar, nuint* consumed) nothrow

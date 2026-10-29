@@ -9,6 +9,7 @@ String, GC, or exception support.
 | `IsValidScalar(uint scalar)` | True for Unicode scalar values: U+0000 through U+10FFFF, excluding U+D800 through U+DFFF. |
 | `EncodedLength(uint scalar)` | One through four bytes; zero for an invalid scalar. |
 | `TryDecode(input, count, &scalar, &consumed)` | Decodes the first complete scalar, reporting its byte length. |
+| `TryDecodeLast(input, count, &scalar, &consumed)` | Decodes the final complete scalar, reporting its byte length. |
 | `TryEncode(scalar, output, capacity, &written)` | Writes one scalar into caller-owned storage. |
 | `TryCount(input, count, &scalarCount)` | Validates all input and counts Unicode scalar values. |
 | `IsValid(input, count)` | Validates all input bytes. |
@@ -36,6 +37,32 @@ sequences. It does not replace malformed input. A failed `TryDecode` writes
 zero to both outputs; it does not consume an invalid byte sequence. Decoding
 one scalar does not validate the following bytes; use `IsValid` or `TryCount`
 for full-input validation.
+
+`TryDecodeLast` examines at most the final four input bytes to locate and
+validate the final scalar. It does not validate the preceding bytes; a malformed
+prefix followed by a valid final scalar can succeed. Empty input and malformed
+or incomplete final scalars fail with both outputs zero. The output alignment
+and overlap rules are the same as for `TryDecode`: result stores can overwrite
+the retained prefix, so use separate metadata if that prefix is still needed.
+
+To remove a final scalar from a counted view, decode it and subtract its byte
+length. Repeating this operation walks scalar boundaries backward without
+building an index. Scalar boundaries do not represent grapheme clusters.
+
+```csharp
+int main()
+{
+    char[5] text = ['A', (char)0xf0, (char)0x9f, (char)0x98, (char)0x80];
+    nuint length = 5;
+    uint scalar = 0u;
+    nuint consumed = 0;
+    if (!std::Text::Utf8::TryDecodeLast(text, length, &scalar, &consumed)) return 1;
+    if (scalar != 0x1f600u || consumed != (nuint)4) return 2;
+    length -= consumed;
+    if (length != (nuint)1 || text[0] != 'A') return 3;
+    return 0;
+}
+```
 
 `TryEncode` checks scalar validity and capacity before writing any output byte.
 On failure it writes zero to `written` and leaves the output buffer untouched.

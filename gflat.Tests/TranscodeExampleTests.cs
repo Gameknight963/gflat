@@ -43,7 +43,13 @@ public sealed class TranscodeExampleTests
                 ("utf8-to-utf16le", [65, 0xed, 0xa0, 0x80]),
                 ("utf16le-to-utf8", [65]),
                 ("utf16le-to-utf8", [65, 0, 0, 0xd8]),
-                ("utf16le-to-utf8", [65, 0, 0, 0xdc]) })
+                ("utf16le-to-utf8", [65, 0, 0, 0xdc]),
+                ("utf16le-to-utf8", [0, 0xd8, 65, 0]),
+                ("utf16le-to-utf8", [0, 0xd8, 0, 0xd8]),
+                ("utf16le-to-utf8", [0xff, 0xdb, 0, 0]),
+                ("utf8-to-utf16le", [65, 0xf4, 0x90, 0x80, 0x80]),
+                ("utf8-to-utf16le", [65, 0x80]),
+                ("utf8-to-utf16le", [65, 0xe0, 0x80, 0x80]) })
             {
                 byte[] sentinel = [1, 2, 3, 0, 255];
                 File.WriteAllBytes(input, bytes); File.WriteAllBytes(output, sentinel);
@@ -77,6 +83,11 @@ public sealed class TranscodeExampleTests
                 Assert.Empty(result.StandardError);
             }
         }
-        finally { Directory.Delete(directory, true); }
+        catch (Exception error)
+        {
+            error.Data["Artifacts"] = directory;
+            throw;
+        }
+        Directory.Delete(directory, true);
     }
 }

@@ -12,9 +12,12 @@ surrogates, and odd UTF-16 byte counts are errors. Embedded nulls and Unicode
 noncharacters are preserved. No byte-order mark is added or removed: a BOM in
 the input remains the same U+FEFF scalar in the output.
 
-The program uses `FileBytes`, owning vectors, caller-buffer `UnicodeTranscoding`,
-and explicit little-endian `BinaryPrimitives` operations. It reads the complete
-input and builds the converted bytes before opening the output. Invalid input
+The program uses `FileBytes` and owning input/output byte vectors. It validates
+encoding and computes the exact output size before allocating that result, then
+converts one scalar at a time with `Utf8`, `Utf16`, and explicit little-endian
+`BinaryPrimitives` operations. UTF-16 conversion uses a two-code-unit stack scratch buffer, with no whole-file
+intermediate wide vector. It reads the complete input
+and builds the converted bytes before opening the output. Invalid input
 therefore leaves an existing output file untouched, and input/output may name
 the same file. File-writing failures are not an atomic replacement guarantee.
 

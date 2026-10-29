@@ -13,16 +13,40 @@ Vector<byte> ToUtf16Le(ref immutable(Vector<byte>) input)
     if(!UnicodeTranscoding::TryGetUtf16Length((readonly(char)*)bytes.Data!,bytes.Length,ref units))
         throw new Exception("Input is not valid UTF-8");
     if(units>((nuint)0-(nuint)1)/2)throw new Exception("Output length overflow");
-    Vector<ushort> wide=new(); wide.Reserve(units);
-    wide.Resize(units,(ushort)0);
-    nuint written=0;
-    UnicodeTranscoding::TryUtf8ToUtf16((readonly(char)*)bytes.Data!,bytes.Length,wide.AsSpan().Data!,units,ref written);
-    Vector<byte> result=new(); result.Reserve(units*2);
-    result.Resize(units*2,(byte)0);
+    nuint required=units*2;
+    Vector<byte> result=new(); result.Reserve(required); result.Resize(required,(byte)0);
     Span<byte> output=result.AsSpan();
-    for(nuint i=0;i<units;i++)
-        BinaryPrimitives::TryWriteUInt16LittleEndian(output.Data!+i*2,2,wide[i]);
+    nuint position=0; nuint produced=0; ushort[2] wide;
+    // Complete validation and sizing above prove these per-scalar operations fit.
+    while(position<bytes.Length) {
+        uint scalar=0u; nuint consumed=0; nuint encoded=0;
+        Utf8::TryDecode((readonly(char)*)bytes.Data!+position,bytes.Length-position,&scalar,&consumed);
+        Utf16::TryEncode(scalar,wide,2,&encoded);
+        for(nuint i=0;i<encoded;i++) {
+            BinaryPrimitives::TryWriteUInt16LittleEndian(output.Data!+produced,2,wide[i]);
+            produced+=2;
+        }
+        position+=consumed;
+    }
     return move result;
+}
+
+// Decode one serialized scalar with bytewise loads; no input alignment assumption.
+bool TryDecodeUtf16Le(readonly(byte)* data,nuint count,uint* scalar,nuint* consumed) nothrow
+{
+    *scalar=0u; *consumed=0;
+    ushort first=0;
+    if(!BinaryPrimitives::TryReadUInt16LittleEndian(data,count,ref first))return false;
+    ushort[2] wide; wide[0]=first; nuint available=1;
+    if(first>=(ushort)0xd800 && first<=(ushort)0xdbff && count>=4) {
+        ushort second=0;
+        BinaryPrimitives::TryReadUInt16LittleEndian(data+2,count-2,ref second);
+        wide[1]=second; available=2;
+    }
+    nuint units=0;
+    if(!Utf16::TryDecode(wide,available,scalar,&units))return false;
+    *consumed=units*2;
+    return true;
 }
 
 Vector<byte> FromUtf16Le(ref immutable(Vector<byte>) input)
@@ -30,20 +54,24 @@ Vector<byte> FromUtf16Le(ref immutable(Vector<byte>) input)
     if(input.IsEmpty)return new Vector<byte>();
     if(input.Count%2!=0)throw new Exception("UTF-16LE input has an odd byte count");
     Span<readonly(byte)> bytes=input.AsImmutable();
-    nuint units=bytes.Length/2;
-    Vector<ushort> wide=new(); wide.Reserve(units);
-    for(nuint i=0;i<units;i++) {
-        ushort value=0;
-        BinaryPrimitives::TryReadUInt16LittleEndian(bytes.Data!+i*2,2,ref value);
-        wide.Add(value);
+    nuint position=0; nuint required=0; nuint maximum=(nuint)0-(nuint)1;
+    while(position<bytes.Length) {
+        uint scalar=0u; nuint consumed=0;
+        if(!TryDecodeUtf16Le(bytes.Data!+position,bytes.Length-position,&scalar,&consumed))
+            throw new Exception("Input is not valid UTF-16LE");
+        nuint encoded=Utf8::EncodedLength(scalar);
+        if(encoded>maximum-required)throw new Exception("Output length overflow");
+        required+=encoded; position+=consumed;
     }
-    nuint required=0;
-    if(!UnicodeTranscoding::TryGetUtf8Length(wide.AsImmutable().Data!,units,ref required))
-        throw new Exception("Input is not valid UTF-16LE");
-    Vector<byte> result=new(); result.Reserve(required);
-    result.Resize(required,(byte)0);
-    nuint written=0;
-    UnicodeTranscoding::TryUtf16ToUtf8(wide.AsImmutable().Data!,units,(char*)result.AsSpan().Data!,required,ref written);
+    Vector<byte> result=new(); result.Reserve(required); result.Resize(required,(byte)0);
+    Span<byte> output=result.AsSpan(); position=0; nuint produced=0;
+    // Input remains unchanged; the validated length proves every output write fits.
+    while(position<bytes.Length) {
+        uint scalar=0u; nuint consumed=0; nuint encoded=0;
+        TryDecodeUtf16Le(bytes.Data!+position,bytes.Length-position,&scalar,&consumed);
+        Utf8::TryEncode(scalar,(char*)output.Data!+produced,required-produced,&encoded);
+        produced+=encoded; position+=consumed;
+    }
     return move result;
 }
 

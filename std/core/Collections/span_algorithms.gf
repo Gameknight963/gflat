@@ -52,6 +52,61 @@ public void Sort<T>(Span<T> values, int(immutable(T)*, immutable(T)*)* compare)
     }
 }
 
+// Build a max-heap in place: no child compares greater than its parent.
+// Elements remain initialized; comparator failure can leave a partial ordering.
+public void MakeMaxHeap<T>(Span<T> values, int(immutable(T)*, immutable(T)*)* compare)
+{
+    nuint count = values.Length;
+    if (count < 2) return;
+    T* data = values.Data!;
+    nuint root = count / 2;
+    while (root != 0)
+    {
+        root--;
+        std::Collections::detail::SiftDown<T>(data, root, count, compare);
+    }
+}
+
+// The prefix excluding the final initialized element must already be a max-heap.
+// Restore heap order by relocating that element upward; length is unchanged.
+public void PushMaxHeap<T>(Span<T> values, int(immutable(T)*, immutable(T)*)* compare)
+{
+    if (values.Length < 2) return;
+    T* data = values.Data!;
+    nuint child = values.Length - 1;
+    while (child != 0)
+    {
+        nuint parent = (child - 1) / 2;
+        if (compare(data + parent, data + child) >= 0) return;
+        std::Collections::detail::SwapElements<T>(data + parent, data + child);
+        child = parent;
+    }
+}
+
+// Input must be a max-heap. Move its maximum to the final slot and heapify
+// the prefix. No element is destroyed, removed, or left uninitialized.
+public void PopMaxHeap<T>(Span<T> values, int(immutable(T)*, immutable(T)*)* compare)
+{
+    if (values.Length < 2) return;
+    T* data = values.Data!;
+    nuint end = values.Length - 1;
+    std::Collections::detail::SwapElements<T>(data, data + end);
+    std::Collections::detail::SiftDown<T>(data, 0, end, compare);
+}
+
+// Borrow parent/child pairs in increasing child-index order; stop at the first
+// child greater than its parent. Empty and singleton spans make no comparisons.
+public bool IsMaxHeap<T>(Span<immutable(T)> values,
+    int(immutable(T)*, immutable(T)*)* compare)
+{
+    for (nuint child = 1; child < values.Length; child++)
+    {
+        nuint parent = (child - 1) / 2;
+        if (compare(&values[parent], &values[child]) < 0) return false;
+    }
+    return true;
+}
+
 public void Reverse<T>(Span<T> values)
 {
     if (values.Length < 2) return;

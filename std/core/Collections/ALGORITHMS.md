@@ -32,6 +32,10 @@ int main()
 | --- | --- |
 | `Swap<T>(ref T left, ref T right)` | Exchange two initialized mutable values by relocation; the same storage is a no-op. |
 | `Sort<T>(Span<T>, compare)` | In-place ascending heapsort; O(n log n) comparisons and constant extra storage. Not stable. |
+| `MakeMaxHeap<T>(Span<T>, compare)` | Build a borrowed max-heap in place in O(n) comparisons. |
+| `PushMaxHeap<T>(Span<T>, compare)` | Incorporate the final initialized element into an already heap-ordered prefix; O(log n). |
+| `PopMaxHeap<T>(Span<T>, compare)` | Place the maximum last and heap-order the preceding elements; length and ownership stay unchanged; O(log n). |
+| `IsMaxHeap<T>(Span<immutable(T)>, compare)` | Check parent/child ordering without mutation; O(n), stopping at the first violation. |
 | `NthElement<T>(Span<T>, nth, compare)` | Select a rank and partition around it without sorting either side. Optional `Collections/nth_element.gf`; see [rank selection](../../../docs/NTH_ELEMENT.md). |
 | `StableSort<T>(Span<T>, compare)` | Stable ordering with O(n log n) comparisons and two allocated index buffers. Optional `Collections/stable_sort.gf`; see [ownership and failure guarantees](OWNING_COLLECTIONS.md#stable-sorting). |
 | `NextPermutation<T>(Span<T>, compare)` | Advance lexicographically, or wrap to the first ordering and return false. Optional `Collections/span_permutations.gf`; see [arrangements](../../../docs/PERMUTATIONS.md). |
@@ -807,3 +811,58 @@ address. Predicate exceptions propagate without rollback: completed subranges ma
 already be rearranged, but every element remains initialized and owned. No element
 is destroyed by the algorithm. The existing unstable `Partition` remains the
 constant-extra-storage alternative when preserving both groups' order is unnecessary.
+
+## Borrowed max heaps
+
+The heap functions operate on initialized caller storage. A positive comparator
+result means its first argument ranks greater; the greatest element sits at the
+front. Reversing the comparator reverses that priority. Keep ordering consistent
+and do not change or invalidate the span through callback aliases.
+
+`MakeMaxHeap` accepts arbitrary input. `PushMaxHeap` requires the prefix excluding
+the final element to be a max-heap. `PopMaxHeap` requires the complete input to be
+a max-heap: it places the maximum in the last slot and leaves the preceding span
+heap-ordered. It neither removes that slot nor destroys its value. A caller can
+then shorten its view, pop the underlying vector, or replace the final element
+and push it again. Empty and singleton spans need no comparisons; `IsMaxHeap`
+returns true for both.
+
+```csharp
+using std::Memory; using std::Collections;
+
+int CompareHeapValues(immutable(int)* left, immutable(int)* right)
+{
+    if (*left < *right) return -1;
+    if (*left > *right) return 1;
+    return 0;
+}
+
+int main()
+{
+    int[5] data = [1, 9, 3, 2, 5];
+    Span<int> values = new(data, 5);
+    MakeMaxHeap<int>(values, CompareHeapValues);
+    if (data[0] != 9) return 1;
+    PopMaxHeap<int>(values, CompareHeapValues);
+    int maximum = data[4];
+    if (!IsMaxHeap<int>(values.Slice(0, 4).AsImmutable(), CompareHeapValues)) return 2;
+    data[4] = 7;
+    PushMaxHeap<int>(values, CompareHeapValues);
+    if (maximum != 9 || data[0] != 7 || values.Length != 5) return 3;
+    return 0;
+}
+```
+
+These functions reuse the relocation helpers used by `Sort`. They call no element
+copy constructor or destructor and need constant temporary storage, with no
+algorithm scratch allocation. Managed-reference bookkeeping and callback
+allocations follow their own contracts. Relocated values can change which
+contents occupy a borrowed slot; raw aliases are not retargeted.
+
+Comparator exceptions propagate. The modifying operations can leave a partial
+ordering, but every slot remains initialized and the same values remain owned.
+They do not promise rollback or heap order after failure. `IsMaxHeap` itself
+changes no elements; it checks children in increasing index order and stops at
+the first child that compares greater than its parent. Callback side effects
+are not rolled back. `PriorityQueue` owns a min-heap; these functions borrow a
+max-heap.

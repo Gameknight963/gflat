@@ -98,7 +98,7 @@ public sealed class ByteSearchTests
         SourceFile[] sources=[new("ByteSearch.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/ByteSearch.gf"))),new("main.gf",code)];
         string ir=Compiler.Emit(sources,options:new(){NoStdLib=true});
         foreach(string forbidden in new[]{"invoke ","personality","@__gflat_eh_","gflat$Memory$","@malloc","@free"})Assert.DoesNotContain(forbidden,ir);
-        Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
+        Assert.Equal(0,CompilerTestHelper.RunIr(ir,optimization,expectedExitCode:0).ExitCode);
     }
 }
 

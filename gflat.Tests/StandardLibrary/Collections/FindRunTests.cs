@@ -199,7 +199,8 @@ public sealed class FindRunTests
         var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("find-run.gf", program));
-        var result = CompilerTestHelper.Run(sources, optimization);
+        string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
+        var result = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
         Assert.True(result.ExitCode == 0, $"FindRun exit {result.ExitCode}: {result.StandardError}");
     }
 }

@@ -162,7 +162,7 @@ public sealed class ByteSearchAnyExceptTests
             (line.Contains("$IndexOfAnyExcept(") || line.Contains("$LastIndexOfAnyExcept("))).ToArray();
         Assert.Equal(2, methods.Length);
         Assert.All(methods, line => Assert.Contains("nounwind", line));
-        var result = CompilerTestHelper.RunIr(ir, optimization);
+        var result = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
         Assert.True(result.ExitCode == 0, $"Byte any-except exit {result.ExitCode}: {result.StandardError}\nProgram:\n{program}");
     }
 }

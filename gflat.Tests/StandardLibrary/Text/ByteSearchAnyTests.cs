@@ -145,7 +145,7 @@ public sealed class ByteSearchAnyTests
             }
             """,optimization);
 
-    private static async Task Run(string program,int optimization)
+    private static Task Run(string program,int optimization)
     {
         SourceFile[] sources=[
             new("ByteSearch.gf",File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core/Text/ByteSearch.gf"))),
@@ -158,15 +158,8 @@ public sealed class ByteSearchAnyTests
             (line.Contains("$IndexOfAny(")||line.Contains("$LastIndexOfAny("))).ToArray();
         Assert.Equal(2,definitions.Length);
         Assert.All(definitions,line=>Assert.Contains("nounwind",line));
-        string directory=Path.Combine(Path.GetTempPath(),"gflat-byte-search-any-"+Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        try{
-            string input=Path.Combine(directory,"any.ll"),output=Path.Combine(directory,"any.exe");
-            File.WriteAllText(input,ir);
-            var compiled=NativeToolchain.Compile(input,output,optimizationLevel:optimization);
-            Assert.True(compiled.ExitCode==0,compiled.StandardError);
-            var result=NativeToolchain.Run(output,[]);
-            Assert.True(result.ExitCode==0,$"Byte any exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
-        }finally{await TestDirectoryCleanup.DeleteAsync(directory);}
+        var result=CompilerTestHelper.RunIr(ir,optimization,expectedExitCode:0);
+        Assert.True(result.ExitCode==0,$"Byte any exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
+        return Task.CompletedTask;
     }
 }

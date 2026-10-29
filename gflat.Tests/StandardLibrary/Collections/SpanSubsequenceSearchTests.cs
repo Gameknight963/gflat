@@ -196,7 +196,8 @@ public sealed class SpanSubsequenceSearchTests
         var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("span-subsequence-search.gf", program));
-        var result = CompilerTestHelper.Run(sources, optimization);
+        string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
+        var result = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
         Assert.True(result.ExitCode == 0, $"Span subsequence search exit {result.ExitCode}: {result.StandardError}");
     }
 }

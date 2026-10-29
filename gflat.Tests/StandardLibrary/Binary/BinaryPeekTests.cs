@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public sealed class StandardBinaryPeekTests
+public sealed class BinaryPeekTests
 {
     [Theory]
     [InlineData(0)]

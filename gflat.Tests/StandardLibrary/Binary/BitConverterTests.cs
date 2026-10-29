@@ -1,8 +1,8 @@
 using System.Buffers.Binary;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public class StandardBitConverterTests
+public class BitConverterTests
 {
     [Theory]
     [InlineData(0)]

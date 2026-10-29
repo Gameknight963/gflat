@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Binary;
 
-public sealed class StandardVarIntTests
+public sealed class VarIntTests
 {
     private static byte[] Encode(ulong value)
     {

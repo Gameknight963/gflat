@@ -423,6 +423,8 @@ int SmokeBinaryAndQueries() {
             || batchPacket[2] != (byte)2 || batchPacket[3] != (byte)3) return 65;
         BinaryBufferReader batchInput = new(batchPacket, 4);
         if (!batchInput.TryReadBytes(&batchPacket[1], 3) || batchPacket[2] != (byte)1 || batchPacket[3] != (byte)2) return 66;
+        if (!batchOutput.TrySeek(0) || batchOutput.TrySeek(5) || batchOutput.Position != 0) return 301;
+        if (!batchInput.TrySeek(batchInput.Length) || batchInput.TrySeek(5) || batchInput.Remaining != 0) return 302;
         char[3] batchUrl; char[2] batchDecoded; nuint batchWritten = 0;
         char[2] batchBytes = [(char)251, (char)255];
         if (!Base64Url::TryEncode(batchBytes, 2, batchUrl, 3, ref batchWritten)

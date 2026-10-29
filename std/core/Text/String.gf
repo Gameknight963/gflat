@@ -402,6 +402,27 @@ struct String : ITextWriter, IFormattable, IStringConvertable, IHashable, IEquat
         this.Replace(oldText, oldCount, newText, newCount);
     }
 
+    /// Returns independent counted bytes repeated times, preserving embedded zeros.
+    /// Empty input or zero repetitions returns an empty value without allocation.
+    /// Length overflow or allocation failure leaves this String unchanged.
+    public immutable String Repeat(nuint times)
+    {
+        String result = new();
+        if (times == 0 || length == 0) return move result;
+        nuint maximum = (nuint)0 - (nuint)1;
+        if (times > (maximum - 1) / length) throw new Exception("String length overflow", 1);
+        nuint required = length * times;
+        result.Reserve(required);
+        result.AppendLiteral(data, length);
+        while (result.Length < required)
+        {
+            nuint count = required - result.Length;
+            if (count > result.Length) count = result.Length;
+            result.AppendLiteral(result.Data, count);
+        }
+        return move result;
+    }
+
     // Total width is measured in bytes; padding never truncates existing text.
     public void PadLeft(nuint width, char padding = ' ')
     {

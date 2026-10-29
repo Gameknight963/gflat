@@ -152,3 +152,39 @@ are explicitly `nothrow`. So are `ToCString()`, `Equals`, `CompareTo`,
 `Replace`. These operations allocate
 nothing under their input memory preconditions. Allocating operations, indexed
 access, ranges, and forward searches retain their existing exception contracts.
+
+
+## Repeated counted bytes
+
+`text.Repeat(times)` returns a new owning String containing `times` copies of
+all counted source bytes, including embedded zeros and arbitrary non-UTF-8 bytes.
+The source is unchanged. A zero count or empty source returns empty without
+allocation, even if the source retains capacity. One repetition is an independent
+copy; changing or destroying either nonempty owner does not affect the other.
+The result always has a trailing zero outside its counted Length.
+
+The method checks `Length * times <= nuint maximum - 1` before allocating result
+storage. Overflow throws `Exception`; allocation failure throws `BadAllocException`.
+Both preserve the source and an existing assignment target. Positive nonempty
+results use one allocation; bytes are filled in linear work by appending doubled
+prefixes into the reserved output, without intermediate String copies. This
+repeats bytes, not Unicode scalars, display columns or a C-string prefix.
+
+```csharp
+using std;
+using std::Text;
+
+int main()
+{
+    String source = s"a\0b";
+    String repeated = source.Repeat(3);
+    if (repeated.Length != 9 || repeated.Data[9] != '\0') return 1;
+    for (nuint i = 0; i < repeated.Length; i++)
+        if (repeated.Data[i] != source.Data[i % source.Length]) return 2;
+    repeated[0] = 'x';
+    if (source.Data[0] != 'a') return 3;
+    String empty = source.Repeat(0);
+    if (!empty.IsEmpty || empty.Data[0] != '\0') return 4;
+    return 0;
+}
+```

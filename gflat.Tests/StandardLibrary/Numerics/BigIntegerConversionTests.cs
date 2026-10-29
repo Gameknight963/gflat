@@ -108,6 +108,58 @@ public sealed class BigIntegerConversionTests
         }
     }
 
+    [Fact]
+    public async Task ManifestActionFailureRetainsItsOriginalExceptionAndFixture()
+    {
+        const string ir = "controlled fixture IR\n";
+        byte[] executable = [1, 2, 3, 4];
+        byte[] expectedManifest = [];
+        string? manifestPath = null;
+        var original = new InvalidOperationException("controlled manifest action failure");
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => WithManifest((directory, manifest) =>
+        {
+            manifestPath = manifest;
+            expectedManifest = File.ReadAllBytes(manifest);
+            File.WriteAllText(Path.Combine(directory, "main.ll"), ir);
+            File.WriteAllBytes(Path.Combine(directory, "main.exe"), executable);
+            throw original;
+        }));
+        string retained = Assert.IsType<string>(error.Data["BigIntegerConversionDirectory"]);
+        try
+        {
+            Assert.Same(original, error);
+            Assert.Contains("WithManifest", error.StackTrace);
+            Assert.True(Directory.Exists(retained));
+            Assert.NotNull(manifestPath);
+            Assert.Equal(retained, Path.GetDirectoryName(manifestPath));
+            Assert.NotEmpty(expectedManifest);
+            Assert.Equal(expectedManifest, File.ReadAllBytes(manifestPath!));
+            Assert.Equal(ir, File.ReadAllText(Path.Combine(retained, "main.ll")));
+            Assert.Equal(executable, File.ReadAllBytes(Path.Combine(retained, "main.exe")));
+        }
+        catch(Exception assertionError)
+        {
+            assertionError.Data["BigIntegerConversionDirectory"] = retained;
+            throw;
+        }
+        // This was an expected failure; remove its fixture after validating retention.
+        await TestDirectoryCleanup.DeleteAsync(retained);
+    }
+
+    [Fact]
+    public async Task SuccessfulManifestActionCleansItsFixture()
+    {
+        string? completed = null;
+        await WithManifest((directory, manifest) =>
+        {
+            completed = directory;
+            Assert.True(File.Exists(manifest));
+            Assert.True(new FileInfo(manifest).Length > 0);
+        });
+        Assert.NotNull(completed);
+        Assert.False(Directory.Exists(completed), $"Successful fixture was retained: {completed}");
+    }
+
     private static Integer[] Values()
     {
         var values=new SortedSet<Integer>{0,1,-1,int.MinValue,int.MaxValue,long.MinValue,long.MaxValue,ulong.MaxValue};
@@ -149,7 +201,8 @@ public sealed class BigIntegerConversionTests
             }
             action(directory,manifest);
         }
-        finally{await TestDirectoryCleanup.DeleteAsync(directory);}
+        catch(Exception error){error.Data["BigIntegerConversionDirectory"]=directory;throw;}
+        await TestDirectoryCleanup.DeleteAsync(directory);
     }
     private const string Counters="""
         using std; using std::Text; using std::IO; using std::Memory; using std::Numerics; using std::Collections;

@@ -131,3 +131,31 @@ numeric result is not a persistent-format contract. Like `Hashing::Bytes`, it is
 not cryptographic and is unsuitable for keys supplied by hostile users because
 collisions can be deliberately chosen. Hash equality alone does not establish
 key equality: the map also calls the matching equality method.
+
+
+## Counted case-insensitive substring search
+
+`Ascii::IndexOfIgnoreCase(data, length, pattern, count)` and
+`Ascii::LastIndexOfIgnoreCase(data, length, pattern, count)` return the first or
+last matching start index, or `length` when absent. An empty pattern returns zero
+for forward search and `length` for reverse search, the last insertion endpoint;
+reverse empty-pattern success therefore shares the absent sentinel. An oversized
+pattern returns `length`. Both preflights read neither pointer, including an
+empty data/pattern pair.
+
+Only ASCII letters fold, using the same comparison as `EqualsIgnoreCase`.
+Embedded NULs are ordinary counted bytes; nonletters and bytes 128 through 255
+must match exactly. This is not Unicode, locale-sensitive or C-string search.
+Both inputs may overlap. For a nonempty pattern that fits, provide live readable
+regions for the counted data and pattern and keep them stable during the call.
+
+Candidate starts run left to right or right to left respectively, comparing
+pattern bytes from left to right at each start. The implementation reuses the
+existing counted equality routine: worst-case work is O(length*count), with
+constant storage and no allocation, copies or mutation of the input buffers.
+Both functions are `nothrow` and add no source dependency to `ascii.gf`.
+
+```csharp
+nuint first = Ascii::IndexOfIgnoreCase(text, textLength, "error", 5);
+nuint last = Ascii::LastIndexOfIgnoreCase(text, textLength, "error", 5);
+```

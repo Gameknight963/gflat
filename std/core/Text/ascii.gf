@@ -106,3 +106,32 @@ int CompareIgnoreCase(readonly(char)* left, readonly(char)* right) nothrow
 
 bool EqualsIgnoreCase(readonly(char)* left, readonly(char)* right) nothrow
     => CompareIgnoreCase(left, right) == 0;
+
+// Counted ASCII-only substring search; embedded null bytes and non-ASCII bytes are compared as data.
+// Empty patterns return zero; oversized patterns return length, without reading pointers.
+// O(length*count) worst-case work and constant storage; neither input is modified.
+nuint IndexOfIgnoreCase(readonly(char)* data, nuint length,
+    readonly(char)* pattern, nuint count) nothrow
+{
+    if (count == 0) return 0;
+    if (count > length) return length;
+    nuint last = length - count;
+    for (nuint start = 0; start <= last; start++)
+        if (EqualsIgnoreCase(data + start, count, pattern, count)) return start;
+    return length;
+}
+
+// Last matching start; an empty pattern returns length as the last insertion endpoint.
+nuint LastIndexOfIgnoreCase(readonly(char)* data, nuint length,
+    readonly(char)* pattern, nuint count) nothrow
+{
+    if (count == 0) return length;
+    if (count > length) return length;
+    nuint start = length - count;
+    while (true)
+    {
+        if (EqualsIgnoreCase(data + start, count, pattern, count)) return start;
+        if (start == 0) return length;
+        start--;
+    }
+}

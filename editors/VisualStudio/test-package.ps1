@@ -257,6 +257,8 @@ int SmokeCore() {
     if (FindUnsortedIndex<int>(runValues.Slice(0, 3).AsImmutable(), Comparer<int>::Compare) != 3) return 9008;
     if (Ascii::IndexOfIgnoreCase("a\0Ba\0b", 6, "A\0B", 3) != 0) return 9009;
     if (Ascii::LastIndexOfIgnoreCase("a\0Ba\0b", 6, "A\0B", 3) != 3) return 9010;
+    if (!Includes<int>(runValues.Slice(0, 3).AsImmutable(), runValues.Slice(4, 2).AsImmutable())) return 9011;
+    if (Includes<int>(runValues.Slice(0, 3).AsImmutable(), runValues.Slice(4, 3).AsImmutable(), Comparer<int>::Compare)) return 9012;
     if (FindRun<int>(runValues.AsImmutable(), 3, &runKey) != 4) return 288;
     if (FindRun<int>(runValues.AsImmutable(), 2, &runKey,
         (immutable(int)* left, immutable(int)* right) => *left == *right) != 1) return 289;

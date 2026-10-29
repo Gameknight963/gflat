@@ -210,6 +210,22 @@ int main() {
         throw 'Packaged compiler exposed the placeholder signature of an unresolved array function group'
     }
 
+    $lineEndings = Join-Path $extracted 'line-endings.gf'
+    [IO.File]::WriteAllText($lineEndings, "// comment`rint main()=>0;`r")
+    & $compiler $lineEndings --no-stdlib --check
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler did not terminate a line comment at CR' }
+    [IO.File]::WriteAllText($lineEndings, "int main(){`r")
+    $oldLineEndingErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $lineEndingDiagnostics = & $compiler $lineEndings --no-stdlib --check 2>&1
+        $lineEndingExitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $oldLineEndingErrorAction }
+    if ($lineEndingExitCode -ne 1 -or ($lineEndingDiagnostics -join "`n") -notmatch '\(2,1\): error GF0005:') {
+        throw 'Packaged compiler did not locate EOF after a bare CR'
+    }
+
     $scopedCast = Join-Path $extracted 'imported-cast.gf'
     @'
 using PackageCast;

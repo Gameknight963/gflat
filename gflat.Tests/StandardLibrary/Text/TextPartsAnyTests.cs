@@ -1,9 +1,9 @@
 using gflat.CompileExceptions;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardTextPartsAnyTests
+public sealed class TextPartsAnyTests
 {
     [Theory]
     [InlineData(0)]

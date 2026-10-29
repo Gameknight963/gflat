@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardTextSplitOnceSpanTests
+public sealed class TextSplitOnceSpanTests
 {
     [Theory]
     [InlineData(0)]

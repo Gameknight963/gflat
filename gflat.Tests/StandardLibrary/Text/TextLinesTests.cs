@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardTextLinesTests
+public sealed class TextLinesTests
 {
     [Theory]
     [InlineData(0)]

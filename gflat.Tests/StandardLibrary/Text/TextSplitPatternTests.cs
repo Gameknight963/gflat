@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardTextSplitPatternTests
+public sealed class TextSplitPatternTests
 {
     [Theory]
     [InlineData(0)]

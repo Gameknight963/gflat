@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileBytesTests
+public sealed class FileBytesTests
 {
     private static string Literal(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 

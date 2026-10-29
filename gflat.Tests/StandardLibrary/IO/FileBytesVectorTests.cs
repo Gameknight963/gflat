@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileBytesVectorTests
+public sealed class FileBytesVectorTests
 {
     [Theory]
     [InlineData(0)]

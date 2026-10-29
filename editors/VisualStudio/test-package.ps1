@@ -271,9 +271,13 @@ bool SmokeUuidFill(byte* output, nuint count) {
     for (nuint i = 0; i < count; i++) output[i] = (byte)255;
     return true;
 }
+int SmokeIncomingNames(int entry, int t0) => entry + t0;
+void SmokeIncomingRef(ref int entry) { entry++; }
 Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
 Unique<int> SmokeFreshOwner(int value) => new Unique<int>(new* int(value));
 int SmokeCore() {
+    int incoming = 40; SmokeIncomingRef(ref incoming);
+    if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
     Uuid generated = UuidGenerator::CreateVersion4(SmokeUuidFill);
     if (generated.High != 0xffffffffffff4ffful || generated.Low != 0xbffffffffffffffful) return 9016;
     Uuid generatedAgain = new();

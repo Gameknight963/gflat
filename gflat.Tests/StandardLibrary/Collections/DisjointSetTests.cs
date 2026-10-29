@@ -1,9 +1,9 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
 // Compare partitions with independent reachability and inject real constructor failures.
-public sealed class StandardDisjointSetTests
+public sealed class DisjointSetTests
 {
     private const string Counters="""
         using std; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);

@@ -58,18 +58,30 @@ public sealed class SortLinesExampleTests
                 input.Write("final unterminated"u8);
                 cases.Add(input.ToArray());
             }
+            // Exact counted duplicates include embedded NUL and high bytes, plus distinct C-string prefixes/case.
+            cases.Add([97,0,98,10,97,0,98,10,97,10,97,0,10,97,0,10,255,128,0,10,255,128,0,10,255,128,10,65,10,97]);
             foreach (byte[] input in cases)
+            foreach (bool unique in new[] { false, true })
             {
-                var result = await Run(executable, input);
-                Assert.True(result.Code == 0, $"sort-lines exit {result.Code}: {result.Error}");
+                string[] arguments = unique ? ["--unique"] : [];
+                var result = await Run(executable, input, arguments);
+                Assert.True(result.Code == 0, $"sort-lines unique={unique} exit {result.Code}: {result.Error}");
                 Assert.Empty(result.Error);
-                Assert.Equal(Expected(input), result.Output);
+                Assert.Equal(Expected(input, unique), result.Output);
+            }
+            foreach (string[] arguments in new string[][] { ["--unknown"], ["--unique", "extra"], ["--unique", "--unique"] })
+            {
+                var result = await Run(executable, [], arguments);
+                Assert.Equal(2, result.Code);
+                Assert.Empty(result.Output);
+                Assert.Equal("Usage: sort-lines [--unique]", result.Error.TrimEnd('\r', '\n'));
             }
         }
-        finally { Directory.Delete(directory, true); }
+        catch (Exception error) { error.Data["SortLinesExampleDirectory"] = directory; throw; }
+        await TestDirectoryCleanup.DeleteAsync(directory);
     }
 
-    private static byte[] Expected(byte[] input)
+    private static byte[] Expected(byte[] input, bool unique = false)
     {
         if (OperatingSystem.IsWindows())
         {
@@ -96,17 +108,20 @@ public sealed class SortLinesExampleTests
         lines.Sort((left, right) => left.AsSpan().SequenceCompareTo(right));
         byte[] newline = Encoding.ASCII.GetBytes(Environment.NewLine);
         using var output = new MemoryStream();
-        foreach (byte[] line in lines) { output.Write(line);output.Write(newline); }
+        IEnumerable<byte[]> selected = lines;
+        if (unique) selected = lines.GroupBy(line => Convert.ToHexString(line), StringComparer.Ordinal).Select(group => group.First());
+        foreach (byte[] line in selected) { output.Write(line);output.Write(newline); }
         return output.ToArray();
     }
 
-    private static async Task<(int Code, byte[] Output, string Error)> Run(string executable, byte[] input)
+    private static async Task<(int Code, byte[] Output, string Error)> Run(string executable, byte[] input, params string[] arguments)
     {
         using var process = new Process { StartInfo = new ProcessStartInfo(executable)
         {
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true,
             RedirectStandardOutput = true, RedirectStandardError = true
         } };
+        foreach (string argument in arguments) process.StartInfo.ArgumentList.Add(argument);
         Assert.True(process.Start());
         using var output = new MemoryStream();
         Task outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
@@ -114,7 +129,7 @@ public sealed class SortLinesExampleTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         try
         {
-            await process.StandardInput.BaseStream.WriteAsync(input, timeout.Token);
+            if (input.Length != 0) await process.StandardInput.BaseStream.WriteAsync(input, timeout.Token);
             process.StandardInput.Close();
             await process.WaitForExitAsync(timeout.Token);
         }

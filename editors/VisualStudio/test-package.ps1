@@ -381,6 +381,12 @@ int SmokeCore() {
     Vector<String> fragments = new(); fragments.Add(s"left"); fragments.Add(s"right");
     String joined = fragments.AsImmutable().Join(",");
     if (!CString::Equals(joined.Data, "left,right")) return 52;
+    char[3] repeatPatternBytes = ['a', (char)0, 'b'];
+    String repeatSourceText = String::From(repeatPatternBytes, 3);
+    String repeatResultText = repeatSourceText.Repeat(3);
+    if (repeatResultText.Length != 9 || repeatResultText.Data[4] != (char)0 || repeatResultText.Data[8] != 'b' || repeatResultText.Data[9] != (char)0) return 9001;
+    repeatResultText[0] = 'z';
+    if (repeatSourceText.Data[0] != 'a') return 9002;
     Date parsedDate = Date::Parse("2024-02-29");
     if (parsedDate.DayNumber != leapDay.DayNumber) return 53;
     ushort[3] utf16Input = [(ushort)65, (ushort)0, (ushort)233];

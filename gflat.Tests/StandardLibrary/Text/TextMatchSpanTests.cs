@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardTextMatchSpanTests
+public sealed class TextMatchSpanTests
 {
     [Theory]
     [InlineData(0)]

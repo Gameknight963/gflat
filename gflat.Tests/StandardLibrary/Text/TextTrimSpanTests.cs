@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardTextTrimSpanTests
+public sealed class TextTrimSpanTests
 {
     [Theory]
     [InlineData(0)]

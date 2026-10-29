@@ -1,9 +1,9 @@
 using Integer=System.Numerics.BigInteger;
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Net;
 
-public sealed class StandardIpNetworkRelationsTests
+public sealed class IpNetworkRelationsTests
 {
     private sealed record Network(byte[] Bytes,int Prefix)
     {

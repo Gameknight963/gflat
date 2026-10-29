@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Net;
 
-public sealed class StandardIpNetworkTests
+public sealed class IpNetworkTests
 {
     private const string Counters="""
         using std; using std::Text; using std::IO; using std::Net; using std::Memory; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);

@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Net;
 
-public sealed class StandardIpAddressTests
+public sealed class IpAddressTests
 {
     [Theory]
     [InlineData(0)]

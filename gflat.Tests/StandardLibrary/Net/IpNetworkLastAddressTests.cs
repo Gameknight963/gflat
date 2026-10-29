@@ -1,9 +1,9 @@
 using System.Net;
 using System.Numerics;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Net;
 
-public sealed class StandardIpNetworkLastAddressTests
+public sealed class IpNetworkLastAddressTests
 {
     private const string Allocator="""
         using std; using std::Net;extern void*? malloc(nuint count);extern void free(void* storage);int attempts=0;bool deny=false;

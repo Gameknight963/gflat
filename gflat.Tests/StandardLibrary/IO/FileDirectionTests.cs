@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.IO;
 
-public sealed class StandardFileDirectionTests
+public sealed class FileDirectionTests
 {
     [Theory]
     [InlineData(0)]

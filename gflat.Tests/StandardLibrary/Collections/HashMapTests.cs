@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public class StandardHashMapTests
+public class HashMapTests
 {
     private static IEnumerable<SourceFile> Sources(string code) =>
         new[] { "IHashable.gf", "IEquatable.gf", "IComparable.gf", "Hashing/primitive_hashing.gf", "Collections/HashMap.gf", "Collections/HashSet.gf", "IStringConvertable.gf", "Text/String.gf", "Text/ByteSearch.gf" }

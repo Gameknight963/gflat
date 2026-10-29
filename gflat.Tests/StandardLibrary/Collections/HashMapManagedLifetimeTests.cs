@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public class StandardHashMapManagedLifetimeTests
+public class HashMapManagedLifetimeTests
 {
     [Fact]
     public void GrowthAndTombstoneRemovalKeepOnlyLiveManagedValuesReachable()

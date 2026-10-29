@@ -83,11 +83,7 @@ public sealed class SpanOrderTests
             "IStringConvertable.gf","IHashable.gf","IEquatable.gf","IComparable.gf","Hashing/primitive_hashing.gf"];
         var sources=files.Select(file=>new SourceFile(file,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",file))))
             .Append(new SourceFile("order.gf",program));
-        string directory=Path.Combine(Path.GetTempPath(),"gflat_span_order_"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
-        try{
-            string ir=Path.Combine(directory,"order.ll"),executable=Path.Combine(directory,"order.exe");File.WriteAllText(ir,Compiler.Emit(sources,options:new(){InternalizeFunctions=true}));
-            var compiled=NativeToolchain.Compile(ir,executable,optimizationLevel:optimization);Assert.True(compiled.ExitCode==0,compiled.StandardError);
-            var result=NativeToolchain.Run(executable,[]);Assert.True(result.ExitCode==0,$"Span order exit {result.ExitCode}: {result.StandardOutput} {result.StandardError}");
-        }finally{Directory.Delete(directory,true);}
+        string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 }

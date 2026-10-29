@@ -129,6 +129,7 @@ public sealed class SpanSearchTests
     {
         IEnumerable<SourceFile> sources = Sources(code);
         if(extra != null) sources = sources.Append(new SourceFile(extra,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std/core",extra))));
-        Assert.Equal(0,CompilerTestHelper.Run(sources,optimization).ExitCode);
+        string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 }

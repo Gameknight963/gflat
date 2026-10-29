@@ -1,6 +1,6 @@
-﻿namespace gflat.Tests;
+﻿namespace gflat.Tests.Std.Text;
 
-public sealed class StandardBufferWriterTryTests
+public sealed class BufferWriterTryTests
 {
     private static void Run(string program, int optimization)
     {

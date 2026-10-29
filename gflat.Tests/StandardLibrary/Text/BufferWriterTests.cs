@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardBufferWriterTests
+public sealed class BufferWriterTests
 {
     [Fact]
     public void BufferMetadataAndUnboundedRandomDrawsDoNotIntroduceExceptionBoundaries()

@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardWriterRepeatTests
+public sealed class WriterRepeatTests
 {
     private const string Probe = """
         using std; using std::Text;

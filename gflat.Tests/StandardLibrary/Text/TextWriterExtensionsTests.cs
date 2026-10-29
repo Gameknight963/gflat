@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardTextWriterExtensionsTests
+public sealed class TextWriterExtensionsTests
 {
     private static ExecutionResult Run(string program, string? path = null, bool strings = false, bool console = false)
     {

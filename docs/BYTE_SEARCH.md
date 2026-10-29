@@ -108,3 +108,40 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Searching outside a byte set
+
+`ByteSearch::IndexOfAnyExcept(data, length, pattern, count)` returns the first
+byte offset whose data byte is absent from the counted set.
+`LastIndexOfAnyExcept` returns the last such offset. No match returns `length`.
+They search set membership, not a substring; duplicate members and set order
+have no effect, and all byte values including NUL participate.
+
+Zero data length returns Length before reading either pointer. With a positive
+length and an empty set, every position qualifies: the first method returns
+zero and the last returns `length - 1`, without reading either pointer. These
+preflights require no readable bytes through either pointer; the normal
+nonnullable pointer type rules still apply. Otherwise, both counted regions
+must remain readable and stable. They may overlap. Neither is written to, and
+no pointer is retained.
+
+The methods reuse the existing four-word, 32-byte membership mask and make no
+library allocation. Both are `nothrow`, with O(`length + count`) worst-case work.
+Existing Any methods keep their old empty-set result of Length; substring
+searches and their Two-Way implementation are unchanged. No String or Span
+convenience overload is added.
+
+```csharp
+using std::Text;
+
+int main()
+{
+    byte[6] data = [7, 0, 255, 3, 255, 8];
+    byte[3] members = [255, 0, 255];
+    if (ByteSearch::IndexOfAnyExcept(data, 6, members, 3) != 0) return 1;
+    if (ByteSearch::LastIndexOfAnyExcept(data, 6, members, 3) != 5) return 2;
+    if (ByteSearch::IndexOfAnyExcept(data, 6, members, 0) != 0) return 3;
+    if (ByteSearch::LastIndexOfAnyExcept(data, 6, members, 0) != 5) return 4;
+    return 0;
+}
+```

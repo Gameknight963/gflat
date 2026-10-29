@@ -45,16 +45,32 @@ public static class ByteSearch
     // Match any member of a counted byte set, rather than a substring.
     public static nuint IndexOfAny(readonly(byte)* data, nuint length,
         readonly(byte)* pattern, nuint count) nothrow
-        => SearchAny(data, length, pattern, count, false);
+        => SearchAny(data, length, pattern, count, false, false);
 
     public static nuint LastIndexOfAny(readonly(byte)* data, nuint length,
         readonly(byte)* pattern, nuint count) nothrow
-        => SearchAny(data, length, pattern, count, true);
+        => SearchAny(data, length, pattern, count, true, false);
+
+    /// Finds the first byte outside the counted set; an empty set selects zero without pointer reads.
+    public static nuint IndexOfAnyExcept(readonly(byte)* data, nuint length,
+        readonly(byte)* pattern, nuint count) nothrow
+        => SearchAny(data, length, pattern, count, false, true);
+
+    /// Finds the last byte outside the counted set; empty data always returns Length.
+    public static nuint LastIndexOfAnyExcept(readonly(byte)* data, nuint length,
+        readonly(byte)* pattern, nuint count) nothrow
+        => SearchAny(data, length, pattern, count, true, true);
 
     private static nuint SearchAny(readonly(byte)* data, nuint length,
-        readonly(byte)* pattern, nuint count, bool reverse) nothrow
+        readonly(byte)* pattern, nuint count, bool reverse, bool invert) nothrow
     {
-        if (length == 0 || count == 0) return length;
+        if (length == 0) return length;
+        if (count == 0)
+        {
+            if (!invert) return length;
+            if (reverse) return length - 1;
+            return 0;
+        }
         ulong[4] membership = [0ul, 0ul, 0ul, 0ul];
         for (nuint i = 0; i < count; i++)
         {
@@ -69,7 +85,8 @@ public static class ByteSearch
             {
                 end--;
                 uint value = (uint)data[end];
-                if ((membership[(nuint)(value / 64u)] & (1ul << (int)(value % 64u))) != 0ul)
+                bool member = (membership[(nuint)(value / 64u)] & (1ul << (int)(value % 64u))) != 0ul;
+                if (member != invert)
                     return end;
             }
         }
@@ -78,7 +95,8 @@ public static class ByteSearch
             for (nuint i = 0; i < length; i++)
             {
                 uint value = (uint)data[i];
-                if ((membership[(nuint)(value / 64u)] & (1ul << (int)(value % 64u))) != 0ul)
+                bool member = (membership[(nuint)(value / 64u)] & (1ul << (int)(value % 64u))) != 0ul;
+                if (member != invert)
                     return i;
             }
         }

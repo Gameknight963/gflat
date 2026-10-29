@@ -2552,7 +2552,7 @@ namespace gflat
                             }
                             if (!IsAssignable(fieldType, initType, field.Initializer))
                             {
-                                throw new TypeCheckException($"Cannot assign expression of type '{DisplayTypeName(initType)}' to field '{field.Name}' of type '{DisplayTypeName(fieldType)}'", field.Initializer.Span);
+                                throw new TypeCheckException($"Cannot assign expression of type '{DisplayExpressionTypeName(field.Initializer, initType)}' to field '{field.Name}' of type '{DisplayTypeName(fieldType)}'", field.Initializer.Span);
                             }
                         }
                         ValidateArrayValueShape(fieldType, field.Line);
@@ -2750,7 +2750,7 @@ namespace gflat
                             }
                             if (!IsAssignable(fieldType, initType, field.Initializer))
                             {
-                                throw new TypeCheckException($"Cannot assign expression of type '{DisplayTypeName(initType)}' to field '{field.Name}' of type '{DisplayTypeName(fieldType)}'", field.Initializer.Span);
+                                throw new TypeCheckException($"Cannot assign expression of type '{DisplayExpressionTypeName(field.Initializer, initType)}' to field '{field.Name}' of type '{DisplayTypeName(fieldType)}'", field.Initializer.Span);
                             }
                         }
                         ValidateArrayValueShape(fieldType, field.Line);
@@ -2967,7 +2967,7 @@ namespace gflat
                 fieldType = InferArrayStorageType(fieldType, node.Initializer, initType);
                 if (!IsAssignable(fieldType, initType, node.Initializer))
                 {
-                    throw new TypeCheckException($"Cannot assign expression of type '{DisplayTypeName(initType)}' to field '{node.Name}' of type '{DisplayTypeName(fieldType)}'", node.Initializer.Span);
+                    throw new TypeCheckException($"Cannot assign expression of type '{DisplayExpressionTypeName(node.Initializer, initType)}' to field '{node.Name}' of type '{DisplayTypeName(fieldType)}'", node.Initializer.Span);
                 }
             }
             else if (node.IsConst)
@@ -3136,7 +3136,7 @@ namespace gflat
 
                     if (matches.Count == 0)
                     {
-                        string argTypes = string.Join(", ", node.BaseArguments.Select(a => DisplayTypeName(GetType(a))));
+                        string argTypes = string.Join(", ", node.BaseArguments.Select(a => DisplayExpressionTypeName(a, GetType(a))));
                         throw new TypeCheckException($"No matching base constructor found for '{DisplayName(baseClass.Name)}' with arguments ({argTypes})", node.Line);
                     }
                     var selectedBase = SelectBestOverload(matches, c => c.Parameters, node.BaseArguments, baseClass.Name, node.Line, useDeclaredTypes: false);
@@ -3329,7 +3329,7 @@ namespace gflat
                     }
                     if (!IsAssignable(retType, valType, _ownedReturns.ContainsKey(node) ? null : node.Value))
                     {
-                        throw new TypeCheckException($"Cannot return '{DisplayTypeName(valType)}' from function returning '{DisplayTypeName(retType)}'", node.Line);
+                        throw new TypeCheckException($"Cannot return '{DisplayExpressionTypeName(node.Value, valType)}' from function returning '{DisplayTypeName(retType)}'", node.Line);
                     }
                 }
                 else if (_currentFunction is OperatorDeclaration operation)
@@ -3337,7 +3337,7 @@ namespace gflat
                     TypeExpression result = ResolveAlias(operation.ReturnType);
                     TypeExpression value = GetType(node.Value);
                     if (!IsAssignable(result, value, node.Value))
-                        throw new TypeCheckException($"Cannot return '{DisplayTypeName(value)}' from operator returning '{DisplayTypeName(result)}'", node.Value.Span);
+                        throw new TypeCheckException($"Cannot return '{DisplayExpressionTypeName(node.Value, value)}' from operator returning '{DisplayTypeName(result)}'", node.Value.Span);
                 }
                 else if (_currentFunction is ConstructorDeclaration or DestructorDeclaration)
                 {
@@ -3565,7 +3565,7 @@ namespace gflat
 
                 if (!IsAssignable(varType, initType, node.Initializer))
                 {
-                    _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Initializer.Span, DisplayTypeName(initType), DisplayTypeName(varType));
+                    _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Initializer.Span, DisplayExpressionTypeName(node.Initializer, initType), DisplayTypeName(varType));
                 }
             }
             else if (node.IsConst)
@@ -4393,7 +4393,7 @@ namespace gflat
 
             if (!IsAssignable(targetType, valueType, node.Value))
             {
-                _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Value.Span, DisplayTypeName(valueType), DisplayTypeName(targetType));
+                _diagnostics.Report(DiagnosticRules.GF1001_TypeMismatch, node.Value.Span, DisplayExpressionTypeName(node.Value, valueType), DisplayTypeName(targetType));
                 RecordType(node, Error);
                 return;
             }
@@ -4569,7 +4569,7 @@ namespace gflat
                         TypeExpression paramType = ifaceMethod.Parameters[i].Type;
                         if (!IsAssignable(paramType, argType, node.Arguments[i]))
                             throw new TypeCheckException(
-                                $"Argument {i + 1} of '{DisplayName(namedIface.Name)}.{memberAccess.Member}': cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
+                                $"Argument {i + 1} of '{DisplayName(namedIface.Name)}.{memberAccess.Member}': cannot pass '{DisplayExpressionTypeName(node.Arguments[i], argType)}' as '{DisplayTypeName(paramType)}'",
                                 node.Arguments[i].Span);
 
                         if (ifaceMethod.Parameters[i].IsConst)
@@ -4769,7 +4769,7 @@ namespace gflat
                     {
                         DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                         throw new TypeCheckException(
-                            $"Argument {i + 1} of '{funcName}': cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
+                            $"Argument {i + 1} of '{funcName}': cannot pass '{DisplayExpressionTypeName(node.Arguments[i], argType)}' as '{DisplayTypeName(paramType)}'",
                             node.Arguments[i].Span);
                     }
 
@@ -4832,7 +4832,7 @@ namespace gflat
                     DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                     string callable = method.PropertyName == null ? $"'{funcName}'" : DescribeSourceCallable(method);
                     throw new TypeCheckException(
-                        $"Argument {i + 1} of {callable}: cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
+                        $"Argument {i + 1} of {callable}: cannot pass '{DisplayExpressionTypeName(node.Arguments[i], argType)}' as '{DisplayTypeName(paramType)}'",
                         node.Arguments[i].Span);
                 }
 
@@ -4880,7 +4880,7 @@ namespace gflat
                 {
                     DiagnoseAmbiguousFunctionValue(node.Arguments[i], paramType);
                     throw new TypeCheckException(
-                        $"Argument {i + 1} of indirect call: cannot pass '{DisplayTypeName(argType)}' as '{DisplayTypeName(paramType)}'",
+                        $"Argument {i + 1} of indirect call: cannot pass '{DisplayExpressionTypeName(node.Arguments[i], argType)}' as '{DisplayTypeName(paramType)}'",
                         node.Arguments[i].Span);
                 }
             }
@@ -5287,7 +5287,7 @@ namespace gflat
                                 CheckNullableArgument(arg);
 
                         }
-                        string argTypes = string.Join(", ", node.Arguments.Select(a => DisplayTypeName(GetType(a))));
+                        string argTypes = string.Join(", ", node.Arguments.Select(a => DisplayExpressionTypeName(a, GetType(a))));
                         throw new TypeCheckException($"No matching constructor found for '{DisplayName(cInfo.Name)}' with arguments ({argTypes})", node.Line);
                     }
                     matchedCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, cInfo.Name, node.Line, useDeclaredTypes: false);
@@ -5386,7 +5386,7 @@ namespace gflat
                             CheckNullableArgument(arg);
 
                     }
-                    string argTypes = string.Join(", ", node.Arguments.Select(a => DisplayTypeName(GetType(a))));
+                    string argTypes = string.Join(", ", node.Arguments.Select(a => DisplayExpressionTypeName(a, GetType(a))));
                     throw new TypeCheckException($"No matching constructor found for '{DisplayName(sInfo.Name)}' with arguments ({argTypes})", node.Line);
                 }
                 matchedStructCtor = SelectBestOverload(matches, c => c.Parameters, node.Arguments, sInfo.Name, node.Line, useDeclaredTypes: false);

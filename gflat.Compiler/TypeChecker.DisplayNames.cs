@@ -17,6 +17,10 @@ public partial class TypeChecker
     }
 
     public string DisplayTypeName(TypeExpression type) => DisplayTypeName(type, false);
+    // An unresolved function group has no selected signature to display.
+    private string DisplayExpressionTypeName(AstNode expression, TypeExpression type)
+        => IsOverloadedFunctionValue(expression) && !selectedFunctionValues.Contains(expression)
+            ? "function group" : DisplayTypeName(type);
 
     private string DisplayTypeName(TypeExpression type, bool inheritedReadOnly)
     {

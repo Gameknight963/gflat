@@ -25,7 +25,7 @@ namespace components. Both roots can contribute to the same namespace.
 | `std::Numerics` | Scalar math, arbitrary-precision numbers, bit operations, seeded randomness |
 | `std::Memory` | Spans, owning pointers, arenas, memory operations |
 | `std::IO` | Files, paths, IO exceptions |
-| `std::Binary` | Binary cursors, byte-order operations, variable-length integers |
+| `std::Binary` | Binary cursors, byte-order operations, bit fields, variable-length integers |
 | `std::Encoding` | Base32, Base64, hexadecimal, percent encoding |
 | `std::Json`, `std::Csv` | Format readers, writers, helpers, and exceptions |
 | `std::Time` | Dates, times, durations, clocks, timers |
@@ -148,6 +148,7 @@ implementation lives in `libc`.
 | Bits | `BitOperations` | [Counts, rotations, power-of-two rounding, and byte reversal](../docs/BIT_OPERATIONS.md) |
 | Floating representations | `BitConverter` | [Exact floating-point bit conversions](../docs/BIT_CONVERTER.md) |
 | Binary scalars | `BinaryPrimitives` | [Checked byte-order integer and IEEE floating-point reads and writes](../docs/BINARY_PRIMITIVES.md) |
+| Bit fields | `BitPrimitives`, `BitOrder` | [Borrowed-buffer fields with explicit bit order](../docs/BIT_FIELDS.md) |
 | Variable-length integers | `VarInt` | [Canonical unsigned base-128 encoding and signed ZigZag transforms](../docs/VARINT.md) |
 | Byte searches | `ByteSearch` | [Counted substring and byte-set searches](../docs/BYTE_SEARCH.md) |
 | Byte wildcards | `MatchesWildcard` | [Whole-input counted wildcard matching with bounded and C-string adapters](../docs/WILDCARD_MATCHING.md) |

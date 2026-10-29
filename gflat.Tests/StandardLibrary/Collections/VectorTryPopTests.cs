@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardVectorTryPopTests
+public sealed class VectorTryPopTests
 {
     [Theory]
     [InlineData(0)]

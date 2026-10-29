@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardVectorShrinkTests
+public sealed class VectorShrinkTests
 {
     private static IEnumerable<SourceFile> Sources(string program, bool managed = false)
     {

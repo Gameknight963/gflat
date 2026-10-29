@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public class StandardVectorTests
+public class VectorTests
 {
     [Fact]
     public void FailedReservePreservesElementsAndUsesEmergencyReserve()

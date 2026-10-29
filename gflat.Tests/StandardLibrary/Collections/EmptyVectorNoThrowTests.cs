@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardEmptyVectorNoThrowTests
+public sealed class EmptyVectorNoThrowTests
 {
     [Theory]
     [InlineData(0)]

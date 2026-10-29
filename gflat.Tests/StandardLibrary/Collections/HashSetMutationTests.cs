@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardHashSetMutationTests
+public sealed class HashSetMutationTests
 {
     private const string Owners="""
         using std; using std::Text; using std::Memory; using std::Numerics; using std::Collections;

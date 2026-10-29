@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardHashSetRelationTests
+public sealed class HashSetRelationTests
 {
     private const string Prelude = """
         using std; using std::Text; using std::Collections;

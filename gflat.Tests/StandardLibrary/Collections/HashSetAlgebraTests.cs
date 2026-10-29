@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardHashSetAlgebraTests
+public sealed class HashSetAlgebraTests
 {
     [Theory]
     [InlineData(0)]

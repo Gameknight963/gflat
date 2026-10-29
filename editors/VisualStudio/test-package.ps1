@@ -44,6 +44,9 @@ try {
             throw "Packaged SDK is missing the $platform UTC clock"
         }
     }
+    if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Sdk/std/core/Collections/span_find_run.gf'))) {
+        throw 'Packaged SDK is missing the borrowed span run search'
+    }
     $buildInfo = Get-Content -Raw -LiteralPath (Join-Path $extracted 'BUILD-INFO.json') | ConvertFrom-Json
     foreach ($source in @('SystemRandom.gf', 'WindowsRandom.gfproj', 'README.md')) {
         if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/libraries/platform/windows-random/$source"))) {
@@ -246,6 +249,11 @@ bool SmokeRangeFailure(int value) { throw new Exception("Range predicate evaluat
 Unique<int> SmokeOwnedFold(Unique<int> total, int value) { total.Value += value; return move total; }
 Unique<int> SmokeFreshOwner(int value) => new Unique<int>(new* int(value));
 int SmokeCore() {
+    int[7] runData = [0, 5, 5, 1, 5, 5, 5];
+    Span<int> runValues = new(runData, 7); int runKey = 5;
+    if (FindRun<int>(runValues.AsImmutable(), 3, &runKey) != 4) return 288;
+    if (FindRun<int>(runValues.AsImmutable(), 2, &runKey,
+        (immutable(int)* left, immutable(int)* right) => *left == *right) != 1) return 289;
     HashMap<String, int> map = new();
     map.Add(s"answer", 42);
     String key = s"answer";

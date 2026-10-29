@@ -179,6 +179,23 @@ int main() {
         throw 'Packaged compiler did not locate the reserved local name after its type'
     }
 
+    $callbackQualifiers = Join-Path $extracted 'callback-qualifiers.gf'
+    $callbackSource = 'void F(readonly(int) value){} void F(long value){} int main(){void(readonly(int))* callback=F;callback(42);return 0;}'
+    [IO.File]::WriteAllText($callbackQualifiers, $callbackSource)
+    & $compiler $callbackQualifiers --no-stdlib --check
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler rejected an exact protected callback signature' }
+    [IO.File]::WriteAllText($callbackQualifiers, $callbackSource.Replace('void(readonly(int))* callback', 'void(int)* callback'))
+    $oldCallbackErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $callbackDiagnostics = & $compiler $callbackQualifiers --no-stdlib --check 2>&1
+        $callbackExitCode = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $oldCallbackErrorAction }
+    if ($callbackExitCode -ne 1 -or ($callbackDiagnostics -join "`n") -notmatch 'error GF1001: Cannot assign ') {
+        throw 'Packaged compiler discarded callback qualifiers during overload selection'
+    }
+
     $scopedCast = Join-Path $extracted 'imported-cast.gf'
     @'
 using PackageCast;

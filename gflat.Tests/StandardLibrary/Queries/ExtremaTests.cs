@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Queries;
 
-public sealed class StandardQueryExtremaTests
+public sealed class ExtremaTests
 {
     private const string Allocator="""
         using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);

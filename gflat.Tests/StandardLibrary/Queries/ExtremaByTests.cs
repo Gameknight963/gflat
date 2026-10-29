@@ -1,7 +1,7 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Queries;
 
 // Selectors use the established ordinary by-value T contract.
-public sealed class StandardQueryExtremaByTests
+public sealed class ExtremaByTests
 {
     private const string Allocator="""
         using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);

@@ -639,3 +639,53 @@ int main()
     return 0;
 }
 ```
+
+## Contiguous pattern search
+
+`IndexOf<T>(values, pattern, equal)` returns the first start index where every
+pattern element matches the corresponding source element. A missing pattern
+returns `values.Length`; an empty pattern returns zero. A pattern longer than
+the source returns Length. Both preflight returns make no comparisons.
+Both spans must remain valid and their backing storage alive and stable; they
+may be identical or overlap.
+
+Candidate starts are tried from left to right. Within a candidate, offsets are
+compared from left to right, source address first and pattern address second,
+until the first mismatch or a complete match. This permits asymmetric callbacks;
+no equality symmetry is assumed. The straightforward search uses O(N*M)
+comparisons in the worst case and constant auxiliary storage. The library
+copies no elements, allocates nothing and mutates neither input. Callback
+exceptions propagate unchanged; callback allocations and external side effects
+are not rolled back.
+
+The explicit overload lives in `span_subsequence_search.gf` with Span's normal
+dependencies. The optional IEquatable default in `default_equality.gf` uses
+`EqualityComparer<T>::Equals`; selective users of that new overload must also
+include the new source and IEquatable/EqualityComparer dependencies. Unused
+generic overloads do not require the new source for existing equality calls.
+The existing `IndexOf(values, keyPointer)` overload keeps its single-element
+meaning; pass a span to request a contiguous pattern. This is element matching,
+without string encoding or grapheme semantics.
+
+```csharp
+using std;
+using std::Memory;
+using std::Collections;
+
+bool EqualInt(immutable(int)* element, immutable(int)* pattern) => *element == *pattern;
+
+int main()
+{
+    int[7] data = [1, 2, 1, 2, 3, 2, 3];
+    int[3] sought = [1, 2, 3];
+    Span<int> values = new(data, 7);
+    Span<int> pattern = new(sought, 3);
+    if (IndexOf<int>(values.AsImmutable(), pattern.AsImmutable()) != 2) return 1;
+    if (IndexOf<int>(values.AsImmutable(), values.Slice(3, 2).AsImmutable(), EqualInt) != 3) return 2;
+    int key = 2;
+    if (IndexOf<int>(values.AsImmutable(), &key) != 1) return 3;
+    Span<immutable(int)> empty = new();
+    if (IndexOf<int>(values.AsImmutable(), empty) != 0) return 4;
+    return 0;
+}
+```

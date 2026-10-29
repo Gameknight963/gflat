@@ -28,3 +28,6 @@ public bool Contains<T : IEquatable<T>>(Span<immutable(T)> values, immutable(T)*
 
 public nuint FindRun<T : IEquatable<T>>(Span<immutable(T)> values, nuint count, immutable(T)* key)
     => std::Collections::FindRun<T>(values, count, key, EqualityComparer<T>::Equals);
+
+public nuint IndexOf<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> pattern)
+    => std::Collections::IndexOf<T>(values, pattern, EqualityComparer<T>::Equals);

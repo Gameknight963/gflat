@@ -193,7 +193,7 @@ int main() {
         $callbackExitCode = $LASTEXITCODE
     }
     finally { $ErrorActionPreference = $oldCallbackErrorAction }
-    if ($callbackExitCode -ne 1 -or ($callbackDiagnostics -join "`n") -notmatch 'error GF1001: Cannot assign ') {
+    if ($callbackExitCode -ne 1 -or ($callbackDiagnostics -join "`n") -notmatch "error GF1001: Cannot assign 'function group' to 'void\(int\)\*'") {
         throw 'Packaged compiler discarded callback qualifiers during overload selection'
     }
 

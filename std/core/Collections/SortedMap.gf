@@ -60,6 +60,15 @@ struct SortedMap<K, V>
     public immutable bool ContainsKey(immutable(K)* key)
         => this.Matches(this.LowerBound(key), key);
 
+    /// Borrows the stored comparison-equivalent key, or null; no owner copies or library allocation.
+    public immutable immutable(K)*? FindKey(immutable(K)* key)
+    {
+        nuint index = this.LowerBound(key);
+        if (!this.Matches(index, key)) return null;
+        Span<immutable(Entry)> items = storage.AsImmutable();
+        return items[index].Key;
+    }
+
     public V*? Find(immutable(K)* key)
     {
         nuint index = this.LowerBound(key);

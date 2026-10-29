@@ -155,3 +155,17 @@ destroying the previous value's resources, so do not retain derived resource
 borrows across replacement. Keep the owning map alive throughout use of the span.
 No additional std source files are required beyond the ordinary SortedMap/Span
 dependencies.
+
+
+## Borrowing the stored equivalent key
+
+`FindKey(immutable(K)* query)` returns `immutable(K)*?` borrowing the actual
+comparison-equivalent stored key, or null when absent. This is distinct from
+Find, which returns the mapped value. It uses the existing logarithmic lookup,
+without copying owners, allocating or modifying entries. Comparator exceptions
+propagate under the existing callback rules; a query may borrow a stored key.
+The result protects reachable key state but does not extend storage lifetime.
+Keep the responsible owner alive. Growth can relocate all entries, and insertion
+or removal can shift entries at or after its position. Reacquire affected borrows
+before later use. Duplicate insertion and existing-key Set retain the canonical
+stored key, which can carry payload different from the equivalent query.

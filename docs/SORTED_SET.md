@@ -53,3 +53,16 @@ comparisons, so such operations need an explicit compatibility contract first.
 Source-library selection requires `Collections/SortedSet.gf`, `Collections/SortedMap.gf`, `Collections/Vector.gf`,
 `Memory/Span.gf`, and their query interface declarations. No tree nodes or GC allocations
 are introduced. The selected `Memory` implementation supplies vector storage.
+
+
+## Borrowing the stored equivalent value
+
+`Find(immutable(T)* query)` returns `immutable(T)*?` borrowing the actual
+comparison-equivalent stored value, or null when absent. It delegates to the
+underlying sorted map's FindKey lookup, taking logarithmic comparisons without
+copying owners or allocating storage. Comparator exceptions propagate without
+library mutation under the existing callback rules. A query may borrow the
+stored value. The result protects reachable key state and does not extend its
+lifetime: keep the owner alive, and reacquire borrows affected by growth or shifts
+from insertion/removal. Removing a value, clearing or destroying its owner ends
+that value's borrow. Equivalent duplicate insertion keeps the original payload.

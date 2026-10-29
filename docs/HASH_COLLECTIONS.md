@@ -187,3 +187,47 @@ or additions remain. All surviving keys stay owned, and
 a distinct source remains intact. Hash/equality/copy callbacks must not mutate either set
 through other aliases. Structural mutation invalidates target iterators and key
 borrows under the rules above. A borrowed source must stay alive for the call.
+
+
+## Borrowing the stored equivalent key
+
+`map.FindKey(&query)` returns `immutable(K)*?` pointing to the actual stored key;
+`set.Find(&query)` returns the same kind of borrow for a set value. A miss returns
+null. These methods use the existing hash/equality lookup, not enumeration, and
+copy no owners or allocate library storage. Query and callback rules are the
+same as Contains; hash/equality exceptions propagate without library mutation.
+Even an empty hash container can call the query's hash method.
+
+This is useful when equality uses an identifier but the stored value carries a
+different payload. Duplicate insertion and existing-key Set preserve that original
+key. The pointer protects all reachable key state and does not own or extend its
+lifetime. Keep the responsible owner alive. Rehash/growth replaces storage;
+removing that key, Clear or destruction ends its borrow. Reacquire when an
+operation may relocate or remove the entry; stable operations do not create a
+new independently owned key.
+
+```csharp
+using std;
+using std::Collections;
+
+struct Key : IHashable, IEquatable<Key>
+{
+    public int Id;
+    public int Payload;
+    public Key(int id, int payload) { Id = id; Payload = payload; }
+    public immutable nuint GetHashCode() => (nuint)Id;
+    public immutable bool Equals(immutable(Key)* other) => Id == other.Id;
+}
+
+int main()
+{
+    HashSet<Key> values = new();
+    values.Add(new Key(7, 70));
+    Key query = new(7, 99);
+    immutable(Key)*? stored = values.Find(&query);
+    if (stored == null || stored!.Payload != 70 || stored == &query) return 1;
+    Key missing = new(8, 80);
+    if (values.Find(&missing) != null) return 2;
+    return 0;
+}
+```

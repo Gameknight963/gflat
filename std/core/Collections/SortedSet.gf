@@ -14,6 +14,8 @@ struct SortedSet<T>
     public void Reserve(nuint count) { storage.Reserve(count); }
     public bool Add(T value) => storage.TryAdd(move value, 0);
     public immutable bool Contains(immutable(T)* value) => storage.ContainsKey(value);
+    /// Borrows the stored comparison-equivalent value, or null; no owner copies or library allocation.
+    public immutable immutable(T)*? Find(immutable(T)* value) => storage.FindKey(value);
     public bool Remove(immutable(T)* value) => storage.Remove(value);
     public void Clear() { storage.Clear(); }
     public immutable Enumerator GetEnumerator() => new Enumerator(storage.GetEnumerator());

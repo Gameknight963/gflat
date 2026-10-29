@@ -53,6 +53,14 @@ struct HashMap<K : IHashable, V>
     public immutable bool ContainsKey(immutable(K)* key)
         => this.Locate(key, key.GetHashCode()) != capacity;
 
+    /// Borrows the stored equivalent key, or null when absent; no owner copies or library allocation.
+    public immutable immutable(K)*? FindKey(immutable(K)* key)
+    {
+        nuint slot = this.Locate(key, key.GetHashCode());
+        if (slot == capacity) return null;
+        return &entries![slot].key;
+    }
+
     public V*? Find(immutable(K)* key)
     {
         nuint slot = this.Locate(key, key.GetHashCode());

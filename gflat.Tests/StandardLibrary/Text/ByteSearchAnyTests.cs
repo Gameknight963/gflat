@@ -1,9 +1,9 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
 // Independent nested-loop oracle; no membership-mask logic is shared with the implementation.
-public sealed class StandardByteSearchAnyTests
+public sealed class ByteSearchAnyTests
 {
     private static (int First, int Last) Naive(byte[] data, int start, int length,
         byte[] pattern, int patternStart, int count)

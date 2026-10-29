@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardByteSearchTests
+public sealed class ByteSearchTests
 {
     [Theory]
     [InlineData(0)]

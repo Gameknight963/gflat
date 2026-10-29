@@ -196,7 +196,7 @@ public sealed class AsciiHashingTests
         var sources = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)
             .Select(path => new SourceFile(path, File.ReadAllText(path)))
             .Append(new SourceFile("ascii-hashing.gf", program));
-        var result = CompilerTestHelper.Run(sources, optimization);
-        Assert.True(result.ExitCode == 0, $"ASCII hashing exit {result.ExitCode}: {result.StandardError}");
+        string ir = Compiler.Emit(sources, options: new() { InternalizeFunctions = true });
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 }

@@ -12,6 +12,7 @@ public sealed class CompilerTestHelperBehaviorTests
         try
         {
             Assert.StartsWith("clang compilation failed: ", error.Message);
+            Assert.Contains("Artifacts: " + directory, error.Message);
             Assert.Contains("IR:\n" + ir, error.Message);
             Assert.Contains("CompilerTestHelper.RunIr", error.StackTrace);
             Assert.True(Directory.Exists(directory));
@@ -110,6 +111,7 @@ public sealed class CompilerTestHelperBehaviorTests
         try
         {
             Assert.Contains("actual=7, expected=0", error.Message);
+            Assert.Contains("Artifacts: " + directory, error.Message);
             Assert.Contains("stdout:\nnative-stdout", error.Message);
             Assert.Contains("stderr:\nnative-stderr:", error.Message);
             Assert.Contains("CompilerTestHelper.RunIr", error.StackTrace);

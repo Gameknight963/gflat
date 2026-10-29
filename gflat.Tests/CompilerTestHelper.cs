@@ -77,12 +77,13 @@ namespace gflat.Tests
 
                 ProcessResult compilation = NativeToolchain.Compile(llPath, exePath, optimizationLevel: optimizationLevel);
                 if (compilation.ExitCode != 0)
-                    throw new Exception($"clang compilation failed: {compilation.StandardError}\nIR:\n{ir}");
+                    throw new Exception($"clang compilation failed: {compilation.StandardError}\nArtifacts: {tempDir}\nIR:\n{ir}");
                 ProcessResult execution = NativeToolchain.Run(exePath, []);
                 result = new ExecutionResult(execution.ExitCode, execution.StandardOutput, execution.StandardError);
                 if (expectedExitCode.HasValue && result.ExitCode != expectedExitCode.Value)
                     throw new InvalidOperationException(
                         $"Unexpected native exit code: actual={result.ExitCode}, expected={expectedExitCode.Value}.\n" +
+                        $"Artifacts: {tempDir}\n" +
                         $"stdout:\n{result.StandardOutput}\nstderr:\n{result.StandardError}");
             }
             catch (Exception error)

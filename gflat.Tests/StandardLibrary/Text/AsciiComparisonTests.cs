@@ -10,18 +10,7 @@ public sealed class AsciiComparisonTests
         string ir = Compiler.Emit(sources, options: new() { NoStdLib = true, InternalizeFunctions = true });
         Assert.DoesNotContain("__gflat_eh", ir);
         Assert.DoesNotContain("@malloc", ir);
-        string directory = Path.Combine(Path.GetTempPath(), "gflat-ascii-compare-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        try
-        {
-            string input = Path.Combine(directory, "program.ll"), output = Path.Combine(directory, "program.exe");
-            File.WriteAllText(input, ir);
-            var compiled = NativeToolchain.Compile(input, output, optimizationLevel: optimization);
-            Assert.True(compiled.ExitCode == 0, compiled.StandardError);
-            var result = NativeToolchain.Run(output, [], 30000);
-            Assert.True(result.ExitCode == 0, $"Exit {result.ExitCode}: {result.StandardError}");
-        }
-        finally { Directory.Delete(directory, true); }
+        _ = CompilerTestHelper.RunIr(ir, optimization, expectedExitCode: 0);
     }
 
     [Theory]

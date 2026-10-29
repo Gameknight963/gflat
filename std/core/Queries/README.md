@@ -114,6 +114,7 @@ lifetime. See [text parts](../../../docs/TEXT_PARTS.md),
 | `Aggregate(function)` | Fold from the first value; throws if empty. |
 | `Min()` / `Max()` / `Min(compare)` / `Max(compare)` | Select the first least or greatest value; throw if empty. |
 | `MinBy(selector)` / `MaxBy(selector)` | Select the first element with the least or greatest key; optional key comparer; throw if empty. |
+| `TryMinBy(selector, ref result)` / `TryMaxBy(selector, ref result)` | Select a keyed extremum in one pass, or false with unchanged output when empty; optional key comparer. |
 | `Append(value)` / `Prepend(value)` | Lazily add one captured value after or before the source. |
 | `DefaultIfEmpty(value)` | Yield the source, or one captured value if the source is empty. |
 | `ForEach(action)` | Visit every element. |
@@ -389,3 +390,49 @@ sequence contracts. Default comparison additionally uses Collections/Comparer.gf
 IComparable.gf. No Vector, String, or direct libc dependency is introduced by
 the scan itself; selected element, iterator, callback, and exception dependencies
 still apply.
+
+
+### Empty-safe keyed extrema
+
+`TryMinBy(selector, ref result)` and `TryMaxBy(selector, ref result)` scan once
+and return false for an empty sequence, leaving the initialized output unchanged.
+Explicit comparison uses `(selector, compare, ref result)`. Like the throwing
+forms, they select the first tied element, read each `Current` and select its key
+once, and compare the current key with the retained best key.
+
+```csharp
+using std; using std::Memory; using std::Queries;
+
+struct Ticket
+{
+    public int Priority;
+    public int Id;
+    public Ticket(int priority, int id) { Priority = priority; Id = id; }
+}
+int Priority(Ticket value) => value.Priority;
+
+int main()
+{
+    Ticket[4] storage = [new Ticket(4, 0), new Ticket(1, 1),
+        new Ticket(1, 2), new Ticket(3, 3)];
+    Span<Ticket> values = new(storage, 4);
+    Ticket best = new(9, 99);
+    if (!values.AsEnumerable().TryMinBy(&Priority, ref best) || best.Id != 1) return 1;
+    if (!values.AsEnumerable().TryMaxBy(&Priority, ref best) || best.Id != 0) return 2;
+    Span<Ticket> empty = new();
+    if (empty.AsEnumerable().TryMinBy(&Priority, ref best) || best.Id != 0) return 3;
+    return 0;
+}
+```
+
+The output is replaced only after the complete scan, following `TryLast`'s
+ordinary move-assignment and destructor rules. Iterator, element/key copying,
+selector and comparer failures propagate; they do not become false, and failures
+before the final assignment preserve the old output. Source consumption and
+callback effects are not rolled back. A separate `Any()` check is unnecessary,
+which matters for stateful sources whose enumerations consume input.
+
+Elements, keys and source views retain the ownership and borrowing rules above.
+The loop introduces no sequence buffer; copies and user code can still allocate.
+The existing writable-output limitation of the ref-output `Try` methods applies;
+these overloads do not strip element qualifications.

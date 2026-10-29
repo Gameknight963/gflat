@@ -323,6 +323,13 @@ int SmokeCore() {
     long atomicWide = 4294967297l;
     if (std::Threading::Interlocked::CompareExchange(ref atomicWide, 9l, 1l) != 4294967297l
         || std::Threading::Interlocked::Exchange(ref atomicWide, 0l) != 4294967297l) return 9025;
+    byte[2] bitFieldData = [(byte)0x96, (byte)0x35]; ulong bitFieldValue = 0ul;
+    if (!BitPrimitives::TryReadUInt64(bitFieldData, 2, 4, 8, BitOrder::MostSignificantFirst, ref bitFieldValue)
+        || bitFieldValue != 0x63ul) return 9026;
+    if (!BitPrimitives::TryWriteUInt64(bitFieldData, 2, 4, 8, BitOrder::LeastSignificantFirst, 0xa5ul)
+        || bitFieldData[0] != (byte)0x56 || bitFieldData[1] != (byte)0x3a) return 9027;
+    if (BitPrimitives::TryWriteUInt64(bitFieldData, 2, 0, 4, BitOrder::LeastSignificantFirst, 255ul)
+        || bitFieldData[0] != (byte)0x56 || bitFieldData[1] != (byte)0x3a) return 9028;
     String wildcardText = s"notes.gf";
     if (!wildcardText.AsReadOnly().MatchesWildcard("*.gf")) return 9023;
     Uuid generated = UuidGenerator::CreateVersion4(SmokeUuidFill);

@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardStringPaddingTests
+public sealed class StringPaddingTests
 {
     private const string Counters = """
         using std; using std::Text;

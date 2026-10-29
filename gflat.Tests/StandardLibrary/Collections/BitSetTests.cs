@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardBitSetTests
+public sealed class BitSetTests
 {
     private static IEnumerable<SourceFile> Sources(string program) => new[] {
         "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/BitSet.gf", "IEquatable.gf", "IHashable.gf", "Hashing/primitive_hashing.gf"

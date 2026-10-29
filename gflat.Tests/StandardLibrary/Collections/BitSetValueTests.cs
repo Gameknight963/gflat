@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardBitSetValueTests
+public sealed class BitSetValueTests
 {
     private const string Counters="""
         using std; using std::Text; using std::IO; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);

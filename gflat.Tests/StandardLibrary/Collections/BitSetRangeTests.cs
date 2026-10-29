@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardBitSetRangeTests
+public sealed class BitSetRangeTests
 {
     [Theory]
     [InlineData(0)]

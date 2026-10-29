@@ -1,8 +1,8 @@
 using System.Collections;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardBitSetShiftTests
+public sealed class BitSetShiftTests
 {
     [Theory]
     [InlineData(0)]

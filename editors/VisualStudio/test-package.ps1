@@ -61,6 +61,14 @@ try {
             throw "Packaged SDK is missing linux-random/$source"
         }
     }
+    foreach ($source in @('TcpClient.gf', 'SocketException.gf', 'WindowsNetwork.gfproj', 'README.md')) {
+        $packagedSource = Join-Path $extracted "Sdk/libraries/platform/windows-network/$source"
+        $repositorySource = Join-Path $repoRoot "libraries/platform/windows-network/$source"
+        if (-not (Test-Path -LiteralPath $packagedSource)) { throw "Packaged SDK is missing windows-network/$source" }
+        if ((Get-FileHash -LiteralPath $packagedSource).Hash -ne (Get-FileHash -LiteralPath $repositorySource).Hash) {
+            throw "Packaged SDK has stale windows-network/$source"
+        }
+    }
     if ($buildInfo.commit -notmatch '^[0-9a-f]{40}$') { throw 'VSIX source commit is missing' }
     # Exercise the grammar and configuration actually shipped in the archive.
     Copy-Item -LiteralPath (Join-Path $extracted 'gflat-language-configuration.json') -Destination (Join-Path $extracted 'Grammars')
@@ -1323,7 +1331,7 @@ int main(int argc, char** argv) {
     [IO.File]::WriteAllBytes($boundedInput, [byte[]](97, 0, 98))
     & $compiler $expandedStd --source-list $allSourcesList --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
     if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
-    foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj', 'windows-random/WindowsRandom.gfproj', 'linux-random/LinuxRandom.gfproj')) {
+    foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj', 'windows-random/WindowsRandom.gfproj', 'linux-random/LinuxRandom.gfproj', 'windows-network/WindowsNetwork.gfproj')) {
         & $compiler check (Join-Path $extracted "Sdk/libraries/platform/$project")
         if ($LASTEXITCODE -ne 0) { throw "Packaged optional platform project check failed: $project" }
     }
@@ -1375,6 +1383,33 @@ int main()
 '@ | Set-Content -LiteralPath (Join-Path $randomConsumer 'random.gfproj')
     & $compiler build (Join-Path $randomConsumer 'random.gfproj') --configuration Release --run
     if ($LASTEXITCODE -ne 0) { throw 'Packaged SDK consumer could not build and run through the optional Windows random project reference' }
+    $networkConsumer = Join-Path $extracted 'network consumer'
+    New-Item -ItemType Directory -Force -Path $networkConsumer | Out-Null
+    @'
+extern nuint socket(int family, int kind, int protocol) nothrow;
+extern int WSAGetLastError() nothrow;
+extern int closesocket(nuint socket) nothrow;
+int main()
+{
+    Windows::TcpClient client = new();
+    client.Close();
+    if (client.IsOpen) return 1;
+    nuint raw = socket(2, 1, 6);
+    if (raw != (nuint)0 - 1) { closesocket(raw); return 2; }
+    if (WSAGetLastError() != 10093) return 3;
+    return 0;
+}
+'@ | Set-Content -LiteralPath (Join-Path $networkConsumer 'main.gf')
+    @'
+<Project DefaultTargets="Build">
+  <PropertyGroup><GflatSdkRoot>../Sdk</GflatSdkRoot></PropertyGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.props" />
+  <ItemGroup><ProjectReference Include="$(GflatSdkRoot)/libraries/platform/windows-network/WindowsNetwork.gfproj" /></ItemGroup>
+  <Import Project="$(GflatSdkRoot)/build/Gflat.targets" />
+</Project>
+'@ | Set-Content -LiteralPath (Join-Path $networkConsumer 'network.gfproj')
+    & $compiler build (Join-Path $networkConsumer 'network.gfproj') --configuration Release --run
+    if ($LASTEXITCODE -ne 0) { throw 'Packaged SDK consumer could not link Winsock through the optional TCP project reference' }
     if (-not (Test-Path -LiteralPath (Join-Path $extracted 'ItemTemplates/gflat-source/SourceFile.vstemplate'))) { throw 'VSIX is missing the source item template' }
     if ((Get-Content -Raw -LiteralPath (Join-Path $extracted 'gflat.pkgdef')) -notmatch '"ProjectFactoryPackage"="\{3347BEE8-D7A1-4082-95E4-38A439553CC2\}"') { throw 'Project factory must be registered with CPS' }
     dotnet msbuild (Join-Path $repoRoot 'examples/hello/hello.gfproj') -t:Check "-p:GflatBundledCompiler=$compiler" -nologo -v:minimal

@@ -18,6 +18,12 @@ public struct BinaryBufferReader
     public nuint Position { immutable get nothrow => position; }
     public nuint Remaining { immutable get nothrow => length - position; }
     public void Reset() nothrow { position = 0; }
+    // Absolute position within the captured bytes; failure preserves the old position.
+    public bool TrySeek(nuint newPosition) nothrow
+    {
+        if (newPosition > length) return false;
+        position = newPosition; return true;
+    }
     public bool TrySkip(nuint count) nothrow
     {
         if (count > length - position) return false;

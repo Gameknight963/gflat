@@ -26,6 +26,22 @@ extent. Both have `Position` and `Remaining` getters. `Reset()` sets position to
 zero without modifying storage. `TrySkip(count)` advances only if enough bytes
 remain; a writer skip does not initialize the skipped bytes.
 
+`TrySeek(position)` sets an absolute position within the cursor's captured region.
+Positions from zero through `Length` or `Capacity`, including the end, succeed;
+an out-of-range position returns false and leaves the old position unchanged.
+It can move forward or backward without reading, writing, clearing or initializing
+bytes, allocating storage or computing an address from `Data`. A default empty
+cursor accepts only zero. Child positions are relative to the child's own region,
+and seeking one cursor does not change a copy's or child's position.
+
+This supports parser checkpoints and packet-header backfill without a destructive
+`Reset()` followed by a potentially failing skip. A writer's `Position` is its
+current cursor, not a high-water mark: save and restore the end position when
+backfilling, and do not treat a forward seek as proof that bytes were initialized.
+Backing-storage lifetime and validity rules still apply. `Reset` and `TrySkip`
+keep their existing behavior.
+
+
 `Data` exposes the start of the captured region, independently of the current
 position: a reader returns `readonly(byte)*?`, and a mutable writer returns
 `byte*?`. A default cursor has null data. This lets a bounded child feed another
@@ -158,6 +174,32 @@ int main()
     long value = 0l;
     if (reader.ReadZigZagInt64(ref value) != VarInt::Status::Done) return 2;
     if (value != -300l || reader.Remaining != 0) return 3;
+    return 0;
+}
+```
+
+
+## Example: header backfill and parser checkpoints
+
+```csharp
+using std; using std::Binary;
+
+int main()
+{
+    byte[8] bytes;
+    BinaryBufferWriter writer = new(bytes, 8);
+    if (!writer.TrySkip(2)) return 1;
+    if (!writer.TryWriteByte((byte)10) || !writer.TryWriteByte((byte)20)) return 2;
+    nuint end = writer.Position;
+    if (!writer.TrySeek(0) || !writer.TryWriteUInt16BigEndian((ushort)(end - 2))) return 3;
+    if (!writer.TrySeek(end) || writer.Position != 4) return 4;
+    BinaryBufferReader reader = new(bytes, end);
+    ushort length = 0;
+    if (!reader.TryReadUInt16BigEndian(ref length) || length != 2) return 5;
+    nuint checkpoint = reader.Position;
+    if (!reader.TrySkip((nuint)length) || !reader.TrySeek(checkpoint)) return 6;
+    byte first = (byte)0;
+    if (!reader.TryReadByte(ref first) || first != (byte)10) return 7;
     return 0;
 }
 ```

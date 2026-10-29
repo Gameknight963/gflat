@@ -164,8 +164,10 @@ implementation lives in `libc`.
 | Integer alignment | `Memory::AlignUp`, `AlignDown`, `IsAligned` | [Checked offsets and alignment tests](../docs/MEMORY.md#integer-alignment) |
 
 Containers own stored values. Raw pointers stored as elements borrow their
-pointees; they do not cause automatic deletion. Views and enumerators borrow
-their sources. Do not retain them across operations that invalidate storage.
+pointees; they do not cause automatic deletion. Container views and enumerators
+borrow container storage. Do not retain them across operations that invalidate
+that storage. Query sequences and iterators can also own captured values or
+materialized buffers; see the [query ownership rules](core/Queries/README.md).
 
 ## Libc and host runtime
 

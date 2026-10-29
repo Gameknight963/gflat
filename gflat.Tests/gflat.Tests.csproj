@@ -38,6 +38,7 @@
     <None Include="..\examples\tasks\main.gf" Link="Examples\tasks.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\examples\hexdump\main.gf" Link="Examples\hexdump.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/riff-list/main.gf" Link="Examples/riff-list.gf" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../examples/zip-list/main.gf" Link="Examples/zip-list.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/png-list/main.gf" Link="Examples/png-list.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/binary-info/main.gf" Link="Examples/binary-info.gf" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../examples/file-compare/main.gf" Link="Examples/file-compare.gf" CopyToOutputDirectory="PreserveNewest" />

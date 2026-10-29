@@ -55,6 +55,7 @@ launch page sets arguments and working directory; see [debugging projects](../do
 - [riff-list](riff-list/README.md): list top-level RIFF chunk offsets and lengths.
 - [png-list](png-list/README.md): list PNG chunk offsets and lengths, checking framing and CRCs.
 - [binary-info](binary-info/README.md): inspect PE32+/ELF64LE declared dependency metadata.
+- [zip-list](zip-list/README.md): list ZIP32 central-directory sizes, methods, and escaped names.
 
 ## Numbers, algorithms, and commands
 

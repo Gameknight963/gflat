@@ -45,4 +45,5 @@
   <Project Path="unquote-lines/unquote-lines.gfproj" />
   <Project Path="values/values.gfproj" />
   <Project Path="word-count/word-count.gfproj" />
+  <Project Path="zip-list/zip-list.gfproj" />
 </Solution>

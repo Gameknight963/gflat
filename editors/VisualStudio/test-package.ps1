@@ -50,6 +50,11 @@ try {
             throw "Packaged SDK is missing windows-random/$source"
         }
     }
+    foreach ($source in @('SystemRandom.gf', 'LinuxRandom.gfproj', 'README.md')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $extracted "Sdk/libraries/platform/linux-random/$source"))) {
+            throw "Packaged SDK is missing linux-random/$source"
+        }
+    }
     if ($buildInfo.commit -notmatch '^[0-9a-f]{40}$') { throw 'VSIX source commit is missing' }
     # Exercise the grammar and configuration actually shipped in the archive.
     Copy-Item -LiteralPath (Join-Path $extracted 'gflat-language-configuration.json') -Destination (Join-Path $extracted 'Grammars')
@@ -1168,7 +1173,7 @@ int main(int argc, char** argv) {
     [IO.File]::WriteAllBytes($boundedInput, [byte[]](97, 0, 98))
     & $compiler $expandedStd --source-list $allSourcesList --optimization 2 --run -o (Join-Path $extracted 'expanded-std.exe') -- $boundedInput
     if ($LASTEXITCODE -ne 0) { throw "Packaged expanded standard library smoke test failed (exit code $LASTEXITCODE)" }
-    foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj', 'windows-random/WindowsRandom.gfproj')) {
+    foreach ($project in @('windows/Windows.gfproj', 'linux/Linux.gfproj', 'windows-random/WindowsRandom.gfproj', 'linux-random/LinuxRandom.gfproj')) {
         & $compiler check (Join-Path $extracted "Sdk/libraries/platform/$project")
         if ($LASTEXITCODE -ne 0) { throw "Packaged optional platform project check failed: $project" }
     }

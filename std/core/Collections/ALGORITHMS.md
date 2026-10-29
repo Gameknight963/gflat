@@ -45,6 +45,7 @@ int main()
 | `PartitionPoint<T>(Span<immutable(T)>, predicate)` | First false index in an already partitioned true-prefix/false-suffix span, or span length when all match. |
 | `BinarySearch<T>(Span<immutable(T)>, key, compare)` | First matching index in sorted input, or span length when absent. |
 | `IsSorted<T>(Span<immutable(T)>, compare)` | Test whether every adjacent pair is in ascending order; equal elements are allowed. |
+| `Includes<T>(Span<immutable(T)>, Span<immutable(T)>, compare)` | Sorted multiset inclusion, including duplicate multiplicities; optional IComparable default. |
 | `FindUnsortedIndex<T>(Span<immutable(T)>, compare)` | First right-hand element that breaks nondecreasing order, or Length when ordered; optional IComparable default. |
 | `SequenceEqual<T>(first, second, equal)` | Compare equal-length `Span<immutable(T)>` views element by element, stopping at the first difference. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `CommonPrefixLength<T>(first, second, equal)` | Count matching corresponding elements up to the first difference or shorter length. Optional `IEquatable<T>` default in `default_equality.gf`. |
@@ -760,3 +761,27 @@ callback aliases. Comparator exceptions propagate without library mutation;
 callback allocations and side effects are not rolled back. The optional overload
 in `default_ordering.gf` uses `IComparable<T>` through `Comparer<T>::Compare`,
 matching `IsSorted`.
+
+
+## Sorted multiset inclusion
+
+`Includes(values, required, compare)` checks that sorted `values` contains at
+least as many entries from each comparison-equivalence class as `required`.
+For example, `[17, 17, 42]` includes `[17, 17]` and `[17, 42]`, but not
+`[17, 17, 17]`. Matches may have gaps; this is not contiguous pattern search.
+An empty `required` returns true, and an oversized `required` returns false,
+without comparison. Both spans must remain valid and live, including preflights.
+
+Both inputs must already be sorted under the same consistent ordering; this
+precondition is not validated. Zero comparison defines equivalence, which may
+differ from equality. The two-cursor scan compares a source element first and
+required element second. Negative advances the source, zero advances both, and
+positive fails immediately. It stops when all requirements match or the source
+runs out. Work is O(N+M) with constant storage, no element copies, library
+allocation or input mutation. Inputs may overlap or be identical; callbacks
+must not mutate or invalidate either through aliases. Exceptions propagate;
+callback allocations and external effects are not rolled back.
+
+The optional overload in `default_ordering.gf` uses `IComparable<T>` through
+`Comparer<T>::Compare`. It shares the ordering conventions of `IsSorted` and
+binary search.

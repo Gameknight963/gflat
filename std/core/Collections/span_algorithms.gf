@@ -193,6 +193,26 @@ public nuint FindUnsortedIndex<T>(Span<immutable(T)> values, int(immutable(T)*, 
     return values.Length;
 }
 
+/// Tests sorted multiset inclusion, respecting comparison-equivalent duplicate counts.
+/// Both spans must use the same consistent ordering; overlapping spans are permitted.
+/// Comparator receives source then required; no element copies or library allocation.
+public bool Includes<T>(Span<immutable(T)> values, Span<immutable(T)> required,
+    int(immutable(T)*, immutable(T)*)* compare)
+{
+    if (required.Length == 0) return true;
+    if (required.Length > values.Length) return false;
+    nuint first = 0; nuint second = 0;
+    while (second < required.Length)
+    {
+        if (first == values.Length) return false;
+        int order = compare(&values[first], &required[second]);
+        if (order > 0) return false;
+        if (order == 0) second++;
+        first++;
+    }
+    return true;
+}
+
 public bool SequenceEqual<T>(Span<immutable(T)> first, Span<immutable(T)> second,
     bool(immutable(T)*, immutable(T)*)* equal)
 {

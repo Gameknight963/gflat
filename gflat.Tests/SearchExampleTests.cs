@@ -43,17 +43,42 @@ public sealed class SearchExampleTests
                 Assert.Equal(Expected(item.Input, Bytes(item.Pattern)), result.Output);
                 Assert.Equal(item.Input, File.ReadAllBytes(input));
             }
-            foreach (string[] arguments in new[] { Array.Empty<string>(), [input], new[] { input, "needle", "extra" } })
+            (byte[] Input, string Pattern)[] foldedCases =
+            [
+                ([], ""), (Bytes("\n\n"), ""), (Bytes("\n\n"), "needle"),
+                (Bytes("match\nMATCH\r\nno\nMaTcHtail"), "mAtCh"),
+                (Bytes("before\0PAYLOAD\nnomatch\n"), "payload"),
+                (Bytes("bare\rReturn\nfinal\r"), "return"),
+                (Bytes(new string('x', 4094) + "NeEdLe\r\nlastNEEDLE"), "needle"),
+                ([255, 128, 0, .. Bytes("NeEdLe\n"), 254, .. Bytes("miss\n")], "needle"),
+                (Bytes("\u00e9\n\u00c9\nE\n"), "e"),
+                (Bytes("prefix\nlast\r"), ""), (Bytes("aaaA\n"), "AaA")
+            ];
+            foreach (var item in foldedCases)
+            {
+                File.WriteAllBytes(input, item.Input);
+                var result = await Run(executable, ["--ignore-case", input, item.Pattern]);
+                Assert.Equal(0, result.ExitCode); Assert.Empty(result.Error);
+                Assert.Equal(Expected(item.Input, Bytes(item.Pattern), ignoreCase: true), result.Output);
+                Assert.Equal(item.Input, File.ReadAllBytes(input));
+            }
+            // The flag spelling remains a valid file operand in the original two-operand mode.
+            File.WriteAllBytes(Path.Combine(directory, "--ignore-case"), Bytes("needle\nNEEDLE\n"));
+            var literalName = await Run(executable, ["--ignore-case", "needle"], directory);
+            Assert.Equal(0, literalName.ExitCode); Assert.Empty(literalName.Error);
+            Assert.Equal(Bytes("needle" + Environment.NewLine), literalName.Output);
+            foreach (string[] arguments in new[] { Array.Empty<string>(), [input], new[] { input, "needle", "extra" }, new[] { "--unknown", input, "needle" } })
             {
                 var usage = await Run(executable, arguments);
                 Assert.Equal(2, usage.ExitCode); Assert.Empty(usage.Output);
-                Assert.Equal("Usage: search <file> <text>", usage.Error.TrimEnd('\r','\n'));
+                Assert.Equal("Usage: search [--ignore-case] <file> <text>", usage.Error.TrimEnd('\r','\n'));
             }
             var missing = await Run(executable, [Path.Combine(directory, "missing file"), "needle"]);
             Assert.Equal(1, missing.ExitCode); Assert.Empty(missing.Output);
             Assert.Equal("Unable to read file.", missing.Error.TrimEnd('\r','\n'));
         }
-        finally { Directory.Delete(directory, true); }
+        catch (Exception error) { error.Data["SearchExampleDirectory"] = directory; throw; }
+        Directory.Delete(directory, true);
     }
 
     [Theory]
@@ -64,7 +89,7 @@ public sealed class SearchExampleTests
 
     private static byte[] Bytes(string value) => Encoding.UTF8.GetBytes(value);
 
-    private static byte[] Expected(byte[] input, byte[] pattern)
+    private static byte[] Expected(byte[] input, byte[] pattern, bool ignoreCase = false)
     {
         var result = new List<byte>();
         int start = 0;
@@ -81,15 +106,26 @@ public sealed class SearchExampleTests
 
         void Add(ReadOnlySpan<byte> line)
         {
-            if (line.IndexOf(pattern) < 0) return;
+            byte[] comparable = line.ToArray();
+            byte[] sought = pattern;
+            if (ignoreCase)
+            {
+                comparable = comparable.Select(FoldAscii).ToArray();
+                sought = pattern.Select(FoldAscii).ToArray();
+            }
+            if (comparable.AsSpan().IndexOf(sought) < 0) return;
             result.AddRange(line.ToArray());
             result.AddRange(Bytes(Environment.NewLine));
         }
     }
 
-    private static async Task<(int ExitCode, byte[] Output, string Error)> Run(string executable, string[] arguments)
+    private static byte FoldAscii(byte value)
+        => value is >= (byte)'a' and <= (byte)'z' ? (byte)(value - 32) : value;
+
+    private static async Task<(int ExitCode, byte[] Output, string Error)> Run(string executable, string[] arguments, string? workingDirectory = null)
     {
         var start = new ProcessStartInfo(executable) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+        if (workingDirectory != null) start.WorkingDirectory = workingDirectory;
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
         using var process = Process.Start(start)!;
         using var output = new MemoryStream();

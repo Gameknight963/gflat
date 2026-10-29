@@ -2,13 +2,17 @@ using std::Text;
 using std::IO;
 using std;
 
-void EmitMatch(ref String line, immutable(char*) needle, bool endedWithLF, ref bool writingOutput)
+void EmitMatch(ref String line, immutable(char*) needle, nuint needleLength, bool ignoreCase, bool endedWithLF, ref bool writingOutput)
 {
     // Preserve bytes within a line; normalize its ending for Console output.
     if (endedWithLF && line.Length != 0 && line.Data[line.Length - 1] == '\r')
         line.Remove(line.Length - 1, 1);
-    // Shared byte-oriented String search; no regex or Unicode normalization.
-    if (line.Contains(needle))
+    // ASCII folding preserves every other byte and never copies or edits the line.
+    bool matches = false;
+    if (ignoreCase)
+        matches = needleLength == 0 || Ascii::IndexOfIgnoreCase(line.Data, line.Length, needle, needleLength) != line.Length;
+    else matches = line.IndexOf(needle, needleLength) != String::NotFound;
+    if (matches)
     {
         writingOutput = true;
         Console::WriteLine(ref line);
@@ -19,15 +23,24 @@ void EmitMatch(ref String line, immutable(char*) needle, bool endedWithLF, ref b
 
 int main(int argc, char** argv)
 {
-    if (argc != 3)
+    bool ignoreCase = false;
+    int fileIndex = 1;
+    int textIndex = 2;
+    if (argc == 4 && CString::Equals(argv[1], "--ignore-case"))
     {
-        Console::Error.WriteLine("Usage: search <file> <text>");
+        ignoreCase = true; fileIndex = 2; textIndex = 3;
+    }
+    else if (argc != 3)
+    {
+        Console::Error.WriteLine("Usage: search [--ignore-case] <file> <text>");
         return 2;
     }
+    immutable(char*) needle = argv[textIndex];
+    nuint needleLength = CString::Length(needle);
     bool writingOutput = false;
     try
     {
-        File input = File::OpenRead(argv[1]);
+        File input = File::OpenRead(argv[fileIndex]);
         String line = new String();
         char[4096] buffer;
         while (true)
@@ -36,11 +49,11 @@ int main(int argc, char** argv)
             if (count == 0) break;
             for (nuint i = 0; i < count; i++)
             {
-                if (buffer[i] == '\n') EmitMatch(ref line, argv[2], true, ref writingOutput);
+                if (buffer[i] == '\n') EmitMatch(ref line, needle, needleLength, ignoreCase, true, ref writingOutput);
                 else line.Append(&buffer[i], 1);
             }
         }
-        if (line.Length != 0) EmitMatch(ref line, argv[2], false, ref writingOutput);
+        if (line.Length != 0) EmitMatch(ref line, needle, needleLength, ignoreCase, false, ref writingOutput);
         input.Close();
         writingOutput = true;
         Console::Flush();

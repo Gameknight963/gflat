@@ -25,3 +25,6 @@ public nuint LastIndexOf<T : IEquatable<T>>(Span<immutable(T)> values, immutable
 
 public bool Contains<T : IEquatable<T>>(Span<immutable(T)> values, immutable(T)* key)
     => std::Collections::Contains<T>(values, key, EqualityComparer<T>::Equals);
+
+public nuint FindRun<T : IEquatable<T>>(Span<immutable(T)> values, nuint count, immutable(T)* key)
+    => std::Collections::FindRun<T>(values, count, key, EqualityComparer<T>::Equals);

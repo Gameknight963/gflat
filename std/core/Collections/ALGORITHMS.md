@@ -594,3 +594,48 @@ int main()
     return 0;
 }
 ```
+
+## Consecutive run search
+
+`FindRun<T>(values, count, key, equal)` returns the start of the first run of
+`count` elements for which `equal(elementAddress, key)` is true. Absence returns
+`values.Length`. Zero count returns zero without accessing elements, key or the
+callback; a count greater than Length returns Length with the same no-access
+behavior. Otherwise comparisons visit elements once from left to right and
+stop as soon as the first complete run is found. Matching need not be symmetric;
+the source address is always the first callback argument.
+
+The function itself allocates nothing, copies no elements and mutates neither
+source nor key. Keep the span valid throughout the call. The key must be
+readable and stable when `0 < count <= values.Length`; the preflight returns
+do not access it. Callback exceptions propagate unchanged; side effects through other
+aliases or external state are not rolled back. This searches element runs,
+without string encoding or grapheme semantics.
+
+The explicit callback overload lives in `span_find_run.gf`, requiring Span and
+its normal dependencies. The optional IEquatable overload is appended to
+`default_equality.gf` and uses `EqualityComparer<T>::Equals`. Selective-source
+users calling that new overload must also include `span_find_run.gf`,
+`IEquatable.gf`, and `EqualityComparer.gf` with their normal dependencies.
+Existing equality calls do not need the new source when FindRun is unused.
+Ordinary std projects already include these files.
+
+```csharp
+using std;
+using std::Memory;
+using std::Collections;
+
+bool EqualInt(immutable(int)* element, immutable(int)* key) => *element == *key;
+
+int main()
+{
+    int[7] data = [4, 4, 1, 4, 4, 4, 2];
+    Span<int> values = new(data, 7);
+    int key = 4;
+    if (FindRun<int>(values.AsImmutable(), 3, &key) != 3) return 1;
+    if (FindRun<int>(values.AsImmutable(), 2, &key, EqualInt) != 0) return 2;
+    if (FindRun<int>(values.AsImmutable(), 0, &key) != 0) return 3;
+    if (FindRun<int>(values.AsImmutable(), 8, &key) != 7) return 4;
+    return 0;
+}
+```

@@ -87,4 +87,23 @@ public sealed class TypeNameDiagnosticTests
         Assert.Equal("type-name.gf", error.FilePath);
         Assert.Equal(expected, error.Message);
     }
+
+    [Theory]
+    [InlineData(
+        "namespace Lib { struct Item {} } int main(){Lib::Item value;1.0f+value;return 0;}",
+        "Operator '+' cannot be applied to operands of type 'float' and 'Lib::Item'")]
+    [InlineData(
+        "namespace Lib { struct Box<T> {} } int main(){Lib::Box<int> value;value+1.0d;return 0;}",
+        "Operator '+' cannot be applied to operands of type 'Lib::Box<int>' and 'double'")]
+    [InlineData(
+        "namespace Lib { struct Item {} } int main(){Lib::Item value;(&value)+1.0f;return 0;}",
+        "Operator '+' cannot be applied to operands of type 'Lib::Item*' and 'float'")]
+    public void FloatingOperatorDiagnosticsUseSourceTypeNames(string source, string expected)
+    {
+        var diagnostics = Compiler.Analyze([new SourceFile("floating-type-name.gf", source)], new() { NoStdLib = true });
+        var error = Assert.Single(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Equal("GF1002", error.Descriptor.Id);
+        Assert.Equal(expected, error.Message);
+        Assert.DoesNotContain("$", error.Message);
+    }
 }

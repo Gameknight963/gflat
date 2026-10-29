@@ -21,7 +21,7 @@ public partial class TypeChecker
         if (!leftFloat || !rightFloat || !comparison && !arithmetic)
         {
             ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, expression.Line, 0,
-                OperatorText(expression.Operator), TypeName(left), TypeName(right));
+                OperatorText(expression.Operator), DisplayTypeName(left), DisplayTypeName(right));
             RecordType(expression, Error);
             return true;
         }

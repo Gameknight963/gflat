@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardVectorInsertRangeTests
+public sealed class VectorInsertRangeTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "Std"), "*.gf", SearchOption.AllDirectories)

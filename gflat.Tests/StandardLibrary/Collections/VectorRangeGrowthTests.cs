@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardVectorRangeGrowthTests
+public sealed class VectorRangeGrowthTests
 {
     [Theory]
     [InlineData(0)]

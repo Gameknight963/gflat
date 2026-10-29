@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardVectorRemoveAllTests
+public sealed class VectorRemoveAllTests
 {
     private static IEnumerable<SourceFile> Sources(string program, bool managed = false)
     {

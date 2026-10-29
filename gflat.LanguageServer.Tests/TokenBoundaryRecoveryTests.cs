@@ -98,6 +98,70 @@ public sealed class TokenBoundaryRecoveryTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void StructuralTokenDeletionsPreserveIndependentFileServicesInBothFileOrders(bool healthyFirst)
+    {
+        var healthy = new SourceFile(Path.GetFullPath("healthy-deletion-recovery.gf"), Healthy);
+        var original = new SourceFile(Path.GetFullPath("editable-deletion-recovery.gf"), Editable);
+        SourceFile[] Order(SourceFile editable) => healthyFirst ? [healthy, editable] : [editable, healthy];
+        SourceFile[] baselineFiles = Order(original);
+        var baseline = new AnalysisSnapshot(baselineFiles, new() { NoStdLib = true });
+        Assert.DoesNotContain(baseline.Diagnostics, error => error.Severity == DiagnosticSeverity.Error);
+        var baselineModel = new EditorModel(baseline, baselineFiles);
+        string baselineTokens = Json(baselineModel.SemanticTokens(healthy.Path)).GetRawText();
+        int localUse = Healthy.LastIndexOf("result", StringComparison.Ordinal);
+        int[] healthySites = [Healthy.LastIndexOf("Safe::", StringComparison.Ordinal),
+            Healthy.IndexOf("Marker", StringComparison.Ordinal), Healthy.LastIndexOf("Echo(", StringComparison.Ordinal), localUse];
+        string[] hovers = healthySites.Select(site => RequiredHover(baselineModel, healthy, site)).ToArray();
+        string[] definitions = healthySites.Select(site => RequiredDefinition(baselineModel, healthy, site)).ToArray();
+        string localCompletion = CompletionItem(baselineModel, healthy, localUse, "result");
+
+        Token[] structural = Lexer.Tokenize(original)
+            .Where(token => token.Kind is TokenKind.OpenBrace or TokenKind.CloseBrace or
+                TokenKind.OpenParen or TokenKind.CloseParen or TokenKind.Semicolon).ToArray();
+        Assert.True(structural.Length >= 12);
+        Token[] deletedTokens = Enumerable.Range(0, 12)
+            .Select(index => structural[index * (structural.Length - 1) / 11]).ToArray();
+        Assert.Equal(12, deletedTokens.Select(token => token.Start).Distinct().Count());
+
+        foreach (Token token in deletedTokens)
+        {
+            string context = $"healthyFirst={healthyFirst}, delete={token.Kind}, offset={token.Start}";
+            try
+            {
+                Assert.Equal(token.Text, Editable.Substring(token.Start, token.Span.Length));
+                var edited = new SourceFile(original.Path, Editable.Remove(token.Start, token.Span.Length));
+                SourceFile[] files = Order(edited);
+                var snapshot = new AnalysisSnapshot(files, new() { NoStdLib = true });
+                // A deletion can still form valid syntax; only independent-file recovery is required.
+                Assert.DoesNotContain(snapshot.Diagnostics, error => error.Severity == DiagnosticSeverity.Error && error.FilePath == healthy.Path);
+                var model = new EditorModel(snapshot, files);
+                Assert.Equal(baselineTokens, Json(model.SemanticTokens(healthy.Path)).GetRawText());
+                for (int index = 0; index < healthySites.Length; index++)
+                {
+                    Assert.Equal(hovers[index], RequiredHover(model, healthy, healthySites[index]));
+                    Assert.Equal(definitions[index], RequiredDefinition(model, healthy, healthySites[index]));
+                }
+                Assert.Equal(localCompletion, CompletionItem(model, healthy, localUse, "result"));
+                ValidateTokenRanges(model, healthy);
+                ValidateTokenRanges(model, edited);
+                foreach (int site in new[] { Math.Min(token.Start, edited.Text.Length), edited.Text.Length }.Distinct())
+                {
+                    model.Hover(edited.Path, site);
+                    model.Definition(edited.Path, site);
+                    model.Completion(edited.Path, site);
+                    model.SignatureHelp(edited.Path, site);
+                }
+            }
+            catch (Exception error)
+            {
+                throw new XunitException(context + Environment.NewLine + error);
+            }
+        }
+    }
+
     private static string RequiredHover(EditorModel model, SourceFile source, int offset)
     {
         // Recovery intentionally suppresses layout details after any diagnostic error.

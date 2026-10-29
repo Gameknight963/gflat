@@ -7,17 +7,25 @@ public record ProcessResult(int ExitCode, string StandardOutput, string Standard
 public static class NativeToolchain
 {
     private static readonly Lazy<string> DefaultClang = new(DiscoverClang);
-    private static readonly Lazy<string?> LibraryDirectory = new(() =>
+    private static readonly Lazy<string?> LibraryDirectory = new(() => FindMsvcLibraryDirectory(VisualStudioInstallations()));
+
+    internal static string? FindMsvcLibraryDirectory(IEnumerable<string> installations)
     {
-        string? lib = VisualStudioInstallations()
+        string? lib = installations
             .Select(installation => Path.Combine(installation, "VC", "Tools", "MSVC"))
             .Where(Directory.Exists)
             .SelectMany(root => Directory.EnumerateDirectories(root))
-            .Select(version => Path.Combine(version, "lib", "x64", "libcmt.lib"))
-            .Where(File.Exists)
-            .OrderDescending().FirstOrDefault();
+            .Select(directory => (
+                Version: Version.TryParse(Path.GetFileName(directory), out var version) ? version : null,
+                Library: Path.Combine(directory, "lib", "x64", "libcmt.lib")))
+            .Where(candidate => candidate.Version != null && File.Exists(candidate.Library))
+            // Select the newest complete toolset across installations, independent
+            // of edition names and directory enumeration order.
+            .OrderByDescending(candidate => candidate.Version)
+            .ThenBy(candidate => candidate.Library, StringComparer.OrdinalIgnoreCase)
+            .Select(candidate => candidate.Library).FirstOrDefault();
         return lib == null ? null : Path.GetDirectoryName(lib);
-    });
+    }
 
     private static IEnumerable<string> VisualStudioInstallations()
     {

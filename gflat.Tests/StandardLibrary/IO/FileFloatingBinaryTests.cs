@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Globalization;
 
 namespace gflat.Tests.Std.IO;
@@ -90,7 +90,7 @@ public sealed class FileFloatingBinaryTests
     private static void Run(string program,int optimization)
     {
         // Preserve explicit-source consumers: no BinaryPrimitives or whole std dependency.
-        var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","libc/IO/File.gf","libc/IO/FileBinary.gf"}
+        var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/IO/IByteReader.gf", "libc/IO/File.gf","libc/IO/FileBinary.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("main.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

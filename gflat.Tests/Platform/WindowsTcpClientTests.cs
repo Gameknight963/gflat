@@ -182,7 +182,8 @@ public sealed class WindowsTcpClientTests
             char[4098] request;request[0]='A';request[4097]='Z';
             for(nuint index=0;index<4096;index++)request[index+1]=(char)(index%251);
             ITextWriter* output=&client;output.Write(&request[1],4096);client.ShutdownSend();
-            char[4098] response;response[0]='Q';response[4097]='R';client.ReadExactly(&response[1],4096);
+            char[4098] response;response[0]='Q';response[4097]='R';client.ReadExactly(&response[1],2048);
+            IByteReader* input=&client;std::IO::ReadExactly(input,&response[2049],2048);
             if(request[0]!='A'||request[4097]!='Z'||response[0]!='Q'||response[4097]!='R')return 2;
             for(nuint index=0;index<4096;index++)if((byte)response[index+1]!=(byte)((index*17+23)%256))return 3;
             char tail='\0';if(client.Read(&tail,1)!=0||!client.IsOpen)return 4;

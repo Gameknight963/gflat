@@ -4,7 +4,7 @@ public sealed class TextWriterExtensionsTests
 {
     private static ExecutionResult Run(string program, string? path = null, bool strings = false, bool console = false)
     {
-        var names = new List<string> { "core/Text/text_writer_line.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "libc/IO/File.gf" };
+        var names = new List<string> { "core/Text/text_writer_line.gf", "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/Text/BufferTooSmallException.gf", "core/Text/BufferWriter.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf" };
         if (strings) names.AddRange(["core/Text/String.gf", "core/Text/ByteSearch.gf", "core/IStringConvertable.gf", "core/IHashable.gf", "core/IEquatable.gf", "core/IComparable.gf", "core/Hashing/primitive_hashing.gf"]);
         if (console) names.AddRange(["libc/Console/Console.gf", "libc/Console/standard_writers.gf"]);
         if (path != null) program = program.Replace("$PATH", "\"" + path.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"");

@@ -15,7 +15,8 @@ references propagate that requirement to the final executable.
 
 The move-only value owns its socket and WinSock startup reference. Default
 construction is closed. `Connect(IpEndpoint)` opens a connection; `IsOpen` reports
-whether it still owns a socket. It implements counted `ITextWriter::Write`.
+whether it still owns a socket. It implements counted `ITextWriter::Write` and
+`std::IO::IByteReader::Read`.
 
 | API | Behavior |
 | --- | --- |

@@ -3,6 +3,9 @@
 See the [standard library index](../README.md) for collections, hashing, parsing,
 UTF-8, binary codecs, paths, math, and runnable examples.
 
+[Borrowed byte readers](../../docs/BYTE_READERS.md) connect counted sources to
+writer and encoding consumers without transferring ownership.
+
 Lazy collection queries and their ownership rules are documented in
 [Collections](Queries/README.md). The runnable example is
 [`examples/queries`](../../examples/queries/main.gf).

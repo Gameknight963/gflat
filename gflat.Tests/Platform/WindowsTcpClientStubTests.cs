@@ -217,6 +217,14 @@ public sealed class WindowsTcpClientStubTests
                 if(Probe::Reads!=3)return 21;for(nuint index=0;index<6;index++)if(buffer[index+1]!=(char)(48+index))return 22;
                 if(buffer[0]!=(char)165||buffer[7]!=(char)165)return 23;
                 for(nuint index=0;index<8;index++)buffer[index]=(char)165;
+                Probe::Received=0;Probe::Reads=0;IByteReader* input=&value;
+                std::IO::ReadExactly(input,&buffer[1],6);
+                if(Probe::Reads!=3||Probe::Received!=6)return 37;
+                for(nuint index=0;index<6;index++)if(buffer[index+1]!=(char)(48+index))return 38;
+                if(buffer[0]!=(char)165||buffer[7]!=(char)165)return 39;
+                std::IO::ReadExactly(input,(char*)1,0);
+                if(Probe::Reads!=3||Probe::Received!=6)return 40;
+                for(nuint index=0;index<8;index++)buffer[index]=(char)165;
                 Probe::Received=0;Probe::Reads=0;Probe::ReadMode=3;Probe::Total=5;caught=false;
                 try{value.ReadExactly(&buffer[1],5);}catch(ref EndOfStreamException error){caught=true;}
                 if(!caught||Probe::Reads!=3||Probe::Received!=3||!value.IsOpen||buffer[0]!=(char)165)return 24;

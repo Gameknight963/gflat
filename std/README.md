@@ -24,7 +24,7 @@ namespace components. Both roots can contribute to the same namespace.
 | `std::Text` | Strings, Unicode, text writers, formatting, text parsing |
 | `std::Numerics` | Scalar math, arbitrary-precision numbers, bit operations, seeded randomness |
 | `std::Memory` | Spans, owning pointers, arenas, memory operations |
-| `std::IO` | Files, paths, IO exceptions |
+| `std::IO` | Files, paths, borrowed byte readers, IO exceptions |
 | `std::Binary` | Binary cursors, byte-order operations, bit fields, variable-length integers |
 | `std::Encoding` | Base32, Base64, hexadecimal, percent encoding |
 | `std::Json`, `std::Csv` | Format readers, writers, helpers, and exceptions |
@@ -74,6 +74,7 @@ implementation lives in `libc`.
 | Buffered output | `BufferedWriter` | [Coalesce writes with caller-owned scratch](../docs/TEXT_WRITERS.md#buffer-small-writes-before-forwarding) |
 | Prefixed lines | `LinePrefixWriter` | [Prefix streamed lines without buffering them](../docs/LINE_PREFIX_WRITER.md) |
 | Writer helpers | `ITextWriter*` `WriteLine` overloads and `WriteRepeated` | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
+| Byte readers | `IByteReader`, borrowed `ReadExactly` and `CopyTo` extensions | [Borrowed byte readers](../docs/BYTE_READERS.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split`, Span `TrySplitOnce`/`TrySplitLastOnce`/`Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md), [key/value views](../docs/TEXT_SPLIT_ONCE.md), [multi-byte delimiters](../docs/TEXT_SPLIT_PATTERN.md) |
 | Borrowed byte-set splitting | `TextPartsAny`, String/Span `SplitAny` | [Copied delimiter sets and borrowed parts](../docs/TEXT_PARTS_ANY.md) |
 | Borrowed text matching | Span `StartsWith`, `EndsWith` | [Counted and C-string patterns without copying](../docs/TEXT_MATCH_SPAN.md) |

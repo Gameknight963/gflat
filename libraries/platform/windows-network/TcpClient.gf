@@ -17,7 +17,7 @@ namespace tcp_detail
 
 /// Owns one blocking WinSock TCP connection and its startup reference.
 /// Default construction is closed; move transfers both resources.
-public struct TcpClient : ITextWriter
+public struct TcpClient : ITextWriter, IByteReader
 {
     private struct Session
     {

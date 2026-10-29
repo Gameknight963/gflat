@@ -6,7 +6,7 @@ public alias FileHandle = void*?;
 /// Owns one libc binary byte stream; move transfers it and default construction is closed.
 /// Destruction closes without reporting errors; call Close to check final flushing.
 /// Paths are borrowed zero-terminated native bytes, without encoding conversion.
-public struct File : ITextWriter
+public struct File : ITextWriter, IByteReader
 {
     private FileHandle handle;
 

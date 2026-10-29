@@ -14,6 +14,9 @@ public partial class TypeChecker
 
     private CallableOverloadCandidate[] MatchingFunctionValues(MethodDeclaration method, FunctionPointerTypeExpression expected, int line, AstNode expression)
     {
+        // Function values keep their complete signature, just as singleton addresses do.
+        bool MatchesSignatureType(TypeExpression actual, TypeExpression target) => TypesMatchPublic(
+            ResolveAlias(OverloadArgumentType(actual)), ResolveAlias(OverloadArgumentType(target)), _symbols);
         var matches = new List<CallableOverloadCandidate>();
         var definitions = FunctionValueDefinitions(method, expression);
         var eligible = definitions.Where(candidate => candidate.Parameters.Count == expected.ParameterTypes.Count).ToArray();
@@ -38,8 +41,8 @@ public partial class TypeChecker
                 parameter.Line, parameter.IsConst, parameter.DefaultValue)).ToList();
             var returnType = CallablePreviewType(candidate, BindCallableOwnerType(candidate, expression,
                 SubstituteExtensionType(GenericFormalType(candidate, candidate.ReturnType), bindings)));
-            if (!TypesMatch(OverloadArgumentType(returnType), OverloadArgumentType(expected.ReturnType)) ||
-                !parameters.Zip(expected.ParameterTypes).All(pair => TypesMatch(OverloadArgumentType(pair.First.Type), OverloadArgumentType(pair.Second)))) continue;
+            if (!MatchesSignatureType(returnType, expected.ReturnType) ||
+                !parameters.Zip(expected.ParameterTypes).All(pair => MatchesSignatureType(pair.First.Type, pair.Second))) continue;
             matches.Add(new(candidate, candidate.GenericParameters.Select(parameter => bindings[parameter.Name]).ToList(), parameters));
         }
         return matches.Where(candidate => !matches.Any(other => !ReferenceEquals(candidate, other) &&

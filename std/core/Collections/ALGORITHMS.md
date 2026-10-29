@@ -61,6 +61,8 @@ int main()
 | `FindLastIndex<T>(Span<immutable(T)>, predicate)` | Last matching index, or span length when no element matches. |
 | `IndexOf<T>(Span<immutable(T)>, key, equal)` | First equal element's index, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `LastIndexOf<T>(Span<immutable(T)>, key, equal)` | Last equal element's index, or span length when absent. Optional `IEquatable<T>` default in `default_equality.gf`. |
+| `IndexOf<T>(Span<immutable(T)>, Span<immutable(T)>, equal)` | First contiguous pattern match, or span length when absent; an empty pattern returns zero. Defined in `span_subsequence_search.gf`, with an optional `IEquatable<T>` default in `default_equality.gf`. |
+| `LastIndexOf<T>(Span<immutable(T)>, Span<immutable(T)>, equal)` | Last contiguous pattern match, or span length when absent; an empty pattern returns span length. Defined in `span_subsequence_search.gf`, with an optional `IEquatable<T>` default in `default_equality.gf`. |
 | `Contains<T>(Span<immutable(T)>, key, equal)` | Whether any element equals the borrowed key. Optional `IEquatable<T>` default in `default_equality.gf`. |
 | `Partition<T>(Span<T>, predicate)` | Move matching elements into a prefix and return its length; relative order is not preserved. |
 | `Shuffle<T>(Span<T>, ref PseudoRandom)` | Randomly permute elements in place using the supplied generator. |
@@ -686,6 +688,55 @@ int main()
     if (IndexOf<int>(values.AsImmutable(), &key) != 1) return 3;
     Span<immutable(int)> empty = new();
     if (IndexOf<int>(values.AsImmutable(), empty) != 0) return 4;
+    return 0;
+}
+```
+
+## Last contiguous pattern match
+
+`LastIndexOf<T>(values, pattern, equal)` returns the rightmost start of a
+contiguous pattern match, or `values.Length` when absent. An empty pattern
+returns `values.Length`, the last insertion endpoint, consistently with reverse
+counted substring search. Thus empty-pattern success shares the sentinel value.
+An oversized pattern also returns Length; neither preflight invokes comparison.
+Both spans must remain valid, live and stable, including for preflights, and may
+overlap or be identical.
+
+Candidate starts are examined from `values.Length - pattern.Length` down to
+zero. Within a candidate, pattern offsets are compared left to right, with
+the source element address first and pattern element address second. Stop at
+the first mismatch for that candidate or the first complete match. Asymmetric
+callbacks therefore have a defined direction and order. Worst-case comparison
+work is O(N*M), with constant auxiliary storage. The library copies no elements,
+allocates nothing and mutates neither input. Callback exceptions propagate;
+callback allocations and external side effects are not rolled back.
+
+The explicit overload shares `span_subsequence_search.gf` with forward IndexOf.
+The optional default in `default_equality.gf` uses IEquatable through
+`EqualityComparer<T>::Equals`; selective callers need those files and Span's
+normal dependencies. Existing single-key `LastIndexOf(values, keyPointer)`
+keeps its meaning; pass a span for a pattern. Unused generic defaults do not add
+a source requirement to old equality calls.
+
+```csharp
+using std;
+using std::Memory;
+using std::Collections;
+
+bool EqualInt(immutable(int)* element, immutable(int)* pattern) => *element == *pattern;
+
+int main()
+{
+    int[7] data = [1, 2, 3, 1, 2, 0, 1];
+    int[2] sought = [1, 2];
+    Span<int> values = new(data, 7);
+    Span<int> pattern = new(sought, 2);
+    if (LastIndexOf<int>(values.AsImmutable(), pattern.AsImmutable()) != 3) return 1;
+    if (LastIndexOf<int>(values.AsImmutable(), values.Slice(0, 3).AsImmutable(), EqualInt) != 0) return 2;
+    int key = 1;
+    if (LastIndexOf<int>(values.AsImmutable(), &key) != 6) return 3;
+    Span<immutable(int)> empty = new();
+    if (LastIndexOf<int>(values.AsImmutable(), empty) != 7) return 4;
     return 0;
 }
 ```

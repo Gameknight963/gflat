@@ -31,3 +31,6 @@ public nuint FindRun<T : IEquatable<T>>(Span<immutable(T)> values, nuint count, 
 
 public nuint IndexOf<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> pattern)
     => std::Collections::IndexOf<T>(values, pattern, EqualityComparer<T>::Equals);
+
+public nuint LastIndexOf<T : IEquatable<T>>(Span<immutable(T)> values, Span<immutable(T)> pattern)
+    => std::Collections::LastIndexOf<T>(values, pattern, EqualityComparer<T>::Equals);

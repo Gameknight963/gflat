@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardSpanSearchTests
+public sealed class SpanSearchTests
 {
     private static IEnumerable<SourceFile> Sources(string code)
         => new[] { "Collections/IEnumerable.gf", "Queries/Enumerable.gf", "Collections/span_algorithms.gf",

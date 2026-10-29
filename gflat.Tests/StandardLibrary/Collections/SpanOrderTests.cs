@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardSpanOrderTests
+public sealed class SpanOrderTests
 {
     [Theory]
     [InlineData(0)]

@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardUnicodeScalarQueryTests
+public sealed class UnicodeScalarQueryTests
 {
     private const string Allocator="""
         using std; using std::Text; using std::Memory; using std::Queries; using std::Collections;int allocations=0;

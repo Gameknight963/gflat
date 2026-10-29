@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardUnicodeTranscodingTests
+public sealed class UnicodeTranscodingTests
 {
     private static string Bytes(IEnumerable<byte> bytes) => string.Join(",", bytes.Select(value => $"(char){value}"));
     private static string Units(IEnumerable<char> units) => string.Join(",", units.Select(value => $"(ushort){(int)value}"));

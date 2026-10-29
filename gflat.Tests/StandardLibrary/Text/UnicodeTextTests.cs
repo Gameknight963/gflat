@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Text;
 
-public sealed class StandardUnicodeTextTests
+public sealed class UnicodeTextTests
 {
     private const string Prelude="""
         using std; using std::Text; using std::Collections;extern void*? malloc(nuint count);extern void free(void* storage);

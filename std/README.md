@@ -31,6 +31,7 @@ namespace components. Both roots can contribute to the same namespace.
 | `std::Time` | Dates, times, durations, clocks, timers |
 | `std::Net` | Numeric addresses, endpoints, and networks |
 | `std::Hashing` | Checksums and digest implementations |
+| `std::Threading` | Atomic integer operations |
 | `std::Reflection` (planned) | Reflection descriptors |
 
 Ordinary library APIs use these subject namespaces. Reflection's move is
@@ -111,6 +112,7 @@ implementation lives in `libc`.
 | Numeric text | `TryParseInt`, `ParseInt`, matching methods for other integer widths | [Strict decimal parsing](../docs/INTEGER_PARSING.md) |
 | Arbitrary-precision integers | `BigInteger` | [Owned values, exact arithmetic, strict decimal parsing, and formatting](../docs/BIG_INTEGER.md) |
 | Exact fractions | `Rational` | [Normalized BigInteger fractions with owning value semantics](../docs/RATIONAL.md) |
+| Atomic integers | `Interlocked` | [Sequentially consistent int and long operations](../docs/INTERLOCKED.md) |
 | Hexadecimal numbers | `TryParseHexUInt`, `ParseHexUInt`, matching methods for other unsigned widths | [Explicit hexadecimal parsing](../docs/HEX_INTEGER_PARSING.md) |
 | Boolean text | `TryParseBool`, `ParseBool` | [Strict ASCII Boolean parsing](../docs/BOOLEAN_PARSING.md) |
 | Identifiers | `Uuid`, `UuidGenerator` | [Canonical UUID values and explicit-source version 4 generation](../docs/UUID.md) |

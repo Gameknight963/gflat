@@ -253,6 +253,8 @@ Unique<int> SmokeFreshOwner(int value) => new Unique<int>(new* int(value));
 int SmokeCore() {
     int[7] runData = [0, 5, 5, 1, 5, 5, 5];
     Span<int> runValues = new(runData, 7); int runKey = 5;
+    if (FindUnsortedIndex<int>(runValues.AsImmutable()) != 3) return 9007;
+    if (FindUnsortedIndex<int>(runValues.Slice(0, 3).AsImmutable(), Comparer<int>::Compare) != 3) return 9008;
     if (FindRun<int>(runValues.AsImmutable(), 3, &runKey) != 4) return 288;
     if (FindRun<int>(runValues.AsImmutable(), 2, &runKey,
         (immutable(int)* left, immutable(int)* right) => *left == *right) != 1) return 289;

@@ -1151,7 +1151,7 @@ namespace gflat
                     }
                     return ResolveAlias(new NamedTypeExpression(candidate, namedParent.Namespace, nested.Line), publish);
                 }
-                throw new TypeCheckException($"Cannot resolve nested type member '{nested.Member}' on non-named type '{TypeName(resolvedParent)}'", nested.Line);
+                throw new TypeCheckException($"Cannot resolve nested type member '{nested.Member}' on non-named type '{DisplayTypeName(resolvedParent)}'", nested.Line);
             }
             if (type is NamedTypeExpression named)
             {
@@ -5204,7 +5204,7 @@ namespace gflat
             }
             if (resolvedType is not NamedTypeExpression named)
             {
-                ReportError(DiagnosticRules.GF1000_GeneralTypeError, node.Line, 0, $"Cannot instantiate non-struct and non-class type '{TypeName(node.Type)}'");
+                ReportError(DiagnosticRules.GF1000_GeneralTypeError, node.Line, 0, $"Cannot instantiate non-struct and non-class type '{DisplayTypeName(node.Type)}'");
                 RecordType(node, Error);
                 return;
             }
@@ -5428,7 +5428,7 @@ namespace gflat
                 TypeExpression resolved = ResolveAlias(node.TargetType);
                 if (!CanDefaultInitialize(resolved))
                 {
-                    throw new TypeCheckException($"Cannot get default value of type '{TypeName(node.TargetType)}': it requires explicit initialization (non-nullable fields or user constructors)", node.Line);
+                    throw new TypeCheckException($"Cannot get default value of type '{DisplayTypeName(node.TargetType)}': it requires explicit initialization (non-nullable fields or user constructors)", node.Line);
                 }
                 RecordType(node, resolved);
             }
@@ -6184,7 +6184,7 @@ namespace gflat
                         if (TypesMatch(resLeft, p0) && TypesMatch(resRight, p1))
                         {
                             if (opDecl != null)
-                                throw new TypeCheckException($"Operator '{OperatorText(opKind)}' is ambiguous between '{TypeName(new NamedTypeExpression(structName, null, use.Line))}' and '{TypeName(new NamedTypeExpression(owner.Name, null, use.Line))}'", use.Span);
+                                throw new TypeCheckException($"Operator '{OperatorText(opKind)}' is ambiguous between '{DisplayName(structName)}' and '{DisplayName(owner.Name)}'", use.Span);
                             structName = owner.Name;
                             opDecl = op;
                         }
@@ -6320,7 +6320,7 @@ namespace gflat
 
                     if (typeName == null || !TypeDerivesFromClass(NamedTypeExpression.Resolved(typeName, clause.Line), "Exception"))
                     {
-                        throw new TypeCheckException($"Catch type '{TypeName(clause.ExceptionType)}' must be 'Exception' or a subclass of 'Exception'", clause.Line);
+                        throw new TypeCheckException($"Catch type '{DisplayTypeName(clause.ExceptionType)}' must be 'Exception' or a subclass of 'Exception'", clause.Line);
                     }
 
                     foreach (string prevCaught in caughtTypeNames)

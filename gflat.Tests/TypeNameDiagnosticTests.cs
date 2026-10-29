@@ -80,6 +80,21 @@ public sealed class TypeNameDiagnosticTests
     [InlineData(
         "interface ITextWriter { void Write(readonly(char)* data, nuint count); }\nstruct Destination : ITextWriter {\n    public static Destination operator t\"\"(readonly(char)* text, nuint count) => new Destination();\n    public void Write(readonly(char)* text, nuint count) {}\n}\r\nnamespace Lib { struct Item {} }\nint main() { Lib::Item value; t$\"{&value}\"; return 0; }",
         "Interpolation value of type 'Lib::Item*' must implement IFormattable or IStringConvertable; raw pointers are not implicitly treated as text")]
+    [InlineData(
+        "namespace Lib { struct Box<T> {} } alias Ptr=Lib::Box<int>*; void Test(){Ptr::Missing value;} int main()=>0;",
+        "Cannot resolve nested type member 'Missing' on non-named type 'Lib::Box<int>*'")]
+    [InlineData(
+        "namespace Lib { struct Box<T> {} } alias Ptr=Lib::Box<int>*; void Test(){new Ptr();} int main()=>0;",
+        "Cannot instantiate non-struct and non-class type 'Lib::Box<int>*'")]
+    [InlineData(
+        "namespace Lib { struct Box<T> { public Box(int value){} } } void Test<T>(){T value=default(T);} int main(){Test<Lib::Box<int>>();return 0;}",
+        "Cannot get default value of type 'Lib::Box<int>': it requires explicit initialization (non-nullable fields or user constructors)")]
+    [InlineData(
+        "namespace Lib { class Wrong<T> {} } void Test<T>(){try{}catch(ref T error){}} int main(){Test<Lib::Wrong<int>>();return 0;}",
+        "Catch type 'ref Lib::Wrong<int>' must be 'Exception' or a subclass of 'Exception'")]
+    [InlineData(
+        "namespace Lib { struct A { public static int operator +(A first,B second)=>0; } struct B { public static int operator +(A first,B second)=>0; } } int main(){Lib::A first=new();Lib::B second=new();return first+second;}",
+        "Operator '+' is ambiguous between 'Lib::A' and 'Lib::B'")]
     public void SourceDiagnosticsUseReadableTypeNamesWithoutEditorPostprocessing(string source, string expected)
     {
         var diagnostics = Compiler.Analyze([new SourceFile("type-name.gf", source)], new() { NoStdLib = true });

@@ -11,29 +11,37 @@ public static class NativeToolchain
 
     internal static string? FindMsvcLibraryDirectory(IEnumerable<string> installations)
     {
-        string? lib = installations
+        string? toolset = FindMsvcToolsetDirectory(installations);
+        return toolset == null ? null : Path.Combine(toolset, "lib", "x64");
+    }
+
+    internal static string? FindMsvcToolsetDirectory(IEnumerable<string> installations, bool requireHeaders = false)
+        => installations
             .Select(installation => Path.Combine(installation, "VC", "Tools", "MSVC"))
             .Where(Directory.Exists)
             .SelectMany(root => Directory.EnumerateDirectories(root))
             .Select(directory => (
                 Version: Version.TryParse(Path.GetFileName(directory), out var version) ? version : null,
-                Library: Path.Combine(directory, "lib", "x64", "libcmt.lib")))
-            .Where(candidate => candidate.Version != null && File.Exists(candidate.Library))
-            // Select the newest complete toolset across installations, independent
-            // of edition names and directory enumeration order.
+                Directory: directory))
+            .Where(candidate => candidate.Version != null && File.Exists(Path.Combine(candidate.Directory, "lib", "x64", "libcmt.lib")) &&
+                (!requireHeaders || File.Exists(Path.Combine(candidate.Directory, "include", "exception")) &&
+                    File.Exists(Path.Combine(candidate.Directory, "include", "new"))))
+            // Compare toolset versions, never edition/year directory spelling.
             .OrderByDescending(candidate => candidate.Version)
-            .ThenBy(candidate => candidate.Library, StringComparer.OrdinalIgnoreCase)
-            .Select(candidate => candidate.Library).FirstOrDefault();
-        return lib == null ? null : Path.GetDirectoryName(lib);
+            .ThenBy(candidate => candidate.Directory, StringComparer.OrdinalIgnoreCase)
+            .Select(candidate => candidate.Directory).FirstOrDefault();
+
+    internal static IEnumerable<string> VisualStudioInstallations()
+    {
+        if (!OperatingSystem.IsWindows()) return [];
+        return EnumerateVisualStudioInstallations(new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86 }
+            .Select(Environment.GetFolderPath));
     }
 
-    private static IEnumerable<string> VisualStudioInstallations()
+    // Only visit version/edition directories, never recurse through installed files.
+    internal static IEnumerable<string> EnumerateVisualStudioInstallations(IEnumerable<string> programFilesRoots)
     {
-        if (!OperatingSystem.IsWindows()) yield break;
-        // Only visit version/edition directories, not the entire installation tree.
-        // A recursive search can take minutes on a fresh CI runner, outside Run's timeout.
-        var roots = new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86 }
-            .Select(folder => Path.Combine(Environment.GetFolderPath(folder), "Microsoft Visual Studio"))
+        var roots = programFilesRoots.Select(root => Path.Combine(root, "Microsoft Visual Studio"))
             .Distinct(StringComparer.OrdinalIgnoreCase);
         foreach (string root in roots.Where(Directory.Exists))
             foreach (string version in Directory.EnumerateDirectories(root))
@@ -141,13 +149,16 @@ public static class NativeToolchain
         string fullOutput = Path.GetFullPath(outputPath);
         string ir = File.ReadAllText(irPath);
         bool debug = ir.Contains("!llvm.dbg.cu", StringComparison.Ordinal);
+        var (exceptions, stdio) = RequiredNativeRuntimes(ir);
         if (linkInputs.Libraries.Any(library => library.Kind == "File" &&
             (paths.Equals(library.Value, fullOutput) ||
              (debug && OperatingSystem.IsWindows() && paths.Equals(library.Value, Path.ChangeExtension(fullOutput, ".pdb"))))))
             throw new ArgumentException("Output must differ from native library files.");
         var args = new List<string> { irPath, "-O" + optimization, "-o", outputPath };
         AddUnusedCodeElimination(args);
-        if (OperatingSystem.IsWindows() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LIB")))
+        // Runtime compilation supplies a matched C++ header/library toolset below.
+        // Do not prepend a different, possibly headerless bare-link fallback.
+        if (!exceptions && !stdio && OperatingSystem.IsWindows() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LIB")))
         {
             if (LibraryDirectory.Value is string lib) args.AddRange(["-Xlinker", "/libpath:" + lib]);
         }
@@ -162,7 +173,6 @@ public static class NativeToolchain
         // do not by themselves require Clang's compiler-rt library.
         if (OperatingSystem.IsWindows() && RequiresWideIntegerRuntime(ir))
             args.Add("--rtlib=compiler-rt");
-        var (exceptions, stdio) = RequiredNativeRuntimes(ir);
         if (exceptions || stdio)
         {
             // Keep the selected LLVM version, including names such as clang-18.

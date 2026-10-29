@@ -10,21 +10,18 @@ internal static class NativeRuntime
 
     internal static List<string> HostArguments()
     {
-        var args = new List<string>();
-        if (!OperatingSystem.IsWindows()) return args;
-        string root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio");
-        string? version = Directory.Exists(root) ? Directory.GetDirectories(root)
-            .SelectMany(year => Directory.GetDirectories(year))
-            .Select(edition => Path.Combine(edition, "VC", "Tools", "MSVC"))
-            .Where(Directory.Exists).SelectMany(Directory.GetDirectories)
-            .OrderDescending().FirstOrDefault() : null;
-        if (version != null)
-        {
-            args.AddRange(["-isystem", Path.Combine(version, "include"), "-Xlinker", "/libpath:" + Path.Combine(version, "lib", "x64")]);
-        }
+        if (!OperatingSystem.IsWindows()) return [];
         string kits = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Kits", "10");
-        string includes = Path.Combine(kits, "Include");
-        string? sdk = Directory.Exists(includes) ? Directory.GetDirectories(includes).OrderDescending().FirstOrDefault() : null;
+        return HostArguments(NativeToolchain.VisualStudioInstallations(), kits);
+    }
+
+    internal static List<string> HostArguments(IEnumerable<string> installations, string kits)
+    {
+        var args = new List<string>();
+        string? toolset = NativeToolchain.FindMsvcToolsetDirectory(installations, requireHeaders: true);
+        if (toolset != null)
+            args.AddRange(["-isystem", Path.Combine(toolset, "include"), "-Xlinker", "/libpath:" + Path.Combine(toolset, "lib", "x64")]);
+        string? sdk = FindWindowsSdkDirectory(kits);
         if (sdk != null)
         {
             foreach (string part in new[] { "ucrt", "shared", "um" }) args.AddRange(["-isystem", Path.Combine(sdk, part)]);
@@ -33,6 +30,24 @@ internal static class NativeRuntime
         return args;
     }
 
+    private static string? FindWindowsSdkDirectory(string kits)
+    {
+        string includes = Path.Combine(kits, "Include");
+        if (!Directory.Exists(includes)) return null;
+        return Directory.EnumerateDirectories(includes)
+            .Select(directory => (
+                Version: Version.TryParse(Path.GetFileName(directory), out var version) ? version : null,
+                Directory: directory))
+            .Where(candidate => candidate.Version != null &&
+                File.Exists(Path.Combine(candidate.Directory, "ucrt", "stdio.h")) &&
+                File.Exists(Path.Combine(candidate.Directory, "shared", "sdkddkver.h")) &&
+                File.Exists(Path.Combine(candidate.Directory, "um", "windows.h")) &&
+                File.Exists(Path.Combine(kits, "Lib", Path.GetFileName(candidate.Directory), "ucrt", "x64", "ucrt.lib")) &&
+                File.Exists(Path.Combine(kits, "Lib", Path.GetFileName(candidate.Directory), "um", "x64", "kernel32.lib")))
+            .OrderByDescending(candidate => candidate.Version)
+            .ThenBy(candidate => candidate.Directory, StringComparer.OrdinalIgnoreCase)
+            .Select(candidate => candidate.Directory).FirstOrDefault();
+    }
     internal static string GetObject(string driver, int reserveBytes = gflat.Projects.ExceptionReserve.DefaultBytes)
     {
         if (reserveBytes < 0) throw new ArgumentOutOfRangeException(nameof(reserveBytes));

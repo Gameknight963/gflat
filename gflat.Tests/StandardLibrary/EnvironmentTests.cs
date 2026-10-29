@@ -1,8 +1,8 @@
 using System.Diagnostics;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std;
 
-public sealed class StandardEnvironmentTests
+public sealed class EnvironmentTests
 {
     private static void Run(string program, bool strings = false, int? optimization = null)
     {

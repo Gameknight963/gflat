@@ -3903,6 +3903,7 @@ namespace gflat
                 if (ResolveAlias(operandType) is NamedTypeExpression { Name: "null" })
                     throw new TypeCheckException("null has no value storage; cast it to a nullable pointer type before taking its address", node.Span);
                 ValidateValueType(operandType, node.Line);
+                ValidateAssignmentResultAddress(node.Operand);
                 bool isReadOnly = IsExpressionReadOnly(node.Operand);
                 RecordType(node, new PointerTypeExpression(operandType, false, node.Line, isReadOnly: isReadOnly));
                 if (_constEvaluator.TryEvaluate(node, out ConstValue? constPtr, out _))
@@ -5012,6 +5013,7 @@ namespace gflat
             bool CompleteMethodGroup(MethodDeclaration method)
             {
                 BindMethodSignature(method);
+                if (asCallCallee && !method.IsStatic) ValidateAssignmentResultAddress(node.Object);
                 if (!asCallCallee)
                 {
                     if (method.IsGeneric)
@@ -5087,6 +5089,7 @@ namespace gflat
                         throw new TypeCheckException($"Cannot access protected field '{node.Member}' of class '{DisplayName(field.DeclaringClass)}'", node.Span);
                     }
                     RecordType(node, PrimitiveFieldType(node, ResolveFieldLayoutType(field.DeclaringClass, field.Name, field.Type)));
+                    ValidateAssignmentResultAddress(node.Object);
                     return false;
                 }
 
@@ -5117,6 +5120,7 @@ namespace gflat
                 if (info.FieldDeclarationsByName.TryGetValue(node.Member, out var field))
                     ValidateStructMemberAccess(info, field.Name, field.Accessibility, false, node.Span);
                 RecordType(node, PrimitiveFieldType(node, ResolveFieldLayoutType(info.Name, node.Member, info.Fields[idx].Type)));
+                ValidateAssignmentResultAddress(node.Object);
                 return false;
             }
 
@@ -5517,9 +5521,9 @@ namespace gflat
             if (node.Indices.Count != 1)
                 throw new TypeCheckException("Built-in array and pointer indexing requires exactly one index", node.Line);
             node.Target.Accept(this);
-            node.Index.Accept(this);
-
             TypeExpression targetType = GetType(node.Target);
+            if (targetType is ArrayTypeExpression) ValidateAssignmentResultAddress(node.Target);
+            node.Index.Accept(this);
             TypeExpression indexType = GetType(node.Index);
 
             if (!IsInteger(indexType))

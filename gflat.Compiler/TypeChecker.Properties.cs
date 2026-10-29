@@ -158,7 +158,6 @@ public partial class TypeChecker
                 name = "$index";
                 receiver = index.Target;
                 arguments = index.Indices;
-                foreach (var argument in arguments) if (!_types.ContainsKey(argument)) argument.Accept(this);
                 break;
             case IdentifierExpression id:
                 if (_scopes.Any(s => s.ContainsKey(id.Name))) return null;
@@ -347,6 +346,7 @@ public partial class TypeChecker
                     !(receiverType is NamedTypeExpression named && IsInterface(named.Name));
                 if (byAddress && IsPropertyValueStorage(property.Receiver))
                     throw new TypeCheckException("Cannot modify a value returned by a property", node.Line);
+                if (byAddress) ValidateAssignmentResultAddress(property.Receiver);
                 receiver = Temporary(byAddress ? new PointerTypeExpression(receiverType, false, node.Line, IsExpressionReadOnly(property.Receiver)) : receiverType);
             }
             var arguments = new List<(AstNode Value, IdentifierExpression Temporary)>();
@@ -355,6 +355,7 @@ public partial class TypeChecker
             for (int i = 0; i < property.Arguments.Count; i++)
             {
                 var argument = property.Arguments[i];
+                CheckNullableArgument(argument);
                 var parameterType = ResolveAlias(setter.Parameters[i].Type);
                 if (!IsAssignable(parameterType, GetType(argument), argument))
                     throw new TypeCheckException($"Cannot pass '{DisplayTypeName(GetType(argument))}' as indexer argument '{DisplayTypeName(parameterType)}'", argument.Line);

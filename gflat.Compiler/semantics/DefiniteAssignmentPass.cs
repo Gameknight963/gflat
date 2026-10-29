@@ -774,7 +774,7 @@ namespace gflat.semantics
                     MarkConstructorField(storage);
                     return;
                 }
-                CheckExpression(write.Receiver);
+                if (write.Receiver != null) CheckValue(write.Receiver);
                 foreach (var argument in write.Arguments) CheckValue(argument.Value);
                 if (write.Getter != null) CheckExpression(write.Getter);
                 CheckValue(write.Value);
@@ -820,7 +820,7 @@ namespace gflat.semantics
                     }
                 }
 
-                if (member.Object is not IdentifierExpression { Name: "this" }) CheckExpression(member.Object);
+                if (member.Object is not IdentifierExpression { Name: "this" }) CheckValue(member.Object);
             }
             else if (expr is AssignmentExpression assign)
             {
@@ -828,7 +828,8 @@ namespace gflat.semantics
             }
             else if (expr is UnaryExpression unary)
             {
-                CheckExpression(unary.Operand);
+                if (unary.Operator == TokenKind.Ampersand) CheckValue(unary.Operand);
+                else CheckExpression(unary.Operand);
             }
             else if (expr is BinaryExpression bin)
             {
@@ -900,7 +901,7 @@ namespace gflat.semantics
             }
             else if (expr is IndexExpression index)
             {
-                CheckExpression(index.Target);
+                CheckValue(index.Target);
                 foreach (var argument in index.Indices) CheckExpression(argument);
             }
             else if (expr is ArrayLiteralExpression array)
@@ -983,7 +984,7 @@ namespace gflat.semantics
                         throw new TypeCheckException("An uninitialized owning local must be initialized as a whole value", target.Span);
                     return;
                 }
-                if (member.Object is not IdentifierExpression { Name: "this" }) CheckExpression(member.Object);
+                if (member.Object is not IdentifierExpression { Name: "this" }) CheckValue(member.Object);
                 return;
             }
             // Indexing reads its base and indices, not the destination element;

@@ -697,12 +697,13 @@ public partial class LlvmEmitter : IVisitor
         }
         else if (node is NewExpression or CallExpression or ArrayLiteralExpression or MoveExpression or TypeofExpression or
                  UnaryExpression or BinaryExpression or DefaultExpression or CastExpression or LiteralExpression or
-                 SizeofExpression or AlignofExpression or NameofExpression or LambdaExpression ||
+                 SizeofExpression or AlignofExpression or NameofExpression or LambdaExpression or AssignmentExpression ||
                  node is NamespaceAccessExpression enumMember && _typeChecker.TryGetEnumMember(enumMember, out _, out _))
         {
-            node.Accept(this);
-            string value = Pop();
             TypeExpression type = _typeChecker.GetType(node);
+            if (node is AssignmentExpression) EmitValueForTarget(node, type);
+            else node.Accept(this);
+            string value = Pop();
             string llvmType = EmitType(type);
             if (_typeChecker.UsesCollector && HasManagedReferences(type) && !_typeChecker.HasDestructor(type))
             {
@@ -739,7 +740,7 @@ public partial class LlvmEmitter : IVisitor
         TypeExpression targetType = _typeChecker.ResolveAlias(_typeChecker.GetType(node.Target));
         string targetPtr;
         if (targetType is ArrayTypeExpression { Size: not null } && node.Target is
-            (UnaryExpression { Operator: TokenKind.Star } or ArrayLiteralExpression or CallExpression or DefaultExpression or CastExpression))
+            (UnaryExpression { Operator: TokenKind.Star } or ArrayLiteralExpression or CallExpression or DefaultExpression or CastExpression or AssignmentExpression))
         {
             EmitAddress(node.Target);
             string arrayAddress = Pop();

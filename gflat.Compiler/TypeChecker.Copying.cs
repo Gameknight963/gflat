@@ -73,6 +73,22 @@ public partial class TypeChecker
     public bool CopiesValue(AstNode expression, TypeExpression target)
         => !IsFreshValue(expression) && RequiresCopy(target);
 
+    private void ValidateAssignmentResultAddress(AstNode expression)
+    {
+        // Projected receivers validate their container while it is checked.
+        // Do not replay that copy's effects after an index or other child ran.
+        if (expression is AssignmentExpression)
+        {
+            TypeExpression type = ResolveAlias(GetType(expression));
+            if (type is not (PointerTypeExpression or ManagedTypeExpression or ReferenceTypeExpression) && !IsError(type))
+            {
+                if (!ValidateCopyUse(expression, type))
+                    throw new TypeCheckException("Assignment-result temporary requires a copyable value and accessible copy constructor", expression.Span);
+                if (CopiesValue(expression, type)) InvalidateNullableEscapes();
+            }
+        }
+    }
+
     private bool ValidateCopyUse(AstNode expression, TypeExpression target)
     {
         if (!CopiesValue(expression, target)) return true;

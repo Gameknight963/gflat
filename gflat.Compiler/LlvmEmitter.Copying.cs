@@ -22,7 +22,23 @@ public partial class LlvmEmitter
 
     private void EmitCopyValue(AstNode expression, TypeExpression type)
     {
-        EmitAddress(expression);
+        if (expression is AssignmentExpression)
+        {
+            // The assignment has committed its owner. Stage its result only as
+            // a borrowed copy source, never as another destructor-owning value.
+            expression.Accept(this);
+            string borrowed = EmitOwnedClassHeader(type, Pop());
+            if (_typeChecker.UsesCollector && HasManagedReferences(type))
+                Push(CreateManagedTemporary(type, borrowed));
+            else
+            {
+                string scratch = NewTemp(), storageType = EmitType(type);
+                EmitAlloca(storageType, scratch);
+                Emit($"    store {storageType} {borrowed}, {storageType}* {scratch}");
+                Push(scratch);
+            }
+        }
+        else EmitAddress(expression);
         string source = Pop(), destination = NewTemp(), llvm = EmitType(type);
         EmitAlloca(llvm, destination);
         EmitManagedReferences(type, destination, true, initialize: true);

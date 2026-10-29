@@ -292,6 +292,11 @@ struct SmokeTemporary {
     ~SmokeTemporary() { smokeDestroyed++; }
 }
 SmokeTemporary Tick(ref int value) { value++; return new SmokeTemporary(); }
+int SmokeHeapCompare(immutable(int)* left, immutable(int)* right) {
+    if (*left < *right) return -1;
+    if (*left > *right) return 1;
+    return 0;
+}
 bool SmokeRemove(readonly(int)* value) => *value == 9;
 long SmokeMagnitude(int value) { if (value < 0) return -(long)value; return (long)value; }
 bool SmokeRangeFailure(int value) { throw new Exception("Range predicate evaluated", 77); }
@@ -330,6 +335,13 @@ int SmokeCore() {
         || bitFieldData[0] != (byte)0x56 || bitFieldData[1] != (byte)0x3a) return 9027;
     if (BitPrimitives::TryWriteUInt64(bitFieldData, 2, 0, 4, BitOrder::LeastSignificantFirst, 255ul)
         || bitFieldData[0] != (byte)0x56 || bitFieldData[1] != (byte)0x3a) return 9028;
+    int[5] heapData = [1, 9, 3, 2, 5]; Span<int> heapValues = new(heapData, 5);
+    MakeMaxHeap<int>(heapValues, SmokeHeapCompare);
+    if (heapData[0] != 9 || !IsMaxHeap<int>(heapValues.AsImmutable(), SmokeHeapCompare)) return 9031;
+    PopMaxHeap<int>(heapValues, SmokeHeapCompare);
+    if (heapData[4] != 9 || !IsMaxHeap<int>(heapValues.Slice(0, 4).AsImmutable(), SmokeHeapCompare)) return 9032;
+    heapData[4] = 7; PushMaxHeap<int>(heapValues, SmokeHeapCompare);
+    if (heapData[0] != 7 || !IsMaxHeap<int>(heapValues.AsImmutable(), SmokeHeapCompare)) return 9033;
     String wildcardText = s"notes.gf";
     if (!wildcardText.AsReadOnly().MatchesWildcard("*.gf")) return 9023;
     Uuid generated = UuidGenerator::CreateVersion4(SmokeUuidFill);

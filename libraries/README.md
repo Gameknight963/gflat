@@ -8,6 +8,7 @@ distributed alongside std, without becoming part of its default source set.
 | [Windows](platform/windows/Windows.gfproj) | `Windows::PerformanceCounter`, `Windows::SystemClock` | Windows x64 |
 | [Windows random bytes](platform/windows-random/WindowsRandom.gfproj) | `Windows::SystemRandom` | Windows 8+ x64; explicit `bcrypt` linkage |
 | [Linux](platform/linux/Linux.gfproj) | `Linux::MonotonicClock`, `Linux::SystemClock` | Linux LP64 |
+| [Linux random bytes](platform/linux-random/LinuxRandom.gfproj) | `Linux::SystemRandom` | Linux; glibc 2.25+, kernel 3.17+ |
 
 The monotonic providers implement std's static `IMonotonicClock` contract. A program
 can use `std::Time::Stopwatch<Windows::PerformanceCounter>`, for example, or define a

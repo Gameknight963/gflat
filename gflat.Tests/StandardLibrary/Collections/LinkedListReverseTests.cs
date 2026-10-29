@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardLinkedListReverseTests
+public sealed class LinkedListReverseTests
 {
     [Theory]
     [InlineData(0)]

@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardLinkedListRemoveAllTests
+public sealed class LinkedListRemoveAllTests
 {
     private const string Allocator="""
         using std; using std::Queries; using std::Collections;
@@ -183,7 +183,7 @@ public sealed class StandardLinkedListRemoveAllTests
                 return 0;
             }
             """;
-        // Match StandardLinkedListTests.Sources(gc:true), not an alternate collector.
+        // Match LinkedListTests.Sources(gc:true), not an alternate collector.
         string[] names=["core/Collections/IEnumerable.gf","core/Queries/Enumerable.gf",
             "core/Collections/LinkedList.gf","libc/GC.gf","libc/TracingCollector.gf"];
         var sources=names.Select(name=>new SourceFile(name,File.ReadAllText(

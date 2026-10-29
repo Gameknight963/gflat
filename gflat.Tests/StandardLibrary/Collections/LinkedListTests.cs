@@ -1,8 +1,8 @@
 using gflat.CompileExceptions;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardLinkedListTests
+public sealed class LinkedListTests
 {
     private static IEnumerable<SourceFile> Sources(string program, bool text = false, bool gc = false)
     {

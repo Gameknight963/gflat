@@ -6,6 +6,7 @@ distributed alongside std, without becoming part of its default source set.
 | Project | Provider | Target |
 | --- | --- | --- |
 | [Windows](platform/windows/Windows.gfproj) | `Windows::PerformanceCounter`, `Windows::SystemClock` | Windows x64 |
+| [Windows random bytes](platform/windows-random/WindowsRandom.gfproj) | `Windows::SystemRandom` | Windows 8+ x64; explicit `bcrypt` linkage |
 | [Linux](platform/linux/Linux.gfproj) | `Linux::MonotonicClock`, `Linux::SystemClock` | Linux LP64 |
 
 The monotonic providers implement std's static `IMonotonicClock` contract. A program

@@ -148,6 +148,7 @@ implementation lives in `libc`.
 | Binary scalars | `BinaryPrimitives` | [Checked byte-order integer and IEEE floating-point reads and writes](../docs/BINARY_PRIMITIVES.md) |
 | Variable-length integers | `VarInt` | [Canonical unsigned base-128 encoding and signed ZigZag transforms](../docs/VARINT.md) |
 | Byte searches | `ByteSearch` | [Counted substring and byte-set searches](../docs/BYTE_SEARCH.md) |
+| Byte wildcards | `MatchesWildcard` | [Whole-input counted wildcard matching with bounded and C-string adapters](../docs/WILDCARD_MATCHING.md) |
 | Byte edit distance | `EditDistance::TryCompute` | [Levenshtein distance with caller workspace](../docs/EDIT_DISTANCE.md) |
 | Binary buffers | `BinaryBufferReader`, `BinaryBufferWriter` | [Borrowed cursors and bounded payloads](../docs/BINARY_CURSORS.md) |
 | Streaming checksums | `CRC32`, `CRC32C`, `Adler32` | [Incremental byte checksums](../docs/CHECKSUMS.md) |

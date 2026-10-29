@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardBitSetQueryTests
+public sealed class BitSetQueryTests
 {
     [Theory]
     [InlineData(0)]

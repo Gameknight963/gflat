@@ -1,6 +1,6 @@
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public class StandardBitSetEnumerationTests
+public class BitSetEnumerationTests
 {
     [Theory]
     [InlineData(0)]

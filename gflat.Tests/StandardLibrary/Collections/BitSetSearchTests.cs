@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardBitSetSearchTests
+public sealed class BitSetSearchTests
 {
     private const string Allocator = """
         using std; using std::Text; using std::Collections;

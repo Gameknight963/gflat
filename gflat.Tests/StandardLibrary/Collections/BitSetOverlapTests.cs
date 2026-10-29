@@ -1,8 +1,8 @@
 using System.Collections;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardBitSetOverlapTests
+public sealed class BitSetOverlapTests
 {
     [Theory]
     [InlineData(0)]

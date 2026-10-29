@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Text;
 
-namespace gflat.Tests;
+namespace gflat.Tests.Std.Collections;
 
-public sealed class StandardBitSetOccupancyTests
+public sealed class BitSetOccupancyTests
 {
     [Theory]
     [InlineData(0)]

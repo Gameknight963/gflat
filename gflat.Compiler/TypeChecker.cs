@@ -3642,7 +3642,7 @@ namespace gflat
             {
                 if (!TypesMatch(left, Bool) || !TypesMatch(right, Bool))
                 {
-                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), TypeName(left), TypeName(right));
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), DisplayTypeName(left), DisplayTypeName(right));
                     RecordType(node, Error);
                     return;
                 }
@@ -3653,7 +3653,7 @@ namespace gflat
                 PlanIntegerComparison(node, left, right);
                 if (!TypesMatch(left, right) && !IsAssignable(left, right) && !IsAssignable(right, left) && !(IsAssignable(Int, left) && IsAssignable(Int, right)))
                 {
-                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), TypeName(left), TypeName(right));
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), DisplayTypeName(left), DisplayTypeName(right));
                     RecordType(node, Error);
                     return;
                 }
@@ -3729,7 +3729,7 @@ namespace gflat
                             return;
                         }
                     }
-                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, "+", TypeName(left), TypeName(right));
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, "+", DisplayTypeName(left), DisplayTypeName(right));
                     RecordType(node, Error);
                     return;
                 }
@@ -3810,7 +3810,7 @@ namespace gflat
                             return;
                         }
                     }
-                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, "-", TypeName(left), TypeName(right));
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, "-", DisplayTypeName(left), DisplayTypeName(right));
                     RecordType(node, Error);
                     return;
                 }
@@ -3820,7 +3820,7 @@ namespace gflat
             {
                 if (!IsInteger(left) || !IsInteger(right))
                 {
-                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), TypeName(left), TypeName(right));
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), DisplayTypeName(left), DisplayTypeName(right));
                     RecordType(node, Error);
                     return;
                 }
@@ -3848,7 +3848,7 @@ namespace gflat
                             return;
                         }
                     }
-                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), TypeName(left), TypeName(right));
+                    ReportError(DiagnosticRules.GF1002_BinaryOperatorMismatch, node.Line, 0, OperatorText(node.Operator), DisplayTypeName(left), DisplayTypeName(right));
                     RecordType(node, Error);
                     return;
                 }

@@ -106,4 +106,32 @@ public sealed class TypeNameDiagnosticTests
         Assert.Equal(expected, error.Message);
         Assert.DoesNotContain("$", error.Message);
     }
+
+    [Theory]
+    [InlineData(
+        "namespace Lib { struct Box<T> { public int Value; } } bool Test(Lib::Box<int>* value)=>value&&true; int main()=>0;",
+        "Operator '&&' cannot be applied to operands of type 'Lib::Box<int>*' and 'bool'")]
+    [InlineData(
+        "namespace Lib { interface I { int Read(); } } bool Test(Lib::I* value)=>value==null; int main()=>0;",
+        "Operator '==' cannot be applied to operands of type 'Lib::I*' and 'null'")]
+    [InlineData(
+        "namespace Lib { struct Box<T> { public int Value; } } void Test(Lib::Box<int>* value){value+true;} int main()=>0;",
+        "Operator '+' cannot be applied to operands of type 'Lib::Box<int>*' and 'bool'")]
+    [InlineData(
+        "namespace Lib { struct Box<T> { public int Value; } } void Test(Lib::Box<int>* value){true-value;} int main()=>0;",
+        "Operator '-' cannot be applied to operands of type 'bool' and 'Lib::Box<int>*'")]
+    [InlineData(
+        "namespace Lib { struct Box<T> { public int Value; } } void Test(Lib::Box<int>* value){value<<1;} int main()=>0;",
+        "Operator '<<' cannot be applied to operands of type 'Lib::Box<int>*' and 'int'")]
+    [InlineData(
+        "namespace Lib { enum A { Zero=0 } enum B { Zero=0 } } Lib::A Test(Lib::A first,Lib::B second)=>first*second; int main()=>0;",
+        "Operator '*' cannot be applied to operands of type 'Lib::A' and 'Lib::B'")]
+    public void BuiltinBinaryCompatibilityDiagnosticsUseSourceTypeNames(string source, string expected)
+    {
+        var diagnostics = Compiler.Analyze([new SourceFile("binary-operator-type-name.gf", source)], new() { NoStdLib = true });
+        var error = Assert.Single(diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Equal("GF1002", error.Descriptor.Id);
+        Assert.Equal(expected, error.Message);
+        Assert.DoesNotContain("$", error.Message);
+    }
 }

@@ -186,6 +186,8 @@ Explicit file `Close` can report errors; destruction closes without throwing.
 [Optional platform libraries](../libraries/README.md) provide monotonic clocks
 for `Stopwatch<C>` and `SystemClock::GetUtcNow()` for UTC calendar timestamps.
 Applications reference the Windows or Linux source project explicitly.
+The optional [Windows TCP library](../libraries/platform/windows-network/README.md)
+provides an owning blocking client for numeric IPv4 and IPv6 endpoints.
 
 ## Runnable examples
 

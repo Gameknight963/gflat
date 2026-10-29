@@ -24,6 +24,7 @@
     <None Include="..\std\**\*.gf" Link="Std\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../libraries/platform/windows/*.gf" Link="Platform/windows/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../libraries/platform/windows-random/*.gf" Link="Platform/windows-random/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../libraries/platform/windows-network/*.gf" Link="Platform/windows-network/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../libraries/platform/linux/*.gf" Link="Platform/linux/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../libraries/platform/linux-random/*.gf" Link="Platform/linux-random/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\docs\LANGUAGE_SPEC.md" Link="LANGUAGE_SPEC.md" CopyToOutputDirectory="PreserveNewest" />

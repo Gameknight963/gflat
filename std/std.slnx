@@ -9,6 +9,7 @@
   <Folder Name="/Platform providers/">
     <Project Path="../libraries/platform/windows/Windows.gfproj" />
     <Project Path="../libraries/platform/windows-random/WindowsRandom.gfproj" />
+    <Project Path="../libraries/platform/windows-network/WindowsNetwork.gfproj" />
     <Project Path="../libraries/platform/linux/Linux.gfproj" />
     <Project Path="../libraries/platform/linux-random/LinuxRandom.gfproj" />
   </Folder>

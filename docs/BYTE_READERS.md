@@ -43,6 +43,67 @@ Failure can leave consumed input, a modified output-buffer prefix, or already-wr
 chunks. There is no rollback or automatic draining. A reader can fail after consuming
 an unknown prefix, so callers cannot infer consumed bytes from an exception alone.
 
+## Read counted lines from any byte source
+
+`TryReadLine(output)` appends one line to an `ITextWriter` without clearing it.
+`TryReadLine(ref String line)` clears the String first and reuses its capacity,
+matching Console's existing convention. Immediate EOF returns false with an empty
+String. `ReadLine()` returns a new owning String and converts immediate EOF to
+EndOfStreamException. A blank terminated line is a successful empty line.
+
+LF and CRLF are removed; a bare CR, embedded zero, and high bytes remain counted
+data. Final nonempty unterminated lines are returned once. No encoding conversion
+or validation is performed. Console.In still observes its existing host stream
+translation before these byte rules apply.
+
+```csharp
+using Standard::Binary;
+using Standard::IO;
+using Standard::Text;
+
+int main()
+{
+    byte[11] bytes = [65, 13, 10, 66, 0, 67, 10, 108, 97, 115, 116];
+    BinaryBufferReader source = new(bytes, 11);
+    BufferedReader input = new(&source, 4);
+
+    char[8] storage;
+    BufferWriter output = new(storage, 8);
+    if (!input.TryReadLine(&output) || output.Length != 1 || storage[0] != 'A') return 1;
+
+    String line = s"old";
+    line.Reserve(8);
+    if (!input.TryReadLine(ref line) || line.Length != 3) return 2;
+    if (line.Data[0] != 'B' || line.Data[1] != '\0' || line.Data[2] != 'C') return 3;
+
+    String last = input.ReadLine();
+    if (!last.Equals("last")) return 4;
+    if (input.TryReadLine(ref line) || line.Length != 0) return 5;
+    return 0;
+}
+```
+
+The helper requests one source byte at a time and does not consume the byte after
+LF. Keep one BufferedReader across calls when buffering is useful; read any later
+bytes through that same object so its read-ahead tail remains available. The
+helper owns no heap buffer, closes nothing, and writes counted stack chunks to the
+sink. String and BufferedReader retain their normal allocation and ownership rules.
+
+Source and writer exceptions propagate unchanged. Consumed input and prior output
+are not rolled back. An uncommitted scratch prefix may be lost on error; the
+String convenience has already cleared its old value and may contain an appended
+prefix. Failure does not automatically drain the rest of the line. Existing
+BufferWriter provides a raw-buffer route, but an over-capacity Write can stop
+midline; this differs from Console's explicitly draining raw-buffer overload.
+
+Keep the concrete input/sink alive and unmoved, with disjoint state and captured
+storage. In particular, the input must not borrow the String output's old buffer,
+which clearing or growth can change. Borrowed views of the reused String's old
+contents cannot be relied on across a call. The writer helper is independently
+available in `Standard/core/IO/byte_reader_lines.gf`; the optional String overloads
+are in `byte_reader_string_lines.gf`.
+
+
 ## Decode file or network input through the same consumer
 
 The existing strict `HexDecoder` is an `ITextWriter`. It accepts arbitrary chunk splits

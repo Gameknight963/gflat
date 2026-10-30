@@ -5,6 +5,39 @@ namespace gflat.Tests;
 
 public sealed class StandardToStringExtensionTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void ProtectedPrimitiveReceiversReturnIndependentMutableOwners(int optimization)
+    {
+        (string Type, string Literal, string Expected)[] cases =
+        [
+            ("byte", "(byte)255", "255"), ("sbyte", "(sbyte)(-128)", "-128"),
+            ("short", "(short)(-32768)", "-32768"), ("ushort", "(ushort)65535", "65535"),
+            ("int", "-123456", "-123456"), ("uint", "4294967295u", "4294967295"),
+            ("long", "-9000000000000000000l", "-9000000000000000000"),
+            ("ulong", "18446744073709551615ul", "18446744073709551615"),
+            ("nint", "(nint)(-123)", "-123"), ("nuint", "(nuint)456", "456"),
+            ("bool", "true", "true"), ("char", "'A'", "A"),
+            ("extralong", "(extralong)1234567890", "1234567890"),
+            ("float", "1.25f", "1.25"), ("double", "-2.5", "-2.5")
+        ];
+        var body = new StringBuilder();
+        foreach (string qualifier in new[] { "readonly", "immutable" })
+        foreach (var (type, literal, expected) in cases)
+            body.AppendLine($$"""
+                {
+                    {{qualifier}}({{type}}) number = {{literal}};
+                    String rendered = number.ToString();
+                    if (!CString::Equals(rendered.Data, "{{expected}}")) return 1;
+                    rendered.Append("!", 1);
+                    if (!CString::Equals(rendered.Data, "{{expected}}!")) return 2;
+                    if (number != {{literal}}) return 3;
+                }
+                """);
+        Run(Allocator + "int main() {" + body + "return allocated - released;}", optimization);
+    }
+
     private const string Allocator="""
         using Standard; using Standard::Text; using Standard::Memory; using Standard::Collections;extern void*? malloc(nuint count);extern void free(void* storage);
         int attempts=0;int allocated=0;int released=0;int denied=0;int failAfter=-1;

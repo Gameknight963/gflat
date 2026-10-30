@@ -7,7 +7,7 @@ public String ToString(extralong value)
 
 extension extralong
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);

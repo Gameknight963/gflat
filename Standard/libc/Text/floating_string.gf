@@ -7,7 +7,7 @@ public String ToString(float value)
 
 extension float
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -20,7 +20,7 @@ public String ToString(double value)
 
 extension double
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);

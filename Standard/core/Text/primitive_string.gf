@@ -6,7 +6,7 @@ public String ToString(byte value)
 
 extension byte
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -19,7 +19,7 @@ public String ToString(sbyte value)
 
 extension sbyte
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -32,7 +32,7 @@ public String ToString(short value)
 
 extension short
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -45,7 +45,7 @@ public String ToString(ushort value)
 
 extension ushort
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -58,7 +58,7 @@ public String ToString(int value)
 
 extension int
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -71,7 +71,7 @@ public String ToString(uint value)
 
 extension uint
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -84,7 +84,7 @@ public String ToString(long value)
 
 extension long
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -97,7 +97,7 @@ public String ToString(ulong value)
 
 extension ulong
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -110,7 +110,7 @@ public String ToString(nint value)
 
 extension nint
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -123,7 +123,7 @@ public String ToString(nuint value)
 
 extension nuint
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -136,7 +136,7 @@ public String ToString(bool value)
 
 extension bool
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);
@@ -149,7 +149,7 @@ public String ToString(char value)
 
 extension char
 {
-    public String ToString()
+    public immutable String ToString()
     {
         String result = new();
         Standard::Format((*this), &result);

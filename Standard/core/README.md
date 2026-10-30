@@ -12,8 +12,8 @@ through those same borrowed contracts.
 [Stream varints](../../docs/STREAM_VARINT.md) reuse the canonical codec for borrowed
 sources and sinks without reading ahead.
 
-[BufferedReader](../../docs/BUFFERED_READER.md) owns explicit read-ahead storage while borrowing
-one source cursor. Keep prefix, payload and subsequent reads on that cursor.
+[BufferedReader](../../docs/BUFFERED_READER.md) uses owned or caller-provided read-ahead storage
+while borrowing one source cursor. Keep prefix, payload and subsequent reads on that cursor.
 
 [Base32Encoder](../../docs/BASE32_ENCODER.md) streams counted binary chunks to a borrowed writer,
 with final padding emitted by explicit `Complete()`. The matching
@@ -132,8 +132,8 @@ stack buffers or literal text, without allocating intermediate strings.
 With `using Standard;`, primitive values also support `value.Format(writer)`.
 Floating-point overloads live in `../libc/floating_format.gf`.
 Explicit `ToString()` extensions in `Standard::Text` collect the same formatting into an owning
-`String`. Primitive receivers use value parameters; the generic `IFormattable`
-extension borrows existing storage, including noncopyable values. Existing
+`String`. Primitive and generic `IFormattable` extensions borrow their receivers;
+the generic extension also supports noncopyable values. Existing
 instance methods keep precedence. See [owning conversions](../../docs/STRING_CONVERSION.md)
 for receiver restrictions and selective source dependencies.
 Signed 128-bit `extralong` uses `extra_long_format.gf` together with

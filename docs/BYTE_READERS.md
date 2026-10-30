@@ -243,6 +243,12 @@ make independent copies; a zero-allocation query chain is not promised.
 Take(0) performs no reads. Early breaks and exceptions release the iterator's
 String normally and leave the reader open at its consumed cursor.
 
+For selective sources, direct iteration needs `core/IO/LineSequence.gf`,
+`byte_reader_enumerate_lines.gf`, both `byte_reader_string_lines.gf` and
+`byte_reader_lines.gf`, and their String, reader, writer, exception and collection
+contracts. Supply String's normal memory support; libc File and Console are not
+required. The query bridge is optional.
+
 The [distinct-lines tool](../examples/distinct-lines/README.md) combines a
 caller-buffered stdin reader, LineSequence and HashSet<String> to preserve the
 first occurrence of each counted line without copying duplicate keys into the set.

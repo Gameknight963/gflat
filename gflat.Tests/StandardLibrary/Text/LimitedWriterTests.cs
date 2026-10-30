@@ -327,12 +327,103 @@ public sealed class LimitedWriterTests
         Compiler.Check(sources, options: new() { NoStdLib = true, NoBuiltins = true });
     }
 
-    private static void Run(string program, int optimization)
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public void EncoderPlacementBoundsEncodedOutputIncludingPaddingOrRawInputSeparately(int optimization)
+    {
+        byte[] raw = [0, 255, 65, 0, 127];
+        string expected = Convert.ToBase64String(raw);
+        string payload = string.Join(", ", raw.Select(value => "(char)" + value));
+        Run("using Standard::Encoding;\n" + SinkSource + $$"""
+            int main()
+            {
+                char[5] raw = [{{payload}}];
+                char* data = raw;
+                readonly(char)* expected = "{{expected}}";
+                for (nuint split = 0; split <= 5; split++)
+                {
+                    char[12] storage;
+                    for (nuint index = 0; index < 12; index++) storage[index] = '!';
+                    Sink sink = new(&storage[1], 10);
+                    LimitedWriter encodedBudget = new(&sink, 8);
+                    Base64Encoder encoder = new(&encodedBudget);
+                    int before = attempts;
+                    encoder.Write(data, split);
+                    encoder.Write(data + split, 5 - split);
+                    if (sink.Length != 4 || encodedBudget.Remaining != 4) return 70;
+                    for (nuint index = 0; index < 4; index++) if (storage[index + 1] != expected[index]) return 71;
+                    encoder.Complete();
+                    if (sink.Length != 8 || encodedBudget.Remaining != 0) return 72;
+                    for (nuint index = 0; index < 8; index++) if (storage[index + 1] != expected[index]) return 73;
+                    encoder.Complete();
+                    if (sink.Length != 8 || encodedBudget.Remaining != 0) return 74;
+                    sink.Write("M", 1);
+                    if (storage[0] != '!' || storage[9] != 'M' || storage[10] != '!' || storage[11] != '!') return 75;
+                    if (sink.Closed || attempts != before) return 76;
+                }
+                if (destroyed != 6) return 77;
+
+                {
+                    char[12] storage;
+                    for (nuint index = 0; index < 12; index++) storage[index] = '!';
+                    Sink sink = new(&storage[1], 10);
+                    Base64Encoder encoder = new(&sink);
+                    LimitedWriter rawBudget = new(&encoder, 5);
+                    int before = attempts;
+                    rawBudget.Write(data, 5);
+                    if (rawBudget.Remaining != 0 || sink.Length != 4) return 78;
+                    encoder.Complete();
+                    if (rawBudget.Remaining != 0 || sink.Length != 8) return 79;
+                    for (nuint index = 0; index < 8; index++) if (storage[index + 1] != expected[index]) return 80;
+                    sink.Write("M", 1);
+                    if (storage[0] != '!' || storage[9] != 'M' || storage[10] != '!' || storage[11] != '!') return 81;
+                    if (sink.Closed || attempts != before) return 82;
+                }
+
+                {
+                    char[12] storage;
+                    for (nuint index = 0; index < 12; index++) storage[index] = '!';
+                    Sink sink = new(&storage[1], 10);
+                    LimitedWriter encodedBudget = new(&sink, 7);
+                    Base64Encoder encoder = new(&encodedBudget);
+                    encoder.Write(data, 5);
+                    if (sink.Length != 4 || encodedBudget.Remaining != 3) return 83;
+                    bool caught = false;
+                    try { encoder.Complete(); }
+                    catch (ref IOException error) { caught = true; }
+                    if (!caught || sink.Length != 4 || encodedBudget.Remaining != 3) return 84;
+                    for (nuint index = 0; index < 4; index++) if (storage[index + 1] != expected[index]) return 85;
+                    for (nuint index = 5; index < 12; index++) if (storage[index] != '!') return 86;
+                    nuint calls = sink.Calls;
+                    caught = false;
+                    try { encoder.Write(((nuint)1).reinterpret<readonly(char)*>(), 0); }
+                    catch (ref Exception error) { caught = true; }
+                    if (!caught || sink.Calls != calls || sink.Length != 4) return 87;
+
+                    // Recover only the downstream budget; do not resume the failed encoder.
+                    int before = attempts;
+                    encodedBudget.Write("xyz", 3);
+                    if (encodedBudget.Remaining != 0 || sink.Length != 7) return 88;
+                    sink.Write("M", 1);
+                    if (storage[5] != 'x' || storage[6] != 'y' || storage[7] != 'z' || storage[8] != 'M') return 89;
+                    if (storage[0] != '!' || storage[9] != '!' || storage[10] != '!' || storage[11] != '!') return 90;
+                    for (nuint index = 0; index < 4; index++) if (storage[index + 1] != expected[index]) return 91;
+                    if (sink.Closed || attempts != before) return 92;
+                }
+                if (destroyed != 8) return 93;
+                return 0;
+            }
+            """, optimization, base64: true);
+    }
+
+    private static void Run(string program, int optimization, bool base64 = false)
     {
         string[] names = ["core/Exception.gf", "core/ITextWriter.gf", "core/IO/IOException.gf",
             "core/Text/LimitedWriter.gf", "core/Text/BufferedWriter.gf", "core/Text/CountingWriter.gf",
             "core/Text/CString.gf", "core/Text/BufferTooSmallException.gf",
             "libc/Memory/allocation.gf", "libc/Exceptions/unhandled.gf"];
+        if (base64) names = [.. names, "core/Encoding/Base64.gf", "core/Encoding/Base64Encoder.gf"];
         var sources = names.Select(name => new SourceFile(name,
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Standard", name))))
             .Append(new SourceFile("limited-writer-tests.gf", program))

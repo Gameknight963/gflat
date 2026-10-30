@@ -46,6 +46,12 @@ whole-frame atomicity is not promised. The caller checks `Remaining == 0` before
 starting the next field; dropping an underfilled adapter does not pad or complete
 that field.
 
+For example, passing a LimitedWriter to Base64Encoder bounds the encoded output,
+including padding emitted by `Complete()`. Wrapping the encoder instead bounds
+its raw input. A rejection during completion can leave an encoded prefix already
+accepted. The encoder's own failure state still applies even when LimitedWriter
+rejected the call before forwarding it.
+
 Keep the concrete sink and its captured storage alive, usable and unmoved. Input
 must satisfy the sink's stability/overlap requirements and must not overlap the
 adapter's state. This adapter retains no input pointers. Do not interleave writes

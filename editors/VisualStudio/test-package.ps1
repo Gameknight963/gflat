@@ -367,6 +367,13 @@ int SmokeCore() {
     pipelineBase32.Complete();
     if (pipelineBase32Sink.Length != 8 || pipelineBase32Payload[8] != '\0') return 9043;
     for (nuint i = 0; i < 8; i++) if (pipelineBase32Payload[i] != "IFBA===="[i]) return 9044;
+    BinaryBufferReader pipelineEncodedSource = new((readonly(byte)*)pipelineBase32Payload, 8);
+    IByteReader* pipelineEncodedInput = &pipelineEncodedSource;
+    char[3] pipelineDecodedPayload; BufferWriter pipelineDecodedSink = new(pipelineDecodedPayload, 3);
+    Base32Decoder pipelineDecoder = new(&pipelineDecodedSink);
+    if (pipelineEncodedInput.CopyTo(&pipelineDecoder, pipelineBase32Scratch, 1) != 8 || pipelineDecodedSink.Length != 2) return 9045;
+    pipelineDecoder.Write((readonly(char)*)1, 0); pipelineDecoder.Complete(); pipelineDecoder.Complete();
+    if (pipelineDecodedPayload[0] != 'A' || pipelineDecodedPayload[1] != 'B' || pipelineDecodedPayload[2] != '\0') return 9046;
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
     BigInteger unsignedBig = BigInteger::FromULong(18446744073709551615ul);

@@ -9,6 +9,9 @@ writer and encoding consumers without transferring ownership.
 [Binary scalar IO](../../docs/BINARY_IO.md) adds fixed-width endian reads and writes
 through those same borrowed contracts.
 
+[Stream varints](../../docs/STREAM_VARINT.md) reuse the canonical codec for borrowed
+sources and sinks without reading ahead.
+
 Lazy collection queries and their ownership rules are documented in
 [Collections](Queries/README.md). The runnable example is
 [`examples/queries`](../../examples/queries/main.gf).

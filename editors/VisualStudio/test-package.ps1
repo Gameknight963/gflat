@@ -356,6 +356,10 @@ int SmokeCore() {
     if (buffered.Capacity != 4 || buffered.BufferedCount != 0
         || bufferedPayload[0] != 'A' || bufferedPayload[4] != 'E'
         || bufferedInput.Read(bufferedPayload, 1) != 0) return 9040;
+    byte[2] memoryInput = [(byte)0x41, (byte)0x42];
+    global::std::Binary::BinaryBufferReader memoryReader = new(memoryInput, 2);
+    IByteReader* memoryBytes = &memoryReader;
+    if (memoryBytes.ReadUInt16BigEndian() != (ushort)0x4142 || memoryReader.Position != 2) return 9041;
     int incoming = 40; SmokeIncomingRef(ref incoming);
     if (SmokeIncomingNames(incoming, 1) != 42) return 9018;
     BigInteger unsignedBig = BigInteger::FromULong(18446744073709551615ul);

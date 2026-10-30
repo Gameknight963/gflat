@@ -70,7 +70,7 @@ or the width limit. It never prefetches the following field, including after an 
 integer. Up to five or ten `Read` calls are required. With a direct unbuffered TcpClient,
 that means up to five or ten `recv` calls per scalar. No extra buffering is hidden in
 these helpers. For bulk parsing, read framed blocks into `BinaryBufferReader` and use
-its existing varint adapters, or supply a caller-owned buffered reader.
+its existing varint adapters, or use an explicit [BufferedReader](BUFFERED_READER.md) and keep subsequent reads on that cursor.
 
 Empty input or EOF inside an unfinished integer throws `EndOfStreamException`. A
 malformed integer throws `IOException` at its terminator or width limit. Underlying

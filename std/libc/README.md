@@ -407,7 +407,7 @@ use network byte order. Matching `WriteUInt16/32/64LittleEndian` and
 `WriteUInt16/32/64BigEndian` methods write these representations. Signed
 `ReadInt16/32/64` and `WriteInt16/32/64` methods are available in both byte orders
 and preserve two's-complement bits. The 16/32/64-bit operations
-use an eight-byte stack buffer and work independently of host byte order,
+use exact-width stack buffers and work independently of host byte order,
 alignment, pointer width, and the C runtime's `long` size. Truncation throws
 `EndOfStreamException`; actual IO errors throw `IOException` (the base type of
 `EndOfStreamException`), with the same partial-progress behavior as
@@ -430,11 +430,19 @@ zero, subnormals, infinities, and NaN signs/payloads; no numerical conversion or
 NaN canonicalization occurs. Each operation consumes or writes exactly four or
 eight bytes on success, beginning at the stream's current position.
 
-These adapters reuse the unsigned integer operations and add no source
-requirement beyond the existing FileBinary dependencies. Truncated reads may
+These adapters forward to core borrowed binary IO extensions, reusing the existing
+`BinaryPrimitives` codecs. Truncated reads may
 consume an available prefix before throwing; writes can make partial progress
 before an IO failure. They do not rewind, flush, or close the borrowed file.
 
+
+`FileBinary` is now a thin File-specific forwarding class over the core
+`IByteReader*` / `ITextWriter*` extensions. Explicit source lists must add
+`core/Binary/BinaryPrimitives.gf`, `core/IO/byte_reader_binary.gf`,
+`core/IO/text_writer_binary.gf`, and `core/IO/byte_reader.gf` alongside the reader
+interface and IO exception sources already needed by File. It is no longer a
+self-contained codec implementation. See [binary scalar IO](../../docs/BINARY_IO.md)
+for the complete names, portable consumers and source dependencies.
 `IO/FileVarInt.gf` provides `FileVarInt::ReadUInt32/64` and `WriteUInt32/64`
 for canonical unsigned base-128 integers. These borrow an open File and reuse the
 core `VarInt` codec with at most ten stack bytes. Reads stop at a terminator or

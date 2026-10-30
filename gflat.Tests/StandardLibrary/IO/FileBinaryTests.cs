@@ -14,7 +14,7 @@ public sealed class FileBinaryTests
         {
             string source = Path.Combine(directory, "input.bin"), target = Path.Combine(directory, "output.bin");
             File.WriteAllBytes(source, input);
-            var files = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "libc/IO/FileBinary.gf" }
+            var files = new[] { "core/IO/IOException.gf", "core/IO/EndOfStreamException.gf", "core/IO/IByteReader.gf", "libc/IO/File.gf", "core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf" }
                 .Select(name => new SourceFile(name, File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Std", name))))
                 .Append(new SourceFile("main.gf", program(Literal(source), Literal(target))));
             string ir = Path.Combine(directory, "program.ll"), exe = Path.Combine(directory, "program.exe");

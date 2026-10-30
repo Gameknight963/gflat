@@ -89,8 +89,8 @@ public sealed class FileFloatingBinaryTests
 
     private static void Run(string program,int optimization)
     {
-        // Preserve explicit-source consumers: no BinaryPrimitives or whole std dependency.
-        var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/IO/IByteReader.gf", "libc/IO/File.gf","libc/IO/FileBinary.gf"}
+        // Select the facade and its core binary helpers explicitly; do not rely on implicit std loading.
+        var sources=new[]{"core/IO/IOException.gf","core/IO/EndOfStreamException.gf","core/IO/IByteReader.gf", "libc/IO/File.gf","core/Binary/BinaryPrimitives.gf", "core/IO/byte_reader.gf", "core/IO/byte_reader_binary.gf", "core/IO/text_writer_binary.gf", "libc/IO/FileBinary.gf"}
             .Select(name=>new SourceFile(name,File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Std",name))))
             .Append(new SourceFile("main.gf",program));
         var result=CompilerTestHelper.Run(sources,optimization);

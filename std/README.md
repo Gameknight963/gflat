@@ -75,6 +75,7 @@ implementation lives in `libc`.
 | Prefixed lines | `LinePrefixWriter` | [Prefix streamed lines without buffering them](../docs/LINE_PREFIX_WRITER.md) |
 | Writer helpers | `ITextWriter*` `WriteLine` overloads and `WriteRepeated` | [Borrowed writer conveniences](../docs/TEXT_WRITERS.md) |
 | Byte readers | `IByteReader`, borrowed `ReadExactly` and `CopyTo` extensions | [Borrowed byte readers](../docs/BYTE_READERS.md) |
+| Binary scalar IO | Endian reads on `IByteReader*` and writes on `ITextWriter*` | [Borrowed binary IO](../docs/BINARY_IO.md) |
 | Borrowed text parts | `TextParts`, String/Span `Split`, Span `TrySplitOnce`/`TrySplitLastOnce`/`Trim` | [Allocation-free splitting and trimming](../docs/TEXT_PARTS.md), [key/value views](../docs/TEXT_SPLIT_ONCE.md), [multi-byte delimiters](../docs/TEXT_SPLIT_PATTERN.md) |
 | Borrowed byte-set splitting | `TextPartsAny`, String/Span `SplitAny` | [Copied delimiter sets and borrowed parts](../docs/TEXT_PARTS_ANY.md) |
 | Borrowed text matching | Span `StartsWith`, `EndsWith` | [Counted and C-string patterns without copying](../docs/TEXT_MATCH_SPAN.md) |

@@ -1,6 +1,7 @@
 param(
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Release',
-    [string]$MSBuild
+    [string]$MSBuild,
+    [switch]$NoRestore
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -32,9 +33,11 @@ New-Item -ItemType Directory -Force -Path $itemsOutput | Out-Null
 $itemArchive = Join-Path $itemsOutput 'gflat-source.zip'
 if (Test-Path -LiteralPath $itemArchive) { Remove-Item -LiteralPath $itemArchive }
 [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $PSScriptRoot 'Templates/Items/SourceFile'), $itemArchive)
-dotnet publish (Join-Path $repoRoot 'gflat.LanguageServer/gflat.LanguageServer.csproj') -c $Configuration -r win-x64 --self-contained true -o $serverOutput
+$restoreArguments = @()
+if ($NoRestore) { $restoreArguments += '--no-restore' }
+dotnet publish (Join-Path $repoRoot 'gflat.LanguageServer/gflat.LanguageServer.csproj') -c $Configuration -r win-x64 --self-contained true -o $serverOutput @restoreArguments -m:1 -nodeReuse:false
 if ($LASTEXITCODE -ne 0) { throw 'Language server publishing failed' }
-dotnet publish (Join-Path $repoRoot 'gflat/gflat.csproj') -c $Configuration -r win-x64 --self-contained true -o $compilerOutput
+dotnet publish (Join-Path $repoRoot 'gflat/gflat.csproj') -c $Configuration -r win-x64 --self-contained true -o $compilerOutput @restoreArguments -m:1 -nodeReuse:false
 if ($LASTEXITCODE -ne 0) { throw 'Compiler publishing failed' }
 & (Join-Path $PSScriptRoot 'build-project-templates.ps1') -Compiler (Join-Path $PSScriptRoot 'obj/compiler/gflat.exe')
 # Preserve the notices from the exact runtime pack being redistributed.
@@ -64,5 +67,7 @@ foreach ($relative in @("obj/$Configuration/extension.vsixmanifest", "bin/$Confi
     if (-not $generatedManifest.StartsWith($extensionOutputRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Manifest output must remain inside the extension directory' }
     if (Test-Path -LiteralPath $generatedManifest) { Remove-Item -LiteralPath $generatedManifest }
 }
-& $MSBuild (Join-Path $PSScriptRoot 'gflat.VisualStudio.csproj') /restore /t:Rebuild /m /v:minimal "/p:Configuration=$Configuration"
+$msbuildRestoreArguments = @()
+if (-not $NoRestore) { $msbuildRestoreArguments += '/restore' }
+& $MSBuild (Join-Path $PSScriptRoot 'gflat.VisualStudio.csproj') @msbuildRestoreArguments /t:Rebuild /m:1 /nodeReuse:false /v:minimal "/p:Configuration=$Configuration"
 if ($LASTEXITCODE -ne 0) { throw 'VSIX build failed' }
